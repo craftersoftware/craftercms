@@ -72,7 +72,7 @@
 		<handlebars.version>4.4.0</handlebars.version>
 		<script.security.version>${project.version}</script.security.version>
 		<jakarta.json.version>2.0.1</jakarta.json.version>
-		<spring-boot.version>3.3.4</spring-boot.version>
+		<spring-boot.version>3.3.5</spring-boot.version>
 
 		<!-- Override property setup by Spring Boot Parent -->
 
