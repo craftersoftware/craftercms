@@ -76,7 +76,7 @@
 		<aws.sdk.version>2.28.29</aws.sdk.version>
 		<box-java-sdk.version>4.12.0</box-java-sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
-		<groovy.version>4.0.23</groovy.version>
+		<groovy.version>4.0.24</groovy.version>
 		<ivy.version>2.5.2</ivy.version>
 		<quartz.version>2.5.0-rc1</quartz.version>
 	</properties>
