@@ -92,7 +92,7 @@
 		<httpmime.version>4.5.14</httpmime.version>
 		<httpclient5.version>5.4.1</httpclient5.version>
 
-		<mongo.version>5.2.0</mongo.version>
+		<mongo.version>5.2.1</mongo.version>
 		<jongo.version>1.5.1</jongo.version>
 		<xstream.version>1.4.21</xstream.version>
 		<slf4j.version>2.0.16</slf4j.version>
