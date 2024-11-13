@@ -78,7 +78,7 @@
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.24</groovy.version>
 		<ivy.version>2.5.2</ivy.version>
-		<quartz.version>2.5.0-rc1</quartz.version>
+		<quartz.version>2.5.0</quartz.version>
 	</properties>
 
 	<dependencyManagement>
