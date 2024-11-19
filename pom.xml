@@ -72,7 +72,7 @@
 		<!-- Main -->
 		<!-- Spring -->
 		<spring.version>6.2.0</spring.version>
-		<spring-security.version>6.3.4</spring-security.version>
+		<spring-security.version>6.4.0</spring-security.version>
 		<spring-data-commons.version>3.4.0</spring-data-commons.version>
 		<spring-ldap-core.version>3.2.8</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
