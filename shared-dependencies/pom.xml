@@ -73,7 +73,7 @@
 		<okio.version>3.9.1</okio.version>
 		<bouncycastle.version>1.79</bouncycastle.version>
 		<jackson.version>2.18.1</jackson.version>
-		<aws.sdk.version>2.29.16</aws.sdk.version>
+		<aws.sdk.version>2.29.17</aws.sdk.version>
 		<box-java-sdk.version>4.12.0</box-java-sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.24</groovy.version>
