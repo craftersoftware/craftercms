@@ -95,7 +95,7 @@ project.ext.set("statusCommand", "status")
 project.ext.set("gitUrl", getPropertySafelyWithDefaults("gitUrl", "https://github.com/craftercms/"))
 project.ext.set("gitRemote", getPropertySafelyWithDefaults("gitRemote", "origin"))
 project.ext.set("shallowClone", getPropertySafelyWithDefaults("shallowClone", "false").toBoolean())
-project.ext.set("gitBranch", "develop") // craftercms branch flag
+project.ext.set("gitBranch", "support/4.2.x") // craftercms branch flag
 project.ext.set("bundlesDir", getPropertySafelyWithDefaults(bundlesDir, "./bundles"))
 project.ext.set("crafterCmd", getPropertySafelyWithDefaults("crafterCmd", "./crafter.sh"))
 project.ext.set("currentPlatform", getPropertySafelyWithDefaults("currentPlatform", SystemUtils.IS_OS_MAC_OSX ? "darwin" : "linux"))
