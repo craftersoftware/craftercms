@@ -72,7 +72,7 @@
 		<sardine.version>5.12</sardine.version>
 		<okio.version>3.9.1</okio.version>
 		<bouncycastle.version>1.79</bouncycastle.version>
-		<jackson.version>2.18.1</jackson.version>
+		<jackson.version>2.18.2</jackson.version>
 		<aws.sdk.version>2.29.22</aws.sdk.version>
 		<box-java-sdk.version>4.13.0</box-java-sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
