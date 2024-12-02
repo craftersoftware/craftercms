@@ -74,7 +74,7 @@
 		<bouncycastle.version>1.79</bouncycastle.version>
 		<jackson.version>2.18.1</jackson.version>
 		<aws.sdk.version>2.29.22</aws.sdk.version>
-		<box-java-sdk.version>4.13.0</box-java-sdk.version>
+		<box-java-sdk.version>4.13.1</box-java-sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.24</groovy.version>
 		<ivy.version>2.5.2</ivy.version>
