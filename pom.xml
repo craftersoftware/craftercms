@@ -85,7 +85,7 @@
 		<commons-beanutils.version>1.9.4</commons-beanutils.version>
 		<commons-text.version>1.12.0</commons-text.version>
 		<commons-cli.version>1.9.0</commons-cli.version>
-		<commons-dbcp2.version>2.12.0</commons-dbcp2.version>
+		<commons-dbcp2.version>2.13.0</commons-dbcp2.version>
 		<commons-fileupload2-jakarta-servlet6.version>2.0.0-M2</commons-fileupload2-jakarta-servlet6.version>
 		<commons-compress.version>1.27.1</commons-compress.version>
 
