@@ -15,7 +15,7 @@ Try CrafterCMS using a pre-built AMI (use the `authoring` AMI): https://aws.amaz
 
 Download a pre-built binary archive here: https://craftercms.org/downloads.
 
-Read the docs here: https://docs.craftercms.org/current
+Read the docs here: https://craftercms.com/docs/current
 
 This repository is for developers interested in contributing to CrafterCMS, customizing their own release, or building the latest. This parent project helps you build the following:
 
@@ -24,11 +24,11 @@ This repository is for developers interested in contributing to CrafterCMS, cust
 3. Developer's environment so you can compile and contribute to CrafterCMS
 
 **WARNING:** CrafterCMS source code development and building is
-_only_ supported on Unix based systems. If you want to use CrafterCMS in Windows, use [Docker](https://docs.craftercms.org/current/by-role/system-admin/installation.html#docker) or install Windows Subsystem for Linux (WSL) by following the instructions [here](https://docs.microsoft.com/en-us/windows/wsl/install) then use the WSL 2 terminal for all the commands below.
+_only_ supported on Unix based systems. If you want to use CrafterCMS in Windows, use [Docker](https://craftercms.com/docs/current/by-role/system-admin/installation.html#docker) or install Windows Subsystem for Linux (WSL) by following the instructions [here](https://docs.microsoft.com/en-us/windows/wsl/install) then use the WSL 2 terminal for all the commands below.
 
 # 1. Initial Setup
 Please make sure your system meets the prerequisites:
-https://docs.craftercms.org/current/by-role/system-admin/installation.html#requirements
+https://craftercms.com/docs/current/by-role/system-admin/installation.html#requirements
 
 Let's begin :)
 
@@ -163,7 +163,7 @@ Start CrafterCMS,
     ./gradlew start
 ```
 
-You can now point your browser to [http://localhost:8080/studio](http://localhost:8080/studio) and start using CrafterCMS. To get started with your first CrafterCMS experience, you can follow this guide: [Your First Templated Project](https://docs.craftercms.org/current/getting-started/your-first-project/templated.html) or [Your First Headless Project](https://docs.craftercms.org/current/getting-started/your-first-project/headless.html).
+You can now point your browser to [http://localhost:8080/studio](http://localhost:8080/studio) and start using CrafterCMS. To get started with your first CrafterCMS experience, you can follow this guide: [Your First Templated Project](https://craftercms.com/docs/current/getting-started/your-first-project/templated.html) or [Your First Headless Project](https://craftercms.com/docs/current/getting-started/your-first-project/headless.html).
 
 > **_NOTE:_**
     * The authoring environment runs on port `8080`, a great place to start, while the delivery environment runs on port `9080`.
@@ -202,11 +202,11 @@ To build, start and stop one of the two environments is similar to building/star
 The mechanics for working with a single module are similar to working with _all_, with one exception: You can deploy a module to one or both environments (`authoring`/`delivery`).
 
 CrafterCMS comprises the following modules:
-* [`engine`](https://docs.craftercms.org/current/reference/modules/engine/index.html)
-* [`studio`](https://docs.craftercms.org/current/reference/modules/studio/index.html)
-* [`profile`](https://docs.craftercms.org/current/reference/modules/profile/index.html)
-* [`social`](https://docs.craftercms.org/current/reference/modules/social/index.html)
-* [`deployer`](https://docs.craftercms.org/current/reference/modules/deployer/index.html)
+* [`engine`](https://craftercms.com/docs/current/reference/modules/engine/index.html)
+* [`studio`](https://craftercms.com/docs/current/reference/modules/studio/index.html)
+* [`profile`](https://craftercms.com/docs/current/reference/modules/profile/index.html)
+* [`social`](https://craftercms.com/docs/current/reference/modules/social/index.html)
+* [`deployer`](https://craftercms.com/docs/current/reference/modules/deployer/index.html)
 
 You'll find these projects checked out and ready for you to contribute to in the folder `src/{modules}`.
 

@@ -43,12 +43,12 @@ After logging in, you should be redirected to the MySites screen, and you’re n
 Create a New Site
 -----------------
 Once logged in:
-    1. Click on `Create Site` 
-    2. Give the site a friendly name for the Site Id 
-    3. Choose a blueprint (a site template) 
-    4. and click `Create`  
+    1. Click on `Create Site`
+    2. Give the site a friendly name for the Site Id
+    3. Choose a blueprint (a site template)
+    4. and click `Create`
 
-Studio will create your new site and redirect you to a preview where you can preview and edit your site. 
+Studio will create your new site and redirect you to a preview where you can preview and edit your site.
 
 
 Stopping CrafterCMS Server
@@ -63,9 +63,9 @@ From the command line, navigate to the INSTALL_PATH/ directory, and execute the 
 Going Further
 -------------
 To learn more about content modeling, publishing, personalization, configuration and other topics
-please visit: http://docs.craftercms.org
+please visit: http://craftercms.com/docs
 
 Additional Resources:
-* http://craftersoftware.com/resources/white-papers
-* http://craftersoftware.com/resources/e-books
-* http://craftersoftware.com/resources/webcasts
+* http://craftercms.com/resources?type=white-paper
+* http://craftercms.com/resources?type=e-book
+* http://craftercms.com/resources?type=webcast
