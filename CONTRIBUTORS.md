@@ -11,7 +11,7 @@ Core Developers
 | --- | --- |
 | Sumer Jabri | https://github.com/sumerjabri |
 | Mike Vertal | https://github.com/mikevertal |
-| Russ Danner | https://github.com/russdanner | 
+| Russ Danner | https://github.com/russdanner |
 | Alfonso Vasquez | https://github.com/avasquez614 |
 | Roy Art | https://github.com/rart |
 | Jose Vega | https://github.com/jvega190 |
@@ -25,30 +25,30 @@ Security Analysts
 =================
 | Name                               | URL                                  | Contribution                                                                              |
 |------------------------------------|--------------------------------------|-------------------------------------------------------------------------------------------|
-| Egidio Romano                      | egidio.romano@mindedsecurity.com     | [CV-2023080301](https://docs.craftercms.org/current/security/advisory.html#cv-2023080301) |
-| Gil Correia                        | gil.correia@devoteam.com             | [CV-2023021701](https://docs.craftercms.org/current/security/advisory.html#cv-2023021701) |
-| Matei "Mal" Badanoiu               | https://github.com/mbadanoiu         | [CV-2022091301](https://docs.craftercms.org/current/security/advisory.html#cv-2022091301) |
-|                                    |                                      | [CV-2022091302](https://docs.craftercms.org/current/security/advisory.html#cv-2022091302) |
-| Kai Zhao <br> (ToTU Security Team) | https://github.com/happyhacking-k    | [CV-2020080101](https://docs.craftercms.org/current/security/advisory.html#cv-2020080101) |
-|                                    |                                      | [CV-2021120101](https://docs.craftercms.org/current/security/advisory.html#cv-2021120101) | 
-|                                    |                                      | [CV-2021120102](https://docs.craftercms.org/current/security/advisory.html#cv-2021120102) |
-|                                    |                                      | [CV-2021120103](https://docs.craftercms.org/current/security/advisory.html#cv-2021120103) |
-|                                    |                                      | [CV-2021120104](https://docs.craftercms.org/current/security/advisory.html#cv-2021120104) |
-|                                    |                                      | [CV-2021120105](https://docs.craftercms.org/current/security/advisory.html#cv-2021120105) |
-|                                    |                                      | [CV-2022051603](https://docs.craftercms.org/current/security/advisory.html#cv-2022051603) |
-| Sparsh Kulshrestha                 | https://github.com/sparshkulshrestha | [CV-2021120107](https://docs.craftercms.org/current/security/advisory.html#cv-2021120107) |
-| Carlos Ortiz                       | https://github.com/cortiz            | [CV-2021120106](https://docs.craftercms.org/current/security/advisory.html#cv-2021120106) |
-| Faizan Wani                        | https://github.com/faizanw8          | [CV-2022051601](https://docs.craftercms.org/current/security/advisory.html#cv-2022051601) |
-|                                    |                                      | [CV-2022051602](https://docs.craftercms.org/current/security/advisory.html#cv-2022051602) |
-| Alvaro Muñoz <br> (GitHub)         | https://github.com/pwntester         | [CV-2020080102](https://docs.craftercms.org/current/security/advisory.html#cv-2020080102) |
-| Buxu                               | https://github.com/buxu              | [CV-2018120601](https://docs.craftercms.org/current/security/advisory.html#cv-2018120601) |
-| Jasmin Landry                      | https://github.com/JR0ch17           | [CV-2017061501](https://docs.craftercms.org/current/security/advisory.html#cv-2017061501) |
-|                                    |                                      | [CV-2017061502](https://docs.craftercms.org/current/security/advisory.html#cv-2017061502) |
-|                                    |                                      | [CV-2017061503](https://docs.craftercms.org/current/security/advisory.html#cv-2017061503) |
-|                                    |                                      | [CV-2017061504](https://docs.craftercms.org/current/security/advisory.html#cv-2017061504) |
-|                                    |                                      | [CV-2017061505](https://docs.craftercms.org/current/security/advisory.html#cv-2017061505) |
-|                                    |                                      | [CV-2017061506](https://docs.craftercms.org/current/security/advisory.html#cv-2017061506) |
-|                                    |                                      | [CV-2017061507](https://docs.craftercms.org/current/security/advisory.html#cv-2017061507) |
+| Egidio Romano                      | egidio.romano@mindedsecurity.com     | [CV-2023080301](https://craftercms.com/docs/current/security/advisory.html#cv-2023080301) |
+| Gil Correia                        | gil.correia@devoteam.com             | [CV-2023021701](https://craftercms.com/docs/current/security/advisory.html#cv-2023021701) |
+| Matei "Mal" Badanoiu               | https://github.com/mbadanoiu         | [CV-2022091301](https://craftercms.com/docs/current/security/advisory.html#cv-2022091301) |
+|                                    |                                      | [CV-2022091302](https://craftercms.com/docs/current/security/advisory.html#cv-2022091302) |
+| Kai Zhao <br> (ToTU Security Team) | https://github.com/happyhacking-k    | [CV-2020080101](https://craftercms.com/docs/current/security/advisory.html#cv-2020080101) |
+|                                    |                                      | [CV-2021120101](https://craftercms.com/docs/current/security/advisory.html#cv-2021120101) |
+|                                    |                                      | [CV-2021120102](https://craftercms.com/docs/current/security/advisory.html#cv-2021120102) |
+|                                    |                                      | [CV-2021120103](https://craftercms.com/docs/current/security/advisory.html#cv-2021120103) |
+|                                    |                                      | [CV-2021120104](https://craftercms.com/docs/current/security/advisory.html#cv-2021120104) |
+|                                    |                                      | [CV-2021120105](https://craftercms.com/docs/current/security/advisory.html#cv-2021120105) |
+|                                    |                                      | [CV-2022051603](https://craftercms.com/docs/current/security/advisory.html#cv-2022051603) |
+| Sparsh Kulshrestha                 | https://github.com/sparshkulshrestha | [CV-2021120107](https://craftercms.com/docs/current/security/advisory.html#cv-2021120107) |
+| Carlos Ortiz                       | https://github.com/cortiz            | [CV-2021120106](https://craftercms.com/docs/current/security/advisory.html#cv-2021120106) |
+| Faizan Wani                        | https://github.com/faizanw8          | [CV-2022051601](https://craftercms.com/docs/current/security/advisory.html#cv-2022051601) |
+|                                    |                                      | [CV-2022051602](https://craftercms.com/docs/current/security/advisory.html#cv-2022051602) |
+| Alvaro Muñoz <br> (GitHub)         | https://github.com/pwntester         | [CV-2020080102](https://craftercms.com/docs/current/security/advisory.html#cv-2020080102) |
+| Buxu                               | https://github.com/buxu              | [CV-2018120601](https://craftercms.com/docs/current/security/advisory.html#cv-2018120601) |
+| Jasmin Landry                      | https://github.com/JR0ch17           | [CV-2017061501](https://craftercms.com/docs/current/security/advisory.html#cv-2017061501) |
+|                                    |                                      | [CV-2017061502](https://craftercms.com/docs/current/security/advisory.html#cv-2017061502) |
+|                                    |                                      | [CV-2017061503](https://craftercms.com/docs/current/security/advisory.html#cv-2017061503) |
+|                                    |                                      | [CV-2017061504](https://craftercms.com/docs/current/security/advisory.html#cv-2017061504) |
+|                                    |                                      | [CV-2017061505](https://craftercms.com/docs/current/security/advisory.html#cv-2017061505) |
+|                                    |                                      | [CV-2017061506](https://craftercms.com/docs/current/security/advisory.html#cv-2017061506) |
+|                                    |                                      | [CV-2017061507](https://craftercms.com/docs/current/security/advisory.html#cv-2017061507) |
 
 External Contributors
 =====================
