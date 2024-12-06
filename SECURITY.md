@@ -10,4 +10,4 @@
 
 ## Reporting a Vulnerability
 
-Please follow our guidelines detailed here: https://docs.craftercms.org/current/security/security-policies.html
+Please follow our guidelines detailed here: https://craftercms.com/docs/current/security/policies.html
