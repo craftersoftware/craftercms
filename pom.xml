@@ -120,7 +120,7 @@
 		<tinify.version>1.8.8</tinify.version>
 		<mariadb4j.version>3.1.0.3</mariadb4j.version>
 		<Saxon-HE.version>12.5</Saxon-HE.version>
-		<cxf-rt.version>4.0.5</cxf-rt.version>
+		<cxf-rt.version>4.0.6</cxf-rt.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
 		<mybatis-spring.version>3.0.4</mybatis-spring.version>
 		<mybatis.version>3.5.17</mybatis.version>
