@@ -178,7 +178,7 @@
 		<maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
-		<gmavenplus-plugin.version>4.0.1</gmavenplus-plugin.version>
+		<gmavenplus-plugin.version>4.1.1</gmavenplus-plugin.version>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
 		<maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
 		<frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
