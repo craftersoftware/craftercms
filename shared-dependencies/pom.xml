@@ -69,7 +69,7 @@
 
 		<jgit.version>7.1.0.202411261347-r</jgit.version>
 		<snakeyaml.version>2.3</snakeyaml.version>
-		<sardine.version>5.12</sardine.version>
+		<sardine.version>5.13</sardine.version>
 		<okio.version>3.10.2</okio.version>
 		<bouncycastle.version>1.79</bouncycastle.version>
 		<jackson.version>2.18.2</jackson.version>
