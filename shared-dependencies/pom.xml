@@ -71,7 +71,7 @@
 		<snakeyaml.version>2.3</snakeyaml.version>
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.10.2</okio.version>
-		<bouncycastle.version>1.79</bouncycastle.version>
+		<bouncycastle.version>1.80</bouncycastle.version>
 		<jackson.version>2.18.2</jackson.version>
 		<aws.sdk.version>2.29.51</aws.sdk.version>
 		<box-java-sdk.version>4.13.1</box-java-sdk.version>
