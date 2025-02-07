@@ -293,7 +293,6 @@ ext.commonConfUpdatePatterns = [
                         'bcpkix-*.jar,\\\n' +
                         'bcprov-*.jar,\\\n' +
                         'bcutil-*.jar,\\\n' +
-                        'box-java-sdk-*.jar,\\\n' +
                         'bsh-*.jar,\\\n' +
                         'bson4jackson-*.jar,\\\n' +
                         'bson-*.jar,\\\n' +
