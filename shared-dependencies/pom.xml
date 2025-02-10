@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
-  ~
+  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License version 3 as published by
   * the Free Software Foundation.
-  ~
+  *
   * This program is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
-  ~
+  *
   * You should have received a copy of the GNU General Public License
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
@@ -74,7 +74,6 @@
 		<bouncycastle.version>1.80</bouncycastle.version>
 		<jackson.version>2.18.2</jackson.version>
 		<aws.sdk.version>2.30.14</aws.sdk.version>
-		<box-java-sdk.version>4.14.0</box-java-sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.25</groovy.version>
 		<ivy.version>2.5.3</ivy.version>
@@ -293,11 +292,6 @@
 				<groupId>software.amazon.awssdk</groupId>
 				<artifactId>ssooidc</artifactId>
 				<version>${aws.sdk.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.box</groupId>
-				<artifactId>box-java-sdk</artifactId>
-				<version>${box-java-sdk.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.bitbucket.b_c</groupId>
