@@ -15,7 +15,7 @@ Try CrafterCMS using a pre-built AMI (use the `authoring` AMI): https://aws.amaz
 
 Download a pre-built binary archive here: https://craftercms.com/download.
 
-Read the docs here: https://craftercms.com/docs/current/index.html
+Read the docs here: https://craftercms.com/docs
 
 This repository is for developers interested in contributing to CrafterCMS, customizing their own release, or building the latest. This parent project helps you build the following:
 
