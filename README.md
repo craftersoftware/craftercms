@@ -9,13 +9,13 @@ CrafterCMS is a modern content management platform for building digital experien
 * OTT video experiences on AWS Elemental Media Services
 * AR/VR applications using A-Frame
 
-You can learn more about CrafterCMS here: https://craftercms.org
+You can learn more about CrafterCMS here: https://craftercms.com
 
 Try CrafterCMS using a pre-built AMI (use the `authoring` AMI): https://aws.amazon.com/marketplace/seller-profile?id=6d75ffca-9630-44bd-90b4-ac0e99058995
 
-Download a pre-built binary archive here: https://craftercms.org/downloads
+Download a pre-built binary archive here: https://craftercms.com/download
 
-Read the docs here: https://docs.craftercms.org/en/4.1
+Read the docs here: https://craftercms.com/docs/4.1/index.html
 
 This repository is for developers interested in contributing to CrafterCMS, customizing their own release, or building the latest. This parent project helps you build the following:
 
