@@ -63,7 +63,7 @@ From the command line, navigate to the INSTALL_PATH/ directory, and execute the 
 Going Further
 -------------
 To learn more about content modeling, publishing, personalization, configuration and other topics
-please visit: http://craftercms.com/docs
+please visit: http://craftercms.com/docs/current/index.html
 
 Additional Resources:
 * http://craftercms.com/resources?type=white-paper

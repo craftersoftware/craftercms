@@ -9,13 +9,13 @@ CrafterCMS is a modern content management platform for building digital experien
 * OTT video experiences on AWS Elemental Media Services
 * AR/VR applications using A-Frame
 
-You can learn more about CrafterCMS here: https://craftercms.org.
+You can learn more about CrafterCMS here: https://craftercms.com.
 
 Try CrafterCMS using a pre-built AMI (use the `authoring` AMI): https://aws.amazon.com/marketplace/seller-profile?id=6d75ffca-9630-44bd-90b4-ac0e99058995
 
-Download a pre-built binary archive here: https://craftercms.org/downloads.
+Download a pre-built binary archive here: https://craftercms.com/download.
 
-Read the docs here: https://craftercms.com/docs/current
+Read the docs here: https://craftercms.com/docs/current/index.html
 
 This repository is for developers interested in contributing to CrafterCMS, customizing their own release, or building the latest. This parent project helps you build the following:
 
@@ -239,7 +239,7 @@ You can update, build, deploy, start or stop a module by:
     * In the current version of CrafterCMS, some services run in the same Web container, and that implies the stopping/starting of one of these services will cause other services to stop/start as well.
 
 # 5. Advanced Topics
-For more detailed information and advanced topic, please visit the [detailed documentation](https://docs.craftercms.org/current/by-role/developer/index.html).
+For more detailed information and advanced topic, please visit the [detailed documentation](https://craftercms.com/docs/current/by-role/developer/index.html).
 
 CrafterCMS has two environments, the Authoring Environment and the Delivery Environment.
 
@@ -278,7 +278,7 @@ The CrafterCMS Authoring and Delivery scripts will help you on the basic startup
 |**Arguments**|``start`` Starts all CrafterCMS services in this order Crafter Deployer OpenSearch, Apache Tomcat<br><br>``stop``  Stops all CrafterCMS services in the same order as they start.<br><br>``debug`` Start all CrafterCMS services with the JAVA remote debug port 5000 for Crafter Deployer, and 8000 for Apache Tomcat for the *Authoring Environment* <br>Starts all CrafterCMS services with the JAVA remote debug port 5001 for Crafter Deployer, and 9000 for Apache Tomcat for the *Delivery Environment*<br><br>``help``  Prints script help|
 
 <br><br>
-For more information on environment variables used by ``crafter.sh``, see [CrafterCMS Environment Variables](https://docs.craftercms.org/current/by-role/system-admin/configuration.html#environment-variables)
+For more information on environment variables used by ``crafter.sh``, see [CrafterCMS Environment Variables](https://craftercms.com/docs/current/by-role/system-admin/configuration.html#environment-variables)
 <br><br>
 Let's look at an example on how to start an authoring environment using the scripts we discussed above.  To start the authoring environment, go to your CrafterCMS install folder then run the following:
 
