@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
-  ~
+  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License version 3 as published by
   * the Free Software Foundation.
-  ~
+  *
   * This program is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
-  ~
+  *
   * You should have received a copy of the GNU General Public License
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
@@ -151,6 +151,7 @@
 		<okhttp.version>4.12.0</okhttp.version>
 		<zxcvbn.version>1.9.0</zxcvbn.version>
 		<esapi.version>2.6.0.0</esapi.version>
+		<owasp-java-html-sanitizer.version>20240325.1</owasp-java-html-sanitizer.version>
 		<directory-watcher.version>0.18.0</directory-watcher.version>
 
 		<!-- Testing -->
@@ -471,6 +472,12 @@
 				<artifactId>zxcvbn</artifactId>
 				<version>${zxcvbn.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+				<artifactId>owasp-java-html-sanitizer</artifactId>
+				<version>${owasp-java-html-sanitizer.version}</version>
+			</dependency>
+
 
 			<!-- FreeMarker -->
 			<dependency>
