@@ -16,7 +16,7 @@ FROM eclipse-temurin:21-jdk-alpine AS main
 ############# INSTALL NATIVE TOMCAT #############
 ENV CATALINA_HOME=/usr/local/tomcat \
     TOMCAT_MAJOR="10" \
-    TOMCAT_VERSION="10.1.36"
+    TOMCAT_VERSION="10.1.39"
 
 # Download Tomcat, and then Build tc-native
 RUN apk add --no-cache --virtual .my-build-deps apr-dev openssl-dev make g++ && \
