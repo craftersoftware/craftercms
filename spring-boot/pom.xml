@@ -114,11 +114,16 @@
 				<artifactId>jakarta.json</artifactId>
 				<version>${jakarta.json.version}</version>
 			</dependency>
-			<dependency>
-				<groupId>org.mvnpm</groupId>
-				<artifactId>handlebars</artifactId>
-				<version>${handlebars.version}</version>
-			</dependency>
+                        <dependency>
+                                <groupId>org.craftercms</groupId>
+                                <artifactId>handlebars</artifactId>
+                                <version>${handlebars.version}</version>
+                        </dependency>
+                        <dependency>
+                                <groupId>org.craftercms</groupId>
+                                <artifactId>handlebars-springmvc</artifactId>
+                                <version>${handlebars.version}</version>
+                        </dependency>
 		</dependencies>
 	</dependencyManagement>
 	<build>
