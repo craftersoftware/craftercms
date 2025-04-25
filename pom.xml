@@ -71,7 +71,7 @@
 
 		<!-- Main -->
 		<!-- Spring -->
-		<spring.version>6.2.5</spring.version>
+		<spring.version>6.2.6</spring.version>
 		<spring-security.version>6.4.4</spring-security.version>
 		<spring-data-commons.version>3.4.4</spring-data-commons.version>
 		<spring-ldap-core.version>3.2.11</spring-ldap-core.version>
