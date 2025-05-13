@@ -18,8 +18,8 @@ package upgrade
 @Grapes([
 	@Grab(group = 'org.slf4j', module = 'slf4j-nop', version = '1.7.36'),
 	@Grab(group = 'org.apache.commons', module = 'commons-lang3', version = '3.17.0'),
-	@Grab(group = 'org.apache.commons', module = 'commons-collections4', version = '4.4'),
-	@Grab(group = 'org.apache.commons', module = 'commons-configuration2', version = '2.11.0'),
+	@Grab(group = 'org.apache.commons', module = 'commons-collections4', version = '4.5.0'),
+	@Grab(group = 'org.apache.commons', module = 'commons-configuration2', version = '2.12.0'),
 	@Grab(group = 'org.apache.commons', module = 'commons-text', version = '1.13.1'),
 	@Grab(group = 'commons-beanutils', module = 'commons-beanutils', version = '1.10.1'),
 	@Grab(group = 'org.yaml', module = 'snakeyaml', version = '2.4')

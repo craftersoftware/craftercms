@@ -17,7 +17,7 @@
 @Grapes([
 	@Grab(group = 'org.slf4j', module = 'slf4j-nop', version = '1.7.36'),
 	@Grab(group = 'org.apache.commons', module = 'commons-lang3', version = '3.17.0'),
-	@Grab(group = 'org.apache.commons', module = 'commons-collections4', version = '4.4'),
+	@Grab(group = 'org.apache.commons', module = 'commons-collections4', version = '4.5.0'),
 	@Grab(group = 'commons-io', module = 'commons-io', version = '2.19.0'),
 	@Grab(group = 'com.squareup.okhttp3', module = 'okhttp', version = '4.12.0')
 ])
