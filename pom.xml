@@ -131,7 +131,7 @@
 		<hibernate-validator.version>8.0.2.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>2.19.2</opensearch-rest-high-level-client.version>
-		<opensearch-java.version>2.23.0</opensearch-java.version>
+		<opensearch-java.version>3.0.0</opensearch-java.version>
 		<opensearch-runner.version>2.19.1.0</opensearch-runner.version>
 		<tika.version>3.1.0</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
