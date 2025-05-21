@@ -187,7 +187,7 @@
 		<studio.ui.node.version>v21.7.3</studio.ui.node.version>
 		<studio.ui.yarn.version>v1.22.22</studio.ui.yarn.version>
 		<exec-maven-plugin.version>3.1.1</exec-maven-plugin.version>
-		<nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
+		<central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
 	</properties>
 
@@ -1172,22 +1172,14 @@
 						</executions>
 					</plugin>
 					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<version>${nexus-staging-maven-plugin.version}</version>
-						<executions>
-							<execution>
-								<id>default-deploy</id>
-								<phase>deploy</phase>
-								<goals>
-									<goal>deploy</goal>
-								</goals>
-							</execution>
-						</executions>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>${central-publishing-maven-plugin.version}</version>
+						<extensions>true</extensions>
 						<configuration>
-							<serverId>central-releases</serverId>
-							<nexusUrl>https://central.sonatype.com/</nexusUrl>
-							<autoReleaseAfterClose>true</autoReleaseAfterClose>
+							<publishingServerId>central-releases</publishingServerId>
+							<autoPublish>true</autoPublish>
+							<deploymentName>${project.artifactId}-${project.version}</deploymentName>
 						</configuration>
 					</plugin>
 				</plugins>
@@ -1216,9 +1208,5 @@
 			<id>central-snapshots</id>
 			<url>https://central.sonatype.com/repository/maven-snapshots/</url>
 		</snapshotRepository>
-		<repository>
-			<id>central-releases</id>
-			<url>https://central.sonatype.com/repository/maven-releases/</url>
-		</repository>
 	</distributionManagement>
 </project>
