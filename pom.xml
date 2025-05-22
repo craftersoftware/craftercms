@@ -159,7 +159,7 @@
 		<junit.version>4.13.2</junit.version>
 		<junit-jupiter-engine.version>5.12.2</junit-jupiter-engine.version>
 		<testng-engine.version>1.0.6</testng-engine.version>
-		<mockito-core.version>5.17.0</mockito-core.version>
+		<mockito-core.version>5.18.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
 		<de.flapdoodle.embed.mongo.version>4.20.0</de.flapdoodle.embed.mongo.version>
 		<hamcrest.version>3.0</hamcrest.version>
