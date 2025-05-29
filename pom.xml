@@ -137,7 +137,7 @@
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
 		<jsoup.version>1.20.1</jsoup.version>
-		<protobuf-java.version>4.31.0</protobuf-java.version>
+		<protobuf-java.version>4.31.1</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
 		<semver4j.version>3.1.0</semver4j.version>
