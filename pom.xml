@@ -114,7 +114,7 @@
 		<cglib.version>3.3.0</cglib.version>
 		<script.security.version>${project.version}</script.security.version>
 		<urlrewritefilter.version>5.1.3</urlrewritefilter.version>
-		<graphql-java.version>24.0</graphql-java.version>
+		<graphql-java.version>24.1</graphql-java.version>
 		<graphql-java-extended-scalars.version>22.0</graphql-java-extended-scalars.version>
 		<smiley-http-proxy-servlet.version>2.0</smiley-http-proxy-servlet.version>
 		<tinify.version>1.8.8</tinify.version>
