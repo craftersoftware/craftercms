@@ -156,7 +156,7 @@
 		<!-- Testing -->
 		<testng.version>7.11.0</testng.version>
 		<junit.version>4.13.2</junit.version>
-		<junit-jupiter-engine.version>5.12.2</junit-jupiter-engine.version>
+		<junit-jupiter-engine.version>5.13.0</junit-jupiter-engine.version>
 		<testng-engine.version>1.0.6</testng-engine.version>
 		<mockito-core.version>5.18.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
@@ -175,7 +175,7 @@
 		<maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
 		<buildnumber-maven-plugin.version>3.2.1</buildnumber-maven-plugin.version>
 		<maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
-		<maven-clean-plugin.version>3.4.1</maven-clean-plugin.version>
+		<maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
 		<gmavenplus-plugin.version>4.2.0</gmavenplus-plugin.version>
