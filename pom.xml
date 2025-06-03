@@ -131,7 +131,7 @@
 		<hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>2.19.2</opensearch-rest-high-level-client.version>
-		<opensearch-java.version>2.24.0</opensearch-java.version>
+		<opensearch-java.version>2.25.0</opensearch-java.version>
 		<opensearch-runner.version>2.19.1.0</opensearch-runner.version>
 		<tika.version>3.2.0</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
@@ -150,7 +150,7 @@
 		<eddsa.version>0.3.0</eddsa.version>
 		<okhttp.version>4.12.0</okhttp.version>
 		<zxcvbn.version>1.9.0</zxcvbn.version>
-		<esapi.version>2.6.1.0</esapi.version>
+		<esapi.version>2.6.2.0</esapi.version>
 		<owasp-java-html-sanitizer.version>20240325.1</owasp-java-html-sanitizer.version>
 		<directory-watcher.version>0.19.0</directory-watcher.version>
 
