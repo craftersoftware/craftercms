@@ -161,7 +161,7 @@
 		<testng-engine.version>1.0.6</testng-engine.version>
 		<mockito-core.version>5.18.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
-		<de.flapdoodle.embed.mongo.version>4.20.0</de.flapdoodle.embed.mongo.version>
+		<de.flapdoodle.embed.mongo.version>4.20.1</de.flapdoodle.embed.mongo.version>
 		<hamcrest.version>3.0</hamcrest.version>
 		<xmlunit-core.version>2.10.2</xmlunit-core.version>
 
