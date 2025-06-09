@@ -92,7 +92,7 @@
 		<httpmime.version>4.5.14</httpmime.version>
 		<httpclient5.version>5.5</httpclient5.version>
 
-		<mongo.version>5.5.0</mongo.version>
+		<mongo.version>5.5.1</mongo.version>
 		<jongo.version>1.5.1</jongo.version>
 		<xstream.version>1.4.21</xstream.version>
 		<slf4j.version>2.0.17</slf4j.version>
@@ -105,7 +105,7 @@
 		<guava-collections.version>r03</guava-collections.version>
 		<findbugs.version>3.0.1</findbugs.version>
 		<bcel.version>6.10.0</bcel.version>
-		<caffeine.version>3.2.0</caffeine.version>
+		<caffeine.version>3.2.1</caffeine.version>
 		<json-path.version>2.9.0</json-path.version>
 		<dom4j.version>2.1.4</dom4j.version>
 		<jaxen.version>2.0.0</jaxen.version>
@@ -157,7 +157,7 @@
 		<!-- Testing -->
 		<testng.version>7.11.0</testng.version>
 		<junit.version>4.13.2</junit.version>
-		<junit-jupiter-engine.version>5.13.0</junit-jupiter-engine.version>
+		<junit-jupiter-engine.version>5.13.1</junit-jupiter-engine.version>
 		<testng-engine.version>1.0.6</testng-engine.version>
 		<mockito-core.version>5.18.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
