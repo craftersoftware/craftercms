@@ -73,7 +73,7 @@
 		<!-- Spring -->
 		<spring.version>6.2.8</spring.version>
 		<spring-security.version>6.5.0</spring-security.version>
-		<spring-data-commons.version>3.5.0</spring-data-commons.version>
+		<spring-data-commons.version>3.5.1</spring-data-commons.version>
 		<spring-ldap-core.version>3.3.1</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
@@ -128,7 +128,7 @@
 		<greenmail.version>2.1.3</greenmail.version>
 		<stax2-api.version>4.2.2</stax2-api.version>
 		<joda-time.version>2.14.0</joda-time.version>
-		<hibernate-validator.version>9.0.0.Final</hibernate-validator.version>
+		<hibernate-validator.version>9.0.1.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>2.19.2</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>2.25.0</opensearch-java.version>
