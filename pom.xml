@@ -79,7 +79,7 @@
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
 
 		<!-- Commons -->
-		<commons-lang3.version>3.17.0</commons-lang3.version>
+		<commons-lang3.version>3.18.0</commons-lang3.version>
 		<commons-collections4.version>4.5.0</commons-collections4.version>
 		<commons-codec.version>1.18.0</commons-codec.version>
 		<commons-beanutils.version>1.11.0</commons-beanutils.version>
