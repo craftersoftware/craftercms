@@ -20,7 +20,7 @@ RUN apk update && apk upgrade
 
 # Install dependencies
 RUN apk add --no-cache bash shadow git git-daemon su-exec vim nano \
-    tini fcgiwrap apache2-utils;
+    tini apache2-utils;
 
 # Create folders for crafter user
 RUN mkdir -p /opt/crafter/data; \
