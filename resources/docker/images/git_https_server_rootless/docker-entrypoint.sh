@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2007-2021 Crafter Software Corporation. All Rights Reserved.
+# Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as published by
@@ -39,4 +39,5 @@ if [ ! -f "$PASSWD_FILE_PATH" ]; then
     htpasswd -cb "$PASSWD_FILE_PATH" "$GIT_USERNAME" "$GIT_PASSWORD"
 fi
 
+# Start the Apache server
 exec httpd-foreground
