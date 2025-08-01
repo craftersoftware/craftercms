@@ -87,7 +87,7 @@
 		<commons-cli.version>1.9.0</commons-cli.version>
 		<commons-dbcp2.version>2.13.0</commons-dbcp2.version>
 		<commons-fileupload2-jakarta-servlet6.version>2.0.0-M4</commons-fileupload2-jakarta-servlet6.version>
-		<commons-compress.version>1.27.1</commons-compress.version>
+		<commons-compress.version>1.28.0</commons-compress.version>
 
 		<httpmime.version>4.5.14</httpmime.version>
 		<httpclient5.version>5.5</httpclient5.version>
@@ -160,7 +160,7 @@
 		<testng-engine.version>1.0.6</testng-engine.version>
 		<mockito-core.version>5.18.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
-		<de.flapdoodle.embed.mongo.version>4.20.1</de.flapdoodle.embed.mongo.version>
+		<de.flapdoodle.embed.mongo.version>4.21.0</de.flapdoodle.embed.mongo.version>
 		<hamcrest.version>3.0</hamcrest.version>
 		<xmlunit-core.version>2.10.3</xmlunit-core.version>
 
