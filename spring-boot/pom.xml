@@ -58,7 +58,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.3</version>
+		<version>3.5.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
@@ -72,7 +72,7 @@
 		<handlebars.version>4.4.0</handlebars.version>
 		<script.security.version>${project.version}</script.security.version>
 		<jakarta.json.version>2.0.1</jakarta.json.version>
-		<spring-boot.version>3.5.3</spring-boot.version>
+		<spring-boot.version>3.5.4</spring-boot.version>
 
 		<!-- Override property setup by Spring Boot Parent -->
 		<netty.version>4.1.118.Final</netty.version>
