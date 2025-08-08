@@ -69,7 +69,7 @@
 		<!-- Version Numbers -->
 		<tomcat.version>10.1.41</tomcat.version>
 		<java.version>21</java.version>
-		<handlebars.version>4.4.0</handlebars.version>
+		<handlebars.version>4.5.0</handlebars.version>
 		<script.security.version>${project.version}</script.security.version>
 		<jakarta.json.version>2.0.1</jakarta.json.version>
 		<spring-boot.version>3.5.4</spring-boot.version>
