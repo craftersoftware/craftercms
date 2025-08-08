@@ -133,7 +133,7 @@
 		<opensearch-rest-high-level-client.version>2.19.3</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>2.26.0</opensearch-java.version>
 		<opensearch-runner.version>2.19.1.0</opensearch-runner.version>
-		<tika.version>3.2.1</tika.version>
+		<tika.version>3.2.2</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
 		<jsoup.version>1.21.1</jsoup.version>
