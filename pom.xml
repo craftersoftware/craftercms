@@ -124,8 +124,8 @@
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
 		<mybatis-spring.version>3.0.5</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
-		<mariadb-java-client.version>3.5.4</mariadb-java-client.version>
-		<greenmail.version>2.1.4</greenmail.version>
+		<mariadb-java-client.version>3.5.5</mariadb-java-client.version>
+		<greenmail.version>2.1.5</greenmail.version>
 		<stax2-api.version>4.2.2</stax2-api.version>
 		<joda-time.version>2.14.0</joda-time.version>
 		<hibernate-validator.version>9.0.1.Final</hibernate-validator.version>
