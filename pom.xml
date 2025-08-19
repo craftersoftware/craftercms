@@ -71,10 +71,10 @@
 
 		<!-- Main -->
 		<!-- Spring -->
-		<spring.version>6.2.9</spring.version>
-		<spring-security.version>6.5.2</spring-security.version>
-		<spring-data-commons.version>3.5.2</spring-data-commons.version>
-		<spring-ldap-core.version>3.3.2</spring-ldap-core.version>
+		<spring.version>6.2.10</spring.version>
+		<spring-security.version>6.5.3</spring-security.version>
+		<spring-data-commons.version>3.5.3</spring-data-commons.version>
+		<spring-ldap-core.version>3.3.3</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
 
@@ -137,7 +137,7 @@
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
 		<jsoup.version>1.21.1</jsoup.version>
-		<protobuf-java.version>4.31.1</protobuf-java.version>
+		<protobuf-java.version>4.32.0</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
 		<semver4j.version>3.1.0</semver4j.version>
@@ -158,7 +158,7 @@
 		<junit.version>4.13.2</junit.version>
 		<junit-jupiter-engine.version>5.13.4</junit-jupiter-engine.version>
 		<testng-engine.version>1.0.6</testng-engine.version>
-		<mockito-core.version>5.18.0</mockito-core.version>
+		<mockito-core.version>5.19.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
 		<de.flapdoodle.embed.mongo.version>4.21.0</de.flapdoodle.embed.mongo.version>
 		<hamcrest.version>3.0</hamcrest.version>
@@ -168,7 +168,7 @@
 		<maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
 		<maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
 		<maven-war-plugin.version>3.4.0</maven-war-plugin.version>
-		<maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+		<maven-javadoc-plugin.version>3.11.3</maven-javadoc-plugin.version>
 		<maven-source-plugin.version>3.3.1</maven-source-plugin.version>
 		<maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
 		<maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
