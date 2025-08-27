@@ -136,7 +136,7 @@
 		<tika.version>3.2.2</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
-		<jsoup.version>1.21.1</jsoup.version>
+		<jsoup.version>1.21.2</jsoup.version>
 		<protobuf-java.version>4.32.0</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
