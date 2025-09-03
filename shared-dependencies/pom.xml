@@ -68,12 +68,12 @@
 		<junit-vintage.version>5.13.4</junit-vintage.version>
 
 		<jgit.version>7.3.0.202506031305-r</jgit.version>
-		<snakeyaml.version>2.4</snakeyaml.version>
+		<snakeyaml.version>2.5</snakeyaml.version>
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.16.0</okio.version>
 		<bouncycastle.version>1.81</bouncycastle.version>
-		<jackson.version>2.19.2</jackson.version>
-		<aws.sdk.version>2.32.31</aws.sdk.version>
+		<jackson.version>2.20</jackson.version>
+		<aws.sdk.version>2.33.0</aws.sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.28</groovy.version>
 		<ivy.version>2.5.3</ivy.version>
