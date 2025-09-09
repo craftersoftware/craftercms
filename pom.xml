@@ -60,7 +60,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
-		<tomcat.version>11.0.10</tomcat.version>
+		<tomcat.version>11.0.11</tomcat.version>
 		<java.version>21</java.version>
 		<groovy.version>4.0.28</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
@@ -136,7 +136,7 @@
 		<tika.version>3.2.2</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
-		<jsoup.version>1.21.1</jsoup.version>
+		<jsoup.version>1.21.2</jsoup.version>
 		<protobuf-java.version>4.32.0</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
