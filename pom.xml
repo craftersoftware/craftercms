@@ -72,7 +72,7 @@
 		<!-- Main -->
 		<!-- Spring -->
 		<spring.version>6.2.11</spring.version>
-		<spring-security.version>6.5.4</spring-security.version>
+		<spring-security.version>6.5.5</spring-security.version>
 		<spring-data-commons.version>3.5.4</spring-data-commons.version>
 		<spring-ldap-core.version>3.3.3</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
@@ -101,7 +101,7 @@
 		<jakarta.activation-api.version>2.1.4</jakarta.activation-api.version>
 		<angus-activation.version>2.0.3</angus-activation.version>
 		<jakarta.xml.bind-api.version>4.0.4</jakarta.xml.bind-api.version>
-		<guava.version>33.4.8-jre</guava.version>
+		<guava.version>33.5.0-jre</guava.version>
 		<guava-collections.version>r03</guava-collections.version>
 		<findbugs.version>3.0.1</findbugs.version>
 		<bcel.version>6.10.0</bcel.version>
