@@ -118,7 +118,7 @@
 		<graphql-java-extended-scalars.version>24.0</graphql-java-extended-scalars.version>
 		<smiley-http-proxy-servlet.version>2.0</smiley-http-proxy-servlet.version>
 		<tinify.version>1.8.8</tinify.version>
-		<mariadb4j.version>3.1.0.4</mariadb4j.version>
+		<mariadb4j.version>3.1.0.5</mariadb4j.version>
 		<Saxon-HE.version>12.8</Saxon-HE.version>
 		<cxf-rt.version>4.1.3</cxf-rt.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
