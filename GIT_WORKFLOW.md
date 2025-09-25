@@ -12,10 +12,12 @@ There's also long-running branches for every supported version of CrafterCMS:
 
 * `support/{VERSION}`
 
+For example, CrafterCMS has a long-running branch for version 4.x, called `support/4.x`
+
 There are several other branches that are created and deleted over time, these include:
 
 * feature/bug branches: branches created to develop a features, perform a task or fix a bug as part of regular development
-* hotfix branches: branches created to deal with a critical bug that must be fixed in `support/{VERSION}` quickly and can't wait for the next release
+* hotfix branches: branches created to deal with a critical bug
 * release branches: branches created to prepare for a release, these are branched off `develop` and have 0 new feature additions, only bug fixes/hotfixes while the branch is tested and stabilized. Once stable, these are merged to `support/{VERSION}` for release and to `develop` to keep that updated.
 
 A good video illustrating the flow is here: https://vimeo.com/16018419
@@ -41,6 +43,8 @@ gitflow.prefix.hotfix=hotfix/
 gitflow.prefix.support=support/
 gitflow.prefix.versiontag=v
 ```
+
+Note that CrafterCMS does not use the `master` branch and instead just uses the develop and support branches.
 
 ## Workflow
 
