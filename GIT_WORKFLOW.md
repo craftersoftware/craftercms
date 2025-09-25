@@ -85,7 +85,7 @@ Fixing a bug is identical to working on a feature except it uses a different git
 
 ### Hotfixes and Urgent Updates
 
-Unlike features/bugfixes, hotfixes are urgent and must be applied to `support/{VERSION}` and `develop` simultaneously. The workflow for hotfixes is identical to feature except it uses a different git flow commands `git flow hotfix start {TICKET}` and `git flow hotfix finish {TICKET}`. Git flow will make sure the hotfix is merged to `support/{VERSION}` and `develop` and that `support/{VERSION}` is tagged indicating a release with that hotfix.
+Unlike features/bugfixes, hotfixes are urgent and must be applied to `master` and `develop` simultaneously. The workflow for hotfixes is identical to feature except it uses a different git flow commands `git flow hotfix start {TICKET}` and `git flow hotfix finish {TICKET}`. Git flow will make sure the hotfix is merged to `master` and `develop` and that `master` is tagged indicating a release with that hotfix.
 
 ### Release Management
 
