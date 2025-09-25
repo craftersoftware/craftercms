@@ -4,20 +4,19 @@ CrafterCMS uses a Git workflow that's based on Gitflow: http://nvie.com/posts/a-
 
 ## High-level
 
-For every CrafterCMS repository, there are two main long-running branches:
+For every CrafterCMS repository, there's a long-running branch:
 
 * `develop`: this is where development activities happen, and this branch is not meant to be stable
-* `master`: this is stable and deployable
 
-There are long-running branches for every supported version of CrafterCMS:
+There's also long-running branches for every supported version of CrafterCMS:
 
-* support/v{VERSION}
+* `support/{VERSION}`
 
 There are several other branches that are created and deleted over time, these include:
 
 * feature/bug branches: branches created to develop a features, perform a task or fix a bug as part of regular development
-* hotfix branches: branches created to deal with a critical bug that must be fixed in `master` quickly and can't wait for the next release
-* release branches: branches created to prepare for a release, these are branched off `develop` and have 0 new feature additions, only bug fixes/hotfixes while the branch is tested and stabilized. Once stable, these are merged to `master` for release and to `develop` to keep that updated.
+* hotfix branches: branches created to deal with a critical bug that must be fixed in `support/{VERSION}` quickly and can't wait for the next release
+* release branches: branches created to prepare for a release, these are branched off `develop` and have 0 new feature additions, only bug fixes/hotfixes while the branch is tested and stabilized. Once stable, these are merged to `support/{VERSION}` for release and to `develop` to keep that updated.
 
 A good video illustrating the flow is here: https://vimeo.com/16018419
 
@@ -69,7 +68,7 @@ Note the command `git flow feature rebase` before finishing the feature. This en
 
 With the feature published to your remote git repo, you can send pull-requests (PRs) to `develop` or other branches as required.
 
-With the PR in, you now wait for the codereview process to complete and your PR to be accepted. Once accepted, you can now finish the feature using git flow which deletes the local branch after merging to `develop` and then push upstream.
+With the PR in, you now wait for the code review process to complete and your PR to be accepted. Once accepted, you can now finish the feature using git flow which deletes the local branch after merging to `develop` and then push upstream.
 
 ```
 git flow feature finish {TICKET}
@@ -82,7 +81,7 @@ Fixing a bug is identical to working on a feature except it uses a different git
 
 ### Hotfixes and Urgent Updates
 
-Unlike features/bugfixes, hotfixes are urgent and must be applied to `master` and `develop` simultaneously. The workflow for hotfixes is identical to feature except it uses a different git flow commands `git flow hotfix start {TICKET}` and `git flow hotfix finish {TICKET}`. Git flow will make sure the hotfix is merged to `master` and `develop` and that `master` is tagged indicating a release with that hotfix.
+Unlike features/bugfixes, hotfixes are urgent and must be applied to `support/{VERSION}` and `develop` simultaneously. The workflow for hotfixes is identical to feature except it uses a different git flow commands `git flow hotfix start {TICKET}` and `git flow hotfix finish {TICKET}`. Git flow will make sure the hotfix is merged to `support/{VERSION}` and `develop` and that `support/{VERSION}` is tagged indicating a release with that hotfix.
 
 ### Release Management
 
@@ -102,6 +101,6 @@ Where:
 * Y is the minor release number
 * Z is the patch release number
 
-Releases are automatically merged with `master` and tagged as `v{X.Y.Z}` and then with `develop`.
+Releases are automatically merged with `support/{VERSION}` and tagged as `v{X.Y.Z}` and then with `develop`.
 
 Bugfixes that are relevant to the release must be merged into the release by hand as needed.
