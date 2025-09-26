@@ -18,7 +18,7 @@ There are several other branches that are created and deleted over time, these i
 
 * feature/bug branches: branches created to develop a features, perform a task or fix a bug as part of regular development
 * hotfix branches: branches created to deal with a critical bug
-* release branches: branches created to prepare for a release, these are branched off `develop` and have 0 new feature additions, only bug fixes/hotfixes while the branch is tested and stabilized. Once stable, these are merged to `support/{VERSION}` for release and to `develop` to keep that updated.
+* release branches: branches created to prepare for a release
 
 A good video illustrating the flow is here: https://vimeo.com/16018419
 
