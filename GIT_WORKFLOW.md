@@ -35,7 +35,6 @@ In addition, consider using:
 GitFlow is configured as follows:
 
 ```
-gitflow.branch.master=master
 gitflow.branch.develop=develop
 gitflow.prefix.feature=feature/
 gitflow.prefix.release=release/
