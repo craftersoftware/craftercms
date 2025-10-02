@@ -36,7 +36,7 @@ Let's begin :)
 If you're building deployable CrafterCMS binaries, we'll clone the tag where the tag is the release you want to build. For example, if we want to build CrafterCMS version 4.4.4, we'll check the [CrafterCMS tags list](https://github.com/craftercms/craftercms/tags) to get the tag for the version we want, which is `v4.4.4` for our example:
 
 ```bash
-git clone --depth 1 --branch v4.4.4 https://github.com/craftercms/craftercms.git
+git clone --branch v4.4.4 https://github.com/craftercms/craftercms.git
 ```
 
 OR
@@ -44,7 +44,7 @@ OR
 If you would like to contribute to CrafterCMS, to build a developer's environment, we'll need to clone the develop branch (default):
 
 ```bash
-git clone -b develop https://github.com/craftercms/craftercms.git
+git clone https://github.com/craftercms/craftercms.git
 ```
 
 For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git Workflow](https://github.com/craftercms/craftercms/blob/develop/GIT_WORKFLOW.md).
