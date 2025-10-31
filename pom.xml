@@ -130,9 +130,9 @@
 		<joda-time.version>2.14.0</joda-time.version>
 		<hibernate-validator.version>9.0.1.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
-		<opensearch-rest-high-level-client.version>2.19.3</opensearch-rest-high-level-client.version>
-		<opensearch-java.version>2.26.0</opensearch-java.version>
-		<opensearch-runner.version>2.19.1.0</opensearch-runner.version>
+		<opensearch-rest-high-level-client.version>3.3.2</opensearch-rest-high-level-client.version>
+		<opensearch-java.version>3.3.0</opensearch-java.version>
+		<opensearch-runner.version>3.3.2.0</opensearch-runner.version>
 		<tika.version>3.2.2</tika.version>
 		<poi-scratchpad.version>5.4.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
