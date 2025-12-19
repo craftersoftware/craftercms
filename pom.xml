@@ -62,7 +62,7 @@
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
 		<tomcat.version>11.0.11</tomcat.version>
 		<java.version>21</java.version>
-		<groovy.version>4.0.28</groovy.version>
+		<groovy.version>4.0.29</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
 		<jakarta.servlet.jsp-api.version>4.0.0</jakarta.servlet.jsp-api.version>
 		<jakarta.servlet.jsp.jstl-api.version>3.0.2</jakarta.servlet.jsp.jstl-api.version>
@@ -79,11 +79,11 @@
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
 
 		<!-- Commons -->
-		<commons-lang3.version>3.18.0</commons-lang3.version>
+		<commons-lang3.version>3.20.0</commons-lang3.version>
 		<commons-collections4.version>4.5.0</commons-collections4.version>
 		<commons-codec.version>1.19.0</commons-codec.version>
 		<commons-beanutils.version>1.11.0</commons-beanutils.version>
-		<commons-text.version>1.14.0</commons-text.version>
+		<commons-text.version>1.15.0</commons-text.version>
 		<commons-cli.version>1.10.0</commons-cli.version>
 		<commons-dbcp2.version>2.13.0</commons-dbcp2.version>
 		<commons-fileupload2-jakarta-servlet6.version>2.0.0-M4</commons-fileupload2-jakarta-servlet6.version>
