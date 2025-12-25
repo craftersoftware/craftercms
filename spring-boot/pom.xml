@@ -75,7 +75,7 @@
 		<spring-boot.version>3.5.9</spring-boot.version>
 
 		<!-- Override property setup by Spring Boot Parent -->
-		<netty.version>4.1.126.Final</netty.version>
+		<netty.version>4.2.9.Final</netty.version>
 
 		<!-- Testing -->
 
