@@ -65,7 +65,7 @@
 		<log4j2.version>2.25.3</log4j2.version>
 		<angus-mail.version>2.0.5</angus-mail.version>
 		<jakarta-mail-api.version>2.1.5</jakarta-mail-api.version>
-		<junit-vintage.version>5.13.4</junit-vintage.version>
+		<junit-vintage.version>6.0.1</junit-vintage.version>
 
 		<jgit.version>7.5.0.202512021534-r</jgit.version>
 		<snakeyaml.version>2.5</snakeyaml.version>
