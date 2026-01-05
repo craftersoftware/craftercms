@@ -76,6 +76,7 @@
 
 		<!-- Override property setup by Spring Boot Parent -->
 		<netty.version>4.2.9.Final</netty.version>
+		<httpclient5.version>5.6</httpclient5.version>
 
 		<!-- Testing -->
 
