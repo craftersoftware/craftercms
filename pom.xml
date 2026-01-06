@@ -136,7 +136,7 @@
 		<tika.version>3.2.3</tika.version>
 		<poi-scratchpad.version>5.5.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.19.0</metadata-extractor.version>
-		<jsoup.version>1.21.2</jsoup.version>
+		<jsoup.version>1.22.1</jsoup.version>
 		<protobuf-java.version>4.33.2</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
@@ -151,7 +151,7 @@
 		<okhttp.version>5.3.2</okhttp.version>
 		<zxcvbn.version>1.9.0</zxcvbn.version>
 		<esapi.version>2.7.0.0</esapi.version>
-		<owasp-java-html-sanitizer.version>20240325.1</owasp-java-html-sanitizer.version>
+		<owasp-java-html-sanitizer.version>20260102.1</owasp-java-html-sanitizer.version>
 		<directory-watcher.version>0.19.1</directory-watcher.version>
 
 		<!-- Testing -->
