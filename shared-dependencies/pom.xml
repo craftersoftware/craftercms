@@ -72,8 +72,8 @@
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.16.4</okio.version>
 		<bouncycastle.version>1.83</bouncycastle.version>
-		<jackson.version>2.20.1</jackson.version>
-		<jackson-annotations.version>2.20</jackson-annotations.version>
+		<jackson.version>2.21.0</jackson.version>
+		<jackson-annotations.version>2.21</jackson-annotations.version>
 		<aws.sdk.version>2.40.14</aws.sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.29</groovy.version>
