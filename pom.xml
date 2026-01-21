@@ -73,7 +73,7 @@
 		<!-- Spring -->
 		<spring.version>6.2.15</spring.version>
 		<spring-security.version>6.5.7</spring-security.version>
-		<spring-data-commons.version>3.5.7</spring-data-commons.version>
+		<spring-data-commons.version>3.5.8</spring-data-commons.version>
 		<spring-ldap-core.version>3.3.5</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
@@ -118,7 +118,7 @@
 		<graphql-java-extended-scalars.version>24.0</graphql-java-extended-scalars.version>
 		<smiley-http-proxy-servlet.version>2.0</smiley-http-proxy-servlet.version>
 		<tinify.version>1.8.8</tinify.version>
-		<mariadb4j.version>3.3.0.1</mariadb4j.version>
+		<mariadb4j.version>3.3.0.2</mariadb4j.version>
 		<Saxon-HE.version>12.9</Saxon-HE.version>
 		<cxf-rt.version>4.1.4</cxf-rt.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
@@ -173,7 +173,7 @@
 		<maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
 		<maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
 		<maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
-		<buildnumber-maven-plugin.version>3.2.1</buildnumber-maven-plugin.version>
+		<buildnumber-maven-plugin.version>3.3.0</buildnumber-maven-plugin.version>
 		<maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 		<maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
