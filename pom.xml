@@ -73,7 +73,7 @@
 		<!-- Spring -->
 		<spring.version>6.2.15</spring.version>
 		<spring-security.version>6.5.7</spring-security.version>
-		<spring-data-commons.version>3.5.7</spring-data-commons.version>
+		<spring-data-commons.version>3.5.8</spring-data-commons.version>
 		<spring-ldap-core.version>3.3.5</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
@@ -104,7 +104,7 @@
 		<guava.version>33.5.0-jre</guava.version>
 		<guava-collections.version>r03</guava-collections.version>
 		<findbugs.version>3.0.1</findbugs.version>
-		<bcel.version>6.11.0</bcel.version>
+		<bcel.version>6.12.0</bcel.version>
 		<caffeine.version>3.2.3</caffeine.version>
 		<json-path.version>2.10.0</json-path.version>
 		<dom4j.version>2.2.0</dom4j.version>
@@ -154,13 +154,13 @@
 		<directory-watcher.version>0.19.1</directory-watcher.version>
 
 		<!-- Testing -->
-		<testng.version>7.11.0</testng.version>
+		<testng.version>7.12.0</testng.version>
 		<junit.version>4.13.2</junit.version>
 		<junit-jupiter-engine.version>5.14.2</junit-jupiter-engine.version>
 		<testng-engine.version>1.1.0</testng-engine.version>
 		<mockito-core.version>5.21.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
-		<de.flapdoodle.embed.mongo.version>4.23.0</de.flapdoodle.embed.mongo.version>
+		<de.flapdoodle.embed.mongo.version>4.24.0</de.flapdoodle.embed.mongo.version>
 		<hamcrest.version>3.0</hamcrest.version>
 		<xmlunit-core.version>2.11.0</xmlunit-core.version>
 
@@ -173,12 +173,12 @@
 		<maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
 		<maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
 		<maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
-		<buildnumber-maven-plugin.version>3.2.1</buildnumber-maven-plugin.version>
+		<buildnumber-maven-plugin.version>3.3.0</buildnumber-maven-plugin.version>
 		<maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 		<maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
-		<gmavenplus-plugin.version>4.2.1</gmavenplus-plugin.version>
+		<gmavenplus-plugin.version>4.3.0</gmavenplus-plugin.version>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
 		<maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
 		<frontend-maven-plugin.version>2.0.0</frontend-maven-plugin.version>
