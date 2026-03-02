@@ -65,18 +65,18 @@
 		<log4j2.version>2.25.3</log4j2.version>
 		<angus-mail.version>2.0.5</angus-mail.version>
 		<jakarta-mail-api.version>2.1.5</jakarta-mail-api.version>
-		<junit-vintage.version>5.14.2</junit-vintage.version>
+		<junit-vintage.version>5.14.3</junit-vintage.version>
 
 		<jgit.version>7.5.0.202512021534-r</jgit.version>
-		<snakeyaml.version>2.5</snakeyaml.version>
+		<snakeyaml.version>2.6</snakeyaml.version>
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.16.4</okio.version>
 		<bouncycastle.version>1.83</bouncycastle.version>
-		<jackson.version>2.20.1</jackson.version>
-		<jackson-annotations.version>2.20</jackson-annotations.version>
+		<jackson.version>2.21.1</jackson.version>
+		<jackson-annotations.version>2.21</jackson-annotations.version>
 		<aws.sdk.version>2.40.14</aws.sdk.version>
 		<jose4j.version>0.9.6</jose4j.version>
-		<groovy.version>4.0.29</groovy.version>
+		<groovy.version>4.0.30</groovy.version>
 		<ivy.version>2.5.3</ivy.version>
 		<quartz.version>2.5.2</quartz.version>
 
