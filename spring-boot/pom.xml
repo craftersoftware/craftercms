@@ -58,7 +58,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.9</version>
+		<version>3.5.11</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
@@ -72,7 +72,7 @@
 		<handlebars.version>4.5.0</handlebars.version>
 		<script.security.version>${project.version}</script.security.version>
 		<jakarta.json.version>2.0.1</jakarta.json.version>
-		<spring-boot.version>3.5.9</spring-boot.version>
+		<spring-boot.version>3.5.11</spring-boot.version>
 
 		<!-- Override property setup by Spring Boot Parent -->
 		<netty.version>4.2.9.Final</netty.version>
@@ -85,7 +85,7 @@
 		<maven-source-plugin.version>3.4.0</maven-source-plugin.version>
 		<maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
 		<maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
-		<buildnumber-maven-plugin.version>3.2.1</buildnumber-maven-plugin.version>
+		<buildnumber-maven-plugin.version>3.3.0</buildnumber-maven-plugin.version>
 		<central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
 	</properties>
