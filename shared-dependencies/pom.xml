@@ -72,7 +72,7 @@
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.16.4</okio.version>
 		<bouncycastle.version>1.83</bouncycastle.version>
-		<jackson.version>2.20.1</jackson.version>
+		<jackson.version>2.21.2</jackson.version>
 		<jackson-annotations.version>2.20</jackson-annotations.version>
 		<aws.sdk.version>2.42.30</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
