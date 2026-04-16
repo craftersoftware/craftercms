@@ -77,7 +77,7 @@
 		<aws.sdk.version>2.42.30</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
-		<groovy.version>5.0.3</groovy.version>
+		<groovy.version>5.0.5</groovy.version>
 		<ivy.version>2.5.3</ivy.version>
 		<quartz.version>2.5.2</quartz.version>
 
