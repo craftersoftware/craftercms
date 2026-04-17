@@ -62,7 +62,7 @@
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
 		<tomcat.version>11.0.21</tomcat.version>
 		<java.version>21</java.version>
-		<groovy.version>4.0.29</groovy.version>
+		<groovy.version>4.0.31</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
 		<jakarta.servlet.jsp-api.version>4.0.0</jakarta.servlet.jsp-api.version>
 		<jakarta.servlet.jsp.jstl-api.version>3.0.2</jakarta.servlet.jsp.jstl-api.version>
