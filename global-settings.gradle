@@ -19,7 +19,7 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath group: 'org.apache.commons', name: 'commons-lang3', version: project.property('commons-lang3.version')
+		classpath "org.apache.commons:commons-lang3:${project.property('commons-lang3.version')}"
 	}
 }
 

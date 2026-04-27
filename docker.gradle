@@ -24,7 +24,7 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath group: 'commons-io', name: 'commons-io', version: project.property('commons-io.version')
+		classpath "commons-io:commons-io:${project.property('commons-io.version')}"
 	}
 }
 
