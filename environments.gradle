@@ -19,8 +19,8 @@ buildscript {
         mavenCentral()
 	}
 	dependencies {
-        classpath group: 'org.ajoberstar.grgit', name: 'org.ajoberstar.grgit.gradle.plugin', version: project.property("grgit.version")
-    }
+		classpath "org.ajoberstar.grgit:org.ajoberstar.grgit.gradle.plugin:${project.property('grgit.version')}"
+	}
 }
 
 import org.apache.tools.ant.filters.ReplaceTokens

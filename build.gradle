@@ -33,14 +33,14 @@ apply from: "run.gradle"
 apply from: "docker.gradle"
 
 task splash() {
-	description 'Displays splash screen'
+	description = 'Displays splash screen'
 	doFirst {
 		splash()
 	}
 }
 
 task preFlightCheck() {
-	description 'Checks dependencies'
+	description = 'Checks dependencies'
 	dependsOn = ["splash"]
 	doFirst {
 		if (JavaVersion.current() != JavaVersion.VERSION_21) {
@@ -60,7 +60,7 @@ task preFlightCheck() {
 }
 
 task download() {
-	description 'Downloads dependencies if required.'
+	description = 'Downloads dependencies if required.'
 	dependsOn = ["preFlightCheck"]
 	doFirst {
 		def performDownload = true
@@ -88,7 +88,7 @@ task download() {
 }
 
 task clone() {
-	description 'Clones the modules if required.'
+	description = 'Clones the modules if required.'
 	dependsOn = ["preFlightCheck"]
 	doFirst {
 		getAllModules().each { module ->
@@ -98,7 +98,7 @@ task clone() {
 }
 
 task selfUpdate() {
-	description 'Updates the CrafterCMS parent project.'
+	description = 'Updates the CrafterCMS parent project.'
 	dependsOn = ["clone"]
 	doFirst {
 		execCommand(["git", "pull", gitRemote, gitBranch], "${projectDir}")
@@ -106,7 +106,7 @@ task selfUpdate() {
 }
 
 task update() {
-	description 'Updates the modules.'
+	description = 'Updates the modules.'
 	dependsOn = ["clone"]
 	doFirst {
 		getAllModules().each { module ->
@@ -118,7 +118,7 @@ task update() {
 }
 
 clean() {
-	description 'Cleans the modules.'
+	description = 'Cleans the modules.'
 	mustRunAfter update
 	dependsOn = ["clone", "installPomFiles"]
 	doFirst {
@@ -131,7 +131,7 @@ clean() {
 }
 
 task installPomFiles() {
-	description 'Installs the main POMs.'
+	description = 'Installs the main POMs.'
 	mustRunAfter selfUpdate
 	dependsOn = ["preFlightCheck"]
 	doFirst {
@@ -141,7 +141,7 @@ task installPomFiles() {
 }
 
 build() {
-	description 'Builds the modules and prepares the binaries for deployment.'
+	description = 'Builds the modules and prepares the binaries for deployment.'
 	mustRunAfter clean
 	dependsOn = ["clone", "installPomFiles"]
 	doFirst {
@@ -154,7 +154,7 @@ build() {
 }
 
 task deployToMaven() {
-	description 'Deploys the modules to Maven Central.'
+	description = 'Deploys the modules to Maven Central.'
 	dependsOn = ["clone", "installPomFiles"]
 	doFirst {
 		getDeployToMavenModules().each { module ->
@@ -166,7 +166,7 @@ task deployToMaven() {
 }
 
 task buildBaseEnvs() {
-	description 'Build base target environments.'
+	description = 'Build base target environments.'
 	dependsOn = ["clone", "download"]
 	doFirst {
 		getEnvironments().each { environment ->
@@ -178,7 +178,7 @@ task buildBaseEnvs() {
 }
 
 task buildBom() {
-	description 'Builds the Software Bill of Materials (BOM).'
+	description = 'Builds the Software Bill of Materials (BOM).'
 	dependsOn = ["clone", "installPomFiles"]
 	doFirst {
 		println "Build the Software Bill of Materials (BOM)"
@@ -194,7 +194,7 @@ task buildBom() {
 }
 
 task deploy() {
-	description 'Deploys the module artifacts prepares the authoring/delivery environments.'
+	description = 'Deploys the module artifacts prepares the authoring/delivery environments.'
 	mustRunAfter build
 	dependsOn = ["buildBaseEnvs"]
 	doFirst {
@@ -206,12 +206,12 @@ task deploy() {
 }
 
 task upgrade() {
-	description 'Upgrades all modules and redeploys them'
+	description = 'Upgrades all modules and redeploys them'
 	dependsOn = ["installPomFiles", "update", "clean", "build", "deploy"]
 }
 
 task start() {
-	description 'Starts CrafterCMS'
+	description = 'Starts CrafterCMS'
 	doFirst {
 		getEnvironments().each { environment ->
 			println "Starting $environment"
@@ -227,7 +227,7 @@ task start() {
 }
 
 task stop() {
-	description 'Stops CrafterCMS'
+	description = 'Stops CrafterCMS'
 	doFirst {
 		getEnvironments().each { environment ->
 			println "Stopping $environment"
@@ -243,7 +243,7 @@ task stop() {
 }
 
 task status() {
-	description 'Reports CrafterCMS status'
+	description = 'Reports CrafterCMS status'
 	doFirst {
 		getEnvironments().each { environment ->
 			def command = [statusCommand]
@@ -257,7 +257,7 @@ task status() {
 }
 
 task bundle() {
-	description 'Bundles the authoring/delivery environments into tarballs for distribution.'
+	description = 'Bundles the authoring/delivery environments into tarballs for distribution.'
 	dependsOn = ["deploy"]
 	doFirst {
 		getEnvironments().each { environment ->

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,6 +15,7 @@
  */
 
 import org.apache.commons.io.FilenameUtils
+import javax.inject.Inject
 
 apply from: "commons.gradle"
 
@@ -23,8 +24,13 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath group: 'commons-io', name: 'commons-io', version: project.property('commons-io.version')
+		classpath "commons-io:commons-io:${project.property('commons-io.version')}"
 	}
+}
+
+interface InjectedExecOps {
+	@Inject
+	ExecOperations getExecOps()
 }
 
 if (!dockerTag.isEmpty()) {
@@ -121,17 +127,18 @@ ext {
 }
 
 ext.pushTagDockerImage = { dockerImage ->
+	def injected = project.objects.newInstance(InjectedExecOps)
 	if (pushDockerImages) {
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'push', dockerImage + ":${project.version}"
 		}
 	}
 
 	if (!tagDockerImages.isEmpty()) {
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'image', 'tag', dockerImage + ":${project.version}", dockerImage + ":" + tagDockerImages
 		}
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'push', dockerImage + ":" + tagDockerImages
 		}
 	}
@@ -246,10 +253,12 @@ task copyDeliveryCustomWebapps() {
 	}
 }
 
-task buildAuthoringTomcat(group: "Build", description: "Builds the Authoring Tomcat Docker image") {
+tasks.register('buildAuthoringTomcat') {
+	group = "Build"
+	description = "Builds the Authoring Tomcat Docker image"
 	dependsOn prepareAuthoringBundle
 	dependsOn copyAuthoringCustomWebapps
-
+	def injected = project.objects.newInstance(InjectedExecOps)
 	def imageBuildDir = "${imagesBuildDir}/authoring/tomcat"
 
 	doFirst {
@@ -269,7 +278,7 @@ task buildAuthoringTomcat(group: "Build", description: "Builds the Authoring Tom
 			exclude defaultTomcatBinExcludes
 		}
 
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '--target', authoringBuildTarget, '-t', "${project.authoringTomcatImageName}:${project.version}", imageBuildDir
 		}
 
@@ -277,10 +286,12 @@ task buildAuthoringTomcat(group: "Build", description: "Builds the Authoring Tom
 	}
 }
 
-task buildAuthoringLocal(group: "Build", description: "Builds the Authoring Tomcat Docker Local image") {
+tasks.register('buildAuthoringLocal') {
+	group = 'Build'
+	description = 'Builds the Authoring Tomcat Docker Local image'
 	dependsOn prepareAuthoringBundle
 	dependsOn copyAuthoringCustomWebapps
-
+	def injected = project.objects.newInstance(InjectedExecOps)
 	def imageBuildDir = "${imagesBuildDir}/authoring_local/tomcat"
 
 	doFirst {
@@ -300,7 +311,7 @@ task buildAuthoringLocal(group: "Build", description: "Builds the Authoring Tomc
 			exclude defaultTomcatLocalBinExcludes
 		}
 
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '--target', authoringBuildTarget, '-t', "${project.authoringLocalImageName}:${project.version}", imageBuildDir
 		}
 
@@ -308,13 +319,15 @@ task buildAuthoringLocal(group: "Build", description: "Builds the Authoring Tomc
 	}
 }
 
-task buildAuthoringTomcatWithImageMagick(group: "Build", description: "Builds the Authoring Tomcat Docker image, including the ImageMagick binary") {
+tasks.register('buildAuthoringTomcatWithImageMagick') {
+	group = 'Build'
+	description = 'Builds the Authoring Tomcat Docker image, including the ImageMagick binary'
 	dependsOn buildAuthoringTomcat
-
+	def injected = project.objects.newInstance(InjectedExecOps)
 	def imageBuildDir = "${imagesBuildDir}/authoring/tomcat"
 
 	doLast {
-		exec {
+		injected.execOps.exec {
 			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '--target', 'imagemagick', '-t', "${project.authoringTomcatWithImageMagickImageName}:${project.version}", imageBuildDir
 		}
 
@@ -322,191 +335,212 @@ task buildAuthoringTomcatWithImageMagick(group: "Build", description: "Builds th
 	}
 }
 
-task buildDeliveryTomcat(group: "Build", description: "Builds the Delivery Tomcat Docker image") {
-	dependsOn prepareDeliveryBundle
-	dependsOn copyDeliveryCustomWebapps
+tasks.register('buildDeliveryTomcat') {
+    group = "Build"
+    description = "Builds the Delivery Tomcat Docker image"
+    dependsOn prepareDeliveryBundle
+    dependsOn copyDeliveryCustomWebapps
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/delivery/tomcat"
 
-	def imageBuildDir = "${imagesBuildDir}/delivery/tomcat"
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            from "${imagesDir}/delivery/tomcat/"
+            into imageBuildDir
+        }
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			from "${imagesDir}/delivery/tomcat/"
-			into imageBuildDir
-		}
+        updateDockerfileUser("${imageBuildDir}/Dockerfile")
 
-		updateDockerfileUser("${imageBuildDir}/Dockerfile")
+        copy {
+            from "${deliveryBundleRoot}/bin/"
+            into "${imageBuildDir}/bin"
+            exclude defaultTomcatBinExcludes
+        }
 
-		copy {
-			from "${deliveryBundleRoot}/bin/"
-			into "${imageBuildDir}/bin"
-			exclude defaultTomcatBinExcludes
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.deliveryTomcatImageName}:${project.version}", imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.deliveryTomcatImageName}:${project.version}", imageBuildDir
-		}
-
-		pushTagDockerImage(project.deliveryTomcatImageName)
-	}
+        pushTagDockerImage(project.deliveryTomcatImageName)
+    }
 }
 
-task buildDeployer(group: "Build", description: "Builds the Deployer Docker image") {
-	dependsOn prepareDeliveryBundle
+tasks.register('buildDeployer') {
+    group = "Build"
+    description = "Builds the Deployer Docker image"
+    dependsOn prepareDeliveryBundle
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/deployer"
 
-	def imageBuildDir = "${imagesBuildDir}/deployer"
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            from "${imagesDir}/deployer/"
+            into imageBuildDir
+        }
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			from "${imagesDir}/deployer/"
-			into imageBuildDir
-		}
+        updateDockerfileUser("${imageBuildDir}/Dockerfile")
 
-		updateDockerfileUser("${imageBuildDir}/Dockerfile")
+        copy {
+            from "${deliveryBundleRoot}/bin/"
+            into "${imageBuildDir}/bin"
+            exclude "migration"
+            exclude "upgrade"
+            exclude "cli"
+            exclude "mongodb"
+            exclude "crafter-cli"
+            exclude "apache-tomcat"
+            exclude "opensearch"
+            exclude "**/*.pid"
+        }
 
-		copy {
-			from "${deliveryBundleRoot}/bin/"
-			into "${imageBuildDir}/bin"
-			exclude "migration"
-			exclude "upgrade"
-			exclude "cli"
-			exclude "mongodb"
-			exclude "crafter-cli"
-			exclude "apache-tomcat"
-			exclude "opensearch"
-			exclude "**/*.pid"
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.deployerImageName}:${project.version}", imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.deployerImageName}:${project.version}", imageBuildDir
-		}
-
-		pushTagDockerImage(project.deployerImageName)
-	}
+        pushTagDockerImage(project.deployerImageName)
+    }
 }
 
-task buildProfile(group: "Build", description: "Builds the Profile Docker image") {
-	dependsOn buildDeliveryTomcat
+tasks.register('buildProfile') {
+    group = "Build"
+    description = "Builds the Profile Docker image"
+    dependsOn buildDeliveryTomcat
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/profile"
 
-	def imageBuildDir = "${imagesBuildDir}/profile"
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            duplicatesStrategy = 'include'
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			duplicatesStrategy = 'include'
+            from "${imagesBuildDir}/delivery/tomcat/"
+            from "${imagesDir}/profile/"
+            into imageBuildDir
+        }
 
-			from "${imagesBuildDir}/delivery/tomcat/"
-			from "${imagesDir}/profile/"
-			into imageBuildDir
-		}
+        updateDockerfileUser("${imageBuildDir}/Dockerfile")
 
-		updateDockerfileUser("${imageBuildDir}/Dockerfile")
+        copy {
+            from "${deliveryBundleRoot}/bin/apache-tomcat/webapps/crafter-profile.war"
+            from "${deliveryBundleRoot}/bin/apache-tomcat/webapps/crafter-profile-admin.war"
+            into "${imageBuildDir}/bin/apache-tomcat/webapps"
+        }
 
-		copy {
-			from "${deliveryBundleRoot}/bin/apache-tomcat/webapps/crafter-profile.war"
-			from "${deliveryBundleRoot}/bin/apache-tomcat/webapps/crafter-profile-admin.war"
-			into "${imageBuildDir}/bin/apache-tomcat/webapps"
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.profileImageName}:${project.version}", imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.profileImageName}:${project.version}", imageBuildDir
-		}
-
-		pushTagDockerImage(project.profileImageName)
-	}
+        pushTagDockerImage(project.profileImageName)
+    }
 }
 
-task buildGitSshServer(group: "Build", description: "Builds the Git SSH Server Docker image") {
-	def imageBuildDir = "${imagesBuildDir}/git_ssh_server"
+tasks.register('buildGitSshServer') {
+    group = "Build"
+    description = "Builds the Git SSH Server Docker image"
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/git_ssh_server"
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			from "${imagesDir}/git_ssh_server${rootlessDockerImages ? '_rootless' : ''}/"
-			into imageBuildDir
-		}
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            from "${imagesDir}/git_ssh_server${rootlessDockerImages ? '_rootless' : ''}/"
+            into imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.gitSshServerImageName }:${project.version}", imageBuildDir
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.gitSshServerImageName}:${project.version}", imageBuildDir
+        }
 
-		pushTagDockerImage(project.gitSshServerImageName)
-	}
+        pushTagDockerImage(project.gitSshServerImageName)
+    }
 }
 
-task buildGitHttpsServer(group: "Build", description: "Builds the Git HTTPS Server Docker image") {
-	def imageBuildDir = "${imagesBuildDir}/git_https_server"
+tasks.register('buildGitHttpsServer') {
+    group = "Build"
+    description = "Builds the Git HTTPS Server Docker image"
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/git_https_server"
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			from "${imagesDir}/git_https_server${rootlessDockerImages ? '_rootless' : ''}/"
-			into imageBuildDir
-		}
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            from "${imagesDir}/git_https_server${rootlessDockerImages ? '_rootless' : ''}/"
+            into imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.gitHttpsServerImageName}:${project.version}", imageBuildDir
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.gitHttpsServerImageName}:${project.version}", imageBuildDir
+        }
 
-		pushTagDockerImage(project.gitHttpsServerImageName)
-	}
+        pushTagDockerImage(project.gitHttpsServerImageName)
+    }
 }
 
-task buildLogrotate(group: "Build", description: "Builds the Logrotate Docker image") {
-	def imageBuildDir = "${imagesBuildDir}/logrotate"
+tasks.register('buildLogrotate') {
+    group = "Build"
+    description = "Builds the Logrotate Docker image"
+	def injected = project.objects.newInstance(InjectedExecOps)
+    def imageBuildDir = "${imagesBuildDir}/logrotate"
 
-	doFirst {
-		delete imageBuildDir
-	}
-	doLast {
-		copy {
-			from "${imagesDir}/logrotate${rootlessDockerImages ? '_rootless' : ''}/"
-			into imageBuildDir
-		}
+    doFirst {
+        delete imageBuildDir
+    }
+    doLast {
+        copy {
+            from "${imagesDir}/logrotate${rootlessDockerImages ? '_rootless' : ''}/"
+            into imageBuildDir
+        }
 
-		exec {
-			commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.logrotateImageName}:${project.version}", imageBuildDir
-		}
+		injected.execOps.exec {
+            commandLine 'docker', 'buildx', 'build', '--sbom=true', '--provenance=true', '-t', "${project.logrotateImageName}:${project.version}", imageBuildDir
+        }
 
-		pushTagDockerImage(project.logrotateImageName)
-	}
+        pushTagDockerImage(project.logrotateImageName)
+    }
 }
 
-task buildMainImages(group: 'Build', description: 'Builds main Docker images') {
-	dependsOn buildLogrotate
-	dependsOn buildAuthoringTomcat
-	dependsOn buildAuthoringLocal
-	dependsOn buildDeliveryTomcat
-	dependsOn buildDeployer
-	dependsOn buildGitSshServer
-	dependsOn buildGitHttpsServer
-	if (dockerEnterprise) {
-		if (project.hasProperty('imagemagick')) {
-			dependsOn buildAuthoringTomcatWithImageMagick
-		}
-	}
+tasks.register('buildMainImages') {
+    group = 'Build'
+    description = 'Builds main Docker images'
+    dependsOn buildLogrotate
+    dependsOn buildAuthoringTomcat
+    dependsOn buildAuthoringLocal
+    dependsOn buildDeliveryTomcat
+    dependsOn buildDeployer
+    dependsOn buildGitSshServer
+    dependsOn buildGitHttpsServer
+    if (dockerEnterprise) {
+        if (project.hasProperty('imagemagick')) {
+            dependsOn buildAuthoringTomcatWithImageMagick
+        }
+    }
 }
 
-task buildAllImages(group: 'Build', description: 'Builds all Docker images') {
-	dependsOn buildMainImages
-	dependsOn buildProfile
+tasks.register('buildAllImages') {
+    group = 'Build'
+    description = 'Builds all Docker images'
+    dependsOn buildMainImages
+    dependsOn buildProfile
 }
 
-task deleteDockerArtifacts(group: 'Build', description: 'Deletes Docker build artifacts') {
-	doLast {
-		execCommand(['docker', 'container', "prune", '-f'], "${projectDir}")
-		execCommand(['docker', 'image', 'prune', '-af'], "${projectDir}")
-		execCommand(['docker', 'volume', 'prune', '-af'], "${projectDir}")
-	}
+tasks.register('deleteDockerArtifacts') {
+    group = 'Build'
+    description = 'Deletes Docker build artifacts'
+    doLast {
+        execCommand(['docker', 'container', "prune", '-f'], "${projectDir}")
+        execCommand(['docker', 'image', 'prune', '-af'], "${projectDir}")
+        execCommand(['docker', 'volume', 'prune', '-af'], "${projectDir}")
+    }
 }
