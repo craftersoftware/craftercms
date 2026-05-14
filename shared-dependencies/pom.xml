@@ -59,11 +59,11 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<commons-configuration2.version>2.14.0</commons-configuration2.version>
+		<commons-configuration2.version>2.15.0</commons-configuration2.version>
 		<commons-lang3.version>3.20.0</commons-lang3.version>
 		<commons-io.version>2.22.0</commons-io.version>
 		<commons-csv.version>1.14.1</commons-csv.version>
-		<log4j2.version>2.25.4</log4j2.version>
+		<log4j2.version>2.26.0</log4j2.version>
 		<angus-mail.version>2.0.5</angus-mail.version>
 		<jakarta-mail-api.version>2.1.5</jakarta-mail-api.version>
 		<junit-vintage.version>5.14.4</junit-vintage.version>
@@ -75,10 +75,10 @@
 		<bouncycastle.version>1.84</bouncycastle.version>
 		<jackson.version>2.21.3</jackson.version>
 		<jackson-annotations.version>2.21</jackson-annotations.version>
-		<aws.sdk.version>2.44.2</aws.sdk.version>
+		<aws.sdk.version>2.44.5</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
-		<groovy.version>4.0.31</groovy.version>
+		<groovy.version>4.0.32</groovy.version>
 		<ivy.version>2.5.3</ivy.version>
 		<quartz.version>2.5.2</quartz.version>
 
