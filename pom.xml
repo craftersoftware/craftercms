@@ -120,7 +120,7 @@
 		<tinify.version>1.8.9</tinify.version>
 		<mariadb4j.version>3.3.0.2</mariadb4j.version>
 		<Saxon-HE.version>12.9</Saxon-HE.version>
-		<cxf-rt.version>4.2.0</cxf-rt.version>
+		<cxf-rt.version>4.2.1</cxf-rt.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
 		<mybatis-spring.version>4.0.0</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
@@ -133,11 +133,11 @@
 		<opensearch-rest-high-level-client.version>3.6.0</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>3.6.0</opensearch-java.version>
 		<opensearch-runner.version>3.6.0.0</opensearch-runner.version>
-		<tika.version>3.3.0</tika.version>
+		<tika.version>3.3.1</tika.version>
 		<poi-scratchpad.version>5.5.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.20.0</metadata-extractor.version>
 		<jsoup.version>1.22.2</jsoup.version>
-		<protobuf-java.version>4.34.1</protobuf-java.version>
+		<protobuf-java.version>4.35.0</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
 		<semver4j.version>3.1.0</semver4j.version>
