@@ -59,7 +59,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<commons-configuration2.version>2.14.0</commons-configuration2.version>
+		<commons-configuration2.version>2.15.1</commons-configuration2.version>
 		<commons-lang3.version>3.20.0</commons-lang3.version>
 		<commons-io.version>2.22.0</commons-io.version>
 		<commons-csv.version>1.14.1</commons-csv.version>
@@ -73,9 +73,9 @@
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.17.0</okio.version>
 		<bouncycastle.version>1.84</bouncycastle.version>
-		<jackson.version>2.21.3</jackson.version>
-		<jackson-annotations.version>2.21</jackson-annotations.version>
-		<aws.sdk.version>2.45.1</aws.sdk.version>
+		<jackson.version>2.21.4</jackson.version>
+		<jackson-annotations.version>2.22</jackson-annotations.version>
+		<aws.sdk.version>2.46.2</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>5.0.6</groovy.version>
