@@ -72,8 +72,8 @@
 		<!-- Main -->
 		<!-- Spring -->
 		<spring.version>7.0.8</spring.version>
-		<spring-security.version>7.0.5</spring-security.version>
-		<spring-data-commons.version>4.0.5</spring-data-commons.version>
+		<spring-security.version>7.1.0</spring-security.version>
+		<spring-data-commons.version>4.1.0</spring-data-commons.version>
 		<spring-ldap-core.version>4.1.0</spring-ldap-core.version>
 		<spring-social-web.version>1.1.6.RELEASE</spring-social-web.version>
 		<spring-social-facebook.version>2.0.3.RELEASE</spring-social-facebook.version>
@@ -120,12 +120,12 @@
 		<tinify.version>1.8.9</tinify.version>
 		<mariadb4j.version>3.3.0.2</mariadb4j.version>
 		<Saxon-HE.version>13.0</Saxon-HE.version>
-		<cxf-rt.version>4.2.1</cxf-rt.version>
+		<cxf-rt.version>4.2.2</cxf-rt.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
 		<mybatis-spring.version>4.0.0</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
-		<mariadb-java-client.version>3.5.8</mariadb-java-client.version>
-		<greenmail.version>2.1.8</greenmail.version>
+		<mariadb-java-client.version>3.5.9</mariadb-java-client.version>
+		<greenmail.version>2.1.9</greenmail.version>
 		<stax2-api.version>4.3.0</stax2-api.version>
 		<joda-time.version>2.14.2</joda-time.version>
 		<hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
@@ -137,7 +137,7 @@
 		<poi-scratchpad.version>5.5.1</poi-scratchpad.version>
 		<metadata-extractor.version>2.20.0</metadata-extractor.version>
 		<jsoup.version>1.22.2</jsoup.version>
-		<protobuf-java.version>4.35.0</protobuf-java.version>
+		<protobuf-java.version>4.35.1</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
 		<javax.inject.version>1</javax.inject.version>
 		<semver4j.version>3.1.0</semver4j.version>
@@ -183,7 +183,7 @@
 		<gmavenplus-plugin.version>5.0.0</gmavenplus-plugin.version>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
 		<maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
-		<frontend-maven-plugin.version>2.0.0</frontend-maven-plugin.version>
+		<frontend-maven-plugin.version>2.0.1</frontend-maven-plugin.version>
 		<studio.ui.node.version>v21.7.3</studio.ui.node.version>
 		<studio.ui.yarn.version>v1.22.22</studio.ui.yarn.version>
 		<exec-maven-plugin.version>3.1.1</exec-maven-plugin.version>
