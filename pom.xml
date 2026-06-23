@@ -60,7 +60,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
-		<tomcat.version>11.0.22</tomcat.version>
+		<tomcat.version>11.0.23</tomcat.version>
 		<java.version>21</java.version>
 		<groovy.version>4.0.31</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
@@ -128,7 +128,7 @@
 		<greenmail.version>2.1.9</greenmail.version>
 		<stax2-api.version>4.3.0</stax2-api.version>
 		<joda-time.version>2.14.2</joda-time.version>
-		<hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
+		<hibernate-validator.version>9.1.1.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>3.6.0</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>3.6.0</opensearch-java.version>
@@ -186,7 +186,7 @@
 		<studio.ui.yarn.version>v1.22.22</studio.ui.yarn.version>
 		<exec-maven-plugin.version>3.1.1</exec-maven-plugin.version>
 		<central-publishing-maven-plugin.version>0.7.0</central-publishing-maven-plugin.version>
-		<cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
+		<cyclonedx-maven-plugin.version>2.9.2</cyclonedx-maven-plugin.version>
 	</properties>
 
 	<dependencyManagement>
