@@ -68,14 +68,14 @@
 		<jakarta-mail-api.version>2.1.5</jakarta-mail-api.version>
 		<junit-vintage.version>6.1.0</junit-vintage.version>
 
-		<jgit.version>7.6.0.202603022253-r</jgit.version>
+		<jgit.version>7.7.0.202606012155-r</jgit.version>
 		<snakeyaml.version>2.6</snakeyaml.version>
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.17.0</okio.version>
 		<bouncycastle.version>1.84</bouncycastle.version>
 		<jackson.version>2.22.0</jackson.version>
 		<jackson-annotations.version>2.22</jackson-annotations.version>
-		<aws.sdk.version>2.46.6</aws.sdk.version>
+		<aws.sdk.version>2.46.17</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>5.0.6</groovy.version>
