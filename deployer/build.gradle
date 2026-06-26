@@ -1,0 +1,118 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+
+group = 'org.craftercms'
+version = craftercmsVersion
+
+base {
+	archivesName = 'crafter-deployer'
+}
+
+ext.crafterManifestTitle = 'Crafter Deployer'
+
+dependencies {
+	implementation project(':commons:utilities')
+	implementation project(':commons:validation')
+	implementation project(':commons:git')
+	implementation project(':commons:upgrade-manager')
+	implementation project(':core')
+	implementation project(':search:commons')
+	implementation project(':search:opensearch')
+	implementation project(':search:batch-indexer')
+	implementation project(':script-security-plugin')
+
+	implementation platform("org.apache.groovy:groovy-bom:${groovyVersion}")
+	implementation 'org.apache.groovy:groovy'
+	implementation 'org.apache.groovy:groovy-templates'
+	implementation 'org.apache.groovy:groovy-json'
+
+	implementation libs.commons.configuration2
+	implementation libs.commons.csv
+	implementation libs.commons.collections
+	implementation libs.commons.collections4
+	implementation libs.commons.lang3
+	implementation libs.commons.lang
+	implementation libs.commons.io
+	implementation libs.jakarta.validation.api
+	implementation libs.hibernate.validator
+	implementation libs.spring.boot.starter.web
+	implementation libs.spring.boot.starter
+	implementation libs.spring.boot.starter.log4j2
+	implementation libs.spring.boot.starter.restclient
+	implementation libs.jackson.databind
+	implementation libs.jackson.core
+	implementation libs.jackson.dataformat.xml
+	implementation libs.jakarta.json
+	implementation libs.jgit
+	implementation libs.angus.mail
+	implementation libs.handlebars
+	implementation libs.handlebars.springmvc
+	implementation libs.aws.s3
+	implementation libs.aws.s3.transfer.manager
+	implementation libs.aws.sts
+	implementation libs.aws.cloudfront
+	implementation libs.aws.cloudformation
+	implementation libs.aws.sso
+	implementation libs.aws.ssooidc
+	implementation libs.sardine
+	implementation libs.opensearch.rest.high.level.client
+	implementation libs.opensearch.java
+	implementation libs.ivy
+	implementation libs.slf4j.api
+	implementation libs.dom4j
+	implementation libs.spring.context
+	implementation libs.spring.beans
+	implementation libs.spring.core
+
+	testImplementation libs.spring.boot.starter.test
+	testImplementation libs.junit.vintage.engine
+}
+
+configurations.configureEach {
+	exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+}
+
+tasks.named('bootJar') {
+	archiveFileName = 'crafter-deployer.jar'
+	manifest {
+		attributes(crafterManifestAttributes())
+	}
+}
+
+apply from: "${rootDir}/gradle/build-metadata.gradle"
+
+tasks.named('jar') {
+	manifest {
+		attributes(crafterManifestAttributes())
+	}
+}
+
+tasks.named('test') {
+	systemProperty 'deployer.main.homePath', layout.buildDirectory.dir('test-resources').get().asFile
+	systemProperty 'targets.dir', layout.buildDirectory.dir('test-resources/targets').get().asFile
+	systemProperty 'deployments.dir', layout.buildDirectory.dir('test-logs').get().asFile
+	systemProperty 'processedCommits.dir', layout.buildDirectory.dir('test-resources/processed-commits').get().asFile
+	systemProperty 'deploymentEvents.dir', layout.buildDirectory.dir('test-resources/deployment-events').get().asFile
+	systemProperty 'logs.dir', layout.buildDirectory.dir('test-logs').get().asFile
+}

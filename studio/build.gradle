@@ -1,0 +1,226 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'war'
+}
+
+ext.crafterManifestTitle = 'Crafter Studio'
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+apply from: "${rootDir}/gradle/war.gradle"
+
+base {
+	archivesName = 'studio'
+}
+
+def studioUiDir = project(':studio-ui').projectDir
+
+sourceSets {
+	test {
+		resources {
+			srcDir 'src/main/webapp'
+		}
+	}
+}
+
+dependencies {
+	compileOnly libs.jakarta.servlet.api
+	compileOnly project(path: ':engine', configuration: 'classes')
+
+	implementation project(':core')
+	implementation project(':commons:entitlements')
+	implementation project(':commons:mongo')
+	implementation project(':search:opensearch')
+	implementation project(':search:commons')
+	implementation project(':script-security-plugin')
+	implementation project(':commons:git')
+	implementation project(':commons:security')
+	implementation project(':commons:plugin')
+	implementation project(':commons:upgrade-manager')
+	implementation project(':commons:utilities')
+	implementation project(':commons:validation')
+
+	compileOnly libs.ibatis.sqlmap
+
+	implementation libs.mybatis.spring
+	implementation libs.mybatis
+	implementation libs.spring.jdbc
+	implementation libs.spring.security.core
+	implementation libs.spring.security.config
+	implementation libs.spring.security.web
+	implementation libs.spring.websocket
+	implementation libs.spring.messaging
+	implementation libs.spring.security.messaging
+	implementation libs.commons.dbcp2
+	implementation libs.commons.fileupload2.jakarta.servlet6
+	implementation libs.commons.io
+	implementation libs.jta
+	implementation libs.jakarta.validation.api
+	implementation libs.hibernate.validator
+	implementation libs.freemarker
+	implementation libs.jgit
+	implementation libs.mariadb4j
+	implementation libs.mariadb.java.client
+	implementation libs.jcl.over.slf4j
+	implementation libs.slf4j.api
+	implementation libs.log4j.api
+	implementation libs.log4j.core
+	implementation libs.log4j.slf4j2.impl
+	implementation libs.spring.ldap.core
+	implementation libs.spring.security.ldap
+	implementation libs.spring.data.commons
+	implementation libs.jackson.datatype.jsr310
+	implementation libs.jackson.databind
+	implementation libs.aws.sts
+	implementation libs.aws.s3
+	implementation libs.aws.elastictranscoder
+	implementation libs.aws.mediaconvert
+	implementation libs.aws.sso
+	implementation libs.aws.ssooidc
+	implementation libs.sardine
+	implementation libs.saxon.he
+	implementation libs.tinify
+	implementation libs.gson
+	implementation libs.jose4j
+	implementation libs.zxcvbn
+	implementation libs.owasp.java.html.sanitizer
+	implementation libs.snakeyaml
+
+	implementation libs.spring.webmvc
+	implementation libs.spring.web
+	implementation libs.spring.context
+	implementation libs.spring.core
+	implementation libs.spring.aop
+	implementation libs.spring.tx
+	implementation libs.spring.expression
+	implementation libs.spring.context.support
+	implementation libs.aspectjrt
+	implementation libs.aspectjweaver
+	implementation libs.guava
+	implementation libs.commons.lang3
+	implementation libs.commons.lang
+	implementation libs.commons.collections
+	implementation libs.commons.collections4
+	implementation libs.commons.codec
+	implementation libs.commons.configuration2
+	implementation libs.commons.text
+	implementation libs.commons.beanutils
+	implementation libs.dom4j
+	implementation libs.httpclient5
+	implementation libs.jackson.annotations
+	implementation libs.jackson.core
+	implementation libs.jackson.databind
+	implementation libs.jackson.dataformat.xml
+	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
+	implementation libs.xstream
+	implementation libs.groovy
+	implementation libs.jaxb.api
+	implementation libs.jaxb.core
+	implementation libs.jaxb.impl
+	implementation libs.jakarta.xml.bind.api
+	implementation libs.opensearch.java
+	implementation libs.opensearch.rest.high.level.client
+	implementation libs.jackson.dataformat.yaml
+	implementation libs.angus.mail
+	implementation libs.jakarta.mail.api
+	implementation libs.tika.core
+	implementation libs.rome.utils
+	implementation platform("org.apache.groovy:groovy-bom:${groovyVersion}")
+	implementation 'org.apache.groovy:groovy-jsr223'
+
+	testImplementation project(path: ':engine', configuration: 'classes')
+	testImplementation libs.jgit.junit
+	testImplementation libs.junit.jupiter.engine
+	testImplementation libs.junit.vintage.engine
+	testImplementation libs.testng.engine
+	testImplementation libs.tomcat.jasper.el
+	testImplementation libs.testng
+	testImplementation libs.mockito.core
+	testImplementation libs.spring.test
+	testImplementation libs.xmlunit.core
+	testImplementation libs.tomcat.embed.websocket
+	testImplementation libs.jakarta.servlet.api
+}
+
+war {
+	archiveFileName = 'studio.war'
+	dependsOn ':engine:war', ':studio-ui:build'
+	exclude '**/crafterTemplateRepository/**'
+
+	from({ zipTree(project(':engine').tasks.named('war').get().archiveFile) }) {
+		exclude 'META-INF/MANIFEST.MF'
+		// Studio owns default-site via studio-ui and src/main/webapp below.
+		exclude 'default-site/**'
+		exclude 'WEB-INF/lib/xml-apis-1.0.b2.jar'
+		exclude 'WEB-INF/lib/httpclient-4.5.2.jar'
+		exclude 'WEB-INF/lib/httpcore-4.4.4.jar'
+		exclude 'WEB-INF/lib/commons-logging-1.2.jar'
+		exclude 'WEB-INF/lib/slf4j-api-*.jar'
+		exclude 'WEB-INF/lib/slf4j-log4j12-*.jar'
+		exclude 'WEB-INF/lib/jcl-over-slf4j-*.jar'
+		exclude 'WEB-INF/lib/spring-security-core-4.2.7.RELEASE.jar'
+		exclude 'WEB-INF/templates/system/common/versionInfo.ftl'
+		exclude 'WEB-INF/classes/crafter/engine/services/security-context.xml'
+	}
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	from("$studioUiDir/static-assets") {
+		into 'default-site/static-assets'
+	}
+	from("$studioUiDir/templates") {
+		into 'default-site/templates'
+	}
+	from("$studioUiDir/site") {
+		into 'default-site/site'
+	}
+	from('src/main/webapp/repo-bootstrap/global/blueprints/4000_empty/static-assets/images/screenshots') {
+		into 'default-site/static-assets/images/blueprints/empty'
+	}
+	from('src/main/webapp/repo-bootstrap/global/blueprints/5000_headless_blog/static-assets/images/screenshots') {
+		into 'default-site/static-assets/images/blueprints/headless_blog'
+	}
+	from('src/main/webapp/repo-bootstrap/global/blueprints/2000_headless_store/static-assets/images/screenshots') {
+		into 'default-site/static-assets/images/blueprints/headless_store'
+	}
+	from('src/main/webapp/repo-bootstrap/global/blueprints/1000_website_editorial/static-assets/images/screenshots') {
+		into 'default-site/static-assets/images/blueprints/website_editorial'
+	}
+}
+
+configureFilteredWarResource(
+	tasks.named('war').get(),
+	'src/main/generated-resources/ftl',
+	'WEB-INF/templates/system/common'
+)
+
+configureFilteredWarResource(
+	tasks.named('war').get(),
+	'src/main/generated-resources/rest',
+	'default-site/scripts/rest'
+)
+
+tasks.named('compileJava') {
+	dependsOn ':engine:classesJar'
+}
+
+tasks.named('test') {
+	exclude '**/integration/**'
+}
+
+tasks.named('javadoc') {
+	failOnError = false
+}

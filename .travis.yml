@@ -7,7 +7,8 @@ jdk:
     - openjdk21
 cache:
     directories:
-        - "$HOME/.m2"
+        - "$HOME/.gradle/caches"
+        - "$HOME/.gradle/wrapper"
 branches:
     only:
         - develop
@@ -16,17 +17,4 @@ notifications:
     slack: craftersoftware:7YiSb41ZG5rfMgiAY7Qgprc7
 install: skip
 script:
-    - if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
-        bash -c "mvn -DskipTests -f shared-dependencies/pom.xml deploy --settings .travis-settings.xml";
-        bash -c "mvn -DskipTests -f pom.xml deploy --settings .travis-settings.xml";
-        bash -c "mvn -DskipTests -f spring-boot/pom.xml deploy --settings .travis-settings.xml";
-        fi
-    - if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
-        bash -c "mvn -DskipTests -f shared-dependencies/pom.xml deploy --settings .travis-settings.xml";
-        bash -c "mvn -DskipTests -f pom.xml clean install --settings .travis-settings.xml";
-        bash -c "mvn -DskipTests -f spring-boot/pom.xml clean install --settings .travis-settings.xml";
-        fi
-env:
-    global:
-        -   secure: "voCB2AKyLP47Wi4otEXDQV5bR1kZugN2wfC3lUtYrk1XHiOqq81qGsdUFXEPpqepquO3AK9RQeDlY61tNparm7JCTA7FDbahC+3PU0VcelXvcMZPf3BWWax9qlXcDmJSk/c8jx5hdYsDLUg58GVClhZLyI3vd90Px9UdARog3ATRXzI8SkLybNNvCfDDkOYCog+KqNYs6y4gdedo7iR9BGOMpNP7axHt5dmK7ZgM0PDNZl9rn72NgtkaSEi9KkhoCU5aoe4gZ06gmVVXSSnvTOyfN83EhqZhrXe0HlkEVJCHFKZ+dSLJd3YfeYjmg36OanHCM60NtjZ32+iabWGGPcNGaHmIUPN7uWm9PbR9qeOP9zs27ZyD9nrQHYyf8RJCnatApZ+J34XwxNLe+pW5LzvhRl5Wz4j8YvyljxiqhsMJPjHaOAR6jXFFzQ4v5eZJtAiPotICDPUkGlZWGGyo8cepPKtOqKlzx82H6rNZ9WUti/OynlwjGZlXUCeveC60zcSOt+RpS3FN8daWsInnZpbrRBedxCZ6/bJCVwr7XPNudTKh7bYff3+2x/XYai6vAI7WWpB2FxM8fF53QHOSGBIWX/0fo7C+XicbXrKqJAD8EqnARCPSwniObymQcEF/5rzV78hoak0ZHmlzuiLVPo3rSOw0IFmhhThVlHEawao="
-        -   secure: "rfdm2Rbi3JL2GnmB6l4GNOHyt2yl/H/0LpLogVRzUiAykiOJLANF8OUDXP1x5iLjXrQEMGvo5op5ItsFisS+Uh9dky91nre1PHYTql6KSCH6DTqsrzdGOL9mHLR9XDJPYxWFBcMQf4fHHPx9kAT1tX/60GvpwQbC355eCOMxv6ciab7j5tH/t9Z2MUip0dYWKN3gQA+UuGteXlzfQxZGW4VxDBqcyibvG3Sms9ZltDeBX33CgWtKR+7Rg0Tql4HRjxdxyfaeJSXyL2IImHHtsvvcSOirjp+ztxN7B+1UAACla01zplq7OCH2WLr7wSpVRAOlof+rx4rDepmbgZeGAKQIptO5NnmdOViX3H1rWqvVNEA3AjrWgLgB+dP8wWrVtvoPjv8qMKhlG3brqwIUWTCrkkPpNrVlbtPSi4PIEmTBbzG6lMnKPLTGc+cwFwcdNGakhATb4xiTgMZwsqzAdSTq6fYvS1dtpQiidv2Z5VwlTW5pwJBWtus3q2x5f5F0oByY5bmoehF6XUeKLiHhz0omS95S/Y0ajl/JI/um5gxO6qclUq95IzpEzAZcBbKTQ0SsL0yMHrONMdMTQfkIFTU+JATNAxEpy/M2zvc5jNxmIIyb3QuCoEdr13rDa4IuV5aBSyD7UOu+Sl0L3MYhsySWd3vx3rTMIg0Of68YvV4="
+    - ./gradlew build -x test

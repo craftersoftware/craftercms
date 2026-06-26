@@ -1,0 +1,104 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'war'
+}
+
+ext.crafterManifestTitle = 'Crafter Social'
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+apply from: "${rootDir}/gradle/war.gradle"
+
+base {
+	archivesName = 'crafter-social'
+}
+
+dependencies {
+	compileOnly libs.jakarta.servlet.api
+	compileOnly libs.jakarta.servlet.jsp.api
+
+	implementation project(':commons:mongo')
+	implementation project(':commons:utilities')
+	implementation project(':commons:audit')
+	implementation project(':commons:entitlements')
+	implementation project(':commons:security')
+	implementation project(':profile:api')
+	implementation project(':profile:client')
+	implementation project(':profile:security-provider')
+	implementation project(':social:virus-scanner')
+
+	implementation libs.mongo.bson
+	implementation libs.mongo.driver.sync
+	implementation libs.mongo.driver.legacy
+	implementation libs.jongo
+	implementation libs.commons.lang3
+	implementation libs.commons.beanutils
+	implementation libs.commons.collections4
+	implementation libs.commons.io
+	implementation libs.commons.codec
+	implementation libs.commons.fileupload2.jakarta.servlet6
+	implementation libs.guava
+	implementation libs.bcpg.jdk18on
+	implementation libs.angus.mail
+	implementation libs.jakarta.mail.api
+	implementation libs.javax.inject
+	implementation libs.quartz
+	implementation libs.spring.core
+	implementation libs.spring.context
+	implementation libs.spring.context.support
+	implementation libs.spring.beans
+	implementation libs.spring.expression
+	implementation libs.spring.web
+	implementation libs.spring.webmvc
+	implementation libs.spring.tx
+	implementation libs.spring.oxm
+	implementation libs.spring.aop
+	implementation libs.freemarker
+	implementation libs.httpclient5
+	implementation libs.httpmime
+	implementation libs.jackson.annotations
+	implementation libs.jackson.core
+	implementation libs.jackson.databind
+	implementation libs.xstream
+	implementation libs.hibernate.validator
+	implementation libs.jakarta.validation.api
+	implementation libs.jsoup
+	implementation libs.jakarta.servlet.jsp.jstl.api
+	implementation libs.jaxb.api
+	implementation libs.jaxb.core
+	implementation libs.jaxb.impl
+	implementation libs.jakarta.xml.bind.api
+	implementation libs.slf4j.api
+	implementation libs.jcl.over.slf4j
+	implementation libs.log4j.api
+	implementation libs.log4j.core
+	implementation libs.log4j.jakarta.web
+	implementation libs.log4j.slf4j2.impl
+
+	testImplementation libs.junit
+	testImplementation libs.spring.test
+	testImplementation libs.jakarta.servlet.api
+}
+
+war {
+	archiveFileName = 'crafter-social.war'
+}
+
+tasks.named('test') {
+	exclude '**/integration/**'
+	exclude '**/unit/VirusScannerServiceTest.class'
+}

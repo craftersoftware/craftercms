@@ -1,0 +1,91 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'groovy'
+	id 'application'
+}
+
+group = 'org.craftercms'
+version = craftercmsVersion
+
+base {
+	archivesName = 'crafter-cli'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(javaVersion.toInteger())
+	}
+}
+
+application {
+	mainClass = 'org.craftercms.cli.Main'
+	applicationName = 'crafter-cli'
+}
+
+dependencies {
+	implementation platform("org.apache.groovy:groovy-bom:${groovyVersion}")
+	implementation 'org.apache.groovy:groovy'
+	implementation 'org.apache.groovy:groovy-json'
+	implementation libs.picocli
+	implementation libs.okhttp.jvm
+	implementation libs.commons.csv
+}
+
+processResources {
+	filesMatching('**/version.txt') {
+		expand('project': [version: project.version])
+	}
+}
+
+tasks.named('startScripts') {
+	dependsOn jar
+}
+
+tasks.register('assembleCliDistribution', Sync) {
+	group = 'build'
+	description = 'Assembles the CLI distribution (bin + repo), matching Maven appassembler layout'
+	dependsOn tasks.named('startScripts'), configurations.runtimeClasspath, tasks.named('jar')
+	into layout.buildDirectory.dir('cli')
+
+	from(tasks.named('startScripts')) {
+		into 'bin'
+	}
+	from(configurations.runtimeClasspath) {
+		into 'repo'
+	}
+	from(tasks.named('jar')) {
+		into 'repo'
+	}
+}
+
+tasks.named('build') {
+	dependsOn tasks.named('assembleCliDistribution')
+}
+
+apply from: "${rootDir}/gradle/maven-publish.gradle"
+
+tasks.register('cliDistTar', Tar) {
+	group = 'distribution'
+	description = 'Packages the CLI distribution as tar.gz'
+	dependsOn tasks.named('assembleCliDistribution')
+	compression = Compression.GZIP
+	archiveFileName = "cli-${project.version}.tar.gz"
+	from(layout.buildDirectory.dir('cli')) {
+		into 'cli'
+	}
+}

@@ -1,0 +1,62 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'base'
+	id 'com.github.node-gradle.node'
+}
+
+import com.github.gradle.node.yarn.task.YarnTask
+
+group = 'org.craftercms'
+version = craftercmsVersion
+
+node {
+	version = '21.7.3'
+	yarnVersion = '1.22.22'
+	download = true
+	distBaseUrl = null
+	workDir = file("${layout.buildDirectory.get()}/nodejs")
+	yarnWorkDir = file("${layout.buildDirectory.get()}/yarn")
+}
+
+tasks.register('yarnBuild', YarnTask) {
+	group = 'build'
+	description = 'Builds all studio UI workspaces'
+	dependsOn tasks.named('yarn')
+	args.set(['build:all'])
+}
+
+tasks.register('bomGenerate', YarnTask) {
+	group = 'build'
+	description = 'Generates CycloneDX BOMs for UI workspaces'
+	dependsOn tasks.named('yarn')
+	args.set(['bom:generate'])
+}
+
+tasks.named('build') {
+	dependsOn tasks.named('yarnBuild')
+}
+
+tasks.named('clean') {
+	delete 'node_modules'
+	delete 'ui/guest/node_modules'
+	delete 'ui/app/node_modules'
+	delete 'ui/legacy/node_modules'
+	delete 'ui/npm-content/node_modules'
+	delete 'ui/uppy/node_modules'
+	delete 'ui/scss/node_modules'
+}

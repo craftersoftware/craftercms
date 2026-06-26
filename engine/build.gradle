@@ -1,0 +1,128 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'war'
+}
+
+ext.crafterManifestTitle = 'Crafter Engine'
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+apply from: "${rootDir}/gradle/war.gradle"
+
+base {
+	archivesName = 'ROOT'
+}
+
+dependencies {
+	compileOnly libs.jakarta.servlet.api
+
+	implementation project(':core')
+	implementation project(':profile:security-provider')
+	implementation project(':profile:client')
+	implementation project(':profile:api')
+	implementation project(':commons:mongo')
+	implementation project(':commons:entitlements')
+	implementation project(':commons:validation')
+	implementation project(':search:opensearch')
+	implementation project(':search:commons')
+	implementation project(':script-security-plugin')
+	implementation project(':commons:utilities')
+
+	implementation libs.spring.webmvc
+	implementation libs.spring.web
+	implementation libs.spring.tx
+	implementation libs.spring.aop
+	implementation libs.spring.context.support
+	implementation libs.spring.expression
+	implementation libs.freemarker
+	implementation libs.guava
+	implementation libs.xstream
+	implementation libs.dom4j
+	implementation libs.commons.codec
+	implementation libs.commons.io
+	implementation libs.commons.beanutils
+	implementation libs.commons.collections
+	implementation libs.commons.lang3
+	implementation libs.commons.lang
+	implementation libs.slf4j.api
+	implementation libs.opensearch.rest.high.level.client
+	implementation libs.opensearch.java
+	implementation libs.jakarta.validation.api
+	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
+	implementation libs.quartz
+	implementation libs.mongo.bson
+	implementation platform("org.apache.groovy:groovy-bom:${groovyVersion}")
+	implementation libs.groovy
+	implementation libs.spring.social.web
+	implementation libs.spring.social.facebook
+
+	implementation libs.angus.mail
+	implementation libs.httpclient5
+	implementation libs.commons.configuration2
+	implementation libs.cglib
+	implementation libs.ivy
+	implementation libs.commons.collections4
+	implementation libs.urlrewritefilter
+	implementation libs.jaxb.api
+	implementation libs.log4j.api
+	implementation libs.log4j.core
+	implementation libs.log4j.jakarta.web
+	implementation libs.log4j.slf4j2.impl
+	implementation libs.bcpg.jdk18on
+	implementation libs.aws.s3
+	implementation libs.aws.sts
+	implementation libs.aws.sso
+	implementation libs.aws.ssooidc
+	implementation libs.sardine
+	implementation libs.jackson.annotations
+	implementation libs.jackson.core
+	implementation libs.jackson.databind
+	implementation libs.jackson.dataformat.cbor
+	implementation libs.jackson.dataformat.smile
+	implementation libs.jackson.dataformat.xml
+	implementation libs.jackson.dataformat.yaml
+	implementation libs.jackson.datatype.jsr310
+	implementation libs.graphql.java
+	implementation libs.graphql.java.extended.scalars
+	implementation libs.spatial4j
+	implementation libs.smiley.http.proxy.servlet
+	implementation libs.directory.watcher
+	implementation libs.spring.security.core
+	implementation libs.spring.security.config
+	implementation libs.spring.security.web
+	implementation libs.spring.security.access
+
+	testImplementation libs.jakarta.servlet.api
+	testImplementation libs.tomcat.jasper.el
+	testImplementation libs.spring.test
+	testImplementation libs.junit
+	testImplementation libs.mockito.core
+	testImplementation libs.testng
+	testImplementation libs.junit.jupiter.engine
+	testImplementation libs.junit.vintage.engine
+	testImplementation libs.testng.engine
+}
+
+war {
+	archiveFileName = 'ROOT.war'
+}
+
+configureFilteredWarResource(
+	tasks.named('war').get(),
+	'src/main/generated-resources',
+	'WEB-INF/templates/system/common'
+)

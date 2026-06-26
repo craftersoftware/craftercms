@@ -1,0 +1,64 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Shared configuration for CrafterCMS WAR modules.
+ */
+
+import org.apache.tools.ant.filters.ReplaceTokens
+
+apply from: "${rootDir}/gradle/build-metadata.gradle"
+
+def buildMetadata = crafterBuildMetadata
+
+plugins.withId('war') {
+	war {
+		manifest {
+			attributes(crafterManifestAttributes())
+		}
+	}
+
+	tasks.register('classesJar', Jar) {
+		archiveClassifier = 'classes'
+		from sourceSets.main.output
+		manifest {
+			attributes(crafterManifestAttributes())
+		}
+	}
+
+	configurations {
+		classes {
+			canBeConsumed = true
+			canBeResolved = false
+		}
+	}
+
+	artifacts {
+		add('archives', tasks.named('classesJar'))
+		add('classes', tasks.named('classesJar'))
+	}
+}
+
+
+ext.configureFilteredWarResource = { warTask, sourceDir, targetPath ->
+	warTask.from(sourceDir) {
+		into targetPath
+		filter(ReplaceTokens, tokens: [
+			buildNumber: buildMetadata.buildNumber,
+			timestamp  : buildMetadata.timestamp
+		])
+	}
+}

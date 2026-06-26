@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,13 +15,15 @@
  */
 
 plugins {
+	// The "de.undercouch.download" plugin allows Gradle to download files from the internet during the build process,
+	// making it easy to automate the retrieval of external dependencies, resources, or other files as part of your build.
 	id "de.undercouch.download" version "${undercouchDownloadVersion}"
 }
 
 apply plugin: "groovy"
 apply plugin: 'de.undercouch.download'
 
-project.version = "5.0.0-SNAPSHOT" // craftercms version flag
+project.version = craftercmsVersion
 
 apply from: "global-settings.gradle"
 apply from: "commons.gradle"
@@ -47,13 +49,14 @@ task preFlightCheck() {
 			throw new GradleException("The java version used ${JavaVersion.current()} is not the expected version ${project.targetCompatibility}.")
 		}
 
-		def command = "mvn -v"
-		if (!command.execute()) {
-			throw new GradleException("Maven ('mvn') not found, please make sure it is installed and accessible.")
+		def proc = "./gradlew -v".execute(null, file(projectDir))
+		proc.waitFor()
+		if (proc.exitValue() != 0) {
+			throw new GradleException("Gradle wrapper ('./gradlew') not working. Please ensure it is available and executable.")
 		}
 
-		command = "lsof -v"
-		if (!command.execute()) {
+		def lsofCheck = "lsof -v"
+		if (!lsofCheck.execute()) {
 			throw new GradleException("'lsof' command not found, please make sure it is installed and accessible.")
 		}
 	}
@@ -105,22 +108,9 @@ task selfUpdate() {
 	}
 }
 
-task update() {
-	description = 'Updates the modules.'
-	dependsOn = ["clone"]
-	doFirst {
-		getAllModules().each { module ->
-			println "Updating $module"
-
-			updateModule(module, gitRemote, gitBranch)
-		}
-	}
-}
-
 clean() {
 	description = 'Cleans the modules.'
-	mustRunAfter update
-	dependsOn = ["clone", "installPomFiles"]
+	dependsOn = ["clone"]
 	doFirst {
 		getBuildModules().each { module ->
 			println "Cleaning $module"
@@ -130,20 +120,10 @@ clean() {
 	}
 }
 
-task installPomFiles() {
-	description = 'Installs the main POMs.'
-	mustRunAfter selfUpdate
-	dependsOn = ["preFlightCheck"]
-	doFirst {
-		println "Installing main POMs"
-		installPoms()
-	}
-}
-
 build() {
 	description = 'Builds the modules and prepares the binaries for deployment.'
 	mustRunAfter clean
-	dependsOn = ["clone", "installPomFiles"]
+	dependsOn = ["clone"]
 	doFirst {
 		getBuildModules().each { module ->
 			println "Building $module"
@@ -154,8 +134,8 @@ build() {
 }
 
 task deployToMaven() {
-	description = 'Deploys the modules to Maven Central.'
-	dependsOn = ["clone", "installPomFiles"]
+	description = 'Builds and publishes modules to the local Maven repository (publishToMavenLocal).'
+	dependsOn = ["clone"]
 	doFirst {
 		getDeployToMavenModules().each { module ->
 			println "Deploying $module"
@@ -179,7 +159,7 @@ task buildBaseEnvs() {
 
 task buildBom() {
 	description = 'Builds the Software Bill of Materials (BOM).'
-	dependsOn = ["clone", "installPomFiles"]
+	dependsOn = ["clone"]
 	doFirst {
 		println "Build the Software Bill of Materials (BOM)"
 
@@ -207,7 +187,7 @@ task deploy() {
 
 task upgrade() {
 	description = 'Upgrades all modules and redeploys them'
-	dependsOn = ["installPomFiles", "update", "clean", "build", "deploy"]
+	dependsOn = ["selfUpdate", "clean", "build", "deploy"]
 }
 
 task start() {

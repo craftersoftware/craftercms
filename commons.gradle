@@ -45,7 +45,6 @@ ext {
 	cmsDir = "${projectDir}/craftercms"
 	srcFolder = "${projectDir}/"
 	commandTimeout = getPropertySafelyWithDefaults("commandTimeout", 1000000).toInteger()
-	mavenCmd = getPropertySafelyWithDefaults("quietBuild", "true").toBoolean() ? ["mvn", "-q"] : ["mvn"]
 }
 
 ext.execCommand = { command, dir ->
@@ -112,6 +111,63 @@ ext.syncFolder = { workingDir, source, destination, exclude, overwriteChangedFil
 }
 
 // Build methods
+ext.gradleModules = [
+	'groovy-sandbox': ':groovy-sandbox',
+	'script-security-plugin': ':script-security-plugin',
+	'commons': [
+		':commons:audit',
+		':commons:entitlements',
+		':commons:git',
+		':commons:mongo',
+		':commons:plugin',
+		':commons:security',
+		':commons:upgrade-manager',
+		':commons:utilities',
+		':commons:validation'
+	],
+	'core': ':core',
+	'search': [
+		':search:commons',
+		':search:batch-indexer',
+		':search:opensearch'
+	],
+	'profile': [
+		':profile:api',
+		':profile:client',
+		':profile:security-provider',
+		':profile:server',
+		':profile:admin-console'
+	],
+	'engine': ':engine',
+	'social': [
+		':social:virus-scanner',
+		':social:server',
+		':social:admin'
+	],
+	'studio-ui': ':studio-ui',
+	'studio': ':studio',
+	'deployer': ':deployer',
+	'cli': ':cli'
+]
+
+ext.runGradleModuleTask = { module, task, unitTest ->
+	def projects = gradleModules[module]
+	if (projects == null) {
+		return false
+	}
+	def gradleArgs = ["./gradlew", "-q"]
+	if (!unitTest) {
+		gradleArgs += ["-x", "test"]
+	}
+	if (projects instanceof List) {
+		projects.each { gradleArgs += "${it}:${task}" }
+	} else {
+		gradleArgs += "${projects}:${task}"
+	}
+	execCommand(gradleArgs, projectDir)
+	return true
+}
+
 ext.cloneModule = { module, gitUrl, shallowClone, gitBranch, gitRemote ->
 	def url = gitUrl + module
 	def dir = srcFolder
@@ -134,94 +190,35 @@ ext.cloneModule = { module, gitUrl, shallowClone, gitBranch, gitRemote ->
 	}
 }
 
-ext.installPoms = {
-	try {
-		execCommand(mavenCmd + ["install"], "${projectDir}/shared-dependencies")
-		execCommand(mavenCmd + ["install"], "${projectDir}")
-		execCommand(mavenCmd + ["install"], "${projectDir}/spring-boot")
-	} catch (e) {
-		logger.error("Failed to install POMs, exception: {}", e)
-		throw new GradleException("Failed to install POMs.", e)
-	}
-}
-
-ext.updateModule = { module, remote, branch ->
-	def dir = srcFolder + module
-
-	try {
-		execCommand(["git", "pull", remote, branch], dir)
-	} catch (e) {
-		logger.error("Failed to update module: {}, exception: {}", module, e)
-		throw new GradleException("Failed to update module.", e)
-	}
-}
-
 ext.cleanModule = { module ->
-	def dir = srcFolder + module
-
-	try {
-		execCommand(mavenCmd + ["clean"], dir)
-	} catch (e) {
-		logger.error("Failed to clean module: {}, exception: {}", module, e)
-		throw new GradleException("Failed to clean module.", e)
+	if (!runGradleModuleTask(module, 'clean', true)) {
+		throw new GradleException("No Gradle module mapping for $module")
 	}
 }
 
 ext.buildModule = { module, unitTest ->
-	def dir = srcFolder + module
-
-	try {
-		if (unitTest)
-			execCommand(mavenCmd + ["install"], dir)
-		else
-			execCommand(mavenCmd + ["install", "-DskipTests"], dir)
-	} catch (e) {
-		logger.error("Failed to build module: {}, exception: {}", module, e)
-		throw new GradleException("Failed to build module.", e)
-	}
-}
-
-ext.deployArtifact = { module, dir, unitTest ->
-	try {
-		if (unitTest)
-			execCommand(mavenCmd + ["deploy", "-Prelease-sign-artifacts"], dir)
-		else
-			execCommand(mavenCmd + ["deploy", "-DskipTests", "-Prelease-sign-artifacts"], dir)
-	} catch (e) {
-		logger.error("Failed to deploy module: {}, exception: {}", module, e)
-		throw new GradleException("Failed to deploy module.", e)
+	if (!runGradleModuleTask(module, 'build', unitTest)) {
+		throw new GradleException("No Gradle module mapping for $module")
 	}
 }
 
 ext.deployModule = { module, unitTest ->
-	def dir
-
 	if (module == "craftercms") {
-		deployArtifact(module, "${projectDir}/shared-dependencies", unitTest)
-		deployArtifact(module, "${projectDir}/spring-boot", unitTest)
-		dir = projectDir
-	} else {
-		dir = srcFolder + module
+		println "Skipping craftercms parent POM deploy (dependency management is in gradle/libs.versions.toml)"
+		return
 	}
 
-	deployArtifact(module, dir, unitTest)
+	if (!runGradleModuleTask(module, 'publishToMavenLocal', unitTest)) {
+		throw new GradleException("No Gradle module mapping for $module")
+	}
 }
 
 ext.buildBom = { module ->
-	def dir = srcFolder + module
-
-	try {
-		def goal
-		if (module == "studio-ui") {
-			goal = ["frontend:install-node-and-yarn", "frontend:yarn", "frontend:yarn@generate", "-Pgenerate-bom"]
-		} else {
-			goal = ["cyclonedx:makeBom"]
-		}
-		execCommand(mavenCmd + goal, dir)
-	} catch (e) {
-		logger.error("Failed to build bom: {}, exception: {}", module, e)
-		throw new GradleException("Failed to build bom.", e)
+	if (runGradleModuleTask(module, 'bomGenerate', false)) {
+		return
 	}
+
+	println "Skipping BOM generation for $module (no Gradle bomGenerate task configured)"
 }
 
 ext.aggregateBoms = { dir ->

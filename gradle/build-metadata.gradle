@@ -1,0 +1,62 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Shared build metadata for manifest attributes and resource token replacement.
+ * Matches Maven buildnumber-maven-plugin behavior:
+ *   - buildNumber: SCM revision (git commit), or 'unknown' if unavailable
+ *   - timestamp: epoch milliseconds for the Build-On manifest attribute
+ *   - crafterManifestTitle: human-friendly Implementation-Title, set in each module's build.gradle
+ */
+
+def resolveScmBuildNumber = {
+	if (findProperty('buildNumber')) {
+		return findProperty('buildNumber').toString()
+	}
+	def proc = ['git', 'rev-parse', 'HEAD'].execute(null, rootDir)
+	proc.waitFor()
+	return proc.exitValue() == 0 ? proc.text.trim() : 'unknown'
+}
+
+def resolveBuildTimestamp = {
+	if (findProperty('timestamp')) {
+		return findProperty('timestamp').toString()
+	}
+	return System.currentTimeMillis().toString()
+}
+
+ext.crafterBuildMetadata = [
+	buildNumber: resolveScmBuildNumber(),
+	timestamp  : resolveBuildTimestamp()
+]
+
+ext.crafterManifestAttributes = {
+	def jdkVersion = findProperty('javaVersion').toString()
+	def title = findProperty('crafterManifestTitle')?.toString()
+	if (!title) {
+		throw new GradleException("Set ext.crafterManifestTitle in ${project.path}/build.gradle")
+	}
+
+	[
+		'Implementation-Title'   : title,
+		'Implementation-Version' : version.toString(),
+		'Implementation-Vendor'  : 'CrafterCMS',
+		'Implementation-Build'   : crafterBuildMetadata.buildNumber,
+		'Build-On'               : crafterBuildMetadata.timestamp,
+		'Java-Version'           : jdkVersion,
+		'Build-Jdk-Spec'         : jdkVersion
+	]
+}

@@ -4,37 +4,37 @@ apply from: "environments.gradle"
 ext.commonDeployArtifacts = [
 	[
 		module: 'deployer',
-		from  : "${projectDir}/deployer/target/crafter-deployer.jar",
+		from  : "${projectDir}/deployer/build/libs/crafter-deployer.jar",
 		into  : "/bin/crafter-deployer/"
 	],
 	[
 		module: 'engine',
-		from  : "${projectDir}/engine/target/ROOT.war",
+		from  : "${projectDir}/engine/build/libs/ROOT.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	],
 	[
 		module: 'profile',
-		from  : "${projectDir}/profile/server/target/crafter-profile.war",
+		from  : "${projectDir}/profile/server/build/libs/crafter-profile.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	],
 	[
 		module: 'profile-admin',
-		from  : "${projectDir}/profile/admin-console/target/crafter-profile-admin.war",
+		from  : "${projectDir}/profile/admin-console/build/libs/crafter-profile-admin.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	],
 	[
 		module: 'social',
-		from  : "${projectDir}/social/server/target/crafter-social.war",
+		from  : "${projectDir}/social/server/build/libs/crafter-social.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	],
 	[
 		module: 'social-admin',
-		from  : "${projectDir}/social/admin/target/crafter-social-admin.war",
+		from  : "${projectDir}/social/admin/build/libs/crafter-social-admin.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	],
 	[
 		module: 'cli',
-		from  : "${projectDir}/cli/target/cli",
+		from  : "${projectDir}/cli/build/cli",
 		into  : "/bin/"
 	]
 ]
@@ -42,7 +42,7 @@ ext.commonDeployArtifacts = [
 ext.authoringDeployArtifacts = [
 	[
 		module: 'studio',
-		from  : "${projectDir}/studio/target/studio.war",
+		from  : "${projectDir}/studio/build/libs/studio.war",
 		into  : "/bin/apache-tomcat/webapps/"
 	]
 ]

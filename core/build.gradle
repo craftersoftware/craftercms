@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'java-library'
+}
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+
+base {
+	archivesName = 'crafter-core'
+}
+
+dependencies {
+	compileOnly libs.jakarta.servlet.api
+
+	implementation project(':commons:utilities')
+	implementation project(':commons:validation')
+
+	implementation libs.jakarta.validation.api
+	implementation libs.quartz
+	implementation libs.commons.lang3
+	implementation libs.commons.collections4
+	implementation libs.commons.codec
+	implementation libs.commons.beanutils
+	implementation libs.commons.io
+	implementation libs.commons.configuration2
+	implementation libs.slf4j.api
+	implementation libs.jcl.over.slf4j
+	implementation libs.spring.core
+	implementation libs.spring.context
+	implementation libs.spring.context.support
+	implementation libs.spring.beans
+	implementation libs.spring.expression
+	implementation libs.spring.web
+	implementation libs.spring.webmvc
+	implementation libs.spring.tx
+	implementation libs.spring.oxm
+	implementation libs.spring.aop
+	implementation libs.guava
+	implementation libs.jackson.databind
+	implementation libs.jackson.dataformat.xml
+	implementation libs.jackson.core
+	implementation libs.jackson.annotations
+	implementation libs.stax2.api
+	implementation libs.xstream
+	implementation libs.freemarker
+	implementation libs.aspectjrt
+	implementation libs.aspectjweaver
+	implementation libs.dom4j
+	implementation libs.jaxen
+
+	testImplementation libs.junit
+	testImplementation libs.mockito.core
+	testImplementation libs.spring.test
+	testImplementation libs.slf4j.simple
+	testImplementation libs.jakarta.servlet.api
+}

@@ -1,0 +1,92 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+	}
+}
+
+plugins {
+	id 'com.github.node-gradle.node' version '7.1.0' apply false
+}
+
+dependencyResolutionManagement {
+	repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+	repositories {
+		mavenLocal()
+		mavenCentral()
+		maven {
+			url = uri('https://repo.jenkins-ci.org/public/')
+		}
+		ivy {
+			name = 'Node.js'
+			url = uri('https://nodejs.org/dist/')
+			patternLayout {
+				artifact 'v[revision]/[artifact]-v[revision]-[classifier].[ext]'
+			}
+			metadataSources {
+				artifact()
+			}
+			content {
+				includeModule('org.nodejs', 'node')
+			}
+		}
+	}
+}
+
+rootProject.name = 'craftercms'
+
+include 'groovy-sandbox'
+include 'script-security-plugin'
+include 'core'
+
+include 'commons:audit'
+include 'commons:entitlements'
+include 'commons:git'
+include 'commons:mongo'
+include 'commons:plugin'
+include 'commons:security'
+include 'commons:upgrade-manager'
+include 'commons:utilities'
+include 'commons:validation'
+
+include 'search:commons'
+include 'search:batch-indexer'
+include 'search:opensearch'
+
+include 'profile:api'
+include 'profile:client'
+include 'profile:security-provider'
+include 'profile:server'
+include 'profile:admin-console'
+include 'profile:integration-tests'
+
+include 'engine'
+
+include 'social:virus-scanner'
+include 'social:server'
+include 'social:admin'
+
+include 'studio-ui'
+include 'studio'
+include 'deployer'
+include 'cli'
+
+project(':search:commons').projectDir = file('search/crafter-search-commons')
+project(':search:batch-indexer').projectDir = file('search/crafter-search-batch-indexer')
+project(':search:opensearch').projectDir = file('search/crafter-search-opensearch')

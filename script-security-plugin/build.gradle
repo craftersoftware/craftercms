@@ -1,0 +1,50 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'groovy'
+	id 'java-library'
+}
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+
+base {
+	archivesName = 'script-security'
+}
+
+dependencies {
+	api project(':groovy-sandbox')
+
+	implementation libs.caffeine
+	implementation libs.bcel
+	implementation libs.groovy.sql
+	implementation(libs.findbugs) {
+		exclude group: 'dom4j', module: 'dom4j'
+		exclude group: 'com.google.code.findbugs', module: 'bcel-findbugs'
+	}
+
+	compileOnly libs.commons.lang3
+	compileOnly libs.commons.collections4
+	compileOnly libs.guava.collections
+	compileOnly libs.groovy
+
+	testImplementation libs.junit
+	testImplementation libs.mockito.core
+	testImplementation libs.guava
+	testImplementation libs.groovy
+	testImplementation libs.commons.collections4
+	testImplementation libs.commons.lang3
+}

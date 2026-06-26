@@ -1,0 +1,301 @@
+# Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3 as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+[versions]
+craftercms = "5.0.0-SNAPSHOT"
+java = "21"
+spring = "7.0.8"
+commons-lang3 = "3.20.0"
+commons-lang = "2.6"
+commons-collections = "3.2.2"
+commons-collections4 = "4.5.0"
+commons-codec = "1.22.0"
+commons-beanutils = "1.11.0"
+commons-io = "2.22.0"
+commons-configuration2 = "2.15.1"
+httpclient5 = "5.6.1"
+jakarta-servlet-api = "6.1.0"
+jakarta-activation-api = "2.1.4"
+angus-activation = "2.0.3"
+angus-mail = "2.0.5"
+slf4j = "2.0.18"
+bouncycastle = "1.84"
+commons-cli = "1.11.0"
+snakeyaml = "2.6"
+aws-sdk = "2.46.6"
+sardine = "5.13"
+mongo = "5.8.0"
+guava = "33.6.0-jre"
+guava-collections = "r03"
+aspectj = "1.9.25.1"
+freemarker = "2.3.34"
+jackson = "2.22.0"
+jackson-annotations = "2.22"
+groovy = "5.0.5"
+findbugs = "3.0.1"
+bcel = "6.12.0"
+caffeine = "3.2.4"
+junit = "4.13.2"
+mockito = "5.23.0"
+json-path = "3.0.0"
+# Jakarta EE variant uses classifier :jakarta — see implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
+esapi = "2.7.0.0"
+jakarta-validation-api = "3.1.1"
+hibernate-validator = "9.1.0.Final"
+xstream = "1.4.21"
+dom4j = "2.2.0"
+jaxen = "2.0.6"
+quartz = "2.5.2"
+stax2-api = "4.3.0"
+commons-text = "1.15.0"
+jgit = "7.7.0.202606012155-r"
+eddsa = "0.3.0"
+jongo = "1.5.2"
+semver4j = "3.1.0"
+joda-time = "2.14.2"
+jsoup = "1.22.2"
+opensearch = "3.6.0"
+opensearch-runner = "3.6.0.0"
+tika = "3.3.1"
+poi-scratchpad = "5.5.1"
+metadata-extractor = "2.20.0"
+commons-compress = "1.28.0"
+protobuf-java = "4.35.1"
+unit-api = "2.2"
+jdom2 = "2.0.6.1"
+hamcrest = "3.0"
+spring-security = "7.1.0"
+spring-social-web = "1.1.6.RELEASE"
+spring-social-facebook = "2.0.3.RELEASE"
+cglib = "3.3.0"
+urlrewritefilter = "5.1.3"
+graphql-java = "26.0"
+graphql-java-extended-scalars = "24.0"
+spatial4j = "0.8"
+smiley-http-proxy-servlet = "2.0"
+directory-watcher = "0.19.1"
+log4j = "2.26.0"
+ivy = "2.5.3"
+jaxb-api = "2.3.1"
+tomcat = "11.0.20"
+testng = "7.12.0"
+junit-jupiter = "6.1.0"
+junit-vintage = "6.1.0"
+testng-engine = "1.1.0"
+commons-fileupload2 = "2.0.0-M5"
+jakarta-xml-bind-api = "4.0.5"
+jaxb-core = "4.0.9"
+jaxb-impl = "4.0.9"
+greenmail = "2.1.9"
+javax-inject = "1"
+jakarta-mail-api = "2.1.5"
+jakarta-servlet-jsp-api = "4.0.0"
+jakarta-servlet-jsp-jstl-api = "3.0.2"
+httpmime = "4.5.14"
+spring-boot = "4.1.0"
+spring-data-commons = "4.1.0"
+spring-ldap-core = "4.1.0"
+commons-dbcp2 = "2.14.0"
+commons-csv = "1.14.1"
+ibatis-sqlmap = "2.3.4.726"
+mybatis-spring = "4.0.0"
+mybatis = "3.5.19"
+mariadb4j = "3.3.0.2"
+mariadb-java-client = "3.5.9"
+jta = "1.1"
+gson = "2.14.0"
+jose4j = "0.9.6"
+saxon-he = "13.0"
+tinify = "1.8.9"
+zxcvbn = "1.9.0"
+owasp-java-html-sanitizer = "20260313.1"
+xmlunit-core = "2.12.0"
+picocli = "4.7.7"
+okhttp = "5.4.0"
+handlebars = "4.6.0"
+jakarta-json = "2.0.1"
+aws-sdk-elastictranscoder = "2.40.14"
+node = "21.7.3"
+yarn = "1.22.22"
+rome-utils = "2.1.0"
+
+[libraries]
+commons-lang = { module = "commons-lang:commons-lang", version.ref = "commons-lang" }
+commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
+commons-collections = { module = "commons-collections:commons-collections", version.ref = "commons-collections" }
+commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
+commons-codec = { module = "commons-codec:commons-codec", version.ref = "commons-codec" }
+commons-beanutils = { module = "commons-beanutils:commons-beanutils", version.ref = "commons-beanutils" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+commons-configuration2 = { module = "org.apache.commons:commons-configuration2", version.ref = "commons-configuration2" }
+commons-cli = { module = "commons-cli:commons-cli", version.ref = "commons-cli" }
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
+jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "jakarta-servlet-api" }
+jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation-api" }
+angus-activation = { module = "org.eclipse.angus:angus-activation", version.ref = "angus-activation" }
+angus-mail = { module = "org.eclipse.angus:angus-mail", version.ref = "angus-mail" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+jcl-over-slf4j = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
+bcpg-jdk18on = { module = "org.bouncycastle:bcpg-jdk18on", version.ref = "bouncycastle" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+aws-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
+aws-s3-transfer-manager = { module = "software.amazon.awssdk:s3-transfer-manager", version.ref = "aws-sdk" }
+sardine = { module = "com.github.lookfirst:sardine", version.ref = "sardine" }
+mongo-bson = { module = "org.mongodb:bson", version.ref = "mongo" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+guava-collections = { module = "com.google.guava:guava-collections", version.ref = "guava-collections" }
+aspectjrt = { module = "org.aspectj:aspectjrt", version.ref = "aspectj" }
+aspectjweaver = { module = "org.aspectj:aspectjweaver", version.ref = "aspectj" }
+freemarker = { module = "org.freemarker:freemarker", version.ref = "freemarker" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson-annotations" }
+jackson-dataformat-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
+jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
+stax2-api = { module = "org.codehaus.woodstox:stax2-api", version.ref = "stax2-api" }
+spring-core = { module = "org.springframework:spring-core", version.ref = "spring" }
+spring-context = { module = "org.springframework:spring-context", version.ref = "spring" }
+spring-context-support = { module = "org.springframework:spring-context-support", version.ref = "spring" }
+spring-beans = { module = "org.springframework:spring-beans", version.ref = "spring" }
+spring-expression = { module = "org.springframework:spring-expression", version.ref = "spring" }
+spring-web = { module = "org.springframework:spring-web", version.ref = "spring" }
+spring-webmvc = { module = "org.springframework:spring-webmvc", version.ref = "spring" }
+spring-tx = { module = "org.springframework:spring-tx", version.ref = "spring" }
+spring-oxm = { module = "org.springframework:spring-oxm", version.ref = "spring" }
+spring-aop = { module = "org.springframework:spring-aop", version.ref = "spring" }
+spring-test = { module = "org.springframework:spring-test", version.ref = "spring" }
+groovy = { module = "org.apache.groovy:groovy", version.ref = "groovy" }
+groovy-sql = { module = "org.apache.groovy:groovy-sql", version.ref = "groovy" }
+findbugs = { module = "com.google.code.findbugs:findbugs", version.ref = "findbugs" }
+bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+junit = { module = "junit:junit", version.ref = "junit" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+json-path = { module = "com.jayway.jsonpath:json-path", version.ref = "json-path" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakarta-validation-api" }
+hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", version.ref = "hibernate-validator" }
+xstream = { module = "com.thoughtworks.xstream:xstream", version.ref = "xstream" }
+dom4j = { module = "org.dom4j:dom4j", version.ref = "dom4j" }
+jaxen = { module = "jaxen:jaxen", version.ref = "jaxen" }
+quartz = { module = "org.quartz-scheduler:quartz", version.ref = "quartz" }
+test-annotations = { module = "org.jenkins-ci:test-annotations", version = "1.5" }
+commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+jgit-archive = { module = "org.eclipse.jgit:org.eclipse.jgit.archive", version.ref = "jgit" }
+jgit-ssh-apache = { module = "org.eclipse.jgit:org.eclipse.jgit.ssh.apache", version.ref = "jgit" }
+bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+bcprov-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+bcmail-jdk18on = { module = "org.bouncycastle:bcmail-jdk18on", version.ref = "bouncycastle" }
+eddsa = { module = "net.i2p.crypto:eddsa", version.ref = "eddsa" }
+mongo-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongo" }
+mongo-driver-legacy = { module = "org.mongodb:mongodb-driver-legacy", version.ref = "mongo" }
+jongo = { module = "org.jongo:jongo", version.ref = "jongo" }
+semver4j = { module = "com.vdurmont:semver4j", version.ref = "semver4j" }
+joda-time = { module = "joda-time:joda-time", version.ref = "joda-time" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+opensearch-rest-high-level-client = { module = "org.opensearch.client:opensearch-rest-high-level-client", version.ref = "opensearch" }
+opensearch-java = { module = "org.opensearch.client:opensearch-java", version.ref = "opensearch" }
+opensearch-runner = { module = "org.codelibs.opensearch:opensearch-runner", version.ref = "opensearch-runner" }
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+tika-parsers-standard-package = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
+poi-scratchpad = { module = "org.apache.poi:poi-scratchpad", version.ref = "poi-scratchpad" }
+metadata-extractor = { module = "com.drewnoakes:metadata-extractor", version.ref = "metadata-extractor" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf-java" }
+unit-api = { module = "javax.measure:unit-api", version.ref = "unit-api" }
+jdom2 = { module = "org.jdom:jdom2", version.ref = "jdom2" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
+json-path-assert = { module = "com.jayway.jsonpath:json-path-assert", version.ref = "json-path" }
+spring-security-core = { module = "org.springframework.security:spring-security-core", version.ref = "spring-security" }
+spring-security-config = { module = "org.springframework.security:spring-security-config", version.ref = "spring-security" }
+spring-security-web = { module = "org.springframework.security:spring-security-web", version.ref = "spring-security" }
+spring-security-access = { module = "org.springframework.security:spring-security-access", version.ref = "spring-security" }
+spring-social-web = { module = "org.springframework.social:spring-social-web", version.ref = "spring-social-web" }
+spring-social-facebook = { module = "org.springframework.social:spring-social-facebook", version.ref = "spring-social-facebook" }
+cglib = { module = "cglib:cglib", version.ref = "cglib" }
+urlrewritefilter = { module = "org.tuckey:urlrewritefilter", version.ref = "urlrewritefilter" }
+graphql-java = { module = "com.graphql-java:graphql-java", version.ref = "graphql-java" }
+graphql-java-extended-scalars = { module = "com.graphql-java:graphql-java-extended-scalars", version.ref = "graphql-java-extended-scalars" }
+spatial4j = { module = "org.locationtech.spatial4j:spatial4j", version.ref = "spatial4j" }
+smiley-http-proxy-servlet = { module = "org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet", version.ref = "smiley-http-proxy-servlet" }
+directory-watcher = { module = "io.methvin:directory-watcher", version.ref = "directory-watcher" }
+log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+log4j-jakarta-web = { module = "org.apache.logging.log4j:log4j-jakarta-web", version.ref = "log4j" }
+log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
+ivy = { module = "org.apache.ivy:ivy", version.ref = "ivy" }
+jaxb-api = { module = "javax.xml.bind:jaxb-api", version.ref = "jaxb-api" }
+groovy-all = { module = "org.apache.groovy:groovy-all", version.ref = "groovy" }
+jackson-dataformat-smile = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-smile", version.ref = "jackson" }
+jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+aws-sts = { module = "software.amazon.awssdk:sts", version.ref = "aws-sdk" }
+aws-sso = { module = "software.amazon.awssdk:sso", version.ref = "aws-sdk" }
+aws-ssooidc = { module = "software.amazon.awssdk:ssooidc", version.ref = "aws-sdk" }
+tomcat-jasper-el = { module = "org.apache.tomcat:tomcat-jasper-el", version.ref = "tomcat" }
+testng = { module = "org.testng:testng", version.ref = "testng" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
+testng-engine = { module = "org.junit.support:testng-engine", version.ref = "testng-engine" }
+commons-fileupload2-jakarta-servlet6 = { module = "org.apache.commons:commons-fileupload2-jakarta-servlet6", version.ref = "commons-fileupload2" }
+jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
+jaxb-core = { module = "com.sun.xml.bind:jaxb-core", version.ref = "jaxb-core" }
+jaxb-impl = { module = "com.sun.xml.bind:jaxb-impl", version.ref = "jaxb-impl" }
+greenmail = { module = "com.icegreen:greenmail", version.ref = "greenmail" }
+javax-inject = { module = "javax.inject:javax.inject", version.ref = "javax-inject" }
+jakarta-mail-api = { module = "jakarta.mail:jakarta.mail-api", version.ref = "jakarta-mail-api" }
+jakarta-servlet-jsp-api = { module = "jakarta.servlet.jsp:jakarta.servlet.jsp-api", version.ref = "jakarta-servlet-jsp-api" }
+jakarta-servlet-jsp-jstl-api = { module = "jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api", version.ref = "jakarta-servlet-jsp-jstl-api" }
+httpmime = { module = "org.apache.httpcomponents:httpmime", version.ref = "httpmime" }
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-log4j2 = { module = "org.springframework.boot:spring-boot-starter-log4j2" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-restclient = { module = "org.springframework.boot:spring-boot-starter-restclient" }
+spring-jdbc = { module = "org.springframework:spring-jdbc", version.ref = "spring" }
+spring-websocket = { module = "org.springframework:spring-websocket", version.ref = "spring" }
+spring-messaging = { module = "org.springframework:spring-messaging", version.ref = "spring" }
+spring-data-commons = { module = "org.springframework.data:spring-data-commons", version.ref = "spring-data-commons" }
+spring-ldap-core = { module = "org.springframework.ldap:spring-ldap-core", version.ref = "spring-ldap-core" }
+spring-security-ldap = { module = "org.springframework.security:spring-security-ldap", version.ref = "spring-security" }
+spring-security-messaging = { module = "org.springframework.security:spring-security-messaging", version.ref = "spring-security" }
+commons-dbcp2 = { module = "org.apache.commons:commons-dbcp2", version.ref = "commons-dbcp2" }
+commons-csv = { module = "org.apache.commons:commons-csv", version.ref = "commons-csv" }
+ibatis-sqlmap = { module = "org.apache.ibatis:ibatis-sqlmap", version.ref = "ibatis-sqlmap" }
+mybatis-spring = { module = "org.mybatis:mybatis-spring", version.ref = "mybatis-spring" }
+mybatis = { module = "org.mybatis:mybatis", version.ref = "mybatis" }
+mariadb4j = { module = "org.craftercms.mariaDB4j:mariaDB4j", version.ref = "mariadb4j" }
+mariadb-java-client = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb-java-client" }
+jta = { module = "javax.transaction:jta", version.ref = "jta" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+jose4j = { module = "org.bitbucket.b_c:jose4j", version.ref = "jose4j" }
+saxon-he = { module = "net.sf.saxon:Saxon-HE", version.ref = "saxon-he" }
+tinify = { module = "com.tinify:tinify", version.ref = "tinify" }
+zxcvbn = { module = "com.nulab-inc:zxcvbn", version.ref = "zxcvbn" }
+owasp-java-html-sanitizer = { module = "com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer", version.ref = "owasp-java-html-sanitizer" }
+xmlunit-core = { module = "org.xmlunit:xmlunit-core", version.ref = "xmlunit-core" }
+tomcat-embed-websocket = { module = "org.apache.tomcat.embed:tomcat-embed-websocket", version.ref = "tomcat" }
+jgit-junit = { module = "org.eclipse.jgit:org.eclipse.jgit.junit", version.ref = "jgit" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+okhttp-jvm = { module = "com.squareup.okhttp3:okhttp-jvm", version.ref = "okhttp" }
+handlebars = { module = "org.craftercms:handlebars", version.ref = "handlebars" }
+handlebars-springmvc = { module = "org.craftercms:handlebars-springmvc", version.ref = "handlebars" }
+jakarta-json = { module = "org.glassfish:jakarta.json", version.ref = "jakarta-json" }
+aws-cloudfront = { module = "software.amazon.awssdk:cloudfront", version.ref = "aws-sdk" }
+aws-cloudformation = { module = "software.amazon.awssdk:cloudformation", version.ref = "aws-sdk" }
+aws-elastictranscoder = { module = "software.amazon.awssdk:elastictranscoder", version.ref = "aws-sdk-elastictranscoder" }
+aws-mediaconvert = { module = "software.amazon.awssdk:mediaconvert", version.ref = "aws-sdk" }
+rome-utils = { module = "com.rometools:rome-utils", version.ref = "rome-utils" }

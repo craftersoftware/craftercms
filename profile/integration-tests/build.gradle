@@ -1,0 +1,65 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'war'
+}
+
+ext.crafterManifestTitle = 'Crafter Profile Integration Tests'
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+apply from: "${rootDir}/gradle/war.gradle"
+
+base {
+	archivesName = 'crafter-profile-integration-tests'
+}
+
+dependencies {
+	implementation project(':profile:client')
+
+	testImplementation project(':profile:api')
+	testImplementation project(':commons:utilities')
+	testImplementation project(':commons:security')
+	testImplementation libs.spring.context
+	testImplementation libs.spring.web
+	testImplementation libs.mongo.bson
+	testImplementation libs.junit
+	testImplementation libs.spring.test
+	testImplementation libs.greenmail
+	testImplementation libs.slf4j.simple
+}
+
+processResources {
+	filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+		'mongo.port': findProperty('profileMongoPort') ?: '37017',
+		'cargo.port': findProperty('cargoPort') ?: '8080'
+	])
+}
+
+war {
+	dependsOn ':profile:server:war'
+	from({
+		zipTree(project(':profile:server').tasks.named('war').get().archiveFile.get().asFile)
+	}) {
+		exclude 'META-INF/MANIFEST.MF'
+	}
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('test') {
+	// Requires embedded Mongo, Cargo/Jetty; run explicitly when needed.
+	enabled = false
+}

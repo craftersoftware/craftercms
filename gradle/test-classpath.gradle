@@ -1,0 +1,86 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Mirrors selected compileOnly dependencies onto the test classpath. Main code keeps
+ * compileOnly scope while unit tests can still resolve the same APIs.
+ */
+
+def hasCompileOnlyDependency = { String group, String name ->
+	configurations.compileOnly.allDependencies.any { dep ->
+		dep.group == group && dep.name == name
+	}
+}
+
+def mirrorCompileOnlyToTest = { dependency ->
+	dependencies {
+		testImplementation dependency
+	}
+}
+
+plugins.withType(JavaPlugin).configureEach {
+	afterEvaluate {
+		if (configurations.findByName('testImplementation') == null) {
+			return
+		}
+
+		if (hasCompileOnlyDependency('jakarta.servlet', 'jakarta.servlet-api')) {
+			mirrorCompileOnlyToTest(libs.jakarta.servlet.api)
+		}
+		if (hasCompileOnlyDependency('jakarta.servlet.jsp', 'jakarta.servlet.jsp-api')) {
+			mirrorCompileOnlyToTest(libs.jakarta.servlet.jsp.api)
+		}
+		if (hasCompileOnlyDependency('org.springframework', 'spring-context')) {
+			mirrorCompileOnlyToTest(libs.spring.context)
+		}
+		if (hasCompileOnlyDependency('org.springframework', 'spring-context-support')) {
+			mirrorCompileOnlyToTest(libs.spring.context.support)
+		}
+		if (hasCompileOnlyDependency('org.springframework', 'spring-web')) {
+			mirrorCompileOnlyToTest(libs.spring.web)
+		}
+		if (hasCompileOnlyDependency('org.springframework', 'spring-webmvc')) {
+			mirrorCompileOnlyToTest(libs.spring.webmvc)
+		}
+		if (hasCompileOnlyDependency('org.springframework', 'spring-beans')) {
+			mirrorCompileOnlyToTest(libs.spring.beans)
+		}
+		if (hasCompileOnlyDependency('org.eclipse.angus', 'angus-mail')) {
+			mirrorCompileOnlyToTest(libs.angus.mail)
+		}
+		if (hasCompileOnlyDependency('org.freemarker', 'freemarker')) {
+			mirrorCompileOnlyToTest(libs.freemarker)
+		}
+		if (hasCompileOnlyDependency('org.apache.groovy', 'groovy')) {
+			mirrorCompileOnlyToTest(libs.groovy)
+		}
+		if (hasCompileOnlyDependency('com.fasterxml.jackson.core', 'jackson-databind')) {
+			mirrorCompileOnlyToTest(libs.jackson.databind)
+		}
+		if (hasCompileOnlyDependency('com.fasterxml.jackson.core', 'jackson-core')) {
+			mirrorCompileOnlyToTest(libs.jackson.core)
+		}
+		if (hasCompileOnlyDependency('org.apache.commons', 'commons-configuration2')) {
+			mirrorCompileOnlyToTest(libs.commons.configuration2)
+		}
+		if (hasCompileOnlyDependency('com.google.guava', 'guava')) {
+			mirrorCompileOnlyToTest(libs.guava)
+		}
+		if (hasCompileOnlyDependency('org.yaml', 'snakeyaml')) {
+			mirrorCompileOnlyToTest(libs.snakeyaml)
+		}
+	}
+}

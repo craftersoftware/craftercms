@@ -1,0 +1,50 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'java-library'
+}
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+
+base {
+	archivesName = 'crafter-security-provider'
+}
+
+dependencies {
+	implementation project(':profile:api')
+	implementation project(':profile:client')
+	implementation project(':commons:utilities')
+	implementation project(':commons:security')
+
+	implementation libs.commons.lang3
+	implementation libs.commons.collections4
+	implementation libs.mongo.bson
+	implementation libs.slf4j.api
+	compileOnly libs.jakarta.servlet.api
+	implementation libs.spring.security.web
+	implementation libs.spring.social.web
+	implementation libs.spring.social.facebook
+	implementation libs.guava
+	implementation libs.aspectjrt
+	implementation libs.aspectjweaver
+
+	testImplementation libs.junit
+	testImplementation libs.mockito.core
+	testImplementation libs.spring.test
+	testImplementation libs.jakarta.servlet.api
+	testImplementation libs.slf4j.simple
+}

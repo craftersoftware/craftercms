@@ -23,7 +23,7 @@ ext.buildModules = ["groovy-sandbox", "script-security-plugin", "commons",
 ext.deployModules = ["groovy-sandbox", "script-security-plugin", "commons",
 		     "core", "search", "profile", "profile-admin", "engine", "deployer", "studio-ui", "studio",
 		     "social", "social-admin", "cli"]
-ext.deployToMavenModules = ["craftercms", "groovy-sandbox", "script-security-plugin", "commons",
+ext.deployToMavenModules = ["groovy-sandbox", "script-security-plugin", "commons",
 			    "core", "search", "profile", "engine", "deployer", "studio",
 			    "social", "cli"]
 
@@ -69,4 +69,27 @@ ext.getDeployToMavenModules = { ->
 		result = deployToMavenModules
 
 	return result
+}
+
+// When -Pmodules is set and root orchestration tasks run, Gradle would otherwise also execute
+// clean/build on every subproject (LifecycleBasePlugin). Disable all subproject tasks so only
+// getBuildModules() subprocess invocations run; direct :project:task requests are unaffected.
+gradle.taskGraph.whenReady { graph ->
+	if (!project.hasProperty('modules')) {
+		return
+	}
+
+	def orchestratedRootTasks = ['clean', 'build', 'deployToMaven', 'buildBom']
+	def runningRootOrchestration = graph.allTasks.any { task ->
+		task.project == rootProject && orchestratedRootTasks.contains(task.name)
+	}
+	if (!runningRootOrchestration) {
+		return
+	}
+
+	graph.allTasks.each { task ->
+		if (task.project != rootProject) {
+			task.enabled = false
+		}
+	}
 }

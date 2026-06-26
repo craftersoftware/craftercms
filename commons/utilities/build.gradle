@@ -1,0 +1,84 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+plugins {
+	id 'java-library'
+}
+
+apply from: "${rootDir}/gradle/java-library.gradle"
+
+base {
+	archivesName = 'crafter-commons-utilities'
+}
+
+dependencies {
+	compileOnly libs.jakarta.activation.api
+	compileOnly libs.angus.activation
+
+	implementation libs.commons.lang3
+	implementation libs.commons.collections4
+	implementation libs.commons.codec
+	implementation libs.commons.beanutils
+	implementation libs.commons.io
+	implementation libs.httpclient5
+	implementation libs.slf4j.api
+	implementation libs.jcl.over.slf4j
+	implementation libs.aws.s3.transfer.manager
+
+	compileOnly libs.bcpg.jdk18on
+	compileOnly libs.commons.configuration2
+	compileOnly libs.commons.cli
+	compileOnly libs.jakarta.servlet.api
+	compileOnly libs.spring.context
+	compileOnly libs.spring.context.support
+	compileOnly libs.spring.web
+	compileOnly libs.spring.webmvc
+	compileOnly libs.angus.mail
+	compileOnly libs.freemarker
+	compileOnly libs.jackson.databind
+	compileOnly libs.jackson.core
+	compileOnly libs.jackson.dataformat.cbor
+	compileOnly libs.mongo.bson
+	compileOnly libs.guava
+	compileOnly libs.aspectjrt
+	compileOnly libs.aspectjweaver
+	compileOnly libs.snakeyaml
+	compileOnly libs.aws.s3
+	compileOnly libs.sardine
+	compileOnly project(':script-security-plugin')
+
+	testImplementation libs.junit
+	testImplementation libs.spring.test
+	testImplementation libs.mockito.core
+	testImplementation libs.json.path
+	testImplementation libs.angus.mail
+	testImplementation libs.freemarker
+	testImplementation libs.spring.context
+	testImplementation libs.spring.context.support
+	testImplementation libs.spring.web
+	testImplementation libs.spring.webmvc
+	testImplementation libs.jackson.databind
+	testImplementation libs.jackson.core
+	testImplementation libs.jackson.annotations
+	testImplementation libs.guava
+	testImplementation libs.commons.configuration2
+	testImplementation libs.snakeyaml
+	testImplementation libs.jakarta.servlet.api
+}
+
+tasks.named('test') {
+	environment 'TEST_ENV_PROPERTY1', 'CUSTOM_VALUE'
+}
