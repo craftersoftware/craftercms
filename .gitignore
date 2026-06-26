@@ -41,6 +41,23 @@ craftercms/crafter-delivery
 crafter-authoring
 crafter-delivery
 craftercms/downloads/
+
+# CrafterCMS modules (cloned locally)
+# These should be removed once the monorepo and gradle upgrade is complete
+/cli/
+/commons/
+/core/
+/deployer/
+/engine/
+/groovy-sandbox/
+/js-sdk/
+/profile/
+/script-security-plugin/
+/search/
+/social/
+/studio/
+/studio-ui/
+
 !utils/src/main/java/org/craftercms/bundle/utils/
 utils/target
 .project
