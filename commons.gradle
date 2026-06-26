@@ -42,7 +42,8 @@ ext.splash = { ->
 
 // Settings
 ext {
-	srcFolder = getPropertySafelyWithDefaults("projectDir", ".") + "/src/"
+	cmsDir = "${projectDir}/craftercms"
+	srcFolder = "${projectDir}/"
 	commandTimeout = getPropertySafelyWithDefaults("commandTimeout", 1000000).toInteger()
 	mavenCmd = getPropertySafelyWithDefaults("quietBuild", "true").toBoolean() ? ["mvn", "-q"] : ["mvn"]
 }
@@ -196,9 +197,9 @@ ext.deployModule = { module, unitTest ->
 	def dir
 
 	if (module == "craftercms") {
+		deployArtifact(module, "${projectDir}/shared-dependencies", unitTest)
+		deployArtifact(module, "${projectDir}/spring-boot", unitTest)
 		dir = projectDir
-		deployArtifact(module, "$dir/shared-dependencies", unitTest)
-		deployArtifact(module, "$dir/spring-boot", unitTest)
 	} else {
 		dir = srcFolder + module
 	}

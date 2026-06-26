@@ -43,7 +43,7 @@ if (!dockerTag.isEmpty()) {
 // TODO: See https://plugins.gradle.org/search?term=docker
 
 ext {
-	imagesDir = "${projectDir}/resources/docker/images"
+	imagesDir = "${cmsDir}/resources/docker/images"
 	imagesBuildDir = "${buildDir}/images"
 	tempDir = "${buildDir}/temp"
 
@@ -68,7 +68,7 @@ ext {
 	} else {
 		// Authoring bundle
 		authoringBundleUrl = ""
-		authoringBundleSource = "${projectDir}/bundles/crafter-cms-authoring-${project.version}-linux-x86_64.tar.gz"
+		authoringBundleSource = "${bundlesDir}/crafter-cms-authoring-${project.version}-linux-x86_64.tar.gz"
 		authoringBundleFile = "${tempDir}/" + FilenameUtils.getName(authoringBundleSource)
 		authoringBundleRoot = "${tempDir}/" + FilenameUtils.getBaseName(authoringBundleSource) + "/crafter"
 	}
@@ -87,7 +87,7 @@ ext {
 	} else {
 		// Delivery bundle
 		deliveryBundleUrl = ""
-		deliveryBundleSource = "${projectDir}/bundles/crafter-cms-delivery-${project.version}-linux-x86_64.tar.gz"
+		deliveryBundleSource = "${bundlesDir}/crafter-cms-delivery-${project.version}-linux-x86_64.tar.gz"
 		deliveryBundleFile = "${tempDir}/" + FilenameUtils.getName(deliveryBundleSource)
 		deliveryBundleRoot = "${tempDir}/" + FilenameUtils.getBaseName(deliveryBundleSource) + "/crafter"
 	}

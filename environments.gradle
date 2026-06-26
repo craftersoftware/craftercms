@@ -82,7 +82,7 @@ ext.commonItemsToCopy = [
 	],
 	[
 		name   : "tomcat_info",
-		from   : "${projectDir}/resources/tomcat/ServerInfo.properties",    // Hides tomcat version
+		from   : "${cmsDir}/resources/tomcat/ServerInfo.properties",    // Hides tomcat version
 		into   : "/bin/apache-tomcat/lib/org/apache/catalina/util/",
 		exclude: ""
 	],
@@ -118,13 +118,13 @@ ext.commonItemsToCopy = [
 	],
 	[
 		name   : "license",
-		from   : "${projectDir}/resources/LICENSE",
+		from   : "${cmsDir}/resources/LICENSE",
 		into   : "/",
 		exclude: ""
 	],
 	[
 		name   : "ssh",
-		from   : "${projectDir}/resources/ssh",
+		from   : "${cmsDir}/resources/ssh",
 		into   : "/data/",
 		exclude: ""
 	]
@@ -140,7 +140,7 @@ ext.authoringItemsToCopy = [
 	],
 	[
 		name   : "setenv",
-		from   : "${projectDir}/resources/env/authoring/tomcat-config/setenv.sh",
+		from   : "${cmsDir}/resources/env/authoring/tomcat-config/setenv.sh",
 		into   : "/bin/apache-tomcat/bin/",
 		exclude: ""
 	]
@@ -149,29 +149,29 @@ ext.authoringItemsToCopy = [
 ext.deliveryItemsToCopy = [
 	[
 		name   : "setenv",
-		from   : "${projectDir}/resources/env/delivery/tomcat-config/setenv.sh",
+		from   : "${cmsDir}/resources/env/delivery/tomcat-config/setenv.sh",
 		into   : "/bin/apache-tomcat/bin/",
 		exclude: ""
 	]
 ]
 
 ext.commonGrapesDownloads = [
-	["groovy/bin/groovy", "-cp", "${projectDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
-	 "${projectDir}/resources/bin/upgrade/start-upgrade.groovy"],
-	["groovy/bin/groovy", "-cp", "${projectDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
-	 "${projectDir}/resources/bin/upgrade/upgrade-target.groovy"],
-	["groovy/bin/groovy", "-cp", "${projectDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
-	 "${projectDir}/resources/bin/upgrade/post-upgrade.groovy"]
+	["groovy/bin/groovy", "-cp", "${cmsDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
+	 "${cmsDir}/resources/bin/upgrade/start-upgrade.groovy"],
+	["groovy/bin/groovy", "-cp", "${cmsDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
+	 "${cmsDir}/resources/bin/upgrade/upgrade-target.groovy"],
+	["groovy/bin/groovy", "-cp", "${cmsDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
+	 "${cmsDir}/resources/bin/upgrade/post-upgrade.groovy"]
 ]
 
 ext.authoringGrapesDownloads = [
 ]
 
 ext.deliveryGrapesDownloads = [
-	["groovy/bin/groovy", "-cp", "${projectDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
-	 "${projectDir}/resources/env/delivery/bin/init-site.groovy"],
-	["groovy/bin/groovy", "-cp", "${projectDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
-	 "${projectDir}/resources/env/delivery/bin/remove-site.groovy"]
+	["groovy/bin/groovy", "-cp", "${cmsDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
+	 "${cmsDir}/resources/env/delivery/bin/init-site.groovy"],
+	["groovy/bin/groovy", "-cp", "${cmsDir}/resources/bin", "-Dgrape.root=.", "-Dmode.downloadGrapesOnly=true",
+	 "${cmsDir}/resources/env/delivery/bin/remove-site.groovy"]
 ]
 
 ext.commonUpdatePermissions = [
@@ -749,7 +749,7 @@ ext.prepareBaseEnvironment = { envFolder, overwriteChangedFiles, downloadGrapes,
 	// Download Grapes
 	if (downloadGrapes) {
 		copy {
-			from "${projectDir}/resources/bin/grapeConfig.xml"
+			from "${cmsDir}/resources/bin/grapeConfig.xml"
 			into "${envFolder}/bin"
 		}
 		commonGrapesDownloads.each() { grapes ->
@@ -801,28 +801,28 @@ ext.prepareAuthoringEnvironment = { overwriteChangedFiles, downloadGrapes, inclu
 
 	// Copy Deployer config
 	copy {
-		from "./resources/deployer"
+		from "${cmsDir}/resources/deployer"
 		into "${authoringEnvDir}/bin/crafter-deployer"
 		filter(ReplaceTokens, tokens: authoringTokens)
 	}
 
 	// Copy bin scripts
 	copy {
-		from "${projectDir}/resources/bin"
+		from "${cmsDir}/resources/bin"
 		into "${authoringEnvDir}/bin"
 		filter(ReplaceTokens, tokens: authoringTokens)
 	}
 
 	// Copy env specific bin scripts
 	copy {
-		from "./resources/env/authoring/bin"
+		from "${cmsDir}/resources/env/authoring/bin"
 		into "${authoringEnvDir}/bin"
 		filter(ReplaceTokens, tokens: authoringTokens)
 	}
 
 	// Copy Tomcat shared conf
 	copy {
-		from "./resources/env/authoring/tomcat-config/crafter"
+		from "${cmsDir}/resources/env/authoring/tomcat-config/crafter"
 		into "${authoringEnvDir}/bin/apache-tomcat/shared/classes/crafter"
 		filter(ReplaceTokens, tokens: authoringTokens)
 	}
@@ -871,28 +871,28 @@ ext.prepareDeliveryEnvironment = { overwriteChangedFiles, downloadGrapes, includ
 
 	// Copy Deployer config
 	copy {
-		from "./resources/deployer"
+		from "${cmsDir}/resources/deployer"
 		into "${deliveryEnvDir}/bin/crafter-deployer"
 		filter(ReplaceTokens, tokens: deliveryTokens)
 	}
 
 	// Copy bin scripts
 	copy {
-		from "${projectDir}/resources/bin"
+		from "${cmsDir}/resources/bin"
 		into "${deliveryEnvDir}/bin"
 		filter(ReplaceTokens, tokens: deliveryTokens)
 	}
 
 	// Copy env specific bin scripts
 	copy {
-		from "./resources/env/delivery/bin"
+		from "${cmsDir}/resources/env/delivery/bin"
 		into "${deliveryEnvDir}/bin"
 		filter(ReplaceTokens, tokens: deliveryTokens)
 	}
 
 	// Copy Tomcat shared conf
 	copy {
-		from "./resources/env/delivery/tomcat-config/crafter"
+		from "${cmsDir}/resources/env/delivery/tomcat-config/crafter"
 		into "${deliveryEnvDir}/bin/apache-tomcat/shared/classes/crafter"
 		filter(ReplaceTokens, tokens: deliveryTokens)
 	}
