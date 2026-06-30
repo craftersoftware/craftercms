@@ -35,12 +35,12 @@ live-env/
 crafter-auth-env/
 !craftercms/src/.gitkeep
 craftercms/src/
-craftercms/bundles/
+bundles/
 craftercms/crafter-authoring
 craftercms/crafter-delivery
 crafter-authoring
 crafter-delivery
-craftercms/downloads/
+downloads/
 
 # CrafterCMS modules (cloned locally)
 # These should be removed once the monorepo and gradle upgrade is complete

@@ -89,9 +89,9 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 * `startMongoDB`: start MongoDB, default `false` unless Profile or Social are enabled. This is automatic.
 * `unitTest`: Run unit tests during build, default `false`
 * `shallowClone`: Clone only the latest commits and not the entire history (faster, but you lose history), default `false`
-* `bundlesDir`: Where to deposit binaries, default `./craftercms/bundles`
+* `bundlesDir`: Where to deposit binaries, default `./bundles`
 * `downloadGrapes`: Download Grapes ahead of time (useful when no public Internet is available), default `false`
-* `downloadDir`: Where to store downloads, default `./craftercms/downloads`
+* `downloadDir`: Where to store downloads, default `./downloads`
 * `authoringEnvDir`: Where to store the authoring environment, default `./craftercms/crafter-authoring`
 * `deliveryEnvDir`: Where to store the delivery environment, default `./craftercms/crafter-delivery`
 * `currentPlatform`: What platform to build to (`linux` or `darwin`), default is the build machine's OS
