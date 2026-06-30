@@ -90,7 +90,7 @@
 		<commons-compress.version>1.28.0</commons-compress.version>
 
 		<httpmime.version>4.5.14</httpmime.version>
-		<httpclient5.version>5.6.1</httpclient5.version>
+		<httpclient5.version>5.6.2</httpclient5.version>
 
 		<mongo.version>5.8.0</mongo.version>
 		<jongo.version>1.5.2</jongo.version>
@@ -121,7 +121,7 @@
 		<mariadb4j.version>3.3.0.2</mariadb4j.version>
 		<Saxon-HE.version>13.0</Saxon-HE.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
-		<mybatis-spring.version>4.0.0</mybatis-spring.version>
+		<mybatis-spring.version>4.1.0</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
 		<mariadb-java-client.version>3.5.9</mariadb-java-client.version>
 		<greenmail.version>2.1.9</greenmail.version>
@@ -156,7 +156,7 @@
 		<!-- Testing -->
 		<testng.version>7.12.0</testng.version>
 		<junit.version>4.13.2</junit.version>
-		<junit-jupiter-engine.version>6.1.0</junit-jupiter-engine.version>
+		<junit-jupiter-engine.version>6.1.1</junit-jupiter-engine.version>
 		<testng-engine.version>1.1.0</testng-engine.version>
 		<mockito-core.version>5.23.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>

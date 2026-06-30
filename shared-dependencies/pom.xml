@@ -66,7 +66,7 @@
 		<log4j2.version>2.26.0</log4j2.version>
 		<angus-mail.version>2.0.5</angus-mail.version>
 		<jakarta-mail-api.version>2.1.5</jakarta-mail-api.version>
-		<junit-vintage.version>6.1.0</junit-vintage.version>
+		<junit-vintage.version>6.1.1</junit-vintage.version>
 
 		<jgit.version>7.7.0.202606012155-r</jgit.version>
 		<snakeyaml.version>2.6</snakeyaml.version>
@@ -75,7 +75,7 @@
 		<bouncycastle.version>1.84</bouncycastle.version>
 		<jackson.version>2.22.0</jackson.version>
 		<jackson-annotations.version>2.22</jackson-annotations.version>
-		<aws.sdk.version>2.46.17</aws.sdk.version>
+		<aws.sdk.version>2.46.18</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>5.0.6</groovy.version>
