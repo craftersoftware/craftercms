@@ -78,6 +78,7 @@ tasks.named('build') {
 }
 
 apply from: "${rootDir}/gradle/maven-publish.gradle"
+apply from: "${rootDir}/gradle/bom.gradle"
 
 tasks.register('cliDistTar', Tar) {
 	group = 'distribution'

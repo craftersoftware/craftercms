@@ -46,3 +46,4 @@ plugins.withType(JavaPlugin).configureEach {
 
 apply from: "${rootDir}/gradle/test-classpath.gradle"
 apply from: "${rootDir}/gradle/maven-publish.gradle"
+apply from: "${rootDir}/gradle/bom.gradle"

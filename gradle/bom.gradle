@@ -1,0 +1,39 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * CycloneDX BOM generation for Java/Groovy modules.
+ * Matches the former parent POM cyclonedx-maven-plugin configuration (makeBom goal).
+ */
+
+apply plugin: 'org.cyclonedx.bom'
+
+cyclonedxBom {
+	projectType = 'application'
+	schemaVersion = '1.4'
+	includeBomSerialNumber = true
+	includeLicenseText = false
+	outputFormat = 'json'
+	outputName = 'bom'
+	destination = layout.buildDirectory.get().asFile
+	skipConfigs = ['testRuntimeClasspath']
+}
+
+tasks.register('bomGenerate') {
+	group = 'build'
+	description = 'Generates CycloneDX BOM'
+	dependsOn tasks.named('cyclonedxBom')
+}

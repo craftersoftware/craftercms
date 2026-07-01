@@ -163,7 +163,6 @@ task buildBom() {
 	doFirst {
 		println "Build the Software Bill of Materials (BOM)"
 
-		// TODO Switch to all modules
 		getBuildModules().each { module ->
 			println "Building BOM for $module"
 			buildBom(module)
