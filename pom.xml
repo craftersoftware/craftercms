@@ -90,7 +90,7 @@
 		<commons-compress.version>1.28.0</commons-compress.version>
 
 		<httpmime.version>4.5.14</httpmime.version>
-		<httpclient5.version>5.6.1</httpclient5.version>
+		<httpclient5.version>5.6.2</httpclient5.version>
 
 		<mongo.version>5.8.0</mongo.version>
 		<jongo.version>1.5.2</jongo.version>
@@ -127,7 +127,7 @@
 		<greenmail.version>2.1.9</greenmail.version>
 		<stax2-api.version>4.3.0</stax2-api.version>
 		<joda-time.version>2.14.2</joda-time.version>
-		<hibernate-validator.version>9.1.1.Final</hibernate-validator.version>
+		<hibernate-validator.version>9.1.2.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>3.6.0</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>3.6.0</opensearch-java.version>
@@ -177,7 +177,7 @@
 		<maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
-		<gmavenplus-plugin.version>5.0.0</gmavenplus-plugin.version>
+		<gmavenplus-plugin.version>5.1.0</gmavenplus-plugin.version>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
 		<maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
 		<frontend-maven-plugin.version>2.0.1</frontend-maven-plugin.version>
