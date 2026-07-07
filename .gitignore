@@ -110,16 +110,6 @@ pids/
 *.out
 *.gz
 results/
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-tsconfig.tsbuildinfo
-*.babel
-*.ignore.*
 
 # Docker
 docker/images/build/
@@ -162,6 +152,16 @@ studio/derby.log
 studio-ui/.bic_cache
 studio-ui/**/build_tsc/
 studio-ui/**/jquery-src/
+studio-ui/.pnp.*
+studio-ui/.yarn/*
+!studio-ui/.yarn/patches
+!studio-ui/.yarn/plugins
+!studio-ui/.yarn/releases
+!studio-ui/.yarn/sdks
+!studio-ui/.yarn/versions
+studio-ui/**/tsconfig.tsbuildinfo
+studio-ui/**/*.babel
+studio-ui/**/*.ignore.*
 studio-ui/ui/app/tsconfig.build.tsbuildinfo
 studio-ui/ui/uppy/lib/
 studio-ui/.yarn/cache/*.flock
