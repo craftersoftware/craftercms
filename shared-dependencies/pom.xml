@@ -72,10 +72,10 @@
 		<snakeyaml.version>2.6</snakeyaml.version>
 		<sardine.version>5.13</sardine.version>
 		<okio.version>3.17.0</okio.version>
-		<bouncycastle.version>1.84</bouncycastle.version>
-		<jackson.version>2.22.0</jackson.version>
+		<bouncycastle.version>1.85</bouncycastle.version>
+		<jackson.version>2.22.1</jackson.version>
 		<jackson-annotations.version>2.22</jackson-annotations.version>
-		<aws.sdk.version>2.47.0</aws.sdk.version>
+		<aws.sdk.version>2.47.5</aws.sdk.version>
 		<aws.sdk.elastictranscoder.version>2.40.14</aws.sdk.elastictranscoder.version>
 		<jose4j.version>0.9.6</jose4j.version>
 		<groovy.version>4.0.32</groovy.version>
