@@ -60,7 +60,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
-		<tomcat.version>11.0.23</tomcat.version>
+		<tomcat.version>11.0.24</tomcat.version>
 		<java.version>21</java.version>
 		<groovy.version>5.0.5</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
@@ -90,9 +90,9 @@
 		<commons-compress.version>1.28.0</commons-compress.version>
 
 		<httpmime.version>4.5.14</httpmime.version>
-		<httpclient5.version>5.6.1</httpclient5.version>
+		<httpclient5.version>5.6.2</httpclient5.version>
 
-		<mongo.version>5.8.0</mongo.version>
+		<mongo.version>5.9.0</mongo.version>
 		<jongo.version>1.5.2</jongo.version>
 		<xstream.version>1.4.21</xstream.version>
 		<slf4j.version>2.0.18</slf4j.version>
@@ -118,16 +118,16 @@
 		<graphql-java-extended-scalars.version>24.0</graphql-java-extended-scalars.version>
 		<smiley-http-proxy-servlet.version>2.0</smiley-http-proxy-servlet.version>
 		<tinify.version>1.8.9</tinify.version>
-		<mariadb4j.version>3.3.0.2</mariadb4j.version>
+		<mariadb4j.version>3.3.0.3</mariadb4j.version>
 		<Saxon-HE.version>13.0</Saxon-HE.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
-		<mybatis-spring.version>4.0.0</mybatis-spring.version>
+		<mybatis-spring.version>4.1.0</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
 		<mariadb-java-client.version>3.5.9</mariadb-java-client.version>
-		<greenmail.version>2.1.9</greenmail.version>
+		<greenmail.version>2.1.11</greenmail.version>
 		<stax2-api.version>4.3.0</stax2-api.version>
 		<joda-time.version>2.14.2</joda-time.version>
-		<hibernate-validator.version>9.1.1.Final</hibernate-validator.version>
+		<hibernate-validator.version>9.1.2.Final</hibernate-validator.version>
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
 		<opensearch-rest-high-level-client.version>3.6.0</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>3.6.0</opensearch-java.version>
@@ -156,7 +156,7 @@
 		<!-- Testing -->
 		<testng.version>7.12.0</testng.version>
 		<junit.version>4.13.2</junit.version>
-		<junit-jupiter-engine.version>6.1.0</junit-jupiter-engine.version>
+		<junit-jupiter-engine.version>6.1.2</junit-jupiter-engine.version>
 		<testng-engine.version>1.1.0</testng-engine.version>
 		<mockito-core.version>5.23.0</mockito-core.version>
 		<embedmongo-maven-plugin.version>0.4.2</embedmongo-maven-plugin.version>
@@ -179,7 +179,7 @@
 		<maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
 		<maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
-		<gmavenplus-plugin.version>5.0.0</gmavenplus-plugin.version>
+		<gmavenplus-plugin.version>5.1.0</gmavenplus-plugin.version>
 		<appassembler-maven-plugin.version>2.1.0</appassembler-maven-plugin.version>
 		<maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
 		<frontend-maven-plugin.version>2.0.1</frontend-maven-plugin.version>
