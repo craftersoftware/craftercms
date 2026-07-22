@@ -38,6 +38,7 @@ gradle-app.setting
 *.iml
 .idea/
 .cursor/
+.legacy-sync-cache/
 dependency-reduced-pom.xml
 build/
 crafter-install/
