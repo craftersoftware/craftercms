@@ -92,9 +92,9 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 						/>
 					</Box>
 					<Box display="flex" alignItems="center">
-						<Tooltip title={<FormattedMessage defaultMessage="Remove Dependency" />}>
+						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
 							<IconButton
-								aria-label={formatMessage({ defaultMessage: 'Remove Dependency' })}
+								aria-label={formatMessage({ defaultMessage: 'Remove Reference' })}
 								onClick={() => removeDependency(index)}
 							>
 								<RemoveCircleOutlineRoundedIcon />
@@ -104,8 +104,8 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 				</Card>
 			))}
 			<Box display="flex" justifyContent="center">
-				<Tooltip title={<FormattedMessage defaultMessage="Add Dependency" />}>
-					<IconButton aria-label={formatMessage({ defaultMessage: 'Add Dependency' })} onClick={() => addDependency()}>
+				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
+					<IconButton aria-label={formatMessage({ defaultMessage: 'Add Reference' })} onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>
 				</Tooltip>

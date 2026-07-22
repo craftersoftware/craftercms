@@ -16,7 +16,7 @@
 
 import { DialogBody } from '../DialogBody';
 import { DialogFooter } from '../DialogFooter';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ImageEditorDialogProps } from './types';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -36,7 +36,7 @@ import { getFileExtension, getFileNameFromPath, removeExtension } from '../../ut
 import { pushDialog } from '../../state/actions/dialogStack';
 import { useDispatch } from 'react-redux';
 import { createComponentId } from '../../utils/system';
-import { applyAssetNameRules } from '../../utils/content';
+import { applyAssetNameRules, isBlobUrl } from '../../utils/content';
 import { isEmpty } from '../../utils/string';
 import { Slider } from '@mui/material';
 import AdjustableBackground from './AdjustableBackground';
@@ -104,6 +104,12 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 	const cropperEnabled = editorMode && editorMode === 'crop';
 	const isSliderMode = editorMode && sliderModes.includes(editorMode);
 	const isNewFileName = overwriteState.fileName !== fileNameWithoutExtension;
+
+	useEffect(() => {
+		if (path && isBlobUrl(path)) {
+			return () => URL.revokeObjectURL(path);
+		}
+	}, [path]);
 
 	const handleSubmit = (newPath?: string) => {
 		const cropper = cropperRef.current;

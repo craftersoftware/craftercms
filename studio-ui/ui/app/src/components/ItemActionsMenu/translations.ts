@@ -73,9 +73,9 @@ export const translations = defineMessages({
 		id: 'words.history',
 		defaultMessage: 'History'
 	},
-	dependencies: {
-		id: 'words.dependencies',
-		defaultMessage: 'Dependencies'
+	references: {
+		id: 'words.references',
+		defaultMessage: 'References'
 	},
 	translation: {
 		id: 'words.translation',

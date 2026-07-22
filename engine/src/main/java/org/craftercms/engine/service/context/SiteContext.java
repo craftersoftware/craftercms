@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,18 +15,42 @@
  */
 package org.craftercms.engine.service.context;
 
-import graphql.GraphQL;
+import java.net.URLClassLoader;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.lang3.time.StopWatch;
 import org.craftercms.commons.http.RequestContext;
 import org.craftercms.commons.lang.Callback;
+import static org.craftercms.commons.locale.LocaleUtils.CONFIG_KEY_DEFAULT_LOCALE;
+import static org.craftercms.commons.locale.LocaleUtils.CONFIG_KEY_SUPPORTED_LOCALES;
 import org.craftercms.core.exception.CrafterException;
 import org.craftercms.core.service.ContentStoreService;
 import org.craftercms.core.service.Context;
 import org.craftercms.core.url.UrlTransformationEngine;
 import org.craftercms.core.util.cache.CacheTemplate;
 import org.craftercms.engine.cache.SiteCacheWarmer;
-import org.craftercms.engine.event.*;
+import org.craftercms.engine.event.CacheClearedEvent;
+import org.craftercms.engine.event.GraphQLBuiltEvent;
+import org.craftercms.engine.event.SiteContextCreatedEvent;
+import org.craftercms.engine.event.SiteContextDestroyedEvent;
+import org.craftercms.engine.event.SiteContextInitializedEvent;
+import org.craftercms.engine.event.SiteEvent;
 import org.craftercms.engine.exception.GraphQLBuildException;
 import org.craftercms.engine.exception.SiteContextInitializationException;
 import org.craftercms.engine.graphql.GraphQLFactory;
@@ -45,19 +69,8 @@ import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfig;
 import org.tuckey.web.filters.urlrewrite.UrlRewriter;
 
+import graphql.GraphQL;
 import jakarta.servlet.ServletContext;
-import java.net.URLClassLoader;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.craftercms.commons.locale.LocaleUtils.CONFIG_KEY_DEFAULT_LOCALE;
-import static org.craftercms.commons.locale.LocaleUtils.CONFIG_KEY_SUPPORTED_LOCALES;
 
 /**
  * Wrapper for a {@link Context} that adds properties specific to Crafter
@@ -616,12 +629,23 @@ public class SiteContext {
 					} catch (Exception e) {
 						logger.error("Error while closing application context for {}", this, e);
 					}
+				}                // Close the GroovyScriptEngine's ScriptClassLoader (child) before the parent site class loader
+				if (scriptFactory != null) {
+					try {
+						scriptFactory.destroy();
+					} catch (Exception e) {
+						logger.error("Error while destroying script factory for {}", this, e);
+					} finally {
+						scriptFactory = null;
+					}
 				}
 				if (classLoader != null) {
 					try {
 						classLoader.close();
 					} catch (Exception e) {
 						logger.error("Error while closing class loader for {}", this, e);
+					} finally {
+						classLoader = null;
 					}
 				}
 

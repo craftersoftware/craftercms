@@ -79,7 +79,7 @@ export const dialogInitialState = {
 
 export const assetsTypes = {
 	'all-deps': {
-		label: <FormattedMessage id="dependenciesDialog.allDeps" defaultMessage="Show all dependencies" />,
+		label: <FormattedMessage defaultMessage="Show all references" />,
 		filter: () => true
 	},
 	'content-items': {

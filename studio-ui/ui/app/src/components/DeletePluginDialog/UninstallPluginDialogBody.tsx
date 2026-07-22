@@ -82,8 +82,7 @@ export function UninstallPluginDialogBody(props: UninstallPluginDialogBodyProps)
 					<>
 						<Alert variant="outlined" severity="warning" icon={false}>
 							<FormattedMessage
-								id="uninstallPluginDialog.reviewDependenciesMessage"
-								defaultMessage={'Please review the dependant items of "{pluginId}"'}
+								defaultMessage={'Please review the items that reference the plugin "{pluginId}"'}
 								values={{
 									pluginId
 								}}

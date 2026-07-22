@@ -17,14 +17,14 @@
 
 package org.craftercms.deployer.utils.opensearch;
 
+import java.util.ArrayList;
+
 import org.craftercms.commons.config.ConfigurationException;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
-
-import java.util.ArrayList;
 
 /**
  * Base implementation for factories capable of build single or multi-cluster OpenSearch services
@@ -54,6 +54,14 @@ public abstract class AbstractOpenSearchFactory<T> extends AbstractFactoryBean<T
 	@Override
 	public void setBeanName(final String name) {
 		this.name = name;
+	}
+
+	@Override
+	protected void destroyInstance(T instance) throws Exception {
+		logger.debug("Closing OpenSearch service for '{}'", name);
+		if (instance instanceof AutoCloseable closeable) {
+			closeable.close();
+		}
 	}
 
 	@Override

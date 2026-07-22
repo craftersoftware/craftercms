@@ -27,10 +27,12 @@ import Typography from '@mui/material/Typography';
 import ItemDisplay from '../ItemDisplay';
 import Box from '@mui/material/Box';
 import useFetchAllowedTypesForPath from '../../hooks/useFetchAllowedTypesForPath';
+import useSelection from '../../hooks/useSelection';
 
 export function NewContentDialogContainer(props: NewContentDialogContainerProps) {
 	const { item, onContentTypeSelected, initialCompact = false } = props;
-
+	const stateCreateContentCompactView = useSelection((state) => state.preview.createContentCompactView);
+	const createContentCompactView = stateCreateContentCompactView || initialCompact;
 	const handleContentTypeSelected = (contentType: ContentType) => {
 		onContentTypeSelected?.({ path: withoutIndex(item.path), contentType });
 	};
@@ -42,7 +44,7 @@ export function NewContentDialogContainer(props: NewContentDialogContainerProps)
 	return (
 		<DialogBody sx={{ minHeight: 670 }}>
 			<SelectTypeView
-				initialCompact={initialCompact}
+				initialCompact={createContentCompactView}
 				contentTypesList={contentTypes}
 				slotProps={{
 					listing: {

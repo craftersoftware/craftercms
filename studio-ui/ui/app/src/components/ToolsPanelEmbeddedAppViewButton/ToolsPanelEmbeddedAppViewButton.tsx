@@ -16,61 +16,52 @@
 
 import React from 'react';
 import ToolsPanelListItemButton, { ToolsPanelListItemButtonProps } from '../ToolsPanelListItemButton';
-import WidgetDialog from '../WidgetDialog';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
 import { WidgetDescriptor } from '../../models';
-import { useEnhancedDialogState } from '../../hooks/useEnhancedDialogState';
-import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingChangesCloseRequest';
+import { useDispatch, useStore } from 'react-redux';
+import { pushDialog, updateDialogState } from '../../state/actions/dialogStack';
+import { createComponentId } from '../../utils/system';
+import GlobalState from '../../models/GlobalState';
+import { EnhancedDialogProps } from '../EnhancedDialog';
 
 interface ToolsPanelEmbeddedAppViewButtonProps extends Omit<ToolsPanelListItemButtonProps, 'onClick'> {
 	widget: WidgetDescriptor;
 }
 
 export function ToolsPanelEmbeddedAppViewButton(props: ToolsPanelEmbeddedAppViewButtonProps) {
-	const {
-		open,
-		onOpen,
-		onClose,
-		hasPendingChanges,
-		isSubmitting,
-		isMinimized,
-		onMinimize,
-		onMaximize,
-		onSubmittingAndOrPendingChange
-	} = useEnhancedDialogState();
+	const { widget, ...buttonProps } = props;
 	const title = usePossibleTranslation(props.title);
-	const widgetDialogPendingChangesCloseRequest = useWithPendingChangesCloseRequest(onClose);
+	const dispatch = useDispatch();
+	const store = useStore<GlobalState>();
+	const widgetDialogId = widget.id;
 
 	const openEmbeddedApp = () => {
-		if (isMinimized) {
-			onMaximize();
+		const existing = store.getState().dialogStack.byId[widgetDialogId];
+		if (existing) {
+			const { isMinimized } = existing.props as EnhancedDialogProps;
+			dispatch(
+				updateDialogState({
+					id: widgetDialogId,
+					props: {
+						title,
+						widget,
+						...(isMinimized && { isMinimized: false })
+					}
+				})
+			);
+		} else {
+			dispatch(
+				pushDialog({
+					id: widgetDialogId,
+					component: createComponentId('WidgetDialog'),
+					allowMinimize: true,
+					props: { title, widget }
+				})
+			);
 		}
-		onOpen();
 	};
 
-	return (
-		<>
-			<ToolsPanelListItemButton {...props} onClick={openEmbeddedApp} />
-			<WidgetDialog
-				title={title}
-				open={open}
-				onClose={onClose}
-				widget={props.widget}
-				extraProps={{
-					onMinimize,
-					onMaximize,
-					onClose
-				}}
-				hasPendingChanges={hasPendingChanges}
-				onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
-				onWithPendingChangesCloseRequest={widgetDialogPendingChangesCloseRequest}
-				onMaximize={onMaximize}
-				onMinimize={onMinimize}
-				isMinimized={isMinimized}
-				isSubmitting={isSubmitting}
-			/>
-		</>
-	);
+	return <ToolsPanelListItemButton {...buttonProps} onClick={openEmbeddedApp} />;
 }
 
 export default ToolsPanelEmbeddedAppViewButton;

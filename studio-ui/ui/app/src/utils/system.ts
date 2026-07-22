@@ -29,7 +29,8 @@ import { Context, useContext } from 'react';
 import type { LegacyFormDialogProps } from '../components/LegacyFormDialog/utils';
 import { nanoid } from 'nanoid';
 import { DialogStackItem } from '../models';
-import type { ConfirmDialogProps, ErrorDialogProps } from '../components';
+import type { ConfirmDialogProps } from '../components/ConfirmDialog';
+import type { ErrorDialogProps } from '../components/ErrorDialog';
 import { getPathFromPreviewURL, getPreviewURLFromPath, isPagePath } from './path';
 
 export type SystemLinkId =

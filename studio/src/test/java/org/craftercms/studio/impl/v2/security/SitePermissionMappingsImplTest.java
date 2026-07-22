@@ -17,6 +17,7 @@
 package org.craftercms.studio.impl.v2.security;
 
 import java.util.Collections;
+import static java.util.Collections.emptySet;
 import java.util.List;
 import java.util.Set;
 
@@ -146,13 +147,35 @@ public class SitePermissionMappingsImplTest {
 	}
 
 	@Test
-	public void getUserPermissionsReturnsContentReadWhenUserHasNoRoles() {
+	public void getUserPermissionsReturnsEmptySetWhenUserHasNoRoles() {
 		Set<String> sitePermissions = mappings.getUserPermissions("unknown", Collections.emptyList(), false);
 		Set<String> pathPermissions = mappings.getUserPermissions("unknown", Collections.emptyList(),
 			"/site/website/index.xml", false);
 
-		assertEquals(Set.of(PERMISSION_CONTENT_READ), sitePermissions);
-		assertEquals(Set.of(PERMISSION_CONTENT_READ), pathPermissions);
+		assertEquals(emptySet(), sitePermissions);
+		assertEquals(emptySet(), pathPermissions);
+	}
+
+	@Test
+	public void getUserPermissionsReturnsEmptySetWhenSiteHasNoRoles() {
+		SitePermissionMappingsImpl siteMappings = new SitePermissionMappingsImpl();
+
+		Set<String> sitePermissions = siteMappings.getUserPermissions("jane", Collections.emptyList(), false);
+		Set<String> pathPermissions = siteMappings.getUserPermissions("jane", Collections.emptyList(),
+			"/site/website/index.xml", false);
+
+		assertEquals(emptySet(), sitePermissions);
+		assertEquals(emptySet(), pathPermissions);
+	}
+
+	@Test
+	public void getUserPermissionsReturnsContentReadWhenUserHasNoMappedPermission() {
+		Set<String> sitePermissions = mappings.getUserPermissions("unknown", List.of(group("no_permissions")), false);
+		Set<String> pathPermissions = mappings.getUserPermissions("unknown", List.of(group("no_permissions")),
+			"/site/website/index.xml", false);
+
+		assertEquals(Set.of(PERMISSION_GET_CHILDREN, PERMISSION_CONTENT_READ), sitePermissions);
+		assertEquals(Set.of(PERMISSION_GET_CHILDREN, PERMISSION_CONTENT_READ), pathPermissions);
 	}
 
 	private static SitePermissionMappingsImpl editorialSiteMappings() {
@@ -161,6 +184,7 @@ public class SitePermissionMappingsImplTest {
 			List.of(new NormalizedRole("author")));
 		siteMappings.addRolePermissionMapping("author", authorRoleMappings());
 		siteMappings.addRolePermissionMapping("*", wildcardRoleMappings());
+		siteMappings.addGroupToRolesMapping(new NormalizedGroup("no_permissions"), List.of(new NormalizedRole("no_permissions")));
 		return siteMappings;
 	}
 

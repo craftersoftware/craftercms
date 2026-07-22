@@ -16,13 +16,15 @@
 
 import { WidgetDescriptor } from '../../models';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
-import WidgetDialog from '../WidgetDialog';
 import React from 'react';
 import TranslationOrText from '../../models/TranslationOrText';
 import SystemIcon, { SystemIconDescriptor } from '../SystemIcon';
-import { useEnhancedDialogState } from '../../hooks/useEnhancedDialogState';
 import { IconButton, Tooltip } from '@mui/material';
-import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingChangesCloseRequest';
+import { useDispatch, useStore } from 'react-redux';
+import { pushDialog, updateDialogState } from '../../state/actions/dialogStack';
+import { createComponentId } from '../../utils/system';
+import GlobalState from '../../models/GlobalState';
+import { EnhancedDialogProps } from '../EnhancedDialog';
 
 interface WidgetDialogIconButtonProps {
 	title: TranslationOrText;
@@ -31,48 +33,44 @@ interface WidgetDialogIconButtonProps {
 }
 
 export function WidgetDialogIconButton(props: WidgetDialogIconButtonProps) {
+	const { widget } = props;
 	const title = usePossibleTranslation(props.title);
-	const {
-		open,
-		onOpen,
-		onClose,
-		hasPendingChanges,
-		isSubmitting,
-		isMinimized,
-		onMinimize,
-		onMaximize,
-		onSubmittingAndOrPendingChange
-	} = useEnhancedDialogState();
-	const widgetDialogPendingChangesCloseRequest = useWithPendingChangesCloseRequest(onClose);
+	const dispatch = useDispatch();
+	const store = useStore<GlobalState>();
+	const widgetDialogId = widget.id;
 
 	const openEmbeddedApp = () => {
-		if (isMinimized) {
-			onMaximize();
+		const existing = store.getState().dialogStack.byId[widgetDialogId];
+		if (existing) {
+			const { isMinimized } = existing.props as EnhancedDialogProps;
+			dispatch(
+				updateDialogState({
+					id: widgetDialogId,
+					props: {
+						title,
+						widget,
+						...(isMinimized && { isMinimized: false })
+					}
+				})
+			);
+		} else {
+			dispatch(
+				pushDialog({
+					id: widgetDialogId,
+					component: createComponentId('WidgetDialog'),
+					allowMinimize: true,
+					props: { title, widget }
+				})
+			);
 		}
-		onOpen();
 	};
 
 	return (
-		<>
-			<Tooltip title={title}>
-				<IconButton onClick={openEmbeddedApp}>
-					<SystemIcon icon={props.icon} fontIconProps={{ fontSize: 'small' }} />
-				</IconButton>
-			</Tooltip>
-			<WidgetDialog
-				title={title}
-				open={open}
-				onClose={() => onClose()}
-				widget={props.widget}
-				hasPendingChanges={hasPendingChanges}
-				onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
-				onWithPendingChangesCloseRequest={widgetDialogPendingChangesCloseRequest}
-				onMaximize={onMaximize}
-				onMinimize={onMinimize}
-				isMinimized={isMinimized}
-				isSubmitting={isSubmitting}
-			/>
-		</>
+		<Tooltip title={title}>
+			<IconButton onClick={openEmbeddedApp}>
+				<SystemIcon icon={props.icon} fontIconProps={{ fontSize: 'small' }} />
+			</IconButton>
+		</Tooltip>
 	);
 }
 

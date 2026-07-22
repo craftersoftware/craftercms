@@ -35,7 +35,7 @@ import SocketEventBase, {
 } from '../../models/SocketEvent';
 import { ContentItem, MarketplacePlugin } from '../../models';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
-import type { CommonSaveOptions } from '../../components';
+import type { CommonSaveOptions } from '../../components/MultiChoiceSaveButton';
 
 // region Item Events
 

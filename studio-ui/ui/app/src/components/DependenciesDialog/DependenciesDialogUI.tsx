@@ -93,13 +93,10 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							}}
 						>
 							<MenuItem value="depends-on-me">
-								<FormattedMessage id="dependenciesDialog.dependsOnMe" defaultMessage="Dependencies of selected item" />
+								<FormattedMessage defaultMessage="References of selected item" />
 							</MenuItem>
 							<MenuItem value="depends-on">
-								<FormattedMessage
-									id="dependenciesDialog.dependsOn"
-									defaultMessage="Items that depend on selected item"
-								/>
+								<FormattedMessage defaultMessage="Items that are referenced by the selected item" />
 							</MenuItem>
 						</Select>
 					</FormControl>
@@ -115,14 +112,12 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 						title={
 							dependenciesShown === 'depends-on-me' ? (
 								<FormattedMessage
-									id="dependenciesDialog.emptyDependantsMessage"
-									defaultMessage={'"{itemName}" has no dependencies'}
+									defaultMessage={'"{itemName}" has no references'}
 									values={{ itemName: item?.label }}
 								/>
 							) : (
 								<FormattedMessage
-									id="dependenciesDialog.emptyDependenciesMessage"
-									defaultMessage={'Nothing depends on "{itemName}"'}
+									defaultMessage={'Nothing is referenced by "{itemName}"'}
 									values={{ itemName: item?.label }}
 								/>
 							)
@@ -167,7 +162,7 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 										handleContextMenuClose();
 									}}
 								>
-									<FormattedMessage id="dependenciesDialog.dependencies" defaultMessage="Dependencies" />
+									<FormattedMessage id="dependenciesDialog.references" defaultMessage="References" />
 								</MenuItem>
 							)}
 							<MenuItem

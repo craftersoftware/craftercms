@@ -69,7 +69,7 @@ import { PublishingPackageReviewDialogStateProps } from '../components/PublishPa
 import { CancelPackageDialogStateProps } from '../components/CancelPackageDialog';
 import { BulkCancelPackageDialogStateProps } from '../components/BulkCancelPackageDialog';
 import { PublishingPackageResubmitDialogStateProps } from '../components/PublishingPackageResubmitDialog/types';
-import { PackageDetailsDialogStateProps } from '../components';
+import { PackageDetailsDialogStateProps } from '../components/PackageDetailsDialog';
 import { ViewPackagesDialogStateProps } from '../components/ViewPackagesDialog';
 import type { FolderMoveAlertDialogStateProps } from '../components/FolderMoveAlertDialog/FolderMoveAlertDialog';
 import type { PublishingStatus } from './Publishing';
@@ -221,6 +221,8 @@ export interface GlobalState {
 			code: number;
 			message: string;
 		};
+		keyboardShortcutsEnabled: boolean;
+		createContentCompactView: boolean;
 	};
 	previewNavigation: {
 		currentUrlPath: string;

@@ -290,7 +290,7 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 		'delete-dependencies': {
 			id: 'delete-dependencies',
 			type: 'delete-dependencies',
-			name: defineMessage({ defaultMessage: 'Delete Dependencies' }),
+			name: defineMessage({ defaultMessage: 'Delete References' }),
 			description: '',
 			helpText: '',
 			defaultValue: { 'delete-dependency': [] },
@@ -299,7 +299,7 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 		'copy-dependencies': {
 			id: 'copy-dependencies',
 			type: 'copy-dependencies',
-			name: defineMessage({ defaultMessage: 'Copy Dependencies' }),
+			name: defineMessage({ defaultMessage: 'Copy References' }),
 			description: '',
 			helpText: '',
 			defaultValue: { 'copy-dependency': [] },

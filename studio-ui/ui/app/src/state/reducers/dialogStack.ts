@@ -19,7 +19,8 @@ import { createReducer } from '@reduxjs/toolkit';
 import { nanoid } from 'nanoid';
 import { WidgetDialogProps } from '../../components/WidgetDialog/utils';
 import { popDialog, pushDialog, pushNonDialog, updateDialogState, updateNonDialogState } from '../actions/dialogStack';
-import type { CodeEditorDialogProps, FormsEngineDialogProps } from '../../components';
+import type { CodeEditorDialogProps } from '../../components/CodeEditorDialog';
+import type { FormsEngineDialogProps } from '../../components/FormsEngine';
 import type { LegacyFormDialogProps } from '../../components/LegacyFormDialog/utils';
 
 const reducer = createReducer<GlobalState['dialogStack']>(

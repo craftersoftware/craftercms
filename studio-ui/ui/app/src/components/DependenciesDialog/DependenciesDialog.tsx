@@ -23,10 +23,7 @@ import { FormattedMessage } from 'react-intl';
 export function DependenciesDialog(props: DependenciesDialogProps) {
 	const { item, dependenciesShown, rootPath, ...rest } = props;
 	return (
-		<EnhancedDialog
-			title={<FormattedMessage id="dependenciesDialog.title" defaultMessage="Content Item Dependencies" />}
-			{...rest}
-		>
+		<EnhancedDialog title={<FormattedMessage defaultMessage="Content Item References" />} {...rest}>
 			<DependenciesDialogContainer item={item} rootPath={rootPath} dependenciesShown={dependenciesShown} />
 		</EnhancedDialog>
 	);

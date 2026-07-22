@@ -123,7 +123,6 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 						permissions.addAll(rolePermissionMappings.getAllPermissions());
 					}
 				});
-			} else {
 				permissions.add(PERMISSION_CONTENT_READ);
 			}
 		}
@@ -146,7 +145,6 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 						permissions.addAll(rolePermissionMappings.getPermissionsForPath(path));
 					}
 				});
-			} else {
 				permissions.add(PERMISSION_CONTENT_READ);
 			}
 		}

@@ -93,7 +93,7 @@ export function ErrorState(props: ErrorStateProps) {
 					sx={{
 						textAlign: 'center',
 						marginBottom: (theme) => theme.spacing(1),
-						wordBreak: 'break-all',
+						wordBreak: 'break-word',
 						...sxs?.message
 					}}
 					children={message}

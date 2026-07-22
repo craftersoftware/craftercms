@@ -17,7 +17,7 @@
 import { defineMessages } from 'react-intl';
 import { PackageActions, PublishPackage } from '../models';
 import { ContextMenuOptionDescriptor } from './itemActions';
-import { ContextMenuOption } from '../components';
+import { ContextMenuOption } from '../components/ContextMenu';
 import { createPresenceTable } from './array';
 import { Action, Dispatch } from 'redux';
 import { batchActions } from '../state/actions/misc';

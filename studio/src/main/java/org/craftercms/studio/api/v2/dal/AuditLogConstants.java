@@ -38,22 +38,21 @@ public abstract class AuditLogConstants {
 	public static final String OPERATION_PUSH_TO_REMOTE = "PUSH_TO_REMOTE";
 	public static final String OPERATION_PULL_FROM_REMOTE = "PULL_FROM_REMOTE";
 	public static final String OPERATION_REQUEST_PUBLISH = "REQUEST_PUBLISH";
-	public static final String OPERATION_APPROVE = "APPROVE";
 	public static final String OPERATION_APPROVE_SCHEDULED = "APPROVE_SCHEDULED";
-	public static final String OPERATION_REJECT = "REJECT";
-	public static final String OPERATION_PUBLISHED = "PUBLISHED";
+	public static final String OPERATION_ITEM_LIST_PUBLISHED = "PUBLISH_ITEM_LIST_COMPLETE";
 	public static final String OPERATION_REVERT = "REVERT";
 	public static final String OPERATION_ENABLE = "ENABLE";
 	public static final String OPERATION_DISABLE = "DISABLE";
 	public static final String OPERATION_START_PUBLISHER = "START_PUBLISHER";
 	public static final String OPERATION_STOP_PUBLISHER = "STOP_PUBLISHER";
+	public static final String OPERATION_APPROVE_PUBLISH_PACKAGE = "APPROVE_PUBLISH_PACKAGE";
 	public static final String OPERATION_CANCEL_PUBLISH_PACKAGE = "CANCEL_PUBLISH_PACKAGE";
 	public static final String OPERATION_REJECT_PUBLISH_PACKAGE = "REJECT_PUBLISH_PACKAGE";
 	public static final String OPERATION_PUBLISH = "PUBLISH";
-	public static final String OPERATION_INITIAL_PUBLISH = "INITIAL_PUBLISH";
+	public static final String OPERATION_INITIAL_PUBLISH = "INITIAL_PUBLISH_COMPLETE";
 	public static final String OPERATION_SYSTEM_PROPERTY_UPDATE = "SYSTEM_PROPERTY_UPDATE";
 	public static final String OPERATION_PUBLISH_START = "PUBLISH_START";
-	public static final String OPERATION_PUBLISH_ALL = "PUBLISH_ALL";
+	public static final String OPERATION_PUBLISH_ALL = "PUBLISH_ALL_COMPLETE";
 	public static final String OPERATION_GIT_CHANGES = "GIT_SYNC";
 	public static final String OPERATION_UNKNOWN = "UNKNOWN";
 

@@ -82,10 +82,7 @@ export function DeleteContentTypeDialogBody(props: DeleteContentTypeDialogBodyPr
 				) : (
 					<>
 						<Alert variant="outlined" severity="warning" sx={{ marginBottom: '1em' }} icon={false}>
-							<FormattedMessage
-								id="deleteContentTypeDialog.reviewDependenciesMessage"
-								defaultMessage="Please review and confirm all of content type dependencies that will be deleted."
-							/>
+							<FormattedMessage defaultMessage="Please review and confirm all content type references that will be deleted." />
 						</Alert>
 						<ContentTypeUsageReport
 							entries={entriesWithItems}
@@ -97,8 +94,7 @@ export function DeleteContentTypeDialogBody(props: DeleteContentTypeDialogBodyPr
 						/>
 						<Alert severity="warning" sx={{ marginBottom: '.5em' }}>
 							<FormattedMessage
-								id="deleteContentTypeDialog.typeConfirmPassword"
-								defaultMessage={`Type the word "<b>{password}</b>" to confirm the deletion of "{name}" and all it's dependencies.`}
+								defaultMessage={`Type the word "<b>{password}</b>" to confirm the deletion of "{name}" and all its references.`}
 								values={{
 									password,
 									name: contentType.name,

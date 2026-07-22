@@ -38,8 +38,8 @@ import {
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
-import { moveAndUpdateContent, writeContent } from '../../../services/content';
-import { AjaxError } from 'rxjs/ajax';
+import { moveAndUpdateContent, writeContent, WriteContentResponse } from '../../../services/content';
+import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { buildContentXml } from './valueSerializers';
@@ -89,7 +89,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const setHasPendingChanges = useSetAtom(stableFormContext.atoms.hasPendingChanges);
 	const onSave = wrapOnSaveProp(props.onSave);
 	const fileName = useAtomValue(stableFormContext.atoms.fileName);
-	const { setRenamedPath } = useContext(RenamedPathContext);
+	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
 	return async (draft?: boolean) => {
@@ -170,12 +170,19 @@ export function useSaveForm(props: UseSaveFormProps) {
 		}
 
 		const saveActionCallbacks = {
-			async next() {
+			async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
+				const isAmended = ajaxResponse.response?.items?.[0]?.amended;
 				const dom = fromString(xml);
 				const result = (await onSave?.({ dom, xml, values, versionComment, path })) as FormSavePromiseResult;
 				const shouldClose = result.close || closeAfterSave;
-				if (isRename && !shouldClose) {
-					setRenamedPath(renamePath);
+				if (!shouldClose) {
+					if (isCreateMode) {
+						setSavedCreatePath(path);
+					} else if (isRename) {
+						setRenamedPath(renamePath);
+					} else if (isAmended) {
+						triggerReload();
+					}
 				}
 				onSavePromiseHandler(result);
 			},

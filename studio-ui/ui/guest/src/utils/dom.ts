@@ -422,3 +422,83 @@ export function elementOffset(element: Element) {
 	var left = rec.left + window.scrollX;
 	return { top: top, left: left };
 }
+
+export const DRAG_SCROLL_MARGIN = 150;
+export const DRAG_SCROLL_STEP = 5; // pixels to scroll per interval
+export const DRAG_SCROLL_INTERVAL = 8; // milliseconds between intervals
+
+/**
+ * Determines if the given element is one of the primary scroll elements for the entire document.
+ *
+ * Checks if the element is equal to the document's scrollingElement, documentElement, or body.
+ *
+ * @param {Element} element - The element to check.
+ * @returns {boolean} True if the element represents the document's main scrollable area, false otherwise.
+ */
+function isDocumentScrollElement(element: Element): boolean {
+	return element === document.scrollingElement || element === document.documentElement || element === document.body;
+}
+
+/**
+ * Returns the nearest scrollable parent element of the provided element.
+ *
+ * @param {Element} element - The element for which to find the nearest scrollable container.
+ * @returns {Element} The closest scrollable parent element, or the document's scrolling element if none are found.
+ */
+export function getScrollContainer(element: Element): Element {
+	let parent = element.parentElement;
+
+	while (parent) {
+		const { overflow, overflowY } = getComputedStyle(parent);
+		const scrollable = /(auto|scroll)/.test(overflowY) || /(auto|scroll)/.test(overflow);
+		if (scrollable && parent.scrollHeight > parent.clientHeight) {
+			return parent;
+		}
+		parent = parent.parentElement;
+	}
+
+	return document.scrollingElement ?? document.documentElement;
+}
+
+/**
+ * Returns the visible bounds (top, bottom, left, right) for drag-scroll detection.
+ * If the scroll container is the document, calculates bounds based on the viewport.
+ * Otherwise, returns the bounding rect of the scroll container element.
+ *
+ * @param scrollContainer - Element to use for scrolling
+ */
+export function getDragScrollBounds(scrollContainer: Element): {
+	top: number;
+	bottom: number;
+	left: number;
+	right: number;
+} {
+	if (isDocumentScrollElement(scrollContainer)) {
+		return {
+			top: 0,
+			bottom: window.innerHeight,
+			left: 0,
+			right: window.innerWidth
+		};
+	}
+
+	const rect = scrollContainer.getBoundingClientRect();
+	return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+}
+
+/**
+ * Scrolls the given container vertically by the specified number of pixels.
+ *
+ * If the scroll container is the document's scrolling element, this function scrolls the window.
+ * Otherwise, it scrolls the provided element by modifying its scrollTop property.
+ *
+ * @param {Element} scrollContainer - The container element to scroll. This can be a DOM element or the document's scrolling element.
+ * @param {number} delta - The number of pixels by which to scroll vertically. Positive values scroll down, negative values scroll up.
+ */
+export function scrollContainerBy(scrollContainer: Element, delta: number): void {
+	if (isDocumentScrollElement(scrollContainer)) {
+		window.scrollTo({ top: window.scrollY + delta, behavior: 'auto' });
+	} else {
+		scrollContainer.scrollTop += delta;
+	}
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -68,6 +68,12 @@ public class GroovyScriptFactoryTest {
 
 	@After
 	public void tearDown() throws Exception {
+		if (scriptFactory != null) {
+			scriptFactory.destroy();
+		}
+		if (classLoader != null) {
+			classLoader.close();
+		}
 		removeCurrentRequest();
 		destroyApplicationContext();
 	}

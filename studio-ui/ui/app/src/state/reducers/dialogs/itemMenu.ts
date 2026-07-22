@@ -17,7 +17,7 @@
 import { createReducer } from '@reduxjs/toolkit';
 import GlobalState from '../../../models/GlobalState';
 import { closeItemMenu, itemMenuClosed, showItemMenu } from '../../actions/dialogs';
-import { ItemMenuStateProps } from '../../../components';
+import { ItemMenuStateProps } from '../../../components/ItemActionsMenu';
 
 const initialState: ItemMenuStateProps = {
 	open: false,

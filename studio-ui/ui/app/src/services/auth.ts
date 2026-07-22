@@ -55,6 +55,8 @@ export function login(credentials: Credentials): Observable<boolean> {
 		// With Spring 6, the XSRF token cookie is only removed but not written on the login post,
 		// so we need to do it "manually" after login by requesting a page that does write it.
 		switchMap(() => from(fetch('/studio', { method: 'GET', cache: 'no-cache', credentials: 'include' }))),
+		// We can't check if login failed when using redirect: 'manual'. So we call obtainAuthToken to verify the session.
+		switchMap(() => obtainAuthToken()),
 		map(() => true)
 	);
 }

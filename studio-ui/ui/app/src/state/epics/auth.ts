@@ -28,8 +28,9 @@ import {
 	sharedWorkerUnauthenticated
 } from '../actions/auth';
 import { catchError, delay, ignoreElements, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { AjaxError } from 'rxjs/ajax';
 import * as auth from '../../services/auth';
-import { catchAjaxError } from '../../utils/ajax';
 import { getRequestForgeryToken, getXSRFToken, setJwt, setRequestForgeryToken } from '../../utils/auth';
 import { CrafterCMSEpic } from '../store';
 import { messageSharedWorker, openSiteSocket, showSystemNotification } from '../actions/system';
@@ -43,7 +44,14 @@ const epics: CrafterCMSEpic[] = [
 			switchMap((action) =>
 				auth.login(action.payload).pipe(
 					map(() => loginComplete()),
-					catchAjaxError(loginFailed)
+					catchError((error: any) => {
+						if (error.name === 'AjaxError') {
+							// Using catchError instead of catchAjaxError to avoid the sessionTimeout action being dispatched.
+							// sessionTimeout resets auth to initial state, wiping the error state.
+							return of(loginFailed(error as AjaxError));
+						}
+						throw error;
+					})
 				)
 			)
 		),

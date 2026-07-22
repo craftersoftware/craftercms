@@ -42,7 +42,7 @@ import {
 	reloadContentItem,
 	unlockItem
 } from '../actions/content';
-import { catchAjaxError } from '../../utils/ajax';
+import { catchAjaxError, extractErrorPayload } from '../../utils/ajax';
 import {
 	duplicate,
 	fetchContentItem as fetchContentItemService,
@@ -439,7 +439,39 @@ const content: CrafterCMSEpic[] = [
 						map(() => batchActions([unblockUI(), clearClipboard(), showPasteItemSuccessNotification()])),
 						catchAjaxError(
 							() => unblockUI(),
-							(error) => pushErrorDialog({ props: { error: error.response } })
+							(error) => {
+								const responseCode = error.response?.code;
+								if (responseCode === 56001) {
+									const item = state.content.itemsByPath[state.content.clipboard.sourcePath];
+									const sourceContentType = item?.contentTypeId;
+									return pushErrorDialog({
+										props: {
+											error: {
+												message: getIntl().formatMessage(
+													{ defaultMessage: 'Cannot copy "{sourceLabel}" to "{targetPath}".' },
+													{
+														sourceLabel: item?.label ?? state.content.clipboard.sourcePath,
+														targetPath: payload.path
+													}
+												),
+												remedialAction: sourceContentType
+													? getIntl().formatMessage(
+															{
+																defaultMessage:
+																	'Content type "{contentType}" of the source item is not allowed in the target location.'
+															},
+															{
+																contentType: sourceContentType
+															}
+														)
+													: undefined
+											}
+										}
+									});
+								} else {
+									return pushErrorDialog({ props: { error: extractErrorPayload(error as AjaxError) } });
+								}
+							}
 						)
 					)
 				)

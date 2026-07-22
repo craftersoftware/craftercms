@@ -190,7 +190,7 @@ const unparsedMenuOptions: Record<AllItemActions, ContextMenuOptionDescriptor<Al
 	},
 	dependencies: {
 		id: 'dependencies',
-		label: translations.dependencies
+		label: translations.references
 	},
 	editController: {
 		id: 'editController',

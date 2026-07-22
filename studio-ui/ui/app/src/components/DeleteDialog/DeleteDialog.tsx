@@ -27,10 +27,7 @@ export function DeleteDialog(props: DeleteDialogProps) {
 			title={<FormattedMessage id="deleteDialog.title" defaultMessage="Delete" />}
 			dialogHeaderProps={{
 				subtitle: (
-					<FormattedMessage
-						id="deleteDialog.subtitle"
-						defaultMessage="Selected items will be deleted along with their child items. Please review dependent items before deleting as these will end-up with broken link references."
-					/>
+					<FormattedMessage defaultMessage="Selected items will be deleted along with their child items. Please review items that reference the selected item before deleting as these will end up with broken link references." />
 				)
 			}}
 			isSubmitting={isSubmitting}

@@ -63,23 +63,19 @@ export function DependencySelection(props: DependencySelectionProps) {
 				{nnou(dependencies) && (
 					<>
 						<SelectionList
-							title={<FormattedMessage id="publishDialog.hardDependencies" defaultMessage="Hard Dependencies" />}
+							title={<FormattedMessage defaultMessage="References of mandatory submission" />}
 							subtitle={
 								<FormattedMessage id="publishDialog.submissionMandatory" defaultMessage="Submission Mandatory" />
 							}
-							emptyMessage={
-								<FormattedMessage id="publishDialog.emptyHardDependencies" defaultMessage="No hard dependencies" />
-							}
+							emptyMessage={<FormattedMessage defaultMessage="No references of mandatory submission" />}
 							paths={dependencies.hardDependencies ?? []}
 							displayItemTitle={false}
 							disabled={disabled}
 						/>
 						<SelectionList
-							title={<FormattedMessage id="publishDialog.softDependencies" defaultMessage="Soft Dependencies" />}
+							title={<FormattedMessage defaultMessage="References of optional submission" />}
 							subtitle={<FormattedMessage id="publishDialog.submissionOptional" defaultMessage="Submission Optional" />}
-							emptyMessage={
-								<FormattedMessage id="publishDialog.emptySoftDependencies" defaultMessage="No soft dependencies" />
-							}
+							emptyMessage={<FormattedMessage defaultMessage="No references of optional submission" />}
 							paths={dependencies.softDependencies ?? []}
 							onItemClicked={onItemClicked}
 							onSelectAllClicked={onSelectAllSoftClicked}

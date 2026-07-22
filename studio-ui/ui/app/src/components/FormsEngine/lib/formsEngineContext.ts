@@ -159,4 +159,13 @@ export const useItemMetaContext = /*#__PURE__*/ createUseContextHook('useItemMet
 export const RenamedPathContext = createContext<{
 	renamedPath: string | null;
 	setRenamedPath(path: string | null): void;
-}>({ renamedPath: null, setRenamedPath: () => {} });
+	reloadNonce: number;
+	triggerReload(): void;
+	setSavedCreatePath(path: string | null): void;
+}>({
+	renamedPath: null,
+	setRenamedPath: () => {},
+	reloadNonce: 0,
+	triggerReload: () => {},
+	setSavedCreatePath: () => {}
+});

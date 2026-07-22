@@ -34,8 +34,4 @@ public class SingleAccessTokenIdResolver implements AccessTokenIdResolver {
 		return accessTokenId;
 	}
 
-	public void setAccessTokenId(String accessTokenId) {
-		this.accessTokenId = accessTokenId;
-	}
-
 }

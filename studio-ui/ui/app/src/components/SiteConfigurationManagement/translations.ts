@@ -248,13 +248,11 @@ export const translations = defineMessages({
 		defaultMessage: 'Engine URL Rewrite Configuration (XML Style) - Live'
 	},
 	confTabDependencyResolverConf: {
-		id: 'siteConfigurationManagement.confTabDependencyResolverConf',
-		defaultMessage: 'Dependency Resolver Configuration'
+		defaultMessage: 'Reference Resolver Configuration'
 	},
 	confTabDependencyResolverConfDesc: {
-		id: 'siteConfigurationManagement.confTabDependencyResolverConfDesc',
 		defaultMessage:
-			'This file configures what file paths Crafter considers a dependency and how they should be extracted.'
+			'This file configures what file paths Crafter considers a reference and how they should be extracted.'
 	},
 	confTabAWSProfiles: { id: 'siteConfigurationManagement.confTabAWSProfiles', defaultMessage: 'AWS Profiles' },
 	confTabAWSProfilesDesc: {

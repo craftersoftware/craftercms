@@ -90,7 +90,7 @@ export function RenameItemView(props: RenameItemViewProps) {
 
 	return fetchingDependantItems ? (
 		<LoadingState
-			title={<FormattedMessage defaultMessage="Fetching dependent items" />}
+			title={<FormattedMessage defaultMessage="Fetching items that reference the selected item" />}
 			sxs={{ title: { marginTop: 0 } }}
 		/>
 	) : dependantItems ? (
@@ -123,7 +123,7 @@ export function RenameItemView(props: RenameItemViewProps) {
 			{dependantItems?.length > 0 ? (
 				<>
 					<Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>
-						<FormattedMessage id="renameAsset.dependentItems" defaultMessage="Dependent Items" />
+						<FormattedMessage defaultMessage="Items that reference the selected item" />
 					</Typography>
 					<DependenciesList
 						dependencies={dependantItems}
@@ -174,7 +174,10 @@ export function RenameItemView(props: RenameItemViewProps) {
 							mr: 1
 						}}
 					/>
-					<FormattedMessage id="renameAsset.noDependentItems" defaultMessage="No dependent items" />
+					<FormattedMessage
+						id="renameAsset.noDependentItems"
+						defaultMessage="No items that reference the selected item"
+					/>
 				</Typography>
 			)}
 		</>

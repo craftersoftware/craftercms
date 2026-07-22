@@ -71,7 +71,8 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						<ListItemText
 							primary={
 								<Typography variant="subtitle1" component="span">
-									<FormattedMessage id="deleteDialog.dependentItems" defaultMessage="Dependent Items" />
+									<FormattedMessage defaultMessage="Items that reference the selected item" />
+
 									{` • `}
 									<FormattedMessage id="deleteDialog.brokenItems" defaultMessage="Will have broken references" />
 								</Typography>
@@ -128,7 +129,7 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						>
 							<InfoIcon color="action" fontSize="small" />
 							<Typography variant="caption">
-								<FormattedMessage id="deleteDialog.emptyDependentItems" defaultMessage="No dependent items" />
+								<FormattedMessage defaultMessage="No items that reference the selected item" />
 							</Typography>
 						</Box>
 					)}

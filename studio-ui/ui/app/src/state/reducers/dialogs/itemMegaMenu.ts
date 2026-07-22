@@ -17,7 +17,7 @@
 import { createReducer } from '@reduxjs/toolkit';
 import GlobalState from '../../../models/GlobalState';
 import { closeItemMegaMenu, itemMegaMenuClosed, showItemMegaMenu } from '../../actions/dialogs';
-import { ItemMegaMenuStateProps } from '../../../components';
+import { ItemMegaMenuStateProps } from '../../../components/ItemMegaMenu';
 
 const initialState: ItemMegaMenuStateProps = {
 	open: false,

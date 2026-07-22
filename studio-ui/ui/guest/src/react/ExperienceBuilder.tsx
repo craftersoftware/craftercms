@@ -122,6 +122,7 @@ import { getParentModelId } from '../utils/ice';
 import { SxProps } from '@mui/system';
 import { I18nProvider } from './I18nProvider';
 import { loadAceEditorAssets } from '@craftercms/studio-ui/utils/system';
+import { imageEditCancelled, imageEdited } from '@craftercms/studio-ui/state/actions/dialogs';
 
 // TODO: add themeOptions and global styles customising
 interface BaseXBProps {
@@ -416,6 +417,8 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 				case updateRteConfig.type:
 				case setEditModePadding.type:
 				case assetDragStarted.type:
+				case imageEdited.type:
+				case imageEditCancelled.type:
 					dispatch(action);
 					break;
 				// endregion

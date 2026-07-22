@@ -85,7 +85,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 						/>
 					</Box>
 					<Box display="flex" alignItems="center">
-						<Tooltip title={<FormattedMessage defaultMessage="Remove Dependency" />}>
+						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
 							<IconButton onClick={() => removeDependency(index)}>
 								<RemoveCircleOutlineRoundedIcon />
 							</IconButton>
@@ -94,7 +94,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 				</Card>
 			))}
 			<Box display="flex" justifyContent="center">
-				<Tooltip title={<FormattedMessage defaultMessage="Add Dependency" />}>
+				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
 					<IconButton onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>

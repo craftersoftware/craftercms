@@ -19,7 +19,7 @@ import { defineMessages, useIntl } from 'react-intl';
 import User from '../../models/User';
 import React, { useEffect, useMemo, useState } from 'react';
 import LookupTable from '../../models/LookupTable';
-import { disable, enable, fetchRolesBySite, trash, update } from '../../services/users';
+import { disable, enable, fetchRolesBySite, update } from '../../services/users';
 import { showSystemNotification } from '../../state/actions/system';
 import { EditUserDialogUI } from './EditUserDialogUI';
 import { useSpreadState } from '../../hooks/useSpreadState';
@@ -32,10 +32,6 @@ import { pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 
 const translations = defineMessages({
-	userDeleted: {
-		id: 'userInfoDialog.userDeleted',
-		defaultMessage: 'User deleted successfully'
-	},
 	userUpdated: {
 		id: 'userInfoDialog.userUpdated',
 		defaultMessage: 'User updated successfully'
@@ -100,6 +96,7 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 							message: formatMessage(translations.userEnabled)
 						})
 					);
+					fnRefs.current.onUserEdited();
 				},
 				error({ response: { response } }) {
 					dispatch(pushErrorDialog({ props: { error: response } }));
@@ -113,6 +110,7 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 							message: formatMessage(translations.userDisabled)
 						})
 					);
+					fnRefs.current.onUserEdited();
 				},
 				error({ response: { response } }) {
 					dispatch(pushErrorDialog({ props: { error: response } }));
@@ -151,23 +149,6 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 		});
 	};
 
-	const onDelete = (username: string) => {
-		trash(username).subscribe({
-			next() {
-				onClose(null, null);
-				dispatch(
-					showSystemNotification({
-						message: formatMessage(translations.userDeleted)
-					})
-				);
-				fnRefs.current.onUserEdited();
-			},
-			error({ response: { response } }) {
-				dispatch(pushErrorDialog({ props: { error: response } }));
-			}
-		});
-	};
-
 	const onCloseResetPasswordDialog = () => {
 		setOpenResetPassword(false);
 	};
@@ -198,10 +179,10 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 		setSubmitOk(
 			Boolean(
 				user.firstName.trim() &&
-					!validateFieldMinLength('firstName', user.firstName) &&
-					user.lastName.trim() &&
-					!validateFieldMinLength('lastName', user.lastName) &&
-					!isInvalidEmail(user.email)
+				!validateFieldMinLength('firstName', user.firstName) &&
+				user.lastName.trim() &&
+				!validateFieldMinLength('lastName', user.lastName) &&
+				!isInvalidEmail(user.email)
 			)
 		);
 	}, [user, refs]);
@@ -223,7 +204,6 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 			passwordRequirementsMinComplexity={passwordRequirementsMinComplexity}
 			onSave={onSave}
 			onCloseButtonClick={(e) => onClose(e, null)}
-			onDelete={onDelete}
 			onCloseResetPasswordDialog={onCloseResetPasswordDialog}
 			onInputChange={onInputChange}
 			onEnableChange={onEnableChange}

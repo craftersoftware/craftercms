@@ -58,64 +58,13 @@ import {
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import Skeleton from '@mui/material/Skeleton';
 import { nnou, nou } from '../../../utils/object';
+import { validateImageRestrictions } from '../../../utils/content';
 
 export interface ImagePickerProps extends ControlProps {
 	value: string | null;
 }
 
 export type ImagePickerType = 'browse' | 'upload' | 'search';
-
-/** Validates if an HTMLImageElement meets the given size restrictions. The restrictions may be a range (min/max) or an
- * exact value (width/height). If no restrictions are provided, the image is considered valid.
- *
- * @param file - The HTMLImageElement to validate.
- * @param restrictions - Optional image size restrictions (width, height, minWidth, minHeight, maxWidth, maxHeight).
- * @returns True if the image meets the restrictions or if no restrictions are provided, false otherwise.
- */
-function doesImageMeetSizeRestrictions(file: HTMLImageElement, restrictions?: ImageRestrictions): boolean {
-	let meetRestrictions = true;
-	if (restrictions) {
-		const { width, height, minWidth, minHeight, maxWidth, maxHeight } = restrictions;
-		if (
-			(width && file.width !== width) ||
-			(height && file.height !== height) ||
-			(minWidth && file.width < minWidth) ||
-			(minHeight && file.height < minHeight) ||
-			(maxWidth && file.width > maxWidth) ||
-			(maxHeight && file.height > maxHeight)
-		) {
-			meetRestrictions = false;
-		}
-	}
-	return meetRestrictions;
-}
-
-/** Loads an image from the given path and validates it against the provided size restrictions.
- *
- * @param path - The image path or URL to load.
- * @param restrictions - Optional size restrictions to validate the image against.
- * @returns Promise that resolves to true if the image meets the restrictions or no restrictions are provided, false otherwise.
- * */
-function validateImageRestrictions(path: string, restrictions?: ImageRestrictions): Promise<boolean> {
-	return new Promise((resolve) => {
-		if (restrictions) {
-			const img = new window.Image();
-			const done = (result: boolean) => resolve(result);
-			const timeout = window.setTimeout(() => done(true), 5000);
-			img.onload = () => {
-				window.clearTimeout(timeout);
-				done(doesImageMeetSizeRestrictions(img, restrictions));
-			};
-			img.onerror = img.onabort = () => {
-				window.clearTimeout(timeout);
-				done(true);
-			};
-			img.src = path;
-		} else {
-			resolve(true);
-		}
-	});
-}
 
 export function ImagePicker(props: ImagePickerProps) {
 	const { field, value: valueProp, setValue, contentType, autoFocus, readonly: formReadonly } = props;

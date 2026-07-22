@@ -87,11 +87,15 @@ const messages = defineMessages({
 	},
 	'application/javascript': {
 		id: 'mimeTypes.application/javascript',
-		defaultMessage: 'Typescript (tsx)'
+		defaultMessage: 'JavaScript'
 	},
 	'text/texmacs': {
 		id: 'mimeTypes.text/texmacs',
-		defaultMessage: 'Typescript (ts)'
+		defaultMessage: 'TeXmacs'
+	},
+	'application/typescript': {
+		id: 'mimeTypes.application/typescript',
+		defaultMessage: 'TypeScript'
 	},
 	'text/css': {
 		id: 'mimeTypes.text/css',

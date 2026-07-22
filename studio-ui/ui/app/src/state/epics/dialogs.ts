@@ -44,12 +44,8 @@ import { getHostToGuestBus } from '../../utils/subjects';
 import { unlockItem } from '../actions/content';
 import { generateDialogId } from '../../utils/dialogs';
 import type { LegacyFormDialogStateProps } from '../../components/LegacyFormDialog/utils';
-import type {
-	CodeEditorDialogProps,
-	CodeEditorDialogStateProps,
-	PreviewDialogProps,
-	PreviewDialogStateProps
-} from '../../components';
+import type { CodeEditorDialogProps, CodeEditorDialogStateProps } from '../../components/CodeEditorDialog';
+import type { PreviewDialogProps, PreviewDialogStateProps } from '../../components/PreviewDialog';
 import { popDialog, pushDialog, updateDialogState } from '../actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { pushConfirmDialog } from '../../utils/system';

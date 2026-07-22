@@ -16,18 +16,32 @@
 
 package org.craftercms.studio.impl.v2.service.workflow.internal;
 
+import java.time.Instant;
+import static java.time.Instant.now;
+import java.util.Collection;
+import java.util.List;
+
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.AuditLog;
+import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_APPROVE_PUBLISH_PACKAGE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_CANCEL_PUBLISH_PACKAGE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_REJECT_PUBLISH_PACKAGE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.ORIGIN_API;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.TARGET_TYPE_PUBLISH_PACKAGE;
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.User;
 import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.APPROVED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.REJECTED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.CANCELLED;
 import org.craftercms.studio.api.v2.event.workflow.WorkflowEvent;
 import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.PackageAlreadyApprovedException;
@@ -37,27 +51,16 @@ import org.craftercms.studio.api.v2.service.audit.AuditService;
 import org.craftercms.studio.api.v2.service.item.ItemService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
 import org.craftercms.studio.api.v2.service.workflow.WorkflowService;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishPackageLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getSandboxRepoLockKey;
 import org.craftercms.studio.impl.v2.utils.DateUtils;
+import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getAuthentication;
+import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getCurrentUser;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
-
-import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-
-import static java.time.Instant.now;
-import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
-import static org.craftercms.studio.api.v2.dal.AuditLogConstants.*;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.APPROVED;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.REJECTED;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.CANCELLED;
-import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishPackageLockKey;
-import static org.craftercms.studio.api.v2.utils.StudioUtils.getSandboxRepoLockKey;
-import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getAuthentication;
-import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getCurrentUser;
 
 public class WorkflowServiceInternalImpl implements WorkflowService, ApplicationEventPublisherAware {
 
@@ -108,7 +111,7 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 				}
 				p.setApprovalState(APPROVED);
 				p.setReviewerComment(comment);
-			}, OPERATION_APPROVE, WorkflowEvent.WorkFlowEventType.APPROVE);
+			}, OPERATION_APPROVE_PUBLISH_PACKAGE, WorkflowEvent.WorkFlowEventType.APPROVE);
 		}
 	}
 

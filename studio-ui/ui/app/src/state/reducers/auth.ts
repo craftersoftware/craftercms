@@ -35,6 +35,8 @@ export const initialState: GlobalState['auth'] = {
 	isFetching: false
 };
 
+export const INCORRECT_CREDENTIALS_ERROR_CODE = 6004;
+
 const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 	builder
 		.addCase(storeInitialized, (state, { payload }) => ({
@@ -59,14 +61,14 @@ const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 		}))
 		.addCase(sessionTimeout, () => initialState)
 		.addCase(sharedWorkerUnauthenticated, () => initialState)
-		.addCase(login, (state) => ({ ...state, isFetching: true }))
+		.addCase(login, (state) => ({ ...state, isFetching: true, error: null }))
 		.addCase(loginFailed, (state, action) => ({
 			...state,
 			isFetching: false,
 			error:
 				action.payload?.status === 401
 					? {
-							code: 6004,
+							code: INCORRECT_CREDENTIALS_ERROR_CODE,
 							message: 'Incorrect password',
 							remedialAction: 'Please use correct password'
 						}

@@ -54,9 +54,8 @@ import { extractErrorPayload } from '../../utils/ajax';
 
 const messages = defineMessages({
 	publishStudioWarning: {
-		id: 'publishingDashboard.warning',
 		defaultMessage:
-			"This will force publish all items that match the pattern requested including their dependencies, and it may take a long time depending on the number of items. Please make sure that all modified items (including potentially someone's work in progress) are ready to be published before continuing."
+			"This will force publish all items that match the pattern requested including their references, and it may take a long time depending on the number of items. Please make sure that all modified items (including potentially someone's work in progress) are ready to be published before continuing."
 	},
 	warningLabel: {
 		id: 'words.warning',

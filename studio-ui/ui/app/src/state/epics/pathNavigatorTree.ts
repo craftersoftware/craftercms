@@ -80,7 +80,7 @@ import {
 import StandardAction from '../../models/StandardAction';
 import { GetChildrenOptions, MarketplacePlugin, MoveContentEventPayload, SocketEventBase } from '../../models';
 import { contentAndDeleteEventForEachApplicableTree } from '../reducers/pathNavigatorTree';
-import { PathNavigatorTreeStateProps } from '../../components';
+import { PathNavigatorTreeStateProps } from '../../components/PathNavigatorTree';
 import { pluckProps } from '../../utils/object';
 
 const createGetChildrenOptions: (

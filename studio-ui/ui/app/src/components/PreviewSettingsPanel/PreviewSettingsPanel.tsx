@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import {
 	Divider,
 	FormControl,
@@ -34,6 +34,7 @@ import EditModeSwitch from '../EditModeSwitch';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import { HighlightMode } from '../../models/GlobalState';
 import PaddingModeSwitchListItem from '../PaddingModeSwitchListItem';
+import { KeyboardShortcutsSwitch } from '../KeyboardShortcutsSwitch';
 
 const translations = defineMessages({
 	editMode: {
@@ -82,6 +83,13 @@ export function PreviewSettingsPanel() {
 				<EditModeSwitch edge="end" />
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
+			<ListItem>
+				<ListItemText primary={formatMessage({ defaultMessage: 'Keyboard shortcuts' })} />
+				<KeyboardShortcutsSwitch edge="end" />
+			</ListItem>
+			<FormHelperText sx={formHelperTextSx}>
+				<FormattedMessage defaultMessage="Enable/disable keyboard shortcuts" />
+			</FormHelperText>
 			<Divider />
 			<ListSubheader id="settingsPanelHighlightModeLabel" children={formatMessage(translations.highlightMode)} />
 			<FormControl sx={{ pt: 0, pb: 0, pl: 2, pr: 2 }} component="li">

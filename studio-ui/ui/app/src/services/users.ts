@@ -45,11 +45,9 @@ export function update(user: Partial<User>): Observable<User> {
 	return patchJSON(`/studio/api/2/users`, user).pipe(map((response) => response?.response?.user));
 }
 
-export function trash(username: string): Observable<true> {
-	return del(`/studio/api/2/users?username=${encodeURIComponent(username)}`).pipe(map(() => true));
-}
-
-export function fetchAll(options?: Partial<PaginationOptions & { keyword?: string }>): Observable<PagedArray<User>> {
+export function fetchAll(
+	options?: Partial<PaginationOptions & { keyword?: string; showDisabled?: boolean }>
+): Observable<PagedArray<User>> {
 	const mergedOptions = {
 		limit: 100,
 		offset: 0,

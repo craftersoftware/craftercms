@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,8 +15,24 @@
  */
 package org.craftercms.engine.service.context;
 
-import io.methvin.watcher.DirectoryWatcher;
-import io.methvin.watcher.hashing.FileHasher;
+import static java.lang.String.format;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.craftercms.commons.concurrency.locks.LockByKey;
 import org.craftercms.commons.entitlements.exception.EntitlementException;
@@ -34,14 +50,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.validation.annotation.Validated;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
-import static java.lang.String.format;
+import io.methvin.watcher.DirectoryWatcher;
+import io.methvin.watcher.hashing.FileHasher;
 
 /**
  * Registry and lifecycle manager of {@link SiteContext}s.
@@ -671,7 +681,11 @@ public class SiteContextManager implements ApplicationContextAware, DisposableBe
 			SiteContext newContext = createContext(siteName, fallback);
 
 			if (oldSiteContext != null) {
-				oldSiteContext.destroy();
+				try {
+					destroyContext(oldSiteContext);
+				} catch (Exception e) {
+					logger.error("Error destroying previous site context for site '{}'", siteName, e);
+				}
 			}
 
 			logger.info("==================================================");

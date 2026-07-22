@@ -83,7 +83,7 @@ import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
 import { isDashboardAppUrl, isPreviewAppUrl, isProjectToolsAppUrl, pushConfirmDialog } from '../../utils/system';
 import { GlobalRoutes } from '../../env/routes';
 import { previewSwitch } from '../../services/security';
-import { getPublishingStatusState } from '../../components';
+import { getPublishingStatusState } from '../../components/PublishingStatusDisplay';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../actions/dialogStack';
 

@@ -62,6 +62,7 @@ import {
 	setHostSize,
 	setHostWidth,
 	setItemBeingDragged,
+	setKeyboardShortcutsEnabled,
 	setPreviewEditMode,
 	setWindowSize,
 	toggleEditModePadding,
@@ -178,7 +179,9 @@ const initialState: GlobalState['preview'] = {
 	editModePadding: false,
 	windowSize: window.innerWidth,
 	xbDetectionTimeoutMs: 5000,
-	error: null
+	error: null,
+	keyboardShortcutsEnabled: true,
+	createContentCompactView: false
 };
 
 const minDrawerWidth = 240;
@@ -265,6 +268,7 @@ const reducer = createReducer<GlobalState['preview']>(initialState, (builder) =>
 			const previewConfigEl = configDOM.querySelector('[id="craftercms.components.Preview"]');
 			const initialEditModeOn = previewConfigEl?.getAttribute('initialEditModeOn');
 			const initialHighlightMode = previewConfigEl?.getAttribute('initialHighlightMode') as HighlightMode;
+			const initialCreateContentCompactView = previewConfigEl?.getAttribute('initialCreateContentCompactView');
 
 			// If there is no storedEditMode, set it to the value of initialEditModeOn (config value), otherwise, defaults to true
 			state.editMode = payload.storedEditMode ?? (initialEditModeOn ? initialEditModeOn === 'true' : true);
@@ -272,6 +276,8 @@ const reducer = createReducer<GlobalState['preview']>(initialState, (builder) =>
 				payload.storedHighlightMode ??
 				(['all', 'move'].includes(initialHighlightMode) ? initialHighlightMode : state.highlightMode);
 			state.editModePadding = payload.storedPaddingMode ?? state.editModePadding;
+			state.keyboardShortcutsEnabled = payload.storedEnabledKeyboardShortcuts;
+			state.createContentCompactView = initialCreateContentCompactView === 'true';
 		})
 		.addCase(openToolsPanel, (state) => {
 			const { windowSize, editMode, toolsPanelWidth, icePanelWidth } = state;
@@ -816,6 +822,9 @@ const reducer = createReducer<GlobalState['preview']>(initialState, (builder) =>
 		.addCase(fetchContentTypesComplete, (state) => {
 			if (!state.guest) return state;
 			state.guest.contentTypesUpdated = true;
+		})
+		.addCase(setKeyboardShortcutsEnabled, (state, { payload }) => {
+			state.keyboardShortcutsEnabled = payload.enabled;
 		});
 });
 

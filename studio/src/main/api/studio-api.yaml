@@ -5690,7 +5690,7 @@ paths:
                     $ref: '#/components/responses/NotFound'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
-                    
+
     /api/2/dependency/{siteId}/dependencies:
         post:
             tags:
@@ -7523,7 +7523,7 @@ paths:
     #      tags:
     #        - translation
     #      summary: Get translation item(s) detail
-    #      description: 
+    #      description:
     #          Module: Studio <br>
     #          Required permission "get_translation_item_detail"
     #      operationId: getTranslationItemByPath
@@ -7576,7 +7576,7 @@ paths:
     #        - translation
     #      summary: Get list of target translation locales
     #      description: |
-    #          Module: Studio <br>    
+    #          Module: Studio <br>
     #          Required permission "get_translation_target_locales"
     #      operationId: getTranslationTargetLocales
     #      parameters:
@@ -9680,15 +9680,15 @@ components:
                     type: string
                     description: >-
                         Authentication type to use to access remote repository
-                        
+
                         Possible values:
-                        
+
                           - none: no authentication
-                        
+
                           - basic: username and password authentication
-                        
+
                           - token: token authentication
-                        
+
                           - key: key-based authentication
                 remoteUsername:
                     type: string
@@ -10271,6 +10271,9 @@ components:
                 - lockOwner
                 - staging
                 - availableActions
+                - live
+                - creator
+                - dateCreated
 
         PublishTargetStatus:
             type: object
@@ -10815,179 +10818,6 @@ components:
                     type: string
                     description: Path to use for quick create.
 
-        ContentItemV1:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: The item name
-                internalName:
-                    type: string
-                    description: The item internal name
-                contentType:
-                    type: string
-                    description: The item content type
-                uri:
-                    type: string
-                    description: The content type uri
-                path:
-                    type: string
-                    description: The content type form path
-                browserUri:
-                    type: string
-                navigation:
-                    type: boolean
-                floating:
-                    type: boolean
-                hideInAuthoring:
-                    type: boolean
-                previewable:
-                    type: boolean
-                lockOwner:
-                    type: string
-                user:
-                    type: string
-                userFirstName:
-                    type: string
-                userLastName:
-                    type: string
-                nodeRef:
-                    type: string
-                metaDescription:
-                    type: string
-                site:
-                    type: string
-                page:
-                    type: boolean
-                component:
-                    type: boolean
-                document:
-                    type: boolean
-                asset:
-                    type: boolean
-                isContainer:
-                    type: boolean
-                container:
-                    type: boolean
-                disabled:
-                    type: boolean
-                savedAsDraft:
-                    type: boolean
-                submitted:
-                    type: boolean
-                submittedForDeletion:
-                    type: boolean
-                scheduled:
-                    type: boolean
-                published:
-                    type: boolean
-                deleted:
-                    type: boolean
-                inProgress:
-                    type: boolean
-                live:
-                    type: boolean
-                inFlight:
-                    type: boolean
-                isDisabled:
-                    type: boolean
-                isSavedAsDraft:
-                    type: boolean
-                isInProgress:
-                    type: boolean
-                isLive:
-                    type: boolean
-                isSubmittedForDeletion:
-                    type: boolean
-                isScheduled:
-                    type: boolean
-                isPublished:
-                    type: boolean
-                isNavigation:
-                    type: boolean
-                isDeleted:
-                    type: boolean
-                isNew:
-                    type: boolean
-                isSubmitted:
-                    type: boolean
-                isFloating:
-                    type: boolean
-                isPage:
-                    type: boolean
-                isPreviewable:
-                    type: boolean
-                isComponent:
-                    type: boolean
-                isDocument:
-                    type: boolean
-                isAsset:
-                    type: boolean
-                isInFlight:
-                    type: boolean
-                eventDate:
-                    type: string
-                endpoint:
-                    type: string
-                timezone:
-                    type: string
-                numOfChildren:
-                    type: number
-                scheduledDate:
-                    type: string
-                publishedDate:
-                    type: string
-                mandatoryParent:
-                    type: string
-                isLevelDescriptor:
-                    type: boolean
-                categoryRoot:
-                    type: string
-                lastEditDate:
-                    type: string
-                form:
-                    type: string
-                renderingTemplates:
-                    type: array
-                    items:
-                        type: string
-                folder:
-                    type: boolean
-                submissionComment:
-                    type: string
-                components:
-                    type: string
-                documents:
-                    type: string
-                levelDescriptors:
-                    type: string
-                pages:
-                    type: string
-                parentPath:
-                    type: string
-                orders:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/ContentItemOrder'
-                children:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/ContentItemV1'
-                size:
-                    type: number
-                sizeUnit:
-                    type: string
-                mimeType:
-                    type: string
-                levelDescriptor:
-                    type: boolean
-                newFile:
-                    type: boolean
-                reference:
-                    type: boolean
-                new:
-                    type: boolean
-
         ReorderItemRequestBase:
             type: object
             properties:
@@ -11037,25 +10867,6 @@ components:
                         - previousPath
                         - nextPath
                         - type
-
-        ContentItemOrder:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: The item name
-                id:
-                    type: string
-                    description: The item id
-                disabled:
-                    type: string
-                    description: Indicates whether the item is disabled
-                order:
-                    type: string
-                    description: The item's order
-                placeInNav:
-                    type: string
-                    description: Indicates whether the item is placed in the navigation
 
         ContentItemVersions:
             type: object

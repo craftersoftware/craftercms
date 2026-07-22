@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -26,7 +26,8 @@ import groovy.util.GroovyScriptEngine;
 public interface ScriptEngineManager {
 
 	/**
-	 * Returns the {@link GroovyScriptEngine} for the given site, if it doesn't exist then a new one is created
+	 * Returns the {@link GroovyScriptEngine} for the given site, if it doesn't
+	 * exist then a new one is created
 	 *
 	 * @param siteId the id fo the site
 	 * @return the script engine instance
@@ -34,7 +35,9 @@ public interface ScriptEngineManager {
 	GroovyScriptEngine getScriptEngine(String siteId);
 
 	/**
-	 * Creates a new {@link GroovyScriptEngine} for the given site
+	 * Creates a new {@link GroovyScriptEngine} for the given site, closing the
+	 * previous one if present
+	 *
 	 *
 	 * @param siteId the id of the site
 	 */

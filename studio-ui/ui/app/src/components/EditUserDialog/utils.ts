@@ -30,8 +30,7 @@ export interface EditUserDialogProps extends EditUserBaseProps, EnhancedDialogPr
 }
 
 export interface EditUserDialogContainerProps
-	extends EditUserBaseProps,
-		Pick<EditUserDialogProps, 'onClose' | 'isSubmitting' | 'onUserEdited' | 'open'> {}
+	extends EditUserBaseProps, Pick<EditUserDialogProps, 'onClose' | 'isSubmitting' | 'onUserEdited' | 'open'> {}
 
 export interface EditUserDialogUIProps {
 	user: User;
@@ -48,6 +47,5 @@ export interface EditUserDialogUIProps {
 	onSave(): void;
 	onCloseButtonClick?(e: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
 	onCloseResetPasswordDialog(): void;
-	onDelete(username: string): void;
 	onResetPassword(value: boolean): void;
 }

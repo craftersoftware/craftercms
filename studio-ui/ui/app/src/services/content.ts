@@ -41,7 +41,7 @@ import { ItemHistoryEntry } from '../models/Version';
 import { GetChildrenOptions } from '../models/GetChildrenOptions';
 import { generateComponentPath, isPdfDocument, parseContentXML, prepareVirtualItemProps } from '../utils/content';
 import QuickCreateItem from '../models/content/QuickCreateItem';
-import ApiResponse from '../models/ApiResponse';
+import ApiResponse, { Api2ResponseFormat } from '../models/ApiResponse';
 import { fetchContentTypes } from './contentTypes';
 import { Clipboard } from '../models/GlobalState';
 import { getFileNameFromPath } from '../utils/path';
@@ -122,12 +122,20 @@ export function fetchContentInstance(
 	return fetchContentDOM(site, path).pipe(map((doc) => parseContentXML(doc, path, contentTypesLookup, {})));
 }
 
+export type WriteContentResponse = Api2ResponseFormat<{
+	items: Array<{
+		path: string;
+		action: string;
+		amended: boolean;
+	}>;
+}>;
+
 export function writeContent(
 	siteId: string,
 	path: string,
 	content: string,
 	options?: { unlock?: boolean; comment?: string }
-) {
+): Observable<AjaxResponse<WriteContentResponse>> {
 	const request$ = postJSON(`/studio/api/2/content/${siteId}`, {
 		path,
 		content,
@@ -145,7 +153,12 @@ export function uploadFile(siteId: string, formData: FormData) {
 }
 
 // TODO: add link to API docs when available
-export function moveAndUpdateContent(siteId: string, sourcePath: string, targetPath: string, content: string) {
+export function moveAndUpdateContent(
+	siteId: string,
+	sourcePath: string,
+	targetPath: string,
+	content: string
+): Observable<AjaxResponse<WriteContentResponse>> {
 	return post(`/studio/api/2/content/${siteId}/move_and_update`, {
 		sourcePath,
 		targetPath,
@@ -1015,7 +1028,7 @@ export function createFileUpload(
 	uploadMeta: (Record<string, unknown> & { site: string }) | (Record<string, unknown> & { siteId: string }),
 	xsrfArgumentName: string = '_csrf'
 ): Observable<StandardAction> {
-	const blob = dataUriToBlob(file.dataUrl);
+	const blob = file.blob ?? dataUriToBlob(file.dataUrl);
 	return uploadBlob(
 		(uploadMeta?.site ?? uploadMeta?.siteId) as string,
 		path,

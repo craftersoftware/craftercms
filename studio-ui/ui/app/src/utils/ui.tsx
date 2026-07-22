@@ -18,7 +18,7 @@ import type { Dispatch as ReduxDispatch } from 'redux';
 import { FormattedMessage } from 'react-intl';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../state/actions/dialogStack';
-import type { ConfirmDialogProps } from '../components';
+import type { ConfirmDialogProps } from '../components/ConfirmDialog';
 import type { Theme } from '@mui/material';
 import type { SxProps } from '@mui/system';
 import { pushConfirmDialog } from './system';

@@ -16,7 +16,21 @@
 
 package org.craftercms.studio.impl.v2.publish;
 
+import java.beans.ConstructorProperties;
+import java.io.IOException;
+import static java.lang.String.format;
+import static java.time.Instant.now;
+import java.util.ArrayList;
+import java.util.Collection;
+import static java.util.Collections.emptyList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections4.ListUtils;
+import static org.apache.commons.lang3.Strings.CS;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -26,12 +40,22 @@ import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
 import org.craftercms.studio.api.v2.dal.AuditLog;
+import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_INITIAL_PUBLISH;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_ITEM_LIST_PUBLISHED;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_ALL;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_START;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.TARGET_TYPE_PUBLISH_PACKAGE;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishItem;
+import static org.craftercms.studio.api.v2.dal.publish.PublishItem.Action.DELETE;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.PublishEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
@@ -56,23 +80,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.event.EventListener;
+import static org.springframework.data.util.Predicates.negate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
-
-import java.beans.ConstructorProperties;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.time.Instant.now;
-import static java.util.Collections.emptyList;
-import static org.apache.commons.lang3.Strings.CS;
-import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
-import static org.craftercms.studio.api.v2.dal.AuditLogConstants.*;
-import static org.craftercms.studio.api.v2.dal.publish.PublishItem.Action.DELETE;
-import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.*;
-import static org.springframework.data.util.Predicates.negate;
 
 /**
  * Listen for {@link RequestPublishEvent} and handle accordingly.
@@ -201,7 +211,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 				}
 				case ITEM_LIST -> {
 					logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_PUBLISHED;
+					activityOperation = OPERATION_ITEM_LIST_PUBLISHED;
 					doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget);
 				}
 				default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
@@ -209,8 +219,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			}
 		} finally {
 			Stage completeStage = taskProgress.startStage("Save completed package");
-			auditPublishOperation(publishPackage, OPERATION_PUBLISHED);
 			if (activityOperation != null) {
+				auditPublishOperation(publishPackage, activityOperation);
 				activityService.insertActivity(publishPackage.getSiteId(), publishPackage.getSubmitterId(), activityOperation, DateUtils.getCurrentTime(),
 					null, Long.toString(packageId));
 			}

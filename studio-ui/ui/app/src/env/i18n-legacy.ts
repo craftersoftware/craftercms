@@ -264,8 +264,7 @@ export const contentTypesMessages = defineMessages({
 		defaultMessage: '"{tool}" tool not found.'
 	},
 	dependsOn: {
-		id: 'contentType.dependsOn',
-		defaultMessage: 'This property depends on "{dependency}"'
+		defaultMessage: 'This property references "{dependency}"'
 	},
 	minValueError: {
 		id: 'contentType.minSizeError',
