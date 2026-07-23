@@ -20,7 +20,7 @@ pluginManagement {
 		mavenCentral()
 	}
 	plugins {
-		id 'org.cyclonedx.bom' version '2.3.1'
+		id 'org.cyclonedx.bom' version '3.3.0'
 	}
 }
 
