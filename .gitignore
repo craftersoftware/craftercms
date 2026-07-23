@@ -10,8 +10,19 @@
 *.jar
 *.war
 *.ear
-target/
-tmp/
+# Root and module build dirs only (not nested source paths)
+/target/
+/tmp/
+*/target/
+*/tmp/
+commons/*/target/
+commons/*/tmp/
+search/*/target/
+search/*/tmp/
+profile/*/target/
+profile/*/tmp/
+social/*/target/
+social/*/tmp/
 
 # Module build output (directly inside each Gradle module)
 groovy-sandbox/bin/

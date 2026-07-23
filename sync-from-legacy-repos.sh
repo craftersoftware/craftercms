@@ -64,13 +64,17 @@ RSYNC_EXCLUDES=(
 	--exclude='**/distribution.xml'
 	# Legacy studio UI app
 	--exclude='src/ui/'
-	# Build / IDE noise from either side
-	--exclude='target/'
-	--exclude='**/target/'
+	# Build / IDE noise: module root + one-level nested modules only.
+	# Use /*/…/ (anchored) — plain */…/ matches any depth in rsync and would
+	# skip valid source packages like deployer/.../api/target/.
+	--exclude='/target/'
+	--exclude='/*/target/'
+	--exclude='/tmp/'
+	--exclude='/*/tmp/'
 	--exclude='build/'
 	--exclude='**/build/'
-	--exclude='bin/'
-	--exclude='**/bin/'
+	--exclude='/bin/'
+	--exclude='/*/bin/'
 	--exclude='node_modules/'
 	--exclude='**/node_modules/'
 	--exclude='.gradle/'
