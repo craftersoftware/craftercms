@@ -232,13 +232,13 @@ You can now work in your local system, and build/deploy and ultimately push to y
 To update your local clone with the latest:
 
 ```bash
-    ./gradlew selfUpdate
+    ./gradlew -PgitRemote=upstream selfUpdate
 ```
 
 Or simply:
 
 ```bash
-    git pull
+    git pull upstream <current-branch>
 ```
 
 ### 4.3.2. Build and Deploy a Module

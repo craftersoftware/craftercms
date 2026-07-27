@@ -1,11 +1,10 @@
-groovy-sandbox
-==============
+# groovy-sandbox
 
 Compile-time transformer to run Groovy code in a restrictive sandbox. Executes untrusted Groovy script safely.
 
 [Documentation](http://groovy-sandbox.kohsuke.org/).
 
-#### Maven dependency
+## Maven dependency
 
 ```xml
 <dependency>
@@ -25,7 +24,7 @@ Starting with version 1.20, this artifact is only published to the Jenkins Relea
 </repository>
 ```
 
-#### Usage
+## Usage
 
 A good example can be found [here](https://github.com/jenkinsci/groovy-sandbox/tree/master/src/test/groovy/org/kohsuke/groovy/sandbox/robot).
 This is a simple test that always expects a `SecurityException`:
@@ -45,20 +44,20 @@ class Test {
 }
 ```
 
-# Community
+## Community
 
-## Contributors
+### Contributors
 
 https://github.com/craftersoftware/craftercms/blob/develop/CONTRIBUTORS.md
 
-## Code of Conduct
+### Code of Conduct
 
 https://github.com/craftersoftware/craftercms/blob/develop/CODE_OF_CONDUCT.md
 
-## Contributing
+### Contributing
 
 https://github.com/craftersoftware/craftercms/blob/develop/CONTRIBUTING.md
 
-## Git Workflow
+### Git Workflow
 
 https://github.com/craftersoftware/craftercms/blob/develop/GIT_WORKFLOW.md
