@@ -117,8 +117,9 @@ export default [
 						payload: { id }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const requestedPath = state.pathNavigator[id].currentPath;
+					return fetchItemWithChildrenByPath(state.sites.active, requestedPath, {
 						keyword: state.pathNavigator[id].keyword,
 						limit: state.pathNavigator[id].limit,
 						offset: state.pathNavigator[id].offset,
@@ -131,10 +132,11 @@ export default [
 							if (error.status === 404 && state.pathNavigator[id].rootPath !== state.pathNavigator[id].currentPath) {
 								return pathNavigatorConditionallySetPath({ id, path: state.pathNavigator[id].rootPath });
 							} else {
-								return pathNavigatorFetchPathFailed({ error, id });
+								return pathNavigatorFetchPathFailed({ error, id, path: requestedPath });
 							}
 						})
-					)
+					);
+				}
 			)
 		),
 	// endregion
@@ -268,7 +270,7 @@ export default [
 						order: state.pathNavigator[id].order
 					}).pipe(
 						map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, path }))
 					)
 			)
 		),
@@ -285,8 +287,9 @@ export default [
 						payload: { id, keyword }
 					},
 					state
-				]) =>
-					fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const requestedPath = state.pathNavigator[id].currentPath;
+					return fetchChildrenByPath(state.sites.active, requestedPath, {
 						keyword,
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
@@ -296,12 +299,13 @@ export default [
 						map((children) =>
 							pathNavigatorFetchPathComplete({
 								id,
-								parent: state.content.itemsByPath[state.pathNavigator[id].currentPath],
+								parent: state.content.itemsByPath[requestedPath],
 								children
 							})
 						),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
-					)
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, path: requestedPath }))
+					);
+				}
 			)
 		),
 	// endregion
@@ -317,8 +321,9 @@ export default [
 						payload: { id, offset }
 					},
 					state
-				]) =>
-					fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const requestedPath = state.pathNavigator[id].currentPath;
+					return fetchChildrenByPath(state.sites.active, requestedPath, {
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
 						order: state.pathNavigator[id].order,
@@ -327,8 +332,9 @@ export default [
 						offset
 					}).pipe(
 						map((children) => pathNavigatorFetchPathComplete({ id, children })),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
-					)
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, path: requestedPath }))
+					);
+				}
 			)
 		),
 	// endregion
@@ -364,7 +370,7 @@ export default [
 								if (error.status === 404) {
 									return pathNavigatorConditionallySetPath({ id, path: getRootPath(path) });
 								} else {
-									return pathNavigatorFetchPathFailed({ error, id });
+									return pathNavigatorFetchPathFailed({ error, id, path });
 								}
 							})
 						);
@@ -378,7 +384,7 @@ export default [
 							order: state.pathNavigator[id].order
 						}).pipe(
 							map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
-							catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
+							catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, path }))
 						);
 					}
 				}

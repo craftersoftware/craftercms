@@ -198,17 +198,15 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		})
 		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error, path } }) => {
 			const chunk = state[id];
-			if (path) {
-				if (withoutIndex(path) !== withoutIndex(chunk.currentPath)) {
-					return;
-				}
-				const revert = chunk.pathNavigationRevert;
-				if (revert) {
-					chunk.currentPath = revert.currentPath;
-					chunk.breadcrumb = revert.breadcrumb;
-					chunk.offset = revert.offset;
-					delete chunk.pathNavigationRevert;
-				}
+			if (!path || withoutIndex(path) !== withoutIndex(chunk.currentPath)) {
+				return;
+			}
+			const revert = chunk.pathNavigationRevert;
+			if (revert) {
+				chunk.currentPath = revert.currentPath;
+				chunk.breadcrumb = revert.breadcrumb;
+				chunk.offset = revert.offset;
+				delete chunk.pathNavigationRevert;
 			}
 			chunk.isFetching = false;
 			chunk.error = error;
