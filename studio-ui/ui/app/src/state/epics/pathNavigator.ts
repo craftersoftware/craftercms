@@ -209,6 +209,7 @@ export default [
 					state
 				]) =>
 					fetchItemWithChildrenByPath(state.sites.active, path, {
+						...(keyword && { keyword }),
 						excludes: state.pathNavigator[id].excludes,
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
