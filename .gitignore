@@ -211,7 +211,6 @@ studio-ui/templates/web/common/js-next-scripts.ftl
 studio-ui/static-assets/app/
 studio-ui/static-assets/styles/*.css
 studio-ui/static-assets/styles/*.css.map
-studio-ui/static-assets/themes/cstudioTheme/
 studio-ui/static-assets/scripts/*.umd.js*
 studio-ui/ui/app/public/*.umd.js*
 studio-ui/ui/app/public/shared-worker.js*

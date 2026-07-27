@@ -1,0 +1,148 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+.cstudio-wcm-galleryResult-header {
+	font-size: 20px;
+	padding-bottom: 20px;
+	padding-top: 20px;
+	padding-left: 20px;
+}
+
+.cstudio-wcm-gallery-filters {
+	background-color: white;
+	border: 1px solid #cccccc;
+	border-radius: 5px 5px 5px 5px;
+	float: left;
+	margin-bottom: 10px;
+	margin-left: 20px;
+	height: 550px;
+	padding: 20px 30px;
+	width: 250px;
+}
+
+.cstudio-wcm-gallery-filters-box {
+	float: left;
+	padding: 10px 15px 0;
+	width: 240px;
+}
+
+.cstudio-wcm-gallery-filters-type {
+	float: left;
+	width: 100px;
+}
+
+.cstudio-wcm-gallery-filters-value {
+	float: left;
+	margin: 2px 0 0;
+	width: 140px;
+}
+
+.cstudio-wcm-gallery-search-button {
+	float: left;
+	padding: 10px 15px 0;
+	width: 240px;
+}
+
+.cstudio-wcm-gallery-results {
+	border: 1px solid #cccccc;
+	border-radius: 5px 5px 5px 5px;
+	float: left;
+	left: 340px;
+	margin-bottom: 10px;
+	margin-left: 10px;
+	overflow: hidden;
+	position: absolute;
+	width: 69%;
+	background-color: #ffffff;
+	height: 550px;
+	padding: 20px 30px;
+}
+
+.cstudio-wcm-gallery-search-results-header {
+	border-bottom: 1px solid rgb(179, 179, 179);
+	height: 30px;
+	background: url('../../../components/cstudio-search/images/bar_bg.gif') repeat scroll 0 0 transparent;
+}
+
+.cstudio-wcm-gallery-search-results-heading {
+	font-size: 1.35em;
+	font-weight: bold;
+	margin: 0 0 0 10px;
+}
+
+.cstudio-wcm-gallery-result-header-pagination {
+	float: right;
+	font-weight: bold;
+	margin-right: 10px;
+}
+
+.cstudio-wcm-gallery-result-header-pagination-textbox {
+	width: 23px;
+	margin-right: 10px;
+}
+
+.cstudio-wcm-gallery-result-header-sort {
+	float: right;
+	font-weight: bold;
+	margin-right: 10px;
+}
+
+.cstudio-wcm-gallery-result {
+	height: 400px;
+	overflow: auto;
+	padding: 40px 30px;
+}
+
+.cstudio-wcm-gallery-search-main {
+	margin: 0 30px;
+}
+
+.cstudio-wcm-gallery-header-container {
+	padding-top: 5px;
+}
+
+.cstudio-wcm-gallery-wrapper {
+	padding-left: 10px;
+}
+
+.cstudio-gallery-component-title-nopreview {
+	margin-left: 20px;
+}
+
+div.cstudio-wcm-search-pagination {
+	margin: 0;
+}
+
+div#cstudio-wcm-search-pagination-controls {
+	margin: 20px 0 0;
+	text-align: center;
+	width: 100%;
+}
+
+a.cstudio-wcm-search-pagination-number {
+	cursor: pointer;
+	margin: 0 10px 0 0;
+}
+
+#cstudio-wcm-search-wrapper {
+	background-color: #f0f0f0;
+	margin: 0;
+}
+
+.sticky-wrapper {
+	background-color: #f0f0f0;
+	margin: -3px 0 0;
+}

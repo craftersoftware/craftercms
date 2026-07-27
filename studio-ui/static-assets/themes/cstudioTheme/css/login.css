@@ -1,0 +1,95 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+body {
+	background-color: #fafafa;
+	text-align: center;
+}
+
+a {
+	color: #0176b1;
+	text-decoration: none;
+}
+
+a:link {
+	color: #005986;
+}
+
+a:hover {
+	color: #005986;
+}
+
+input {
+	font-size: 9px;
+	border: 1px solid #534a3d;
+	padding: 2px;
+	color: #999999;
+	margin-bottom: 6px;
+}
+
+.login-panel {
+	padding-top: 20%;
+}
+
+.login-button {
+	background-color: #f0f0f0;
+}
+
+#footer {
+	border-width: 1px 0 0 0;
+	border-style: dotted;
+	border-color: #000;
+	clear: both;
+	margin: 30px 30px 30px 30px;
+	padding: 10px 0 0 0;
+	height: 30px;
+}
+
+fieldset {
+	border: none;
+	padding: 0;
+}
+
+.login-copyright {
+	float: right;
+}
+
+.login-contact {
+	float: left;
+	color: #0176b1;
+}
+
+.login-logo {
+	margin-left: 46.5%;
+	height: 33px;
+	width: 450px;
+	background: transparent url('../images/app-logo.png') no-repeat;
+}
+
+.submitButtonstyle {
+	border: 1px solid #006;
+	color: #534a3d;
+	font-size: 11px;
+}
+
+.inputStyle {
+	font-size: 11px;
+}
+
+.errorStyle {
+	color: red;
+	font-size: 15px;
+}

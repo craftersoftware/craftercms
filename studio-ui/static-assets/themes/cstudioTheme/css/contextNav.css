@@ -1,0 +1,1165 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+.floatLeft {
+	float: left;
+}
+
+#wcm-popup-container {
+	border: 3px solid #000000;
+}
+
+#contentTypePreviewImg {
+	margin: 5px 0 0 0;
+}
+
+.contentTypePopupInner {
+	border: 5px solid #000;
+	height: 434px;
+	width: 598px;
+}
+
+.contentTypePopupContent {
+	margin: 15px 25px 15px 25px;
+}
+
+.contentTypeOuter {
+	margin: 30px 0 20px 0;
+}
+
+.contentTypeOuter .alert {
+	padding: 9px 15px;
+	color: #a94442 !important;
+	margin-bottom: 0;
+}
+
+.contentType {
+	padding: 0 10px 0 0;
+	height: 260px;
+	width: 250px;
+}
+
+.floatLeft {
+	float: left;
+}
+
+#wcm-popup-container {
+	border: 3px solid #000000;
+}
+
+#cstudio-wcm-popup-table {
+	width: 350px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+#cstudio-wcm-popup-table .tbody {
+	margin-top: 10px;
+}
+
+#contentTypePreviewImg {
+	margin: 5px 0 0 0;
+}
+
+#cstudio-wcm-popup-div .rename-container::before,
+#cstudio-wcm-popup-div-login .rename-container::before {
+	content: '.' attr(data-extension);
+	top: 9px;
+	right: 20px;
+	color: #000;
+	position: absolute;
+}
+
+.contentTypePopupContent {
+	margin: 15px 25px 15px 25px;
+}
+
+.contentTypePopupContent .contentTypePopupBtn .indicator {
+	float: left;
+	margin-right: 10px;
+	margin-top: 7px;
+}
+
+.contentTypePopupContent .contentTypePopupBtn .rename-container {
+	float: left;
+	position: relative;
+}
+
+#renameFileInput {
+	display: inline-block;
+	width: 220px;
+	border-right-width: 54px;
+	border-right-color: rgba(204, 204, 204, 0.33);
+}
+
+.contentTypeOuter {
+	margin: 20px 0;
+	overflow: hidden;
+}
+
+.contentType {
+	padding: 0 10px 0 0;
+	height: 260px;
+	width: 250px;
+}
+
+/* Modal */
+#status-dialog_mask {
+	z-index: 997 !important;
+}
+
+body .mask {
+	background-color: rgb(68, 68, 68) !important;
+	opacity: 0.5 !important;
+	z-index: 1031;
+}
+
+.yui-dialog.inc-zindex {
+	z-index: 1040 !important;
+}
+
+.yui-dialog.login-dialog {
+	z-index: 1050 !important;
+}
+
+body .mask.login-dialog-mask {
+	z-index: 1040 !important;
+}
+
+body .mask#expandComponentError_mask {
+	z-index: 103 !important;
+}
+
+div[id*='expandComponentError'].yui-dialog {
+	z-index: 104 !important;
+}
+
+.cstudio-dialogue[id^='viewcontroller-history'],
+.cstudio-dialogue[id^='viewcontroller-dependencies'],
+.cstudio-dialogue[id^='viewcontroller-approve'],
+.cstudio-dialogue[id^='viewcontroller-delete'],
+.cstudio-dialogue[id^='viewcontroller-requestpublish'] {
+	z-index: 1030 !important;
+}
+
+.yui-dialog .yui-overlay.yui-panel {
+	border-radius: 6px;
+}
+
+.yui-dialog .yui-overlay.yui-panel .hd {
+	border-radius: 6px 6px 0 0;
+}
+
+.yui-dialog .yui-overlay.yui-panel .ft {
+	border-radius: 0 0 6px 6px;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner {
+	background-color: #fff;
+	border: 1px solid #808080;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+	border-radius: 6px;
+	transition: opacity 0.15s linear;
+	width: 100% !important;
+	height: 100% !important;
+	overflow: hidden;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner .contentTypePopupContent {
+	margin: 15px 0;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner .contentTypePopupContent form > div {
+	padding-left: 20px;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner .contentTypePopupHeader {
+	border-bottom: solid 1px #ccc;
+	padding: 10px 15px 20px !important;
+	margin-bottom: 8px !important;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner .contentTypeOuter {
+	border-bottom: solid 1px #ccc;
+	padding: 0 20px 20px;
+	min-height: 80px;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner .contentTypePopupBtn {
+	float: right;
+	margin: 0 17px !important;
+}
+
+.yui-dialog .yui-panel .create-new-folder-dialog .contentTypePopupBtn,
+.yui-dialog .yui-panel .changeContent-type-dialog .contentTypePopupBtn {
+	margin-bottom: 20px !important;
+}
+
+.yui-dialog .yui-panel .changeContent-type-dialog .btn-primary,
+.yui-dialog .yui-panel .changeContent-type-dialog .btn-default {
+	width: auto;
+}
+
+.crop-image-dialog-panel-container {
+	display: flex;
+	height: calc(100% - 115px);
+	max-height: 615px;
+}
+
+.crop-image-dialog-panel-content {
+	align-self: center;
+	height: 100%;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner.crop-image-dialog {
+	max-height: 100%;
+	overflow: auto;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner.crop-image-dialog .contentTypePopupContent {
+	height: 100%;
+	margin: 0;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner.crop-image-dialog .contentTypeContentWrapper {
+	height: calc(100% - 63px); /* 63px = header */
+	overflow-y: auto;
+}
+
+.yui-dialog .yui-panel .contentTypePopupInner.crop-image-dialog .contentTypePopupBtn {
+	padding-bottom: 10px !important;
+}
+
+.contentTypePopupInner input[type='text'],
+.contentTypePopupInner input[type='password'],
+.yui-overlay.yui-panel .bd > div select,
+.rejectReasonDropDown {
+	display: inline-block;
+	width: 100%;
+	height: 31px;
+	padding: 6px 12px;
+	font-size: 12px;
+	line-height: 1.42857;
+	color: #555555;
+	background-color: white;
+	background-image: none;
+	border: 1px solid #cccccc;
+	border-radius: 4px;
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	-webkit-transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+	-o-transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+	transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+}
+
+.contentTypePopupInner select {
+	display: inline-block;
+	width: 50%;
+	height: 31px;
+	padding: 6px 12px;
+	font-size: 12px;
+	line-height: 1.42857;
+	color: #555555;
+	background-color: white;
+	background-image: none;
+	border: 1px solid #cccccc;
+	border-radius: 4px;
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+	-webkit-transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+	-o-transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+	transition:
+		border-color ease-in-out 0.15s,
+		box-shadow ease-in-out 0.15s;
+}
+
+/* -- Go Live and Schedule Overlay -- */
+#acnVersionWrapper div,
+#acnVersionWrapper span,
+#acnVersionWrapper label,
+#acnVersionWrapper h1,
+#acnVersionWrapper h2,
+#acnVersionWrapper h3,
+#acnVersionWrapper h4,
+#acnVersionWrapper b,
+#acnVersionWrapper textarea {
+	cursor: auto;
+	color: #000000;
+	direction: ltr;
+	font: normal normal normal 12px / normal;
+	font-size-adjust: none;
+	font-stretch: normal;
+	letter-spacing: normal;
+	line-height: normal;
+	text-align: left;
+	text-indent: 0;
+	text-justify: auto;
+	text-outline: none;
+	text-shadow: none;
+	text-transform: none;
+	white-space: normal;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+}
+
+#acnVersionWrapper select,
+#acnVersionWrapper option {
+	cursor: auto;
+	direction: ltr;
+	font: normal normal normal 12px / normal;
+	font-size-adjust: none;
+	font-stretch: normal;
+	letter-spacing: normal;
+	line-height: normal;
+	text-align: left;
+	text-indent: 0;
+	text-justify: auto;
+	text-outline: none;
+	text-shadow: none;
+	text-transform: none;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+}
+
+#acnVersionWrapper input[type='radio'],
+#acnVersionWrapper input[type='checkbox'] {
+	margin: 0;
+}
+
+#acnVersionWrapper .dialog-main {
+	overflow: hidden;
+}
+
+#acnVersionWrapper .comment {
+	clear: both;
+	padding-right: 3px;
+}
+
+#acnVersionWrapper .comment label {
+	font-size: 12px;
+	font-weight: bold;
+	display: block;
+	padding: 10px 0 3px 0;
+}
+
+#acnVersionWrapper .comment textarea {
+	height: 40px;
+	border: 1px solid #7f9db9;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+#acnVersionWrapper.schedule .publishing-channels {
+	min-height: 100px;
+}
+
+#acnVersionWrapper.go-live .publishing-channels {
+	min-height: 100px;
+}
+
+#acnVersionWrapper h3,
+#submitPanel .acnBox h3 {
+	font: normal 1.8em;
+	margin: 0;
+	padding: 6px 0;
+}
+
+#acnVersionWrapper.acnBox .publishing-channels h3 {
+	font-size: 18px;
+	border-bottom: 1px solid #7f9db9;
+	padding: 0;
+}
+
+#acnVersionWrapper .publishing-channels {
+	padding: 20px 15px;
+	border: 1px solid #7f9db9;
+	float: left;
+	margin: 5px 0 0 10px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-status label {
+	display: block;
+	padding: 5px 0 0 0;
+	float: none;
+	text-align: left;
+}
+
+#acnVersionWrapper .publishing-channels .pub-msg {
+	padding-top: 5px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-msg span.counter {
+	margin: 3px 0;
+	font-style: italic;
+}
+
+#acnVersionWrapper .publishing-channels .pub-msg b.emphasize,
+#acnVersionWrapper .publishing-channels .pub-msg .over-limit b {
+	color: #d92626;
+}
+
+#acnVersionWrapper .publishing-channels .pub-msg .over-limit span {
+	font-weight: bold;
+	font-size: 12px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-channel > label {
+	margin-right: 5px;
+	font-weight: bold;
+	padding: 5px 0 0 0;
+	float: none;
+	text-align: left;
+}
+
+#acnVersionWrapper .publishing-channels .pub-channel > select {
+	width: 135px;
+	border: 1px solid #c5d6e2;
+	font-weight: normal;
+}
+
+#acnVersionWrapper .publishing-channels .pub-channel {
+	padding-top: 15px;
+	font-size: 12px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-status {
+	padding-top: 15px;
+	font-size: 12px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-status textarea {
+	font-size: 1em;
+	height: 80px;
+	margin: 5px 0 0 0;
+	padding: 2px;
+}
+
+#acnVersionWrapper .publishing-channels .pub-msg span.counter,
+#acnVersionWrapper .publishing-channels .pub-status textarea {
+	width: 240px;
+	border: 1px solid #c5d6e2;
+	font-weight: normal;
+}
+
+#acnVersionWrapper .publishing-channels .pub-status h4 {
+	font-weight: bold;
+	font-size: 1em;
+	margin: 0 0 6px 0;
+	padding: 0;
+}
+
+#ct_contentTypePopupInner .contentTypePopupBtn,
+.contentTypePopupContent .contentTypePopupBtn,
+#submitPanel .acnBox .acnSubmitButtons,
+#messageOverlay .acnSubmitButtons,
+#acnVersionWrapper .acnSubmitButtons,
+.acn-submit-buttons {
+	margin: 8px 0 4px 0;
+	padding: 0;
+	text-align: center;
+}
+
+#acnVersionWrapper .publishing-channels .show {
+	display: block;
+}
+
+#acnVersionWrapper .publishing-channels .hidden {
+	display: none;
+}
+
+#acnVersionWrapper #calendarContainer .calheader {
+	text-align: center;
+}
+
+/* -- END Go Live and Schedule Overlay -- */
+
+/* -- Upload Overlay -- */
+.yui-pe-content div,
+.yui-pe-content span,
+#cstudio-wcm-popup-div label,
+#cstudio-wcm-popup-div-login label,
+#cstudio-wcm-popup-div h1,
+#cstudio-wcm-popup-div-login h1,
+#cstudio-wcm-popup-div h2,
+#cstudio-wcm-popup-div-login h2,
+#cstudio-wcm-popup-div h3,
+#cstudio-wcm-popup-div-login h3,
+#cstudio-wcm-popup-div b,
+#cstudio-wcm-popup-div-login b {
+	cursor: auto;
+	color: #000000;
+	direction: ltr;
+	font: normal normal normal 12px / normal;
+	font-size-adjust: none;
+	font-stretch: normal;
+	letter-spacing: normal;
+	line-height: normal;
+	text-align: left;
+	text-indent: 0;
+	text-justify: auto;
+	text-outline: none;
+	text-shadow: none;
+	text-transform: none;
+	white-space: normal;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+}
+
+.crop-image-dialog span.status-icon {
+	color: #fff;
+}
+
+#cstudio-wcm-popup-div select,
+#cstudio-wcm-popup-div-login select,
+#cstudio-wcm-popup-div option,
+#cstudio-wcm-popup-div-login option {
+	cursor: auto;
+	direction: ltr;
+	font: normal normal normal 12px / normal;
+	font-size-adjust: none;
+	font-stretch: normal;
+	letter-spacing: normal;
+	line-height: normal;
+	text-align: left;
+	text-indent: 0;
+	text-justify: auto;
+	text-outline: none;
+	text-shadow: none;
+	text-transform: none;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+}
+
+#cstudio-wcm-popup-div.yui-panel .hd,
+#cstudio-wcm-popup-div-login.yui-panel .hd {
+	height: 0;
+	display: none;
+	width: 400px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .bd,
+#cstudio-wcm-popup-div-login.yui-panel .bd {
+	background: url(../images/bg/gradient_workflow.gif) repeat-x;
+	background-color: #d6d6d6;
+	height: 100%;
+	min-height: 100%;
+	overflow: hidden;
+	width: 400px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .ft,
+#cstudio-wcm-popup-div-login.yui-panel .ft {
+	height: 0;
+	display: none;
+}
+
+#cstudio-wcm-popup-div.yui-panel .header-titl,
+#cstudio-wcm-popup-div-login.yui-panel .header-title {
+	font-size: 14px;
+	color: black;
+	font-weight: bold;
+	padding-left: 10px;
+	padding-top: 10px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .cstudio-wcm-popup-label,
+#cstudio-wcm-popup-div-login.yui-panel .cstudio-wcm-popup-label {
+	font-weight: bold;
+}
+
+#cstudio-wcm-popup-div.yui-panel .templateName,
+#cstudio-wcm-popup-div-login.yui-panel .templateName,
+#cstudio-wcm-popup-div.yui-panel .previewImage,
+#cstudio-wcm-popup-div-login.yui-panel .previewImage {
+	width: 50%;
+	float: left;
+}
+
+#cstudio-wcm-popup-div.yui-panel .templateName .contentTypeDropdown,
+#cstudio-wcm-popup-div-login.yui-panel .templateName .contentTypeDropdown {
+	margin-right: 2px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .previewImage .contentTypePreview,
+#cstudio-wcm-popup-div-login.yui-panel .previewImage .contentTypePreview {
+	margin-left: 8px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .cstudio-wcm-popup-select-control,
+#cstudio-wcm-popup-div-login.yui-panel .cstudio-wcm-popup-select-control {
+	height: 260px;
+	width: 235px;
+	margin: 5px 0 0 0;
+	color: #000000;
+	border: 1px solid #c5d6e2;
+	background: #ffffff;
+	padding: 1px 0 1px 0;
+	box-shadow: 0;
+	border-radius: 0;
+	-moz-box-shadow: 0 0 0 0 #000000 inset;
+}
+
+#cstudio-wcm-popup-div .yui-resize .yui-resize-handle-br,
+#cstudio-wcm-popup-div-login .yui-resize .yui-resize-handle-br {
+	background-position: -20px -58px;
+	height: 12px;
+	width: 10px;
+}
+
+#cstudio-wcm-popup-div.yui-panel .cstudio-wcm-popup-select-control option,
+#cstudio-wcm-popup-div-login.yui-panel .cstudio-wcm-popup-select-control option {
+	padding: 0 5px 0 3px;
+}
+
+#cstudio-wcm-popup-div .contentTypePopupHeader,
+#cstudio-wcm-popup-div-login .contentTypePopupHeader {
+	font: normal 1.8em;
+	margin: 0;
+	padding: 6px 0;
+}
+
+#cstudio-wcm-popup-div .contentTypePopupHeader.loginHeader,
+#cstudio-wcm-popup-div-login .contentTypePopupHeader.loginHeader {
+	font-size: 1.5em;
+	padding: 0 15px 3px !important;
+}
+
+#cstudio-wcm-popup-div .contentTypePopupHeader.loginHeader #crafterLogo,
+#cstudio-wcm-popup-div-login .contentTypePopupHeader.loginHeader #crafterLogo {
+	width: 200px;
+	margin: 30px auto 0;
+	display: block;
+}
+
+#login_form .subtitleErr {
+	text-align: center;
+	color: red;
+}
+
+#cstudio-wcm-popup-div .contentTypePopupBtn,
+#cstudio-wcm-popup-div-login .contentTypePopupBtn {
+	margin: 15px 0 0 0;
+	padding: 0 0 20px 0;
+	text-align: center;
+}
+
+#cstudio-wcm-popup-div .contentTypePopupBtn input,
+#cstudio-wcm-popup-div-login .contentTypePopupBtn input {
+	margin-right: 4px;
+}
+
+#login_form .btn {
+	width: 153px;
+	white-space: normal;
+	height: 47px;
+}
+
+#cstudio-wcm-popup-div_h {
+	display: block;
+}
+
+/* Up load dialog */
+#upload-popup-inner .formDesc {
+	margin-bottom: 10px;
+}
+
+/* login dialog */
+#login-popup-inner .contentTypePopupHeader,
+#login-popup-inner .contentTypeOuter {
+	border-bottom: none;
+}
+
+#login-popup-inner .contentTypeOuter {
+	padding-bottom: 11px;
+}
+
+/* -- END Upload Overlay -- */
+
+/* -- Channels Publishing Overlay : appears when no publishing channels have been set up -- */
+#messageOverlay .bd {
+	padding: 0;
+	border: 0;
+	margin: 0;
+}
+
+#messageOverlay .message {
+	background-color: #e2e1e1;
+	border: 4px #000 solid;
+	color: #000;
+	margin: 0;
+	padding: 15px 25px;
+	position: relative;
+	width: 320px;
+}
+
+#messageOverlay .header {
+	font-size: 16px;
+	padding-bottom: 10px;
+}
+
+#messageOverlay .acnSubmitButtons {
+	margin-top: 20px;
+}
+
+#messageOverlay .acnSubmitButtons input {
+	padding: 4px 15px;
+}
+
+/* -- END Channels Publishing Overlay -- */
+
+/* -- Create Content Type Overlay : appears in admin console after clicking on "Create New Type" -- */
+.contentTypePopupContent .content {
+	margin-top: 15px;
+}
+
+.contentTypePopupContent .content label {
+	display: block;
+	margin-bottom: 10px;
+}
+
+.contentTypePopupContent .content label span {
+	display: inline-block;
+	width: 30%;
+	padding-right: 8px;
+}
+
+.contentTypePopupContent .content label input {
+	font-size: 12px;
+	padding: 3px;
+	width: 50%;
+}
+
+.contentTypePopupContent .content label .error-message {
+	width: 100%;
+	text-align: left !important;
+	font-weight: normal;
+	color: #ff3b30;
+	padding-left: 30%;
+}
+
+.contentTypePopupContent .content .selectInput label {
+	display: inline-block;
+	width: 30%;
+	margin-bottom: 10px;
+	padding-right: 8px;
+}
+
+.contentTypePopupContent .content .selectInput select {
+	line-height: 20px;
+}
+
+.contentTypePopupContent .content .checkboxInput input {
+	padding: 0;
+	vertical-align: 4px;
+	width: 15px;
+}
+
+#cstudio-wcm-popup-div,
+#cstudio-wcm-popup-div-login {
+	border: none;
+	box-shadow: none;
+	background-color: transparent;
+}
+
+#cstudio-wcm-popup-div .content span,
+#cstudio-wcm-popup-div-login .content span,
+#cstudio-wcm-popup-div .content .selectInput label,
+#cstudio-wcm-popup-div-login .content .selectInput label {
+	text-align: right;
+}
+
+/* Need to use ID selector or else styles are overriden */
+
+.acnDraftContent,
+.acnDisabledContent {
+	display: block;
+	font-weight: bold !important;
+	padding: 5px;
+	position: fixed;
+	text-align: center !important;
+	top: 50px;
+	width: 90%;
+	left: 5%;
+	z-index: 999;
+	border-radius: 5px;
+}
+
+.acnDraftContent {
+	background-color: rgba(255, 165, 0, 0.7);
+	border: 1px solid rgba(255, 140, 0, 0.9);
+	color: #000;
+}
+
+.acnDisabledContent {
+	background-color: rgb(204, 51, 51, 0.7);
+	border: 1px solid rgb(255, 0, 0, 0.9);
+	color: #fff;
+}
+
+.acn-notice--close {
+	border-radius: 50px;
+	margin-left: 10px;
+	background: rgba(0, 0, 0, 0.4);
+	border: 1px solid rgba(0, 0, 0, 0.8);
+	text-align: center;
+}
+
+/* -- END Create Content Type Overlay -- */
+
+/* */
+
+/* Modal */
+body.yui-skin-cstudioTheme .mask {
+	background-color: rgb(68, 68, 68);
+	opacity: 0.5;
+	position: fixed;
+}
+
+.yui-overlay.yui-panel {
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+	border-radius: 6px;
+	background-color: white;
+}
+
+.yui-overlay.yui-panel .hd {
+	background-color: white;
+	font-size: 21px;
+	font-weight: 500;
+	text-align: left;
+	padding: 10px 10px;
+	line-height: 2;
+	color: #000;
+	border-bottom: solid 1px #ccc;
+}
+
+.yui-overlay.yui-panel .bd {
+	background-color: white;
+	border-bottom: solid 1px #ccc;
+	padding: 30px;
+	word-wrap: break-word;
+}
+
+.yui-overlay.yui-panel .bd > div {
+	width: 100% !important;
+}
+
+.yui-overlay.yui-panel .bd .when-go-live-items {
+	margin: 0;
+}
+
+.yui-overlay.yui-panel .bd .form-go-live-items .radio {
+	margin-top: 3px;
+}
+
+.yui-overlay.yui-panel .bd .form-go-live-items .radio label {
+	padding-left: 10px;
+}
+
+.bd > #acnVersionWrapper {
+	width: 595px !important;
+}
+
+.yui-overlay.yui-panel .bd > div select,
+.rejectReasonDropDown {
+	display: block;
+}
+
+#errorPostfix-dialog .bd {
+	max-height: 232px;
+	overflow: auto;
+	display: flex;
+}
+
+#errorPostfix-dialog .bd .postfixErrorContainer {
+	max-height: 180px;
+	overflow-y: auto;
+	width: 310px !important;
+}
+
+#errorPostfix-dialog .bd .postfixErrorContainer ul {
+	padding-left: 24px;
+}
+
+#errorPostfix-dialog .descriptionMessage {
+	color: #8e8c8c;
+	font-style: italic;
+}
+
+#child-content-deprecated-dialog .button-group {
+	overflow: hidden;
+	padding: 3px 0 3px 8px;
+}
+
+#child-content-deprecated-dialog .button-group > span {
+	float: left;
+}
+
+#child-content-deprecated-dialog .button-group > span.default {
+	float: right;
+}
+
+.yui-overlay.yui-panel .ft {
+	background-color: white;
+	padding: 0 10px 10px;
+}
+
+#errMissingRequirements .ft .button-group,
+.studioDialog .ft .button-group {
+	display: block;
+}
+
+.yui-overlay.yui-panel .ft .button-group {
+	text-align: right !important;
+	margin: 15px 0;
+}
+
+.yui-overlay.yui-panel .ft .button-group span {
+	border: none !important;
+	background: none;
+	padding: 0 !important;
+	margin: 0;
+	background-color: white !important;
+}
+
+.yui-overlay.yui-panel .ft .button-group span.first-child {
+	margin-right: 10px;
+}
+
+.yui-panel-container.shadow .underlay {
+	border-radius: 6px;
+}
+
+.container-close {
+	display: none;
+}
+
+.yui-module.yui-overlay.yui-panel button {
+	display: inline-block;
+	margin: 0;
+	font-weight: normal;
+	text-align: center;
+	vertical-align: middle;
+	touch-action: manipulation;
+	cursor: pointer;
+	background-image: none;
+	border: none;
+	white-space: nowrap;
+	padding: 6px 12px;
+	font-size: 12px;
+	line-height: 1.42857;
+	border-radius: 4px;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	color: white;
+	background-color: var(--craftercms-blue);
+	box-shadow:
+		0 3px 1px -2px rgba(0, 0, 0, 0.2),
+		0 2px 2px 0 rgba(0, 0, 0, 0.14),
+		0 1px 5px 0 rgba(0, 0, 0, 0.12);
+}
+
+.yui-module.yui-overlay.yui-panel button:hover {
+	background-color: var(--craftercms-blueShade);
+}
+
+.action-wrapper button.btn-default.close-button {
+	color: #333;
+	background-color: #fff;
+	border-color: #ccc;
+}
+
+.action-wrapper button.btn-default.close-button:hover {
+	background-color: #e6e6e6;
+	border-color: #adadad;
+	color: #333333;
+}
+
+.yui-module.yui-overlay.yui-panel .yui-button.default button {
+	color: #333333;
+	background-color: white;
+	border-color: #cccccc;
+}
+
+.yui-module.yui-overlay.yui-panel .yui-button.default button:hover {
+	color: #333333;
+	background-color: #e6e6e6;
+	border-color: #adadad;
+}
+
+#errNoTemplAssoc,
+#errMissingRequirements {
+	border: none;
+}
+
+#closeUserWarning .bd,
+#saveDraftWar .bd,
+#errMissingRequirements .bd,
+.studioDialog .bd {
+	padding: 24px;
+}
+
+#errMissingRequirements .bd,
+.studioDialog .bd {
+	font-size: 12px;
+	line-height: normal;
+	height: auto !important;
+}
+
+#saveDraftWar .bd {
+	border-radius: 0 0 6px 6px;
+}
+
+#closeUserWarning .hd,
+#saveDraftWar .hd,
+#errMissingRequirements .hd,
+.yui-dialog .yui-overlay.yui-panel.studioDialog .hd {
+	border-radius: 6px 6px 0 0;
+	font-size: 15px;
+	padding: 7px 10px;
+}
+
+#closeUserWarning .ft,
+#saveDraftWar .ft,
+#errMissingRequirements .ft,
+.studioDialog .ft {
+	border-radius: 0 0 6px 6px;
+}
+
+#closeUserWarning .ft span.button-group,
+#saveDraftWar .ft span.button-group,
+#errMissingRequirements .ft span.button-group,
+.studioDialog .ft span.button-group {
+	margin: 12px 0 6px;
+}
+
+#errNoTemplAssoc .bd span.blckicon {
+	top: -2px;
+}
+
+.newTempText {
+	margin-bottom: 10px;
+}
+
+.yui-skin-cstudioTheme .yui-simple-dialog .success .bd span.infoicon {
+	background: url('../images/icons/success-icon.png') no-repeat 0 0;
+}
+
+/*Crop Dialog*/
+
+#crop-popup-inner .contentTypePopupHeader {
+	padding-bottom: 10px !important;
+}
+
+#crop-popup-inner .contentTypeOuter {
+	margin: 14px 0 20px 0;
+	padding: 0 20px 10px;
+}
+
+#crop-popup-inner .cropMethods .refresh {
+	margin-left: 5px;
+}
+
+#crop-popup-inner .leftControls {
+	width: 70%;
+	float: left;
+}
+
+#crop-popup-inner .cropContainer {
+	width: 100%;
+	max-height: 270px;
+	margin-bottom: 5px;
+}
+
+#crop-popup-inner .formDesc {
+	margin-bottom: 10px;
+}
+
+#crop-popup-inner .rightControls {
+	width: 30%;
+	float: left;
+}
+
+#crop-popup-inner .rightControls .img-preview > img {
+	max-width: 100%;
+}
+
+#crop-popup-inner .rightControls .preview-sm {
+	width: 189px;
+	height: 109px;
+	overflow: hidden;
+	float: right;
+	margin-right: 10px;
+	margin-bottom: 10px;
+	border: 1px solid rgb(204, 204, 204);
+}
+
+#crop-popup-inner .rightControls .docs-data {
+	clear: both;
+	padding: 10px 10px 10px 20px;
+}
+
+#crop-popup-inner .input-group {
+	padding-bottom: 5px;
+}
+
+#crop-popup-inner .input-group label {
+	min-width: 64px;
+}
+
+#crop-popup-inner #zoomMessage {
+	margin-left: 11px;
+}
+
+#crop-popup-inner .error {
+	border-color: rgba(169, 68, 66, 0.47);
+}
+
+/* Upload alert override */
+.yui-pe-content div .MuiAlert-root {
+	background-color: rgb(253, 237, 237);
+}
+
+.yui-pe-content div .MuiAlert-root .MuiTypography-root {
+	color: rgb(95, 33, 32) !important;
+}
+
+.yui-pe-content div .MuiAlert-root .MuiIconButton-root,
+.yui-pe-content div .MuiAlert-root .MuiIconButton-root:hover {
+	background-color: transparent;
+	box-shadow: none;
+	color: #ff3b30;
+}

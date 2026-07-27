@@ -1,0 +1,462 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* Site-wide Styles * /
+body
+{
+   font-family: Arial, sans-serif;
+   font-size: 81%;
+   color: #515D6B;
+}
+
+h1
+{
+   font-family: Helvetica, Arial, sans-serif;
+   font-size: 146.5%;
+   font-weight: normal;
+}
+
+h2
+{
+   font-weight: bold;
+   font-size: 123.1%;
+}
+
+h1 .light,
+h1 .lighter,
+h2 .light,
+h2 .lighter
+{
+   color: #c7dbeb;
+}
+
+h3
+{
+   font-weight: bold;
+   font-size: 108%;
+}
+
+h4
+{
+   font-weight: bold;
+}
+
+h3 .light,
+h3 .lighter,
+h4 .light,
+h4 .lighter
+{
+   color: #a2a2a2;
+}
+
+hr
+{
+   color: #E4E4E4;
+   background-color: #E4E4E4;
+}
+
+.label
+{
+   font-weight: bold;
+}
+
+.error
+{
+   background: white !important;
+   color: red !important;
+   font-weight: bold;
+   padding: 0.2em 1em;
+}
+
+.error-alt
+{
+   background-color: red !important;
+   color: white !important;
+   font-weight: bold;
+   padding: 0.2em 1em;
+}
+
+.light
+{
+   font-weight: normal;
+}
+
+.lighter
+{
+   font-size: 93%;
+   font-weight: normal;
+}
+
+.yui-skin-cstudioTheme .yui-panel
+{
+   border-bottom: medium none;
+}
+
+.yui-skin-cstudioTheme .mask
+{
+   opacity: 0.25;
+}
+
+.yui-skin-cstudioTheme .yui-panel .hd,
+.yui-skin-cstudioTheme .yui-panel .bdft,
+.yui-skin-cstudioTheme .yui-panel .ft
+{
+   color: #515D6B;
+   background: #E3EBEC;
+   border-bottom: 1px solid #C4C5C5;
+   border-left-color: #C4C5C5;
+   border-right-color: #C4C5C5;
+}
+
+.yui-skin-cstudioTheme .yui-panel .hd
+{
+   font-size: 123.1%;
+   font-weight: bold;
+   border-bottom: 1px solid #C4C5C5;
+}
+
+.yui-skin-cstudioTheme .yui-panel .bdft
+{
+   font-size: 100%;
+   border-top: 1px solid #C4C5C5;
+}
+
+.yui-skin-cstudioTheme .yui-panel .ft
+{
+   border-top: 1px solid #C4C5C5;
+   padding: 5px;
+}
+
+.yui-skin-cstudioTheme .yui-panel .bd
+{
+   color: #515D6B;
+   background-color: #F9FBFD;
+   border-left-color: #C4C5C5;
+   border-right-color: #C4C5C5;
+}
+
+/* Style the cstudioTheme message  */
+
+.yui-skin-cstudioTheme #message .bd {
+	background-color: #808080;
+	color: white;
+}
+
+.yui-skin-cstudioTheme #message .bd span.wait {
+	background-image: url(images/wait.gif);
+	background-repeat: no-repeat;
+}
+
+/* Style the cstudioTheme prompt */
+
+.yui-skin-cstudioTheme #prompt {
+	border-top: 1px solid #c4c5c5;
+	border-bottom: 1px solid #c4c5c5;
+	background-color: #e3ebec;
+}
+
+.yui-skin-cstudioTheme #prompt .bd {
+	background-color: #e3ebec;
+}
+
+.yui-skin-cstudioTheme #prompt .ft {
+	border-left: 1px solid #c4c5c5;
+	border-right: 1px solid #c4c5c5;
+	background-color: #e3ebec;
+}
+
+/* Page title and navigation styles */
+
+.page-title {
+	background-color: #6ca5ce;
+	border-width: 1px 0 0 0;
+	color: white;
+}
+
+.page-title a,
+.page-title a:visited {
+	color: #000;
+}
+
+.page-title a:hover {
+	color: #fff;
+}
+
+.page-title h1 span {
+	color: #fff;
+}
+
+.site-navigation {
+	background-color: #73b4da;
+	background-image: url(../../components/images/navigation-bg.png);
+	border-bottom: 1px solid #4b86ae;
+	border-top: 1px dotted #bbd6e7;
+	color: white;
+}
+
+span.navigation-separator,
+span.navigation-item,
+span.navigation-item-alt {
+	color: #9fc6e1;
+}
+
+span.navigation-item a.active-page,
+span.navigation-item a.active-page:visited,
+span.navigation-item a:hover {
+	color: #fff;
+}
+
+span.navigation-separator {
+	border-right: 1px dotted #457a9c;
+}
+
+span.navigation-separator-alt {
+	border-right: 1px solid #457a9c;
+}
+
+/* Standard toolbar separator */
+
+.toolbar .separator {
+	border-right: 1px dotted #457a9c;
+}
+
+strong {
+	font-weight: bold;
+}
+
+em {
+	font-style: italic;
+}
+
+.rich-content a.wiki-missing-page {
+	color: #cc2200 !important;
+}
+
+select,
+input[type='text'],
+textarea {
+	/*border: 1px solid #C5D6E2;*/
+	font-weight: normal;
+}
+
+/* Richtext Editor Plug-ins */
+
+/* Point the YUI button to the themed sprite */
+
+.yui-skin-cstudioTheme .yui-button {
+	background-image: url(images/sprite.png);
+}
+
+/* Override YUI Button styles for - flat button style */
+
+.yui-skin-cstudioTheme .flat-button .yui-button {
+	background: none;
+	border-color: transparent;
+}
+
+.yui-skin-cstudioTheme .flat-button .yui-button .first-child {
+	border-color: transparent;
+}
+
+.yui-skin-cstudioTheme .flat-button .yui-button-hover {
+	background: transparent url(images/sprite.png) repeat-x scroll 0 0;
+	border-color: #808080;
+	border-style: solid;
+	border-width: 1px 0;
+}
+
+.yui-skin-cstudioTheme .flat-button .yui-button-hover .first-child {
+	border-color: #808080;
+	border-style: solid;
+	border-width: 0 1px;
+}
+
+.yui-skin-cstudioTheme .flat-button .yui-radio-button-checked,
+.yui-skin-cstudioTheme .flat-button .yui-checkbox-button-checked {
+	background: #6ca5ce none;
+}
+
+/* Override YUI Button styles for - title button style */
+
+.yui-skin-cstudioTheme .title-button .yui-button {
+	background: transparent url(images/title-button-bg.png) repeat-x 0 0;
+}
+
+.yui-skin-cstudioTheme .title-button a:hover {
+	color: #000;
+}
+
+.yui-skin-cstudioTheme .title-button .yui-button .first-child,
+.yui-skin-cstudioTheme .title-button .yui-button {
+	border-color: #286a99;
+}
+
+/* Paginator link styling */
+
+.yui-skin-cstudioTheme .yui-pg-container a.yui-pg-next,
+.yui-skin-cstudioTheme .yui-pg-container a.yui-pg-previous {
+	color: #2b6eb5;
+}
+
+/* A combination of a link and splitbutton wrapped inside a span */
+
+.yui-skin-cstudioTheme .link-menu-button .yui-menu-button span button {
+	color: #4c4c4c;
+	font-size: 2px;
+	background-image: url(images/link-menu-button-arrow.png);
+	background-position: center center;
+}
+
+.yui-skin-cstudioTheme .link-menu-button .yui-menu-button.yui-menu-button-hover {
+	background-color: #ffffff;
+	border: 1px solid #7ba9ce;
+}
+
+.yui-skin-cstudioTheme .link-menu-button .yui-menu-button span.first-child,
+.yui-skin-cstudioTheme .link-menu-button .yui-menu-button.yui-menu-button-activeoption span.first-child,
+.yui-skin-cstudioTheme .link-menu-button .yui-menu-button.yui-menu-button-hover span.first-child {
+	border-width: 0;
+}
+
+.yui-skin-cstudioTheme .link-menu-button span.link-menu-button-link {
+	border-right: 1px #bdbdbd solid;
+}
+
+.yui-skin-cstudioTheme .link-menu-button.link-menu-button-menu-active {
+	background-color: #ffffff;
+	border: 1px solid #7ba9ce;
+}
+
+.yui-skin-cstudioTheme .link-menu-button.link-menu-button-menu-active .yui-menu-button.yui-menu-button-hover {
+	border: 1px solid #ffffff;
+}
+
+/* filter list link */
+
+.yui-skin-cstudioTheme .treeview .selected,
+.yui-skin-cstudioTheme .filter li.selected,
+.yui-skin-cstudioTheme .tags li.selected {
+	background-color: #d2e5f2;
+}
+
+.yui-skin-cstudioTheme .node .nodeTitle a,
+.yui-skin-cstudioTheme .node .nodeURL a,
+.yui-skin-cstudioTheme .nodeAttrValue a,
+.yui-skin-cstudioTheme .node .userLink a,
+.yui-skin-cstudioTheme .site-members h3 a,
+.yui-skin-cstudioTheme .yui-calendar td.calcell a,
+.yui-skin-cstudioTheme .doclist .documents a,
+.yui-skin-cstudioTheme .attrValue a,
+.yui-skin-cstudioTheme .detail .item a,
+.yui-skin-cstudioTheme .info .meta-value a {
+	color: #4f94c9;
+}
+
+.yui-skin-cstudioTheme .postview .nodeTitle a {
+	color: #606060;
+}
+
+.yui-skin-cstudioTheme .site-navigation {
+	background-image: url(./images/navigation-bg.png);
+}
+
+.yui-skin-cstudioTheme .over {
+	background-color: #f4faff;
+}
+
+.toolbar .action-bar {
+	border-right: 1px solid #9eb0b7;
+}
+
+.yui-skin-cstudioTheme #calendar .yui-calendar td.calcell.selected a {
+	background-color: #ebeff1;
+}
+
+/* Theme colors */
+
+.theme-color-1,
+a.theme-color-1,
+a.theme-color-1:visited,
+a.theme-color-1:hover {
+	color: #6ca5ce;
+}
+
+.theme-color-2,
+a.theme-color-2,
+a.theme-color-2:visited,
+a.theme-color-2:hover {
+	color: #038603;
+}
+
+.theme-color-3,
+a.theme-color-3,
+a.theme-color-3:visited,
+a.theme-color-3:hover {
+	color: #c7dbeb;
+}
+
+.theme-color-4,
+a.theme-color-4,
+a.theme-color-4:visited,
+a.theme-color-4:hover {
+	color: #0d3b57;
+}
+
+/* Theme background colors */
+
+.theme-bg-color-1,
+div.theme-bg-color-1 {
+	background-color: #6ca5ce;
+}
+
+.theme-bg-color-2,
+div.theme-bg-color-2 {
+	background-color: #fffbdd;
+}
+
+.theme-bg-color-3,
+div.theme-bg-color-3 {
+	background-color: #dee8ed;
+}
+
+.theme-bg-color-4,
+div.theme-bg-color-4 {
+	background-color: #ebeff1;
+}
+
+.theme-bg-color-5,
+div.theme-bg-color-5 {
+	background-color: #2b6eb5;
+}
+
+.theme-bg-1 {
+	/* background-image: url(images/navbar-bg.png); */
+}
+
+.theme-bg-2 {
+	/* background-image: url(images/navbar-bg-2.png); */
+}
+
+/* Theme border type/colors */
+
+.theme-border-1 {
+	border-color: #457f63;
+	border-style: dotted;
+}
+
+.theme-border-2 {
+	border-color: #2b6eb5;
+}
