@@ -93,7 +93,7 @@ project.ext.set("startCommand", project.hasProperty("debug") ? "debug" : "start"
 project.ext.set("stopCommand", "stop")
 project.ext.set("statusCommand", "status")
 project.ext.set("gitRemote", getPropertySafelyWithDefaults("gitRemote", "origin"))
-project.ext.set("gitBranch", "monorepo") // craftercms branch flag
+project.ext.set("gitBranch", "develop") // craftercms branch flag
 project.ext.set("bundlesDir", getPropertySafelyWithDefaults(bundlesDir, "./bundles"))
 project.ext.set("crafterCmd", getPropertySafelyWithDefaults("crafterCmd", "./crafter.sh"))
 project.ext.set("currentPlatform", getPropertySafelyWithDefaults("currentPlatform", SystemUtils.IS_OS_MAC_OSX ? "darwin" : "linux"))
