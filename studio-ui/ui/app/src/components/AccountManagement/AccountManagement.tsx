@@ -281,7 +281,7 @@ export function AccountManagement(props: AccountManagementProps) {
 								setCurrentPassword(e.target.value);
 							}}
 							slotProps={{
-								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH }
+								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'current-password' }
 							}}
 						/>
 						<PasswordTextField
@@ -325,7 +325,7 @@ export function AccountManagement(props: AccountManagementProps) {
 								)
 							}
 							slotProps={{
-								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH }
+								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
 							}}
 						/>
 						<PrimaryButton
