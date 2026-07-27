@@ -247,7 +247,7 @@ export function usePackageContextMenu() {
 
 	const handleContextMenuClick = useCallback(
 		(e: React.MouseEvent<HTMLButtonElement>, pkg: PublishPackage) => {
-			// https://github.com/craftercms/craftercms/issues/8552 - Because of a limitation in the back end, the packages at
+			// https://github.com/craftersoftware/craftercms/issues/8552 - Because of a limitation in the back end, the packages at
 			// this point may not have the full AA. So we need to fetch the package to generate the proper set of options.
 			const currentTarget = e.currentTarget;
 			subscriptionRef.current?.unsubscribe();

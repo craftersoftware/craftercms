@@ -198,7 +198,7 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					<Skeleton animation="wave" />
 				) : (
 					<Box className={classes?.itemState} sx={{ '&> *': { marginRight: '5px' }, ...sxs?.itemState }}>
-						{/* @see https://github.com/craftercms/craftercms/issues/5442 */}
+						{/* @see https://github.com/craftersoftware/craftercms/issues/5442 */}
 						{!isFolder &&
 							(inWorkflow ? (
 								<>

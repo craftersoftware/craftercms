@@ -58,7 +58,7 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 	// region const { ... } = props;
 	const {
 		item,
-		// @see https://github.com/craftercms/craftercms/issues/5442
+		// @see https://github.com/craftersoftware/craftercms/issues/5442
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		showPublishingTarget = true,
 		showWorkflowState = true,
@@ -100,7 +100,7 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 				...sxs?.root
 			}}
 		>
-			{/* @see https://github.com/craftercms/craftercms/issues/5442 */}
+			{/* @see https://github.com/craftersoftware/craftercms/issues/5442 */}
 			{inWorkflow && !shouldItemShowAsStaged(item)
 				? showWorkflowState && (
 						<ItemStateIcon

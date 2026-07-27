@@ -25,7 +25,7 @@
   "author": "CrafterCMS",
   "license": "LGPL-3.0",
   "bugs": {
-    "url": "https://github.com/craftercms/craftercms/issues"
+    "url": "https://github.com/craftersoftware/craftercms/issues"
   },
   "homepage": "https://github.com/craftercms/craftercms-sdk-js#readme",
   "devDependencies": {

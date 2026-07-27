@@ -121,7 +121,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 				icon={icon}
 				title={title}
 				locale={null}
-				// @see https://github.com/craftercms/craftercms/issues/5360
+				// @see https://github.com/craftersoftware/craftercms/issues/5360
 				menuButtonIcon={<RefreshRounded />}
 				collapsed={isCollapsed}
 				onMenuButtonClick={onHeaderButtonClick}

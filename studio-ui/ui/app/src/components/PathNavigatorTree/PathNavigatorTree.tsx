@@ -118,7 +118,7 @@ interface Menu {
 	loaderItems?: number;
 }
 
-// @see https://github.com/craftercms/craftercms/issues/5360
+// @see https://github.com/craftersoftware/craftercms/issues/5360
 // const translations = defineMessages({
 //   refresh: {
 //     id: 'words.refresh',
@@ -260,7 +260,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 	};
 
 	const onHeaderButtonClick = (element: Element) => {
-		// @see https://github.com/craftercms/craftercms/issues/5360
+		// @see https://github.com/craftersoftware/craftercms/issues/5360
 		onWidgetOptionsClick('refresh');
 		// setWidgetMenu({
 		//   sections: [[toContextMenuOptionsLookup(menuOptions, formatMessage).refresh]],

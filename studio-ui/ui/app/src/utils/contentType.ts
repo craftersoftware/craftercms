@@ -217,7 +217,7 @@ export const filterTypesByKeywordsAndObjectType = (
 };
 
 export function getNormalizedFolderPathForApi1GetTypes(item: ContentItem): string {
-	// TODO: https://github.com/craftercms/craftercms/issues/4473
+	// TODO: https://github.com/craftersoftware/craftercms/issues/4473
 	return item.systemType === 'folder' && !item.path.endsWith('/') ? `${item.path}/` : item.path;
 }
 
