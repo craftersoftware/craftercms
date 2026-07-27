@@ -54,7 +54,7 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 ## 2.1 Commands
 
 * `download` Download dependencies
-* `selfUpdate` Update this repository (`git pull`)
+* `selfUpdate` Update this repository (`git pull` of the current branch)
 * `clean` Clean modules
 * `build` Build modules
 * `deploy` Deploy modules
@@ -133,7 +133,7 @@ To download, build and generate a binary archive from a given tag or branch of t
 1. Clone the branch/tag of craftercms that you want to work with
 
 ```bash
-    git clone -b <tag or branch> https://github.com/craftersoftware/craftercms/
+    git clone -b <tag or branch> https://github.com/craftersoftware/craftercms.git
 ```
 
 2. Download, build and bundle the tag/branch that you want to work with
@@ -225,7 +225,7 @@ You'll find these projects at the repository root in folders named after each mo
 
 Start by forking this repository. You can follow the [GitHub instructions](https://help.github.com/articles/fork-a-repo/).
 The next step is to switch the origin URL to your fork; see [these GitHub instructions](https://help.github.com/articles/changing-a-remote-s-url/).
-Then add an upstream remote pointing at the main `craftercms` repo. Follow [these steps](https://help.github.com/articles/fork-a-repo/#step-3-configure-git-to-sync-your-fork-with-the-original-spoon-knife-repository)
+Then add an upstream remote pointing at the main [craftersoftware/craftercms](https://github.com/craftersoftware/craftercms) repo. Follow [these steps](https://help.github.com/articles/fork-a-repo/#step-3-configure-git-to-sync-your-fork-with-the-original-spoon-knife-repository)
 to make it happen.
 You can now work in your local system, and build/deploy and ultimately push to your fork. We welcome code contributions, so please do send us pull-requests.
 
@@ -241,15 +241,20 @@ Or simply:
     git pull
 ```
 
-### 4.3.2. Build, Deploy, Start, and Stop a Module
+### 4.3.2. Build and Deploy a Module
 
-You can build, deploy, start or stop a module by:
+You can build and deploy a module by:
 
 ```bash
     ./gradlew build -Pmodules=studio
     ./gradlew deploy -Pmodules=studio -Penv=authoring
-    ./gradlew start -Pmodules=studio -Penv=authoring
-    ./gradlew stop -Pmodules=studio -Penv=authoring
+```
+
+Start and stop apply to an environment (not an individual module):
+
+```bash
+    ./gradlew start -Penv=authoring
+    ./gradlew stop -Penv=authoring
 ```
 
 > **_NOTE:_**
@@ -339,7 +344,7 @@ Here's a list of commands (Gradle tasks) available:
 | start                  | Start CrafterCMS                                                                      | authoring <hr> delivery | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
 | stop                   | Stop CrafterCMS                                                                       | authoring <hr> delivery | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
 | upgrade                | Pulls the latest changes, then cleans, builds, and deploys                            | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| selfUpdate             | Updates this repository (`git pull`)                                                  | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
+| selfUpdate             | Updates this repository (`git pull` of the current branch)        | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
 | clean                  | Delete all compiled objects                                                           | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
 
 > **_NOTE:_**

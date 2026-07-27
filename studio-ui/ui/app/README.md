@@ -4,14 +4,14 @@
 Studio UI is the authoring interface for CrafterCMS.
 
 See
-- https://github.com/craftercms/craftercms
-- https://craftercms.com/docs/current/reference/modules/studio/index.html#rest-api
+- https://github.com/craftersoftware/craftercms
+- https://craftercms.com/docs/current/reference/modules/studio.html#rest-api
 - https://app.swaggerhub.com/apis/craftercms/studio
-- https://github.com/craftercms/studio-ui
-- https://github.com/craftercms/studio
+- https://github.com/craftersoftware/craftercms/tree/develop/studio-ui
+- https://github.com/craftersoftware/craftercms/tree/develop/studio
 
 To inspect this package, please browse
-https://github.com/craftercms/studio-ui/tree/develop/ui/app/src
+https://github.com/craftersoftware/craftercms/tree/develop/studio-ui/ui/app/src
 
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
