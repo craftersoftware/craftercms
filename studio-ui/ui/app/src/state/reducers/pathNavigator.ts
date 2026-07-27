@@ -213,10 +213,17 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			chunk.isFetching = false;
 			chunk.error = error;
 		})
-		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { ids, error } }) => {
-			ids.forEach((id) => {
-				state[id].isFetching = false;
-				state[id].error = error;
+		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { requests, error } }) => {
+			requests.forEach(({ id, path }) => {
+				const chunk = state[id];
+				if (!chunk) {
+					return;
+				}
+				if (withoutIndex(path) !== withoutIndex(chunk.currentPath)) {
+					return;
+				}
+				chunk.isFetching = false;
+				chunk.error = error;
 			});
 		})
 		.addCase(pathNavigatorFetchParentItems, (state, { payload: { id, path } }) => {

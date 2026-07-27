@@ -115,7 +115,7 @@ export const pathNavigatorFetchPathFailed = /*#__PURE__*/ createAction<{
 }>('PATH_NAV_FETCH_PATH_FAILED');
 
 export const pathNavigatorBulkFetchPathFailed = /*#__PURE__*/ createAction<{
-	ids: string[];
+	requests: PayloadWithId<{ path: string }>[];
 	error: Omit<AjaxError, 'request' | 'xhr'>;
 }>('PATH_NAV_BULK_FETCH_PATH_FAILED');
 

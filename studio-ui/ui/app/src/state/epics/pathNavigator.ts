@@ -182,7 +182,12 @@ export default [
 									})
 								})
 							),
-							catchAjaxError((error) => pathNavigatorBulkFetchPathFailed({ ids: requests.map(({ id }) => id), error }))
+							catchAjaxError((error) =>
+								pathNavigatorBulkFetchPathFailed({
+									requests: requests.map(({ id }) => ({ id, path: requestedPathById[id] })),
+									error
+								})
+							)
 						)
 					: EMPTY;
 			})
