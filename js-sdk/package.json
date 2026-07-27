@@ -14,7 +14,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/craftercms/craftercms-sdk-js.git"
+    "url": "git+https://github.com/craftersoftware/craftercms.git",
+    "directory": "js-sdk"
   },
   "keywords": [
     "content",
@@ -27,7 +28,7 @@
   "bugs": {
     "url": "https://github.com/craftersoftware/craftercms/issues"
   },
-  "homepage": "https://github.com/craftercms/craftercms-sdk-js#readme",
+  "homepage": "https://github.com/craftersoftware/craftercms/tree/develop/js-sdk#readme",
   "devDependencies": {
     "prettier": "^3.0.3",
     "react": "^18.2.0",

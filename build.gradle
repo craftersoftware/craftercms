@@ -86,10 +86,11 @@ task download() {
 }
 
 task selfUpdate() {
-	description = 'Updates the CrafterCMS parent project.'
+	description = 'Updates this repository (git pull of the current branch).'
 	dependsOn = ["preFlightCheck"]
 	doFirst {
-		execCommand(["git", "pull", gitRemote, gitBranch], "${projectDir}")
+		// Pull the current branch's upstream from gitRemote (do not force a fixed branch name).
+		execCommand(["git", "pull", gitRemote], "${projectDir}")
 	}
 }
 

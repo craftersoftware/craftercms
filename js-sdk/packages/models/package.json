@@ -8,7 +8,8 @@
   "typings": "./models.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/craftercms/craftercms-sdk-js.git"
+    "url": "https://github.com/craftersoftware/craftercms.git",
+    "directory": "js-sdk/packages/models"
   },
   "keywords": [
     "content management",
