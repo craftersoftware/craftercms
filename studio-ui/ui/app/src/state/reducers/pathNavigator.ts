@@ -160,11 +160,27 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			state[payload.id].isFetching = false;
 			state[payload.id].error = payload.error;
 		})
-		.addCase(pathNavigatorFetchPath, (state, { payload }) => {
-			state[payload.id].isFetching = true;
-			state[payload.id].error = null;
+		.addCase(pathNavigatorFetchPath, (state, { payload: { id, path } }) => {
+			const chunk = state[id];
+			// Set the path navigation revert state, so we can revert to it if the request fails.
+			chunk.pathNavigationRevert = {
+				currentPath: chunk.currentPath,
+				breadcrumb: chunk.breadcrumb,
+				offset: chunk.offset
+			};
+			chunk.isFetching = true;
+			chunk.error = null;
+			chunk.currentPath = path;
+			chunk.offset = 0;
+			chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(chunk.rootPath));
 		})
 		.addCase(pathNavigatorFetchPathComplete, (state, { payload }) => {
+			const chunk = state[payload.id];
+			const fetchedPath = payload.parent?.path ?? chunk.currentPath;
+			if (withoutIndex(fetchedPath) !== withoutIndex(chunk.currentPath)) {
+				return;
+			}
+			delete chunk.pathNavigationRevert;
 			updatePath(state, payload);
 		})
 		.addCase(pathNavigatorBulkFetchPathComplete, (state, { payload: { paths } }) => {
@@ -172,9 +188,22 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 				updatePath(state, path);
 			});
 		})
-		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error } }) => {
-			state[id].isFetching = false;
-			state[id].error = error;
+		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error, path } }) => {
+			const chunk = state[id];
+			if (path) {
+				if (withoutIndex(path) !== withoutIndex(chunk.currentPath)) {
+					return;
+				}
+				const revert = chunk.pathNavigationRevert;
+				if (revert) {
+					chunk.currentPath = revert.currentPath;
+					chunk.breadcrumb = revert.breadcrumb;
+					chunk.offset = revert.offset;
+					delete chunk.pathNavigationRevert;
+				}
+			}
+			chunk.isFetching = false;
+			chunk.error = error;
 		})
 		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { ids, error } }) => {
 			ids.forEach((id) => {

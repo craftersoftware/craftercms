@@ -110,6 +110,8 @@ export const pathNavigatorFetchParentItemsComplete = /*#__PURE__*/ createAction<
 export const pathNavigatorFetchPathFailed = /*#__PURE__*/ createAction<{
 	id: string;
 	error: Omit<AjaxError, 'request' | 'xhr'>;
+	/** When set, failure is ignored if it does not match the navigator's current path (stale request). */
+	path?: string;
 }>('PATH_NAV_FETCH_PATH_FAILED');
 
 export const pathNavigatorBulkFetchPathFailed = /*#__PURE__*/ createAction<{

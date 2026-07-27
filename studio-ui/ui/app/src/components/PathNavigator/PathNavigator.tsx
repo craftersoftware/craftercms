@@ -118,6 +118,12 @@ export interface PathNavigatorStateProps {
 	isRootPathMissing: boolean;
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
+	/** Set while a folder navigation fetch is in flight; used to revert on failure */
+	pathNavigationRevert?: {
+		currentPath: string;
+		breadcrumb: string[];
+		offset: number;
+	};
 }
 
 // @see https://github.com/craftercms/craftercms/issues/5360
