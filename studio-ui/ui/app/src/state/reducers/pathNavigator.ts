@@ -184,8 +184,16 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			updatePath(state, payload);
 		})
 		.addCase(pathNavigatorBulkFetchPathComplete, (state, { payload: { paths } }) => {
-			paths.forEach((path) => {
-				updatePath(state, path);
+			paths.forEach((pathPayload) => {
+				const chunk = state[pathPayload.id];
+				if (!chunk) {
+					return;
+				}
+				const requestedPath = pathPayload.path ?? pathPayload.parent?.path ?? chunk.currentPath;
+				if (withoutIndex(requestedPath) !== withoutIndex(chunk.currentPath)) {
+					return;
+				}
+				updatePath(state, pathPayload);
 			});
 		})
 		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error, path } }) => {

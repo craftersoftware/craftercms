@@ -147,10 +147,12 @@ export default [
 				const { requests } = payload;
 				let paths = [];
 				let optionsByPath = {};
+				const requestedPathById: Record<string, string> = {};
 
 				requests.forEach(({ id }) => {
 					const chunk = state.pathNavigator[id];
 					const { currentPath, keyword, limit, offset, excludes, sortStrategy, order } = chunk;
+					requestedPathById[id] = currentPath;
 					paths.push(currentPath);
 					optionsByPath[currentPath] = {
 						keyword,
@@ -169,13 +171,15 @@ export default [
 						]).pipe(
 							map(([items, children]) =>
 								pathNavigatorBulkFetchPathComplete({
-									paths: requests.map(({ id }) => ({
-										id,
-										parent: items.find((item) =>
-											item.path.startsWith(withoutIndex(state.pathNavigator[id].currentPath))
-										),
-										children: children[state.pathNavigator[id].currentPath]
-									}))
+									paths: requests.map(({ id }) => {
+										const path = requestedPathById[id];
+										return {
+											id,
+											path,
+											parent: items.find((item) => item.path.startsWith(withoutIndex(path))),
+											children: children[path]
+										};
+									})
 								})
 							),
 							catchAjaxError((error) => pathNavigatorBulkFetchPathFailed({ ids: requests.map(({ id }) => id), error }))
