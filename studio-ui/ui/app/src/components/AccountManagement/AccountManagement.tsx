@@ -59,6 +59,7 @@ import {
 	setStoredEnableAnimations,
 	setStoredSnackbarDuration
 } from '../../utils/state';
+import { USER_PASSWORD_MAX_LENGTH } from '../UserManagement/utils';
 
 const decrementButtonSx: BoxProps['sx'] = {
 	borderTopRightRadius: 0,
@@ -279,6 +280,9 @@ export function AccountManagement(props: AccountManagementProps) {
 							onChange={(e) => {
 								setCurrentPassword(e.target.value);
 							}}
+							slotProps={{
+								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH }
+							}}
 						/>
 						<PasswordTextField
 							margin="normal"
@@ -298,7 +302,9 @@ export function AccountManagement(props: AccountManagementProps) {
 							}
 							onFocus={(e) => setAnchorEl(e.target)}
 							onBlur={() => setAnchorEl(null)}
-							inputProps={{ autoComplete: 'new-password' }}
+							slotProps={{
+								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
+							}}
 						/>
 						<PasswordTextField
 							margin="normal"
@@ -318,6 +324,9 @@ export function AccountManagement(props: AccountManagementProps) {
 									/>
 								)
 							}
+							slotProps={{
+								htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH }
+							}}
 						/>
 						<PrimaryButton
 							disabled={!validPassword || newPassword !== verifiedPassword || currentPassword === ''}
