@@ -118,6 +118,7 @@ export interface PathNavigatorStateProps {
 	isRootPathMissing: boolean;
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
+	revertPath?: string;
 }
 
 // @see https://github.com/craftercms/craftercms/issues/5360
