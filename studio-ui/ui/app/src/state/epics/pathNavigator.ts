@@ -197,7 +197,11 @@ export default [
 					},
 					state
 				]) => {
-					const pathFetchRequestId = state.pathNavigator[id]?.pathFetchRequestId;
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const { pathFetchRequestId } = chunk;
 					return fetchItemWithChildrenByPath(state.sites.active, path, {
 						excludes: state.pathNavigator[id].excludes,
 						limit: state.pathNavigator[id].limit,
