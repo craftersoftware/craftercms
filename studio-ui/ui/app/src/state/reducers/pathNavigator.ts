@@ -57,6 +57,27 @@ const bumpPathFetchRequestId = (chunk: { pathFetchRequestId?: number }): number 
 	return chunk.pathFetchRequestId;
 };
 
+type PathNavigatorChunk = GlobalState['pathNavigator'][string];
+
+const recordRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
+	if (!chunk.revertPathByRequestId) {
+		chunk.revertPathByRequestId = {};
+	}
+	chunk.revertPathByRequestId[pathFetchRequestId] = chunk.currentPath;
+};
+
+const clearRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
+	delete chunk.revertPathByRequestId?.[pathFetchRequestId];
+};
+
+const restoreRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
+	const revertPath = chunk.revertPathByRequestId?.[pathFetchRequestId];
+	if (revertPath !== undefined) {
+		chunk.currentPath = revertPath;
+		clearRevertPathForRequest(chunk, pathFetchRequestId);
+	}
+};
+
 const updatePath = (state, payload) => {
 	const { id, parent, children } = payload;
 	if (
@@ -143,9 +164,10 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		.addCase(pathNavigatorSetCurrentPath, (state, { payload: { id, path } }) => {
 			const chunk = state[id];
 			chunk.keyword = '';
-			chunk.currentPath = path;
 			chunk.error = null;
-			bumpPathFetchRequestId(chunk);
+			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
+			recordRevertPathForRequest(chunk, pathFetchRequestId);
+			chunk.currentPath = path;
 		})
 		.addCase(pathNavigatorConditionallySetPath, (state, { payload: { id, pathFetchRequestId } }) => {
 			const chunk = state[id];
@@ -189,11 +211,11 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
-			bumpPathFetchRequestId(chunk);
+			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
 			chunk.isFetching = true;
 			chunk.error = null;
 			if (payload.path) {
-				chunk.revertPath = chunk.currentPath;
+				recordRevertPathForRequest(chunk, pathFetchRequestId);
 				chunk.currentPath = payload.path;
 			}
 		})
@@ -205,7 +227,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (payload.pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
-			delete chunk.revertPath;
+			clearRevertPathForRequest(chunk, payload.pathFetchRequestId);
 			updatePath(state, payload);
 		})
 		.addCase(pathNavigatorBulkFetchPathComplete, (state, { payload: { paths } }) => {
@@ -223,11 +245,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			}
 			chunk.isFetching = false;
 			chunk.error = error;
-
-			if (chunk.revertPath) {
-				chunk.currentPath = chunk.revertPath;
-				delete chunk.revertPath;
-			}
+			restoreRevertPathForRequest(chunk, pathFetchRequestId);
 		})
 		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { ids, error } }) => {
 			ids.forEach((id) => {
@@ -237,7 +255,8 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		})
 		.addCase(pathNavigatorFetchParentItems, (state, { payload: { id, path } }) => {
 			const chunk = state[id];
-			bumpPathFetchRequestId(chunk);
+			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
+			recordRevertPathForRequest(chunk, pathFetchRequestId);
 			chunk.isFetching = true;
 			chunk.currentPath = path;
 			chunk.error = null;

@@ -428,7 +428,7 @@ export default [
 							map(([items, children]) => pathNavigatorFetchParentItemsComplete({ id, items, children })),
 							catchAjaxError((error: AjaxError) => {
 								if (error.status === 404) {
-									return pathNavigatorConditionallySetPath({ id, path: getRootPath(path) });
+									return pathNavigatorConditionallySetPath({ id, path: getRootPath(path), pathFetchRequestId });
 								} else {
 									return pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId });
 								}

@@ -118,7 +118,7 @@ export interface PathNavigatorStateProps {
 	isRootPathMissing: boolean;
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
-	revertPath?: string;
+	revertPathByRequestId?: Record<number, string>;
 	pathFetchRequestId?: number;
 }
 
