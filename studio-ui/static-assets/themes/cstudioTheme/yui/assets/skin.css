@@ -4220,7 +4220,7 @@ body.yui-layout {
 
 .yui-skin-cstudioTheme .yui-resize .yui-resize-handle-inner-t,
 .yui-skin-cstudioTheme .yui-resize .yui-resize-handle-inner-b {
-	background-color: transparent url(../../images/icons/layout_sprite.png) no-repeat -20px 0;
+	background: transparent url(../../images/icons/layout_sprite.png) no-repeat -20px 0;
 	height: 5px;
 	width: 16px;
 	position: absolute;
