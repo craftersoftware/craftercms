@@ -24,7 +24,7 @@ apply from: "${rootDir}/gradle/java-library.gradle"
 apply from: "${rootDir}/gradle/war.gradle"
 
 base {
-	archivesName = 'studio'
+	archivesName = 'crafter-studio'
 }
 
 def studioUiDir = project(':studio-ui').projectDir
@@ -157,7 +157,7 @@ dependencies {
 }
 
 war {
-	archiveFileName = 'studio.war'
+	archiveFileName = 'crafter-studio.war'
 	dependsOn ':engine:war', ':studio-ui:build'
 	exclude '**/crafterTemplateRepository/**'
 

@@ -86,7 +86,6 @@ project.ext.set("socialRequired", getPropertySafelyWithDefaults("crafter.social"
 project.ext.set("profileRequired", (getPropertySafelyWithDefaults("crafter.profile", "false").toBoolean()
 	|| (getPropertySafelyWithDefaults("profileRequired", "false").toBoolean()
 	|| socialRequired)))
-project.ext.set("unitTest", getPropertySafelyWithDefaults("unitTest", "false").toBoolean())
 project.ext.set("startMongoDB", getPropertySafelyWithDefaults("startMongodb", (profileRequired || socialRequired)).toBoolean())
 project.ext.set("startSearch", getPropertySafelyWithDefaults("startSearch", getPropertySafelyWithDefaults("withSearch", "true")).toBoolean())
 project.ext.set("startCommand", project.hasProperty("debug") ? "debug" : "start")

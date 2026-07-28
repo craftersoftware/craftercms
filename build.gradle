@@ -94,43 +94,6 @@ task selfUpdate() {
 	}
 }
 
-clean() {
-	description = 'Cleans the modules.'
-	dependsOn = ["preFlightCheck"]
-	doFirst {
-		getBuildModules().each { module ->
-			println "Cleaning $module"
-
-			cleanModule(module)
-		}
-	}
-}
-
-build() {
-	description = 'Builds the modules and prepares the binaries for deployment.'
-	mustRunAfter clean
-	dependsOn = ["preFlightCheck"]
-	doFirst {
-		getBuildModules().each { module ->
-			println "Building $module"
-
-			buildModule(module, unitTest)
-		}
-	}
-}
-
-task deployToMaven() {
-	description = 'Builds and publishes modules to the local Maven repository (publishToMavenLocal).'
-	dependsOn = ["preFlightCheck"]
-	doFirst {
-		getDeployToMavenModules().each { module ->
-			println "Deploying $module"
-
-			deployModule(module, unitTest)
-		}
-	}
-}
-
 task buildBaseEnvs() {
 	description = 'Build base target environments.'
 	dependsOn = ["download"]
@@ -159,15 +122,12 @@ task buildBom() {
 }
 
 task deploy() {
-	description = 'Deploys the module artifacts prepares the authoring/delivery environments.'
+	group = 'deployment'
+	description = 'Deploys module artifacts and prepares the authoring/delivery environments. ' +
+		'Use :<module>:deploy (e.g. :studio:deploy -Penv=authoring) to deploy a single module.'
 	mustRunAfter build
 	dependsOn = ["buildBaseEnvs"]
-	doFirst {
-		getEnvironments().each { environment ->
-			println "Deploying $environment"
-			deployEnvironment(environment, getDeployModules(), overwriteChangedFiles, profileRequired, socialRequired)
-		}
-	}
+	// Module deploy tasks are attached in deploy.gradle (projectsEvaluated).
 }
 
 task upgrade() {

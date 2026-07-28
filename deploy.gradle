@@ -9,8 +9,9 @@ ext.commonDeployArtifacts = [
 	],
 	[
 		module: 'engine',
-		from  : "${projectDir}/engine/build/libs/ROOT.war",
-		into  : "/bin/apache-tomcat/webapps/"
+		from  : "${projectDir}/engine/build/libs/crafter-engine.war",
+		into  : "/bin/apache-tomcat/webapps/ROOT.war",
+		copyFile: true
 	],
 	[
 		module: 'profile',
@@ -42,8 +43,9 @@ ext.commonDeployArtifacts = [
 ext.authoringDeployArtifacts = [
 	[
 		module: 'studio',
-		from  : "${projectDir}/studio/build/libs/studio.war",
-		into  : "/bin/apache-tomcat/webapps/"
+		from  : "${projectDir}/studio/build/libs/crafter-studio.war",
+		into  : "/bin/apache-tomcat/webapps/studio.war",
+		copyFile: true,
 	]
 ]
 
@@ -93,7 +95,11 @@ ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profile
 		}
 
 		if (performSync) {
-			syncFolder("${projectDir}", from, envFolder + into, exclude, overwriteChangedFiles, true)
+			if (item.copyFile) {
+				copyFile("${projectDir}", from, envFolder + into)
+			} else {
+				syncFolder("${projectDir}", from, envFolder + into, exclude, overwriteChangedFiles, true)
+			}
 		}
 	}
 
@@ -130,7 +136,11 @@ ext.deployAuthoringEnvironment = { modules, overwriteChangedFiles, profileRequir
 		}
 
 		if (performSync) {
-			syncFolder("${projectDir}", from, "${authoringEnvDir}" + into, exclude, overwriteChangedFiles, true)
+			if(item.copyFile) {
+				copyFile("${projectDir}", from, "${authoringEnvDir}" + into)
+			} else {
+				syncFolder("${projectDir}", from, "${authoringEnvDir}" + into, exclude, overwriteChangedFiles, true)
+			}
 		}
 	}
 
@@ -162,7 +172,11 @@ ext.deployDeliveryEnvironment = { modules, overwriteChangedFiles, profileRequire
 		}
 
 		if (performSync) {
-			syncFolder("${projectDir}", from, "${deliveryEnvDir}" + into, exclude, overwriteChangedFiles, true)
+			if (item.copyFile) {
+				copyFile("${projectDir}", from, "${deliveryEnvDir}" + into)
+			} else {
+				syncFolder("${projectDir}", from, "${deliveryEnvDir}" + into, exclude, overwriteChangedFiles, true)
+			}
 		}
 	}
 
@@ -186,5 +200,57 @@ ext.deployEnvironment = { environment, modules, overwriteChangedFiles, profileRe
 	} else {
 		logger.error("Unknown environment \"" + environment + "\"")
 		throw new GradleException("Unknown environment \"" + environment + "\"")
+	}
+}
+
+// Gradle project path -> deploy artifact module name (as used in *DeployArtifacts)
+ext.deployModuleProjects = [
+	'deployer'                : 'deployer',
+	'engine'                  : 'engine',
+	'profile:server'          : 'profile',
+	'profile:admin-console'   : 'profile-admin',
+	'social:server'           : 'social',
+	'social:admin'            : 'social-admin',
+	'cli'                     : 'cli',
+	'studio'                  : 'studio'
+]
+
+gradle.projectsEvaluated {
+	def profileRequired = getExplicitlyRequestedModules().contains('profile') || rootProject.profileRequired
+	def socialRequired = getExplicitlyRequestedModules().contains('social') || rootProject.socialRequired
+
+	deployModuleProjects.each { projectPath, moduleName ->
+		def proj = rootProject.findProject(":${projectPath}")
+		if (proj == null) {
+			return
+		}
+		// Register a deploy task for each project
+		proj.tasks.register('deploy') {
+			group = 'deployment'
+			description = "Deploys ${moduleName} artifact(s) to the selected environment(s) (-Penv=authoring|delivery)"
+			dependsOn rootProject.tasks.named('buildBaseEnvs'), proj.tasks.named('build')
+			doLast {
+				rootProject.getEnvironments().each { environment ->
+					println "Deploying ${moduleName} to ${environment}"
+					rootProject.deployEnvironment(
+						environment,
+						[moduleName],
+						rootProject.overwriteChangedFiles,
+						profileRequired,
+						socialRequired
+					)
+				}
+			}
+		}
+	}
+
+	def allowedModules = (rootProject.getDeployModules() as List).toSet()
+	def moduleDeployTasks = deployModuleProjects
+		.findAll { path, name -> allowedModules.contains(name) }
+		.collect { path, name -> rootProject.project(path).tasks.named('deploy') }
+
+	// Make the root deploy task depend on all module deploy tasks
+	rootProject.tasks.named('deploy').configure {
+		dependsOn moduleDeployTasks
 	}
 }

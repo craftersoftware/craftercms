@@ -27,68 +27,78 @@ ext.deployToMavenModules = ["groovy-sandbox", "script-security-plugin", "commons
 			    "core", "search", "profile", "engine", "deployer", "studio",
 			    "social", "cli"]
 
+// Modules named on the command line (e.g. engine:build, :studio:deploy).
+ext.getExplicitlyRequestedModules = { ->
+	def modules = []
+	gradle.startParameter.taskNames.each { taskName ->
+		def name = taskName.startsWith(':') ? taskName.substring(1) : taskName
+		// Unqualified tasks (build, deploy) are not module-scoped
+		if (!name.contains(':')) {
+			return
+		}
+		def projectPath = name.substring(0, name.lastIndexOf(':'))
+		def topLevel = projectPath.contains(':')
+			? projectPath.substring(0, projectPath.indexOf(':'))
+			: projectPath
+		if (allModules.contains(topLevel) && !modules.contains(topLevel)) {
+			modules << topLevel
+		}
+	}
+	return modules
+}
+
 ext.getAllModules = { ->
-	String[] result
-
-	if (project.hasProperty("modules"))
-		result = project.property("modules").toLowerCase().split(",")
-	else
-		result = allModules
-
-	return result
+	def result = getExplicitlyRequestedModules()
+	if (result != null && result.size() > 0) {
+		return result
+	}
+	return allModules
 }
 
 ext.getBuildModules = { ->
-	String[] result
-
-	if (project.hasProperty("modules"))
-		result = project.property("modules").toLowerCase().split(",")
-	else
-		result = buildModules
-
-	return result
+	def result = getExplicitlyRequestedModules()
+	if (result != null && result.size() > 0) {
+		return result
+	}
+	return buildModules
 }
 
 ext.getDeployModules = { ->
-	String[] result
-
-	if (project.hasProperty("modules"))
-		result = project.property("modules").toLowerCase().split(",")
-	else
-		result = deployModules
-
-	return result
+	def result = getExplicitlyRequestedModules()
+	if (result != null && result.size() > 0) {
+		return result
+	}
+	return deployModules
 }
 
 ext.getDeployToMavenModules = { ->
-	String[] result
-
-	if (project.hasProperty("modules"))
-		result = project.property("modules").toLowerCase().split(",")
-	else
-		result = deployToMavenModules
-
-	return result
+	def result = getExplicitlyRequestedModules()
+	if (result != null && result.size() > 0) {
+		return result
+	}
+	return deployToMavenModules
 }
 
-// When -Pmodules is set and root orchestration tasks run, Gradle would otherwise also execute
-// clean/build on every subproject (LifecycleBasePlugin). Disable all subproject tasks so only
-// getBuildModules() subprocess invocations run; direct :project:task requests are unaffected.
+// Skip tests unless explicitly requested (e.g. ./gradlew test or :studio:test).
+// Only the requested projects' Test tasks stay enabled — so
+// `./gradlew studio:test engine:build` runs studio tests but not engine's.
 gradle.taskGraph.whenReady { graph ->
-	if (!project.hasProperty('modules')) {
+	def taskNames = gradle.startParameter.taskNames
+	// Unqualified `test` selects every project's test via task name matching.
+	if (taskNames.any { it == 'test' }) {
 		return
 	}
 
-	def orchestratedRootTasks = ['clean', 'build', 'deployToMaven', 'buildBom']
-	def runningRootOrchestration = graph.allTasks.any { task ->
-		task.project == rootProject && orchestratedRootTasks.contains(task.name)
-	}
-	if (!runningRootOrchestration) {
-		return
-	}
+	def requestedTestProjects = taskNames.findAll { it == ':test' || it.endsWith(':test') }
+		.collect { name ->
+			if (name == ':test') {
+				return rootProject.path
+			}
+			return name.substring(0, name.length() - ':test'.length())
+		}.toSet()
 
-	graph.allTasks.each { task ->
-		if (task.project != rootProject) {
+	graph.allTasks.findAll { it instanceof Test }.each { task ->
+		if (!requestedTestProjects.contains(task.project.path)) {
 			task.enabled = false
 		}
 	}

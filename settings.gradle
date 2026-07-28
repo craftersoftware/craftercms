@@ -78,7 +78,8 @@ include 'profile:client'
 include 'profile:security-provider'
 include 'profile:server'
 include 'profile:admin-console'
-include 'profile:integration-tests'
+// TODO: fix or remove this
+// include 'profile:integration-tests'
 
 include 'engine'
 

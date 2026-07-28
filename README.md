@@ -77,13 +77,13 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 
 * `overwriteChangedFiles`: Update and overwrite the deployed environment (authoring or delivery) files (binaries, configuration, etc.), default `true`
 * `refreshEnv`: Update the deployed environment (authoring or delivery) with any changes to the scripts, default `false`
-* `refreshDownloads`: Update and overwrite the downloaded artifacts (example: OpenSearch, Tomcat, ...) that's cached in the downloads folder by downloading it again, default `false`
-* `gitRemote`: Git remote name used by `selfUpdate`, default `origin`
+* `overwriteArtifact`: Update and overwrite the downloaded artifacts (example: OpenSearch, Tomcat, ...) that's cached in the downloads folder by downloading it again, default `false`
+* `gitRemote`: Git remote name to use in cloned modules, default `origin`
+* `gitBranch`: Git branch to use when cloning modules, default `develop` (for develop branch)
 * `socialRequired`: Include Social in the build, default `false`
 * `profileRequired`: Include Profile in the build, default `false`
 * `startSearch` or `withSearch`: start OpenSearch, default `true`
 * `startMongoDB`: start MongoDB, default `false` unless Profile or Social are enabled. This is automatic.
-* `unitTest`: Run unit tests during build, default `false`
 * `bundlesDir`: Where to deposit binaries, default `./bundles`
 * `downloadGrapes`: Download Grapes ahead of time (useful when no public Internet is available), default `true`
 * `downloadDir`: Where to store downloads, default `./downloads`
@@ -219,7 +219,7 @@ CrafterCMS comprises the following modules (among others):
 * [`social`](https://craftercms.com/docs/current/reference/modules/social.html)
 * [`deployer`](https://craftercms.com/docs/current/reference/modules/deployer.html)
 
-You'll find these projects at the repository root in folders named after each module (for example `engine/`, `studio/`, `deployer/`). Supporting modules such as `commons`, `core`, `search`, `studio-ui`, `cli`, `groovy-sandbox`, `script-security-plugin`, and `js-sdk` live alongside them.
+You'll find these projects under the root project directory and ready for you to contribute to in the folder `{Project Root}/{module}`.
 
 ### 4.3.1. Forking the Repository
 
@@ -232,29 +232,16 @@ You can now work in your local system, and build/deploy and ultimately push to y
 To update your local clone with the latest:
 
 ```bash
-    ./gradlew -PgitRemote=upstream selfUpdate
+    ./gradlew selfUpdate
 ```
 
-Or simply:
+### 4.3.2. Build, Deploy a Module
+
+You can build or deploy a module by:
 
 ```bash
-    git pull upstream <current-branch>
-```
-
-### 4.3.2. Build and Deploy a Module
-
-You can build and deploy a module by:
-
-```bash
-    ./gradlew build -Pmodules=studio
-    ./gradlew deploy -Pmodules=studio -Penv=authoring
-```
-
-Start and stop apply to an environment (not an individual module):
-
-```bash
-    ./gradlew start -Penv=authoring
-    ./gradlew stop -Penv=authoring
+    ./gradlew studio:build
+    ./gradlew studio:deploy -Penv=authoring
 ```
 
 > **_NOTE:_**
@@ -331,26 +318,34 @@ For more information about Apache Tomcat, and OpenSearch please refer to the fol
 As we have seen in the getting started section above, to run a gradle task, we run the following from the root of the project:
 
 ```bash
-   ./gradlew command [-Penv={env}] [-Pmodules={module}]
+   ./gradlew command [-Penv={env}]
+```
+```bash
+   ./gradlew module:task [-Penv={env}]
+```
+e.g.:
+```bash
+   ./gradlew engine:deploy -Penv=authoring
 ```
 
 Here's a list of commands (Gradle tasks) available:
 
-| Command<br>``command`` | Description                                                                           | Env Options<br>``env``  | Module Options<br>``module``                                                                                                                                                                                                                                                    |
-|------------------------|---------------------------------------------------------------------------------------|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| build                  | Build module/s or an entire environment                                               | authoring<hr> delivery  | <ul><li>None</li><li>studio</li><li>deployer</li><li>engine</li><li>search</li><li>social</li><li>profile</li><li>core</li><li>commons</li><li>studio-ui</li><li>groovy-sandbox</li><li>script-security-plugin</li><li>cli</li></ul>                                            |
-| deploy                 | Deploy module/s or an entire environment                                              | authoring<hr>delivery   | <ul><li>None</li><li>studio</li><li>deployer</li><li>engine</li><li>search</li><li>social</li><li>social-admin</li><li>profile</li><li>profile-admin</li><li>commons</li><li>core</li><li>studio-ui</li><li>groovy-sandbox</li><li>script-security-plugin</li><li>cli</li></ul> |
-| bundle                 | Build deployable and distributable binaries                                           | authoring <hr> delivery | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| start                  | Start CrafterCMS                                                                      | authoring <hr> delivery | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| stop                   | Stop CrafterCMS                                                                       | authoring <hr> delivery | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| upgrade                | Pulls the latest changes, then cleans, builds, and deploys                            | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| selfUpdate             | Updates this repository (`git pull` of the current branch)        | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
-| clean                  | Delete all compiled objects                                                           | <ul><li>None</li></ul>  | <ul><li>None</li></ul>                                                                                                                                                                                                                                                          |
+| Command<br>``command`` | Description                                                                                    | Env Options<br>``env``  | Applies to modules                                                                                                                                                                                                                                                    |
+|------------------------|------------------------------------------------------------------------------------------------|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| build                  | Build all modules<br>                 | None  | Yes                                            |
+| deploy                 | Deploy module/s or an entire environment                                                       | authoring<hr>delivery   | Yes |
+| bundle                 | Build deployable and distributable binaries                                                    | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
+| start                  | Start CrafterCMS                                                                               | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
+| stop                   | Stop CrafterCMS                                                                                | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
+| upgrade                | Upgrades the installed Tomcat version, etc., without deleting your data then builds and deploys | None  | No                                                                                                                                                                                                                                                          |
+| selfUpdate             | Updates the CrafterCMS project (gradle)                                                        | None  | No                                                                                                                                                                                                                                                          |
+| clean                  | Delete all compiled objects                                                                    | None  |  Yes                                                                                                                                                                                                                                                          |
 
 > **_NOTE:_**
 * If you don't specify the ``env`` parameter, it means all environments (where applicable).
 * In the current version of CrafterCMS, some services run in the same Web container, and that implies the stopping/starting of one of these services will cause other services to stop/start as well.
-* The Gradle task property ``modules`` accepts one or multiple module/s, separated by commas like this: ``./gradlew build -Pmodules=search,studio``
+* List the modules and the tasks to build multiple modules in the same command: ``./gradlew engine:build studio:build``
+* Use `-p module` to run multiple tasks for a module: ``./gradlew -p studio clean build deploy -Penv=authoring``
 * The ``clean`` command does not delete previously built environment folders ``crafter-authoring`` and ``crafter-delivery``. To build a fresh copy of these two, backup your custom data and delete both folders manually.
 
 <br><br>
@@ -375,7 +370,7 @@ The Gradle task above will:
 To build a module (all module options for task ``build`` are listed in the table above), run the following (we'll build the module *studio* in the example below):
 
 ```bash
-   ./gradlew build -Pmodules=studio
+   ./gradlew studio:build
 ```
 
 To build an environment, run the following (we'll build the authoring environment in the example below:

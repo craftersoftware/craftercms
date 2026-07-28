@@ -79,7 +79,7 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 	 * CSRF interceptor for WebSocket messages
 	 * This needs to be declared so the {@link org.springframework.security.config.websocket.WebSocketMessageBrokerSecurityBeanDefinitionParser} picks it up
 	 *
-	 * @see <a href="https://github.com/spring-projects/spring-security/issues/17260"><websocket-message-broker> should use XorCsrfChannelInterceptor by default</a>
+	 * @see <a href="https://github.com/spring-projects/spring-security/issues/17260">&lt;websocket-message-broker&gt; should use XorCsrfChannelInterceptor by default</a>
 	 */
 	@Bean
 	public CsrfChannelInterceptor csrfChannelInterceptor() {

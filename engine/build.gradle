@@ -24,7 +24,7 @@ apply from: "${rootDir}/gradle/java-library.gradle"
 apply from: "${rootDir}/gradle/war.gradle"
 
 base {
-	archivesName = 'ROOT'
+	archivesName = 'crafter-engine'
 }
 
 dependencies {
@@ -118,7 +118,7 @@ dependencies {
 }
 
 war {
-	archiveFileName = 'ROOT.war'
+	archiveFileName = 'crafter-engine.war'
 }
 
 configureFilteredWarResource(

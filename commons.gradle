@@ -56,7 +56,7 @@ ext.execCommand = { command, dir ->
 		}
 	}
 
-	//System.out.println("Executing command \"" + dir + ":" + cmd + "\"")
+	// System.out.println("Executing command \"" + dir + ":" + cmd + "\"")
 
 	def proc = cmd.execute(null, file(dir))
 
@@ -149,15 +149,13 @@ ext.gradleModules = [
 	'cli': ':cli'
 ]
 
-ext.runGradleModuleTask = { module, task, unitTest, extraArgs = [] ->
+// This is used to run external tasks: bomGenerate, publishMavenPublicationToGitHubPackagesRepository
+ext.runGradleModuleTask = { module, task, extraArgs = [] ->
 	def projects = gradleModules[module]
 	if (projects == null) {
 		return false
 	}
-	def gradleArgs = ["./gradlew", "-q"]
-	if (!unitTest) {
-		gradleArgs += ["-x", "test"]
-	}
+	def gradleArgs = ["./gradlew"]
 	if (extraArgs) {
 		gradleArgs.addAll(extraArgs as List)
 	}
@@ -170,31 +168,8 @@ ext.runGradleModuleTask = { module, task, unitTest, extraArgs = [] ->
 	return true
 }
 
-ext.cleanModule = { module ->
-	if (!runGradleModuleTask(module, 'clean', true)) {
-		throw new GradleException("No Gradle module mapping for $module")
-	}
-}
-
-ext.buildModule = { module, unitTest ->
-	if (!runGradleModuleTask(module, 'build', unitTest)) {
-		throw new GradleException("No Gradle module mapping for $module")
-	}
-}
-
-ext.deployModule = { module, unitTest ->
-	if (module == "craftercms") {
-		println "Skipping craftercms parent POM deploy (dependency management is in gradle/libs.versions.toml)"
-		return
-	}
-
-	if (!runGradleModuleTask(module, 'publishToMavenLocal', unitTest)) {
-		throw new GradleException("No Gradle module mapping for $module")
-	}
-}
-
 ext.buildBom = { module ->
-	if (runGradleModuleTask(module, 'bomGenerate', false)) {
+	if (runGradleModuleTask(module, 'bomGenerate')) {
 		return
 	}
 

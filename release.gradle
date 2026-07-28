@@ -191,7 +191,7 @@ tasks.register('releasePublishMaven') {
 					publishArgs << "-P${prop}=${value}"
 				}
 			}
-			if (!runGradleModuleTask(module, 'publishMavenPublicationToGitHubPackagesRepository', false, publishArgs)) {
+			if (!runGradleModuleTask(module, 'publishMavenPublicationToGitHubPackagesRepository', publishArgs)) {
 				throw new GradleException("No Gradle module mapping for $module")
 			}
 		}
