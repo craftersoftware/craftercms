@@ -26,6 +26,7 @@ import {
 	pathNavigatorConditionallySetPath,
 	pathNavigatorConditionallySetPathComplete,
 	pathNavigatorConditionallySetPathFailed,
+	pathNavigatorBackgroundRefresh,
 	pathNavigatorFetchParentItems,
 	pathNavigatorFetchParentItemsComplete,
 	pathNavigatorFetchPath,
@@ -50,6 +51,11 @@ import SocketEvent, { MoveContentEventPayload } from '../../models/SocketEvent';
 import StandardAction from '../../models/StandardAction';
 import { CaseReducer } from '@reduxjs/toolkit/src/createReducer';
 import GlobalState from '../../models/GlobalState';
+
+const bumpPathFetchRequestId = (chunk: { pathFetchRequestId?: number }): number => {
+	chunk.pathFetchRequestId = (chunk.pathFetchRequestId ?? 0) + 1;
+	return chunk.pathFetchRequestId;
+};
 
 const updatePath = (state, payload) => {
 	const { id, parent, children } = payload;
@@ -135,9 +141,11 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			state[id].localeCode = locale;
 		})
 		.addCase(pathNavigatorSetCurrentPath, (state, { payload: { id, path } }) => {
-			state[id].keyword = '';
-			state[id].currentPath = path;
-			state[id].error = null;
+			const chunk = state[id];
+			chunk.keyword = '';
+			chunk.currentPath = path;
+			chunk.error = null;
+			bumpPathFetchRequestId(chunk);
 		})
 		.addCase(pathNavigatorConditionallySetPath, (state, { payload }) => {
 			state[payload.id].isFetching = true;
@@ -165,7 +173,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
-			chunk.pathFetchRequestId = (chunk.pathFetchRequestId ?? 0) + 1;
+			bumpPathFetchRequestId(chunk);
 			chunk.isFetching = true;
 			chunk.error = null;
 			if (payload.path) {
@@ -178,10 +186,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
-			if (
-				payload.pathFetchRequestId !== undefined &&
-				payload.pathFetchRequestId !== chunk.pathFetchRequestId
-			) {
+			if (payload.pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
 			delete chunk.revertPath;
@@ -197,7 +202,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
-			if (pathFetchRequestId !== undefined && pathFetchRequestId !== chunk.pathFetchRequestId) {
+			if (pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
 			chunk.isFetching = false;
@@ -215,9 +220,11 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			});
 		})
 		.addCase(pathNavigatorFetchParentItems, (state, { payload: { id, path } }) => {
-			state[id].isFetching = true;
-			state[id].currentPath = path;
-			state[id].error = null;
+			const chunk = state[id];
+			bumpPathFetchRequestId(chunk);
+			chunk.isFetching = true;
+			chunk.currentPath = path;
+			chunk.error = null;
 		})
 		.addCase(pathNavigatorFetchParentItemsComplete, (state, { payload: { id, children } }) => {
 			const chunk = state[id];
@@ -235,8 +242,10 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		})
 		.addCase(pathNavigatorSetKeyword, (state, { payload: { id, keyword } }) => {
 			if (keyword !== (state.keyword as unknown as string)) {
-				state[id].keyword = keyword;
-				state[id].isFetching = true;
+				const chunk = state[id];
+				chunk.keyword = keyword;
+				bumpPathFetchRequestId(chunk);
+				chunk.isFetching = true;
 			}
 		})
 		.addCase(pathNavigatorItemChecked, (state, { payload: { id, item } }) => {
@@ -253,7 +262,12 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			Object.assign(state[payload.id], payload);
 		})
 		.addCase(pathNavigatorRefresh, (state, { payload: { id } }) => {
-			state[id].isFetching = true;
+			const chunk = state[id];
+			bumpPathFetchRequestId(chunk);
+			chunk.isFetching = true;
+		})
+		.addCase(pathNavigatorBackgroundRefresh, (state, { payload: { id } }) => {
+			bumpPathFetchRequestId(state[id]);
 		})
 		.addCase(pathNavigatorBulkRefresh, (state, { payload: { requests } }) => {
 			requests.forEach(({ id, backgroundRefresh }) => {
@@ -262,11 +276,15 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			});
 		})
 		.addCase(pathNavigatorChangePage, (state, { payload: { id } }) => {
-			state[id].isFetching = true;
+			const chunk = state[id];
+			bumpPathFetchRequestId(chunk);
+			chunk.isFetching = true;
 		})
 		.addCase(pathNavigatorChangeLimit, (state, { payload: { id, limit } }) => {
-			state[id].limit = limit;
-			state[id].isFetching = true;
+			const chunk = state[id];
+			chunk.limit = limit;
+			bumpPathFetchRequestId(chunk);
+			chunk.isFetching = true;
 		})
 		.addCase(changeSiteComplete, () => ({}))
 		.addCase(fetchSiteUiConfig, () => ({}))

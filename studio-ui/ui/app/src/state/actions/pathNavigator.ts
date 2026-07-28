@@ -96,7 +96,7 @@ export const pathNavigatorFetchPath =
 
 export const pathNavigatorFetchPathComplete =
 	/*#__PURE__*/ createAction<
-		PayloadWithId<{ parent?: ContentItem; children: GetChildrenResponse; pathFetchRequestId?: number }>
+		PayloadWithId<{ parent?: ContentItem; children: GetChildrenResponse; pathFetchRequestId: number }>
 	>('PATH_NAV_FETCH_PATH_COMPLETE');
 
 export const pathNavigatorBulkFetchPathComplete = /*#__PURE__*/ createAction<{
@@ -110,7 +110,7 @@ export const pathNavigatorFetchParentItemsComplete = /*#__PURE__*/ createAction<
 export const pathNavigatorFetchPathFailed = /*#__PURE__*/ createAction<{
 	id: string;
 	error: Omit<AjaxError, 'request' | 'xhr'>;
-	pathFetchRequestId?: number;
+	pathFetchRequestId: number;
 }>('PATH_NAV_FETCH_PATH_FAILED');
 
 export const pathNavigatorBulkFetchPathFailed = /*#__PURE__*/ createAction<{

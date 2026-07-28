@@ -72,6 +72,9 @@ import {
 	workflowEventSubmit
 } from '../actions/system';
 import { pushErrorDialog } from '../../utils/system';
+import GlobalState from '../../models/GlobalState';
+
+const getPathFetchRequestId = (state: GlobalState, id: string) => state.pathNavigator[id]?.pathFetchRequestId ?? 0;
 
 export default [
 	// region pathNavigatorInit
@@ -117,8 +120,9 @@ export default [
 						payload: { id }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					return fetchItemWithChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
 						keyword: state.pathNavigator[id].keyword,
 						limit: state.pathNavigator[id].limit,
 						offset: state.pathNavigator[id].offset,
@@ -126,15 +130,18 @@ export default [
 						sortStrategy: state.pathNavigator[id].sortStrategy,
 						order: state.pathNavigator[id].order
 					}).pipe(
-						map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
+						map(({ item, children }) =>
+							pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
+						),
 						catchAjaxError((error: AjaxError) => {
 							if (error.status === 404 && state.pathNavigator[id].rootPath !== state.pathNavigator[id].currentPath) {
 								return pathNavigatorConditionallySetPath({ id, path: state.pathNavigator[id].rootPath });
 							} else {
-								return pathNavigatorFetchPathFailed({ error, id });
+								return pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId });
 							}
 						})
-					)
+					);
+				}
 			)
 		),
 	// endregion
@@ -262,14 +269,18 @@ export default [
 						payload: { id, path }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, path, {
+				]) => {
+					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					return fetchItemWithChildrenByPath(state.sites.active, path, {
 						sortStrategy: state.pathNavigator[id].sortStrategy,
 						order: state.pathNavigator[id].order
 					}).pipe(
-						map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
-					)
+						map(({ item, children }) =>
+							pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
+						),
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId }))
+					);
+				}
 			)
 		),
 	// endregion
@@ -285,8 +296,9 @@ export default [
 						payload: { id, keyword }
 					},
 					state
-				]) =>
-					fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					return fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
 						keyword,
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
@@ -297,11 +309,13 @@ export default [
 							pathNavigatorFetchPathComplete({
 								id,
 								parent: state.content.itemsByPath[state.pathNavigator[id].currentPath],
-								children
+								children,
+								pathFetchRequestId
 							})
 						),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
-					)
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId }))
+					);
+				}
 			)
 		),
 	// endregion
@@ -317,8 +331,9 @@ export default [
 						payload: { id, offset }
 					},
 					state
-				]) =>
-					fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+				]) => {
+					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					return fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
 						order: state.pathNavigator[id].order,
@@ -326,9 +341,10 @@ export default [
 						...(Boolean(state.pathNavigator[id].keyword) && { keyword: state.pathNavigator[id].keyword }),
 						offset
 					}).pipe(
-						map((children) => pathNavigatorFetchPathComplete({ id, children })),
-						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
-					)
+						map((children) => pathNavigatorFetchPathComplete({ id, children, pathFetchRequestId })),
+						catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId }))
+					);
+				}
 			)
 		),
 	// endregion
@@ -347,6 +363,7 @@ export default [
 				]) => {
 					const site = state.sites.active;
 					const parentsPath = getIndividualPaths(path, state.pathNavigator[id].rootPath);
+					const pathFetchRequestId = getPathFetchRequestId(state, id);
 					if (parentsPath.length > 1) {
 						return forkJoin([
 							fetchContentItems(site, parentsPath),
@@ -364,7 +381,7 @@ export default [
 								if (error.status === 404) {
 									return pathNavigatorConditionallySetPath({ id, path: getRootPath(path) });
 								} else {
-									return pathNavigatorFetchPathFailed({ error, id });
+									return pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId });
 								}
 							})
 						);
@@ -377,8 +394,10 @@ export default [
 							sortStrategy: state.pathNavigator[id].sortStrategy,
 							order: state.pathNavigator[id].order
 						}).pipe(
-							map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
-							catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id }))
+							map(({ item, children }) =>
+								pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
+							),
+							catchAjaxError((error) => pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId }))
 						);
 					}
 				}
