@@ -72,9 +72,6 @@ import {
 	workflowEventSubmit
 } from '../actions/system';
 import { pushErrorDialog } from '../../utils/system';
-import GlobalState from '../../models/GlobalState';
-
-const getPathFetchRequestId = (state: GlobalState, id: string) => state.pathNavigator[id]?.pathFetchRequestId ?? 0;
 
 export default [
 	// region pathNavigatorInit
@@ -121,21 +118,35 @@ export default [
 					},
 					state
 				]) => {
-					const pathFetchRequestId = getPathFetchRequestId(state, id);
-					return fetchItemWithChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
-						keyword: state.pathNavigator[id].keyword,
-						limit: state.pathNavigator[id].limit,
-						offset: state.pathNavigator[id].offset,
-						excludes: state.pathNavigator[id].excludes,
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const {
+						pathFetchRequestId,
+						currentPath,
+						keyword,
+						limit,
+						offset,
+						excludes,
+						sortStrategy,
+						order,
+						rootPath
+					} = chunk;
+					return fetchItemWithChildrenByPath(state.sites.active, currentPath, {
+						keyword,
+						limit,
+						offset,
+						excludes,
+						sortStrategy,
+						order
 					}).pipe(
 						map(({ item, children }) =>
 							pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
 						),
 						catchAjaxError((error: AjaxError) => {
-							if (error.status === 404 && state.pathNavigator[id].rootPath !== state.pathNavigator[id].currentPath) {
-								return pathNavigatorConditionallySetPath({ id, path: state.pathNavigator[id].rootPath });
+							if (error.status === 404 && rootPath !== currentPath) {
+								return pathNavigatorConditionallySetPath({ id, path: rootPath });
 							} else {
 								return pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId });
 							}
@@ -157,6 +168,9 @@ export default [
 
 				requests.forEach(({ id }) => {
 					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return;
+					}
 					const { currentPath, keyword, limit, offset, excludes, sortStrategy, order } = chunk;
 					paths.push(currentPath);
 					optionsByPath[currentPath] = {
@@ -208,12 +222,12 @@ export default [
 					if (!chunk) {
 						return EMPTY;
 					}
-					const { pathFetchRequestId } = chunk;
+					const { pathFetchRequestId, excludes, limit, sortStrategy, order } = chunk;
 					return fetchItemWithChildrenByPath(state.sites.active, path, {
-						excludes: state.pathNavigator[id].excludes,
-						limit: state.pathNavigator[id].limit,
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order,
+						excludes,
+						limit,
+						sortStrategy,
+						order,
 						...(keyword && { keyword })
 					}).pipe(
 						map(({ item, children }) =>
@@ -239,12 +253,17 @@ export default [
 						payload: { id, path, keyword }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, path, {
-						excludes: state.pathNavigator[id].excludes,
-						limit: state.pathNavigator[id].limit,
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order,
+				]) => {
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const { excludes, limit, sortStrategy, order } = chunk;
+					return fetchItemWithChildrenByPath(state.sites.active, path, {
+						excludes,
+						limit,
+						sortStrategy,
+						order,
 						...(keyword && { keyword })
 					}).pipe(
 						map(({ item, children }) =>
@@ -254,7 +273,8 @@ export default [
 							(error) => pathNavigatorConditionallySetPathFailed({ id, error }),
 							(error) => pushErrorDialog({ props: { error: error.response ?? error } })
 						)
-					)
+					);
+				}
 			)
 		),
 	// endregion
@@ -270,10 +290,14 @@ export default [
 					},
 					state
 				]) => {
-					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const { pathFetchRequestId, sortStrategy, order } = chunk;
 					return fetchItemWithChildrenByPath(state.sites.active, path, {
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order
+						sortStrategy,
+						order
 					}).pipe(
 						map(({ item, children }) =>
 							pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
@@ -297,18 +321,22 @@ export default [
 					},
 					state
 				]) => {
-					const pathFetchRequestId = getPathFetchRequestId(state, id);
-					return fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const { pathFetchRequestId, currentPath, limit, sortStrategy, order, excludes } = chunk;
+					return fetchChildrenByPath(state.sites.active, currentPath, {
 						keyword,
-						limit: state.pathNavigator[id].limit,
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order,
-						excludes: state.pathNavigator[id].excludes
+						limit,
+						sortStrategy,
+						order,
+						excludes
 					}).pipe(
 						map((children) =>
 							pathNavigatorFetchPathComplete({
 								id,
-								parent: state.content.itemsByPath[state.pathNavigator[id].currentPath],
+								parent: state.content.itemsByPath[currentPath],
 								children,
 								pathFetchRequestId
 							})
@@ -332,13 +360,17 @@ export default [
 					},
 					state
 				]) => {
-					const pathFetchRequestId = getPathFetchRequestId(state, id);
-					return fetchChildrenByPath(state.sites.active, state.pathNavigator[id].currentPath, {
-						limit: state.pathNavigator[id].limit,
-						sortStrategy: state.pathNavigator[id].sortStrategy,
-						order: state.pathNavigator[id].order,
-						excludes: state.pathNavigator[id].excludes,
-						...(Boolean(state.pathNavigator[id].keyword) && { keyword: state.pathNavigator[id].keyword }),
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
+					const { pathFetchRequestId, currentPath, limit, sortStrategy, order, excludes, keyword } = chunk;
+					return fetchChildrenByPath(state.sites.active, currentPath, {
+						limit,
+						sortStrategy,
+						order,
+						excludes,
+						...(Boolean(keyword) && { keyword }),
 						offset
 					}).pipe(
 						map((children) => pathNavigatorFetchPathComplete({ id, children, pathFetchRequestId })),
@@ -361,9 +393,14 @@ export default [
 					},
 					state
 				]) => {
+					const chunk = state.pathNavigator[id];
+					if (!chunk) {
+						return EMPTY;
+					}
 					const site = state.sites.active;
-					const parentsPath = getIndividualPaths(path, state.pathNavigator[id].rootPath);
-					const pathFetchRequestId = getPathFetchRequestId(state, id);
+					const { rootPath, pathFetchRequestId, sortStrategy: navigatorSortStrategy, order: navigatorOrder } =
+						chunk;
+					const parentsPath = getIndividualPaths(path, rootPath);
 					if (parentsPath.length > 1) {
 						return forkJoin([
 							fetchContentItems(site, parentsPath),
@@ -391,8 +428,8 @@ export default [
 							limit,
 							offset,
 							keyword,
-							sortStrategy: state.pathNavigator[id].sortStrategy,
-							order: state.pathNavigator[id].order
+							sortStrategy: navigatorSortStrategy,
+							order: navigatorOrder
 						}).pipe(
 							map(({ item, children }) =>
 								pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
@@ -423,13 +460,17 @@ export default [
 					state
 				]) => {
 					if (type !== pathNavigatorConditionallySetPathComplete.type || parent?.childrenCount > 0) {
+						const chunk = state.pathNavigator[id];
+						if (!chunk) {
+							return;
+						}
 						const uuid = state.sites.byId[state.sites.active].uuid;
 						setStoredPathNavigator(uuid, state.user.username, id, {
-							currentPath: state.pathNavigator[id].currentPath,
-							collapsed: state.pathNavigator[id].collapsed,
-							keyword: state.pathNavigator[id].keyword,
-							offset: state.pathNavigator[id].offset,
-							limit: state.pathNavigator[id].limit
+							currentPath: chunk.currentPath,
+							collapsed: chunk.collapsed,
+							keyword: chunk.keyword,
+							offset: chunk.offset,
+							limit: chunk.limit
 						});
 					}
 				}
