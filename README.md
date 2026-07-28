@@ -213,11 +213,11 @@ The mechanics for working with a single module are similar to working with _all_
 
 CrafterCMS comprises the following modules:
 
-* [`engine`](https://craftercms.com/docs/current/reference/modules/engine/index.html)
-* [`studio`](https://craftercms.com/docs/current/reference/modules/studio/index.html)
-* [`profile`](https://craftercms.com/docs/current/reference/modules/profile/index.html)
-* [`social`](https://craftercms.com/docs/current/reference/modules/social/index.html)
-* [`deployer`](https://craftercms.com/docs/current/reference/modules/deployer/index.html)
+* [`engine`](http://web.archive.org/web/20250327143253/https://craftercms.com/docs/current/reference/modules/engine/index.html)
+* [`studio`](http://web.archive.org/web/20250327131939/https://craftercms.com/docs/current/reference/modules/studio/index.html)
+* [`profile`](http://web.archive.org/web/20250327125254/https://craftercms.com/docs/current/reference/modules/profile/index.html)
+* [`social`](http://web.archive.org/web/20250327143105/https://craftercms.com/docs/current/reference/modules/social/index.html)
+* [`deployer`](http://web.archive.org/web/20250327141050/https://craftercms.com/docs/current/reference/modules/deployer/index.html)
 
 You'll find these projects under the root project directory and ready for you to contribute to in the folder `{Project Root}/{module}`.
 
