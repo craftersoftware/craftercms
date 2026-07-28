@@ -163,11 +163,13 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		.addCase(pathNavigatorFetchPath, (state, { payload: { id, path } }) => {
 			const chunk = state[id];
 			// Set the path navigation revert state, so we can revert to it if the request fails.
-			chunk.pathNavigationRevert = {
-				currentPath: chunk.currentPath,
-				breadcrumb: chunk.breadcrumb,
-				offset: chunk.offset
-			};
+			if (!chunk.pathNavigationRevert) {
+				chunk.pathNavigationRevert = {
+					currentPath: chunk.currentPath,
+					breadcrumb: chunk.breadcrumb,
+					offset: chunk.offset
+				};
+			}
 			chunk.isFetching = true;
 			chunk.error = null;
 			chunk.currentPath = path;
