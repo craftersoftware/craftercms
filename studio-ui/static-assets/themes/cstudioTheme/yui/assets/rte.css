@@ -42,7 +42,7 @@ table.cstudioTableLayout td {
 }
 /** End of Table Layout styles **/
 
-/** Right-Click property box for RTE**/
+/** Right-Click property box for RTE **/
 div.componentPropertyBox {
 	background-color: #ffffff;
 	border: 1px solid #808080;
@@ -52,7 +52,7 @@ div.componentPropertyBox {
 	cursor: pointer;
 	font-size: 12px;
 	line-height: 15px;
-	/*padding: 0 10px;*/
+	/* padding: 0 10px; */
 	text-align: left;
 }
 
@@ -79,14 +79,14 @@ div.componentPropertyBox {
 	background-color: #e2e2e2;
 	display: block;
 }
-/** End of styles for Right-Click property box for RTE**/
+/** End of styles for Right-Click property box for RTE **/
 
 /** for display of widgets within RTE **/
 .crComponent {
 	padding: 0 1px 0 1px;
 }
 
-/** For display of table layout within RTE wigets in RTE mode**/
+/** For display of table layout within RTE wigets in RTE mode **/
 .crComponent table,
 .cstudioComponent table tr,
 .cstudioComponent table th,
