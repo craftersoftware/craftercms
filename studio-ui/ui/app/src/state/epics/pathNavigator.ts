@@ -146,7 +146,7 @@ export default [
 						),
 						catchAjaxError((error: AjaxError) => {
 							if (error.status === 404 && rootPath !== currentPath) {
-								return pathNavigatorConditionallySetPath({ id, path: rootPath });
+								return pathNavigatorConditionallySetPath({ id, path: rootPath, pathFetchRequestId });
 							} else {
 								return pathNavigatorFetchPathFailed({ error, id, pathFetchRequestId });
 							}
@@ -250,12 +250,18 @@ export default [
 			mergeMap(
 				([
 					{
-						payload: { id, path, keyword }
+						payload: { id, path, keyword, pathFetchRequestId }
 					},
 					state
 				]) => {
 					const chunk = state.pathNavigator[id];
 					if (!chunk) {
+						return EMPTY;
+					}
+					if (
+						pathFetchRequestId !== undefined &&
+						pathFetchRequestId !== chunk.pathFetchRequestId
+					) {
 						return EMPTY;
 					}
 					const { excludes, limit, sortStrategy, order } = chunk;
@@ -267,7 +273,13 @@ export default [
 						...(keyword && { keyword })
 					}).pipe(
 						map(({ item, children }) =>
-							pathNavigatorConditionallySetPathComplete({ id, path, parent: item, children })
+							pathNavigatorConditionallySetPathComplete({
+								id,
+								path,
+								parent: item,
+								children,
+								pathFetchRequestId
+							})
 						),
 						catchAjaxError(
 							(error) => pathNavigatorConditionallySetPathFailed({ id, error }),

@@ -51,11 +51,16 @@ export const pathNavigatorSetCurrentPath =
 	/*#__PURE__*/ createAction<PayloadWithId<{ path: string }>>('PATH_NAV_SET_CURRENT_PATH');
 
 export const pathNavigatorConditionallySetPath = /*#__PURE__*/ createAction<
-	PayloadWithId<{ path: string; keyword?: string }>
+	PayloadWithId<{ path: string; keyword?: string; pathFetchRequestId?: number }>
 >('PATH_NAV_CONDITIONALLY_SET_PATH');
 
 export const pathNavigatorConditionallySetPathComplete = /*#__PURE__*/ createAction<
-	PayloadWithId<{ path: string; parent?: ContentItem; children: GetChildrenResponse }>
+	PayloadWithId<{
+		path: string;
+		parent?: ContentItem;
+		children: GetChildrenResponse;
+		pathFetchRequestId?: number;
+	}>
 >('PATH_NAV_CONDITIONALLY_SET_PATH_COMPLETE');
 
 export const pathNavigatorConditionallySetPathFailed = /*#__PURE__*/ createAction<{

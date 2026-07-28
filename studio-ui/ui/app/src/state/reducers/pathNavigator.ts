@@ -147,23 +147,39 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			chunk.error = null;
 			bumpPathFetchRequestId(chunk);
 		})
-		.addCase(pathNavigatorConditionallySetPath, (state, { payload }) => {
-			state[payload.id].isFetching = true;
-			state[payload.id].error = null;
-		})
-		.addCase(pathNavigatorConditionallySetPathComplete, (state, { payload: { id, path, parent, children } }) => {
+		.addCase(pathNavigatorConditionallySetPath, (state, { payload: { id, pathFetchRequestId } }) => {
 			const chunk = state[id];
-			chunk.isFetching = false;
-			chunk.error = null;
-			if (parent.childrenCount > 0) {
-				chunk.currentPath = path;
-				chunk.offset = 0;
-				chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
-				chunk.itemsInPath = children.map((item) => item.path);
-				chunk.levelDescriptor = children.levelDescriptor?.path;
-				chunk.total = children.total;
+			if (!chunk) {
+				return;
 			}
+			if (pathFetchRequestId !== undefined && pathFetchRequestId !== chunk.pathFetchRequestId) {
+				return;
+			}
+			chunk.isFetching = true;
+			chunk.error = null;
 		})
+		.addCase(
+			pathNavigatorConditionallySetPathComplete,
+			(state, { payload: { id, path, parent, children, pathFetchRequestId } }) => {
+				const chunk = state[id];
+				if (!chunk) {
+					return;
+				}
+				if (pathFetchRequestId !== undefined && pathFetchRequestId !== chunk.pathFetchRequestId) {
+					return;
+				}
+				chunk.isFetching = false;
+				chunk.error = null;
+				if (parent.childrenCount > 0) {
+					chunk.currentPath = path;
+					chunk.offset = 0;
+					chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
+					chunk.itemsInPath = children.map((item) => item.path);
+					chunk.levelDescriptor = children.levelDescriptor?.path;
+					chunk.total = children.total;
+				}
+			}
+		)
 		.addCase(pathNavigatorConditionallySetPathFailed, (state, { payload }) => {
 			state[payload.id].isFetching = false;
 			state[payload.id].error = payload.error;
