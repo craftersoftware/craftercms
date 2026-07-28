@@ -165,6 +165,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
+			chunk.pathFetchRequestId = (chunk.pathFetchRequestId ?? 0) + 1;
 			chunk.isFetching = true;
 			chunk.error = null;
 			if (payload.path) {
@@ -177,6 +178,12 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
+			if (
+				payload.pathFetchRequestId !== undefined &&
+				payload.pathFetchRequestId !== chunk.pathFetchRequestId
+			) {
+				return;
+			}
 			delete chunk.revertPath;
 			updatePath(state, payload);
 		})
@@ -185,9 +192,12 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 				updatePath(state, path);
 			});
 		})
-		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error } }) => {
+		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error, pathFetchRequestId } }) => {
 			const chunk = state[id];
 			if (!chunk) {
+				return;
+			}
+			if (pathFetchRequestId !== undefined && pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
 			chunk.isFetching = false;

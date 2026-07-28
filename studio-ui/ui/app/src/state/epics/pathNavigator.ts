@@ -196,20 +196,24 @@ export default [
 						payload: { id, path, keyword }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, path, {
+				]) => {
+					const pathFetchRequestId = state.pathNavigator[id]?.pathFetchRequestId;
+					return fetchItemWithChildrenByPath(state.sites.active, path, {
 						excludes: state.pathNavigator[id].excludes,
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
 						order: state.pathNavigator[id].order,
 						...(keyword && { keyword })
 					}).pipe(
-						map(({ item, children }) => pathNavigatorFetchPathComplete({ id, parent: item, children })),
+						map(({ item, children }) =>
+							pathNavigatorFetchPathComplete({ id, parent: item, children, pathFetchRequestId })
+						),
 						catchAjaxError(
-							(error) => pathNavigatorFetchPathFailed({ id, error }),
+							(error) => pathNavigatorFetchPathFailed({ id, error, pathFetchRequestId }),
 							(error) => pushErrorDialog({ props: { error: error.response ?? error } })
 						)
-					)
+					);
+				}
 			)
 		),
 	// endregion

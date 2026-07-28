@@ -119,6 +119,7 @@ export interface PathNavigatorStateProps {
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
 	revertPath?: string;
+	pathFetchRequestId?: number;
 }
 
 // @see https://github.com/craftercms/craftercms/issues/5360
