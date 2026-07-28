@@ -201,7 +201,6 @@ hr
 
 .site-navigation {
 	background-color: #73b4da;
-	background-image: url(../../components/images/navigation-bg.png);
 	border-bottom: 1px solid #4b86ae;
 	border-top: 1px dotted #bbd6e7;
 	color: white;
@@ -367,10 +366,6 @@ textarea {
 
 .yui-skin-cstudioTheme .postview .nodeTitle a {
 	color: #606060;
-}
-
-.yui-skin-cstudioTheme .site-navigation {
-	background-image: url(./images/navigation-bg.png);
 }
 
 .yui-skin-cstudioTheme .over {
