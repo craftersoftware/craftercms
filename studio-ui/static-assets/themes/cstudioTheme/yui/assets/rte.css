@@ -21,7 +21,6 @@
 
 /** RTE only - Place holder image **/
 .crafterEmbed {
-	background: #fafafa url('../../../../components/cstudio-form/images/placeholder.png') no-repeat center center !important;
 	border: 2px solid #333;
 	-moz-border-radius: 6px;
 	width: 300px;
