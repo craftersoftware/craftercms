@@ -178,7 +178,9 @@ export default [
 										return {
 											id,
 											path,
-											parent: items.find((item) => item.path.startsWith(withoutIndex(path))),
+											parent: items.find(
+												(item) => withoutIndex(item.path) === withoutIndex(path)
+											),
 											children: children[path]
 										};
 									})
@@ -411,13 +413,17 @@ export default [
 					state
 				]) => {
 					if (type !== pathNavigatorConditionallySetPathComplete.type || parent?.childrenCount > 0) {
+						const chunk = state.pathNavigator[id];
+						if (!chunk) {
+							return;
+						}
 						const uuid = state.sites.byId[state.sites.active].uuid;
 						setStoredPathNavigator(uuid, state.user.username, id, {
-							currentPath: state.pathNavigator[id].currentPath,
-							collapsed: state.pathNavigator[id].collapsed,
-							keyword: state.pathNavigator[id].keyword,
-							offset: state.pathNavigator[id].offset,
-							limit: state.pathNavigator[id].limit
+							currentPath: chunk.currentPath,
+							collapsed: chunk.collapsed,
+							keyword: chunk.keyword,
+							offset: chunk.offset,
+							limit: chunk.limit
 						});
 					}
 				}
