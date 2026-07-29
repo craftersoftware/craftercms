@@ -203,18 +203,24 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		const nextPath = withoutIndex(path);
 		setCurrentPath(nextPath);
 
+		// If the selected path is a page and has no children, select the page itself.
 		if (item?.systemType === 'page' && item.childrenCount === 0) {
 			const mediaItem = items?.find((searchItem) => searchItem.path === item.path) ?? contentItemToMediaItem(item);
-			multiSelect ? setSelectedLookup({ [mediaItem.path]: mediaItem }) : setSelectedCard(mediaItem);
+			multiSelect ? replaceSelectedLookup({ [mediaItem.path]: mediaItem }) : setSelectedCard(mediaItem);
 			setTreeSelectedPath(withoutIndex(mediaItem.path));
 		} else {
-			multiSelect ? clearSelectedLookup() : setSelectedCard(null);
+			multiSelect ? replaceSelectedLookup() : setSelectedCard(null);
 			setTreeSelectedPath(null);
 		}
 	};
 
-	const clearSelectedLookup = () => {
-		setSelectedLookup(Object.fromEntries(Object.keys(selectedLookup).map((key) => [key, null])));
+	const replaceSelectedLookup = (lookup?: LookupTable<MediaItem>) => {
+		const cleared = Object.fromEntries(Object.keys(selectedLookup).map((key) => [key, null]));
+		if (!lookup || Object.keys(lookup).length === 0) {
+			setSelectedLookup(cleared);
+		} else {
+			setSelectedLookup({ ...cleared, ...lookup });
+		}
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
