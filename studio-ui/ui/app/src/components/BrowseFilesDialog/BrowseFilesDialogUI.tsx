@@ -156,7 +156,8 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 							<FolderBrowserTreeView
 								rootPath={path}
 								onPathSelected={onPathSelected}
-								selectedPath={treeSelectedPath}
+								selectedPath={currentPath}
+								highlightedPath={treeSelectedPath}
 							/>
 						</Box>
 						<Box

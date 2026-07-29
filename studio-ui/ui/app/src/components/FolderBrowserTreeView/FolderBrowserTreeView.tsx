@@ -23,9 +23,6 @@ import useActiveUser from '../../hooks/useActiveUser';
 import { useDispatch } from 'react-redux';
 import { pathNavigatorTreeExpandPath, pathNavigatorTreeFetchPathChildren } from '../../state/actions/pathNavigatorTree';
 import { getIndividualPaths, withIndex } from '../../utils/path';
-import { useItemsByPath } from '../../hooks/useItemsByPath';
-import { lookupItemByPath } from '../../utils/content';
-import { ContentItem } from '../../models/Item';
 import { forkJoin, of } from 'rxjs';
 import { batchActions } from '../../state/actions/misc';
 import useSelection from '../../hooks/useSelection';
@@ -35,18 +32,18 @@ import { useIntl } from 'react-intl';
 export interface FolderBrowserTreeViewProps {
 	rootPath: string;
 	selectedPath: string;
-	onPathSelected(path: string, item?: ContentItem): void;
+	highlightedPath?: string;
+	onPathSelected(path: string): void;
 }
 
 export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
-	const { rootPath, selectedPath, onPathSelected } = props;
+	const { rootPath, selectedPath, highlightedPath, onPathSelected } = props;
 	const { formatMessage } = useIntl();
 	const id = useId();
 	const tree = useSelection((state) => state.pathNavigatorTree[id]);
 	const { uuid, id: siteId } = useActiveSite();
 	const { username } = useActiveUser();
 	const dispatch = useDispatch();
-	const itemsByPath = useItemsByPath();
 	const selectedPathWithIndex = withIndex(selectedPath);
 	const refs = useUpdateRefs({ tree });
 	useEffect(() => {
@@ -98,9 +95,13 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 			initialCollapsed={false}
 			initialSystemTypes={['folder', 'page']}
 			active={{ [selectedPathWithIndex in (tree?.totalByPath ?? {}) ? selectedPathWithIndex : selectedPath]: true }}
-			onNodeClick={(e, path) => onPathSelected?.(path, lookupItemByPath(path, itemsByPath))}
+			onNodeClick={(e, path) => onPathSelected?.(path)}
 			sxs={{
-				header: { '.MuiTypography-root': { fontWeight: 'bold' } }
+				header: { '.MuiTypography-root': { fontWeight: 'bold' } },
+				activeItem:
+					selectedPath === highlightedPath
+						? { boxShadow: (theme) => `0px 0px 2px 2px ${theme.palette.primary.main}`, borderRadius: '2px' }
+						: {}
 			}}
 			showNavigableAsLinks={false}
 			showPublishingTarget={false}

@@ -29,7 +29,7 @@ import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
 
-export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
+export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header' | 'activeItem';
 
 export interface PathNavigatorTreeUIProps
 	extends Pick<
@@ -145,6 +145,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 						<PathNavigatorTreeItem
 							path={rootPath}
 							active={active}
+							sxs={{ activeItem: sxs?.activeItem }}
 							itemsByPath={itemsByPath}
 							keywordByPath={keywordByPath}
 							totalByPath={totalByPath}

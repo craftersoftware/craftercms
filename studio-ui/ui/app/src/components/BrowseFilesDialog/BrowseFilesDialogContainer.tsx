@@ -41,6 +41,7 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 
 import { createComponentId } from '../../utils/system';
+import { useItemsByPath } from '../../hooks/useItemsByPath';
 
 const defaultPreselectedPaths = [];
 
@@ -83,6 +84,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		(items?.length > 0 && selectedInCurrentPage.length > 0 && selectedInCurrentPage.length < items?.length) ?? false;
 	const browsePath = path.replace(/\/+$/, '');
 	const [currentPath, setCurrentPath] = useState(browsePath);
+	const [treeSelectedPath, setTreeSelectedPath] = useState<string>();
 	const [fetchingBrowsePathExists, setFetchingBrowsePathExists] = useState(false);
 	const [browsePathExists, setBrowsePathExists] = useState(false);
 	const [sortKeys, setSortKeys] = useState([]);
@@ -91,6 +93,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	const [fetchingPreselectedItems, setFetchingPreselectedItems] = useState(false);
 	const disableSubmission = fetchingPreselectedItems || (!selectedArray.length && !selectedCard);
 	const preselectedLookup = createPresenceTable(preselectedPaths);
+	const itemsByPath = useItemsByPath();
 
 	const fetchItems = useCallback(() => {
 		// Since lookahead regex is not supported by opensearch, we are excluding the current path from the search using a
@@ -195,20 +198,24 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		setSelectedLookup({ [path]: selected ? items.find((item) => item.path === path) : null });
 	};
 
-	const onPathSelected = (path: string, item?: ContentItem) => {
+	const onPathSelected = (path: string) => {
+		const item = itemsByPath[path];
 		const nextPath = withoutIndex(path);
 		setCurrentPath(nextPath);
 
-		if (!multiSelect && item?.systemType === 'page' && item.childrenCount === 0) {
+		if (item?.systemType === 'page' && item.childrenCount === 0) {
 			const mediaItem = items?.find((searchItem) => searchItem.path === item.path) ?? contentItemToMediaItem(item);
-			setSelectedCard(mediaItem);
-		} else if (!multiSelect) {
-			setSelectedCard(null);
+			multiSelect ? setSelectedLookup({ [mediaItem.path]: mediaItem }) : setSelectedCard(mediaItem);
+			setTreeSelectedPath(withoutIndex(mediaItem.path));
+		} else {
+			multiSelect ? clearSelectedLookup() : setSelectedCard(null);
+			setTreeSelectedPath(null);
 		}
 	};
 
-	const treeSelectedPath =
-		!multiSelect && selectedCard?.path && isPagePath(selectedCard.path) ? selectedCard.path : currentPath;
+	const clearSelectedLookup = () => {
+		setSelectedLookup(Object.fromEntries(Object.keys(selectedLookup).map((key) => [key, null])));
+	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 
