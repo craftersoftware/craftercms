@@ -153,6 +153,15 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		window.addEventListener('blur', handleBlur);
 	}, [cleanupTreePanelResize, handleTreePanelMouseMove]);
 
+	const handleTreePanelResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
+		if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+			return;
+		}
+		e.preventDefault();
+		const delta = e.key === 'ArrowRight' ? 10 : -10;
+		setTreePanelWidth((prev) => Math.min(TREE_PANEL_MAX_WIDTH, Math.max(TREE_PANEL_MIN_WIDTH, prev + delta)));
+	}, []);
+
 	return (
 		<>
 			<DialogBody sx={{ minHeight: '60vh', padding: 0 }}>
@@ -188,9 +197,14 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 						</Box>
 						<Box
 							onMouseDown={handleTreePanelResizeMouseDown}
+							onKeyDown={handleTreePanelResizeKeyDown}
 							role="separator"
+							tabIndex={0}
 							aria-orientation="vertical"
 							aria-label={formatMessage({ defaultMessage: 'Resize folder panel' })}
+							aria-valuemin={TREE_PANEL_MIN_WIDTH}
+							aria-valuemax={TREE_PANEL_MAX_WIDTH}
+							aria-valuenow={Math.round(treePanelWidth)}
 							sx={{
 								position: 'absolute',
 								top: 0,
