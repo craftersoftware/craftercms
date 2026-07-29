@@ -15,7 +15,7 @@
  */
 
 // @ts-ignore - React typings haven't been updated to include react 18 hooks
-import React, { useCallback, useEffect, useId } from 'react';
+import React, { useCallback, useEffect, useId, useRef } from 'react';
 import useActiveSite from '../../hooks/useActiveSite';
 import { PathNavigatorTree } from '../PathNavigatorTree';
 import { removeStoredPathNavigatorTree } from '../../utils/state';
@@ -44,6 +44,7 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 	const { username } = useActiveUser();
 	const dispatch = useDispatch();
 	const selectedPathWithIndex = withIndex(selectedPath);
+	const pendingChildFetchPathsRef = useRef<Set<string>>(new Set());
 	const refs = useUpdateRefs({ tree });
 	useEffect(() => {
 		if (
@@ -84,22 +85,31 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 				return;
 			}
 			const withIndexXml = withIndex(path);
-			if (tree.expanded.includes(path) || tree.expanded.includes(withIndexXml)) {
-				return;
-			}
+			const isExpanded = tree.expanded.includes(path) || tree.expanded.includes(withIndexXml);
 			const childCount = tree.totalByPath[path] ?? tree.totalByPath[withIndexXml] ?? 0;
 			if (childCount <= 0) {
 				return;
 			}
 			const childrenLoaded = path in tree.childrenByParentPath || withIndexXml in tree.childrenByParentPath;
-			dispatch(
-				childrenLoaded
-					? pathNavigatorTreeExpandPath({
+			if (childrenLoaded) {
+				if (!isExpanded) {
+					dispatch(
+						pathNavigatorTreeExpandPath({
 							id,
 							path: withIndexXml in tree.childrenByParentPath ? withIndexXml : path
 						})
-					: pathNavigatorTreeFetchPathChildren({ id, path, expand: true })
-			);
+					);
+				}
+				return;
+			}
+			if (tree.errorByPath[path]) {
+				pendingChildFetchPathsRef.current.delete(path);
+			}
+			if (isExpanded || pendingChildFetchPathsRef.current.has(path)) {
+				return;
+			}
+			pendingChildFetchPathsRef.current.add(path);
+			dispatch(pathNavigatorTreeFetchPathChildren({ id, path, expand: true }));
 		},
 		[dispatch, id, onPathSelected, tree]
 	);
