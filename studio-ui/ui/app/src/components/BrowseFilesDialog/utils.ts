@@ -72,6 +72,7 @@ export interface BrowseFilesDialogUIProps {
 	disableSubmission?: boolean;
 	allSelected: boolean;
 	someSelected: boolean;
+	isCurrentPathLeaf: boolean;
 	onCardSelected(item: MediaItem): void;
 	onPreviewImage?(item: MediaItem): void;
 	onCheckboxChecked(path: string, selected: boolean): void;

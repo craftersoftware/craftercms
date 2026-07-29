@@ -94,6 +94,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	const disableSubmission = fetchingPreselectedItems || (!selectedArray.length && !selectedCard);
 	const preselectedLookup = createPresenceTable(preselectedPaths);
 	const itemsByPath = useItemsByPath();
+	const isCurrentPathLeaf = Boolean(treeSelectedPath); // treeSelectedPath is set when a leaf page is selected in the tree view
 
 	const fetchItems = useCallback(() => {
 		// Since lookahead regex is not supported by opensearch, we are excluding the current path from the search using a
@@ -303,6 +304,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 			onSelectAll={onSelectAll}
 			allSelected={allSelectedInCurrentPage}
 			someSelected={someSelectedInCurrentPage}
+			isCurrentPathLeaf={isCurrentPathLeaf}
 		/>
 	) : (
 		<EmptyState

@@ -95,7 +95,8 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		disableSubmission,
 		allSelected,
 		someSelected,
-		onSelectAll
+		onSelectAll,
+		isCurrentPathLeaf
 	} = props;
 	// endregion
 	const { formatMessage } = useIntl();
@@ -432,12 +433,19 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									})
 								: new Array(numOfLoaderItems).fill(null).map((x, i) => <MediaSkeletonCard key={i} />)}
 						</Box>
-						{items && items.length === 0 && (
-							<EmptyState
-								sxs={{ root: { flexGrow: 1 } }}
-								title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
-							/>
-						)}
+						{items &&
+							items.length === 0 &&
+							(isCurrentPathLeaf ? (
+								<EmptyState
+									sxs={{ root: { flexGrow: 1 } }}
+									title={<FormattedMessage defaultMessage="This item has no children." />}
+								/>
+							) : (
+								<EmptyState
+									sxs={{ root: { flexGrow: 1 } }}
+									title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
+								/>
+							))}
 					</Box>
 				</Box>
 			</DialogBody>
