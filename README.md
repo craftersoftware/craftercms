@@ -54,11 +54,11 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 ## 2.1 Commands
 
 * `download` Download dependencies
-* `selfUpdate` Update this repository (`git pull` of the current branch)
+* `selfUpdate` Update the parent project (`craftercms`)
 * `clean` Clean modules
 * `build` Build modules
 * `deploy` Deploy modules
-* `upgrade` Upgrade (same as `selfUpdate`, `clean`, `build`, `deploy`)
+* `upgrade` Upgrade modules (same as `selfUpdate`, `clean`, `build`, `deploy`)
 * `start` Start CrafterCMS
 * `stop` Stop CrafterCMS
 * `status` Report status on running environments if any
