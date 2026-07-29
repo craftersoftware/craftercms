@@ -31,8 +31,7 @@ import EmptyState from '../EmptyState';
 import BrowseFilesDialogContainerSkeleton from './BrowseFilesDialogContainerSkeleton';
 import { getStoredBrowseDialogViewMode, setStoredBrowseDialogViewMode } from '../../utils/state';
 import useActiveUser from '../../hooks/useActiveUser';
-import { withIndex, withoutIndex, isPagePath } from '../../utils/path';
-import { ContentItem } from '../../models/Item';
+import { withIndex, withoutIndex } from '../../utils/path';
 import { MediaCardViewModes } from '../MediaCard';
 import { createPresenceTable } from '../../utils/array';
 import { createLookupTable } from '../../utils/object';
@@ -42,6 +41,7 @@ import { nanoid } from 'nanoid';
 
 import { createComponentId } from '../../utils/system';
 import { useItemsByPath } from '../../hooks/useItemsByPath';
+import { lookupItemByPath } from '../../utils/content';
 
 const defaultPreselectedPaths = [];
 
@@ -200,7 +200,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	};
 
 	const onPathSelected = (path: string) => {
-		const item = itemsByPath[path];
+		const item = lookupItemByPath(path, itemsByPath);
 		const nextPath = withoutIndex(path);
 		setCurrentPath(nextPath);
 
