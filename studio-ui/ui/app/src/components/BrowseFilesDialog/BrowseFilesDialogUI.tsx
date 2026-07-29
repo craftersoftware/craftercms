@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -105,6 +105,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);
 	const [treePanelResizeActive, setTreePanelResizeActive] = useState(false);
 	const treePanelRef = useRef<HTMLDivElement>(null);
+	const treePanelResizeListenersRef = useRef<{ mouseUp: () => void; blur: () => void } | null>(null);
 
 	const handleTreePanelMouseMove = useCallback((e: MouseEvent) => {
 		e.preventDefault();
@@ -117,16 +118,40 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		setTreePanelWidth(newWidth);
 	}, []);
 
+	const cleanupTreePanelResize = useCallback(() => {
+		const listeners = treePanelResizeListenersRef.current;
+		if (!listeners) {
+			return;
+		}
+		treePanelResizeListenersRef.current = null;
+		setTreePanelResizeActive(false);
+		document.removeEventListener('mouseup', listeners.mouseUp, true);
+		document.removeEventListener('mousemove', handleTreePanelMouseMove, true);
+		window.removeEventListener('blur', listeners.blur);
+	}, [handleTreePanelMouseMove]);
+
+	useEffect(() => {
+		return () => {
+			cleanupTreePanelResize();
+		};
+	}, [cleanupTreePanelResize]);
+
 	const handleTreePanelResizeMouseDown = useCallback(() => {
+		if (treePanelResizeListenersRef.current) {
+			return;
+		}
 		setTreePanelResizeActive(true);
 		const handleMouseUp = () => {
-			setTreePanelResizeActive(false);
-			document.removeEventListener('mouseup', handleMouseUp, true);
-			document.removeEventListener('mousemove', handleTreePanelMouseMove, true);
+			cleanupTreePanelResize();
 		};
+		const handleBlur = () => {
+			cleanupTreePanelResize();
+		};
+		treePanelResizeListenersRef.current = { mouseUp: handleMouseUp, blur: handleBlur };
 		document.addEventListener('mouseup', handleMouseUp, true);
 		document.addEventListener('mousemove', handleTreePanelMouseMove, true);
-	}, [handleTreePanelMouseMove]);
+		window.addEventListener('blur', handleBlur);
+	}, [cleanupTreePanelResize, handleTreePanelMouseMove]);
 
 	return (
 		<>
