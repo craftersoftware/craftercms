@@ -60,7 +60,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.test.sourceEncoding>UTF-8</project.test.sourceEncoding>
-		<tomcat.version>11.0.23</tomcat.version>
+		<tomcat.version>11.0.24</tomcat.version>
 		<java.version>21</java.version>
 		<groovy.version>4.0.31</groovy.version>
 		<jakarta.servlet-api.version>6.1.0</jakarta.servlet-api.version>
@@ -92,7 +92,7 @@
 		<httpmime.version>4.5.14</httpmime.version>
 		<httpclient5.version>5.6.2</httpclient5.version>
 
-		<mongo.version>5.8.0</mongo.version>
+		<mongo.version>5.9.1</mongo.version>
 		<jongo.version>1.5.2</jongo.version>
 		<xstream.version>1.4.21</xstream.version>
 		<slf4j.version>2.0.18</slf4j.version>
@@ -121,10 +121,10 @@
 		<mariadb4j.version>3.3.0.3</mariadb4j.version>
 		<Saxon-HE.version>13.0</Saxon-HE.version>
 		<ibatis-sqlmap.version>2.3.4.726</ibatis-sqlmap.version>
-		<mybatis-spring.version>3.0.5</mybatis-spring.version>
+		<mybatis-spring.version>3.0.6</mybatis-spring.version>
 		<mybatis.version>3.5.19</mybatis.version>
 		<mariadb-java-client.version>3.5.9</mariadb-java-client.version>
-		<greenmail.version>2.1.9</greenmail.version>
+		<greenmail.version>2.1.11</greenmail.version>
 		<stax2-api.version>4.3.0</stax2-api.version>
 		<joda-time.version>2.14.2</joda-time.version>
 		<hibernate-validator.version>9.1.2.Final</hibernate-validator.version>
@@ -132,9 +132,9 @@
 		<opensearch-rest-high-level-client.version>3.6.0</opensearch-rest-high-level-client.version>
 		<opensearch-java.version>3.6.0</opensearch-java.version>
 		<opensearch-runner.version>3.6.0.0</opensearch-runner.version>
-		<tika.version>3.3.1</tika.version>
+		<tika.version>3.3.2</tika.version>
 		<poi-scratchpad.version>5.5.1</poi-scratchpad.version>
-		<metadata-extractor.version>2.20.0</metadata-extractor.version>
+		<metadata-extractor.version>2.21.0</metadata-extractor.version>
 		<jsoup.version>1.22.2</jsoup.version>
 		<protobuf-java.version>4.35.1</protobuf-java.version>
 		<unit-api.version>2.2</unit-api.version>
@@ -169,7 +169,7 @@
 		<maven-war-plugin.version>3.5.1</maven-war-plugin.version>
 		<maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
 		<maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-		<maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+		<maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
 		<maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
 		<maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
 		<buildnumber-maven-plugin.version>3.3.0</buildnumber-maven-plugin.version>
