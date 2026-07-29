@@ -80,6 +80,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		onCheckboxChecked,
 		handleSearchKeyword,
 		onPathSelected,
+		treeSelectedPath,
 		onSelectButtonClick,
 		onChangePage,
 		onChangeRowsPerPage,
@@ -152,7 +153,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								rowGap: '20px'
 							}}
 						>
-							<FolderBrowserTreeView rootPath={path} onPathSelected={onPathSelected} selectedPath={currentPath} />
+							<FolderBrowserTreeView
+								rootPath={path}
+								onPathSelected={onPathSelected}
+								selectedPath={treeSelectedPath}
+							/>
 						</Box>
 						<Box
 							onMouseDown={handleTreePanelResizeMouseDown}

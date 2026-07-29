@@ -24,14 +24,15 @@ import { useSpreadState } from '../../hooks/useSpreadState';
 import { useDispatch } from 'react-redux';
 import LookupTable from '../../models/LookupTable';
 import { BrowseFilesDialogUI, viewModes } from '.';
-import { BrowseFilesDialogContainerProps, initialParameters } from './utils';
+import { BrowseFilesDialogContainerProps, contentItemToMediaItem, initialParameters } from './utils';
 import { checkPathExistence } from '../../services/content';
 import { FormattedMessage } from 'react-intl';
 import EmptyState from '../EmptyState';
 import BrowseFilesDialogContainerSkeleton from './BrowseFilesDialogContainerSkeleton';
 import { getStoredBrowseDialogViewMode, setStoredBrowseDialogViewMode } from '../../utils/state';
 import useActiveUser from '../../hooks/useActiveUser';
-import { withIndex, withoutIndex } from '../../utils/path';
+import { withIndex, withoutIndex, isPagePath } from '../../utils/path';
+import { ContentItem } from '../../models/Item';
 import { MediaCardViewModes } from '../MediaCard';
 import { createPresenceTable } from '../../utils/array';
 import { createLookupTable } from '../../utils/object';
@@ -194,9 +195,20 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		setSelectedLookup({ [path]: selected ? items.find((item) => item.path === path) : null });
 	};
 
-	const onPathSelected = (path: string) => {
-		setCurrentPath(withoutIndex(path));
+	const onPathSelected = (path: string, item?: ContentItem) => {
+		const nextPath = withoutIndex(path);
+		setCurrentPath(nextPath);
+
+		if (!multiSelect && item?.systemType === 'page' && item.childrenCount === 0) {
+			const mediaItem = items?.find((searchItem) => searchItem.path === item.path) ?? contentItemToMediaItem(item);
+			setSelectedCard(mediaItem);
+		} else if (!multiSelect) {
+			setSelectedCard(null);
+		}
 	};
+
+	const treeSelectedPath =
+		!multiSelect && selectedCard?.path && isPagePath(selectedCard.path) ? selectedCard.path : currentPath;
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 
@@ -266,6 +278,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 			handleSearchKeyword={handleSearchKeyword}
 			onCloseButtonClick={onCloseButtonClick}
 			onPathSelected={onPathSelected}
+			treeSelectedPath={treeSelectedPath}
 			onSelectButtonClick={onSelectButtonClick}
 			numOfLoaderItems={numOfLoaderItems}
 			onRefresh={onRefresh}
