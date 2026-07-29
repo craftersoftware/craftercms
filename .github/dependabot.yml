@@ -12,20 +12,14 @@ updates:
             all-gradle-deps:
                 patterns:
                     - "*"
-        ignore:
-            -   dependency-name: "org.opensearch.client:opensearch-rest-high-level-client"
-                versions: [ ">=3.0.0" ]
-            -   dependency-name: "org.opensearch.client:opensearch-java"
-                versions: [ ">=3.0.0" ]
-            -   dependency-name: "org.codelibs.opensearch:opensearch-runner"
-                versions: [ ">=3.0.0" ]
 
     -   package-ecosystem: "gradle"
         directories:
             - "/"
         schedule:
-            interval: "daily"
-            time: "09:00"
+            interval: "weekly"
+            day: "tuesday"
+            time: "09:15"
         target-branch: "support/4.x"
         groups:
             all-gradle-deps:
@@ -60,3 +54,26 @@ updates:
                 versions: [ ">=4.0.0" ]
             -   dependency-name: "org.junit.jupiter:junit-jupiter-engine"
                 versions: [ ">=6.0.0" ]
+
+    - package-ecosystem: "npm" # See documentation for possible values
+        directory: "/" # Location of package manifests
+        schedule:
+            interval: "weekly"
+            day: "wednesday"
+            time: "09:00"
+        target-branch: "develop"
+        groups:
+            all-ui-deps:
+                patterns:
+                    - "*"
+    - package-ecosystem: "npm" # See documentation for possible values
+        directory: "/" # Location of package manifests
+        schedule:
+            interval: "weekly"
+            day: "wednesday"
+            time: "09:15"
+        target-branch: "support/4.x"
+        groups:
+            all-ui-deps:
+                patterns:
+                - "*"
