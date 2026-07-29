@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -51,6 +51,11 @@ import GridViewIcon from '@mui/icons-material/GridOnRounded';
 import ReorderRoundedIcon from '@mui/icons-material/ReorderRounded';
 import { SORT_AUTO } from '../Search/utils';
 import Checkbox from '@mui/material/Checkbox';
+import palette from '../../styles/palette';
+
+const TREE_PANEL_DEFAULT_WIDTH = 270;
+const TREE_PANEL_MIN_WIDTH = 240;
+const TREE_PANEL_MAX_WIDTH = 480;
 
 export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	// region const { ... } = props;
@@ -95,26 +100,92 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	const { formatMessage } = useIntl();
 	const [sortMenuOpen, setSortMenuOpen] = useState(false);
 	const buttonRef = useRef(undefined);
+	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);
+	const [treePanelResizeActive, setTreePanelResizeActive] = useState(false);
+	const treePanelRef = useRef<HTMLDivElement>(null);
+
+	const handleTreePanelMouseMove = useCallback((e: MouseEvent) => {
+		e.preventDefault();
+		if (!treePanelRef.current) {
+			return;
+		}
+		const left = treePanelRef.current.getBoundingClientRect().left;
+		let newWidth = e.clientX - left + 5;
+		newWidth = Math.min(TREE_PANEL_MAX_WIDTH, Math.max(TREE_PANEL_MIN_WIDTH, newWidth));
+		setTreePanelWidth(newWidth);
+	}, []);
+
+	const handleTreePanelResizeMouseDown = useCallback(() => {
+		setTreePanelResizeActive(true);
+		const handleMouseUp = () => {
+			setTreePanelResizeActive(false);
+			document.removeEventListener('mouseup', handleMouseUp, true);
+			document.removeEventListener('mousemove', handleTreePanelMouseMove, true);
+		};
+		document.addEventListener('mouseup', handleMouseUp, true);
+		document.addEventListener('mousemove', handleTreePanelMouseMove, true);
+	}, [handleTreePanelMouseMove]);
 
 	return (
 		<>
 			<DialogBody sx={{ minHeight: '60vh', padding: 0 }}>
-				<Box display="flex" sx={{ overflow: 'hidden' }}>
+				<Box display="flex" sx={{ flex: 1, minHeight: '60vh', overflow: 'hidden' }}>
 					<Box
+						ref={treePanelRef}
 						sx={{
-							width: '270px',
-							minWidth: '270px',
-							padding: '16px',
-							overflow: 'auto',
-							rowGap: (theme) => theme.spacing(1)
+							width: treePanelWidth,
+							minWidth: treePanelWidth,
+							flexShrink: 0,
+							position: 'relative',
+							display: 'flex',
+							flexDirection: 'column'
 						}}
-						display="flex"
-						flexDirection="column"
-						rowGap="20px"
 					>
-						<FolderBrowserTreeView rootPath={path} onPathSelected={onPathSelected} selectedPath={currentPath} />
+						<Box
+							display="flex"
+							flexDirection="column"
+							sx={{
+								flex: 1,
+								minHeight: 0,
+								padding: '16px',
+								overflow: 'auto',
+								rowGap: '20px'
+							}}
+						>
+							<FolderBrowserTreeView rootPath={path} onPathSelected={onPathSelected} selectedPath={currentPath} />
+						</Box>
+						<Box
+							onMouseDown={handleTreePanelResizeMouseDown}
+							role="separator"
+							aria-orientation="vertical"
+							aria-label={formatMessage({ defaultMessage: 'Resize folder panel' })}
+							sx={{
+								position: 'absolute',
+								top: 0,
+								bottom: 0,
+								right: 0,
+								width: '10px',
+								marginRight: '-5px',
+								cursor: 'ew-resize',
+								zIndex: 2,
+								display: 'flex',
+								justifyContent: 'center',
+								alignItems: 'stretch',
+								'&::before': {
+									content: '""',
+									display: 'block',
+									width: treePanelResizeActive ? '4px' : '2px',
+									backgroundColor: (theme) => (treePanelResizeActive ? palette.blue.tint : theme.palette.divider),
+									transition: 'width 200ms, background-color 200ms'
+								},
+								'&:hover::before': {
+									width: '4px',
+									backgroundColor: palette.blue.tint
+								}
+							}}
+						/>
 					</Box>
-					<Box component="section" sx={{ flexGrow: 1, padding: '16px', overflow: 'auto' }}>
+					<Box component="section" sx={{ flexGrow: 1, minWidth: 0, padding: '16px', overflow: 'auto' }}>
 						<Paper
 							sx={{
 								paddingLeft: (theme) => theme.spacing(1),
