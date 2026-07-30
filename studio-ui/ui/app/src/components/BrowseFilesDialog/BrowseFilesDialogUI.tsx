@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -51,7 +51,7 @@ import GridViewIcon from '@mui/icons-material/GridOnRounded';
 import ReorderRoundedIcon from '@mui/icons-material/ReorderRounded';
 import { SORT_AUTO } from '../Search/utils';
 import Checkbox from '@mui/material/Checkbox';
-import palette from '../../styles/palette';
+import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 
 const TREE_PANEL_DEFAULT_WIDTH = 270;
 const TREE_PANEL_MIN_WIDTH = 240;
@@ -103,135 +103,48 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	const [sortMenuOpen, setSortMenuOpen] = useState(false);
 	const buttonRef = useRef(undefined);
 	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);
-	const [treePanelResizeActive, setTreePanelResizeActive] = useState(false);
-	const treePanelRef = useRef<HTMLDivElement>(null);
-	const treePanelResizeListenersRef = useRef<{ mouseUp: () => void; blur: () => void } | null>(null);
-
-	const handleTreePanelMouseMove = useCallback((e: MouseEvent) => {
-		e.preventDefault();
-		if (!treePanelRef.current) {
-			return;
-		}
-		const left = treePanelRef.current.getBoundingClientRect().left;
-		let newWidth = e.clientX - left + 5;
-		newWidth = Math.min(TREE_PANEL_MAX_WIDTH, Math.max(TREE_PANEL_MIN_WIDTH, newWidth));
-		setTreePanelWidth(newWidth);
-	}, []);
-
-	const cleanupTreePanelResize = useCallback(() => {
-		const listeners = treePanelResizeListenersRef.current;
-		if (!listeners) {
-			return;
-		}
-		treePanelResizeListenersRef.current = null;
-		setTreePanelResizeActive(false);
-		document.removeEventListener('mouseup', listeners.mouseUp, true);
-		document.removeEventListener('mousemove', handleTreePanelMouseMove, true);
-		window.removeEventListener('blur', listeners.blur);
-	}, [handleTreePanelMouseMove]);
-
-	useEffect(() => {
-		return () => {
-			cleanupTreePanelResize();
-		};
-	}, [cleanupTreePanelResize]);
-
-	const handleTreePanelResizeMouseDown = useCallback(() => {
-		if (treePanelResizeListenersRef.current) {
-			return;
-		}
-		setTreePanelResizeActive(true);
-		const handleMouseUp = () => {
-			cleanupTreePanelResize();
-		};
-		const handleBlur = () => {
-			cleanupTreePanelResize();
-		};
-		treePanelResizeListenersRef.current = { mouseUp: handleMouseUp, blur: handleBlur };
-		document.addEventListener('mouseup', handleMouseUp, true);
-		document.addEventListener('mousemove', handleTreePanelMouseMove, true);
-		window.addEventListener('blur', handleBlur);
-	}, [cleanupTreePanelResize, handleTreePanelMouseMove]);
-
-	const handleTreePanelResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
-		if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
-			return;
-		}
-		e.preventDefault();
-		const delta = e.key === 'ArrowRight' ? 10 : -10;
-		setTreePanelWidth((prev) => Math.min(TREE_PANEL_MAX_WIDTH, Math.max(TREE_PANEL_MIN_WIDTH, prev + delta)));
-	}, []);
 
 	return (
 		<>
-			<DialogBody sx={{ minHeight: '60vh', padding: 0 }}>
-				<Box display="flex" sx={{ flex: 1, minHeight: '60vh', overflow: 'hidden' }}>
-					<Box
-						ref={treePanelRef}
-						sx={{
-							width: treePanelWidth,
-							minWidth: treePanelWidth,
-							flexShrink: 0,
-							position: 'relative',
-							display: 'flex',
-							flexDirection: 'column'
-						}}
-					>
-						<Box
-							display="flex"
-							flexDirection="column"
-							sx={{
-								flex: 1,
-								minHeight: 0,
-								padding: '16px',
-								overflow: 'auto',
-								rowGap: '20px'
-							}}
-						>
-							<FolderBrowserTreeView
-								rootPath={path}
-								onPathSelected={onPathSelected}
-								selectedPath={currentPath}
-								highlightedPath={treeSelectedPath}
-							/>
-						</Box>
-						<Box
-							onMouseDown={handleTreePanelResizeMouseDown}
-							onKeyDown={handleTreePanelResizeKeyDown}
-							role="separator"
-							tabIndex={0}
-							aria-orientation="vertical"
-							aria-label={formatMessage({ defaultMessage: 'Resize folder panel' })}
-							aria-valuemin={TREE_PANEL_MIN_WIDTH}
-							aria-valuemax={TREE_PANEL_MAX_WIDTH}
-							aria-valuenow={Math.round(treePanelWidth)}
-							sx={{
-								position: 'absolute',
-								top: 0,
-								bottom: 0,
-								right: 0,
-								width: '10px',
-								marginRight: '-5px',
-								cursor: 'ew-resize',
-								zIndex: 2,
-								display: 'flex',
-								justifyContent: 'center',
-								alignItems: 'stretch',
-								'&::before': {
-									content: '""',
-									display: 'block',
-									width: treePanelResizeActive ? '4px' : '2px',
-									backgroundColor: (theme) => (treePanelResizeActive ? palette.blue.tint : theme.palette.divider),
-									transition: 'width 200ms, background-color 200ms'
-								},
-								'&:hover::before': {
-									width: '4px',
-									backgroundColor: palette.blue.tint
-								}
-							}}
-						/>
-					</Box>
-					<Box component="section" sx={{ flexGrow: 1, minWidth: 0, padding: '16px', overflow: 'auto' }}>
+			<DialogBody sx={{ minHeight: '60vh', padding: 0, position: 'relative' }}>
+				<ResizeableDrawer
+					open
+					width={treePanelWidth}
+					minWidth={TREE_PANEL_MIN_WIDTH}
+					maxWidth={TREE_PANEL_MAX_WIDTH}
+					onWidthChange={setTreePanelWidth}
+					sxs={{
+						drawerPaper: {
+							position: 'absolute',
+							top: 0,
+							bottom: 0,
+							height: 'auto'
+						},
+						resizeHandle: { backgroundColor: 'transparent' },
+						drawerBody: {
+							padding: '16px',
+							overflowY: 'auto',
+							overflowX: 'hidden'
+						}
+					}}
+				>
+					<FolderBrowserTreeView
+						rootPath={path}
+						onPathSelected={onPathSelected}
+						selectedPath={currentPath}
+						highlightedPath={treeSelectedPath}
+					/>
+				</ResizeableDrawer>
+				<Box
+					component="section"
+					sx={{
+						marginLeft: `${treePanelWidth}px`,
+						minHeight: '60vh',
+						minWidth: 0,
+						padding: '16px',
+						overflow: 'auto'
+					}}
+				>
 						<Paper
 							sx={{
 								paddingLeft: (theme) => theme.spacing(1),
@@ -486,7 +399,6 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								/>
 							))}
 					</Box>
-				</Box>
 			</DialogBody>
 			<DialogFooter>
 				<SecondaryButton onClick={onCloseButtonClick}>
