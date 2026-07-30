@@ -102,10 +102,11 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 				}
 				return;
 			}
-			if (tree.errorByPath[path]) {
+			const fetchError = tree.errorByPath[path];
+			if (fetchError) {
 				pendingChildFetchPathsRef.current.delete(path);
 			}
-			if (isExpanded || pendingChildFetchPathsRef.current.has(path)) {
+			if ((!fetchError && isExpanded) || pendingChildFetchPathsRef.current.has(path)) {
 				return;
 			}
 			pendingChildFetchPathsRef.current.add(path);
