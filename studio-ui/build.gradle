@@ -25,7 +25,7 @@ group = 'org.craftercms'
 version = craftercmsVersion
 
 node {
-	version = '21.7.3'
+	version = '22.18.0'
 	yarnVersion = '1.22.22'
 	download = true
 	distBaseUrl = null
