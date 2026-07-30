@@ -65,7 +65,7 @@
 	"packageManager": "yarn@4.2.2",
 	"scripts": {
 		"build:all": "yarn workspace @craftercms/uppy build-if-changed && yarn workspaces foreach --include './ui/{npm-content,legacy,app}' -Ap run build-if-changed && yarn workspaces foreach --include './ui/{scss,guest}' -Ap run build-if-changed",
-		"build:all:ci": "yarn workspaces foreach --include './ui/{uppy,npm-content,legacy,app,scss,guest}' -At run build",
+		"build:all:ci": "NODE_OPTIONS=--max-old-space-size=3072 yarn workspaces foreach --include './ui/{uppy,npm-content,legacy,app,scss,guest}' -At run build",
 		"format:all": "prettier '{scripts,static-assets,ui}/**/*.{tsx,ts,scss,css,json,js,html}' --write",
 		"format:xml": "prettier 'site/**/*.xml' --config prettier.config.js --xml-whitespace-sensitivity 'preserve' --write --plugin=@prettier/plugin-xml",
 		"format:next": "prettier 'ui/app/**/*.{tsx,ts,scss,css,json,js,html}' --write",
