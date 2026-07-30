@@ -127,7 +127,7 @@ okhttp = "5.4.0"
 handlebars = "4.6.0"
 jakarta-json = "2.0.1"
 aws-sdk-elastictranscoder = "2.40.14"
-node = "21.7.3"
+node = "22.18.0"
 yarn = "1.22.22"
 rome-utils = "2.1.0"
 

@@ -25,8 +25,8 @@ group = 'org.craftercms'
 version = craftercmsVersion
 
 node {
-	version = '22.18.0'
-	yarnVersion = '1.22.22'
+	version = libs.versions.node.get()
+	yarnVersion = libs.versions.yarn.get()
 	download = true
 	distBaseUrl = null
 	workDir = file("${layout.buildDirectory.get()}/nodejs")
