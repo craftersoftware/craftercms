@@ -30,7 +30,7 @@
 		"start": "vite",
 		"build": "run-s compile build:worker build:vite",
 		"lint": "eslint .",
-		"build:vite": "NODE_OPTIONS=--max-old-space-size=4096 vite build",
+		"build:vite": "NODE_OPTIONS=--max-old-space-size=3072 vite build",
 		"build:worker": "rollup -c rollup.config.mjs --environment PRODUCTION",
 		"build:worker:dev": "rollup -c rollup.config.mjs --environment PRODUCTION:false",
 		"build:worker:npm": "rollup -c rollup.config.mjs --environment NPM",

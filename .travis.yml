@@ -17,4 +17,4 @@ notifications:
     slack: craftersoftware:7YiSb41ZG5rfMgiAY7Qgprc7
 install: skip
 script:
-    - ./gradlew build -x test
+    - ./gradlew build -x test -Ptravis=true

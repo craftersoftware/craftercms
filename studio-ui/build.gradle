@@ -37,7 +37,11 @@ tasks.register('yarnBuild', YarnTask) {
 	group = 'build'
 	description = 'Builds all studio UI workspaces'
 	dependsOn tasks.named('yarn')
-	args.set(['build:all'])
+	if (getPropertySafelyWithDefaults('travis', 'false').toBoolean()) {
+		args.set(['build:all:ci'])
+	} else {
+		args.set(['build:all'])
+	}
 }
 
 tasks.register('bomGenerate', YarnTask) {
