@@ -209,7 +209,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 			const mediaItem = items?.find((searchItem) => searchItem.path === item.path) ?? contentItemToMediaItem(item);
 			multiSelect ? replaceSelectedLookup({ [mediaItem.path]: mediaItem }) : setSelectedCard(mediaItem);
 			setTreeSelectedPath(withoutIndex(mediaItem.path));
-		} else {
+		} else if (treeSelectedPath) {
 			multiSelect ? replaceSelectedLookup() : setSelectedCard(null);
 			setTreeSelectedPath(null);
 		}
