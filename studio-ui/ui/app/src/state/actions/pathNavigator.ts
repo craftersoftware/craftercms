@@ -66,6 +66,7 @@ export const pathNavigatorConditionallySetPathComplete = /*#__PURE__*/ createAct
 export const pathNavigatorConditionallySetPathFailed = /*#__PURE__*/ createAction<{
 	id: string;
 	error: { status: number; message: string };
+	pathFetchRequestId?: number;
 }>('PATH_NAV_CONDITIONALLY_SET_PATH_FAILED');
 
 export const pathNavigatorRefresh = /*#__PURE__*/ createAction<{ id: string }>('PATH_NAV_REFRESH');

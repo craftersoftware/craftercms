@@ -204,8 +204,15 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			}
 		)
 		.addCase(pathNavigatorConditionallySetPathFailed, (state, { payload }) => {
-			state[payload.id].isFetching = false;
-			state[payload.id].error = payload.error;
+			const chunk = state[payload.id];
+			if (!chunk) {
+				return;
+			}
+			if (payload.pathFetchRequestId !== undefined && payload.pathFetchRequestId !== chunk.pathFetchRequestId) {
+				return;
+			}
+			chunk.isFetching = false;
+			chunk.error = payload.error;
 		})
 		.addCase(pathNavigatorFetchPath, (state, { payload }) => {
 			const chunk = state[payload.id];

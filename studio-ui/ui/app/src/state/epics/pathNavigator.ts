@@ -272,7 +272,7 @@ export default [
 							})
 						),
 						catchAjaxError(
-							(error) => pathNavigatorConditionallySetPathFailed({ id, error }),
+							(error) => pathNavigatorConditionallySetPathFailed({ id, error, pathFetchRequestId }),
 							(error) => pushErrorDialog({ props: { error: error.response ?? error } })
 						)
 					);
