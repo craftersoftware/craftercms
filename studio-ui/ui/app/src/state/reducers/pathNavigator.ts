@@ -165,6 +165,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			const chunk = state[id];
 			chunk.keyword = '';
 			chunk.error = null;
+			chunk.isFetching = true;
 			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
 			recordRevertPathForRequest(chunk, pathFetchRequestId);
 			chunk.currentPath = path;
