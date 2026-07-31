@@ -20,6 +20,7 @@ import React, {
 	ReactNode,
 	type RefCallback,
 	RefObject,
+	useCallback,
 	useContext,
 	useImperativeHandle,
 	useLayoutEffect
@@ -35,7 +36,7 @@ import { useAtomValue, useStore as useJotaiStore } from 'jotai/index';
 import { UIBlocker } from '../../UIBlocker';
 import { getScrollContainer } from '../lib/formUtils';
 import { stackFormCountAtom } from '../lib/formConsts';
-import { createStore, useAtom } from 'jotai';
+import { createStore } from 'jotai';
 import { getMarginSxProps } from '../../../utils/ui';
 import { useResizeObserver } from '../../../hooks/useResizeObserver';
 
@@ -79,7 +80,8 @@ export const FormLayout = forwardRef<HTMLDivElement, FormLayoutProps>(function (
 	const { api: contextApi } = useContext(StableGlobalContext);
 	const { state: stateCache, atoms } = useContext(StableFormContext);
 	const { id } = useContext(ItemMetaContext);
-	const [isLargeContainer, setIsLargeContainer] = useAtom(atoms.isLargeContainer);
+	const isLargeContainerAtom = atoms.isLargeContainer;
+	const isLargeContainer = useAtomValue(isLargeContainerAtom);
 
 	useImperativeHandle(ref, () => containerRef.current);
 
@@ -137,15 +139,25 @@ export const FormLayout = forwardRef<HTMLDivElement, FormLayoutProps>(function (
 		}
 	}, [containerRef, hasStackedForms]);
 
-	// Resize observer attached to the [scroll] container
-	useResizeObserver(containerRef, () => {
+	const measureContainer = useCallback(() => {
 		const container = containerRef.current;
+		if (!container) return;
 		const rect: DOMRect = container.getBoundingClientRect();
 		const width = rect.width;
 		container.style.setProperty('--container-width', `${width}px`);
 		container.style.setProperty('--container-height', `${rect.height}px`);
-		setIsLargeContainer(width >= theme.breakpoints.values.lg);
-	});
+		store.set(isLargeContainerAtom, width >= theme.breakpoints.values.lg);
+	}, [containerRef, isLargeContainerAtom, store, theme.breakpoints.values.lg]);
+
+	// The form may swap in a brand new set of atoms without remounting (e.g. reloading after saving an amend, or
+	// after a rename). The resize observer won't fire for a container that hasn't changed size, so the new
+	// `isLargeContainer` atom would keep its default and the table of contents would render collapsed.
+	useLayoutEffect(() => {
+		measureContainer();
+	}, [measureContainer]);
+
+	// Resize observer attached to the [scroll] container
+	useResizeObserver(containerRef, measureContainer);
 
 	return (
 		<Box
