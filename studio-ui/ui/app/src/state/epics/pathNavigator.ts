@@ -122,17 +122,8 @@ export default [
 					if (!chunk) {
 						return EMPTY;
 					}
-					const {
-						pathFetchRequestId,
-						currentPath,
-						keyword,
-						limit,
-						offset,
-						excludes,
-						sortStrategy,
-						order,
-						rootPath
-					} = chunk;
+					const { pathFetchRequestId, currentPath, keyword, limit, offset, excludes, sortStrategy, order, rootPath } =
+						chunk;
 					return fetchItemWithChildrenByPath(state.sites.active, currentPath, {
 						keyword,
 						limit,
@@ -190,13 +181,15 @@ export default [
 						]).pipe(
 							map(([items, children]) =>
 								pathNavigatorBulkFetchPathComplete({
-									paths: requests.map(({ id }) => ({
-										id,
-										parent: items.find((item) =>
-											item.path.startsWith(withoutIndex(state.pathNavigator[id].currentPath))
-										),
-										children: children[state.pathNavigator[id].currentPath]
-									}))
+									paths: requests
+										.filter(({ id }) => state.pathNavigator[id])
+										.map(({ id }) => ({
+											id,
+											parent: items.find((item) =>
+												item.path.startsWith(withoutIndex(state.pathNavigator[id].currentPath))
+											),
+											children: children[state.pathNavigator[id].currentPath]
+										}))
 								})
 							),
 							catchAjaxError((error) => pathNavigatorBulkFetchPathFailed({ ids: requests.map(({ id }) => id), error }))
@@ -258,10 +251,7 @@ export default [
 					if (!chunk) {
 						return EMPTY;
 					}
-					if (
-						pathFetchRequestId !== undefined &&
-						pathFetchRequestId !== chunk.pathFetchRequestId
-					) {
+					if (pathFetchRequestId !== undefined && pathFetchRequestId !== chunk.pathFetchRequestId) {
 						return EMPTY;
 					}
 					const { excludes, limit, sortStrategy, order } = chunk;
@@ -410,8 +400,7 @@ export default [
 						return EMPTY;
 					}
 					const site = state.sites.active;
-					const { rootPath, pathFetchRequestId, sortStrategy: navigatorSortStrategy, order: navigatorOrder } =
-						chunk;
+					const { rootPath, pathFetchRequestId, sortStrategy: navigatorSortStrategy, order: navigatorOrder } = chunk;
 					const parentsPath = getIndividualPaths(path, rootPath);
 					if (parentsPath.length > 1) {
 						return forkJoin([
