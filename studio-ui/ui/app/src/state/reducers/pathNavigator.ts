@@ -262,8 +262,15 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			chunk.currentPath = path;
 			chunk.error = null;
 		})
-		.addCase(pathNavigatorFetchParentItemsComplete, (state, { payload: { id, children } }) => {
+		.addCase(pathNavigatorFetchParentItemsComplete, (state, { payload: { id, children, pathFetchRequestId } }) => {
 			const chunk = state[id];
+			if (!chunk) {
+				return;
+			}
+			if (pathFetchRequestId !== chunk.pathFetchRequestId) {
+				return;
+			}
+			clearRevertPathForRequest(chunk, pathFetchRequestId);
 			const { currentPath, rootPath } = chunk;
 			chunk.itemsInPath = children.map((item) => item.path);
 			chunk.levelDescriptor = children.levelDescriptor?.path ?? null;

@@ -109,7 +109,7 @@ export const pathNavigatorBulkFetchPathComplete = /*#__PURE__*/ createAction<{
 }>('PATH_NAV_BULK_FETCH_PATH_COMPLETE');
 
 export const pathNavigatorFetchParentItemsComplete = /*#__PURE__*/ createAction<
-	PayloadWithId<{ items: ContentItem[]; children: GetChildrenResponse }>
+	PayloadWithId<{ items: ContentItem[]; children: GetChildrenResponse; pathFetchRequestId: number }>
 >('PATH_NAV_FETCH_PARENT_ITEMS_COMPLETE');
 
 export const pathNavigatorFetchPathFailed = /*#__PURE__*/ createAction<{
