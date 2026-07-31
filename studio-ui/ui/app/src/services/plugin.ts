@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,12 +14,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { isValidElementType } from 'react-is';
 import LookupTable from '../models/LookupTable';
 import { augmentTranslations } from '../utils/i18n';
 import { components, plugins } from '../utils/constants';
 import PluginDescriptor from '../models/PluginDescriptor';
 import PluginFileBuilder from '../models/PluginFileBuilder';
 import { WidgetRecord } from '../models/WidgetRecord';
+import type PluginDescriptorWithSource from '../models/PluginDescriptorWithSource';
+import {
+	normalizeDataSourceBindings,
+	registerControlDataSourceBindings
+} from '../components/FormsEngine/dataSources/bindings';
+import { dataSourceModuleRegistry, validateDataSourceModule } from '../components/FormsEngine/dataSources/registry';
+import { registerControlContribution } from '../components/FormsEngine/controls/registry';
 
 const DEFAULT_FILE_NAME = 'index.js';
 
@@ -100,6 +108,11 @@ export function importFile(
 	return import(/* @vite-ignore */ url);
 }
 
+/**
+ * Dynamic-imports a plugin file, requires a {@link PluginDescriptor} with a string `id`, then
+ * {@link registerPlugin}. The same URL may be imported for widgets then FE; re-entry still installs
+ * new controls / data sources. Not FE-specific — shared Studio plugin loader.
+ */
 export function importPlugin(fileBuilder: PluginFileBuilder): Promise<PluginDescriptor>;
 export function importPlugin(site: string, type: string, name: string): Promise<PluginDescriptor>;
 export function importPlugin(site: string, type: string, name: string, file: string): Promise<PluginDescriptor>;
@@ -119,16 +132,16 @@ export function importPlugin(
 ): Promise<PluginDescriptor> {
 	// @ts-ignore — methods share the same signature(s)
 	const args: [string, string, string, string, string] = arguments;
+	// @ts-expect-error — methods share same signature, this is fine.
+	const url = buildFileUrl(...arguments);
 	return importFile(...args).then((module) => {
 		const plugin: PluginDescriptor = module.plugin ?? module.default;
-		if (plugin) {
-			// The file may have been previously loaded and hence the plugin registered previously.
-			// This may however cause silent skips of legitimate duplicate plugin id registrations.
-			// Perhaps we should consider keeping an internal registry of the plugin file URLs that
-			// have been loaded if this is an issue.
-			!isPluginRegistered(plugin) &&
-				registerPlugin(plugin, isPluginFileBuilder(siteOrBuilder) ? siteOrBuilder : createFileBuilder(...args));
+		if (!plugin?.id || typeof plugin.id !== 'string') {
+			throw new Error(`Plugin file at "${url}" must export a PluginDescriptor with a string id.`);
 		}
+		// Always call registerPlugin: when the id is already known (e.g. widget host loaded first),
+		// registerPlugin still installs any new FE controls/dataSources contributions.
+		registerPlugin(plugin, isPluginFileBuilder(siteOrBuilder) ? siteOrBuilder : createFileBuilder(...args));
 		return plugin;
 	});
 }
@@ -137,34 +150,123 @@ export function isPluginRegistered(plugin: PluginDescriptor): boolean {
 	return plugins.has(plugin?.id);
 }
 
-export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuilder): boolean {
-	// Skip registration if plugin with same id already exists
-	if (!plugins.has(plugin.id)) {
-		const extendedDescriptor = { ...plugin, source };
-		plugins.set(plugin.id, extendedDescriptor);
-		registerComponents(plugin.widgets);
-		augmentTranslations(plugin.locales);
-		// TODO: Allow externals?
-		if (source) {
-			plugin.stylesheets?.forEach((href) =>
-				appendStylesheet(
-					typeof href === 'string' ? (hasProtocol(href) ? href : buildFileUrl({ ...source, file: href })) : href
-				)
+/**
+ * Installs `plugin.dataSources` into the FE module registry.
+ * Map keys must equal `module.type`; conflicting implementations throw.
+ */
+function registerPluginDataSources(plugin: PluginDescriptor): void {
+	const contributions = plugin.dataSources;
+	if (!contributions) return;
+
+	const modules = Object.entries(contributions).map(([typeKey, module]) => {
+		validateDataSourceModule(module);
+		if (module.type !== typeKey) {
+			throw new TypeError(
+				`Plugin "${plugin.id}" dataSources key "${typeKey}" does not match module.type "${module.type}".`
 			);
-			plugin.scripts?.forEach((src) =>
-				appendScript(typeof src === 'string' ? (hasProtocol(src) ? src : buildFileUrl({ ...source, file: src })) : src)
-			);
-		} else {
-			console.error('Scripts & stylesheets not allowed for umd bundles');
 		}
-		return true;
-	} else {
-		console.error(`Attempt to register a duplicate plugin "${plugin.id}" skipped.`);
-		return false;
-	}
+		const existing = dataSourceModuleRegistry.get(module.type);
+		if (existing && existing !== module) {
+			throw new Error(
+				`Plugin "${plugin.id}" cannot register data-source type "${module.type}": a different module is already registered.`
+			);
+		}
+		return module;
+	});
+
+	modules.forEach((module) => {
+		if (!dataSourceModuleRegistry.has(module.type)) {
+			dataSourceModuleRegistry.register(module);
+		}
+	});
 }
 
-export function registerComponents(widgets: LookupTable<WidgetRecord>): void {
+/**
+ * Installs `plugin.controls` into the control contribution + binding registries.
+ * Map keys must equal the control type id (`field.type`).
+ */
+function registerPluginControls(plugin: PluginDescriptor): void {
+	const contributions = plugin.controls;
+	if (!contributions) return;
+
+	const entries = Object.entries(contributions).map(([typeKey, entry]) => {
+		if (!typeKey) {
+			throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
+		}
+		if (!entry || typeof entry !== 'object') {
+			throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" must be a ControlPluginContribution object.`);
+		}
+		if (!isValidElementType(entry.Component)) {
+			throw new TypeError(
+				`Plugin "${plugin.id}" control "${typeKey}" must declare a valid React Component on ControlPluginContribution.Component.`
+			);
+		}
+		const bindings = normalizeDataSourceBindings(entry.dataSourceBindings ?? []);
+		return { typeKey, Component: entry.Component, bindings };
+	});
+
+	entries.forEach(({ typeKey, Component, bindings }) => {
+		registerControlContribution(typeKey, { Component, bindings, pluginId: plugin.id });
+		registerControlDataSourceBindings(typeKey, bindings);
+	});
+}
+
+/**
+ * Registers widgets / locales and **always** installs FE `dataSources` / `controls`, even when
+ * `plugin.id` was already registered (e.g. widget host loaded first without FE contributions).
+ *
+ * Returns `false` if the id already existed; merges contributions onto the stored descriptor.
+ * Prefer this over calling FE registries directly from plugin code. DS / control registries
+ * themselves dedupe by type and throw on conflicting implementations.
+ */
+export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuilder): boolean {
+	const alreadyRegistered = plugins.has(plugin.id);
+	// Always install FE contributions, even when the plugin id was registered earlier
+	// (e.g. widget host loaded the same id without controls/dataSources). DS/control
+	// registries themselves dedupe by type and throw on conflicting implementations.
+	registerPluginDataSources(plugin);
+	registerPluginControls(plugin);
+
+	if (alreadyRegistered) {
+		const existing = plugins.get(plugin.id);
+		// Merge newly contributed FE fields onto the stored descriptor so later lookups see them.
+		plugins.set(plugin.id, {
+			...existing,
+			...plugin,
+			widgets: { ...existing?.widgets, ...plugin.widgets },
+			locales: { ...existing?.locales, ...plugin.locales },
+			utils: { ...existing?.utils, ...plugin.utils },
+			dataSources: { ...existing?.dataSources, ...plugin.dataSources },
+			controls: { ...existing?.controls, ...plugin.controls },
+			source: existing?.source ?? source
+		} as PluginDescriptorWithSource);
+		registerComponents(plugin.widgets);
+		augmentTranslations(plugin.locales);
+		return false;
+	}
+
+	const extendedDescriptor = { ...plugin, source } as PluginDescriptorWithSource;
+	plugins.set(plugin.id, extendedDescriptor);
+	registerComponents(plugin.widgets);
+	augmentTranslations(plugin.locales);
+	// TODO: Allow externals?
+	if (source) {
+		plugin.stylesheets?.forEach((href) =>
+			appendStylesheet(
+				typeof href === 'string' ? (hasProtocol(href) ? href : buildFileUrl({ ...source, file: href })) : href
+			)
+		);
+		plugin.scripts?.forEach((src) =>
+			appendScript(typeof src === 'string' ? (hasProtocol(src) ? src : buildFileUrl({ ...source, file: src })) : src)
+		);
+	} else {
+		console.error('Scripts & stylesheets not allowed for umd bundles');
+	}
+	return true;
+}
+
+export function registerComponents(widgets?: LookupTable<WidgetRecord>): void {
+	if (!widgets) return;
 	Object.entries(widgets).forEach(([id, widget]) => {
 		// Skip registration if component with same id already exists
 		if (!components.has(id)) {

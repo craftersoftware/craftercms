@@ -37,6 +37,10 @@ export const pageNavOrderDescriptor: DescriptorContentType = {
 	fields: {
 		readonly: commonFieldPropertiesDescriptors['readonly'],
 		required: commonFieldPropertiesDescriptors['required']
+	},
+	metadata: {
+		// FE1 stores nav sort order in this sibling tag; FE2 treats it as an additional field atom.
+		additionalFields: ['orderDefault_f']
 	}
 };
 

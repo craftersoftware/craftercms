@@ -21,8 +21,6 @@ import Checkbox, { CheckboxProps } from '@mui/material/Checkbox';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel, { formControlLabelClasses } from '@mui/material/FormControlLabel';
 import LookupTable from '../../../models/LookupTable';
-import { KVPLoaderItem, useKVPLoader } from '../dataSourceHooks/useKVPLoader';
-import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useTheme } from '@mui/material/styles';
 import { typographyClasses } from '@mui/material/Typography';
 import { SearchBar } from '../../SearchBar';
@@ -33,6 +31,8 @@ import { FormattedMessage } from 'react-intl';
 import { useWindowWidth } from '../../../hooks/useWindowWidth';
 import { getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
 import Skeleton from '@mui/material/Skeleton';
+import { useDataSourceListOptions } from '../dataSourceHooks/useDataSourceListOptions';
+import type { DataSourceListItem } from '../dataSources/types';
 
 export interface CheckboxGroupProps extends ControlProps {
 	value: Array<{ key: string; value_smv: string }>;
@@ -40,7 +40,7 @@ export interface CheckboxGroupProps extends ControlProps {
 
 export function CheckboxGroup(props: CheckboxGroupProps) {
 	const theme = useTheme();
-	const { contentType, field, value, setValue, autoFocus, readonly: formReadonly } = props;
+	const { field, value, setValue, autoFocus, readonly: formReadonly, dataSources } = props;
 	const [searchFieldValue, setSearchFieldValue] = useState('');
 	const [keyword, setKeyword] = useState('');
 	const windowWidth = useWindowWidth();
@@ -51,7 +51,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 	const selectAll: boolean = getPropertyValue(field.properties, 'selectAll') as boolean;
 	const listDirection: 'horizontal' | 'vertical' = useMemo(() => {
 		let listDirection: 'horizontal' | 'vertical' = 'horizontal';
-		let directionArray: Array<{ value: string; selected?: boolean }> = [];
+		let directionArray: Array<{ value: string; selected?: boolean }>;
 		try {
 			const raw = getPropertyValue(field.properties, 'listDirection') as string;
 			const parsed = raw ? JSON.parse(raw) : [];
@@ -68,12 +68,9 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 	const onKeyword$ = useDebouncedInput(() => {
 		setKeyword(searchFieldValue);
 	});
-	const options = useKVPLoader(
-		useActiveSiteId(),
-		// Checkbox Group supports only 1 datasource.
-		useMemo(() => [field.properties.datasource?.value as string], [field.properties.datasource?.value]),
-		contentType.dataSources
-	)?.[0]?.items;
+	// TB/legacy bind a single datasource (`datasource:item:singleSelection`). Use the first
+	// list group only; extra groups would only appear from hand-edited multi-id XML.
+	const options = useDataSourceListOptions(dataSources)?.[0]?.items;
 	const finalOptions = useMemo(() => {
 		if (!options) return undefined;
 		let finalOptions = [...options];
@@ -230,7 +227,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 }
 
 const buildOption = (
-	option: KVPLoaderItem['items'][0],
+	option: DataSourceListItem,
 	onChange: CheckboxProps['onChange'],
 	checkedValuesLookup: LookupTable<boolean>,
 	readonly: boolean = false
@@ -252,7 +249,7 @@ const buildOption = (
 
 const VirtualRow = (
 	props: RowComponentProps<{
-		options: KVPLoaderItem['items'];
+		options: DataSourceListItem[];
 		onChange: CheckboxProps['onChange'];
 		checkedValuesLookup: LookupTable<boolean>;
 		numColumns: number;

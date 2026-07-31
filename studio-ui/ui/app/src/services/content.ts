@@ -1456,3 +1456,29 @@ export function fetchContentByCommitId(site: string, path: string, commitId: str
 		})
 	);
 }
+
+export interface PageNavItem {
+	path: string;
+	order: number;
+	label: string;
+}
+
+export function getNavItemsOrder(siteId: string, parentPath: string): Observable<PageNavItem[]> {
+	const qs = toQueryString({ parentPath });
+	return get(`/studio/api/2/content/${siteId}/order${qs}`).pipe(map((response) => response?.response?.items));
+}
+
+export type ReorderNavItemsRequest =
+	| { type: 'addBefore'; referencePath: string }
+	| { type: 'addAfter'; referencePath: string }
+	| { type: 'insertBetween'; previousPath: string; nextPath: string };
+
+/**
+ * Calculates a new nav order value for the current page based on its neighbors.
+ * The caller must persist the returned `order` onto the page's `orderDefault_f` field.
+ */
+export function reorderNavItems(siteId: string, request: ReorderNavItemsRequest): Observable<{ order: number }> {
+	return postJSON(`/studio/api/2/content/${siteId}/order/reorder`, request).pipe(
+		map((response) => ({ order: response?.response?.order as number }))
+	);
+}

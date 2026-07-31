@@ -18,6 +18,19 @@ import { Editor } from '@tinymce/tinymce-react';
 import { ContentTypeField, GlobalState, LookupTable } from '../../../models';
 import { reversePluckProps } from '../../../utils/object';
 import { getPropertyValue, getValidationValue } from './fieldPropertyUtils';
+import type {
+	DataSourceFieldContext,
+	DataSourceSelection,
+	ResolvedDataSourceAction,
+	ResolvedDataSources
+} from '../dataSources/types';
+import { buildActionGroups, invokeActionChoice } from '../dataSources/actionAdapters';
+
+export type OpenRteDataSourcePicker = (
+	actions: readonly ResolvedDataSourceAction[],
+	context: DataSourceFieldContext,
+	onResult: (selection: DataSourceSelection | DataSourceSelection[] | null) => void
+) => void;
 
 // Maps application locales to their corresponding TinyMCE language codes.
 const tinymceLangMap = {
@@ -32,6 +45,8 @@ export function getTinyMceInitOptions(
 	rteConfig: GlobalState['preview']['richTextEditor'], // GlobalState['preview']['richTextEditor']['']['']
 	locale: string,
 	defaultOptions?: Editor['props']['init'],
+	dataSources?: ResolvedDataSources,
+	openDataSourcePicker?: OpenRteDataSourcePicker,
 	setup?: Editor['props']['init']['setup']
 ): Editor['props']['init'] {
 	const setupId: string = getPropertyValue(field.properties, 'rteConfiguration', 'generic') as string;
@@ -113,6 +128,40 @@ export function getTinyMceInitOptions(
 		// If the allowAddMedia validation is set to false, then the callback is not set, so the add media/file options won't be shown in the editor.
 		file_picker_callback: allowAddMedia
 			? function (cb, value, meta) {
+					const propertyNames =
+						meta.filetype === 'image'
+							? ['imageManager']
+							: meta.filetype === 'media'
+								? ['videoManager', 'audioManager']
+								: ['fileManager'];
+					const actions =
+						dataSources?.actions.filter((candidate) => propertyNames.includes(candidate.binding.propertyName)) ?? [];
+					const applySelection = (selection: DataSourceSelection | DataSourceSelection[] | null) => {
+						const selected = Array.isArray(selection) ? selection[0] : selection;
+						if (selected?.kind === 'asset' && typeof selected.relativeUrl === 'string') cb(selected.relativeUrl);
+						else if (selected?.kind === 'item' && typeof selected.path === 'string') cb(selected.path);
+						else if (
+							selected?.kind === 'variants' &&
+							Array.isArray(selected.items) &&
+							typeof selected.items[0]?.url === 'string'
+						) {
+							cb(selected.items[0].url);
+						}
+					};
+					if (actions.length && dataSources?.context) {
+						const grouped = buildActionGroups(actions);
+						if (
+							grouped.customActions.length === 0 &&
+							grouped.groups.length === 1 &&
+							grouped.groups[0].choices.length === 1
+						) {
+							invokeActionChoice(grouped.groups[0].choices[0], dataSources.context)
+								.then(applySelection)
+								.catch((error) => console.error('Unable to select rich-text media.', error));
+						} else {
+							openDataSourcePicker?.(actions, dataSources.context, applySelection);
+						}
+					}
 					//   // meta contains info about type (image, media, etc). Used to properly add DS to dialogs.
 					//   // meta.filetype === 'file | image | media'
 					//   const datasources = {};
@@ -169,7 +218,7 @@ export function getTinyMceInitOptions(
 			//   e.stopPropagation();
 			// });
 
-			editor.on('paste', (e) => {
+			editor.on('paste', () => {
 				// console.log('content', getContent());
 			});
 

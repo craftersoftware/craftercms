@@ -116,7 +116,8 @@ export const dateTimeDescriptor: DescriptorContentType = {
 		required: commonFieldPropertiesDescriptors['required']
 	},
 	metadata: {
-		suffixes: ['_dt']
+		suffixes: ['_dt'],
+		additionalFields: ['{id}_tz']
 	}
 };
 

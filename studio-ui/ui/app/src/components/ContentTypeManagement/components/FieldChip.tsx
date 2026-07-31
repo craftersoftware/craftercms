@@ -32,6 +32,7 @@ import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
 import { applyTranslations } from '../utils';
 import Button from '@mui/material/Button';
+import AdditionalFieldChip from './AdditionalFieldChip';
 
 function composeFieldPath(fieldPath: string, fieldId: string): string {
 	return fieldPath ? `${fieldPath}.${fieldId}` : fieldId;
@@ -77,90 +78,97 @@ export function FieldChip(props: FieldChipProps) {
 		'&:hover': { bgcolor: 'action.selected' }
 	};
 	const { formatMessage } = useIntl();
+	const descriptor = descriptors[field.type];
+	const additionalFields = descriptor?.metadata?.additionalFields;
 	return (
-		<Root
-			disabled={isSelected}
-			sx={[
-				{
-					mb: 1,
-					width: '100%',
-					alignItems: 'start',
-					flexDirection: 'column',
-					bgcolor: isDark ? 'grey.800' : 'grey.200',
-					borderRadius: 10,
-					overflow: 'hidden',
-					borderWidth: '1px',
-					borderStyle: 'solid',
-					borderColor: 'transparent'
-				},
-				isRepeat ? { borderRadius: 2 } : selectorButtonStyles,
-				isSelected && selectorButtonSelectedStyles,
-				error && { borderWidth: '1px', borderStyle: 'solid', borderColor: 'error.main' }
-			]}
-			// @ts-expect-error: Handled. Only when it is a button will it receive the onClick.
-			onClick={isRepeat ? undefined : onClick}
-		>
-			<Box
-				component={Title}
-				// @ts-expect-error: Handled. Only when it is a button will it receive the onClick.
-				onClick={isRepeat ? onClick : undefined}
+		<>
+			<Root
 				disabled={isSelected}
 				sx={[
 					{
-						px: 1.5,
-						py: 0.5,
+						mb: 1,
 						width: '100%',
-						display: 'flex',
-						flexWrap: 'wrap',
-						alignItems: 'center',
-						justifyContent: 'space-between'
+						alignItems: 'start',
+						flexDirection: 'column',
+						bgcolor: isDark ? 'grey.800' : 'grey.200',
+						borderRadius: 10,
+						overflow: 'hidden',
+						borderWidth: '1px',
+						borderStyle: 'solid',
+						borderColor: 'transparent'
 					},
-					isRepeat && selectorButtonStyles,
-					error && { color: 'error.main' }
+					isRepeat ? { borderRadius: 2 } : selectorButtonStyles,
+					isSelected && selectorButtonSelectedStyles,
+					error && { borderWidth: '1px', borderStyle: 'solid', borderColor: 'error.main' }
 				]}
+				// @ts-expect-error: Handled. Only when it is a button will it receive the onClick.
+				onClick={isRepeat ? undefined : onClick}
 			>
-				<Box display="flex" alignItems="center">
-					{(field as NewContentTypeField).NEW ? (
-						<Typography component="strong" sx={{ mr: 0.5, fontWeight: 600 }}>
-							<FormattedMessage defaultMessage={`Draft ({type})`} values={{ type: field.type }} />
-						</Typography>
-					) : (
-						<>
+				<Box
+					component={Title}
+					// @ts-expect-error: Handled. Only when it is a button will it receive the onClick.
+					onClick={isRepeat ? onClick : undefined}
+					disabled={isSelected}
+					sx={[
+						{
+							px: 1.5,
+							py: 0.5,
+							width: '100%',
+							display: 'flex',
+							flexWrap: 'wrap',
+							alignItems: 'center',
+							justifyContent: 'space-between'
+						},
+						isRepeat && selectorButtonStyles,
+						error && { color: 'error.main' }
+					]}
+				>
+					<Box display="flex" alignItems="center">
+						{(field as NewContentTypeField).NEW ? (
 							<Typography component="strong" sx={{ mr: 0.5, fontWeight: 600 }}>
-								{field.name}
+								<FormattedMessage defaultMessage={`Draft ({type})`} values={{ type: field.type }} />
 							</Typography>
-							<Typography component="span" variant="body2">
-								({field.id})
-							</Typography>
-						</>
-					)}
-					{error && <Asterisk fontSize="small" />}
+						) : (
+							<>
+								<Typography component="strong" sx={{ mr: 0.5, fontWeight: 600 }}>
+									{field.name}
+								</Typography>
+								<Typography component="span" variant="body2">
+									({field.id})
+								</Typography>
+							</>
+						)}
+						{error && <Asterisk fontSize="small" />}
+					</Box>
+					<Typography variant="body2">
+						{descriptors[field.type]
+							? applyTranslations(descriptors[field.type], formatMessage).name
+							: capitalize(field.type).replaceAll('-', ' ')}
+					</Typography>
 				</Box>
-				<Typography variant="body2">
-					{descriptors[field.type]
-						? applyTranslations(descriptors[field.type], formatMessage).name
-						: capitalize(field.type).replaceAll('-', ' ')}
-				</Typography>
-			</Box>
-			{isRepeat && (
-				<Box p={1} pt={0}>
-					{Object.entries(field.fields).map(([fieldId, subField]) => (
-						<FieldChip
-							key={fieldId}
-							field={subField}
-							fieldPathsWithErrors={fieldPathsWithErrors}
-							selectedFieldIdPath={selectedFieldIdPath}
-							fieldPath={currentFieldPath}
-							onFieldSelected={onFieldSelected}
-							onInsertField={onInsertField}
-						/>
-					))}
-					<Button onClick={() => onInsertField(currentFieldPath)}>
-						<FormattedMessage defaultMessage="Add Field" />
-					</Button>
-				</Box>
-			)}
-		</Root>
+				{isRepeat && (
+					<Box p={1} pt={0}>
+						{Object.entries(field.fields).map(([fieldId, subField]) => (
+							<FieldChip
+								key={fieldId}
+								field={subField}
+								fieldPathsWithErrors={fieldPathsWithErrors}
+								selectedFieldIdPath={selectedFieldIdPath}
+								fieldPath={currentFieldPath}
+								onFieldSelected={onFieldSelected}
+								onInsertField={onInsertField}
+							/>
+						))}
+						<Button onClick={() => onInsertField(currentFieldPath)}>
+							<FormattedMessage defaultMessage="Add Field" />
+						</Button>
+					</Box>
+				)}
+			</Root>
+			{additionalFields?.map((additionalFieldId) => (
+				<AdditionalFieldChip key={additionalFieldId} fieldId={additionalFieldId} parentFieldId={field.id} />
+			))}
+		</>
 	);
 }
 

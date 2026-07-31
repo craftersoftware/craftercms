@@ -42,7 +42,6 @@ import React, {
 	SyntheticEvent,
 	useEffect,
 	useMemo,
-	useRef,
 	useState
 } from 'react';
 import Menu from '@mui/material/Menu';
@@ -85,12 +84,8 @@ import { isTouchDevice, KeyDownEvent, sortableListKeyDownHandler } from '../lib/
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
 import { XmlKeys } from '../lib/formConsts';
-import useConsolidatedItemPickerData, {
-	ConsolidatedItemPickerData
-} from '../dataSourceHooks/useConsolidatedItemPickerData';
 import { showBrowseFilesDialog, showSearchDialog } from '../lib/controlHelpers';
 import { Dispatch as ReduxDispatch } from 'redux';
-import { useExtractDataSources } from '../dataSourceHooks/useExtractDataSources';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import type { FileUploadResult } from '../../SingleFileUpload';
 import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
@@ -110,6 +105,16 @@ import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { filterTypesByKeywordsAndObjectType } from '../../../utils/contentType';
+import {
+	buildActionGroups,
+	consolidateItemActions,
+	invokeActionChoice,
+	invokeResolvedAction,
+	type ConsolidatedItemPickerData
+} from '../dataSources/actionAdapters';
+import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAction } from '../dataSources/types';
+import Alert from '@mui/material/Alert';
+import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -143,6 +148,7 @@ export type AllowedContentTypesDataWithDestinations = AllowedContentTypesData & 
 export interface AllowedPathsData {
 	path: string;
 	title: string;
+	actionChoice?: DataSourceActionChoice;
 	allowedContentTypes?: string[];
 	options?: {
 		sortBy?: string;
@@ -156,6 +162,7 @@ interface CreateDataSourcePickerData {
 	path: string;
 	strategy: ContentCreationStrategy;
 	contentTypeId: string;
+	actionKey?: string;
 }
 
 const oppositeStrategy: Record<ContentCreationStrategy, ContentCreationStrategy> = {
@@ -163,8 +170,21 @@ const oppositeStrategy: Record<ContentCreationStrategy, ContentCreationStrategy>
 	shared: 'embedded'
 };
 
+function getInitialCreatePickerValue(
+	types: string[],
+	lookup: LookupTable<AllowedContentTypesDataWithDestinations>
+): CreateDataSourcePickerData {
+	return types.length
+		? {
+				path: lookup[types[0]].createPaths?.[0] ?? '',
+				strategy: lookup[types[0]].embedded ? 'embedded' : 'shared',
+				contentTypeId: types[0]
+			}
+		: null;
+}
+
 function NodeSelector(props: NodeSelectorProps) {
-	const { field, contentType, value, setValue, readonly: formReadonly, autoFocus } = props;
+	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -190,11 +210,20 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [pickerDialogOpen, setPickerDialogOpen] = useState(false);
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
-	const addMenuButtonRef = useRef<HTMLButtonElement>(undefined);
+	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const contentTypes = useContentTypes();
 	const siteId = useActiveSiteId();
 	const authoringBase = useSelection((state) => state.env.authoringBase);
-	const dataSourceSummary = useConsolidatedItemPickerData(useExtractDataSources(contentType, field, 'itemManager'));
+	const dataSourceSummary = useMemo(() => consolidateItemActions(dataSources?.actions ?? []), [dataSources?.actions]);
+	const customActions = useMemo(
+		() => buildActionGroups(dataSources?.actions ?? []).customActions,
+		[dataSources?.actions]
+	);
+	const createActions = useMemo(
+		() =>
+			(dataSources?.actions ?? []).filter((action) => action.kind === 'create' && !action.MenuItem && !action.Dialog),
+		[dataSources?.actions]
+	);
 	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
 		event.stopPropagation();
 		const nextValue = value.concat();
@@ -297,6 +326,49 @@ function NodeSelector(props: NodeSelectorProps) {
 			(index, edit) => handleEditItem(e, index, edit && !readonly)
 		);
 	};
+	const applyDataSourceSelection = (
+		selection: DataSourceSelection | DataSourceSelection[] | null,
+		createChoice?: CreateDataSourcePickerData
+	) => {
+		const selections = Array.isArray(selection) ? selection : selection ? [selection] : [];
+		const newItems = selections.flatMap<NodeSelectorItem>((selected) => {
+			if (selected.kind !== 'item' && selected.kind !== 'asset') return [];
+			const path =
+				selected.kind === 'asset' && typeof selected.relativeUrl === 'string'
+					? selected.relativeUrl
+					: selected.kind === 'item' && typeof selected.path === 'string'
+						? selected.path
+						: undefined;
+			const createdValues =
+				selected.kind === 'item' && selected.value && typeof selected.value === 'object'
+					? (selected.value as LookupTable<Primitive>)
+					: null;
+			const embedded = createChoice?.strategy === 'embedded';
+			const key = embedded ? (createdValues?.objectId as string) : path;
+			if (!key) return [];
+			const fallbackName = key.split('/').filter(Boolean).pop() ?? key;
+			const label =
+				(createdValues?.[XmlKeys.internalName] as string) ||
+				(selected.kind === 'item' && typeof selected.value === 'string' ? selected.value : fallbackName);
+			const fileType = getFileExtension(key);
+			return [
+				{
+					key,
+					value: label,
+					...(embedded
+						? { component: createdValues }
+						: {
+								include: key,
+								...(fileType ? getFileMetaData({ fileType, useSingleValueFilename, useMVS }) : {})
+							}),
+					disableFlattening
+				}
+			];
+		});
+		const { validItems, duplicateItems } = validateNewItems(newItems, value, allowDuplicates);
+		if (newItems.length) setValue(validItems);
+		if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
+	};
 	const executeDataSourceOption = (
 		optionType: DataSourcePickerType,
 		choice: AllowedPathsData | CreateDataSourcePickerData
@@ -305,8 +377,14 @@ function NodeSelector(props: NodeSelectorProps) {
 			processPathMacros({ path, objectId: id, fullParentPath: contextItem?.path ?? pathInSite });
 		switch (optionType) {
 			case 'browse': {
-				// Open browse dialog
 				const pickerChoice = choice as AllowedPathsData;
+				if (pickerChoice.actionChoice && dataSources?.context) {
+					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
+						.then(applyDataSourceSelection)
+						.catch(console.error);
+					break;
+				}
+				// Compatibility fallback for legacy callers that don't provide owner-bound actions.
 				showBrowseFilesDialog({
 					dispatch,
 					path: processPath(pickerChoice.path),
@@ -336,8 +414,14 @@ function NodeSelector(props: NodeSelectorProps) {
 				break;
 			}
 			case 'search': {
-				// Open search dialog
 				const pickerChoice = choice as AllowedPathsData;
+				if (pickerChoice.actionChoice && dataSources?.context) {
+					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
+						.then(applyDataSourceSelection)
+						.catch(console.error);
+					break;
+				}
+				// Compatibility fallback for legacy callers that don't provide owner-bound actions.
 				showSearchDialog({
 					dispatch,
 					path: ensureSingleSlash(`${processPath(pickerChoice.path)}/.+`),
@@ -367,6 +451,19 @@ function NodeSelector(props: NodeSelectorProps) {
 			case 'create': {
 				const pickerChoice = choice as CreateDataSourcePickerData;
 				const isEmbedded = pickerChoice.strategy === 'embedded';
+				const owner = findCreateAction(dataSources?.actions ?? [], pickerChoice);
+				if (owner && dataSources?.context) {
+					invokeResolvedAction(owner, dataSources.context, {
+						type: 'create',
+						contentTypeId: pickerChoice.contentTypeId,
+						path: pickerChoice.strategy === 'embedded' ? contextItem.path : pickerChoice.path,
+						strategy: pickerChoice.strategy
+					})
+						.then((selection) => applyDataSourceSelection(selection, pickerChoice))
+						.catch(console.error);
+					break;
+				}
+				// Compatibility fallback for legacy callers that don't provide owner-bound actions.
 				// Push to form stack a new form in create mode with the selected content type
 				api.pushForm({
 					create: {
@@ -391,6 +488,14 @@ function NodeSelector(props: NodeSelectorProps) {
 				break;
 			}
 			case 'upload': {
+				const pickerChoice = choice as AllowedPathsData;
+				if (pickerChoice.actionChoice && dataSources?.context) {
+					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
+						.then(applyDataSourceSelection)
+						.catch(console.error);
+					break;
+				}
+				// Compatibility fallback for legacy callers that don't provide owner-bound actions.
 				showUploadDialog({
 					dispatch,
 					path: processPath(choice.path),
@@ -461,7 +566,7 @@ function NodeSelector(props: NodeSelectorProps) {
 						allowedCreateTypes[contentTypeId].sharedExisting
 					].filter(Boolean).length === 1 &&
 					// When strategy is shared, only one destination path is allowed
-					(!allowedCreateTypes[contentTypeId].shared || allowedCreateTypes[contentTypeId].createPaths.length === 1)
+					(!allowedCreateTypes[contentTypeId].shared || allowedCreateTypes[contentTypeId].createPaths?.length === 1)
 				) {
 					const strategy = allowedCreateTypes[contentTypeId].embedded ? 'embedded' : 'shared';
 					// Open create dialog
@@ -512,18 +617,32 @@ function NodeSelector(props: NodeSelectorProps) {
 	);
 	const { allowedCreateTypes, allowedCreatePaths, allowedBrowsePaths, allowedSearchPaths, allowedUploadPaths } =
 		dataSourceSummary;
+	const customActionItems =
+		dataSources?.context && customActions.length ? (
+			<GroupedDataSourceActionMenuItems
+				actions={customActions}
+				context={dataSources.context}
+				disabled={readonly}
+				onResult={applyDataSourceSelection}
+				onError={console.error}
+				onMenuClose={() => setAddMenuOpen(false)}
+			/>
+		) : null;
 	const maxLimitReached = value.length >= field.validations.maxCount?.value;
-	const isAddDisabled = readonly || maxLimitReached || !menuOptions.length;
+	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
 	return (
 		<>
 			<Menu
-				anchorEl={addMenuButtonRef.current}
+				anchorEl={addMenuAnchor}
 				open={addMenuOpen}
 				onClose={() => {
 					setAddMenuOpen(false);
+					setAddMenuAnchor(null);
 				}}
-				children={menuOptions}
-			/>
+			>
+				{menuOptions}
+				{customActionItems}
+			</Menu>
 			<Dialog
 				open={pickerDialogOpen}
 				onClose={handleCloseDataSourcePickerDialog}
@@ -553,9 +672,11 @@ function NodeSelector(props: NodeSelectorProps) {
 							),
 							create: (
 								<CreateDataSourcePicker
+									key={`${createActions.map((action) => action.actionKey).join(',')}::${allowedCreatePaths.join(',')}::${Object.keys(allowedCreateTypes).join(',')}`}
 									siteId={siteId}
 									allowedCreateTypes={allowedCreateTypes}
 									allowedCreatePaths={allowedCreatePaths}
+									createActions={createActions}
 									contentTypesLookup={contentTypes}
 									onChange={handleDataSourcePickerDialogChange}
 								/>
@@ -568,7 +689,7 @@ function NodeSelector(props: NodeSelectorProps) {
 						<SecondaryButton onClick={handleCloseDataSourcePickerDialog}>
 							<FormattedMessage defaultMessage="Cancel" />
 						</SecondaryButton>
-						<PrimaryButton onClick={handleDataSourcePickerDialogAccept}>
+						<PrimaryButton onClick={handleDataSourcePickerDialogAccept} disabled={!createPickerChoice?.contentTypeId}>
 							<FormattedMessage defaultMessage="Accept" />
 						</PrimaryButton>
 					</DialogFooter>
@@ -610,12 +731,12 @@ function NodeSelector(props: NodeSelectorProps) {
 						<span>
 							<IconButton
 								autoFocus={autoFocus}
-								ref={addMenuButtonRef}
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
-								onClick={() => {
-									if (availableOptions.length === 1) {
+								onClick={(event) => {
+									setAddMenuAnchor(event.currentTarget);
+									if (availableOptions.length === 1 && customActions.length === 0) {
 										handleDataSourceOptionClick(null, availableOptions[0]);
 									} else {
 										setAddMenuOpen(true);
@@ -635,6 +756,11 @@ function NodeSelector(props: NodeSelectorProps) {
 					closeMenu();
 				}}
 			>
+				{dataSources?.errors.map((error) => (
+					<Alert key={`${error.code}-${error.dataSourceId}`} severity="error" sx={{ mb: 1 }}>
+						{error.message}
+					</Alert>
+				))}
 				<FieldBox dashed={!hasContent}>
 					{hasContent ? (
 						<List dense>
@@ -724,8 +850,11 @@ function NodeSelector(props: NodeSelectorProps) {
 					) : (
 						<Box
 							children={
-								menuOptions.length ? (
-									menuOptions
+								menuOptions.length || customActionItems ? (
+									<>
+										{menuOptions}
+										{customActionItems}
+									</>
 								) : (
 									<EmptyState
 										key="emptyState"
@@ -771,32 +900,44 @@ function CreateDataSourcePicker(props: {
 	contentTypesLookup: LookupTable<ContentType>;
 	allowedCreateTypes: LookupTable<AllowedContentTypesDataWithDestinations>;
 	allowedCreatePaths: string[];
+	createActions: readonly ResolvedDataSourceAction[];
 	onChange(e, choice: CreateDataSourcePickerData): void;
 }) {
-	const { siteId, allowedCreatePaths, contentTypesLookup, onChange } = props;
-	const [allowedTypes, setAllowedTypes] = useState<string[]>();
+	const { siteId, allowedCreatePaths, contentTypesLookup, createActions, onChange } = props;
+	const [allowedTypes, setAllowedTypes] = useState<string[] | undefined>(() =>
+		allowedCreatePaths.length ? undefined : Object.keys(props.allowedCreateTypes)
+	);
 	const [allowedCreateTypes, setAllowedCreateTypes] = useState<LookupTable<AllowedContentTypesDataWithDestinations>>(
 		props.allowedCreateTypes
 	);
-	const [value, setValue] = useState<CreateDataSourcePickerData>(() => {
-		for (const key in allowedCreateTypes) {
-			return {
-				path: allowedCreateTypes[key].createPaths?.[0] ?? '',
-				strategy: allowedCreateTypes[key].embedded ? 'embedded' : 'shared',
-				contentTypeId: key
-			};
-		}
-		return null;
-	});
+	const [value, setValue] = useState<CreateDataSourcePickerData>(() =>
+		getInitialCreatePickerValue(Object.keys(props.allowedCreateTypes), props.allowedCreateTypes)
+	);
 	const refs = useUpdateRefs({ value, onChange });
-	const [allowedStrategies, setAllowedStrategies] = useState({ embedded: false, shared: false });
+	const allowedStrategies = {
+		embedded: Boolean(value && allowedCreateTypes[value.contentTypeId]?.embedded),
+		shared: Boolean(value && allowedCreateTypes[value.contentTypeId]?.shared)
+	};
 	const handleTypeChange = (event: SyntheticEvent, contentType: ContentType) => {
-		const newValue = { ...value, contentTypeId: contentType.id };
+		const rules = allowedCreateTypes[contentType.id] ?? {};
+		const currentStrategy = value?.strategy ?? (rules.embedded ? 'embedded' : 'shared');
+		const strategy = rules[currentStrategy] ? currentStrategy : oppositeStrategy[currentStrategy];
+		const newValue = {
+			...value,
+			contentTypeId: contentType.id,
+			strategy,
+			path: rules.createPaths?.[0] ?? ''
+		};
 		setValue(newValue);
 		onChange?.(event, newValue);
 	};
 	const handleStrategyChange = (event: SyntheticEvent) => {
-		const newValue = { ...value, strategy: (event.target as HTMLInputElement).value as ContentCreationStrategy };
+		const strategy = (event.target as HTMLInputElement).value as ContentCreationStrategy;
+		const newValue = {
+			...value,
+			strategy,
+			path: strategy === 'shared' ? (allowedCreateTypes[value.contentTypeId].createPaths?.[0] ?? '') : ''
+		};
 		setValue(newValue);
 		onChange?.(event, newValue);
 	};
@@ -805,55 +946,40 @@ function CreateDataSourcePicker(props: {
 		setValue(newValue);
 		onChange?.(event, newValue);
 	};
+	const handleActionChange = (event: SyntheticEvent) => {
+		const newValue = { ...value, actionKey: (event.target as HTMLInputElement).value };
+		setValue(newValue);
+		onChange?.(event, newValue);
+	};
 	useEffect(() => {
 		const allowedCreateTypes = props.allowedCreateTypes;
 		if (allowedCreatePaths.length) {
 			// Find out all the types that can be created on the allowed creation paths (coming from shared-content DS).
 			const sub = forkJoin(allowedCreatePaths.map((path) => fetchAllowedTypes(siteId, path))).subscribe((responses) => {
-				const result = [
-					...new Set(responses.flatMap((types) => types.map((type) => type)).concat(Object.keys(allowedCreateTypes)))
-				];
-				const allowedLookup = { ...allowedCreateTypes };
-				result.forEach((contentTypeId) => {
-					allowedLookup[contentTypeId] = { ...allowedLookup[contentTypeId] };
-					allowedLookup[contentTypeId].shared = true;
+				const allowedLookup: LookupTable<AllowedContentTypesDataWithDestinations> = { ...allowedCreateTypes };
+				responses.forEach((types, index) => {
+					// The path the types were fetched from is their creation destination.
+					const path = allowedCreatePaths[index];
+					types.forEach((contentTypeId) => {
+						const entry = { ...allowedLookup[contentTypeId] };
+						const createPaths = entry.createPaths ?? [];
+						entry.shared = true;
+						entry.createPaths = createPaths.includes(path) ? createPaths : createPaths.concat(path);
+						allowedLookup[contentTypeId] = entry;
+					});
 				});
+				const result = Object.keys(allowedLookup);
 				setAllowedTypes(result);
 				setAllowedCreateTypes(allowedLookup);
-				const value: CreateDataSourcePickerData = {
-					path: allowedLookup[result[0]].createPaths?.[0] ?? '',
-					strategy: allowedLookup[result[0]].embedded ? 'embedded' : 'shared',
-					contentTypeId: result[0]
-				};
-				setValue(value);
+				setValue(getInitialCreatePickerValue(result, allowedLookup));
 			});
 			return () => sub.unsubscribe();
-		} else {
-			const result = Object.keys(allowedCreateTypes);
-			setAllowedTypes(result);
-			const value: CreateDataSourcePickerData = {
-				path: allowedCreateTypes[result[0]].createPaths?.[0] ?? '',
-				strategy: allowedCreateTypes[result[0]].embedded ? 'embedded' : 'shared',
-				contentTypeId: result[0]
-			};
-			setValue(value);
 		}
 	}, [allowedCreatePaths, props.allowedCreateTypes, refs, siteId]);
-	useEffect(() => {
-		if (value.contentTypeId) {
-			const newValue: CreateDataSourcePickerData = { ...refs.current.value };
-			const strategy = refs.current.value.strategy;
-			if (!allowedCreateTypes[value.contentTypeId][strategy]) {
-				newValue.strategy = oppositeStrategy[strategy];
-			}
-			newValue.path = allowedCreateTypes[value.contentTypeId].createPaths?.[0] ?? '';
-			setValue(newValue);
-			setAllowedStrategies({
-				shared: allowedCreateTypes[value.contentTypeId].shared,
-				embedded: allowedCreateTypes[value.contentTypeId].embedded
-			});
-		}
-	}, [allowedCreateTypes, refs, value.contentTypeId]);
+	const matchingCreateActions = useMemo(
+		() => (value ? findCreateActions(createActions, value) : []),
+		[createActions, value]
+	);
 	useEffect(() => {
 		refs.current.onChange?.(null, value);
 	}, [refs, value]);
@@ -870,18 +996,21 @@ function CreateDataSourcePicker(props: {
 		setFilteredTypes(types);
 	});
 
-	useEffect(() => {
-		if (allowedTypes?.length) {
-			setFilteredTypes((current) =>
-				current === undefined ? allowedTypes.map((typeId) => contentTypesLookup[typeId]).filter(Boolean) : current
-			);
-		}
-	}, [allowedTypes, contentTypesLookup]);
+	const visibleTypes = filteredTypes ?? allowedTypes?.map((typeId) => contentTypesLookup[typeId]).filter(Boolean);
 
 	const handleKeywordsChange = (value: string) => {
 		setKeywords(value);
 		onKeyword$.next(value);
 	};
+
+	if (!value) {
+		// Types coming from creation paths are fetched, so there's nothing to pick until they arrive.
+		return allowedTypes === undefined ? (
+			<TypeList contentTypes={[]} compact skeleton />
+		) : (
+			<EmptyState title={<FormattedMessage defaultMessage="There are no content types available for creation." />} />
+		);
+	}
 
 	return (
 		<Grid container spacing={2} display="flex" flexDirection="column">
@@ -932,6 +1061,30 @@ function CreateDataSourcePicker(props: {
 					</FormControl>
 				</Grid>
 			)}
+			{matchingCreateActions.length > 1 && (
+				<Grid sx={{ display: 'flex', flexDirection: 'column' }}>
+					<FormControl sx={{ mt: 1 }} fullWidth>
+						<FormLabel id="creationDataSourceLabel">
+							<FormattedMessage defaultMessage="Data Source" />
+						</FormLabel>
+						<RadioGroup
+							aria-labelledby="creationDataSourceLabel"
+							name="creationDataSource"
+							value={value.actionKey ?? matchingCreateActions[0]?.actionKey ?? ''}
+						>
+							{matchingCreateActions.map((action) => (
+								<FormControlLabel
+									key={action.actionKey}
+									value={action.actionKey}
+									control={<Radio />}
+									onChange={handleActionChange}
+									label={action.dataSourceTitle}
+								/>
+							))}
+						</RadioGroup>
+					</FormControl>
+				</Grid>
+			)}
 
 			<Grid width="100%">
 				<FormControl fullWidth>
@@ -955,12 +1108,12 @@ function CreateDataSourcePicker(props: {
 						}}
 					/>
 					<TypeList
-						contentTypes={filteredTypes}
+						contentTypes={visibleTypes}
 						compact={true}
 						onCardClick={handleTypeChange}
 						selectedTypeId={value.contentTypeId}
 						disableSelected={false}
-						skeleton={filteredTypes === undefined}
+						skeleton={allowedTypes === undefined}
 					/>
 				</FormControl>
 			</Grid>
@@ -999,6 +1152,32 @@ function DataSourcePicker(props: { allowedPaths: AllowedPathsData[]; onChange(e,
 	);
 }
 
+function findCreateAction(
+	actions: readonly ResolvedDataSourceAction[],
+	choice: CreateDataSourcePickerData
+): ResolvedDataSourceAction | undefined {
+	const matches = findCreateActions(actions, choice);
+	return matches.find((action) => action.actionKey === choice.actionKey) ?? matches[0];
+}
+
+function findCreateActions(
+	actions: readonly ResolvedDataSourceAction[],
+	choice: CreateDataSourcePickerData
+): ResolvedDataSourceAction[] {
+	return actions.filter((action) => {
+		if (action.kind !== 'create') return false;
+		const matchesTarget = action.meta?.createTargets?.some(
+			(target) =>
+				target.contentTypeId === choice.contentTypeId &&
+				target.strategy === choice.strategy &&
+				(choice.strategy === 'embedded' || target.path === choice.path)
+		);
+		const matchesCreatePath =
+			choice.strategy === 'shared' && action.meta?.createPaths?.some((path) => path === choice.path);
+		return matchesTarget || matchesCreatePath;
+	});
+}
+
 function createAddMenuOptions({
 	refs,
 	readonly,
@@ -1013,8 +1192,12 @@ function createAddMenuOptions({
 	menuOptions: ReactNode[];
 	availableOptions: DataSourcePickerType[];
 } {
-	const { allowedCreateTypes, allowedBrowsePaths, allowedSearchPaths, allowedUploadPaths } = itemPickerDataSourceData;
-	const createAllowed = Object.keys(allowedCreateTypes).length > 0;
+	const { allowedCreateTypes, allowedCreatePaths, allowedBrowsePaths, allowedSearchPaths, allowedUploadPaths } =
+		itemPickerDataSourceData;
+	// Data sources may enable creation without naming a content type (e.g. shared-content with no default
+	// type), in which case they only contribute the destination path and the types allowed there are
+	// resolved when the picker opens.
+	const createAllowed = Object.keys(allowedCreateTypes).length > 0 || allowedCreatePaths.length > 0;
 	const menuOptions = [];
 
 	const availableOptions: DataSourcePickerType[] = [];

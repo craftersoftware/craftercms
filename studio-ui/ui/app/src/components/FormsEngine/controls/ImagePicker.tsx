@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -26,52 +26,29 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import useEnv from '../../../hooks/useEnv';
 import { ControlProps } from '../types';
 import { FormattedMessage } from 'react-intl';
-import { useConsolidatedImagePickerData } from '../dataSourceHooks/useConsolidatedImagePickerData';
 import { menuItemClasses } from '@mui/material/MenuItem';
 import { listItemIconClasses } from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import { useImageInfo } from '../../../hooks/useImageInfo';
 import { svgIconClasses } from '@mui/material/SvgIcon';
-import Dialog from '@mui/material/Dialog';
-import { DialogHeader } from '../../DialogHeader';
-import { DialogBody } from '../../DialogBody';
-import type { AllowedPathsData } from './NodeSelector';
-import { processPathMacros } from '../../../utils/path';
-import type { MediaItem } from '../../../models';
 import { ensureSingleSlash } from '../../../utils/string';
 import { useDispatch } from 'react-redux';
-import { useItemContext, useItemMetaContext } from '../lib/formsEngineContext';
-import type { FileUploadResult } from '../../SingleFileUpload';
-import { ContentPicker } from '../components/ContentPicker';
-import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import Tooltip from '@mui/material/Tooltip';
-import { useExtractDataSources } from '../dataSourceHooks/useExtractDataSources';
-import {
-	createMediaMenuOptions,
-	downloadMedia,
-	getImageRestrictionMessages,
-	showBrowseFilesDialog,
-	showImageCropDialog,
-	showSearchDialog,
-	showSingleFileUploadDialog
-} from '../lib/controlHelpers';
+import { downloadMedia, getImageRestrictionMessages, showImageCropDialog } from '../lib/controlHelpers';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import Skeleton from '@mui/material/Skeleton';
 import { nnou, nou } from '../../../utils/object';
 import { validateImageRestrictions } from '../../../utils/content';
+import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
+import type { DataSourceSelection } from '../dataSources/types';
 
 export interface ImagePickerProps extends ControlProps {
 	value: string | null;
 }
 
-export type ImagePickerType = 'browse' | 'upload' | 'search';
-
 export function ImagePicker(props: ImagePickerProps) {
-	const { field, value: valueProp, setValue, contentType, autoFocus, readonly: formReadonly } = props;
-	const siteId = useActiveSiteId();
+	const { field, value: valueProp, setValue, autoFocus, readonly: formReadonly, dataSources } = props;
 	const { guestBase } = useEnv();
-	const contextItem = useItemContext();
-	const { id, pathInSite } = useItemMetaContext();
 
 	// region field properties/validations
 	const readonly = formReadonly || (field.properties?.readonly?.value as boolean);
@@ -91,13 +68,13 @@ export function ImagePicker(props: ImagePickerProps) {
 		value ? ensureSingleSlash(`${guestBase}${value}`) : ''
 	);
 	const hasValue = Boolean(value);
-	const dataSourceSummary = useConsolidatedImagePickerData(useExtractDataSources(contentType, field, 'imageManager'));
-	const { allowedBrowsePaths, allowedUploadPaths, allowedSearchPaths } = dataSourceSummary;
-	const addMenuButtonRef = useRef<HTMLButtonElement>(undefined);
+	const actions = dataSources?.actions ?? [];
+	const dataSourcesLoading = dataSources?.status === 'loading';
+	const dataSourcesError = dataSources?.status === 'error';
+	const actionsReady = Boolean(dataSources?.context) && actions.length > 0 && !dataSourcesLoading;
+	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
 	const dispatch = useDispatch();
-	const [openPickerDialog, setOpenPickerDialog] = useState(false);
-	const [pickerType, setPickerType] = useState<ImagePickerType | null>(null);
 
 	useEffect(() => {
 		// If there's a default value and no value has been set yet, set it as the value.
@@ -107,164 +84,40 @@ export function ImagePicker(props: ImagePickerProps) {
 	}, [defaultValue, setValue, valueProp]);
 
 	const imageRestrictionMessages = getImageRestrictionMessages(restrictions);
-	/* TODO: handleDataSourceOptionClick and executeDataSourceOption only handle hardcoded 'browse', 'upload' and 'search' options.
-	    We need to make them dynamic to support plugins. */
-	const handleDataSourceOptionClick = (option: ImagePickerType) => {
-		setAddMenuOpen(false);
-		switch (option) {
-			case 'browse': {
-				if (allowedBrowsePaths.length === 1) {
-					executeDataSourceOption('browse', allowedBrowsePaths[0]);
-				} else {
-					// Open browse picker
-					setPickerType('browse');
-					setOpenPickerDialog(true);
-				}
-				break;
-			}
-			case 'upload': {
-				if (allowedUploadPaths.length === 1) {
-					executeDataSourceOption('upload', allowedUploadPaths[0]);
-				} else {
-					// Open upload picker
-					setPickerType('upload');
-					setOpenPickerDialog(true);
-				}
-				break;
-			}
-			case 'search': {
-				if (allowedSearchPaths.length === 1) {
-					executeDataSourceOption('search', allowedSearchPaths[0]);
-				} else {
-					// Open search picker
-					setPickerType('search');
-					setOpenPickerDialog(true);
-				}
-				break;
-			}
-		}
-	};
-	const executeDataSourceOption = (optionType: ImagePickerType, choice: AllowedPathsData) => {
-		const processPath = (path: string) =>
-			processPathMacros({ path, objectId: id, fullParentPath: contextItem?.path ?? pathInSite });
-
-		switch (optionType) {
-			case 'browse': {
-				showBrowseFilesDialog({
+	const applySelection = (selection: DataSourceSelection | DataSourceSelection[] | null) => {
+		const selected = Array.isArray(selection) ? selection[0] : selection;
+		const path =
+			selected?.kind === 'asset' && typeof selected.relativeUrl === 'string'
+				? selected.relativeUrl
+				: selected?.kind === 'item' && typeof selected.path === 'string'
+					? selected.path
+					: undefined;
+		if (!path) return;
+		validateImageRestrictions(path, restrictions).then((meetsRestrictions) => {
+			if (!meetsRestrictions) {
+				showImageCropDialog({
 					dispatch,
-					path: processPath(choice.path),
-					multiSelect: false,
-					preselectedPaths: value ? [value] : [],
-					initialParameters: {
-						sortBy: choice.options?.sortBy,
-						sortOrder: choice.options?.sortOrder
-					},
-					onSuccess(imageData: MediaItem) {
-						// Check if the image meets restrictions
-						validateImageRestrictions(imageData.path, restrictions).then((meetsRestrictions) => {
-							if (!meetsRestrictions) {
-								showImageCropDialog({
-									dispatch,
-									path: imageData.path,
-									mimeType: imageData.mimeType,
-									restrictions,
-									writeContent: true,
-									onCrop: (blob: Blob, newPath: string) => {
-										setValue(newPath ?? imageData.path);
-									}
-								});
-							} else {
-								setValue(imageData.path);
-							}
-						});
-					}
+					path,
+					mimeType: selected.kind === 'asset' && typeof selected.mimeType === 'string' ? selected.mimeType : undefined,
+					restrictions,
+					writeContent: true,
+					onCrop: (_blob: Blob, newPath: string) => setValue(newPath ?? path)
 				});
-				break;
+			} else {
+				setValue(path);
 			}
-			case 'search': {
-				showSearchDialog({
-					dispatch,
-					path: ensureSingleSlash(`${processPath(choice.path)}/.+`),
-					preselectedPaths: value ? [value] : [],
-					initialParameters: {
-						sortBy: choice.options?.sortBy,
-						sortOrder: choice.options?.sortOrder
-					},
-					onAcceptSelection(images) {
-						validateImageRestrictions(images[0], restrictions).then((meetsRestrictions) => {
-							if (!meetsRestrictions) {
-								showImageCropDialog({
-									dispatch,
-									path: images[0],
-									restrictions,
-									writeContent: true,
-									onCrop: (blob: Blob, newPath: string) => {
-										setValue(newPath ?? images[0]);
-									}
-								});
-							} else {
-								setValue(images[0]);
-							}
-						});
-					}
-				});
-				break;
-			}
-			case 'upload': {
-				showSingleFileUploadDialog({
-					dispatch,
-					siteId,
-					path: processPath(choice.path),
-					fileTypes: ['image/*'],
-					onFileAdded: (file, uppy, callback) => {
-						const data = file.data;
-						const url = URL.createObjectURL(data as Blob | MediaSource);
-						validateImageRestrictions(url, restrictions).then((meetsRestrictions) => {
-							if (!meetsRestrictions) {
-								showImageCropDialog({
-									dispatch,
-									path: url,
-									mimeType: file.type,
-									restrictions,
-									onCrop: (blob: Blob) => {
-										uppy.setFileState(file.id, {
-											source: 'crop',
-											name: file.name,
-											type: blob.type,
-											data: blob
-										});
-										callback?.();
-										URL.revokeObjectURL(url);
-									}
-								});
-							} else {
-								callback?.();
-								URL.revokeObjectURL(url);
-							}
-						});
-					},
-					onUploadComplete(result: FileUploadResult) {
-						if (result.successful.length) {
-							const newValue = ensureSingleSlash(`${result.successful[0].meta.path}`);
-							setValue(newValue);
-						}
-					}
-				});
-				break;
-			}
-		}
+		});
 	};
-	const handleDataSourcePickerDialogChange = (event, choice: AllowedPathsData) => {
-		if (!pickerType) return;
-		executeDataSourceOption(pickerType, choice);
-		setOpenPickerDialog(false);
-	};
-
-	const { menuOptions, availableOptions } = createMediaMenuOptions(
-		dataSourceSummary,
-		handleDataSourceOptionClick,
-		readonly
-	);
+	const actionMenuItems = actionsReady ? (
+		<GroupedDataSourceActionMenuItems
+			actions={actions}
+			context={dataSources.context}
+			disabled={readonly}
+			onResult={applySelection}
+			onError={console.error}
+			onMenuClose={() => setAddMenuOpen(false)}
+		/>
+	) : null;
 
 	const handleRemoveImage = () => {
 		setValue(null);
@@ -273,51 +126,15 @@ export function ImagePicker(props: ImagePickerProps) {
 	return (
 		<>
 			<Menu
-				anchorEl={addMenuButtonRef.current}
+				anchorEl={anchorEl}
 				open={addMenuOpen}
 				onClose={() => setAddMenuOpen(false)}
 				sx={{
 					[`.${menuItemClasses.root}`]: { pl: 3 }
 				}}
 			>
-				{menuOptions}
+				{actionMenuItems}
 			</Menu>
-			<Dialog open={openPickerDialog} onClose={() => setOpenPickerDialog(false)} fullWidth maxWidth="sm">
-				<DialogHeader
-					title={<FormattedMessage defaultMessage="Choose how to proceed" />}
-					onCloseButtonClick={() => setOpenPickerDialog(false)}
-				/>
-				<DialogBody>
-					{(() => {
-						switch (pickerType) {
-							case 'browse':
-								return (
-									<ContentPicker
-										label={<FormattedMessage defaultMessage="Browse Settings" />}
-										allowedPaths={allowedBrowsePaths}
-										onChange={handleDataSourcePickerDialogChange}
-									/>
-								);
-							case 'upload':
-								return (
-									<ContentPicker
-										label={<FormattedMessage defaultMessage="Upload Settings" />}
-										allowedPaths={allowedUploadPaths}
-										onChange={handleDataSourcePickerDialogChange}
-									/>
-								);
-							case 'search':
-								return (
-									<ContentPicker
-										label={<FormattedMessage defaultMessage="Search Settings" />}
-										allowedPaths={allowedSearchPaths}
-										onChange={handleDataSourcePickerDialogChange}
-									/>
-								);
-						}
-					})()}
-				</DialogBody>
-			</Dialog>
 			<FormsEngineField field={field}>
 				{hasValue ? (
 					<Card sx={{ display: 'flex' }}>
@@ -378,13 +195,11 @@ export function ImagePicker(props: ImagePickerProps) {
 									<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
 										<IconButton
 											size="small"
-											ref={addMenuButtonRef}
-											disabled={readonly}
+											disabled={readonly || !actionsReady}
 											autoFocus={autoFocus}
-											onClick={() => {
-												if (availableOptions.length === 1) {
-													handleDataSourceOptionClick(availableOptions[0]);
-												} else if (availableOptions.length > 1) {
+											onClick={(event) => {
+												if (actionsReady) {
+													setAnchorEl(event.currentTarget);
 													setAddMenuOpen(true);
 												}
 											}}
@@ -411,6 +226,12 @@ export function ImagePicker(props: ImagePickerProps) {
 							</CardContent>
 						</Box>
 					</Card>
+				) : dataSourcesLoading ? (
+					<Skeleton variant="rounded" height={56} />
+				) : dataSourcesError ? (
+					<Typography color="error" variant="body2">
+						<FormattedMessage defaultMessage="Error loading image sources" />
+					</Typography>
 				) : (
 					<Box
 						sx={{
@@ -435,7 +256,7 @@ export function ImagePicker(props: ImagePickerProps) {
 							}
 						}}
 					>
-						{menuOptions}
+						{actionMenuItems}
 					</Box>
 				)}
 			</FormsEngineField>

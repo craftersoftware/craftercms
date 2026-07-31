@@ -18,6 +18,7 @@ import ContentType, {
 	ContentTypeField,
 	ContentTypeSection,
 	DataSource,
+	FormDefinitionPlugin,
 	NewContentTypeField,
 	NewDataSource,
 	PossibleContentTypeDraft
@@ -315,7 +316,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		if (!closeAndCleanup()) return;
 
 		const controlDescriptor =
-			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type].descriptor;
+			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor;
 		if (!controlDescriptor)
 			return showAlert(`No control descriptor found for field "${field.name}" of type "${field.type}"`);
 
@@ -578,24 +579,26 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const handleInsertField = (fieldType: string, position: number): void => {
 		const { sectionId, fieldPath } = insertFieldData;
 		setInsertFieldData({ sectionId: null });
-		const descriptor = controlDescriptors[fieldType] ?? config.controls?.[fieldType].descriptor;
+		const configEntry = config.controls?.[fieldType];
+		const descriptor = controlDescriptors[fieldType] ?? configEntry?.descriptor;
 		if (!descriptor) {
 			showAlert(`No control descriptor found for field type "${fieldType}"`);
 			return;
 		}
-		const newField = getNewFieldFromDescriptor(fieldType, descriptor);
+		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
 		const newFieldPath = fieldPath ? `${fieldPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
 		setType(addField(type, newField, newFieldPath, sectionId, position));
 		handleFieldSelected(newFieldPath, newField, sectionId);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
-		const descriptor = dataSourceDescriptors[dataSourceType] ?? config.dataSources?.[dataSourceType].descriptor;
+		const configEntry = config.dataSources?.[dataSourceType];
+		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
 		if (!descriptor) {
 			showAlert(`No data source descriptor found for type "${dataSourceType}"`);
 			return;
 		}
 
-		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor);
+		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
 		setOpenDataSourceInserter(false);
 		const nextDataSources = type.dataSources?.concat() ?? [];
@@ -1181,8 +1184,14 @@ function updateTypeFromDataSourceUpdate(
 	const nextDataSource = { ...selectedDataSource };
 	// When updating a new data source, we need to exclude NEW prop from the new datasource content
 	delete (nextDataSource as NewDataSource).NEW;
-	const { title, id, ...properties }: Partial<DataSource> = serializedValues;
-	updatedType.dataSources[index] = { ...nextDataSource, id, title, properties };
+	const { title, id, plugin, ...properties } = serializedValues;
+	updatedType.dataSources[index] = {
+		...nextDataSource,
+		id: id as string,
+		title: title as string,
+		properties,
+		...(plugin ? { plugin: plugin as DataSource['plugin'] } : {})
+	};
 	return updatedType;
 }
 
@@ -1268,7 +1277,11 @@ function parseConfigPlugins(
 	return createLookupTable(parsedPlugins);
 }
 
-function getNewFieldFromDescriptor(fieldType: string, descriptor: DescriptorContentType): NewContentTypeField {
+function getNewFieldFromDescriptor(
+	fieldType: string,
+	descriptor: DescriptorContentType,
+	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
+): NewContentTypeField {
 	const newField: NewContentTypeField = {
 		NEW: true,
 		id: systemFieldsIdsMap[fieldType] ?? null,
@@ -1287,11 +1300,19 @@ function getNewFieldFromDescriptor(fieldType: string, descriptor: DescriptorCont
 
 	newField.properties = properties;
 	newField.validations = validations;
+	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
+	if (plugin) {
+		Object.assign(newField.properties, { plugin });
+	}
 
 	return newField;
 }
 
-function getNewDataSourceFromDescriptor(dataSourceType: string, descriptor: DescriptorContentType): NewDataSource {
+function getNewDataSourceFromDescriptor(
+	dataSourceType: string,
+	descriptor: DescriptorContentType,
+	configEntry?: { plugin?: FormDefinitionPlugin; descriptor?: DescriptorContentType }
+): NewDataSource {
 	const newDataSource: NewDataSource = {
 		NEW: true,
 		id: '',
@@ -1309,8 +1330,37 @@ function getNewDataSourceFromDescriptor(dataSourceType: string, descriptor: Desc
 	const properties = {};
 	propertiesFieldIds.forEach((field) => (properties[field] = descriptor.fields[field]?.defaultValue));
 	newDataSource.properties = properties;
+	const plugin = extractPluginLocatorFromConfigEntry(configEntry);
+	if (plugin) {
+		newDataSource.plugin = plugin;
+	}
 
 	return newDataSource;
+}
+
+function extractPluginLocatorFromConfigEntry(
+	configEntry?: { plugin?: FormDefinitionPlugin | Record<string, unknown> } & Record<string, unknown>
+): FormDefinitionPlugin | undefined {
+	if (!configEntry?.plugin || typeof configEntry.plugin !== 'object') return undefined;
+	const raw = configEntry.plugin as Record<string, unknown>;
+	// ui.xml attribute form: <plugin id type name fileName />; form-definition uses pluginId/filename.
+	const type = raw.type;
+	const name = raw.name;
+	const filename = raw.filename ?? raw.fileName ?? raw.file;
+	const pluginId = raw.pluginId ?? raw.id;
+	if (
+		typeof type === 'string' &&
+		typeof name === 'string' &&
+		typeof filename === 'string' &&
+		typeof pluginId === 'string' &&
+		type &&
+		name &&
+		filename &&
+		pluginId
+	) {
+		return { type, name, filename, pluginId };
+	}
+	return undefined;
 }
 
 function reorderSectionFields(

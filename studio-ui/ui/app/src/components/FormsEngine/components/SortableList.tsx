@@ -46,6 +46,7 @@ export interface SortableListProps<T = unknown> {
 	items: TItem<T>[];
 	onChange(items: TItem<T>[]): void;
 	selectedItemId?: string;
+	onlySelectedSortable?: boolean;
 }
 
 const strokeSize = 2;
@@ -162,37 +163,39 @@ function DragPreview({ item }: { item: TItem }) {
 	);
 }
 
-function SortableItem({ item, selected }: { item: TItem; selected?: boolean }) {
+function SortableItem({ item, selected, sortable = true }: { item: TItem; selected?: boolean; sortable?: boolean }) {
 	const ref = useRef<HTMLDivElement | null>(null);
 	const [state, setState] = useState<ItemState>(idle);
 	useEffect(() => {
 		const element = ref.current;
 		invariant(element);
 		return combine(
-			draggable({
-				element,
-				getInitialData() {
-					return getItemData(item);
-				},
-				onGenerateDragPreview({ nativeSetDragImage }) {
-					setCustomNativeDragPreview({
-						nativeSetDragImage,
-						getOffset: pointerOutsideOfPreview({
-							x: '16px',
-							y: '8px'
-						}),
-						render({ container }) {
-							setState({ type: 'preview', container });
+			sortable
+				? draggable({
+						element,
+						getInitialData() {
+							return getItemData(item);
+						},
+						onGenerateDragPreview({ nativeSetDragImage }) {
+							setCustomNativeDragPreview({
+								nativeSetDragImage,
+								getOffset: pointerOutsideOfPreview({
+									x: '16px',
+									y: '8px'
+								}),
+								render({ container }) {
+									setState({ type: 'preview', container });
+								}
+							});
+						},
+						onDragStart() {
+							setState({ type: 'is-dragging' });
+						},
+						onDrop() {
+							setState(idle);
 						}
-					});
-				},
-				onDragStart() {
-					setState({ type: 'is-dragging' });
-				},
-				onDrop() {
-					setState(idle);
-				}
-			}),
+					})
+				: () => {},
 			dropTargetForElements({
 				element,
 				canDrop({ source }) {
@@ -238,7 +241,7 @@ function SortableItem({ item, selected }: { item: TItem; selected?: boolean }) {
 				}
 			})
 		);
-	}, [item]);
+	}, [item, sortable]);
 	return (
 		<>
 			<ListItemButton
@@ -250,9 +253,11 @@ function SortableItem({ item, selected }: { item: TItem; selected?: boolean }) {
 				]}
 				selected={selected}
 			>
-				<ListItemIcon>
-					<DragIndicator fontSize="small" />
-				</ListItemIcon>
+				{sortable && (
+					<ListItemIcon>
+						<DragIndicator fontSize="small" />
+					</ListItemIcon>
+				)}
 				<ListItemText primary={item.value} />
 				{state.type === 'is-dragging-over' && state.closestEdge ? (
 					<DropIndicator edge={state.closestEdge} gap={gapBetweenItems} />
@@ -263,7 +268,7 @@ function SortableItem({ item, selected }: { item: TItem; selected?: boolean }) {
 	);
 }
 
-export function SortableList({ items, onChange, selectedItemId }: SortableListProps) {
+export function SortableList({ items, onChange, selectedItemId, onlySelectedSortable }: SortableListProps) {
 	const onChangeRef = useUpdateRefs(onChange);
 	useEffect(() => {
 		return monitorForElements({
@@ -328,7 +333,12 @@ export function SortableList({ items, onChange, selectedItemId }: SortableListPr
 	return (
 		<List sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
 			{items.map((item) => (
-				<SortableItem key={item.key} item={item} selected={item.key === selectedItemId} />
+				<SortableItem
+					key={item.key}
+					item={item}
+					selected={item.key === selectedItemId}
+					sortable={onlySelectedSortable ? item.key === selectedItemId : true}
+				/>
 			))}
 		</List>
 	);

@@ -22,9 +22,12 @@ import type { NodeSelectorItem } from '../controls/NodeSelector';
 import { systemFieldsNotInType, XmlKeys } from './formConsts';
 import { deserialize, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
+import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { Matcher } from 'path-expression-matcher';
+import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
+import { getAdditionalFieldsIdsFromDescriptor } from './formUtils';
 
 export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
 
@@ -57,7 +60,7 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	rte: textFieldExtractor,
 	textarea: textFieldExtractor,
 	time: null,
-	'transcoded-video-picker': textFieldExtractor,
+	'transcoded-video-picker': arrayFieldExtractor,
 	uuid: uuidExtractor,
 	'video-picker': textFieldExtractor,
 	colorPicker: textOrNullExtractor,
@@ -99,12 +102,14 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
  * @param xmlDeserializedValues The raw deserialized values from the content XML
  * @param contentTypesLookup A lookup table of content types
  * @param fieldCallback A callback to run for each field
+ * @param customControls A lookup table with custom controls to extend the OOB controls descriptors
  **/
 export function createParsedValuesObject(
 	contentTypeFields: LookupTable<ContentTypeField> | ContentTypeField[],
 	xmlDeserializedValues: LookupTable<unknown>,
 	contentTypesLookup: LookupTable<ContentType>,
-	fieldCallback?: (fieldId: string, value: unknown) => void
+	fieldCallback?: (fieldId: string, value: unknown, isAdditionalField?: boolean) => void,
+	customControls?: LookupTable<DescriptorContentType>
 ): LookupTable<unknown> {
 	const values = {};
 	systemFieldsNotInType.forEach((systemFieldId) => {
@@ -113,7 +118,20 @@ export function createParsedValuesObject(
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
+	// TODO: should controlDescriptors have priority over customControls to avoid overriding OOB controls?
+	const descriptors = { ...customControls, ...controlDescriptors };
 	(Array.isArray(contentTypeFields) ? contentTypeFields : Object.values(contentTypeFields)).forEach((field) => {
+		const descriptor = descriptors[field.type];
+		const additionalFieldIds = descriptor ? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor) : [];
+
+		additionalFieldIds.forEach((additionalFieldId) => {
+			values[additionalFieldId] = createParsedValueForField(
+				xmlDeserializedValues[additionalFieldId],
+				field,
+				contentTypesLookup
+			);
+			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
+		});
 		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
 		fieldCallback?.(field.id, values[field.id]);
 	});

@@ -27,6 +27,7 @@ import { fetchSiteLocales, fetchSiteLocalesComplete, fetchSiteLocalesFailed } fr
 import { deserialize, fromString, serialize } from '../../utils/xml';
 import { applyDeserializedXMLTransforms } from '../../utils/object';
 import { getUserLocaleCode, getUserTimeZone } from '../../utils/datetime';
+import { asArray } from '../../utils/array';
 
 const initialState: GlobalState['uiConfig'] = {
 	error: null,
@@ -55,6 +56,7 @@ const initialState: GlobalState['uiConfig'] = {
 		}
 	},
 	references: null,
+	controls: {},
 	xml: null,
 	publishing: {
 		deleteCommentRequired: false,
@@ -80,6 +82,7 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 		.addCase(fetchSiteUiConfigComplete, (state, { payload }) => {
 			let config = payload.config;
 			const references = {};
+			const controls: GlobalState['uiConfig']['controls'] = {};
 			if (config) {
 				const configDOM = fromString(config);
 				const site = payload.site;
@@ -104,6 +107,32 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 
 				configDOM.querySelectorAll('widget').forEach((e, index) => e.setAttribute('uiKey', String(index)));
 
+				configDOM
+					.querySelectorAll('[id="craftercms.components.ContentTypeManagement"] > configuration > controls')
+					.forEach((tag) => {
+						const descriptor = deserialize(tag.innerHTML)?.descriptor;
+						if (!descriptor) return;
+						// Normalize XML-deserialized shapes (single nodes vs arrays, empty fields tag, etc.)
+						controls[tag.id] = {
+							...descriptor,
+							id: tag.id,
+							fields: descriptor.fields ? descriptor.fields : {}, // empty <fields /> deserializes as []
+							sections: descriptor.sections
+								? asArray(descriptor.sections).map((section) => ({
+										...section,
+										fields: section.fields ? asArray(section.fields) : []
+									}))
+								: [],
+							metadata: {
+								...descriptor.metadata,
+								suffixes: descriptor.metadata?.suffixes ? asArray(descriptor.metadata.suffixes) : null,
+								additionalFields: descriptor.metadata?.additionalFields
+									? asArray(descriptor.metadata.additionalFields)
+									: null
+							}
+						};
+					});
+
 				config = serialize(configDOM);
 			}
 
@@ -111,7 +140,8 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 				...state,
 				isFetching: false,
 				xml: config,
-				references
+				references,
+				controls
 			};
 		})
 		.addCase(fetchSiteUiConfigFailed, (state, { payload }) => ({

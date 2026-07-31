@@ -720,6 +720,7 @@ function convertDataSourceStructToXmlStruct(
 		interface: dataSource.interface,
 		title: dataSource.title,
 		type: dataSource.type,
+		plugin: dataSource.plugin,
 		properties: {
 			// TODO: Ideally, suppress these objects into simple key-value pairs.
 			//   <properties>

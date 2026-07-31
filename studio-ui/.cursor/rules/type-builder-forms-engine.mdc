@@ -1,0 +1,39 @@
+---
+description: Type Builder / Forms Engine modernization — read shared context before changing TB/FE code
+globs: ui/app/src/components/FormsEngine/**/*,ui/app/src/components/ContentTypeManagement/**/*,ui/app/src/models/ContentType.ts,ui/app/src/models/PluginDescriptor.ts,ui/app/src/services/plugin.ts,static-assets/components/cstudio-forms/**/*,static-assets/components/cstudio-admin/mods/content-types.js,samples/*.mjs,docs/type-builder-forms-engine.md,docs/type-builder-forms-engine-plugins.md,docs/fe2-control-plugin-single-model-implementation.md
+alwaysApply: false
+---
+
+# TB / FE work
+
+Before substantive changes, read and follow:
+
+[`docs/type-builder-forms-engine.md`](../../docs/type-builder-forms-engine.md)
+
+**Active implementation:** FE control plugins on single `PluginDescriptor` model — **done** (2026-07-31). Next open: eager lib-only plugin boot + `utils` host publish (plugins companion §9.8).
+
+## Anchors
+
+- Next FE: `ui/app/src/components/FormsEngine/`
+- Next TB: `ui/app/src/components/ContentTypeManagement/`; centric editor: `components/EditTypeView.tsx`
+- Legacy: `forms-engine.js`, `content-types.js`
+- Goal: fold `config.xml` into `form-definition.xml` (backend still blocks full drop)
+
+## Runtime environment (authoring instance + sites)
+
+The CrafterCMS authoring instance used for this work is:
+
+`/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28`
+
+Site sandboxes (source of truth for form-definitions / site config — **not** the sample XML under `ui/app/src/components/ContentTypeManagement/` or `samples/`):
+
+| Site | Path |
+|------|------|
+| editorial | `/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28/crafter-authoring/data/repos/sites/editorial/sandbox` |
+| craftercms | `/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28/crafter-authoring/data/repos/sites/craftercmscom/sandbox` |
+
+When diagnosing control/DS behavior, open the live site's `config/studio/content-types/**/form-definition.xml` (and `config/studio/administration/site-config-tools.xml` for DS descriptors). Repo-local sample form-definitions are convenience references only.
+
+## After durable findings
+
+Update the Progress / Open decisions sections of that doc in the same effort when you learn something the next agent will need.

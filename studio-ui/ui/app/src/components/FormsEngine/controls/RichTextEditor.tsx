@@ -31,8 +31,15 @@ import { getTinymce } from '@tinymce/tinymce-react/lib/es2015/main/ts/TinyMCE';
 import { getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
-import { getTinyMceInitOptions } from '../lib/rteUtils';
+import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
 import { getCurrentLocale } from '../../../utils/i18n';
+import Dialog from '@mui/material/Dialog';
+import MenuList from '@mui/material/MenuList';
+import { DialogHeader } from '../../DialogHeader';
+import { DialogBody } from '../../DialogBody';
+import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
+import type { DataSourceFieldContext, DataSourceSelection, ResolvedDataSourceAction } from '../dataSources/types';
+import { FormattedMessage } from 'react-intl';
 
 export interface RichTextEditorProps extends ControlProps {
 	value: string;
@@ -48,11 +55,19 @@ declare global {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-	const { field, value, setValue, readonly, defaultInitOptions } = props;
+	const { field, value, setValue, readonly, defaultInitOptions, dataSources } = props;
 	const locale = getCurrentLocale();
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
 	const hasReceivedFocusRef = useRef(false);
+	const [dataSourcePicker, setDataSourcePicker] = useState<{
+		actions: readonly ResolvedDataSourceAction[];
+		context: DataSourceFieldContext;
+		onResult(selection: DataSourceSelection | DataSourceSelection[] | null): void;
+	} | null>(null);
+	const openDataSourcePicker: OpenRteDataSourcePicker = (actions, context, onResult) => {
+		setDataSourcePicker({ actions, context, onResult });
+	};
 	const maxLength = getPropertyValue(field.properties, 'maxlength') as number;
 	const dialogContext = useContext(FormsEngineDialogContext);
 	const setDisableEnforceFocus = dialogContext?.setDisableEnforceFocus;
@@ -128,14 +143,22 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		>
 			<Editor
 				licenseKey="gpl"
-				init={getTinyMceInitOptions(field, rteConfig, locale, defaultInitOptions, (editor) => {
-					editor.on('OpenWindow', () => {
-						setDisableEnforceFocus?.(true);
-					});
-					editor.on('CloseWindow', () => {
-						setDisableEnforceFocus?.(false);
-					});
-				})}
+				init={getTinyMceInitOptions(
+					field,
+					rteConfig,
+					locale,
+					defaultInitOptions,
+					dataSources,
+					openDataSourcePicker,
+					(editor) => {
+						editor.on('OpenWindow', () => {
+							setDisableEnforceFocus?.(true);
+						});
+						editor.on('CloseWindow', () => {
+							setDisableEnforceFocus?.(false);
+						});
+					}
+				)}
 				tinymceScriptSrc={tinymceScriptSrc}
 				onEditorChange={handleChange}
 				value={value}
@@ -148,6 +171,31 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				}}
 				disabled={readonly}
 			/>
+			<Dialog open={Boolean(dataSourcePicker)} onClose={() => setDataSourcePicker(null)} fullWidth maxWidth="xs">
+				<DialogHeader
+					title={<FormattedMessage defaultMessage="Choose how to add media" />}
+					onCloseButtonClick={() => setDataSourcePicker(null)}
+				/>
+				<DialogBody>
+					{dataSourcePicker && (
+						<MenuList>
+							<GroupedDataSourceActionMenuItems
+								actions={dataSourcePicker.actions}
+								context={dataSourcePicker.context}
+								disabled={readonly}
+								onResult={(selection) => {
+									dataSourcePicker.onResult(selection);
+									setDataSourcePicker(null);
+								}}
+								onError={(error) => {
+									console.error('Unable to select rich-text media.', error);
+									setDataSourcePicker(null);
+								}}
+							/>
+						</MenuList>
+					)}
+				</DialogBody>
+			</Dialog>
 		</FormsEngineField>
 	);
 }

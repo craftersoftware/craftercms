@@ -421,9 +421,15 @@ function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentTyp
 
 	// get receptacles dataSources
 	legacyDataSourceArray.forEach((datasource: LegacyDataSource) => {
-		// TODO: Delete datasource.properties after props have been added to the root object? Must update code usages of datasource.properties.
-		dataSources[datasource.id] = { ...datasource, properties: {} };
-		const legacyDatasource = { ...datasource };
+		// Keep only the typed DataSource shape. Legacy XML may carry extra keys; plugin coords are preserved explicitly.
+		dataSources[datasource.id] = {
+			id: datasource.id,
+			type: datasource.type,
+			title: datasource.title,
+			interface: datasource.interface,
+			properties: {},
+			...(datasource.plugin ? { plugin: datasource.plugin } : {})
+		};
 		asArray(datasource.properties?.property).forEach((property) => {
 			let value: unknown = property.value;
 			switch (property.type) {
@@ -439,10 +445,8 @@ function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentTyp
 				//   break;
 			}
 			dataSources[datasource.id].properties[property.name] = value;
-			// Also update legacyDatasource, since dropTargetsLookup references it for 'components' type datasources.
-			legacyDatasource.properties[property.name] = value;
 		});
-		if (legacyDatasource.type === 'components') {
+		if (datasource.type === 'components') {
 			dropTargetsLookup[datasource.id] = dataSources[datasource.id];
 		}
 	});

@@ -79,6 +79,8 @@ import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
 import { isPagePath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
+import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
+import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
 /**
  * Returns the scroll container for the form's container.
@@ -489,7 +491,8 @@ export function setFieldAtoms(
 	fieldId: string,
 	atomsTarget: FormsEngineAtoms,
 	value: unknown,
-	validatorsData?: ValidatorsData
+	validatorsData?: ValidatorsData,
+	isAdditional?: boolean
 ): void {
 	let field = fieldLookup[fieldId];
 	if (!field) {
@@ -507,6 +510,20 @@ export function setFieldAtoms(
 				values: undefined,
 				id: 'folder-name',
 				name: 'Folder Name'
+			};
+		} else if (isAdditional) {
+			field = {
+				defaultValue: undefined,
+				description: '',
+				fields: undefined,
+				helpText: '',
+				properties: undefined,
+				sortable: false,
+				type: '',
+				validations: undefined,
+				values: undefined,
+				id: fieldId,
+				name: fieldId
 			};
 		} else {
 			!systemFieldsNotInType.includes(fieldId) &&
@@ -833,6 +850,7 @@ export function prepareEmbeddedItemForm(props: {
 	parentPathInSite: string;
 	siteId: string;
 	contentTypesById?: LookupTable<ContentType>;
+	customControls?: LookupTable<DescriptorContentType>;
 }): { atoms: FormsEngineAtoms; values: LookupTable<unknown>; itemMeta: FormsEngineItemMetaContextProps } {
 	const {
 		username,
@@ -845,7 +863,8 @@ export function prepareEmbeddedItemForm(props: {
 		lockError,
 		affectedPackages,
 		siteId,
-		contentTypesById
+		contentTypesById,
+		customControls
 	} = props;
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
@@ -858,19 +877,38 @@ export function prepareEmbeddedItemForm(props: {
 		expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
 		fileName: atom(update.modelId)
 	});
-	const values = update.values;
+	const values = { ...update.values };
 	const validatorsData = { siteId, contentTypesById };
+
+	const descriptors = { ...customControls, ...controlDescriptors };
+	const additionalFieldsIds: string[] = [];
+	// Retrieve all additional fields ids from the contentType fields.
+	Object.values(contentType.fields).forEach((field) => {
+		const descriptor = descriptors[field.type];
+		if (!descriptor) return;
+		additionalFieldsIds.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
+	});
+	// Ensure descriptor additional fields exist in values so atoms are created (same as main/repeat bootstrap).
+	additionalFieldsIds.forEach((additionalFieldId) => {
+		if (!(additionalFieldId in values)) {
+			values[additionalFieldId] = undefined;
+		}
+	});
+
 	Object.entries(values).forEach(([fieldId, value]) => {
+		const isAdditionalField = additionalFieldsIds.includes(fieldId);
 		// System fields (e.g. content-type, display-template, etc.) are not part of the content type, but are part of the content object. We don't need atoms or validity checks for these.
-		if (!contentType.fields[fieldId]) return;
-		const [valueAtom, validityAtom] = createFieldAtoms(
-			contentType.fields[fieldId],
-			value,
+		if (!contentType.fields[fieldId] && !isAdditionalField) return;
+		setFieldAtoms(
 			stableFormContextRef,
-			validatorsData
+			contentType,
+			contentType.fields,
+			fieldId,
+			atoms,
+			value,
+			validatorsData,
+			isAdditionalField
 		);
-		atoms.valueByFieldId[fieldId] = valueAtom;
-		atoms.validationByFieldId[fieldId] = validityAtom;
 	});
 	const xmlDoc = fromString(parentStackData.itemMeta.contentXml);
 	const element = xmlDoc.querySelector(`[id="${update.modelId}"]`);
@@ -926,4 +964,14 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 	} else {
 		return ensureSingleSlash(`${basePath}/${fileName}.xml`);
 	}
+}
+
+export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
+	const additionalFields = descriptor.metadata?.additionalFields ?? [];
+	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+}
+
+// TODO: are there going to be other placeholders besides {id}?
+export function processAdditionalFieldMacro(parentFieldId: string, fieldId: string): string {
+	return fieldId.replaceAll('{id}', parentFieldId);
 }

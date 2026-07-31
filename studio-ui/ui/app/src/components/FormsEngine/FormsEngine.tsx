@@ -96,6 +96,7 @@ import {
 	displayFormBeingSavedSnack,
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
+	getAdditionalFieldsIdsFromDescriptor,
 	getCurrentChildFormStateSummary,
 	getScrollContainer,
 	getTargetHeight,
@@ -142,6 +143,7 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
+import controlDescriptors from '../ContentTypeManagement/descriptors/controls';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -283,6 +285,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	const [reloadNonce, setReloadNonce] = useState(0);
 	const triggerReload = useCallback(() => setReloadNonce((nonce) => nonce + 1), []);
 	const effectiveUpdatePath = renamedPath ?? update?.path;
+	const customControls = useSelection((state) => state.uiConfig.controls);
 
 	const contextApi = useMemo<FormsEngineFormApiContextProps>(() => {
 		const getInitialValues = () => stableFormContextRef.current.originalValues;
@@ -374,7 +377,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
 				fileName: atom('')
 			});
-			const atomValueCreator: Parameters<typeof createParsedValuesObject>[3] = (fieldId, value) => {
+			const atomValueCreator: Parameters<typeof createParsedValuesObject>[3] = (fieldId, value, isAdditional) => {
 				setFieldAtoms(
 					stableFormContextRef,
 					contentType,
@@ -382,15 +385,42 @@ function FormBootstrap(props: FormsEngineProps) {
 					fieldId,
 					atoms,
 					value,
-					{ siteId, contentTypesById: effectRefs.current.contentTypesById }
+					{ siteId, contentTypesById: effectRefs.current.contentTypesById },
+					isAdditional
 				);
 			};
 			const values =
 				repeat.values ??
-				createParsedValuesObject(fieldsToRender, {}, effectRefs.current.contentTypesById, atomValueCreator);
+				createParsedValuesObject(
+					fieldsToRender,
+					{},
+					effectRefs.current.contentTypesById,
+					atomValueCreator,
+					customControls
+				);
 
+			const descriptors = { ...customControls, ...controlDescriptors };
+			const additionalFieldsIds: string[] = [];
 			// If repeat.values was provided, `createCleanValuesObject` didn't run; hence, atomValueCreator needs to be run manually.
-			repeat.values && Object.keys(values).forEach((fieldId) => atomValueCreator(fieldId, values[fieldId]));
+			if (repeat.values) {
+				// First gather all additional fields ids from the provided values
+				(fieldsToRender ?? []).forEach((field) => {
+					const descriptor = descriptors[field.type];
+					if (!descriptor) return;
+					additionalFieldsIds.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
+				});
+				// Ensure descriptor additional fields exist in values so atoms are created
+				additionalFieldsIds.forEach((additionalFieldId) => {
+					if (!(additionalFieldId in values)) {
+						values[additionalFieldId] = undefined;
+					}
+				});
+				// Run atomValueCreator for each field considering the additional fields
+				Object.keys(values).forEach((fieldId) => {
+					const isAdditional = additionalFieldsIds.includes(fieldId);
+					atomValueCreator(fieldId, values[fieldId], isAdditional);
+				});
+			}
 
 			const xmlDoc = fromString(parentStackData.itemMeta.contentXml ?? '');
 			const fieldId = repeat.fieldId;
@@ -431,7 +461,8 @@ function FormBootstrap(props: FormsEngineProps) {
 					stableFormContextRef,
 					parentPathInSite,
 					siteId,
-					contentTypesById: effectRefs.current.contentTypesById
+					contentTypesById: effectRefs.current.contentTypesById,
+					customControls
 				});
 				initializeState(requirements.atoms, requirements.values, requirements.itemMeta);
 			};
@@ -463,12 +494,24 @@ function FormBootstrap(props: FormsEngineProps) {
 				fileName: atom('')
 			});
 			const contentObject = createObjectWithSystemProps(contentType);
-			const values = createParsedValuesObject(contentType.fields, contentObject, contentTypesById, (fieldId, value) => {
-				setFieldAtoms(stableFormContextRef, contentType, contentType.fields, fieldId, atoms, value, {
-					siteId,
-					contentTypesById
-				});
-			});
+			const values = createParsedValuesObject(
+				contentType.fields,
+				contentObject,
+				contentTypesById,
+				(fieldId, value, isAdditional) => {
+					setFieldAtoms(
+						stableFormContextRef,
+						contentType,
+						contentType.fields,
+						fieldId,
+						atoms,
+						value,
+						{ siteId, contentTypesById },
+						isAdditional
+					);
+				},
+				customControls
+			);
 			const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
 
 			const objectId = contentObject[XmlKeys.modelId] as string;
@@ -531,7 +574,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						requirements.contentType.fields,
 						requirements.contentObject,
 						effectRefs.current.contentTypesById,
-						(fieldId, value) => {
+						(fieldId, value, isAdditional) => {
 							setFieldAtoms(
 								stableFormContextRef,
 								requirements.contentType,
@@ -539,9 +582,11 @@ function FormBootstrap(props: FormsEngineProps) {
 								fieldId,
 								atoms,
 								value,
-								{ siteId, contentTypesById }
+								{ siteId, contentTypesById },
+								isAdditional
 							);
-						}
+						},
+						customControls
 					);
 
 					initializeState(atoms, values, {

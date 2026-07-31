@@ -17,18 +17,9 @@
 import { ControlProps } from '../types';
 import Alert from '@mui/material/Alert';
 import { FormattedMessage } from 'react-intl';
-import React, {
-	ComponentType,
-	ElementType,
-	lazy,
-	LazyExoticComponent,
-	memo,
-	MouseEvent as ReactMouseEvent,
-	Suspense
-} from 'react';
+import React, { ElementType, memo, Suspense, useCallback, useContext, useMemo } from 'react';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { Atom, useAtom } from 'jotai/index';
-import { buildFileUrl } from '../../../services/plugin';
 import { controlMap } from './controlMap';
 import { UnknownControl } from '../components/UnknownControl';
 import ErrorBoundary from '../../ErrorBoundary';
@@ -36,14 +27,7 @@ import { ControlSkeleton } from '../components/ControlSkeleton';
 import { ContentTypeField } from '../../../models';
 import ContentType from '../../../models/ContentType';
 import FormsEngineField from '../components/FormsEngineField';
-import { FormsEngineAtoms } from './formsEngineContext';
-import type { ConsolidatedMediaPickerData } from '../dataSourceHooks/useConsolidatedImagePickerData';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import TravelExploreOutlined from '@mui/icons-material/TravelExploreOutlined';
-import SearchRounded from '@mui/icons-material/SearchRounded';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
+import { FormsEngineAtoms, ItemContext, ItemMetaContext, StableGlobalContext } from './formsEngineContext';
 import { getFileNameFromPath } from '../../../utils/path';
 import { ensureSingleSlash } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
@@ -55,31 +39,13 @@ import { SearchProps } from '../../Search';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import type { FileUploadResult } from '../../SingleFileUpload';
-import { ImagePickerType } from '../controls/ImagePicker';
-
-// Note: These persist past the closing of the form.
-const lazyControlMap = new Map<string, LazyExoticComponent<ComponentType>>();
-
-function addLazyControl(url: string): void {
-	lazyControlMap.set(
-		url,
-		lazy(() =>
-			import(/* @vite-ignore */ url)
-				.then((m) => {
-					if (m.default) return m;
-					else return { default: ControlPluginNoDefaultExportError };
-				})
-				.catch((reason) => {
-					console.error(
-						// TODO: Docs or internal URL
-						`An error occurred loading the control. The form attempted to load the control from \`${url}\`. Forms Engine v1 controls are not compatible with this version. If you haven't migrated this control, please check the migration guide at https://docs.craftercms.org/.\n\n`,
-						reason
-					);
-					return { default: ControlPluginError };
-				})
-		)
-	);
-}
+import { useControlPluginModule } from './controlPluginLoader';
+import { getControlDataSourceBindings } from '../dataSources/bindings';
+import { createDataSourceServices } from '../dataSources/services';
+import { useFieldDataSources } from '../dataSources/useFieldDataSources';
+import useContentTypes from '../../../hooks/useContentTypes';
+import { useDispatch } from 'react-redux';
+import { processPathMacros } from '../../../utils/path';
 
 export interface ControlWrapperProps {
 	field: ContentTypeField;
@@ -92,40 +58,103 @@ export interface ControlWrapperProps {
 
 export const ControlWrapper = memo(function (props: ControlWrapperProps) {
 	const siteId = useActiveSiteId();
-	const { field, autoFocus, readonly, contentType, atom, customControlMap } = props;
+	const { field, atom, customControlMap } = props;
 	const [value, setValue] = useAtom(atom);
-	const fieldId = field.id;
-	let Control: ElementType<ControlProps>;
-	if (field.properties?.plugin) {
-		const url = buildFileUrl(
-			siteId,
-			field.properties.plugin.type,
-			field.properties.plugin.name,
-			field.properties.plugin.filename,
-			field.properties.plugin.pluginId
-		);
-		if (!lazyControlMap.has(url)) addLazyControl(url);
-		Control = lazyControlMap.get(url);
-	} else {
-		Control = customControlMap?.[field.type] ?? controlMap[field.type] ?? UnknownControl;
-	}
+	const plugin = field.properties?.plugin;
 	return (
-		<ErrorBoundary key={fieldId}>
+		<ErrorBoundary key={field.id}>
 			<Suspense fallback={<ControlSkeleton label={field.name} />}>
-				<Control
-					// Only auto-focus on controls that are not readonly.
-					// Focus might not work consistently on disabled controls anyway.
-					autoFocus={autoFocus && !readonly}
-					value={value}
-					setValue={setValue}
-					field={field}
-					contentType={contentType}
-					readonly={readonly}
-				/>
+				{plugin ? (
+					<PluginControlRenderer {...props} value={value} setValue={setValue} siteId={siteId} plugin={plugin} />
+				) : (
+					<ResolvedControlRenderer
+						{...props}
+						value={value}
+						setValue={setValue}
+						Control={customControlMap?.[field.type] ?? controlMap[field.type] ?? UnknownControl}
+					/>
+				)}
 			</Suspense>
 		</ErrorBoundary>
 	);
 });
+
+function PluginControlRenderer({
+	siteId,
+	plugin,
+	...props
+}: ControlWrapperProps & {
+	value: unknown;
+	setValue: (value: unknown) => void;
+	siteId: string;
+	plugin: NonNullable<ContentTypeField['properties']['plugin']>;
+}) {
+	const loaded = useControlPluginModule(siteId, plugin, props.field.type, ControlPluginError);
+	return <ResolvedControlRenderer {...props} Control={loaded.Component} bindings={loaded.bindings} />;
+}
+
+function ResolvedControlRenderer({
+	field,
+	autoFocus,
+	readonly,
+	contentType,
+	value,
+	setValue,
+	Control,
+	bindings = getControlDataSourceBindings(field.type)
+}: Omit<ControlWrapperProps, 'atom' | 'customControlMap'> & {
+	value: unknown;
+	setValue: (value: unknown) => void;
+	Control: ElementType<ControlProps>;
+	bindings?: ReturnType<typeof getControlDataSourceBindings>;
+}) {
+	const siteId = useActiveSiteId();
+	const dispatch = useDispatch();
+	const contentTypes = useContentTypes();
+	const item = useContext(ItemContext);
+	const itemMeta = useContext(ItemMetaContext);
+	const stableGlobal = useContext(StableGlobalContext);
+	const services = useMemo(
+		() =>
+			createDataSourceServices({
+				dispatch,
+				siteId,
+				formsApi: stableGlobal?.api ?? { pushForm: () => undefined }
+			}),
+		[dispatch, siteId, stableGlobal]
+	);
+	const expandPath = useCallback(
+		(path: string) =>
+			processPathMacros({ path, objectId: itemMeta?.id, fullParentPath: item?.path ?? itemMeta?.pathInSite }),
+		[item, itemMeta]
+	);
+	const maxCount = field.validations?.maxCount?.value as number | undefined;
+	const remainingCapacity =
+		typeof maxCount === 'number' && Array.isArray(value) ? Math.max(0, maxCount - value.length) : undefined;
+	const dataSources = useFieldDataSources({
+		siteId,
+		contentType,
+		field,
+		bindings,
+		value,
+		readonly,
+		remainingCapacity,
+		services,
+		expandPath,
+		contentTypes
+	});
+	return (
+		<Control
+			autoFocus={autoFocus && !readonly}
+			value={value}
+			setValue={setValue}
+			field={field}
+			contentType={contentType}
+			readonly={readonly}
+			dataSources={dataSources}
+		/>
+	);
+}
 
 function ControlPluginError({ field }: ControlProps) {
 	return (
@@ -140,32 +169,6 @@ function ControlPluginError({ field }: ControlProps) {
 					values={{
 						name: field.name,
 						id: field.id
-					}}
-				/>
-			</Alert>
-		</FormsEngineField>
-	);
-}
-
-function ControlPluginNoDefaultExportError({ field }: ControlProps) {
-	return (
-		<FormsEngineField field={field} menu={false}>
-			<Alert
-				severity="error"
-				variant="standard"
-				sx={(theme) => ({ border: 'none', strong: { fontWeight: theme.typography.fontWeightMedium } })}
-			>
-				<FormattedMessage
-					defaultMessage="Unable to render {name} ({id}) control. No default export found. A control's JavaScript file should export a React component as `default`. Please check <docs>the documentation</docs>."
-					values={{
-						name: field.name,
-						id: field.id,
-						// TODO: Docs or internal link
-						docs: (str) => (
-							<a href="https://docs.craftercms.org" target="_blank">
-								{str}
-							</a>
-						)
 					}}
 				/>
 			</Alert>
@@ -203,57 +206,6 @@ export function renderFieldControl(
  * @param readonly - If true, the menu options will be disabled.
  * @returns An array of JSX elements representing the menu options.
  * */
-export function createMediaMenuOptions(
-	dataSourceSummary: ConsolidatedMediaPickerData,
-	handleDataSourceOptionClick: (option: ImagePickerType) => void,
-	readonly: boolean = false
-) {
-	const { allowedBrowsePaths, allowedUploadPaths, allowedSearchPaths } = dataSourceSummary;
-	const menuOptions = [];
-	const availableOptions: ImagePickerType[] = [];
-
-	if (allowedBrowsePaths.length > 0) {
-		availableOptions.push('browse');
-		menuOptions.push(
-			<MenuItem key="browse" onClick={(event) => handleDataSourceOptionClick('browse')} disabled={readonly}>
-				<ListItemIcon sx={{ mr: 0 }}>
-					<TravelExploreOutlined fontSize="small" />
-				</ListItemIcon>
-				<ListItemText>
-					<FormattedMessage defaultMessage="Browse" />
-				</ListItemText>
-			</MenuItem>
-		);
-	}
-	if (allowedSearchPaths.length > 0) {
-		availableOptions.push('search');
-		menuOptions.push(
-			<MenuItem key="search" onClick={(event) => handleDataSourceOptionClick('search')} disabled={readonly}>
-				<ListItemIcon sx={{ mr: 0 }}>
-					<SearchRounded fontSize="small" />
-				</ListItemIcon>
-				<ListItemText>
-					<FormattedMessage defaultMessage="Search" />
-				</ListItemText>
-			</MenuItem>
-		);
-	}
-	if (allowedUploadPaths.length > 0) {
-		availableOptions.push('upload');
-		menuOptions.push(
-			<MenuItem key="upload" onClick={(event) => handleDataSourceOptionClick('upload')} disabled={readonly}>
-				<ListItemIcon sx={{ mr: 0 }}>
-					<UploadFileOutlinedIcon fontSize="small" />
-				</ListItemIcon>
-				<ListItemText>
-					<FormattedMessage defaultMessage="Upload" />
-				</ListItemText>
-			</MenuItem>
-		);
-	}
-	return { menuOptions, availableOptions };
-}
-
 export function downloadMedia(base: string, url: string) {
 	const link = document.createElement('a');
 	link.href = ensureSingleSlash(`${base}${url}`);
@@ -268,17 +220,21 @@ export const showBrowseFilesDialog = ({
 	onSuccess,
 	path,
 	contentTypes,
+	mimeTypes,
 	multiSelect = true,
 	preselectedPaths = [],
-	initialParameters = {}
+	initialParameters = {},
+	onClose
 }: {
 	path: string;
 	dispatch: ReduxDispatch;
 	onSuccess: BrowseFilesDialogProps['onSuccess'];
 	contentTypes?: string[];
+	mimeTypes?: string[];
 	multiSelect?: boolean;
 	preselectedPaths?: string[];
 	initialParameters?: BrowseFilesDialogProps['initialParameters'];
+	onClose?(): void;
 }): void => {
 	const id = nanoid();
 	dispatch(
@@ -290,9 +246,13 @@ export const showBrowseFilesDialog = ({
 				multiSelect,
 				allowUpload: false,
 				contentTypes: contentTypes ?? [],
+				mimeTypes,
 				preselectedPaths,
 				initialParameters,
-				onClose: () => dispatch(popDialog({ id })),
+				onClose: () => {
+					dispatch(popDialog({ id }));
+					onClose?.();
+				},
 				onSuccess(items) {
 					dispatch(popDialog({ id }));
 					onSuccess(items);
@@ -308,7 +268,8 @@ export const showSearchDialog = ({
 	preselectedPaths = [],
 	contentTypes,
 	onAcceptSelection,
-	initialParameters
+	initialParameters,
+	onClose
 }: {
 	path: string;
 	contentTypes?: string[];
@@ -316,6 +277,7 @@ export const showSearchDialog = ({
 	initialParameters?: SearchProps['initialParameters'];
 	dispatch: ReduxDispatch;
 	onAcceptSelection: SearchProps['onAcceptSelection'];
+	onClose?(): void;
 }): void => {
 	const id = nanoid();
 	dispatch(
@@ -337,7 +299,10 @@ export const showSearchDialog = ({
 					})
 				},
 				preselectedPaths,
-				onClose: () => dispatch(popDialog({ id })),
+				onClose: () => {
+					dispatch(popDialog({ id }));
+					onClose?.();
+				},
 				onAcceptSelection(paths, items) {
 					dispatch(popDialog({ id }));
 					onAcceptSelection(paths, items);
