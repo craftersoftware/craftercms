@@ -59,22 +59,17 @@ const bumpPathFetchRequestId = (chunk: { pathFetchRequestId?: number }): number 
 
 type PathNavigatorChunk = GlobalState['pathNavigator'][string];
 
-const recordRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
-	if (!chunk.revertPathByRequestId) {
-		chunk.revertPathByRequestId = {};
-	}
-	chunk.revertPathByRequestId[pathFetchRequestId] = chunk.currentPath;
+// A path-changing fetch sets `currentPath` optimistically, before its result is in. Reverting a failed
+// fetch to whatever `currentPath` held at dispatch time is unsafe, because a superseded fetch may have
+// left an optimistic path there that no `itemsInPath`/`breadcrumb` ever described. Only a path confirmed
+// by an applied result is a safe target to revert to.
+const confirmPath = (chunk: PathNavigatorChunk, path: string) => {
+	chunk.lastConfirmedPath = path;
 };
 
-const clearRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
-	delete chunk.revertPathByRequestId?.[pathFetchRequestId];
-};
-
-const restoreRevertPathForRequest = (chunk: PathNavigatorChunk, pathFetchRequestId: number) => {
-	const revertPath = chunk.revertPathByRequestId?.[pathFetchRequestId];
-	if (revertPath !== undefined) {
-		chunk.currentPath = revertPath;
-		clearRevertPathForRequest(chunk, pathFetchRequestId);
+const revertToLastConfirmedPath = (chunk: PathNavigatorChunk) => {
+	if (chunk.lastConfirmedPath !== undefined) {
+		chunk.currentPath = chunk.lastConfirmedPath;
 	}
 };
 
@@ -87,6 +82,7 @@ const updatePath = (state, payload) => {
 		const chunk = state[id];
 		const path = parent?.path ?? state[id].currentPath;
 		chunk.currentPath = path;
+		confirmPath(chunk, path);
 		chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
 		chunk.itemsInPath = children.length === 0 ? [] : children.map((item) => item.path);
 		chunk.levelDescriptor = children.levelDescriptor?.path;
@@ -138,6 +134,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 				id,
 				rootPath,
 				currentPath: currentPath,
+				lastConfirmedPath: currentPath,
 				localeCode: locale,
 				keyword: keyword,
 				isSelectMode: false,
@@ -166,8 +163,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			chunk.keyword = '';
 			chunk.error = null;
 			chunk.isFetching = true;
-			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
-			recordRevertPathForRequest(chunk, pathFetchRequestId);
+			bumpPathFetchRequestId(chunk);
 			chunk.currentPath = path;
 		})
 		.addCase(pathNavigatorConditionallySetPath, (state, { payload: { id, pathFetchRequestId } }) => {
@@ -195,6 +191,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 				chunk.error = null;
 				if (parent.childrenCount > 0) {
 					chunk.currentPath = path;
+					confirmPath(chunk, path);
 					chunk.offset = 0;
 					chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
 					chunk.itemsInPath = children.map((item) => item.path);
@@ -219,11 +216,10 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (!chunk) {
 				return;
 			}
-			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
+			bumpPathFetchRequestId(chunk);
 			chunk.isFetching = true;
 			chunk.error = null;
 			if (payload.path) {
-				recordRevertPathForRequest(chunk, pathFetchRequestId);
 				chunk.currentPath = payload.path;
 			}
 		})
@@ -235,7 +231,6 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (payload.pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
-			clearRevertPathForRequest(chunk, payload.pathFetchRequestId);
 			updatePath(state, payload);
 		})
 		.addCase(pathNavigatorBulkFetchPathComplete, (state, { payload: { paths } }) => {
@@ -253,7 +248,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			}
 			chunk.isFetching = false;
 			chunk.error = error;
-			restoreRevertPathForRequest(chunk, pathFetchRequestId);
+			revertToLastConfirmedPath(chunk);
 		})
 		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { ids, error } }) => {
 			ids.forEach((id) => {
@@ -263,8 +258,7 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		})
 		.addCase(pathNavigatorFetchParentItems, (state, { payload: { id, path } }) => {
 			const chunk = state[id];
-			const pathFetchRequestId = bumpPathFetchRequestId(chunk);
-			recordRevertPathForRequest(chunk, pathFetchRequestId);
+			bumpPathFetchRequestId(chunk);
 			chunk.isFetching = true;
 			chunk.currentPath = path;
 			chunk.error = null;
@@ -277,8 +271,8 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			if (pathFetchRequestId !== chunk.pathFetchRequestId) {
 				return;
 			}
-			clearRevertPathForRequest(chunk, pathFetchRequestId);
 			const { currentPath, rootPath } = chunk;
+			confirmPath(chunk, currentPath);
 			chunk.itemsInPath = children.map((item) => item.path);
 			chunk.levelDescriptor = children.levelDescriptor?.path ?? null;
 			chunk.breadcrumb = getIndividualPaths(withoutIndex(currentPath), withoutIndex(rootPath));

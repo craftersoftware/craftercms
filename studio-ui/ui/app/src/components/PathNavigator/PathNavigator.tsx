@@ -118,7 +118,8 @@ export interface PathNavigatorStateProps {
 	isRootPathMissing: boolean;
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
-	revertPathByRequestId?: Record<number, string>;
+	/** Last `currentPath` confirmed by an applied fetch result; a failed fetch reverts to it. */
+	lastConfirmedPath?: string;
 	pathFetchRequestId?: number;
 }
 
