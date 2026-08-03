@@ -35,7 +35,7 @@ import {
 	VersionsDialogContextProps,
 	VersionsDialogContextType
 } from '../CompareVersionsDialog/VersionsDialogContext';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorOptions } from '../MonacoEditor';
 import { getDialogHeaderActions } from '../CompareVersionsDialog';
 
 export function ViewVersionDialog(props: ViewVersionDialogProps) {
@@ -62,7 +62,7 @@ export function ViewVersionDialog(props: ViewVersionDialogProps) {
 					fieldsViewState: { ...state.fieldsViewState, [fieldId]: { ...state.fieldsViewState[fieldId], ...viewState } }
 				});
 			},
-			setFieldViewEditorOptionsState(fieldId: string, options: DiffEditorProps['options']) {
+			setFieldViewEditorOptionsState(fieldId: string, options: MonacoDiffEditorOptions) {
 				setState({
 					...state,
 					fieldsViewState: {

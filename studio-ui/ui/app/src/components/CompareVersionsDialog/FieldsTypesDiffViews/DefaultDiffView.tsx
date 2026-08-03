@@ -17,10 +17,10 @@
 import React from 'react';
 import TextDiffView from './TextDiffView';
 import { DiffViewComponentBaseProps } from '../utils';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorProps } from '../../MonacoEditor';
 
 export interface DefaultDiffViewProps extends Pick<DiffViewComponentBaseProps, 'aXml' | 'bXml'> {
-	editorProps?: DiffEditorProps;
+	editorProps?: MonacoDiffEditorProps;
 }
 
 export function DefaultDiffView(props: DefaultDiffViewProps) {

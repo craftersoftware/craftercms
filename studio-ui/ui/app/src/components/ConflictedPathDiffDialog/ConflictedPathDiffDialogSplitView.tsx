@@ -14,13 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { FileDiff } from '../../models/Repository';
-import { withMonaco } from '../../utils/system';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
-import Box from '@mui/material/Box';
+import { MonacoDiffEditor } from '../MonacoEditor';
 
 export interface SplitViewProps {
 	diff: FileDiff;
@@ -30,37 +29,26 @@ export interface SplitViewProps {
 
 export function ConflictedPathDiffDialogSplitView(props: SplitViewProps) {
 	const { diff, className, sx } = props;
-	const ref = useRef<HTMLDivElement>(undefined);
 	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-	const diffEditorRef = useRef(null);
-	useEffect(() => {
-		if (diff) {
-			withMonaco((monaco) => {
-				const studioVersion = monaco.editor.createModel(diff.studioVersion, 'text/plain');
-				const remoteVersion = monaco.editor.createModel(diff.remoteVersion, 'text/plain');
-				monaco.editor.setTheme(prefersDarkMode ? 'vs-dark' : 'vs');
-				// Only create diff editor if it doesn't exist yet.
-				// This is to avoid creating a new diff editor on every update.
-				if (!diffEditorRef.current) {
-					diffEditorRef.current = monaco.editor.createDiffEditor(ref.current, {
-						scrollbar: {
-							alwaysConsumeMouseWheel: false
-						},
-						readOnly: true,
-						// Monaco editor has a breakpoint for split view, we had to decrease it for the split view to show in current dialog
-						renderSideBySideInlineBreakpoint: 300,
-						automaticLayout: true
-					});
-				}
-				diffEditorRef.current.setModel({
-					original: studioVersion,
-					modified: remoteVersion
-				});
-			});
-		}
-	}, [diff, prefersDarkMode]);
 
-	return <Box ref={ref} className={className} sx={sx} />;
+	return (
+		<MonacoDiffEditor
+			className={className}
+			sx={sx}
+			height="100%"
+			language="plaintext"
+			original={diff?.studioVersion ?? ''}
+			modified={diff?.remoteVersion ?? ''}
+			theme={prefersDarkMode ? 'vs-dark' : 'vs'}
+			options={{
+				readOnly: true,
+				automaticLayout: true,
+				scrollbar: { alwaysConsumeMouseWheel: false },
+				// Monaco editor has a breakpoint for split view; decrease it for the current dialog
+				renderSideBySideInlineBreakpoint: 300
+			}}
+		/>
+	);
 }
 
 export default ConflictedPathDiffDialogSplitView;

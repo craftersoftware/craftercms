@@ -15,7 +15,7 @@
  */
 
 import { createContext, MutableRefObject, useContext } from 'react';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorOptions } from '../MonacoEditor';
 import { CompareVersionsDialogProps } from './utils';
 import { ViewVersionDialogProps } from '../ViewVersionDialog/utils';
 import { LookupTable } from '../../models';
@@ -26,7 +26,7 @@ export interface FieldViewState {
 	cleanText: boolean;
 	compareMode: boolean;
 	compareModeDisabled: boolean;
-	monacoOptions: DiffEditorProps['options'];
+	monacoOptions: MonacoDiffEditorOptions;
 }
 
 export interface VersionsDialogContextProps {
@@ -45,8 +45,8 @@ export const initialFieldViewState = {
 	monacoOptions: {
 		ignoreTrimWhitespace: false,
 		renderSideBySide: true,
-		diffWordWrap: 'off' as DiffEditorProps['options']['diffWordWrap'],
-		wordWrap: 'on' as DiffEditorProps['options']['wordWrap']
+		diffWordWrap: 'off' as MonacoDiffEditorOptions['diffWordWrap'],
+		wordWrap: 'on' as MonacoDiffEditorOptions['wordWrap']
 	}
 };
 
@@ -63,7 +63,7 @@ export interface VersionsDialogContextApi {
 	setCompareSlideOutState: (props: Partial<CompareVersionsDialogProps>) => void;
 	setViewSlideOutState: (props: Partial<ViewVersionDialogProps>) => void;
 	setFieldViewState: (fieldId: string, viewState: Partial<FieldViewState>) => void;
-	setFieldViewEditorOptionsState: (fieldId: string, options: DiffEditorProps['options']) => void;
+	setFieldViewEditorOptionsState: (fieldId: string, options: MonacoDiffEditorOptions) => void;
 	closeSlideOuts: () => void;
 }
 

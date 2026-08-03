@@ -16,7 +16,7 @@
 
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { DialogBody } from '../../DialogBody';
-import Editor from '@monaco-editor/react';
+import { MonacoEditor } from '../../MonacoEditor';
 import React from 'react';
 import useIsDarkModeTheme from '../../../hooks/useIsDarkModeTheme';
 
@@ -30,11 +30,11 @@ export function XmlViewerDialogBody(props: XmlViewerDialogProps) {
 	return (
 		xml && (
 			<DialogBody>
-				<Editor
+				<MonacoEditor
 					height="90vh"
 					defaultLanguage="xml"
 					value={xml}
-					theme={isDark ? 'vs-dark' : 'light'}
+					theme={isDark ? 'vs-dark' : 'vs'}
 					options={{ readOnly: true, scrollBeyondLastLine: false }}
 				/>
 			</DialogBody>

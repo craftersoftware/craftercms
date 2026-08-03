@@ -16,14 +16,14 @@
 
 import React from 'react';
 import { DiffViewComponentBaseProps } from '../utils';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorProps } from '../../MonacoEditor';
 import { fromString } from '../../../utils/xml';
 import { getContentFileNameFromPath } from '../../../utils/content';
 import TextDiffView from './TextDiffView';
 import { XmlKeys } from '../../FormsEngine/lib/formConsts';
 
 export interface FileNameDiffViewProps extends Pick<DiffViewComponentBaseProps, 'aXml' | 'bXml'> {
-	editorProps?: DiffEditorProps;
+	editorProps?: MonacoDiffEditorProps;
 }
 
 export function FileNameDiffView(props: FileNameDiffViewProps) {

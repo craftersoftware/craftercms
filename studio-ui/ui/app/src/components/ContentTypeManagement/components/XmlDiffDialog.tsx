@@ -16,7 +16,7 @@
 
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { DialogBody } from '../../DialogBody';
-import { DiffEditor } from '@monaco-editor/react';
+import { MonacoDiffEditor } from '../../MonacoEditor';
 import React from 'react';
 import useIsDarkModeTheme from '../../../hooks/useIsDarkModeTheme';
 
@@ -32,12 +32,12 @@ export function XmlDiffDialogBody(props: XmlDiffDialogProps) {
 		initialXml &&
 		currentXml && (
 			<DialogBody>
-				<DiffEditor
+				<MonacoDiffEditor
 					height="90vh"
 					language="xml"
 					original={initialXml}
 					modified={currentXml}
-					theme={isDark ? 'vs-dark' : 'light'}
+					theme={isDark ? 'vs-dark' : 'vs'}
 					options={{ readOnly: true, scrollBeyondLastLine: false }}
 				/>
 			</DialogBody>

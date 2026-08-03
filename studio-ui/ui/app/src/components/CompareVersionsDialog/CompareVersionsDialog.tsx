@@ -32,7 +32,7 @@ import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import { DialogHeader } from '../DialogHeader';
 import ViewVersionDialogContainer from '../ViewVersionDialog/ViewVersionDialogContainer';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorOptions } from '../MonacoEditor';
 import {
 	dialogInitialState,
 	FieldViewState,
@@ -87,7 +87,7 @@ export function CompareVersionsDialog(props: CompareVersionsDialogProps) {
 					fieldsViewState: { ...state.fieldsViewState, [fieldId]: { ...state.fieldsViewState[fieldId], ...viewState } }
 				});
 			},
-			setFieldViewEditorOptionsState(fieldId: string, options: DiffEditorProps['options']) {
+			setFieldViewEditorOptionsState(fieldId: string, options: MonacoDiffEditorOptions) {
 				setState({
 					...state,
 					fieldsViewState: {
