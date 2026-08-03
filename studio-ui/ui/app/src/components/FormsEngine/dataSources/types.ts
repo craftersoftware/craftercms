@@ -301,13 +301,42 @@ export interface DataSourceInstance {
 
 /**
  * Versioned behavior factory registered by data-source type (built-in or plugin).
- * A form-definition `DataSource` record is configuration only; this module makes it executable.
+ *
+ * A form-definition {@link DataSource} record is configuration only (ids, titles, properties).
+ * This module is the executable counterpart: look up by `type`, then call {@link create} to get a
+ * live {@link DataSourceInstance} for a field binding. Built-ins register via
+ * `registerDataSourceModule`; plugins contribute via `PluginDescriptor.dataSources` + `registerPlugin`.
+ * Map keys on the descriptor **must** equal `module.type`.
  */
 export interface DataSourceModule {
+	/**
+	 * Contract version this module implements. Must equal {@link DATA_SOURCE_API_VERSION};
+	 * mismatched values are rejected at registration / load time.
+	 */
 	apiVersion: typeof DATA_SOURCE_API_VERSION;
+	/**
+	 * Stable data-source type id (e.g. `img-desktop-upload`, `shared-content`).
+	 * Must match the form-definition record's `type` and (for plugins) the
+	 * `PluginDescriptor.dataSources` map key.
+	 */
 	type: string;
+	/**
+	 * Default interfaces this module can satisfy (`image`, `item`, `options`, …).
+	 * Used for control↔DS matching via {@link DataSourceBinding.interfaces}. Instances may narrow
+	 * this list in {@link create} when a configured record only supports a subset.
+	 */
 	interfaces: readonly DataSourceInterface[];
+	/**
+	 * Default capabilities the module advertises (`browse`, `upload`, `list`, …).
+	 * Should stay consistent with what instance `getActions` / `list` / `edit` expose; helpers like
+	 * `capabilitiesFromActions` can derive the action-facing subset at instance build time.
+	 */
 	capabilities: readonly DataSourceCapability[];
+	/**
+	 * Factory: turn one configured form-definition record into a live {@link DataSourceInstance}.
+	 * Receives {@link DataSourceCreateContext} (`siteId`, `record`, `services`). Prefer
+	 * `createInstanceFromRecord` so identity/metadata stay aligned with the module defaults.
+	 */
 	create(context: DataSourceCreateContext): DataSourceInstance | Promise<DataSourceInstance>;
 }
 
