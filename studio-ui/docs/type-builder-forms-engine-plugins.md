@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-07-31
+Last updated: 2026-08-03
 
 ## 1. Why plugins are part of the core design
 
@@ -336,15 +336,18 @@ The runtime retains the source datasource on the resolved action/choice. It does
 
 ### Form controllers
 
-`form-controller.js` is a content-type-local extension, not the same mechanism as either a UI `PluginDescriptor` or a control/DS file plugin.
+`form-controller.js` is a **content-type-local** extension, not a `PluginDescriptor` / control / DS plugin.
 
-A project plugin can deliver a content type and its controller file, but FE still needs an explicit form-controller runtime contract. FE2 currently has none. A future design should decide whether form controllers:
+**Design (decided):** see main doc [`type-builder-forms-engine.md` §5.9](type-builder-forms-engine.md). Summary:
 
-- remain type-local modules loaded directly;
-- are resolved through the same plugin asset service;
-- or register hooks through a broader FE extension descriptor.
+- Gate: `hasJsController` / `<controller>`.
+- File on disk: `/config/studio/content-types/{contentTypeId}/form-controller.js`.
+- Load: authenticated `form_controller` API → ESM via Blob URL; FE2 owns this in a dedicated loader called from form bootstrap (not `importPlugin` / plugin file URLs).
+- Export: `{ apiVersion, initialize?, isFieldRelevant?, onBeforeSave? }` — all hooks may be async; host awaits. FE1 `moduleLoaded('{typeId}-controller', Class)` scripts are not compatible.
+- Host context: narrow read/write API over form values and type metadata (not the YUI form object).
+- Project plugins may ship the type folder including the file; runtime still loads by content-type id.
 
-Whichever path is chosen must define lifecycle, access to form state/services, field relevance/visibility, pre-save veto/transformation, async behavior, error isolation, and version compatibility.
+**Implementation:** still open in FE2 (`FormsEngine.tsx` TODO). TB “Client-side Controller” currently opens `controller.groovy` by mistake — fix when implementing.
 
 ## 6.1 FE1 → FE2 data-source migration notes
 
