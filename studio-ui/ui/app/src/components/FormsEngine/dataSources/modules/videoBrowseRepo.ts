@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { createBrowseAction, propString, VIDEO_MIME_TYPES } from '../moduleHelpers';
+import { createBrowseAction, VIDEO_MIME_TYPES, resolveRepoPath } from '../moduleHelpers';
 
 export const videoBrowseRepoDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +24,7 @@ export const videoBrowseRepoDataSourceModule: DataSourceModule = defineDataSourc
 	interfaces: ['video'],
 	capabilities: ['browse'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		return createInstanceFromRecord(record, videoBrowseRepoDataSourceModule, {
 			capabilities: ['browse'],
 			getActions() {

@@ -21,16 +21,16 @@ Before substantive changes, read and follow:
 
 ## Runtime environment (authoring instance + sites)
 
-The CrafterCMS authoring instance used for this work is:
+Set a local authoring root (env var or shell profile), then derive site sandboxes from it:
 
-`/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28`
+`CRAFTER_AUTHORING_HOME` — absolute path to your CrafterCMS authoring instance (the directory that contains `crafter-authoring/`).
 
 Site sandboxes (source of truth for form-definitions / site config — **not** the sample XML under `ui/app/src/components/ContentTypeManagement/` or `samples/`):
 
 | Site | Path |
 |------|------|
-| editorial | `/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28/crafter-authoring/data/repos/sites/editorial/sandbox` |
-| craftercms | `/Users/rart/Workspace/craftercms/develop-2026.07.29.11.28/crafter-authoring/data/repos/sites/craftercmscom/sandbox` |
+| editorial | `$CRAFTER_AUTHORING_HOME/crafter-authoring/data/repos/sites/editorial/sandbox` |
+| craftercms | `$CRAFTER_AUTHORING_HOME/crafter-authoring/data/repos/sites/craftercmscom/sandbox` |
 
 When diagnosing control/DS behavior, open the live site's `config/studio/content-types/**/form-definition.xml` (and `config/studio/administration/site-config-tools.xml` for DS descriptors). Repo-local sample form-definitions are convenience references only.
 

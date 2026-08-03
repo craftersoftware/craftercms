@@ -28,6 +28,7 @@ import {
 } from '../components/FormsEngine/dataSources/bindings';
 import { dataSourceModuleRegistry, validateDataSourceModule } from '../components/FormsEngine/dataSources/registry';
 import { registerControlContribution } from '../components/FormsEngine/controls/registry';
+import { controlMap } from '../components/FormsEngine/lib/controlMap';
 
 const DEFAULT_FILE_NAME = 'index.js';
 
@@ -192,6 +193,11 @@ function registerPluginControls(plugin: PluginDescriptor): void {
 	const entries = Object.entries(contributions).map(([typeKey, entry]) => {
 		if (!typeKey) {
 			throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
+		}
+		if (typeKey in controlMap) {
+			throw new Error(
+				`Plugin "${plugin.id}" cannot register control type "${typeKey}": it collides with a built-in control.`
+			);
 		}
 		if (!entry || typeof entry !== 'object') {
 			throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" must be a ControlPluginContribution object.`);

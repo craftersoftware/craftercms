@@ -25,6 +25,7 @@ import {
 	propBoolean,
 	propString
 } from '../moduleHelpers';
+import { expandPathOrRaw } from '../pathUtils';
 
 export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -94,7 +95,7 @@ export const sharedContentDataSourceModule: DataSourceModule = defineDataSourceM
 									);
 								}
 								return ctx.services.createContent({
-									path: ctx.expandPath?.(options.target.path ?? repoPath) ?? options.target.path ?? repoPath,
+									path: expandPathOrRaw(ctx, options.target.path ?? repoPath),
 									contentTypeId: options.target.contentTypeId,
 									embedded: options.target.strategy === 'embedded'
 								});

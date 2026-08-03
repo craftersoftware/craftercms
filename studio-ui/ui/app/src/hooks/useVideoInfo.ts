@@ -85,6 +85,7 @@ export function useVideoInfo(url: string): {
 					if (!response.ok) {
 						throw new Error(`Metadata request failed (${response.status})`);
 					}
+					if (abortController.signal.aborted) return;
 					const contentType = response.headers.get('Content-Type');
 					const contentLength = response.headers.get('Content-Length');
 					const sizeKb =

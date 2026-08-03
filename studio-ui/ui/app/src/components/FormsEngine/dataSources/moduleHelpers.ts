@@ -22,9 +22,27 @@ import type {
 	DataSourceActionMeta,
 	DataSourceAssetSelection,
 	DataSourceCapability,
-	DataSourceItemSelection
+	DataSourceItemSelection,
+	DataSourceListItem
 } from './types';
 import { expandPathOrRaw, toSearchPath } from './pathUtils';
+
+/**
+ * Normalizes a key/value list entry (configured options, taxonomy items, …).
+ * Coerces key/value to strings, spreads remaining properties, and throws indexed errors when invalid.
+ */
+export function normalizeListItem(item: unknown, index: number, sourceLabel: string): DataSourceListItem {
+	if (!item || typeof item !== 'object') {
+		throw new Error(`${sourceLabel} entry at index ${index} is not an object.`);
+	}
+	const record = item as Record<string, unknown>;
+	const key = String(record.key ?? '');
+	const value = String(record.value ?? '');
+	if (!key && !value) {
+		throw new Error(`${sourceLabel} entry at index ${index} is missing key/value.`);
+	}
+	return { ...record, key, value };
+}
 
 /** Shared allow-lists for browse/search/upload filters; keep in sync with legacy FE1 expectations. */
 export const IMAGE_MIME_TYPES = [
@@ -102,6 +120,11 @@ export function baseRepoPath(record: DataSource, fallback = ''): string {
 	return propString(record, 'baseRepoPath') || propString(record, 'baseRepositoryPath') || fallback;
 }
 
+/** Reads `repoPath` or legacy `path`, falling back to `fallback` (typically `/static-assets/`). */
+export function resolveRepoPath(record: DataSource, fallback = '/static-assets/'): string {
+	return propString(record, 'repoPath') || propString(record, 'path', fallback);
+}
+
 /** Extension of the last path segment; no extension → `undefined`. */
 export function fileExtensionFromPath(path: string): string | undefined {
 	const slash = path.lastIndexOf('/');
@@ -157,6 +180,9 @@ export function toAssetSelection(item: unknown): DataSourceAssetSelection {
 		const meta = candidate.meta as { path?: string; name?: string; type?: string };
 		const name = meta.name ?? (typeof candidate.name === 'string' ? candidate.name : '');
 		const path = meta.path ?? '';
+		if (!path && !name) {
+			throw new Error('Unable to map data-source result to an asset selection: missing path.');
+		}
 		const relativeUrl = path && name ? `${path.replace(/\/$/, '')}/${name}` : path || name;
 		return {
 			kind: 'asset',
@@ -409,7 +435,7 @@ export function capabilitiesFromActions(
 	const set = new Set<DataSourceCapability>(extra);
 	actions.forEach((action) => {
 		if (action.kind === 'browse' || action.kind === 'search' || action.kind === 'upload' || action.kind === 'create') {
-			set.add(action.kind);
+			set.add(action.kind as DataSourceCapability);
 		}
 	});
 	return Array.from(set);

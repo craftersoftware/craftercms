@@ -25,7 +25,7 @@ import { DeleteOutlined, DownloadOutlined, EditOutlined } from '@mui/icons-mater
 import { FormsEngineField } from '../components/FormsEngineField';
 import useEnv from '../../../hooks/useEnv';
 import { ControlProps } from '../types';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { menuItemClasses } from '@mui/material/MenuItem';
 import { listItemIconClasses } from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
@@ -41,6 +41,8 @@ import { nnou, nou } from '../../../utils/object';
 import { validateImageRestrictions } from '../../../utils/content';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import type { DataSourceSelection } from '../dataSources/types';
+import { showSystemNotification } from '../../../state/actions/system';
+import { EmptyState } from '../../EmptyState';
 
 export interface ImagePickerProps extends ControlProps {
 	value: string | null;
@@ -49,6 +51,8 @@ export interface ImagePickerProps extends ControlProps {
 export function ImagePicker(props: ImagePickerProps) {
 	const { field, value: valueProp, setValue, autoFocus, readonly: formReadonly, dataSources } = props;
 	const { guestBase } = useEnv();
+	const { formatMessage } = useIntl();
+	const dispatch = useDispatch();
 
 	// region field properties/validations
 	const readonly = formReadonly || (field.properties?.readonly?.value as boolean);
@@ -74,7 +78,6 @@ export function ImagePicker(props: ImagePickerProps) {
 	const actionsReady = Boolean(dataSources?.context) && actions.length > 0 && !dataSourcesLoading;
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
-	const dispatch = useDispatch();
 
 	useEffect(() => {
 		// If there's a default value and no value has been set yet, set it as the value.
@@ -93,20 +96,29 @@ export function ImagePicker(props: ImagePickerProps) {
 					? selected.path
 					: undefined;
 		if (!path) return;
-		validateImageRestrictions(path, restrictions).then((meetsRestrictions) => {
-			if (!meetsRestrictions) {
-				showImageCropDialog({
-					dispatch,
-					path,
-					mimeType: selected.kind === 'asset' && typeof selected.mimeType === 'string' ? selected.mimeType : undefined,
-					restrictions,
-					writeContent: true,
-					onCrop: (_blob: Blob, newPath: string) => setValue(newPath ?? path)
-				});
-			} else {
-				setValue(path);
-			}
-		});
+		validateImageRestrictions(path, restrictions)
+			.then((meetsRestrictions) => {
+				if (!meetsRestrictions) {
+					showImageCropDialog({
+						dispatch,
+						path,
+						mimeType:
+							selected.kind === 'asset' && typeof selected.mimeType === 'string' ? selected.mimeType : undefined,
+						restrictions,
+						writeContent: true,
+						onCrop: (_blob: Blob, newPath: string) => setValue(newPath ?? path)
+					});
+				} else {
+					setValue(path);
+				}
+			})
+			.catch(() => {
+				dispatch(
+					showSystemNotification({
+						message: formatMessage({ defaultMessage: 'Unable to validate image restrictions.' })
+					})
+				);
+			});
 	};
 	const actionMenuItems = actionsReady ? (
 		<GroupedDataSourceActionMenuItems
@@ -232,6 +244,13 @@ export function ImagePicker(props: ImagePickerProps) {
 					<Typography color="error" variant="body2">
 						<FormattedMessage defaultMessage="Error loading image sources" />
 					</Typography>
+				) : !actionsReady ? (
+					<EmptyState
+						title={<FormattedMessage defaultMessage="No options are available for this control" />}
+						subtitle={
+							<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
+						}
+					/>
 				) : (
 					<Box
 						sx={{

@@ -161,6 +161,13 @@ export function getTinyMceInitOptions(
 						} else {
 							openDataSourcePicker?.(actions, dataSources.context, applySelection);
 						}
+					} else {
+						window.tinymce?.activeEditor?.notificationManager?.open({
+							text: 'No data sources have been configured for this field.',
+							timeout: 3000,
+							type: 'error'
+						});
+						cb('');
 					}
 					//   // meta contains info about type (image, media, etc). Used to properly add DS to dialogs.
 					//   // meta.filetype === 'file | image | media'

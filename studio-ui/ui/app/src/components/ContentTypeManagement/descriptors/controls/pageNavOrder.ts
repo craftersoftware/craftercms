@@ -39,6 +39,8 @@ export const pageNavOrderDescriptor: DescriptorContentType = {
 		required: commonFieldPropertiesDescriptors['required']
 	},
 	metadata: {
+		// Root-only: placeInNav / orderDefault_f belong on the content type, not inside repeats.
+		rootOnly: true,
 		// FE1 stores nav sort order in this sibling tag; FE2 treats it as an additional field atom.
 		additionalFields: ['orderDefault_f']
 	}

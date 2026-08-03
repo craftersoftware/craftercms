@@ -57,7 +57,13 @@ export function useDataSourceListOptions(dataSources: ResolvedDataSources | unde
 	useEffect(() => {
 		let active = true;
 		const { context, listInstances } = latest.current;
-		if (!context || status === 'loading') {
+		if (status === 'loading') {
+			return () => {
+				active = false;
+			};
+		}
+		if (!context) {
+			setLoaded({ key, groups: [] });
 			return () => {
 				active = false;
 			};

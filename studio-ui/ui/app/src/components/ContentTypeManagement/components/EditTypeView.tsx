@@ -588,6 +588,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
 		const newFieldPath = fieldPath ? `${fieldPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
 		setType(addField(type, newField, newFieldPath, sectionId, position));
+		onUpdateHasPendingChanges(true);
 		handleFieldSelected(newFieldPath, newField, sectionId);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
@@ -604,6 +605,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const nextDataSources = type.dataSources?.concat() ?? [];
 		nextDataSources.splice(position, 0, newDataSource);
 		setType({ ...type, dataSources: nextDataSources });
+		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
 	};
 	// endregion

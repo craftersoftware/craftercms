@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { AUDIO_MIME_TYPES, createUploadAction, propString } from '../moduleHelpers';
+import { AUDIO_MIME_TYPES, createUploadAction, resolveRepoPath } from '../moduleHelpers';
 
 export const audioDesktopUploadDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +24,7 @@ export const audioDesktopUploadDataSourceModule: DataSourceModule = defineDataSo
 	interfaces: ['audio'],
 	capabilities: ['upload'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		return createInstanceFromRecord(record, audioDesktopUploadDataSourceModule, {
 			capabilities: ['upload'],
 			getActions() {

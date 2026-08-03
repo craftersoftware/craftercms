@@ -38,6 +38,7 @@ import { isFieldReadOnly } from '../lib/formUtils';
 import Menu from '@mui/material/Menu';
 import type { DataSourceSelection } from '../dataSources/types';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
+import { EmptyState } from '../../EmptyState';
 
 export interface VideoPickerProps extends ControlProps {
 	value: string;
@@ -130,7 +131,7 @@ export function VideoPicker(props: VideoPickerProps) {
 											<FormattedMessage defaultMessage="Error loading video dimensions" />
 										</Typography>
 									) : (
-										`${videoInfo.width}x${videoInfo.height}`
+										`${videoInfo?.width}x${videoInfo?.height}`
 									)}
 									<br />
 								</Typography>
@@ -180,6 +181,13 @@ export function VideoPicker(props: VideoPickerProps) {
 					<Typography color="error" variant="body2">
 						<FormattedMessage defaultMessage="Error loading video sources" />
 					</Typography>
+				) : !actionsReady ? (
+					<EmptyState
+						title={<FormattedMessage defaultMessage="No options are available for this control" />}
+						subtitle={
+							<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
+						}
+					/>
 				) : (
 					// TODO: same as in NodeSelector and ImagePicker - Refactor this when datasources implementation is ready.
 					<Box

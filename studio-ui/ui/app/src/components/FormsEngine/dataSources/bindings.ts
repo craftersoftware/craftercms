@@ -123,15 +123,16 @@ export function registerControlDataSourceBindings(
 }
 
 /**
- * Lookup order: runtime plugin registrations → built-in {@link controlDataSourceBindings} → shared
- * empty array. The empty result is a stable frozen `[]` so effect deps do not thrash.
+ * Lookup order: built-in {@link controlDataSourceBindings} → runtime plugin registrations → shared
+ * empty array. Built-ins always win so plugins cannot shadow OOB control bindings.
+ * The empty result is a stable frozen `[]` so effect deps do not thrash.
  *
  * Binding metadata tells FE which field properties hold DS ids and which interfaces they require.
  */
 export function getControlDataSourceBindings(controlType: string): readonly DataSourceBinding[] {
 	return (
-		registeredControlDataSourceBindings.get(controlType) ??
 		controlDataSourceBindings[controlType as BuiltInControlType] ??
+		registeredControlDataSourceBindings.get(controlType) ??
 		noBindings
 	);
 }

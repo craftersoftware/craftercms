@@ -26,6 +26,8 @@ import type {
 	GroupedDataSourceActions,
 	ResolvedDataSourceAction
 } from './types';
+import { defineMessages } from 'react-intl';
+import { getCurrentIntl } from '../../../utils/i18n';
 
 /**
  * Legacy aggregate of create/browse/search/upload allowances for NodeSelector.
@@ -41,7 +43,18 @@ export interface ConsolidatedItemPickerData {
 
 const standardActionKinds = new Set<DataSourceActionKind>(['browse', 'search', 'upload', 'create']);
 
+const actionKindMessages = defineMessages({
+	browse: { defaultMessage: 'Browse' },
+	search: { defaultMessage: 'Search' },
+	upload: { defaultMessage: 'Upload' },
+	create: { defaultMessage: 'Create' }
+});
+
 function actionKindLabel(kind: DataSourceActionKind): string {
+	const message = actionKindMessages[kind as keyof typeof actionKindMessages];
+	if (message) {
+		return getCurrentIntl().formatMessage(message);
+	}
 	return kind.length ? `${kind.charAt(0).toUpperCase()}${kind.slice(1)}` : kind;
 }
 

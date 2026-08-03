@@ -26,8 +26,7 @@ import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { Matcher } from 'path-expression-matcher';
-import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
-import { getAdditionalFieldsIdsFromDescriptor } from './formUtils';
+import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
 
 export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
 
@@ -118,16 +117,21 @@ export function createParsedValuesObject(
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
-	// TODO: should controlDescriptors have priority over customControls to avoid overriding OOB controls?
-	const descriptors = { ...customControls, ...controlDescriptors };
+	const descriptors = resolveControlDescriptors(customControls);
 	(Array.isArray(contentTypeFields) ? contentTypeFields : Object.values(contentTypeFields)).forEach((field) => {
 		const descriptor = descriptors[field.type];
 		const additionalFieldIds = descriptor ? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor) : [];
 
 		additionalFieldIds.forEach((additionalFieldId) => {
+			const additionalField: ContentTypeField = {
+				...field,
+				id: additionalFieldId,
+				type: additionalFieldControlType(additionalFieldId),
+				defaultValue: undefined
+			};
 			values[additionalFieldId] = createParsedValueForField(
 				xmlDeserializedValues[additionalFieldId],
-				field,
+				additionalField,
 				contentTypesLookup
 			);
 			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
@@ -136,6 +140,13 @@ export function createParsedValuesObject(
 		fieldCallback?.(field.id, values[field.id]);
 	});
 	return values;
+}
+
+/** Maps additional-field id conventions (e.g. `orderDefault_f`) to a retriever-backed control type. */
+function additionalFieldControlType(additionalFieldId: string): BuiltInControlType {
+	if (/_(?:f|i|l)$/.test(additionalFieldId)) return 'numeric-input';
+	if (/_b$/.test(additionalFieldId)) return 'checkbox';
+	return 'input';
 }
 
 export function createParsedValueForField<T = unknown>(

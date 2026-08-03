@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { createUploadAction, IMAGE_MIME_TYPES, propString } from '../moduleHelpers';
+import { createUploadAction, IMAGE_MIME_TYPES, resolveRepoPath } from '../moduleHelpers';
 
 export const imgDesktopUploadDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +24,7 @@ export const imgDesktopUploadDataSourceModule: DataSourceModule = defineDataSour
 	interfaces: ['image'],
 	capabilities: ['upload'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		return createInstanceFromRecord(record, imgDesktopUploadDataSourceModule, {
 			capabilities: ['upload'],
 			getActions() {

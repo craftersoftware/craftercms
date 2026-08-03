@@ -48,6 +48,10 @@ export interface GroupedDataSourceActionMenuItemsProps {
 	 * dismiss their add/actions menu once a flow finishes.
 	 */
 	onMenuClose?(): void;
+	/** Forwarded from the host MenuList onto the first direct MenuItem for initial focus. */
+	autoFocus?: boolean;
+	/** Forwarded from the host MenuList onto the first direct MenuItem for keyboard nav. */
+	tabIndex?: number;
 }
 
 /**
@@ -89,12 +93,15 @@ export function GroupedDataSourceActionMenuItems({
 	disabled,
 	onResult,
 	onError,
-	onMenuClose
+	onMenuClose,
+	autoFocus,
+	tabIndex
 }: GroupedDataSourceActionMenuItemsProps) {
 	const { groups, customActions } = useMemo(() => buildActionGroups(actions), [actions]);
 	const [choiceAnchor, setChoiceAnchor] = useState<HTMLElement | null>(null);
 	const [choiceGroup, setChoiceGroup] = useState<DataSourceActionGroup | null>(null);
 	const [dialogAction, setDialogAction] = useState<ResolvedDataSourceAction | null>(null);
+	const focusProps = { autoFocus, tabIndex };
 
 	const closeChoices = () => {
 		setChoiceAnchor(null);
@@ -126,16 +133,22 @@ export function GroupedDataSourceActionMenuItems({
 
 	return (
 		<>
-			{groups.map((group) => (
-				<MenuItem key={group.key} disabled={disabled || group.choices.length === 0} onClick={(e) => runGroup(group, e)}>
+			{groups.map((group, index) => (
+				<MenuItem
+					key={group.key}
+					{...(index === 0 ? focusProps : undefined)}
+					disabled={disabled || group.choices.length === 0}
+					onClick={(e) => runGroup(group, e)}
+				>
 					{group.icon}
 					{group.label}
 				</MenuItem>
 			))}
-			{customActions.map((action) =>
+			{customActions.map((action, index) =>
 				action.MenuItem ? (
 					<action.MenuItem
 						key={action.actionKey}
+						{...(groups.length === 0 && index === 0 ? focusProps : undefined)}
 						action={action}
 						context={context}
 						disabled={disabled}
@@ -143,7 +156,12 @@ export function GroupedDataSourceActionMenuItems({
 						onError={handleError}
 					/>
 				) : (
-					<MenuItem key={action.actionKey} disabled={disabled} onClick={() => runCustom(action)}>
+					<MenuItem
+						key={action.actionKey}
+						{...(groups.length === 0 && index === 0 ? focusProps : undefined)}
+						disabled={disabled}
+						onClick={() => runCustom(action)}
+					>
 						{action.icon}
 						{action.label}
 					</MenuItem>

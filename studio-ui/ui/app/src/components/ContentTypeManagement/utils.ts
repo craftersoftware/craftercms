@@ -318,6 +318,8 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	metadata?: {
 		suffixes?: string[];
 		additionalFields?: string[];
+		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+		rootOnly?: boolean;
 	};
 };
 

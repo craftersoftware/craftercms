@@ -30,7 +30,7 @@ A project plugin is an installable file bundle described by `craftercms-plugin.y
 
 Installation copies authoring assets into the site repository. Relevant mapping:
 
-```
+```text
 plugin source:
   authoring/static-assets/...
 
@@ -169,7 +169,7 @@ Repository:
 
 Structure:
 
-```
+```text
 craftercms-plugin.yaml        # package descriptor + auto-wiring
 examples/                     # source workspaces
   component-library/          # representative modern PluginDescriptor bundle
@@ -478,7 +478,7 @@ interface ControlPluginContribution {
 
 ### 9.5 FE DS resolution
 
-```
+```text
 record.type → registry.get(type)
   if miss && record.plugin → importPlugin(locator) → registerPlugin → registry.get(type)
   if still miss → error (plugin loaded but type not in descriptor.dataSources)
@@ -488,7 +488,7 @@ Built-ins call `registerDataSourceModule` at platform init. Externally authored 
 
 ### 9.6 FE control resolution
 
-```
+```text
 field.type → getRegisteredControlContribution(type)
   if miss && field.properties.plugin → importPlugin(locator) → registerPlugin → lookup again
   if still miss → error (plugin loaded but type not in descriptor.controls)

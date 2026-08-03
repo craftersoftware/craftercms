@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { AUDIO_MIME_TYPES, createBrowseAction, propString } from '../moduleHelpers';
+import { AUDIO_MIME_TYPES, createBrowseAction, resolveRepoPath } from '../moduleHelpers';
 
 export const audioBrowseRepoDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +24,7 @@ export const audioBrowseRepoDataSourceModule: DataSourceModule = defineDataSourc
 	interfaces: ['audio'],
 	capabilities: ['browse'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		return createInstanceFromRecord(record, audioBrowseRepoDataSourceModule, {
 			capabilities: ['browse'],
 			getActions() {

@@ -37,6 +37,7 @@ import type { DataSourceSelection } from '../dataSources/types';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
+import { EmptyState } from '../../EmptyState';
 
 export interface TranscodedVideoPickerProps extends ControlProps {
 	value: { url: string }[];
@@ -143,6 +144,13 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 				<Typography color="error" variant="body2">
 					<FormattedMessage defaultMessage="Error loading video sources" />
 				</Typography>
+			) : !actionsReady ? (
+				<EmptyState
+					title={<FormattedMessage defaultMessage="No options are available for this control" />}
+					subtitle={
+						<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
+					}
+				/>
 			) : (
 				<Box display="flex" gap={1} flexWrap="wrap">
 					{actionMenuItems}

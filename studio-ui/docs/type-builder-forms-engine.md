@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-07-27
+Last updated: 2026-07-31
 
 ---
 
@@ -17,7 +17,7 @@ Crafter Studio is the authoring UI for CrafterCMS.
 
 Pipeline:
 
-```
+```text
 TB (edit type)
   → writes type artifacts under /config/studio/content-types/<objectType>/<typeName>/
   → form-definition.xml (+ today: config.xml)
@@ -69,7 +69,7 @@ Typical type folder contents:
 
 ### FE layout (high signal)
 
-```
+```text
 FormsEngine/
   FormsEngine.tsx          # shell, stack, load, layout modes
   FormsEngineDialog.tsx
@@ -91,7 +91,7 @@ State: Jotai atoms + React context (`StableFormContext`, `ItemMetaContext`, …)
 
 ### TB (ContentTypeManagement) layout (high signal)
 
-```
+```text
 ContentTypeManagement/
   ContentTypeManagement.tsx   # list | edit | create; can fall back to legacy iframe
   utils.ts                    # serialize/deserialize helpers, TypePropsToEdit, paths
@@ -395,15 +395,14 @@ Detailed companion: [`type-builder-forms-engine-plugins.md`](type-builder-forms-
 Keep three mechanisms distinct:
 
 1. A **project plugin package** (`craftercms-plugin.yaml` + `authoring/`) copies assets into a site and may auto-wire XML configuration.
-2. A **modern Studio UI plugin bundle** exports a `PluginDescriptor`; `Widget`/`plugin.ts` imports it and registers widgets, locales, scripts, and stylesheets.
-3. An **FE control/DS plugin** is selected by TB and persisted in `form-definition.xml`; legacy FE loads a YUI class, while new FE control loading expects a default-exported React component.
+2. A **modern Studio UI plugin bundle** exports a `PluginDescriptor`; `Widget`/`plugin.ts` imports it and registers widgets, locales, scripts, stylesheets, and (when present) FE contributions.
+3. An **FE control/DS plugin** is selected by TB and persisted in `form-definition.xml`. New FE loads controls and data sources through `importPlugin` → `PluginDescriptor.controls` / `.dataSources` (keyed by type id). Legacy FE still loads a YUI class via the FE1 contract.
 
 Important findings:
 
-- Current public FE control/DS plugin docs describe the legacy `CStudioForms`/`CStudioAuthoring.Module.moduleLoaded` contract.
+- Current public FE control/DS plugin docs still describe the legacy `CStudioForms`/`CStudioAuthoring.Module.moduleLoaded` contract for FE1.
 - Existing `form-control` / `form-datasource` package installation auto-wires `site-config-tools.xml`, but new TB discovers its catalog from `ui.xml`.
-- New FE control and DS plugins load through `importPlugin` / `PluginDescriptor.controls` and `.dataSources` (not the widget registry).
-- New FE has no executable DS plugin path.
+- New FE control and DS plugins load through `importPlugin` / `PluginDescriptor.controls` and `.dataSources` (not the widget registry). See Progress 2026-07-30/31 and the plugins companion §9.
 - The local `authoring-ui-plugin-examples` `component-library` is the representative modern bundle/build pattern. Its `forms-engine` workspace is only a placeholder experiment; current FE does not consume its control/DS widgets.
 - Package id, asset locator, runtime `PluginDescriptor.id`, widget id, and FE type/name are separate identities and must not be conflated.
 - A project plugin can deliver content types and controller files, but FE2 still needs a form-controller lifecycle; package delivery does not provide runtime execution.
@@ -490,6 +489,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-07-31** — Review pass: pending-change marks on TB insert; page-nav-order `rootOnly`; expired-date `{id}_tz`; ImagePicker validation catch; PageNavOrder draft alert removed; VideoPicker null-safe dims; DS list options empty-context settle; upload map rejects empty path; `DataSourceCustomSelection.kind: 'custom'`; repeat values cloned; control plugin final-promise cache; RTE empty-DS notify; additional-field typed parsing (`orderDefault_f` numeric); video metadata abort guard; plugin control typeKey cannot override built-ins; uiConfig control descriptors keyed by descriptor.id; `customControls` effect dep; shared `resolveRepoPath` / `normalizeListItem` / `resolveControlDescriptors`.
 - **2026-07-31** — Implemented FE control plugins on the single `PluginDescriptor` model: `controls` + `ControlPluginContribution`, `registerPluginControls`, control contribution registry, `controlPluginLoader` rewritten to `importPlugin` + `field.type` lookup (removed raw `import(url)` / bare default component). Sample: `samples/fe2-control-plugin.example.mjs`.
 - **2026-07-31** — Documented FE control plugin convergence spec (`fe2-control-plugin-single-model-implementation.md`): `PluginDescriptor.controls`, registry + `registerPluginControls`, rewrite `controlPluginLoader` to mirror DS `loadDataSourceModule`. Updated plugins companion §9.6/§9.8 and open decisions.
 - **2026-07-30** — Implemented single plugin model for FE data sources: `PluginDescriptor.dataSources`, `registerPlugin` installs into the DS registry, `loadDataSourceModule` only calls `importPlugin` + type lookup (removed bare-module packaging). Also fixed NodeSelector Create for shared-content with empty Default Type (`allowedCreatePaths`), and content-types reactivity for wildcard create actions.

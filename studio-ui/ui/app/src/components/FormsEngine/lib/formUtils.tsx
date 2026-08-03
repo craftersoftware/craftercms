@@ -880,7 +880,7 @@ export function prepareEmbeddedItemForm(props: {
 	const values = { ...update.values };
 	const validatorsData = { siteId, contentTypesById };
 
-	const descriptors = { ...customControls, ...controlDescriptors };
+	const descriptors = resolveControlDescriptors(customControls);
 	const additionalFieldsIds: string[] = [];
 	// Retrieve all additional fields ids from the contentType fields.
 	Object.values(contentType.fields).forEach((field) => {
@@ -969,6 +969,16 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
 	const additionalFields = descriptor.metadata?.additionalFields ?? [];
 	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+}
+
+/**
+ * Merges ui.xml custom control descriptors under code-default descriptors.
+ * Code defaults win on key collision so OOB controls are not overridden by ui.xml entries.
+ */
+export function resolveControlDescriptors(
+	customControls?: LookupTable<DescriptorContentType>
+): LookupTable<DescriptorContentType> {
+	return { ...customControls, ...controlDescriptors };
 }
 
 // TODO: are there going to be other placeholders besides {id}?

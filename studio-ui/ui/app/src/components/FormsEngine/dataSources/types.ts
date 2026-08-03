@@ -21,11 +21,11 @@ import type { FormsEngineProps } from '../FormsEngine';
 
 export const DATA_SOURCE_API_VERSION = 1 as const;
 
-export type DataSourceInterface = 'item' | 'image' | 'video' | 'transcoded-video' | 'audio' | 'options' | string;
+export type DataSourceInterface = 'item' | 'image' | 'video' | 'transcoded-video' | 'audio' | 'options' | (string & {});
 
 export type DataSourceCapability = 'browse' | 'search' | 'upload' | 'create' | 'list' | 'edit' | 'refreshItem';
 
-export type DataSourceActionKind = Exclude<DataSourceCapability, 'list' | 'edit' | 'refreshItem'> | string;
+export type DataSourceActionKind = Exclude<DataSourceCapability, 'list' | 'edit' | 'refreshItem'> | (string & {});
 
 /** Selection of a file/media asset (image, video, audio, or generic file). */
 export interface DataSourceAssetSelection {
@@ -57,9 +57,10 @@ export interface DataSourceVariantsSelection {
 	items: Array<{ url: string; [key: string]: unknown }>;
 }
 
-/** Plugin-defined selection shapes. `kind` must not collide with built-in kinds so unions narrow cleanly. */
+/** Plugin-defined selection shapes. Fixed `kind: 'custom'` so unions narrow cleanly vs built-ins. */
 export interface DataSourceCustomSelection {
-	kind: Exclude<string, 'asset' | 'item' | 'option' | 'variants'>;
+	kind: 'custom';
+	customKind: string;
 	[key: string]: unknown;
 }
 

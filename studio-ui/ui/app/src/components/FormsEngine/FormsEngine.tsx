@@ -97,6 +97,7 @@ import {
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
 	getAdditionalFieldsIdsFromDescriptor,
+	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	getScrollContainer,
 	getTargetHeight,
@@ -143,7 +144,6 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
-import controlDescriptors from '../ContentTypeManagement/descriptors/controls';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -389,17 +389,17 @@ function FormBootstrap(props: FormsEngineProps) {
 					isAdditional
 				);
 			};
-			const values =
-				repeat.values ??
-				createParsedValuesObject(
-					fieldsToRender,
-					{},
-					effectRefs.current.contentTypesById,
-					atomValueCreator,
-					customControls
-				);
+			const values = repeat.values
+				? { ...repeat.values }
+				: createParsedValuesObject(
+						fieldsToRender,
+						{},
+						effectRefs.current.contentTypesById,
+						atomValueCreator,
+						customControls
+					);
 
-			const descriptors = { ...customControls, ...controlDescriptors };
+			const descriptors = resolveControlDescriptors(customControls);
 			const additionalFieldsIds: string[] = [];
 			// If repeat.values was provided, `createCleanValuesObject` didn't run; hence, atomValueCreator needs to be run manually.
 			if (repeat.values) {
@@ -605,6 +605,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	}, [
 		contentTypesLoaded,
 		create,
+		customControls,
 		dispatch,
 		effectRefs,
 		fieldsToRender,

@@ -110,27 +110,30 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 				configDOM
 					.querySelectorAll('[id="craftercms.components.ContentTypeManagement"] > configuration > controls')
 					.forEach((tag) => {
-						const descriptor = deserialize(tag.innerHTML)?.descriptor;
-						if (!descriptor) return;
-						// Normalize XML-deserialized shapes (single nodes vs arrays, empty fields tag, etc.)
-						controls[tag.id] = {
-							...descriptor,
-							id: tag.id,
-							fields: descriptor.fields ? descriptor.fields : {}, // empty <fields /> deserializes as []
-							sections: descriptor.sections
-								? asArray(descriptor.sections).map((section) => ({
-										...section,
-										fields: section.fields ? asArray(section.fields) : []
-									}))
-								: [],
-							metadata: {
-								...descriptor.metadata,
-								suffixes: descriptor.metadata?.suffixes ? asArray(descriptor.metadata.suffixes) : null,
-								additionalFields: descriptor.metadata?.additionalFields
-									? asArray(descriptor.metadata.additionalFields)
-									: null
-							}
-						};
+						const deserialized = deserialize(tag.innerHTML);
+						asArray(deserialized?.descriptor).forEach((descriptor) => {
+							if (!descriptor?.id) return;
+							// Normalize XML-deserialized shapes (single nodes vs arrays, empty fields tag, etc.)
+							controls[descriptor.id] = {
+								...descriptor,
+								id: descriptor.id,
+								// empty <fields /> deserializes as []; treat as empty object map
+								fields: Array.isArray(descriptor.fields) ? {} : (descriptor.fields ?? {}),
+								sections: descriptor.sections
+									? asArray(descriptor.sections).map((section) => ({
+											...section,
+											fields: section.fields ? asArray(section.fields) : []
+										}))
+									: [],
+								metadata: {
+									...descriptor.metadata,
+									suffixes: descriptor.metadata?.suffixes ? asArray(descriptor.metadata.suffixes) : null,
+									additionalFields: descriptor.metadata?.additionalFields
+										? asArray(descriptor.metadata.additionalFields)
+										: null
+								}
+							};
+						});
 					});
 
 				config = serialize(configDOM);

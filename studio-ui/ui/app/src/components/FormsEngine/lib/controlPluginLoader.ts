@@ -32,6 +32,13 @@ export interface LoadedControlPlugin {
 /** Cache of in-flight / completed importPlugin calls, keyed by plugin file URL. */
 const controlPluginCache = new Map<string, Promise<PluginDescriptor>>();
 
+/** Cache of final LoadedControlPlugin promises, keyed by plugin URL + control type. */
+const loadedControlPluginCache = new Map<string, Promise<LoadedControlPlugin>>();
+
+function loadedCacheKey(url: string, controlType: string): string {
+	return `${url}::${controlType}`;
+}
+
 /** Builds the Studio plugin file URL for a form-definition plugin ref (same shape as DS plugin load). */
 export function buildControlPluginUrl(siteId: string, plugin: FormDefinitionPlugin): string {
 	return buildFileUrl(siteId, plugin.type, plugin.name, plugin.filename, plugin.pluginId);
@@ -43,6 +50,8 @@ export function buildControlPluginUrl(siteId: string, plugin: FormDefinitionPlug
  * Loads through the shared plugin system (`importPlugin` → `registerPlugin` →
  * `descriptor.controls`), then looks up the contribution by control type.
  * Cached by plugin file URL so one bundle can contribute multiple controls.
+ * The final {@link LoadedControlPlugin} promise is also cached by URL + control type
+ * so Suspense/`use` sees a stable promise across renders.
  * On miss after load, returns `errorComponent` instead of throwing so the form stays open.
  */
 export function loadControlPluginModule(
@@ -59,19 +68,26 @@ export function loadControlPluginModule(
 		id: plugin.pluginId
 	};
 	const url = buildFileUrl(builder);
+	const cacheKey = loadedCacheKey(url, controlType);
+
+	const cached = loadedControlPluginCache.get(cacheKey);
+	if (cached) return cached;
 
 	// Fast path only when the registered contribution already belongs to this plugin.
 	// A global hit from a different plugin (e.g. widget host) must not skip loading the
 	// field's locator — that would render the wrong component for this field.
 	const existing = getRegisteredControlContribution(controlType);
 	if (existing && existing.pluginId === plugin.pluginId) {
-		return Promise.resolve({ Component: existing.Component, bindings: existing.bindings, url });
+		const resolved = Promise.resolve({ Component: existing.Component, bindings: existing.bindings, url });
+		loadedControlPluginCache.set(cacheKey, resolved);
+		return resolved;
 	}
 
 	let loading = controlPluginCache.get(url);
 	if (!loading) {
 		loading = importPlugin(builder).catch((reason) => {
 			controlPluginCache.delete(url);
+			loadedControlPluginCache.delete(cacheKey);
 			console.error(
 				// TODO: Docs or internal URL
 				`An error occurred loading the control. The form attempted to load the control from \`${url}\`. Forms Engine v1 controls are not compatible with this version. If you haven't migrated this control, please check the migration guide at https://docs.craftercms.org/.\n\n`,
@@ -82,7 +98,7 @@ export function loadControlPluginModule(
 		controlPluginCache.set(url, loading);
 	}
 
-	return loading
+	const result = loading
 		.then((descriptor) => {
 			const contribution = getRegisteredControlContribution(controlType);
 			if (!contribution) {
@@ -102,6 +118,9 @@ export function loadControlPluginModule(
 			return { Component: contribution.Component, bindings: contribution.bindings, url };
 		})
 		.catch(() => ({ Component: errorComponent, bindings: [], url }));
+
+	loadedControlPluginCache.set(cacheKey, result);
+	return result;
 }
 
 /**

@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { createUploadAction, propString, VIDEO_MIME_TYPES } from '../moduleHelpers';
+import { createUploadAction, VIDEO_MIME_TYPES, resolveRepoPath } from '../moduleHelpers';
 
 export const videoDesktopUploadDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +24,7 @@ export const videoDesktopUploadDataSourceModule: DataSourceModule = defineDataSo
 	interfaces: ['video'],
 	capabilities: ['upload'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		return createInstanceFromRecord(record, videoDesktopUploadDataSourceModule, {
 			capabilities: ['upload'],
 			getActions() {

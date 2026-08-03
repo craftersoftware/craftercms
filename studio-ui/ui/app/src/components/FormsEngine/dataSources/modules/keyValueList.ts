@@ -16,7 +16,7 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceListItem, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { propString } from '../moduleHelpers';
+import { normalizeListItem, propString } from '../moduleHelpers';
 import { asArray } from '../../../../utils/array';
 
 function parseKeyValueOptions(raw: string): DataSourceListItem[] {
@@ -26,17 +26,9 @@ function parseKeyValueOptions(raw: string): DataSourceListItem[] {
 	} catch (cause) {
 		throw new Error('Unable to parse key-value-list options JSON.', { cause });
 	}
-	return asArray(parsed as DataSourceListItem | DataSourceListItem[]).map((item, index) => {
-		if (!item || typeof item !== 'object') {
-			throw new Error(`key-value-list options entry at index ${index} is not an object.`);
-		}
-		const key = String((item as DataSourceListItem).key ?? '');
-		const value = String((item as DataSourceListItem).value ?? '');
-		if (!key && !value) {
-			throw new Error(`key-value-list options entry at index ${index} is missing key/value.`);
-		}
-		return { ...item, key, value };
-	});
+	return asArray(parsed as DataSourceListItem | DataSourceListItem[]).map((item, index) =>
+		normalizeListItem(item, index, 'key-value-list options')
+	);
 }
 
 export const keyValueListDataSourceModule: DataSourceModule = defineDataSourceModule({

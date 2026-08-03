@@ -217,6 +217,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 							}}
 						/>
 					</Typography>
+					{/* TODO: Remove this alert when the 'content/reorder-items' new v2 API is implemented. */}
 					<Alert severity="warning" sx={{ mt: 2 }}>
 						Development draft. Waiting for 'content/reorder-items' new v2 API to be implemented.
 					</Alert>

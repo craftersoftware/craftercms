@@ -16,7 +16,14 @@
 
 import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
-import { createBrowseAction, createSearchAction, IMAGE_MIME_TYPES, propBoolean, propString } from '../moduleHelpers';
+import {
+	createBrowseAction,
+	createSearchAction,
+	IMAGE_MIME_TYPES,
+	propBoolean,
+	propString,
+	resolveRepoPath
+} from '../moduleHelpers';
 
 export const imgRepositoryUploadDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -24,7 +31,7 @@ export const imgRepositoryUploadDataSourceModule: DataSourceModule = defineDataS
 	interfaces: ['image'],
 	capabilities: ['browse', 'search'],
 	create({ record }) {
-		const path = propString(record, 'repoPath') || propString(record, 'path', '/static-assets/');
+		const path = resolveRepoPath(record, '/static-assets/');
 		const useSearch = propBoolean(record, 'useSearch', false);
 		const sortBy = propString(record, 'sortBy') || undefined;
 		const sortOrderRaw = propString(record, 'sortOrder');

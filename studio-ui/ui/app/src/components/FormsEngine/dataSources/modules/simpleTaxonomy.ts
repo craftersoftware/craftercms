@@ -21,7 +21,7 @@ import { deserialize } from '../../../../utils/xml';
 import { DATA_SOURCE_API_VERSION, type DataSourceListItem, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
 import { expandPathOrRaw } from '../pathUtils';
-import { propString } from '../moduleHelpers';
+import { normalizeListItem, propString } from '../moduleHelpers';
 
 function itemsFromTaxonomyDoc(doc: XMLDocument): DataSourceListItem[] {
 	const itemsNode = doc.querySelector(':scope > items');
@@ -30,18 +30,7 @@ function itemsFromTaxonomyDoc(doc: XMLDocument): DataSourceListItem[] {
 	}
 	const deserialized = deserialize(itemsNode) as { items?: { item?: unknown } };
 	const items = asArray(deserialized?.items?.item);
-	return items.map((item, index) => {
-		if (!item || typeof item !== 'object') {
-			throw new Error(`Taxonomy item at index ${index} is invalid.`);
-		}
-		const record = item as Record<string, unknown>;
-		const key = String(record.key ?? '');
-		const value = String(record.value ?? '');
-		if (!key && !value) {
-			throw new Error(`Taxonomy item at index ${index} is missing key/value.`);
-		}
-		return { ...record, key, value };
-	});
+	return items.map((item, index) => normalizeListItem(item, index, 'Taxonomy item'));
 }
 
 export const simpleTaxonomyDataSourceModule: DataSourceModule = defineDataSourceModule({
