@@ -14,13 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import Box from '@mui/material/Box';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
-import { withMonaco } from '../../utils/system';
 import type Monaco from '../../models/Monaco';
-import { MonacoEditorOptions, normalizeMonacoTheme } from './types';
+import { MonacoEditorOptions } from './types';
+import { useMonacoLifecycle } from './useMonacoLifecycle';
 
 export interface MonacoEditorProps {
 	height?: string | number;
@@ -33,82 +33,24 @@ export interface MonacoEditorProps {
 	sx?: SxProps<Theme>;
 }
 
+function createEditor(
+	monaco: Monaco,
+	container: HTMLDivElement,
+	models: ReturnType<Monaco['editor']['createModel']>[],
+	options?: MonacoEditorOptions
+) {
+	return monaco.editor.create(container, {
+		model: models[0],
+		automaticLayout: true,
+		...options
+	});
+}
+
 export function MonacoEditor(props: MonacoEditorProps) {
 	const { height = '100%', language, defaultLanguage, value = '', theme = 'vs', options, className, sx } = props;
 	const resolvedLanguage = language || defaultLanguage || 'plaintext';
-	const containerRef = useRef<HTMLDivElement>(undefined);
-	const editorRef = useRef<ReturnType<Monaco['editor']['create']>>(null);
-	const monacoRef = useRef<Monaco>(null);
-	const modelRef = useRef<ReturnType<Monaco['editor']['createModel']>>(null);
-	const propsRef = useRef(props);
-	const [ready, setReady] = useState(false);
-
-	useEffect(() => {
-		propsRef.current = props;
-	});
-
-	useEffect(() => {
-		let active = true;
-		withMonaco((monaco) => {
-			if (!active || !containerRef.current || editorRef.current) {
-				return;
-			}
-			const {
-				value: currentValue = '',
-				language: currentLanguage,
-				defaultLanguage: currentDefaultLanguage,
-				theme: currentTheme = 'vs',
-				options: currentOptions
-			} = propsRef.current;
-			const lang = currentLanguage || currentDefaultLanguage || 'plaintext';
-			monacoRef.current = monaco;
-			monaco.editor.setTheme(normalizeMonacoTheme(currentTheme));
-			const model = monaco.editor.createModel(currentValue, lang);
-			modelRef.current = model;
-			editorRef.current = monaco.editor.create(containerRef.current, {
-				model,
-				automaticLayout: true,
-				...currentOptions
-			});
-			setReady(true);
-		});
-		return () => {
-			active = false;
-			editorRef.current?.dispose();
-			editorRef.current = null;
-			modelRef.current?.dispose();
-			modelRef.current = null;
-		};
-	}, []);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		const model = modelRef.current;
-		const monaco = monacoRef.current;
-		if (!model || !monaco) {
-			return;
-		}
-		if (model.getValue() !== value) {
-			model.setValue(value ?? '');
-		}
-		monaco.editor.setModelLanguage(model, resolvedLanguage);
-	}, [ready, value, resolvedLanguage]);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		editorRef.current?.updateOptions(options ?? {});
-	}, [ready, options]);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		monacoRef.current?.editor.setTheme(normalizeMonacoTheme(theme));
-	}, [ready, theme]);
+	const models = useMemo(() => [{ value, language: resolvedLanguage }], [value, resolvedLanguage]);
+	const containerRef = useMonacoLifecycle({ models, theme, options, createEditor });
 
 	return (
 		<Box

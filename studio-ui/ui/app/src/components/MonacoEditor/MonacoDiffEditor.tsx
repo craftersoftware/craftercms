@@ -14,13 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import Box from '@mui/material/Box';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
-import { withMonaco } from '../../utils/system';
 import type Monaco from '../../models/Monaco';
-import { MonacoDiffEditorOptions, normalizeMonacoTheme } from './types';
+import { MonacoDiffEditorOptions } from './types';
+import { useMonacoLifecycle } from './useMonacoLifecycle';
 
 export interface MonacoDiffEditorProps {
 	height?: string | number;
@@ -31,6 +31,23 @@ export interface MonacoDiffEditorProps {
 	options?: MonacoDiffEditorOptions;
 	className?: string;
 	sx?: SxProps<Theme>;
+}
+
+function createDiffEditor(
+	monaco: Monaco,
+	container: HTMLDivElement,
+	models: ReturnType<Monaco['editor']['createModel']>[],
+	options?: MonacoDiffEditorOptions
+) {
+	const editor = monaco.editor.createDiffEditor(container, {
+		automaticLayout: true,
+		...options
+	});
+	editor.setModel({
+		original: models[0],
+		modified: models[1]
+	});
+	return editor;
 }
 
 export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
@@ -44,91 +61,14 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 		className,
 		sx
 	} = props;
-	const containerRef = useRef<HTMLDivElement>(undefined);
-	const editorRef = useRef<ReturnType<Monaco['editor']['createDiffEditor']>>(null);
-	const monacoRef = useRef<Monaco>(null);
-	const originalModelRef = useRef<ReturnType<Monaco['editor']['createModel']>>(null);
-	const modifiedModelRef = useRef<ReturnType<Monaco['editor']['createModel']>>(null);
-	const propsRef = useRef(props);
-	const [ready, setReady] = useState(false);
-
-	useEffect(() => {
-		propsRef.current = props;
-	});
-
-	useEffect(() => {
-		let active = true;
-		withMonaco((monaco) => {
-			if (!active || !containerRef.current || editorRef.current) {
-				return;
-			}
-			const {
-				original: currentOriginal = '',
-				modified: currentModified = '',
-				language: currentLanguage = 'plaintext',
-				theme: currentTheme = 'vs',
-				options: currentOptions
-			} = propsRef.current;
-			monacoRef.current = monaco;
-			monaco.editor.setTheme(normalizeMonacoTheme(currentTheme));
-			const originalModel = monaco.editor.createModel(currentOriginal, currentLanguage);
-			const modifiedModel = monaco.editor.createModel(currentModified, currentLanguage);
-			originalModelRef.current = originalModel;
-			modifiedModelRef.current = modifiedModel;
-			editorRef.current = monaco.editor.createDiffEditor(containerRef.current, {
-				automaticLayout: true,
-				...currentOptions
-			});
-			editorRef.current.setModel({
-				original: originalModel,
-				modified: modifiedModel
-			});
-			setReady(true);
-		});
-		return () => {
-			active = false;
-			editorRef.current?.dispose();
-			editorRef.current = null;
-			originalModelRef.current?.dispose();
-			originalModelRef.current = null;
-			modifiedModelRef.current?.dispose();
-			modifiedModelRef.current = null;
-		};
-	}, []);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		const monaco = monacoRef.current;
-		const originalModel = originalModelRef.current;
-		const modifiedModel = modifiedModelRef.current;
-		if (!monaco || !originalModel || !modifiedModel) {
-			return;
-		}
-		if (originalModel.getValue() !== original) {
-			originalModel.setValue(original ?? '');
-		}
-		if (modifiedModel.getValue() !== modified) {
-			modifiedModel.setValue(modified ?? '');
-		}
-		monaco.editor.setModelLanguage(originalModel, language);
-		monaco.editor.setModelLanguage(modifiedModel, language);
-	}, [ready, original, modified, language]);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		editorRef.current?.updateOptions(options ?? {});
-	}, [ready, options]);
-
-	useEffect(() => {
-		if (!ready) {
-			return;
-		}
-		monacoRef.current?.editor.setTheme(normalizeMonacoTheme(theme));
-	}, [ready, theme]);
+	const models = useMemo(
+		() => [
+			{ value: original, language },
+			{ value: modified, language }
+		],
+		[original, modified, language]
+	);
+	const containerRef = useMonacoLifecycle({ models, theme, options, createEditor: createDiffEditor });
 
 	return (
 		<Box
