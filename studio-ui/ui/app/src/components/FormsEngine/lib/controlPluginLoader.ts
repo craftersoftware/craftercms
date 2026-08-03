@@ -52,6 +52,9 @@ export function buildControlPluginUrl(siteId: string, plugin: FormDefinitionPlug
  * Cached by plugin file URL so one bundle can contribute multiple controls.
  * The final {@link LoadedControlPlugin} promise is also cached by URL + control type
  * so Suspense/`use` sees a stable promise across renders.
+ *
+ * Ownership is checked against {@link PluginDescriptor.id} from the loaded bundle — never
+ * against the form-definition locator `pluginId`, which is a separate identity.
  * On miss after load, returns `errorComponent` instead of throwing so the form stays open.
  */
 export function loadControlPluginModule(
@@ -73,16 +76,9 @@ export function loadControlPluginModule(
 	const cached = loadedControlPluginCache.get(cacheKey);
 	if (cached) return cached;
 
-	// Fast path only when the registered contribution already belongs to this plugin.
-	// A global hit from a different plugin (e.g. widget host) must not skip loading the
-	// field's locator — that would render the wrong component for this field.
-	const existing = getRegisteredControlContribution(controlType);
-	if (existing && existing.pluginId === plugin.pluginId) {
-		const resolved = Promise.resolve({ Component: existing.Component, bindings: existing.bindings, url });
-		loadedControlPluginCache.set(cacheKey, resolved);
-		return resolved;
-	}
-
+	// Always go through the URL-keyed importPlugin promise. Do not fast-path on
+	// `plugin.pluginId` vs `RegisteredControlContribution.pluginId` — those are unrelated
+	// identities (asset locator vs PluginDescriptor.id).
 	let loading = controlPluginCache.get(url);
 	if (!loading) {
 		loading = importPlugin(builder).catch((reason) => {
@@ -108,10 +104,11 @@ export function loadControlPluginModule(
 				);
 				return { Component: errorComponent, bindings: [], url };
 			}
-			if (contribution.pluginId !== plugin.pluginId) {
+			// Compare against the descriptor we just loaded — not the form-definition locator id.
+			if (contribution.pluginId !== descriptor.id) {
 				console.error(
-					`Control type "${controlType}" is registered by plugin "${contribution.pluginId}", but field plugin locator ` +
-						`points at "${plugin.pluginId}" (${url}). Refusing to use the mismatched contribution.`
+					`Control type "${controlType}" is registered by plugin "${contribution.pluginId}", but the bundle at ` +
+						`"${url}" has PluginDescriptor.id "${descriptor.id}". Refusing to use the mismatched contribution.`
 				);
 				return { Component: errorComponent, bindings: [], url };
 			}

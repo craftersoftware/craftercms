@@ -18,10 +18,11 @@ import type { ComponentType } from 'react';
 import type { DataSourceBinding } from '../dataSources/types';
 import type { ControlProps } from '../types';
 
-/** Cached plugin control: Component, normalized bindings, and owning `pluginId` (for conflict errors). */
+/** Cached plugin control: Component, normalized bindings, and owning `PluginDescriptor.id`. */
 export interface RegisteredControlContribution {
 	Component: ComponentType<ControlProps>;
 	bindings: readonly DataSourceBinding[];
+	/** Owning {@link PluginDescriptor.id} — not the form-definition asset locator `pluginId`. */
 	pluginId: string;
 }
 
@@ -30,23 +31,31 @@ const registeredControls = new Map<string, RegisteredControlContribution>();
 /**
  * Stores an FE2 plugin control Component + bindings by `field.type`.
  *
- * Idempotent for the same Component; throws if another plugin claims the same type with a different
- * Component. Complements binding registration — both are installed by `registerPlugin`.
+ * Idempotent for the same owning plugin + Component. Throws if another plugin's descriptor already
+ * claims the type (even with an identical Component reference), so binding metadata cannot be
+ * overwritten under a retained first owner.
  */
 export function registerControlContribution(controlType: string, contribution: RegisteredControlContribution): void {
 	if (!controlType) {
 		throw new TypeError('registerControlContribution requires a non-empty control type.');
 	}
 	const existing = registeredControls.get(controlType);
-	if (existing && existing.Component !== contribution.Component) {
-		throw new Error(
-			`Cannot register control type "${controlType}": a different component is already registered` +
-				` (plugin "${existing.pluginId}" vs "${contribution.pluginId}").`
-		);
+	if (existing) {
+		if (existing.pluginId !== contribution.pluginId) {
+			throw new Error(
+				`Cannot register control type "${controlType}": already registered by plugin "${existing.pluginId}"` +
+					` (attempted by "${contribution.pluginId}").`
+			);
+		}
+		if (existing.Component !== contribution.Component) {
+			throw new Error(
+				`Cannot register control type "${controlType}": a different component is already registered` +
+					` by plugin "${existing.pluginId}".`
+			);
+		}
+		return;
 	}
-	if (!existing) {
-		registeredControls.set(controlType, contribution);
-	}
+	registeredControls.set(controlType, contribution);
 }
 
 /** Read API for `controlPluginLoader` / hosts after `registerPlugin`. */

@@ -17,7 +17,6 @@
 import { DATA_SOURCE_API_VERSION, type DataSourceListItem, type DataSourceModule } from '../types';
 import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
 import { normalizeListItem, propString } from '../moduleHelpers';
-import { asArray } from '../../../../utils/array';
 
 function parseKeyValueOptions(raw: string): DataSourceListItem[] {
 	let parsed: unknown;
@@ -26,9 +25,15 @@ function parseKeyValueOptions(raw: string): DataSourceListItem[] {
 	} catch (cause) {
 		throw new Error('Unable to parse key-value-list options JSON.', { cause });
 	}
-	return asArray(parsed as DataSourceListItem | DataSourceListItem[]).map((item, index) =>
-		normalizeListItem(item, index, 'key-value-list options')
-	);
+	// Empty array is a valid empty list. Reject falsy primitives (null, false, 0, "") that
+	// asArray would silently coerce to [] — those are invalid options payloads.
+	if (Array.isArray(parsed)) {
+		return parsed.map((item, index) => normalizeListItem(item, index, 'key-value-list options'));
+	}
+	if (parsed && typeof parsed === 'object') {
+		return [normalizeListItem(parsed, 0, 'key-value-list options')];
+	}
+	throw new Error('key-value-list options JSON must be an array or a single options object.');
 }
 
 export const keyValueListDataSourceModule: DataSourceModule = defineDataSourceModule({

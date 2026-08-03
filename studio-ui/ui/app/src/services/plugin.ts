@@ -15,6 +15,7 @@
  */
 
 import { isValidElementType } from 'react-is';
+import type { ComponentType } from 'react';
 import LookupTable from '../models/LookupTable';
 import { augmentTranslations } from '../utils/i18n';
 import { components, plugins } from '../utils/constants';
@@ -27,10 +28,21 @@ import {
 	registerControlDataSourceBindings
 } from '../components/FormsEngine/dataSources/bindings';
 import { dataSourceModuleRegistry, validateDataSourceModule } from '../components/FormsEngine/dataSources/registry';
-import { registerControlContribution } from '../components/FormsEngine/controls/registry';
+import type { DataSourceBinding, DataSourceModule } from '../components/FormsEngine/dataSources/types';
+import {
+	getRegisteredControlContribution,
+	registerControlContribution
+} from '../components/FormsEngine/controls/registry';
 import { controlMap } from '../components/FormsEngine/lib/controlMap';
+import type { ControlProps } from '../components/FormsEngine/types';
 
 const DEFAULT_FILE_NAME = 'index.js';
+
+type ControlContributionCommit = {
+	typeKey: string;
+	Component: ComponentType<ControlProps>;
+	bindings: readonly DataSourceBinding[];
+};
 
 function isPluginFileBuilder(target: any): target is PluginFileBuilder {
 	return typeof target === 'object';
@@ -152,86 +164,85 @@ export function isPluginRegistered(plugin: PluginDescriptor): boolean {
 }
 
 /**
- * Installs `plugin.dataSources` into the FE module registry.
- * Map keys must equal `module.type`; conflicting implementations throw.
- */
-function registerPluginDataSources(plugin: PluginDescriptor): void {
-	const contributions = plugin.dataSources;
-	if (!contributions) return;
-
-	const modules = Object.entries(contributions).map(([typeKey, module]) => {
-		validateDataSourceModule(module);
-		if (module.type !== typeKey) {
-			throw new TypeError(
-				`Plugin "${plugin.id}" dataSources key "${typeKey}" does not match module.type "${module.type}".`
-			);
-		}
-		const existing = dataSourceModuleRegistry.get(module.type);
-		if (existing && existing !== module) {
-			throw new Error(
-				`Plugin "${plugin.id}" cannot register data-source type "${module.type}": a different module is already registered.`
-			);
-		}
-		return module;
-	});
-
-	modules.forEach((module) => {
-		if (!dataSourceModuleRegistry.has(module.type)) {
-			dataSourceModuleRegistry.register(module);
-		}
-	});
-}
-
-/**
- * Installs `plugin.controls` into the control contribution + binding registries.
- * Map keys must equal the control type id (`field.type`).
- */
-function registerPluginControls(plugin: PluginDescriptor): void {
-	const contributions = plugin.controls;
-	if (!contributions) return;
-
-	const entries = Object.entries(contributions).map(([typeKey, entry]) => {
-		if (!typeKey) {
-			throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
-		}
-		if (typeKey in controlMap) {
-			throw new Error(
-				`Plugin "${plugin.id}" cannot register control type "${typeKey}": it collides with a built-in control.`
-			);
-		}
-		if (!entry || typeof entry !== 'object') {
-			throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" must be a ControlPluginContribution object.`);
-		}
-		if (!isValidElementType(entry.Component)) {
-			throw new TypeError(
-				`Plugin "${plugin.id}" control "${typeKey}" must declare a valid React Component on ControlPluginContribution.Component.`
-			);
-		}
-		const bindings = normalizeDataSourceBindings(entry.dataSourceBindings ?? []);
-		return { typeKey, Component: entry.Component, bindings };
-	});
-
-	entries.forEach(({ typeKey, Component, bindings }) => {
-		registerControlContribution(typeKey, { Component, bindings, pluginId: plugin.id });
-		registerControlDataSourceBindings(typeKey, bindings);
-	});
-}
-
-/**
  * Registers widgets / locales and **always** installs FE `dataSources` / `controls`, even when
  * `plugin.id` was already registered (e.g. widget host loaded first without FE contributions).
  *
- * Returns `false` if the id already existed; merges contributions onto the stored descriptor.
- * Prefer this over calling FE registries directly from plugin code. DS / control registries
- * themselves dedupe by type and throw on conflicting implementations.
+ * FE contributions are fully preflighted before any registry write so a mid-flight failure leaves
+ * no partial DS/control state. Returns `false` if the id already existed; merges contributions onto
+ * the stored descriptor. Prefer this over calling FE registries directly from plugin code.
  */
 export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuilder): boolean {
 	const alreadyRegistered = plugins.has(plugin.id);
-	// Always install FE contributions, even when the plugin id was registered earlier
-	// (e.g. widget host loaded the same id without controls/dataSources). DS/control
-	// registries themselves dedupe by type and throw on conflicting implementations.
-	registerPluginDataSources(plugin);
-	registerPluginControls(plugin);
+	const dataSources = plugin.dataSources;
+	const controls = plugin.controls;
+
+	// --- Preflight (no registry writes) ---
+	const dsToCommit: DataSourceModule[] = [];
+	if (dataSources) {
+		for (const [typeKey, module] of Object.entries(dataSources)) {
+			validateDataSourceModule(module);
+			if (module.type !== typeKey) {
+				throw new TypeError(
+					`Plugin "${plugin.id}" dataSources key "${typeKey}" does not match module.type "${module.type}".`
+				);
+			}
+			const existing = dataSourceModuleRegistry.get(module.type);
+			if (existing && existing !== module) {
+				throw new Error(
+					`Plugin "${plugin.id}" cannot register data-source type "${module.type}": a different module is already registered.`
+				);
+			}
+			if (!existing) {
+				dsToCommit.push(module);
+			}
+		}
+	}
+
+	const controlsToCommit: ControlContributionCommit[] = [];
+	if (controls) {
+		for (const [typeKey, entry] of Object.entries(controls)) {
+			if (!typeKey) {
+				throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
+			}
+			if (typeKey in controlMap) {
+				throw new Error(
+					`Plugin "${plugin.id}" cannot register control type "${typeKey}": it collides with a built-in control.`
+				);
+			}
+			if (!entry || typeof entry !== 'object') {
+				throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" must be a ControlPluginContribution object.`);
+			}
+			if (!isValidElementType(entry.Component)) {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" must declare a valid React Component on ControlPluginContribution.Component.`
+				);
+			}
+			const bindings = normalizeDataSourceBindings(entry.dataSourceBindings ?? []);
+			const existing = getRegisteredControlContribution(typeKey);
+			if (existing) {
+				if (existing.pluginId !== plugin.id) {
+					throw new Error(
+						`Plugin "${plugin.id}" cannot register control type "${typeKey}": already registered by plugin "${existing.pluginId}".`
+					);
+				}
+				if (existing.Component !== entry.Component) {
+					throw new Error(
+						`Plugin "${plugin.id}" cannot register control type "${typeKey}": a different component is already registered.`
+					);
+				}
+			}
+			controlsToCommit.push({ typeKey, Component: entry.Component, bindings });
+		}
+	}
+
+	// --- Commit (only after both preflights succeed) ---
+	dsToCommit.forEach((module) => {
+		dataSourceModuleRegistry.register(module);
+	});
+	controlsToCommit.forEach(({ typeKey, Component, bindings }) => {
+		registerControlContribution(typeKey, { Component, bindings, pluginId: plugin.id });
+		registerControlDataSourceBindings(typeKey, bindings);
+	});
 
 	if (alreadyRegistered) {
 		const existing = plugins.get(plugin.id);
