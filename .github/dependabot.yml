@@ -48,24 +48,24 @@ updates:
                 versions: [ ">=6.0.0" ]
 
     - package-ecosystem: "npm" # See documentation for possible values
-        directory: "/" # Location of package manifests
-        schedule:
-            interval: "weekly"
-            day: "wednesday"
-            time: "09:00"
-        target-branch: "develop"
-        groups:
-            all-ui-deps:
-                patterns:
-                    - "*"
+      directory: "/" # Location of package manifests
+      schedule:
+          interval: "weekly"
+          day: "wednesday"
+          time: "09:00"
+      target-branch: "develop"
+      groups:
+          all-ui-deps:
+              patterns:
+                  - "*"
     - package-ecosystem: "npm" # See documentation for possible values
-        directory: "/" # Location of package manifests
-        schedule:
-            interval: "weekly"
-            day: "wednesday"
-            time: "09:15"
-        target-branch: "support/4.x"
-        groups:
-            all-ui-deps:
-                patterns:
-                - "*"
+      directory: "/" # Location of package manifests
+      schedule:
+        interval: "weekly"
+        day: "wednesday"
+        time: "09:15"
+      target-branch: "support/4.x"
+      groups:
+          all-ui-deps:
+              patterns:
+              - "*"
