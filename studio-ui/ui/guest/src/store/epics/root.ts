@@ -1044,7 +1044,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 										id: 'instanceDragStarted.duplicateItem',
 										defaultMessage: 'Drop targets do not allow duplicate items.'
 									}),
-									level: 'info'
+									level: 'required'
 								})
 							);
 						} else {
