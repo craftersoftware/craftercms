@@ -94,26 +94,30 @@ export const pathNavigatorFetchParentItems = /*#__PURE__*/ createAction<
 export const pathNavigatorFetchPath =
 	/*#__PURE__*/ createAction<PayloadWithId<{ path: string; keyword?: string }>>('PATH_NAV_FETCH_PATH');
 
+// The `path` on the results below is the path the request was issued for. The navigator may have been moved to a
+// different path while the request was in flight (e.g. a background refresh triggered by another user's activity
+// racing with the user navigating), in which case the result must be discarded rather than applied.
 export const pathNavigatorFetchPathComplete =
-	/*#__PURE__*/ createAction<PayloadWithId<{ parent?: ContentItem; children: GetChildrenResponse }>>(
+	/*#__PURE__*/ createAction<PayloadWithId<{ path: string; parent?: ContentItem; children: GetChildrenResponse }>>(
 		'PATH_NAV_FETCH_PATH_COMPLETE'
 	);
 
 export const pathNavigatorBulkFetchPathComplete = /*#__PURE__*/ createAction<{
-	paths: PayloadWithId<{ parent?: ContentItem; children: GetChildrenResponse }>[];
+	paths: PayloadWithId<{ path: string; parent?: ContentItem; children: GetChildrenResponse }>[];
 }>('PATH_NAV_BULK_FETCH_PATH_COMPLETE');
 
 export const pathNavigatorFetchParentItemsComplete = /*#__PURE__*/ createAction<
-	PayloadWithId<{ items: ContentItem[]; children: GetChildrenResponse }>
+	PayloadWithId<{ path: string; items: ContentItem[]; children: GetChildrenResponse }>
 >('PATH_NAV_FETCH_PARENT_ITEMS_COMPLETE');
 
 export const pathNavigatorFetchPathFailed = /*#__PURE__*/ createAction<{
 	id: string;
+	path: string;
 	error: Omit<AjaxError, 'request' | 'xhr'>;
 }>('PATH_NAV_FETCH_PATH_FAILED');
 
 export const pathNavigatorBulkFetchPathFailed = /*#__PURE__*/ createAction<{
-	ids: string[];
+	requests: PayloadWithId<{ path: string }>[];
 	error: Omit<AjaxError, 'request' | 'xhr'>;
 }>('PATH_NAV_BULK_FETCH_PATH_FAILED');
 
