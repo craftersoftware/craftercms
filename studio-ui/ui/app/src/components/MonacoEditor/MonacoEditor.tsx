@@ -21,6 +21,7 @@ import { Theme } from '@mui/material';
 import type Monaco from '../../models/Monaco';
 import { MonacoEditorOptions } from './types';
 import { useMonacoLifecycle } from './useMonacoLifecycle';
+import { consolidateSx } from '../../utils/system';
 
 export interface MonacoEditorProps {
 	height?: string | number;
@@ -52,17 +53,7 @@ export function MonacoEditor(props: MonacoEditorProps) {
 	const models = useMemo(() => [{ value, language: resolvedLanguage }], [value, resolvedLanguage]);
 	const containerRef = useMonacoLifecycle({ models, theme, options, createEditor });
 
-	return (
-		<Box
-			ref={containerRef}
-			className={className}
-			sx={{
-				height,
-				width: '100%',
-				...((sx as object) ?? {})
-			}}
-		/>
-	);
+	return <Box ref={containerRef} className={className} sx={consolidateSx({ height, width: '100%' }, sx)} />;
 }
 
 export default MonacoEditor;
