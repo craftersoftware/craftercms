@@ -486,7 +486,7 @@ export default {
 
 **On disk (site repo):**
 
-```
+```text
 /config/studio/content-types/{contentTypeId}/form-controller.js
 ```
 
@@ -496,7 +496,7 @@ That is the authoring artifact TB creates/edits. It is **not** under `static-ass
 
 **Over the network:** Studio serves that file only through the authenticated configuration API (so the browser call includes session/auth):
 
-```
+```text
 GET /studio/api/2/configuration/content_types/{site}/form_controller?contentTypeId={contentTypeId}
 ```
 
