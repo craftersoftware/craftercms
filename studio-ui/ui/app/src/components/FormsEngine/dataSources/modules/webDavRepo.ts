@@ -14,4 +14,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export { webDavRepoDataSourceModule as default } from './remoteStubs';
+import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
+import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
+import { createExternalBrowseAction, propString } from '../moduleHelpers';
+
+export const webDavRepoDataSourceModule: DataSourceModule = defineDataSourceModule({
+	apiVersion: DATA_SOURCE_API_VERSION,
+	type: 'WebDAV-repo',
+	interfaces: ['item'],
+	capabilities: ['browse'],
+	create({ record }) {
+		const path = propString(record, 'repoPath');
+		const profileId = propString(record, 'profileId');
+
+		return createInstanceFromRecord(record, webDavRepoDataSourceModule, {
+			capabilities: ['browse'],
+			getActions() {
+				return [
+					createExternalBrowseAction({
+						label: `Browse - ${record.title}`,
+						path,
+						profileId,
+						profileType: 'webdav',
+						selection: 'item',
+						meta: { path, profileId }
+					})
+				];
+			}
+		});
+	}
+});
+
+export default webDavRepoDataSourceModule;

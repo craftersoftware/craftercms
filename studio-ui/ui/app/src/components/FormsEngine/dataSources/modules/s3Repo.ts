@@ -14,4 +14,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export { s3RepoDataSourceModule as default } from './remoteStubs';
+import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
+import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
+import { createExternalBrowseAction, propString } from '../moduleHelpers';
+
+export const s3RepoDataSourceModule: DataSourceModule = defineDataSourceModule({
+	apiVersion: DATA_SOURCE_API_VERSION,
+	type: 'S3-repo',
+	interfaces: ['item'],
+	capabilities: ['browse'],
+	create({ record }) {
+		const path = propString(record, 'path');
+		const profileId = propString(record, 'profileId');
+
+		return createInstanceFromRecord(record, s3RepoDataSourceModule, {
+			capabilities: ['browse'],
+			getActions() {
+				return [
+					createExternalBrowseAction({
+						label: `Browse - ${record.title}`,
+						path,
+						profileId,
+						profileType: 'aws',
+						selection: 'item',
+						meta: { path, profileId }
+					})
+				];
+			}
+		});
+	}
+});
+
+export default s3RepoDataSourceModule;

@@ -76,26 +76,10 @@ export const imgWebDAVUploadDataSourceModule = remoteMediaModule({
 	mimeTypes: ['image/*']
 });
 
-export const videoS3RepoDataSourceModule = remoteMediaModule({
-	type: 'video-S3-repo',
-	interfaces: ['video'],
-	kind: 'browse',
-	pathProp: 'path',
-	mimeTypes: ['video/*']
-});
-
 export const videoS3UploadDataSourceModule = remoteMediaModule({
 	type: 'video-S3-upload',
 	interfaces: ['video'],
 	kind: 'upload',
-	pathProp: 'repoPath',
-	mimeTypes: ['video/*']
-});
-
-export const videoWebDAVRepoDataSourceModule = remoteMediaModule({
-	type: 'video-WebDAV-repo',
-	interfaces: ['video'],
-	kind: 'browse',
 	pathProp: 'repoPath',
 	mimeTypes: ['video/*']
 });
@@ -108,24 +92,10 @@ export const videoWebDAVUploadDataSourceModule = remoteMediaModule({
 	mimeTypes: ['video/*']
 });
 
-export const s3RepoDataSourceModule = remoteMediaModule({
-	type: 'S3-repo',
-	interfaces: ['item'],
-	kind: 'browse',
-	pathProp: 'path'
-});
-
 export const s3UploadDataSourceModule = remoteMediaModule({
 	type: 'S3-upload',
 	interfaces: ['item'],
 	kind: 'upload',
-	pathProp: 'repoPath'
-});
-
-export const webDavRepoDataSourceModule = remoteMediaModule({
-	type: 'WebDAV-repo',
-	interfaces: ['item'],
-	kind: 'browse',
 	pathProp: 'repoPath'
 });
 
