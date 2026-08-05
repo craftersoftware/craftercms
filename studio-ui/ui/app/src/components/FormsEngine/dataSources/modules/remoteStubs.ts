@@ -60,26 +60,10 @@ function remoteMediaModule(options: {
 	return module;
 }
 
-export const imgS3RepoDataSourceModule = remoteMediaModule({
-	type: 'img-S3-repo',
-	interfaces: ['image'],
-	kind: 'browse',
-	pathProp: 'path',
-	mimeTypes: ['image/*']
-});
-
 export const imgS3UploadDataSourceModule = remoteMediaModule({
 	type: 'img-S3-upload',
 	interfaces: ['image'],
 	kind: 'upload',
-	pathProp: 'repoPath',
-	mimeTypes: ['image/*']
-});
-
-export const imgWebDAVRepoDataSourceModule = remoteMediaModule({
-	type: 'img-WebDAV-repo',
-	interfaces: ['image'],
-	kind: 'browse',
 	pathProp: 'repoPath',
 	mimeTypes: ['image/*']
 });

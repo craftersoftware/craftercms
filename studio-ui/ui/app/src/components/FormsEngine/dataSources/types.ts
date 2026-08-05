@@ -81,6 +81,20 @@ export interface DataSourceBrowseRequest {
 	initialParameters?: Record<string, unknown>;
 }
 
+/**
+ * Inputs for {@link DataSourceServices.browseExternalAssets}.
+ * Mirrors {@link BrowseExternalAssetDialog} props (S3 / WebDAV).
+ */
+export interface DataSourceBrowseExternalRequest {
+	path: string;
+	profileId: string;
+	profileType?: 'aws' | 'webdav';
+	/** API filter passed to list endpoints (e.g. `image`, `video`). */
+	type?: string;
+	multiSelect?: boolean;
+	preselectedPaths?: string[];
+}
+
 /** Inputs for {@link DataSourceServices.search}. */
 export interface DataSourceSearchRequest {
 	path: string;
@@ -114,6 +128,8 @@ export interface DataSourceSearchResult {
  */
 export interface DataSourceServices {
 	browseFiles(request: DataSourceBrowseRequest): Promise<unknown[]>;
+	/** Opens BrowseExternalAssetDialog for S3/WebDAV; cancel resolves to `[]`. */
+	browseExternalAssets(request: DataSourceBrowseExternalRequest): Promise<unknown[]>;
 	search(request: DataSourceSearchRequest): Promise<DataSourceSearchResult>;
 	upload(request: DataSourceUploadRequest): Promise<unknown>;
 	createContent(request: DataSourceCreateRequest): Promise<DataSourceItemSelection | null>;

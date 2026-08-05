@@ -32,6 +32,7 @@ import { getFileNameFromPath } from '../../../utils/path';
 import { ensureSingleSlash } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
+import type { BrowseExternalAssetDialogProps } from '../../BrowseS3Dialog';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog, pushNonDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
@@ -258,6 +259,52 @@ export const showBrowseFilesDialog = ({
 					onSuccess(items);
 				}
 			} as Partial<BrowseFilesDialogProps>
+		})
+	);
+};
+
+export const showBrowseExternalAssetDialog = ({
+	dispatch,
+	onSuccess,
+	path,
+	profileId,
+	profileType = 'aws',
+	type,
+	multiSelect = true,
+	preselectedPaths = [],
+	onClose
+}: {
+	dispatch: ReduxDispatch;
+	onSuccess: BrowseExternalAssetDialogProps['onSuccess'];
+	path: string;
+	profileId: string;
+	profileType?: BrowseExternalAssetDialogProps['profileType'];
+	type?: string;
+	multiSelect?: boolean;
+	preselectedPaths?: string[];
+	onClose?(): void;
+}): void => {
+	const id = nanoid();
+	dispatch(
+		pushDialog({
+			id,
+			component: createComponentId('BrowseExternalAssetDialog'),
+			props: {
+				path,
+				profileId,
+				profileType,
+				type,
+				multiSelect,
+				preselectedPaths,
+				onClose: () => {
+					dispatch(popDialog({ id }));
+					onClose?.();
+				},
+				onSuccess(items) {
+					dispatch(popDialog({ id }));
+					onSuccess?.(items);
+				}
+			} as Partial<BrowseExternalAssetDialogProps>
 		})
 	);
 };

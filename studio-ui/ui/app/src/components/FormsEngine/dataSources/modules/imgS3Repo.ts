@@ -14,4 +14,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export { imgS3RepoDataSourceModule as default } from './remoteStubs';
+import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
+import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
+import { createExternalBrowseAction, IMAGE_MIME_TYPES, propString } from '../moduleHelpers';
+
+export const imgS3RepoDataSourceModule: DataSourceModule = defineDataSourceModule({
+	apiVersion: DATA_SOURCE_API_VERSION,
+	type: 'img-S3-repo',
+	interfaces: ['image'],
+	capabilities: ['browse'],
+	create({ record }) {
+		const path = propString(record, 'path');
+		const profileId = propString(record, 'profileId');
+
+		return createInstanceFromRecord(record, imgS3RepoDataSourceModule, {
+			capabilities: ['browse'],
+			getActions() {
+				return [
+					createExternalBrowseAction({
+						label: `Browse - ${record.title}`,
+						path,
+						profileId,
+						profileType: 'aws',
+						type: 'image',
+						mimeTypes: IMAGE_MIME_TYPES,
+						selection: 'asset',
+						meta: { path, profileId, mimeTypes: IMAGE_MIME_TYPES }
+					})
+				];
+			}
+		});
+	}
+});
+
+export default imgS3RepoDataSourceModule;

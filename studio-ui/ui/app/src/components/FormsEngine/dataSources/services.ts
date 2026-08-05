@@ -18,7 +18,12 @@ import type { Dispatch } from 'redux';
 import type { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
 import type { SearchProps } from '../../Search';
 import type { FormsEngineGlobalApiContextProps } from '../lib/formsEngineContext';
-import { showBrowseFilesDialog, showSearchDialog, showSingleFileUploadDialog } from '../lib/controlHelpers';
+import {
+	showBrowseExternalAssetDialog,
+	showBrowseFilesDialog,
+	showSearchDialog,
+	showSingleFileUploadDialog
+} from '../lib/controlHelpers';
 import type { DataSourceServices } from './types';
 
 /** Redux dispatch + site + forms API needed to bridge dialog / `pushForm` UI into promise services. */
@@ -48,6 +53,23 @@ export function createDataSourceServices({
 					multiSelect: request.multiSelect,
 					preselectedPaths: request.preselectedPaths,
 					initialParameters: request.initialParameters as BrowseFilesDialogProps['initialParameters'],
+					onClose: () => resolve([]),
+					onSuccess(items) {
+						resolve(Array.isArray(items) ? items : [items]);
+					}
+				});
+			});
+		},
+		browseExternalAssets(request) {
+			return new Promise((resolve) => {
+				showBrowseExternalAssetDialog({
+					dispatch,
+					path: request.path,
+					profileId: request.profileId,
+					profileType: request.profileType,
+					type: request.type,
+					multiSelect: request.multiSelect,
+					preselectedPaths: request.preselectedPaths,
 					onClose: () => resolve([]),
 					onSuccess(items) {
 						resolve(Array.isArray(items) ? items : [items]);

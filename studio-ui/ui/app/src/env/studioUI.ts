@@ -77,6 +77,7 @@ export const components = {
 	BasePathSelector: lazy(() => import('../components/BasePathSelector')),
 	BrokenReferencesDialog: lazy(() => import('../components/BrokenReferencesDialog')),
 	BrowseFilesDialog: lazy(() => import('../components/BrowseFilesDialog')),
+	BrowseExternalAssetDialog: lazy(() => import('../components/BrowseS3Dialog')),
 	BulkCancelPackageDialog: lazy(() => import('../components/BulkCancelPackageDialog')),
 	CancelPackageDialog: lazy(() => import('../components/CancelPackageDialog')),
 	ChangeContentTypeDialog: lazy(() => import('../components/ChangeContentTypeDialog')),
