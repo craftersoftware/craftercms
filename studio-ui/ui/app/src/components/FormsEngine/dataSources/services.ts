@@ -21,6 +21,7 @@ import type { FormsEngineGlobalApiContextProps } from '../lib/formsEngineContext
 import {
 	showBrowseExternalAssetDialog,
 	showBrowseFilesDialog,
+	showExternalAssetUploadDialog,
 	showSearchDialog,
 	showSingleFileUploadDialog
 } from '../lib/controlHelpers';
@@ -99,6 +100,19 @@ export function createDataSourceServices({
 					siteId,
 					path: request.path,
 					fileTypes: request.fileTypes,
+					onUploadComplete: resolve
+				});
+			});
+		},
+		uploadExternalAssets(request) {
+			return new Promise((resolve) => {
+				showExternalAssetUploadDialog({
+					dispatch,
+					path: request.path,
+					profileId: request.profileId,
+					profileType: request.profileType,
+					fileTypes: request.fileTypes,
+					onClose: () => resolve(null),
 					onUploadComplete: resolve
 				});
 			});

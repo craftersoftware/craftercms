@@ -109,6 +109,17 @@ export interface DataSourceUploadRequest {
 	fileTypes?: string[];
 }
 
+/**
+ * Inputs for {@link DataSourceServices.uploadExternalAssets}.
+ * Mirrors {@link ExternalAssetUploadDialog} props (S3 / WebDAV).
+ */
+export interface DataSourceUploadExternalRequest {
+	path: string;
+	profileId: string;
+	profileType?: 'aws' | 'webdav';
+	fileTypes?: string[];
+}
+
 /** Inputs for {@link DataSourceServices.createContent}. */
 export interface DataSourceCreateRequest {
 	path: string;
@@ -132,6 +143,8 @@ export interface DataSourceServices {
 	browseExternalAssets(request: DataSourceBrowseExternalRequest): Promise<unknown[]>;
 	search(request: DataSourceSearchRequest): Promise<DataSourceSearchResult>;
 	upload(request: DataSourceUploadRequest): Promise<unknown>;
+	/** Opens ExternalAssetUploadDialog for S3/WebDAV; cancel resolves to `null`. */
+	uploadExternalAssets(request: DataSourceUploadExternalRequest): Promise<unknown | null>;
 	createContent(request: DataSourceCreateRequest): Promise<DataSourceItemSelection | null>;
 	/** @deprecated Use createContent so the action can return the created selection. */
 	pushForm(props: FormsEngineProps): void;

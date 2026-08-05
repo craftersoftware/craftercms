@@ -134,6 +134,7 @@ export const components = {
 	ErrorDialog: lazy(() => import('../components/ErrorDialog')),
 	ErrorState: lazy(() => import('../components/ErrorState')),
 	ExpiringDashlet: lazy(() => import('../components/ExpiringDashlet')),
+	ExternalAssetUploadDialog: lazy(() => import('../components/ExternalAssetUploadDialog')),
 	FieldInformationDialog: lazy(() => import('../components/FieldInformationDialog/FieldInformationDialog')),
 	FolderBrowserTreeView: lazy(() => import('../components/FolderBrowserTreeView')),
 	FolderMoveAlert: lazy(() => import('../components/FolderMoveAlert')),

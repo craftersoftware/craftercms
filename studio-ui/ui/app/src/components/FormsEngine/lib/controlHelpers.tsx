@@ -33,6 +33,7 @@ import { ensureSingleSlash } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
 import type { BrowseExternalAssetDialogProps } from '../../BrowseS3Dialog';
+import type { ExternalAssetUploadDialogProps } from '../../ExternalAssetUploadDialog';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog, pushNonDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
@@ -389,6 +390,46 @@ export const showSingleFileUploadDialog = ({
 					onUploadComplete?.(result);
 				}
 			} as SingleFileUploadDialogProps
+		})
+	);
+};
+
+export const showExternalAssetUploadDialog = ({
+	dispatch,
+	path,
+	profileId,
+	profileType = 'aws',
+	fileTypes,
+	onUploadComplete,
+	onClose
+}: {
+	dispatch: ReduxDispatch;
+	path: string;
+	profileId: string;
+	profileType?: ExternalAssetUploadDialogProps['profileType'];
+	fileTypes?: string[];
+	onUploadComplete?: ExternalAssetUploadDialogProps['onUploadComplete'];
+	onClose?(): void;
+}): void => {
+	const id = nanoid();
+	dispatch(
+		pushDialog({
+			id,
+			component: createComponentId('ExternalAssetUploadDialog'),
+			props: {
+				path,
+				profileId,
+				profileType,
+				fileTypes,
+				onClose: () => {
+					dispatch(popDialog({ id }));
+					onClose?.();
+				},
+				onUploadComplete: (result) => {
+					dispatch(popDialog({ id }));
+					onUploadComplete?.(result);
+				}
+			} as Partial<ExternalAssetUploadDialogProps>
 		})
 	);
 };

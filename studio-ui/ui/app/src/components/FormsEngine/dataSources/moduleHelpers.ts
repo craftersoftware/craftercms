@@ -178,6 +178,19 @@ export function toAssetSelection(item: unknown): DataSourceAssetSelection {
 	// Upload result (Uppy FileUpload)
 	if (candidate.meta && typeof candidate.meta === 'object') {
 		const meta = candidate.meta as { path?: string; name?: string; type?: string };
+		const response = candidate.response as { body?: { item?: { url?: string; name?: string } } } | undefined;
+		const remoteUrl = response?.body?.item?.url;
+		// S3/WebDAV upload APIs return the public/remote URL on the response item.
+		if (typeof remoteUrl === 'string' && remoteUrl) {
+			const name = response?.body?.item?.name ?? meta.name ?? '';
+			return {
+				kind: 'asset',
+				relativeUrl: remoteUrl,
+				previewUrl: remoteUrl,
+				fileExtension: fileExtensionFromPath(remoteUrl) || fileExtensionFromPath(name),
+				mimeType: meta.type ?? (typeof candidate.type === 'string' ? candidate.type : undefined)
+			};
+		}
 		const name = meta.name ?? (typeof candidate.name === 'string' ? candidate.name : '');
 		const path = meta.path ?? '';
 		if (!path && !name) {
@@ -392,6 +405,50 @@ export function createUploadAction(options: {
 		async run(ctx) {
 			const expanded = expandPathOrRaw(ctx, path);
 			const result = await ctx.services.upload({ path: expanded, fileTypes });
+			const mapped = selection === 'asset' ? mapUploadResultToAssets(result) : mapUploadResultToItems(result);
+			return mapped.length ? mapped : null;
+		}
+	};
+}
+
+/**
+ * Factory for uploading to S3/WebDAV via {@link DataSourceServices.uploadExternalAssets}
+ * (opens ExternalAssetUploadDialog).
+ */
+export function createExternalUploadAction(options: {
+	id?: string;
+	label?: string;
+	path: string;
+	profileId: string;
+	profileType?: 'aws' | 'webdav';
+	fileTypes?: string[];
+	selection: 'item' | 'asset';
+	meta?: DataSourceActionMeta;
+}): DataSourceAction {
+	const { path, profileId, profileType = 'aws', fileTypes, selection } = options;
+	return {
+		id: options.id ?? 'upload',
+		kind: 'upload',
+		label: options.label ?? 'Upload',
+		meta: {
+			path,
+			fileTypes,
+			profileId,
+			profileType,
+			...options.meta
+		},
+		async run(ctx) {
+			if (!profileId) {
+				throw new Error('External upload requires a profileId on the data source.');
+			}
+			const expanded = expandPathOrRaw(ctx, path);
+			const result = await ctx.services.uploadExternalAssets({
+				path: expanded,
+				profileId,
+				profileType,
+				fileTypes
+			});
+			if (!result) return null;
 			const mapped = selection === 'asset' ? mapUploadResultToAssets(result) : mapUploadResultToItems(result);
 			return mapped.length ? mapped : null;
 		}
