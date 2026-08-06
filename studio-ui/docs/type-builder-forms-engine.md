@@ -311,6 +311,8 @@ Additional current FE control gaps:
 - `hasJsController` is parsed onto the `ContentType` model but not consumed by React FE
 - Item/media controls group resolved actions by manager binding + intent (browse/search/upload/create). Every displayed choice retains its owning action; plugin `MenuItem`/`Dialog` actions use a standalone custom lane.
 
+**System-field catalog vs FE2 render type:** TB palette entries `disabled` and `internal-name` are not meant to be separate FE2 control implementations. On insert, `getNewFieldFromDescriptor` applies `systemFieldsTypesMap` (`disabled` → `checkbox`, `internal-name` → `input`) and locks the field id via `systemFieldsIdsMap` / `readOnlyFieldsIds`. Persisted form-definition `type` is therefore the remapped built-in; FE2 `controlMap` renders `Checkbox` / `Text`. Unused legacy stubs `link-input`, `link-textarea`, and `linked-dropdown` were removed from the built-in maps/descriptors.
+
 `proposal.xml` sketches a `craftercms.components.FormsEngine` widget with a configurable control/validator map, but no current new-FE code path was found that reads that widget configuration.
 
 #### Data sources
@@ -633,6 +635,8 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [x] **Form-controller design** — type-local FE2 ESM (`FormController` hooks), fetch via form_controller API, not `PluginDescriptor`. See §5.9. Implementation still open (below).
 - [x] **Control-plugin ownership** — after `importPlugin()`, ownership is validated against loaded `PluginDescriptor.id` (not the form-definition locator `pluginId`). See `controlPluginLoader.ts`.
 - [x] **Atomic FE plugin registration** — `registerPlugin` preflights all DS + control contributions before any registry commit.
+- [x] **Retire unused built-in controls** — remove `link-input`, `link-textarea`, and `linked-dropdown` from `BuiltInControlType` / FE2 `controlMap`, DS bindings, validators/retrievers/serializers, and TB descriptors (unused; not in BPs).
+- [x] **System-field control remapping** — TB does not need dedicated FE2 renderers for `disabled` / `internal-name`. On insert, `systemFieldsTypesMap` in `ContentTypeManagement/utils.ts` remaps `disabled` → `checkbox` and `internal-name` → `input`; `systemFieldsIdsMap` / `readOnlyFieldsIds` lock the field id (e.g. variable name `disabled`) as non-editable. FE2 therefore renders via the remapped built-in (`Checkbox` / `Text`). `controlMap` may still list those catalog ids as `null`; that is expected — persisted form-definition `type` is the remapped control.
 
 ### Remaining implementation / validation
 
@@ -647,7 +651,6 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [ ] Normalize plugin identity/locator vocabulary and resolve `file` vs `filename` across XML, frontend, docs, and backend.
 - [ ] Fix the `hasJsController` / “Client-side Controller” UI path currently opening `controller.groovy` (and wire FE2 to consume the flag).
 - [ ] **S3 / WebDAV capability stubs** — remote modules load but ops hard-fail via `unsupportedRemoteError` until `DataSourceServices` gains dedicated platform support.
-- [ ] **Non-rendering control-map entries** — `disabled`, `internal-name`, `link-input`, `link-textarea` (and any other null map slots) need real FE2 controls or an explicit retire/alias decision.
 - [ ] **FE2 Crafter-specific RTE plugin parity** — audit FE1 TinyMCE/Crafter plugins vs current `rteUtils` externals (`craftercms_paste`, `editform`, …) and implement missing FE2 equivalents.
 - [ ] **Focused compatibility / plugin tests** — no Jest/Vitest harness in `ui/app` yet; need coverage for locator≠descriptor id, multi-control URL, registry conflicts, atomic registration failure, partial DS resolve, and TB plugin locator round-trip.
 - [ ] Descriptor override strategy (proposal A deep-merge vs B full replace) — see `proposal.xml`; lean crawl→walk.
@@ -660,7 +663,8 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
-- **2026-08-03** — Convergence-gap audit reflected in §8: remaining work includes S3/WebDAV stubs, null control-map entries (`disabled` / `internal-name` / `link-input` / `link-textarea`), FE2 RTE plugin parity, and focused compatibility tests. Control-plugin `PluginDescriptor.id` ownership checks and atomic `registerPlugin` preflight were already implemented — recorded under completed design decisions, not left as open gaps.
+- **2026-08-06** — Controls cleanup (`7418`): retired unused `link-input` / `link-textarea` / `linked-dropdown` from FE2 maps + TB descriptors. Closed the former “non-rendering control-map entries” open item: those three are removed; `disabled` / `internal-name` remain TB catalog ids that remap on insert via `systemFieldsTypesMap` to `checkbox` / `input` (locked field ids). Documented under completed design decisions.
+- **2026-08-03** — Convergence-gap audit reflected in §8: remaining work includes S3/WebDAV stubs, FE2 RTE plugin parity, and focused compatibility tests. (Null control-map entries later resolved 2026-08-06 — see above.) Control-plugin `PluginDescriptor.id` ownership checks and atomic `registerPlugin` preflight were already implemented — recorded under completed design decisions, not left as open gaps.
 - **2026-08-03** — Refined §5.9: all `FormController` hooks may be async (host awaits); clarified on-disk path, form_controller API, and FE2 loader call site (`formControllerLoader` from form bootstrap — not `importPlugin`).
 - **2026-08-03** — Decided FE2 form-controller design (§5.9): keep type-local `form-controller.js` gated by `hasJsController`; load via authenticated form_controller API + ESM Blob import; export `FormController` hooks (`initialize`, `isFieldRelevant`, `onBeforeSave`) — **not** a `PluginDescriptor`. FE1 YUI controllers are incompatible (migrate by rewrite). TB must fix Client-side Controller to edit `form-controller.js` instead of Groovy. Implementation still TODO.
 - **2026-07-31** — Implemented FE control plugins on the single `PluginDescriptor` model: `controls` + `ControlPluginContribution`, `registerPluginControls`, control contribution registry, `controlPluginLoader` rewritten to `importPlugin` + `field.type` lookup (removed raw `import(url)` / bare default component). Sample: `samples/fe2-control-plugin.example.mjs`.
