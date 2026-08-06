@@ -334,6 +334,7 @@ export function createExternalBrowseAction(options: {
 				profileId,
 				profileType,
 				type,
+				mimeTypes,
 				multiSelect: (ctx.remainingCapacity ?? 2) !== 1
 			});
 			if (!items.length) return null;

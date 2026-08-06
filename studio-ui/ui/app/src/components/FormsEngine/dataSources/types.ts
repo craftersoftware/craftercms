@@ -91,6 +91,7 @@ export interface DataSourceBrowseExternalRequest {
 	profileType?: 'aws' | 'webdav';
 	/** API filter passed to list endpoints (e.g. `image`, `video`). */
 	type?: string;
+	mimeTypes?: string[];
 	multiSelect?: boolean;
 	preselectedPaths?: string[];
 }
