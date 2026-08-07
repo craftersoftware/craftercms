@@ -15,8 +15,9 @@
  */
 
 import { type ComponentType, use } from 'react';
-import type { FormDefinitionPlugin } from '../../../models/ContentType';
+import type { ContentTypeField, FormDefinitionPlugin } from '../../../models/ContentType';
 import type PluginDescriptor from '../../../models/PluginDescriptor';
+import type LookupTable from '../../../models/LookupTable';
 import { buildFileUrl, importPlugin } from '../../../services/plugin';
 import { getRegisteredControlContribution } from '../controls/registry';
 import type { DataSourceBinding } from '../dataSources/types';
@@ -37,6 +38,82 @@ const loadedControlPluginCache = new Map<string, Promise<LoadedControlPlugin>>()
 
 function loadedCacheKey(url: string, controlType: string): string {
 	return `${url}::${controlType}`;
+}
+
+function toFieldList(
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null
+): ContentTypeField[] {
+	if (!fields) return [];
+	return Array.isArray(fields) ? fields : Object.values(fields);
+}
+
+/**
+ * Collects unique form-definition plugin locators from a field tree (including repeat nested fields).
+ * "Which plugin files does this form need?"
+ */
+export function collectControlPluginLocators(
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null
+): FormDefinitionPlugin[] {
+	const out: FormDefinitionPlugin[] = [];
+	const seen = new Set<string>();
+	const walk = (list: ContentTypeField[]) => {
+		for (const field of list) {
+			const plugin = field.properties?.plugin as FormDefinitionPlugin | undefined;
+			if (plugin?.pluginId && plugin.type && plugin.name && plugin.filename) {
+				const key = `${plugin.pluginId}|${plugin.type}|${plugin.name}|${plugin.filename}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					out.push(plugin);
+				}
+			}
+			if (field.fields) {
+				walk(toFieldList(field.fields));
+			}
+		}
+	};
+	walk(toFieldList(fields));
+	return out;
+}
+
+/**
+ * Demand-loads every control plugin referenced by `fields` so `valueRetriever` /
+ * `valueSerializer` / `validator` contributions are registered before form bootstrap
+ * parse, validation, and save. Safe to call repeatedly; uses the same URL-keyed
+ * importPlugin cache as control rendering.
+ * “Load those plugins now, not when React first draws the control.”
+ *
+ */
+export function preloadControlPluginsForFields(
+	siteId: string,
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null
+): Promise<void> {
+	const locators = collectControlPluginLocators(fields);
+	if (!locators.length) return Promise.resolve();
+	return Promise.all(
+		locators.map((plugin) => {
+			const builder = {
+				site: siteId,
+				type: plugin.type,
+				name: plugin.name,
+				file: plugin.filename,
+				id: plugin.pluginId
+			};
+			const url = buildFileUrl(builder);
+			let loading = controlPluginCache.get(url);
+			if (!loading) {
+				loading = importPlugin(builder).catch((reason) => {
+					controlPluginCache.delete(url);
+					console.error(
+						`Failed to preload control plugin from \`${url}\` (needed for valueRetriever/valueSerializer/validator).`,
+						reason
+					);
+					throw reason;
+				});
+				controlPluginCache.set(url, loading);
+			}
+			return loading;
+		})
+	).then(() => undefined);
 }
 
 /** Builds the Studio plugin file URL for a form-definition plugin ref (same shape as DS plugin load). */

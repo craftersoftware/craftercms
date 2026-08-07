@@ -126,6 +126,7 @@ import SectionAccordion from './components/SectionAccordion';
 import useSaveForm from './lib/useSaveForm';
 import { FormPrepError } from './components/FormPrepError';
 import { createParsedValuesObject } from './lib/valueRetrievers';
+import { preloadControlPluginsForFields } from './lib/controlPluginLoader';
 import { fromString } from '../../utils/xml';
 import { displayWithPendingChangesConfirm } from '../../utils/ui';
 import useActiveUser from '../../hooks/useActiveUser';
@@ -334,6 +335,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	useEffect(() => {
 		// Guard statement: If content types are not loaded, we can't proceed.
 		if (!contentTypesLoaded) return;
+		let disposed = false;
 		// TODO: If props are changed, things can be left off... previous item locked, edits get lost, etc. Not sure how much support for prop changes we should implement.
 		const isChildForm = stackIndex > 0;
 		// In the form stack, the present form being opened would be in the last position [length-1], the parent form state would be on [length-2] if it is nested (e.g. Root => Component(L1) => Repeat(L2)|Component(L2)). Otherwise,the parent should be the root.
@@ -494,43 +496,54 @@ function FormBootstrap(props: FormsEngineProps) {
 				fileName: atom('')
 			});
 			const contentObject = createObjectWithSystemProps(contentType);
-			const values = createParsedValuesObject(
-				contentType.fields,
-				contentObject,
-				contentTypesById,
-				(fieldId, value, isAdditional) => {
-					setFieldAtoms(
-						stableFormContextRef,
-						contentType,
-						contentType.fields,
-						fieldId,
-						atoms,
-						value,
-						{ siteId, contentTypesById },
-						isAdditional
-					);
-				},
-				customControls
-			);
-			const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
+			const initCreateForm = () => {
+				if (disposed) return;
+				const values = createParsedValuesObject(
+					contentType.fields,
+					contentObject,
+					contentTypesById,
+					(fieldId, value, isAdditional) => {
+						setFieldAtoms(
+							stableFormContextRef,
+							contentType,
+							contentType.fields,
+							fieldId,
+							atoms,
+							value,
+							{ siteId, contentTypesById },
+							isAdditional
+						);
+					},
+					customControls
+				);
+				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
 
-			const objectId = contentObject[XmlKeys.modelId] as string;
-			initializeState(atoms, values, {
-				id: objectId,
-				// TODO: Should/could we somehow deduce the target path?
-				path: null,
-				// TODO: Sourcemap? How can we determine what would be inherited by this content? New API?
-				sourceMap: null,
-				pathInSite: processPathMacros({
-					path: create.path,
-					objectId,
-					fullParentPath: '',
-					useUUID: false
-				}),
-				contentType,
-				contentObject,
-				contentXml: buildContentXml(valuesWithoutFileName, contentTypesById)
-			});
+				const objectId = contentObject[XmlKeys.modelId] as string;
+				initializeState(atoms, values, {
+					id: objectId,
+					// TODO: Should/could we somehow deduce the target path?
+					path: null,
+					// TODO: Sourcemap? How can we determine what would be inherited by this content? New API?
+					sourceMap: null,
+					pathInSite: processPathMacros({
+						path: create.path,
+						objectId,
+						fullParentPath: '',
+						useUUID: false
+					}),
+					contentType,
+					contentObject,
+					contentXml: buildContentXml(valuesWithoutFileName, contentTypesById)
+				});
+			};
+			preloadControlPluginsForFields(siteId, contentType.fields)
+				.catch((error) => {
+					console.error('Failed to preload control plugins before create-form value parse.', error);
+				})
+				.then(initCreateForm);
+			return () => {
+				disposed = true;
+			};
 		} /* if (isUpdateMode) */ else {
 			const subscription = fetchUpdateRequirements({
 				siteId,
@@ -570,37 +583,47 @@ function FormBootstrap(props: FormsEngineProps) {
 						expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
 						fileName: createFileNameAtom(requirements.item.path)
 					});
-					const values = createParsedValuesObject(
-						requirements.contentType.fields,
-						requirements.contentObject,
-						effectRefs.current.contentTypesById,
-						(fieldId, value, isAdditional) => {
-							setFieldAtoms(
-								stableFormContextRef,
-								requirements.contentType,
+					preloadControlPluginsForFields(siteId, requirements.contentType.fields)
+						.catch((error) => {
+							console.error('Failed to preload control plugins before edit-form value parse.', error);
+						})
+						.then(() => {
+							if (disposed) return;
+							const values = createParsedValuesObject(
 								requirements.contentType.fields,
-								fieldId,
-								atoms,
-								value,
-								{ siteId, contentTypesById },
-								isAdditional
+								requirements.contentObject,
+								effectRefs.current.contentTypesById,
+								(fieldId, value, isAdditional) => {
+									setFieldAtoms(
+										stableFormContextRef,
+										requirements.contentType,
+										requirements.contentType.fields,
+										fieldId,
+										atoms,
+										value,
+										{ siteId, contentTypesById: effectRefs.current.contentTypesById },
+										isAdditional
+									);
+								},
+								customControls
 							);
-						},
-						customControls
-					);
 
-					initializeState(atoms, values, {
-						id: values[XmlKeys.modelId] as string,
-						path: requirements.item.path,
-						// TODO: Sourcemap? How can we determine what would be inherited by this content? New API?
-						sourceMap: requirements.sourceMap,
-						pathInSite: requirements.pathInSite,
-						contentType: requirements.contentType,
-						contentXml: requirements.contentXml,
-						contentObject: requirements.contentObject
-					});
+							initializeState(atoms, values, {
+								id: values[XmlKeys.modelId] as string,
+								path: requirements.item.path,
+								// TODO: Sourcemap? How can we determine what would be inherited by this content? New API?
+								sourceMap: requirements.sourceMap,
+								pathInSite: requirements.pathInSite,
+								contentType: requirements.contentType,
+								contentXml: requirements.contentXml,
+								contentObject: requirements.contentObject
+							});
+						});
 				});
-			return () => subscription.unsubscribe();
+			return () => {
+				disposed = true;
+				subscription.unsubscribe();
+			};
 		}
 	}, [
 		contentTypesLoaded,
@@ -1231,7 +1254,6 @@ export default FormGuard;
 //  - Where do we put the "config" to determine whether to use new or old form engine?
 //  - Form controller loading and execution
 //  - FOR LATER...
-//    - Allow overriding/extending validators, retrievers, [and maybe] controlMap through plugins
 //    - Inherited non overridable if not in the model
 //    - AI
 //    - Edit template & controller

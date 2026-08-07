@@ -18,6 +18,8 @@ import type { ComponentType } from 'react';
 import WidgetRecord from './WidgetRecord';
 import type { DataSourceBinding, DataSourceModule } from '../components/FormsEngine/dataSources/types';
 import type { ControlProps } from '../components/FormsEngine/types';
+import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
+import type { ValidatorFunctionDef } from '../components/FormsEngine/lib/validators';
 
 /**
  * FE2 control contribution on a PluginDescriptor.
@@ -28,6 +30,22 @@ export interface ControlPluginContribution {
 	Component: ComponentType<ControlProps>;
 	/** Optional; same shapes as built-in `controlDataSourceBindings` entries. */
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
+	/**
+	 * Optional XML → form value conversion for this control type.
+	 * Must be registered before form bootstrap parses content (FE preloads plugin locators).
+	 */
+	valueRetriever?: ValueRetriever;
+	/**
+	 * Optional form value → XML-serialiser shape for this control type.
+	 * Used on save via `valueSerializers`; falls back to pass-through when omitted.
+	 */
+	valueSerializer?: ValueSerializer;
+	/**
+	 * Optional type-specific validator for this control type.
+	 * Required/empty checks remain host-owned in `validateFieldValue`.
+	 * FE preloads plugin locators before form bootstrap so validators are registered in time.
+	 */
+	validator?: ValidatorFunctionDef;
 }
 
 export interface PluginDescriptor {

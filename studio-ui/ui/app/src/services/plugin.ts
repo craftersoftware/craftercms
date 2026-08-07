@@ -34,7 +34,9 @@ import {
 	registerControlContribution
 } from '../components/FormsEngine/controls/registry';
 import { controlMap } from '../components/FormsEngine/lib/controlMap';
+import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
 import type { ControlProps } from '../components/FormsEngine/types';
+import type { ValidatorFunctionDef } from '../components/FormsEngine/lib/validators';
 
 const DEFAULT_FILE_NAME = 'index.js';
 
@@ -42,6 +44,9 @@ type ControlContributionCommit = {
 	typeKey: string;
 	Component: ComponentType<ControlProps>;
 	bindings: readonly DataSourceBinding[];
+	valueRetriever?: ValueRetriever;
+	valueSerializer?: ValueSerializer;
+	validator?: ValidatorFunctionDef;
 };
 
 function isPluginFileBuilder(target: any): target is PluginFileBuilder {
@@ -217,6 +222,19 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 					`Plugin "${plugin.id}" control "${typeKey}" must declare a valid React Component on ControlPluginContribution.Component.`
 				);
 			}
+			if (entry.valueRetriever != null && typeof entry.valueRetriever !== 'function') {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" valueRetriever must be a function when provided.`
+				);
+			}
+			if (entry.valueSerializer != null && typeof entry.valueSerializer !== 'function') {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" valueSerializer must be a function when provided.`
+				);
+			}
+			if (entry.validator != null && typeof entry.validator !== 'function') {
+				throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" validator must be a function when provided.`);
+			}
 			const bindings = normalizeDataSourceBindings(entry.dataSourceBindings ?? []);
 			const existing = getRegisteredControlContribution(typeKey);
 			if (existing) {
@@ -231,7 +249,14 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 					);
 				}
 			}
-			controlsToCommit.push({ typeKey, Component: entry.Component, bindings });
+			controlsToCommit.push({
+				typeKey,
+				Component: entry.Component,
+				bindings,
+				valueRetriever: entry.valueRetriever,
+				valueSerializer: entry.valueSerializer,
+				validator: entry.validator
+			});
 		}
 	}
 
@@ -239,8 +264,15 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 	dsToCommit.forEach((module) => {
 		dataSourceModuleRegistry.register(module);
 	});
-	controlsToCommit.forEach(({ typeKey, Component, bindings }) => {
-		registerControlContribution(typeKey, { Component, bindings, pluginId: plugin.id });
+	controlsToCommit.forEach(({ typeKey, Component, bindings, valueRetriever, valueSerializer, validator }) => {
+		registerControlContribution(typeKey, {
+			Component,
+			bindings,
+			pluginId: plugin.id,
+			valueRetriever,
+			valueSerializer,
+			validator
+		});
 		registerControlDataSourceBindings(typeKey, bindings);
 	});
 

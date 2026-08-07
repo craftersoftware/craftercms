@@ -16,24 +16,30 @@
 
 import type { ComponentType } from 'react';
 import type { DataSourceBinding } from '../dataSources/types';
+import type { ValueRetriever, ValueSerializer } from '../lib/controlValueTypes';
+import type { ValidatorFunctionDef } from '../lib/validators';
 import type { ControlProps } from '../types';
 
-/** Cached plugin control: Component, normalized bindings, and owning `PluginDescriptor.id`. */
+/** Cached plugin control: Component, bindings, optional IO/validator hooks, and owning `PluginDescriptor.id`. */
 export interface RegisteredControlContribution {
 	Component: ComponentType<ControlProps>;
 	bindings: readonly DataSourceBinding[];
 	/** Owning {@link PluginDescriptor.id} — not the form-definition asset locator `pluginId`. */
 	pluginId: string;
+	valueRetriever?: ValueRetriever;
+	valueSerializer?: ValueSerializer;
+	validator?: ValidatorFunctionDef;
 }
 
 const registeredControls = new Map<string, RegisteredControlContribution>();
 
 /**
- * Stores an FE2 plugin control Component + bindings by `field.type`.
+ * Stores an FE2 plugin control contribution by `field.type`.
  *
  * Idempotent for the same owning plugin + Component. Throws if another plugin's descriptor already
- * claims the type (even with an identical Component reference), so binding metadata cannot be
- * overwritten under a retained first owner.
+ * claims the type (even with an identical Component reference), so binding/IO metadata cannot be
+ * overwritten under a retained first owner. Re-entry with the same owner+Component refreshes
+ * bindings and optional valueRetriever/valueSerializer/validator.
  */
 export function registerControlContribution(controlType: string, contribution: RegisteredControlContribution): void {
 	if (!controlType) {
@@ -53,6 +59,13 @@ export function registerControlContribution(controlType: string, contribution: R
 					` by plugin "${existing.pluginId}".`
 			);
 		}
+		registeredControls.set(controlType, {
+			...existing,
+			bindings: contribution.bindings,
+			valueRetriever: contribution.valueRetriever ?? existing.valueRetriever,
+			valueSerializer: contribution.valueSerializer ?? existing.valueSerializer,
+			validator: contribution.validator ?? existing.validator
+		});
 		return;
 	}
 	registeredControls.set(controlType, contribution);
@@ -65,4 +78,19 @@ export function getRegisteredControlContribution(controlType: string): Registere
 
 export function hasRegisteredControl(controlType: string): boolean {
 	return registeredControls.has(controlType);
+}
+
+/** Plugin control valueRetriever for `field.type`, if contributed. */
+export function getPluginControlValueRetriever(controlType: string): ValueRetriever | undefined {
+	return registeredControls.get(controlType)?.valueRetriever;
+}
+
+/** Plugin control valueSerializer for `field.type`, if contributed. */
+export function getPluginControlValueSerializer(controlType: string): ValueSerializer | undefined {
+	return registeredControls.get(controlType)?.valueSerializer;
+}
+
+/** Plugin control validator for `field.type`, if contributed. */
+export function getPluginControlValidator(controlType: string): ValidatorFunctionDef | undefined {
+	return registeredControls.get(controlType)?.validator;
 }

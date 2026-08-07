@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-08-03
+Last updated: 2026-08-07
 
 ## 1. Why plugins are part of the core design
 
@@ -282,21 +282,28 @@ export default {
 	controls: {
 		'my-custom-picker': {
 			Component: MyPicker,
-			dataSourceBindings: [{ propertyName: 'itemManager', interfaces: ['item'], selection: 'multi' }]
+			dataSourceBindings: [{ propertyName: 'itemManager', interfaces: ['item'], selection: 'multi' }],
+			valueRetriever: (raw, field) => /* XML → form value */,
+			valueSerializer: (field, value) => /* form value → XML-ready shape */,
+			validator: (field, value, messages, meta) => /* type-specific; push messages; return bool */
 		}
 	}
 };
 ```
 
-Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component).
+Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSerializersLookup` / `validatorsMap` first (`Object.hasOwn`), then plugin contribution for `field.type`. Required/empty checks stay in `validateFieldValue` (host). FE preloads all `field.properties.plugin` locators before form value parse and again before save (`preloadControlPluginsForFields`) so custom retrievers/serializers/validators are registered in time.
 
-Example: `samples/fe2-control-plugin.example.mjs`.
+Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component). Host also exposes `getValueRetriever` / `getValueSerializer` / `getValidator` for inspection.
+
+**Field chrome.** Plugin controls are rendered without a wrapper, so validation state is invisible unless the control renders it. `craftercms.formsEngine.controls.FormsEngineField` is the same component built-in controls use — it reads the field's validity atom and renders the label, required/invalid indicator, validator messages, field menu, and inheritance notice:
+
+```js
+const { FormsEngineField } = globalThis.craftercms?.formsEngine?.controls ?? {};
+// <FormsEngineField field={field} htmlFor={id}>{yourInput}</FormsEngineField>
+```
 
 Missing for a complete extension contract:
 
-- plugin-supplied value retriever;
-- serializer;
-- validators;
 - additional XML fields/attributes;
 - migrations/versioning;
 - optional descriptor for TB property editing (should mirror `dataSourceBindings` for the DS property UI);
@@ -459,13 +466,16 @@ interface PluginDescriptor {
 interface ControlPluginContribution {
 	Component: ComponentType<ControlProps>;
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
+	valueRetriever?: ValueRetriever; // optional XML → form value
+	valueSerializer?: ValueSerializer; // optional form value → XML shape
+	validator?: ValidatorFunctionDef; // optional type-specific; required/empty is host-owned
 }
 ```
 
 `registerPlugin` (current):
 
 1. Validates and installs `dataSources` into `dataSourceModuleRegistry` (before committing the plugin id).
-2. Validates and installs `controls` into the control contribution registry + binding registry.
+2. Validates and installs `controls` into the control contribution registry + binding registry (including optional `valueRetriever` / `valueSerializer` / `validator`).
 3. Stores the descriptor (including `utils`) in the plugins map.
 4. Registers widgets, locales, scripts/stylesheets as before.
 5. `widgets` may be omitted (lib / FE-only bundles).

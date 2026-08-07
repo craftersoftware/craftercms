@@ -18,6 +18,7 @@ import { ContentTypeField } from '../../../models';
 import { NodeSelectorItem } from '../controls/NodeSelector';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
+import { getPluginControlValueSerializer } from '../controls/registry';
 import { XmlKeys } from './formConsts';
 import { BuiltInControlType } from './controlMap';
 import { RepeatItem } from '../controls/Repeat';
@@ -26,16 +27,13 @@ import type { DescriptorControlType } from '../../ContentTypeManagement/controlM
 import { nnou } from '../../../utils/object';
 import { escapeXml } from '../../../utils/xml';
 import { AwsFile } from '../controls/AWSFileUpload';
+import type { ValueSerializer } from './controlValueTypes';
 
 const attributeNamePrefix = '@:';
 const cdataPropName = '__cdata__';
 const textNodeName = '#text';
 
-export type ValueSerializer<T = unknown> = (
-	field: ContentTypeField,
-	value: unknown,
-	contentTypesLookup?: LookupTable<ContentType>
-) => T;
+export type { ValueSerializer } from './controlValueTypes';
 
 export const valueSerializersLookup: Record<BuiltInControlType | DescriptorControlType, ValueSerializer | undefined> = {
 	'auto-filename': undefined,
@@ -119,7 +117,9 @@ function prepareValuesForXmlSerialising(
 		const fieldAttributes: Record<string, unknown> = {};
 		// Field type specific hinting...
 
-		const serializer = valueSerializersLookup[fieldType];
+		const serializer = Object.hasOwn(valueSerializersLookup, fieldType)
+			? valueSerializersLookup[fieldType]
+			: getPluginControlValueSerializer(fieldType);
 		if (serializer) {
 			jObj[id] = serializer(field, value, contentTypesLookup);
 		}

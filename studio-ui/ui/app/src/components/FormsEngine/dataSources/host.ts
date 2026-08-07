@@ -15,9 +15,15 @@
  */
 
 import { getControlDataSourceBindings, registerControlDataSourceBindings } from './bindings';
-import { getRegisteredControlContribution } from '../controls/registry';
+import {
+	getPluginControlValidator,
+	getPluginControlValueRetriever,
+	getPluginControlValueSerializer,
+	getRegisteredControlContribution
+} from '../controls/registry';
 import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
+import { FormsEngineField } from '../components/FormsEngineField';
 
 /**
  * Public runtime surface for the data-source *module registry* (built-ins and
@@ -41,9 +47,17 @@ export const formsEngineDataSourcesHost = {
  * Prefer contributing controls via `PluginDescriptor.controls` (loaded through
  * `importPlugin` / `registerPlugin`). Eager binding registration remains available
  * for UMD-style loaders.
+ *
+ * `FormsEngineField` is the field chrome built-in controls use (label, required/invalid
+ * state, validity messages, field menu, inheritance notice). Plugin controls are rendered
+ * bare, so they must wrap their input in it to display validation state like built-ins do.
  */
 export const formsEngineControlsHost = {
 	registerDataSourceBindings: registerControlDataSourceBindings,
 	getDataSourceBindings: getControlDataSourceBindings,
-	getControl: getRegisteredControlContribution
+	getControl: getRegisteredControlContribution,
+	getValueRetriever: getPluginControlValueRetriever,
+	getValueSerializer: getPluginControlValueSerializer,
+	getValidator: getPluginControlValidator,
+	FormsEngineField
 };
