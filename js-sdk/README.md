@@ -30,13 +30,13 @@ Run `yarn test` on each of the packages to execute all tests.
 
 # Community
 ## Contributors
-https://github.com/craftercms/craftercms/blob/develop/CONTRIBUTORS.md
+https://github.com/craftersoftware/craftercms/blob/support/4.x/CONTRIBUTORS.md
 
 ## Code of Conduct
-https://github.com/craftercms/craftercms/blob/develop/CODE_OF_CONDUCT.md
+https://github.com/craftersoftware/craftercms/blob/support/4.x/CODE_OF_CONDUCT.md
 
 ## Contributing
-https://github.com/craftercms/craftercms/blob/develop/CONTRIBUTING.md
+https://github.com/craftersoftware/craftercms/blob/support/4.x/CONTRIBUTING.md
 
 ## Git Workflow
-https://github.com/craftercms/craftercms/blob/develop/GIT_WORKFLOW.md
+https://github.com/craftersoftware/craftercms/blob/support/4.x/GIT_WORKFLOW.md

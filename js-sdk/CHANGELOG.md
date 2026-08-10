@@ -136,7 +136,7 @@
 
 ### @craftercms/content
 - Add ability to specify `flatten` for the `content_store/descriptor` endpoint (via the config argument of the function).
-- Make `parseDescriptor` be able to handle the deserialization products of the [recent `crafter-source` & `crafter-source-content-type-id` attribute additions](https://github.com/craftercms/craftercms/issues/4093).
+- Make `parseDescriptor` be able to handle the deserialization products of the [recent `crafter-source` & `crafter-source-content-type-id` attribute additions](https://github.com/craftersoftware/craftercms/issues/4093).
 
 ### @craftercms/ice
 - [bugfix] Handle calls to `repaintPencils` before the dependency loader has been configured to avoid incorrect paths to load scripts/css from.

@@ -51,7 +51,7 @@ export function initTinyMCE(
   // If record element is of type inline (doesn't matter the display prop), replace it with a block element (div).
   // This is because of an issue happening with inline elements (for example a span tag even with 'display: block' style
   // was still causing an issue, and also for example a div element with 'display: inline' doesn't present the issue).
-  // https://github.com/craftercms/craftercms/issues/5212
+  // https://github.com/craftersoftware/craftercms/issues/5212
   if (isRecordElInline) {
     const recordEl = record.element;
     const blockEl = document.createElement('div');
@@ -263,11 +263,11 @@ export function initTinyMCE(
       function replaceLineBreaksIfApplicable(content: string) {
         if (type === 'textarea') {
           // Replace line breaks with <br> for textarea fields
-          // Address line breaks in textarea fields: https://github.com/craftercms/craftercms/issues/6432
+          // Address line breaks in textarea fields: https://github.com/craftersoftware/craftercms/issues/6432
           editor.setContent(content.replaceAll('\n', '<br>'), { format: 'html' });
         } else if (type === 'html') {
           // Set content in 'html' format for the editor to exec its internal cleanup mechanisms
-          // For example, removal of potentially problematic line breaks which we're seeing cause the list plugin to crash (https://github.com/craftercms/craftercms/issues/6514)
+          // For example, removal of potentially problematic line breaks which we're seeing cause the list plugin to crash (https://github.com/craftersoftware/craftercms/issues/6514)
           editor.setContent(content, { format: 'html' });
         }
       }

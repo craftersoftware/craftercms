@@ -118,7 +118,7 @@ Parse a [Descriptor](../models/src/descriptor.ts), [Item](../models/src/item.ts)
 
 ### preParseSearchResults
 Inspects and parses elasticsearch hits and pre-parses objects before they can be sent to parseDescriptor
-@see https://github.com/craftercms/craftercms/issues/4057 
+@see https://github.com/craftersoftware/craftercms/issues/4057 
 
 ```js
 import { createQuery, search } from '@craftercms/search';

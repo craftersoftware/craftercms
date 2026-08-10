@@ -181,7 +181,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
         icon={icon}
         title={title}
         locale={state.localeCode}
-        // @see https://github.com/craftercms/craftercms/issues/5360
+        // @see https://github.com/craftersoftware/craftercms/issues/5360
         menuButtonIcon={<RefreshRounded />}
         onMenuButtonClick={onHeaderButtonClick ? (anchor) => onHeaderButtonClick(anchor, 'options') : null}
         collapsed={state.collapsed}

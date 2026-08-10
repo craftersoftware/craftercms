@@ -87,7 +87,7 @@ export function NewContentDialogContainer(props: NewContentDialogContainerProps)
 
   useEffect(() => {
     if (selectedItem.path) {
-      // TODO: https://github.com/craftercms/craftercms/issues/4473
+      // TODO: https://github.com/craftersoftware/craftercms/issues/4473
       const path =
         selectedItem.systemType === 'folder' && !selectedItem.path.endsWith('/')
           ? `${selectedItem.path}/`

@@ -9,7 +9,7 @@ CrafterCMS is a modern content management platform for building digital experien
 * OTT video experiences on AWS Elemental Media Services
 * AR/VR applications using A-Frame
 
-You can learn more about CrafterCMS here: https://craftercms.org.
+You can learn more about CrafterCMS here: https://craftercms.com.
 
 Try CrafterCMS using a pre-built AMI (use the `authoring` AMI): https://aws.amazon.com/marketplace/seller-profile?id=6d75ffca-9630-44bd-90b4-ac0e99058995
 
@@ -33,7 +33,7 @@ https://craftercms.com/docs/current/by-role/system-admin/installation.html#requi
 
 Let's begin :)
 
-If you're building deployable CrafterCMS binaries, we'll clone the tag where the tag is the release you want to build. For example, if we want to build CrafterCMS version 4.4.4, we'll check the [CrafterCMS tags list](https://github.com/craftersoftware/craftercms/tags) to get the tag for the version we want, which is `v4.4.4` for our example:
+If you're building deployable CrafterCMS binaries, clone the tag for the release you want to build. For example, for CrafterCMS version 4.4.4, check the [CrafterCMS tags list](https://github.com/craftersoftware/craftercms/tags) and clone `v4.4.4`:
 
 ```bash
 git clone --branch v4.4.4 https://github.com/craftersoftware/craftercms.git
@@ -41,7 +41,13 @@ git clone --branch v4.4.4 https://github.com/craftersoftware/craftercms.git
 
 OR
 
-If you would like to contribute to CrafterCMS, to build a developer's environment, we'll need to clone the develop branch (default):
+If you would like to contribute to CrafterCMS 4.x, clone the `support/4.x` branch:
+
+```bash
+git clone --branch support/4.x https://github.com/craftersoftware/craftercms.git
+```
+
+For the latest development (default branch `develop`):
 
 ```bash
 git clone https://github.com/craftersoftware/craftercms.git
@@ -54,21 +60,25 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 ## 2.1 Commands
 
 * `download` Download dependencies
-* `selfUpdate` Update the parent project (`craftercms`)
+* `selfUpdate` Update this repository (`git pull`)
 * `clean` Clean modules
 * `build` Build modules
 * `deploy` Deploy modules
-* `upgrade` Upgrade modules (same as `selfUpdate`, `clean`, `build`, `deploy`)
+* `upgrade` Upgrade (same as `selfUpdate`, `clean`, `build`, `deploy`)
 * `start` Start CrafterCMS
 * `stop` Stop CrafterCMS
 * `status` Report status on running environments if any
 * `bundle` Create deployable binaries
+* `buildBom` Build Software Bill of Materials (BOM)
 * `buildAuthoringTomcat` Build an authoring Docker image
+* `buildAuthoringLocal` Build an authoring local Docker image
+* `buildAuthoringTomcatWithImageMagick` Build an authoring Tomcat Docker image with ImageMagick
 * `buildDeliveryTomcat` Build a delivery Docker image
 * `buildDeployer` Build a deployer Docker image
+* `buildProfile` Build a Profile Docker image
 * `buildGitSshServer` Build a Git SSH server Docker image
-* `buildGitHttpServer` Build a Git HTTP server Docker image
-* `buildLogRotate` Build a LogRotate Docker image
+* `buildGitHttpsServer` Build a Git HTTPS server Docker image
+* `buildLogrotate` Build a LogRotate Docker image
 * `buildMainImages` Build the main Docker images
 * `buildAllImages` Build all the Docker images
 * `deleteDockerArtifacts` Delete all Docker artifacts (CrafterCMS and non-CrafterCMS, including containers, images, and volumes)
@@ -77,9 +87,9 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 
 * `overwriteChangedFiles`: Update and overwrite the deployed environment (authoring or delivery) files (binaries, configuration, etc.), default `true`
 * `refreshEnv`: Update the deployed environment (authoring or delivery) with any changes to the scripts, default `false`
-* `overwriteArtifact`: Update and overwrite the downloaded artifacts (example: OpenSearch, Tomcat, ...) that's cached in the downloads folder by downloading it again, default `false`
-* `gitRemote`: Git remote name to use in cloned modules, default `origin`
-* `gitBranch`: Git branch to use when cloning modules, default `support/4.x` (for support/4.x branch)
+* `refreshDownloads`: Update and overwrite the downloaded artifacts (example: OpenSearch, Tomcat, ...) that's cached in the downloads folder by downloading it again, default `false`
+* `gitRemote`: Git remote name used by `selfUpdate`, default `origin`
+* `gitBranch`: Git branch used by `selfUpdate`, default `support/4.x`
 * `socialRequired`: Include Social in the build, default `false`
 * `profileRequired`: Include Profile in the build, default `false`
 * `startSearch` or `withSearch`: start OpenSearch, default `true`
@@ -94,7 +104,7 @@ For more information on CrafterCMS Git Workflow, please review [CrafterCMS Git W
 * `pushDockerImages`: Push the Docker images to DockerHub (if you have the right permissions), default `false`
 * `tagDockerImages`: Tag the Docker images with the tag provided (if you have the right permissions), default is not to tag
 * `rootlessDockerImages`: Docker images without using root at runtime, default `false`
-* `dockerTag`: Tag used to build a Docker image, typically the version number, e.g. `5.0.0`
+* `dockerTag`: Tag used to build a Docker image, typically the version number, e.g. `4.5.0`
 * `dockerAuthoringBundle`: Use to point to an external authoring bundle from which to build the Docker images. This can be a remote URL, a local `.tar.gz` file path, or an expanded bundle path.
 * `dockerDeliveryBundle`: Use to point to an external delivery bundle from which to build the Docker images. This can be a remote URL, a local `.tar.gz` file path, or an expanded bundle path.
 
@@ -104,7 +114,7 @@ To build deployable and distributable binaries of CrafterCMS, use the Gradle tas
 
 Before using `bundle` task make sure that the environment has been created and deployed using gradle tasks `build` and `deploy`
 
-Archives will be named `crafter-cms-${environment}-VERSION.tar.gz` and can be found in the `bundles` folder.
+Archives will be named `crafter-cms-${environment}-${version}-${platform}-${arch}.tar.gz` and can be found in the `bundles` folder.
 
 ```bash
 ./gradlew build deploy bundle
@@ -122,7 +132,7 @@ To build a binary archive for a specific environment:
     ./gradlew bundle -Penv=authoring
 ```
 
-Archive will be named `crafter-cms-authoring-${version}.tar.gz` and can be found in the `bundles` folder.
+Archive will be named `crafter-cms-authoring-${version}-${platform}-${arch}.tar.gz` and can be found in the `bundles` folder.
 
 For the `delivery` environment, simply substitute the `env=authoring` with `env=delivery`.
 
@@ -219,7 +229,7 @@ CrafterCMS comprises the following modules (among others):
 * [`social`](https://craftercms.com/docs/current/reference/modules/social.html)
 * [`deployer`](https://craftercms.com/docs/current/reference/modules/deployer.html)
 
-You'll find these projects under the root project directory and ready for you to contribute to in the folder `{Project Root}/{module}`.
+You'll find these projects at the repository root in folders named after each module (for example `engine/`, `studio/`, `deployer/`). Supporting modules such as `commons`, `core`, `search`, `studio-ui`, `cli`, `groovy-sandbox`, `script-security-plugin`, and `js-sdk` live alongside them.
 
 ### 4.3.1. Forking the Repository
 
@@ -330,16 +340,18 @@ e.g.:
 
 Here's a list of commands (Gradle tasks) available:
 
-| Command<br>``command`` | Description                                                                                    | Env Options<br>``env``  | Applies to modules                                                                                                                                                                                                                                                    |
-|------------------------|------------------------------------------------------------------------------------------------|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| build                  | Build all modules<br>                 | None  | Yes                                            |
-| deploy                 | Deploy module/s or an entire environment                                                       | authoring<hr>delivery   | Yes |
-| bundle                 | Build deployable and distributable binaries                                                    | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
-| start                  | Start CrafterCMS                                                                               | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
-| stop                   | Stop CrafterCMS                                                                                | authoring <hr> delivery | No                                                                                                                                                                                                                                                          |
-| upgrade                | Upgrades the installed Tomcat version, etc., without deleting your data then builds and deploys | None  | No                                                                                                                                                                                                                                                          |
-| selfUpdate             | Updates the CrafterCMS project (gradle)                                                        | None  | No                                                                                                                                                                                                                                                          |
-| clean                  | Delete all compiled objects                                                                    | None  |  Yes                                                                                                                                                                                                                                                          |
+| Command<br>``command`` | Description                                                                    | Env Options<br>``env``  | Applies to modules |
+|------------------------|--------------------------------------------------------------------------------|-------------------------|--------------------|
+| build                  | Build all modules                                                              | None                    | Yes                |
+| deploy                 | Deploy module/s or an entire environment                                       | authoring<hr>delivery   | Yes                |
+| bundle                 | Build deployable and distributable binaries                                    | authoring <hr> delivery | No                 |
+| start                  | Start CrafterCMS                                                               | authoring <hr> delivery | No                 |
+| stop                   | Stop CrafterCMS                                                                | authoring <hr> delivery | No                 |
+| status                 | Report status of running environments                                          | authoring <hr> delivery | No                 |
+| upgrade                | Upgrade modules (same as selfUpdate, clean, build, deploy)                     | None                    | No                 |
+| selfUpdate             | Updates this repository (`git pull`)                                           | None                    | No                 |
+| clean                  | Delete all compiled objects                                                    | None                    | Yes                |
+| buildBom               | Build Software Bill of Materials (BOM)                                         | None                    | Yes                |
 
 > **_NOTE:_**
 * If you don't specify the ``env`` parameter, it means all environments (where applicable).
@@ -364,10 +376,7 @@ The Gradle task above will:
 1. Download the dependencies
 2. Build all CrafterCMS modules from the source
 
-	- ``crafter-authoring``
-	- ``crafter-delivery``
-
-To build a module (all module options for task ``build`` are listed in the table above), run the following (we'll build the module *studio* in the example below):
+To build a module (we'll build the module *studio* in the example below):
 
 ```bash
    ./gradlew studio:build
@@ -433,7 +442,7 @@ The Gradle task ``bundle`` will build deployable and distributable binaries of C
    ./gradlew bundle [-Penv={env}]
 ```
 
-Binaries will be saved as ``crafter-cms-authoring-VERSION.tar.gz`` for the *Authoring Environment* and ``crafter-cms-delivery-VERSION.tar.gz`` for the *Delivery Environment* in the ``bundles`` folder
+Binaries will be saved as ``crafter-cms-authoring-VERSION-PLATFORM-ARCH.tar.gz`` for the *Authoring Environment* and ``crafter-cms-delivery-VERSION-PLATFORM-ARCH.tar.gz`` for the *Delivery Environment* in the ``bundles`` folder
 
 Using the common task property ``env`` lets you select what environment (authoring or delivery) will be generated.
 
@@ -443,5 +452,5 @@ Let's look at an example using the task property mentioned above:
     ./gradlew bundle -Penv=authoring
 ```
 
-The command above will generate an authoring binary archive in the bundles folder named ``crafter-cms-authoring-VERSION.tar.gz``.
+The command above will generate an authoring binary archive in the bundles folder named ``crafter-cms-authoring-VERSION-PLATFORM-ARCH.tar.gz``.
 

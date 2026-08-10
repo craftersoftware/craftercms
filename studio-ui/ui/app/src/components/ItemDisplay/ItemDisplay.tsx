@@ -84,7 +84,7 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
     item,
     styles,
     classes: propClasses,
-    // @see https://github.com/craftercms/craftercms/issues/5442
+    // @see https://github.com/craftersoftware/craftercms/issues/5442
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     showPublishingTarget = true,
     showWorkflowState = true,
@@ -109,7 +109,7 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
   const inWorkflow = isInWorkflow(item.stateMap) || item.systemType === 'folder';
   return (
     <span ref={ref} {...rest} className={cx(classes.root, propClasses?.root, rest?.className)}>
-      {/* @see https://github.com/craftercms/craftercms/issues/5442 */}
+      {/* @see https://github.com/craftersoftware/craftercms/issues/5442 */}
       {inWorkflow
         ? showWorkflowState && (
             <ItemStateIcon

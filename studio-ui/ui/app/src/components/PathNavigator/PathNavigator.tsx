@@ -115,7 +115,7 @@ export interface PathNavigatorStateProps {
   order: GetChildrenOptions['order'];
 }
 
-// @see https://github.com/craftercms/craftercms/issues/5360
+// @see https://github.com/craftersoftware/craftercms/issues/5360
 // const menuOptions: Record<'refresh', ContextMenuOptionDescriptor> = {
 //   refresh: {
 //     id: 'refresh',
@@ -332,7 +332,7 @@ export function PathNavigator(props: PathNavigatorProps) {
   };
 
   const onHeaderButtonClick = (anchorEl: Element, type: string) => {
-    // @see https://github.com/craftercms/craftercms/issues/5360
+    // @see https://github.com/craftersoftware/craftercms/issues/5360
     onSimpleMenuClick('refresh');
     // setWidgetMenu({
     //   sections: [[toContextMenuOptionsLookup(menuOptions, formatMessage).refresh]],
