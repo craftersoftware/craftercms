@@ -135,16 +135,19 @@ import { useContentTypes } from '../../hooks/useContentTypes';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import { useActiveSite } from '../../hooks/useActiveSite';
-import { getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
+import { getFileNameFromPath, getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
 import {
 	closeItemMegaMenu,
 	imageEditCancelled,
 	imageEdited,
 	itemMegaMenuClosed,
+	rteDataSourcePickerResult,
 	rtePickerActionResult,
 	showImageEditorDialog,
 	showItemMegaMenu,
+	showRteDataSourcePicker,
 	showRtePickerActions,
+	type ShowRteDataSourcePickerPayload,
 	type ShowRtePickerActionsPayload
 } from '../../state/actions/dialogs';
 import { UNDEFINED } from '../../utils/constants';
@@ -192,6 +195,22 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { ImageRestrictionSubtitle } from '../FormsEngine/lib/controlHelpers';
 import { getCurrentLocale } from '../../utils/i18n';
+import Dialog from '@mui/material/Dialog';
+import MenuList from '@mui/material/MenuList';
+import DialogHeader from '../DialogHeader';
+import DialogBody from '../DialogBody';
+import GroupedDataSourceActionMenuItems from '../FormsEngine/components/GroupedDataSourceActionMenuItems';
+import { getRteDataSourcePropertyNames, rteSelectionToUrl } from '../FormsEngine/lib/rteUtils';
+import { getControlDataSourceBindings } from '../FormsEngine/dataSources/bindings';
+import { createDataSourceServices } from '../FormsEngine/dataSources/services';
+import { resolveFieldDataSources } from '../FormsEngine/dataSources/useFieldDataSources';
+import { buildActionGroups, invokeActionChoice } from '../FormsEngine/dataSources/actionAdapters';
+import type {
+	DataSourceFieldContext,
+	DataSourceSelection,
+	ResolvedDataSourceAction
+} from '../FormsEngine/dataSources/types';
+import { getField } from '../../utils/contentType';
 
 const issueDescriptorRequest = (props: {
 	site: string;
@@ -356,6 +375,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const [dataSourceActionsListState, setDataSourceActionsListState] = useSpreadState<DataSourcesActionsListProps>(
 		dataSourceActionsListInitialState
 	);
+	const [rteDataSourcePicker, setRteDataSourcePicker] = useState<{
+		requestId: string;
+		actions: ResolvedDataSourceAction[];
+		context: DataSourceFieldContext;
+	}>(null);
 	const toggleEditMode = (nextHighlightMode?: HighlightMode) => {
 		dispatch(
 			setPreviewEditMode({
@@ -394,6 +418,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		showToolsPanel,
 		toolsPanelWidth,
 		browseFilesDialogState,
+		openRteDataSourcePicker,
 		dialogs,
 		stack,
 		keyboardShortcutsEnabled,
@@ -478,6 +503,72 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			payload
 		});
 	};
+
+	// region XB rich text editor data source picker
+	// The in-context editor lives in the preview iframe, where data sources can't be resolved: their
+	// actions carry React nodes and closures over Studio dialogs that only exist here. The guest asks
+	// (showRteDataSourcePicker), the host resolves & presents, and replies with the selected url.
+
+	// The guest holds the editor in "picking" state until it hears back, so every exit path must reply.
+	function respondToRteDataSourcePicker(
+		requestId: string,
+		selection: DataSourceSelection | DataSourceSelection[] | null
+	) {
+		const url = rteSelectionToUrl(selection);
+		getHostToGuestBus().next(
+			rteDataSourcePickerResult(url ? { id: requestId, url, name: getFileNameFromPath(url) } : { id: requestId })
+		);
+	}
+
+	function closeRteDataSourcePicker() {
+		rteDataSourcePicker && respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
+		setRteDataSourcePicker(null);
+	}
+
+	async function openRteDataSourcePicker(request: ShowRteDataSourcePickerPayload) {
+		const { siteId, contentTypes, dispatch, formatMessage } = upToDateRefs.current;
+		const dismiss = (error: unknown) => {
+			console.error('Unable to present the rich text editor data sources.', error);
+			dispatch(showSystemNotification({ message: formatMessage(guestMessages.noDataSourcesSet) }));
+			respondToRteDataSourcePicker(request.id, null);
+		};
+		try {
+			const contentType = contentTypes?.[request.contentTypeId];
+			const field = contentType ? getField(contentType, request.fieldId, contentTypes) : null;
+			if (!field) {
+				return dismiss(`Field "${request.fieldId}" was not found on "${request.contentTypeId}".`);
+			}
+			const { context, actions } = await resolveFieldDataSources({
+				siteId,
+				contentType,
+				field,
+				bindings: getControlDataSourceBindings(field.type),
+				value: null,
+				readonly: false,
+				services: createDataSourceServices({ dispatch, siteId, formsApi: { pushForm: () => undefined } }),
+				expandPath: (path) => processPathMacros({ path, objectId: request.objectId, fullParentPath: request.path }),
+				contentTypes
+			});
+			const propertyNames = getRteDataSourcePropertyNames(request.filetype);
+			const candidates = actions.filter((action) => propertyNames.includes(action.binding.propertyName));
+			if (!candidates.length) {
+				return dismiss(`No data sources are configured for "${request.fieldId}" (${request.filetype}).`);
+			}
+			const grouped = buildActionGroups(candidates);
+			// A single option needs no menu; go straight to the data source's own dialog.
+			if (grouped.customActions.length === 0 && grouped.groups.length === 1 && grouped.groups[0].choices.length === 1) {
+				invokeActionChoice(grouped.groups[0].choices[0], context).then(
+					(selection) => respondToRteDataSourcePicker(request.id, selection),
+					(error) => dismiss(error)
+				);
+			} else {
+				setRteDataSourcePicker({ requestId: request.id, actions: candidates, context });
+			}
+		} catch (error) {
+			dismiss(error);
+		}
+	}
+	// endregion
 
 	useEffect(() => {
 		if (nnou(uiConfig.xml)) {
@@ -1196,6 +1287,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					break;
 				}
 				// endregion
+				case showRteDataSourcePicker.type: {
+					upToDateRefs.current.openRteDataSourcePicker(payload as ShowRteDataSourcePickerPayload);
+					break;
+				}
 				case showRtePickerActions.type: {
 					const typedPayload: ShowRtePickerActionsPayload = payload;
 					const { setDataSourceActionsListState, showToolsPanel, toolsPanelWidth, browseFilesDialogState } =
@@ -1482,6 +1577,31 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				{...dataSourceActionsListState}
 				onClose={() => setDataSourceActionsListState({ show: false })}
 			/>
+			<Dialog open={Boolean(rteDataSourcePicker)} onClose={closeRteDataSourcePicker} fullWidth maxWidth="xs">
+				<DialogHeader
+					title={<FormattedMessage defaultMessage="Choose how to add media" />}
+					onCloseButtonClick={closeRteDataSourcePicker}
+				/>
+				<DialogBody>
+					{rteDataSourcePicker && (
+						<MenuList>
+							<GroupedDataSourceActionMenuItems
+								actions={rteDataSourcePicker.actions}
+								context={rteDataSourcePicker.context}
+								onResult={(selection) => {
+									respondToRteDataSourcePicker(rteDataSourcePicker.requestId, selection);
+									setRteDataSourcePicker(null);
+								}}
+								onError={(error) => {
+									console.error('Unable to select rich-text media.', error);
+									respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
+									setRteDataSourcePicker(null);
+								}}
+							/>
+						</MenuList>
+					)}
+				</DialogBody>
+			</Dialog>
 		</>
 	);
 }

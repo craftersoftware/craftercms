@@ -304,6 +304,33 @@ export const rtePickerActionResult = /*#__PURE__*/ createAction<{ path: string; 
 );
 // endregion
 
+// region Rte Data Source Picker (XB)
+/**
+ * Sent by the guest (XB in-context RTE) to request the host to present the field's data-source
+ * actions. Data sources can't be resolved inside the preview iframe: their actions carry React
+ * nodes and closures over Studio dialogs that only exist in the host. The guest identifies the
+ * field, the host resolves, presents and replies with {@link rteDataSourcePickerResult}.
+ */
+export interface ShowRteDataSourcePickerPayload {
+	/** Correlation id; echoed back on the result so concurrent requests don't cross. */
+	id: string;
+	contentTypeId: string;
+	fieldId: string;
+	/** TinyMCE `meta.filetype` of the picker that was invoked. */
+	filetype: 'image' | 'media' | 'file';
+	/** Model id of the item being edited; used to expand path macros (e.g. `{objectId}`). */
+	objectId?: string;
+	/** Path of the item being edited; used to expand path macros (e.g. `{parentPath}`). */
+	path?: string;
+}
+export const showRteDataSourcePicker =
+	/*#__PURE__*/ createAction<ShowRteDataSourcePickerPayload>('SHOW_RTE_DATA_SOURCE_PICKER');
+/** Host's reply to {@link showRteDataSourcePicker}. A missing `url` means nothing was selected. */
+export const rteDataSourcePickerResult = /*#__PURE__*/ createAction<{ id: string; url?: string; name?: string }>(
+	'RTE_DATA_SOURCE_PICKER_RESULT'
+);
+// endregion
+
 // region BrokenReferences Cancellation
 
 export const showBrokenReferencesDialog = /*#__PURE__*/ createAction<Partial<BrokenReferencesDialogStateProps>>(

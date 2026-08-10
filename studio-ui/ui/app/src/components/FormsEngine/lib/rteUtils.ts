@@ -32,6 +32,38 @@ export type OpenRteDataSourcePicker = (
 	onResult: (selection: DataSourceSelection | DataSourceSelection[] | null) => void
 ) => void;
 
+/** TinyMCE `file_picker_callback` `meta.filetype` values. */
+export type RteFilePickerType = 'image' | 'media' | 'file' | (string & {});
+
+/**
+ * Data-source binding property names that back a given TinyMCE file picker request.
+ * Tiny handles video and audio both as `media`, hence the two property names for it.
+ */
+export function getRteDataSourcePropertyNames(filetype: RteFilePickerType): string[] {
+	switch (filetype) {
+		case 'image':
+			return ['imageManager'];
+		case 'media':
+			return ['videoManager', 'audioManager'];
+		default:
+			return ['fileManager'];
+	}
+}
+
+/**
+ * Maps a data-source selection to the URL TinyMCE expects, or `null` when the selection
+ * doesn't carry anything usable (e.g. the author dismissed the dialog).
+ */
+export function rteSelectionToUrl(selection: DataSourceSelection | DataSourceSelection[] | null): string | null {
+	const selected = Array.isArray(selection) ? selection[0] : selection;
+	if (selected?.kind === 'asset' && typeof selected.relativeUrl === 'string') return selected.relativeUrl;
+	if (selected?.kind === 'item' && typeof selected.path === 'string') return selected.path;
+	if (selected?.kind === 'variants' && Array.isArray(selected.items) && typeof selected.items[0]?.url === 'string') {
+		return selected.items[0].url;
+	}
+	return null;
+}
+
 // Maps application locales to their corresponding TinyMCE language codes.
 const tinymceLangMap = {
 	es: 'es',
@@ -47,7 +79,11 @@ export function getTinyMceInitOptions(
 	defaultOptions?: Editor['props']['init'],
 	dataSources?: ResolvedDataSources,
 	openDataSourcePicker?: OpenRteDataSourcePicker,
-	setup?: Editor['props']['init']['setup']
+	setup?: Editor['props']['init']['setup'],
+	// XB runs the editor inside the preview iframe, where data sources can't be resolved (their
+	// actions carry React nodes and closures over host-only dialogs). It supplies its own picker
+	// that round-trips to the host instead.
+	filePickerCallback?: Editor['props']['init']['file_picker_callback']
 ): Editor['props']['init'] {
 	const setupId: string = getPropertyValue(field.properties, 'rteConfiguration', 'generic') as string;
 	const height = getPropertyValue(field.properties, 'height', 300) as number;
@@ -126,27 +162,16 @@ export function getTinyMceInitOptions(
 		file_picker_types: 'image media',
 		craftercms_paste_cleanup: tinymceOptions.craftercms_paste_cleanup ?? true, // If doesn't exist or if true => true
 		// If the allowAddMedia validation is set to false, then the callback is not set, so the add media/file options won't be shown in the editor.
-		file_picker_callback: allowAddMedia
-			? function (cb, value, meta) {
-					const propertyNames =
-						meta.filetype === 'image'
-							? ['imageManager']
-							: meta.filetype === 'media'
-								? ['videoManager', 'audioManager']
-								: ['fileManager'];
+		file_picker_callback: !allowAddMedia
+			? null
+			: (filePickerCallback ??
+				function (cb, value, meta) {
+					const propertyNames = getRteDataSourcePropertyNames(meta.filetype);
 					const actions =
 						dataSources?.actions.filter((candidate) => propertyNames.includes(candidate.binding.propertyName)) ?? [];
 					const applySelection = (selection: DataSourceSelection | DataSourceSelection[] | null) => {
-						const selected = Array.isArray(selection) ? selection[0] : selection;
-						if (selected?.kind === 'asset' && typeof selected.relativeUrl === 'string') cb(selected.relativeUrl);
-						else if (selected?.kind === 'item' && typeof selected.path === 'string') cb(selected.path);
-						else if (
-							selected?.kind === 'variants' &&
-							Array.isArray(selected.items) &&
-							typeof selected.items[0]?.url === 'string'
-						) {
-							cb(selected.items[0].url);
-						}
+						const url = rteSelectionToUrl(selection);
+						if (url) cb(url);
 					};
 					if (actions.length && dataSources?.context) {
 						const grouped = buildActionGroups(actions);
@@ -207,8 +232,7 @@ export function getTinyMceInitOptions(
 					//   //       cb(payload.path, { alt: payload.name });
 					//   //     }
 					//   //   });
-				}
-			: null,
+				}),
 		setup(editor) {
 			const pluginManager = window.tinymce.util.Tools.resolve('tinymce.PluginManager');
 
