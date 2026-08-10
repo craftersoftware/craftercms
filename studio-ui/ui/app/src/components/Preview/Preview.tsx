@@ -33,6 +33,7 @@ import { GlobalRoutes } from '../../env/routes';
 import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
+import LoadingState from '../LoadingState';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -185,10 +186,18 @@ function Preview() {
 					background: theme.palette.background.default
 				})}
 			>
-				<ToolBar />
-				<Host />
-				<ToolsPanel />
-				<ICEToolsPanel />
+				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
+				 meantime, we'll show a loading state. */}
+				{priorState.current.site ? (
+					<>
+						<ToolBar />
+						<Host />
+						<ToolsPanel />
+						<ICEToolsPanel />
+					</>
+				) : (
+					<LoadingState />
+				)}
 			</Box>
 		</PreviewConcierge>
 	);
