@@ -81,6 +81,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const dispatch = useDispatch();
 	const [contentItems, setContentItems] = useState<ContentItem[]>();
 	const [isFetchingItems, setIsFetchingItems] = useState(false);
+	const [packageDependenciesFetchFailed, setPackageDependenciesFetchFailed] = useState(false);
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: '',
 		requestApproval: false,
@@ -139,10 +140,15 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	}, [itemsDataSummary.itemPaths, itemsByPath]);
 
 	const hardDependenciesWithoutPublishPermission = useMemo(() => {
-		return dependencyData?.items.some(
+		if (packageDependenciesFetchFailed || !dependencyData) {
+			return false;
+		}
+		return dependencyData.items.some(
 			(item) => !item.canRequestPublish && dependencyData.typeByPath[item.path] === 'hard'
 		);
-	}, [dependencyData]);
+	}, [dependencyData, packageDependenciesFetchFailed]);
+	const dependencyValidationIncomplete =
+		packageDependenciesFetchFailed || (!dependencyData && Boolean(state.publishingTarget));
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
@@ -227,6 +233,8 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		state.scheduledDateTime < new Date() ||
 		// All items to publish are empty folders.
 		arePublishingItemsFolders ||
+		// When dependency validation did not complete successfully
+		dependencyValidationIncomplete ||
 		// When there are hard dependencies without publish permission
 		hardDependenciesWithoutPublishPermission;
 
@@ -252,6 +260,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 						depMap[path] = 'soft';
 					});
 					setState({ fetchingItems: false });
+					setPackageDependenciesFetchFailed(false);
 					if (includeChildren && dependenciesByType.items) {
 						if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
 							setChildrenItems(dependenciesByType.items);
@@ -270,7 +279,9 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 				},
 				error() {
 					setState({ fetchingItems: false });
+					setIsFetchingItems(false);
 					setDependencyData(null);
+					setPackageDependenciesFetchFailed(true);
 				}
 			});
 			return () => sub.unsubscribe();
@@ -502,6 +513,13 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 													sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}
 												>
 													<FormattedMessage defaultMessage="Last applied changes can be reverted" />
+												</Alert>
+											</Fade>
+										)}
+										{packageDependenciesFetchFailed && (
+											<Fade in={packageDependenciesFetchFailed}>
+												<Alert severity="error" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+													<FormattedMessage defaultMessage="Dependency validation could not complete. Please try again before submitting." />
 												</Alert>
 											</Fade>
 										)}
