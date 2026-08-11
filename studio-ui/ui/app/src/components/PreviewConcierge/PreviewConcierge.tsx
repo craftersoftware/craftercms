@@ -563,6 +563,9 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					(error) => dismiss(error)
 				);
 			} else {
+				if (rteDataSourcePicker) {
+					respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
+				}
 				setRteDataSourcePicker({ requestId: request.id, actions: candidates, context });
 			}
 		} catch (error) {
