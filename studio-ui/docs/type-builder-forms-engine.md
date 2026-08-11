@@ -651,7 +651,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [ ] Normalize plugin identity/locator vocabulary and resolve `file` vs `filename` across XML, frontend, docs, and backend.
 - [ ] Fix the `hasJsController` / “Client-side Controller” UI path currently opening `controller.groovy` (and wire FE2 to consume the flag).
 - [ ] **S3 / WebDAV capability stubs** — remote modules load but ops hard-fail via `unsupportedRemoteError` until `DataSourceServices` gains dedicated platform support.
-- [ ] **Non-rendering control-map entries** — `disabled`, `internal-name`, `link-input`, `link-textarea` (and any other null map slots) need real FE2 controls or an explicit retire/alias decision.
+- [ ] **Non-rendering control-map entries** — audit only remaining null map slots; `disabled` and `internal-name` remap on insertion, while `link-input`, `link-textarea`, and `linked-dropdown` are retired.
 - [ ] **FE2 Crafter-specific RTE plugin parity** — audit FE1 TinyMCE/Crafter plugins vs current `rteUtils` externals (`craftercms_paste`, `editform`, …) and implement missing FE2 equivalents.
 - [ ] **Focused compatibility / plugin tests** — no Jest/Vitest harness in `ui/app` yet; need coverage for locator≠descriptor id, multi-control URL, registry conflicts, atomic registration failure, partial DS resolve, and TB plugin locator round-trip.
 - [ ] Descriptor override strategy (proposal A deep-merge vs B full replace) — see `proposal.xml`; lean crawl→walk.
