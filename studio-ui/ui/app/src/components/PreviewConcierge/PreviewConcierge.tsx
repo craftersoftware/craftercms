@@ -546,7 +546,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				value: null,
 				readonly: false,
 				services: createDataSourceServices({ dispatch, siteId, formsApi: { pushForm: () => undefined } }),
-				expandPath: (path) => processPathMacros({ path, objectId: request.objectId, fullParentPath: request.path }),
+				expandPath: (path) =>
+					processPathMacros({ path, objectId: request.objectId ?? '', fullParentPath: request.path }),
 				contentTypes
 			});
 			const propertyNames = getRteDataSourcePropertyNames(request.filetype);
