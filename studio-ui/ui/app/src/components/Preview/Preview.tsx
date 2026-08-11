@@ -188,7 +188,7 @@ function Preview() {
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
 				 meantime, we'll show a loading state. */}
-				{priorState.current.site ? (
+				{site ? (
 					<>
 						<ToolBar />
 						<Host />
