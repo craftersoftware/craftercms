@@ -214,6 +214,8 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const submitDisabled =
 		// Detailed items haven't loaded
 		isFetchingItems ||
+		// While fetching dependencies
+		state.fetchingItems ||
 		!contentItems ||
 		// While submitting
 		isSubmitting ||
