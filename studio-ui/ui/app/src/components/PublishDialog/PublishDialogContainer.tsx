@@ -315,6 +315,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	const handleSubmit = (e?: SyntheticEvent) => {
 		e?.preventDefault();
+		if (submitDisabled) return;
 
 		const { publishingTarget, scheduling: schedule } = state;
 		const { itemPaths, itemMap } = itemsDataSummary;
