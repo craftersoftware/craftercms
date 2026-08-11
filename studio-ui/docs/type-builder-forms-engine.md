@@ -341,7 +341,7 @@ Built-in `DataSourceModule`s are registered for all TB descriptors (except dead 
 - `buildActionGroups` creates one presentation group per manager binding + intent while retaining an owner-bound `DataSourceActionChoice` for every concrete option.
 - NodeSelector keeps its richer create/type/path picker, but browse/search/upload and create acceptance invoke the selected owning action. Duplicate-looking create destinations expose the contributing datasource rather than silently merging behavior.
 - ImagePicker, VideoPicker, TranscodedVideoPicker, and RTE use grouped choices; custom `MenuItem`/`Dialog` actions remain standalone.
-- Dropdown / CheckboxGroup / LinkedDropdown use `instance.list`. Dropdown/LinkedDropdown may render multiple bound list groups; CheckboxGroup follows the TB/legacy single-datasource contract and uses the first list group only.
+- Dropdown / CheckboxGroup use `instance.list`. Dropdown/LinkedDropdown may render multiple bound list groups; CheckboxGroup follows the TB/legacy single-datasource contract and uses the first list group only.
 - `createContent` resolves after the nested form saves or closes, allowing create actions to return semantic selections to the control.
 
 Legacy item-picker summaries are now a NodeSelector presentation adapter only. They carry owner-bound choices and are not an execution contract. Metadata-only media consolidation is retired.
