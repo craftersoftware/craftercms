@@ -556,6 +556,9 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				return dismiss(`No data sources are configured for "${request.fieldId}" (${request.filetype}).`);
 			}
 			const grouped = buildActionGroups(candidates);
+			if (rteDataSourcePicker) {
+				closeRteDataSourcePicker();
+			}
 			// A single option needs no menu; go straight to the data source's own dialog.
 			if (grouped.customActions.length === 0 && grouped.groups.length === 1 && grouped.groups[0].choices.length === 1) {
 				invokeActionChoice(grouped.groups[0].choices[0], context).then(
@@ -563,9 +566,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					(error) => dismiss(error)
 				);
 			} else {
-				if (rteDataSourcePicker) {
-					respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
-				}
 				setRteDataSourcePicker({ requestId: request.id, actions: candidates, context });
 			}
 		} catch (error) {
