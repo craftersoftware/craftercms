@@ -452,29 +452,42 @@ function FormBootstrap(props: FormsEngineProps) {
 			const parentLockResult = store.get(parentAtoms.lockResult);
 			const isParentLocked = parentLockResult.locked;
 			const invokePrepareFn = (locked: boolean, lockError: ApiResponse, affectedPackages: PublishPackage[]) => {
-				const requirements = prepareEmbeddedItemForm({
-					username,
-					contentType,
-					locked,
-					lockError,
-					affectedPackages,
-					update,
-					parentStackData,
-					stableFormContextRef,
-					parentPathInSite,
-					siteId,
-					contentTypesById: effectRefs.current.contentTypesById,
-					customControls
-				});
-				initializeState(requirements.atoms, requirements.values, requirements.itemMeta);
+				preloadControlPluginsForFields(siteId, contentType.fields)
+					.catch((error) => {
+						console.error('Failed to preload control plugins before embedded-form value parse.', error);
+					})
+					.then(() => {
+						if (disposed) return;
+						const requirements = prepareEmbeddedItemForm({
+							username,
+							contentType,
+							locked,
+							lockError,
+							affectedPackages,
+							update,
+							parentStackData,
+							stableFormContextRef,
+							parentPathInSite,
+							siteId,
+							contentTypesById: effectRefs.current.contentTypesById,
+							customControls
+						});
+						initializeState(requirements.atoms, requirements.values, requirements.itemMeta);
+					});
 			};
 			if (readonly === isParentReadonly) {
 				invokePrepareFn(isParentLocked, parentLockResult.lockError, parentLockResult.affectedPackages);
+				return () => {
+					disposed = true;
+				};
 			} else {
 				const sub = internalLockContentService(siteId, update.path).subscribe((result) => {
 					invokePrepareFn(result.locked, result.lockError, result.affectedPackages);
 				});
-				return () => sub.unsubscribe();
+				return () => {
+					disposed = true;
+					sub.unsubscribe();
+				};
 			}
 		} else if (
 			create // Create mode (stacked or not)

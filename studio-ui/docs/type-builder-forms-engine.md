@@ -664,6 +664,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-08-11** — Embedded stacked-form bootstrap now awaits `preloadControlPluginsForFields` for the embedded content type before `prepareEmbeddedItemForm`/`setFieldAtoms` (parity with create/edit preload so plugin validators/retrievers exist).
 - **2026-08-07** — Expose `FormsEngineField` on `craftercms.formsEngine.controls`. Plugin controls render bare (built-ins wrap themselves), so a failing plugin validator previously showed only in the ToC; wrapping in the host field chrome restores parity (label, invalid styling, validity messages).
 - **2026-08-07** — Plugin control validators: optional `ControlPluginContribution.validator` installed by `registerPlugin`; `getFieldValidator` / `hasFieldValidator` fall back after built-in `validatorsMap`; host `getValidator`; sample rejects angle brackets. Same preload path as IO hooks.
 - **2026-08-07** — Plugin control IO hooks: `ControlPluginContribution.valueRetriever` / `valueSerializer` installed by `registerPlugin`, looked up after built-in maps in `valueRetrievers` / `valueSerializers`. Form bootstrap + save preload plugin locators via `preloadControlPluginsForFields` so hooks exist before parse/serialize. Host: `craftercms.formsEngine.controls.getValueRetriever` / `getValueSerializer`. Sample updated.
