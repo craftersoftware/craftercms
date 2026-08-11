@@ -329,6 +329,12 @@ export const showRteDataSourcePicker =
 export const rteDataSourcePickerResult = /*#__PURE__*/ createAction<{ id: string; url?: string; name?: string }>(
 	'RTE_DATA_SOURCE_PICKER_RESULT'
 );
+/**
+ * Sent by the guest when it can no longer consume a {@link rteDataSourcePickerResult} — e.g. the
+ * editor was closed while the host picker was up. Without it, the host would keep the request (and
+ * the UI it presented for it) around with nobody left to reply to.
+ */
+export const cancelRteDataSourcePicker = /*#__PURE__*/ createAction<{ id: string }>('CANCEL_RTE_DATA_SOURCE_PICKER');
 // endregion
 
 // region BrokenReferences Cancellation

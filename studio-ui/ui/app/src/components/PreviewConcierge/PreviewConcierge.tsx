@@ -137,6 +137,7 @@ import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import { useActiveSite } from '../../hooks/useActiveSite';
 import { getFileNameFromPath, getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
 import {
+	cancelRteDataSourcePicker,
 	closeItemMegaMenu,
 	imageEditCancelled,
 	imageEdited,
@@ -425,6 +426,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		toolsPanelWidth,
 		browseFilesDialogState,
 		openRteDataSourcePicker,
+		cancelActiveRteDataSourcePicker,
 		dialogs,
 		stack,
 		keyboardShortcutsEnabled,
@@ -531,13 +533,20 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		setRteDataSourcePicker(null);
 	}
 
-	/** Cancels the active/in-flight picker so the guest leaves "picking" state; bumps generation to drop stale work. */
-	function cancelRteDataSourcePicker() {
+	/**
+	 * Cancels the active/in-flight picker so the guest leaves "picking" state; bumps generation to drop stale work.
+	 * When `requestId` is supplied, only that request is cancelled: a late cancellation for a request the host has
+	 * already replaced must not take down its successor.
+	 */
+	function cancelActiveRteDataSourcePicker(requestId?: string) {
+		const activeRequestId = rtePickerActiveRequestIdRef.current;
+		if (requestId != null && requestId !== activeRequestId) {
+			return;
+		}
 		rtePickerGenerationRef.current += 1;
-		const requestId = rtePickerActiveRequestIdRef.current;
 		rtePickerActiveRequestIdRef.current = null;
-		if (requestId) {
-			respondToRteDataSourcePicker(requestId, null);
+		if (activeRequestId) {
+			respondToRteDataSourcePicker(activeRequestId, null);
 		}
 		if (rteDataSourcePickerRef.current) {
 			clearRteDataSourcePickerState();
@@ -545,13 +554,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	}
 
 	function closeRteDataSourcePicker() {
-		cancelRteDataSourcePicker();
+		cancelActiveRteDataSourcePicker();
 	}
 
 	async function openRteDataSourcePicker(request: ShowRteDataSourcePickerPayload) {
 		// Overlapping open: cancel the prior request so the guest cannot remain stuck in picking.
 		if (rtePickerActiveRequestIdRef.current != null) {
-			cancelRteDataSourcePicker();
+			cancelActiveRteDataSourcePicker();
 		}
 		const generation = ++rtePickerGenerationRef.current;
 		rtePickerActiveRequestIdRef.current = request.id;
@@ -795,11 +804,15 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case 'CHECK_OUT_GUEST': {
 					const path = getPathFromPreviewURL(payload.url);
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					dispatch(guestCheckOut({ path }));
 					break;
 				}
 				// endregion
 				case guestCheckIn.type: {
+					// A fresh check-in means the guest reloaded (possibly without checking out, e.g. when the
+					// iFrame url changes abruptly), so any picker request from the previous page is orphaned.
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					getHostToGuestBus().next(
 						hostCheckIn({
 							editMode: false,
@@ -854,6 +867,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case guestCheckOut.type: {
 					requestedSourceMapPaths.current = {};
+					// The editor that requested the picker is gone with the page; nobody is left to reply to.
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					dispatch(action);
 					break;
 				}
@@ -1332,6 +1347,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					upToDateRefs.current.openRteDataSourcePicker(payload as ShowRteDataSourcePickerPayload);
 					break;
 				}
+				case cancelRteDataSourcePicker.type: {
+					upToDateRefs.current.cancelActiveRteDataSourcePicker(payload?.id);
+					break;
+				}
 				case showRtePickerActions.type: {
 					const typedPayload: ShowRtePickerActionsPayload = payload;
 					const { setDataSourceActionsListState, showToolsPanel, toolsPanelWidth, browseFilesDialogState } =
@@ -1544,10 +1563,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				// Changing the site will force-reload the iFrame and 'beforeunload'
 				// event won't trigger withing; guest won't be submitting it's own checkout
 				// in such cases.
+				upToDateRefs.current.cancelActiveRteDataSourcePicker();
 				dispatch(guestCheckOut({ path: guest.path }));
 			}
 		}
-	}, [siteId, guest, dispatch]);
+	}, [siteId, guest, dispatch, upToDateRefs]);
 
 	// Initialize RTE config
 	useEffect(() => {

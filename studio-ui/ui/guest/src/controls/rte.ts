@@ -32,7 +32,11 @@ import { Editor as EditorReact } from '@tinymce/tinymce-react';
 import { getTinyMceInitOptions } from '@craftercms/studio-ui/components/FormsEngine/lib/rteUtils';
 import { getCurrentIntl } from '../utils/i18n';
 import { RteSetup } from '../models/Rte';
-import { rteDataSourcePickerResult, showRteDataSourcePicker } from '@craftercms/studio-ui/state/actions/dialogs';
+import {
+	cancelRteDataSourcePicker,
+	rteDataSourcePickerResult,
+	showRteDataSourcePicker
+} from '@craftercms/studio-ui/state/actions/dialogs';
 import { v4 as uuid } from 'uuid';
 
 export function initTinyMCE(
@@ -125,18 +129,37 @@ export function initTinyMCE(
 	// their actions carry React nodes and closures over Studio dialogs that don't exist here. The
 	// guest identifies the field, the host presents the picker and replies with the selected url.
 	let isDataSourcePickerOpen = false;
+	let dataSourcePickerRequestId: string = null;
 	let dataSourcePickerSubscription: Subscription;
+	function stopListeningToHostDataSourcePicker() {
+		isDataSourcePickerOpen = false;
+		dataSourcePickerRequestId = null;
+		dataSourcePickerSubscription?.unsubscribe();
+		dataSourcePickerSubscription = null;
+	}
+	/** Lets the host drop the request (and close what it presented for it) when there's no one left to reply to. */
+	function cancelHostDataSourcePicker() {
+		const id = dataSourcePickerRequestId;
+		stopListeningToHostDataSourcePicker();
+		if (id) {
+			post(cancelRteDataSourcePicker({ id }));
+		}
+	}
 	const openHostDataSourcePicker: EditorReact['props']['init']['file_picker_callback'] = (cb, value, meta) => {
 		const id = uuid();
+		// Replacing an in-flight request: let the host know the prior one will no longer be consumed.
+		cancelHostDataSourcePicker();
 		isDataSourcePickerOpen = true;
-		dataSourcePickerSubscription?.unsubscribe();
+		dataSourcePickerRequestId = id;
 		dataSourcePickerSubscription = fromTopic(rteDataSourcePickerResult.type)
 			.pipe(
 				filter(({ payload }) => payload?.id === id),
 				take(1)
 			)
 			.subscribe(({ payload }) => {
+				// `take(1)` already completed the subscription; only the picking state needs resetting.
 				isDataSourcePickerOpen = false;
+				dataSourcePickerRequestId = null;
 				if (payload?.url) {
 					cb(payload.url, { alt: payload.name });
 				}
@@ -245,7 +268,7 @@ export function initTinyMCE(
 			function cancel({ saved }: { saved: boolean }) {
 				const finalContent = saved ? getContent() : originalRawContent;
 
-				dataSourcePickerSubscription?.unsubscribe();
+				cancelHostDataSourcePicker();
 				destroyEditor();
 
 				originalElement.innerHTML = finalContent;
