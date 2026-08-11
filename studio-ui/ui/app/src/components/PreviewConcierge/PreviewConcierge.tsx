@@ -380,6 +380,12 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		actions: ResolvedDataSourceAction[];
 		context: DataSourceFieldContext;
 	}>(null);
+	// Tracks the in-flight/open picker so overlapping requests can cancel the prior guest requestId
+	// and ignore stale resolveFieldDataSources / invokeActionChoice completions.
+	const rteDataSourcePickerRef = useRef(rteDataSourcePicker);
+	const rtePickerActiveRequestIdRef = useRef<string | null>(null);
+	const rtePickerGenerationRef = useRef(0);
+	rteDataSourcePickerRef.current = rteDataSourcePicker;
 	const toggleEditMode = (nextHighlightMode?: HighlightMode) => {
 		dispatch(
 			setPreviewEditMode({
@@ -520,16 +526,43 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		);
 	}
 
-	function closeRteDataSourcePicker() {
-		rteDataSourcePicker && respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
+	function clearRteDataSourcePickerState() {
+		rteDataSourcePickerRef.current = null;
 		setRteDataSourcePicker(null);
 	}
 
+	/** Cancels the active/in-flight picker so the guest leaves "picking" state; bumps generation to drop stale work. */
+	function cancelRteDataSourcePicker() {
+		rtePickerGenerationRef.current += 1;
+		const requestId = rtePickerActiveRequestIdRef.current;
+		rtePickerActiveRequestIdRef.current = null;
+		if (requestId) {
+			respondToRteDataSourcePicker(requestId, null);
+		}
+		if (rteDataSourcePickerRef.current) {
+			clearRteDataSourcePickerState();
+		}
+	}
+
+	function closeRteDataSourcePicker() {
+		cancelRteDataSourcePicker();
+	}
+
 	async function openRteDataSourcePicker(request: ShowRteDataSourcePickerPayload) {
+		// Overlapping open: cancel the prior request so the guest cannot remain stuck in picking.
+		if (rtePickerActiveRequestIdRef.current != null) {
+			cancelRteDataSourcePicker();
+		}
+		const generation = ++rtePickerGenerationRef.current;
+		rtePickerActiveRequestIdRef.current = request.id;
+
 		const { siteId, contentTypes, dispatch, formatMessage } = upToDateRefs.current;
+		const isStale = () => generation !== rtePickerGenerationRef.current;
 		const dismiss = (error: unknown) => {
+			if (isStale()) return;
 			console.error('Unable to present the rich text editor data sources.', error);
 			dispatch(showSystemNotification({ message: formatMessage(guestMessages.noDataSourcesSet) }));
+			rtePickerActiveRequestIdRef.current = null;
 			respondToRteDataSourcePicker(request.id, null);
 		};
 		try {
@@ -550,23 +583,27 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					processPathMacros({ path, objectId: request.objectId ?? '', fullParentPath: request.path }),
 				contentTypes
 			});
+			if (isStale()) return;
 			const propertyNames = getRteDataSourcePropertyNames(request.filetype);
 			const candidates = actions.filter((action) => propertyNames.includes(action.binding.propertyName));
 			if (!candidates.length) {
 				return dismiss(`No data sources are configured for "${request.fieldId}" (${request.filetype}).`);
 			}
 			const grouped = buildActionGroups(candidates);
-			if (rteDataSourcePicker) {
-				closeRteDataSourcePicker();
-			}
 			// A single option needs no menu; go straight to the data source's own dialog.
 			if (grouped.customActions.length === 0 && grouped.groups.length === 1 && grouped.groups[0].choices.length === 1) {
 				invokeActionChoice(grouped.groups[0].choices[0], context).then(
-					(selection) => respondToRteDataSourcePicker(request.id, selection),
+					(selection) => {
+						if (isStale()) return;
+						rtePickerActiveRequestIdRef.current = null;
+						respondToRteDataSourcePicker(request.id, selection);
+					},
 					(error) => dismiss(error)
 				);
 			} else {
-				setRteDataSourcePicker({ requestId: request.id, actions: candidates, context });
+				const picker = { requestId: request.id, actions: candidates, context };
+				rteDataSourcePickerRef.current = picker;
+				setRteDataSourcePicker(picker);
 			}
 		} catch (error) {
 			dismiss(error);
@@ -1593,13 +1630,19 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								actions={rteDataSourcePicker.actions}
 								context={rteDataSourcePicker.context}
 								onResult={(selection) => {
-									respondToRteDataSourcePicker(rteDataSourcePicker.requestId, selection);
-									setRteDataSourcePicker(null);
+									const requestId = rteDataSourcePicker.requestId;
+									rtePickerGenerationRef.current += 1;
+									rtePickerActiveRequestIdRef.current = null;
+									clearRteDataSourcePickerState();
+									respondToRteDataSourcePicker(requestId, selection);
 								}}
 								onError={(error) => {
 									console.error('Unable to select rich-text media.', error);
-									respondToRteDataSourcePicker(rteDataSourcePicker.requestId, null);
-									setRteDataSourcePicker(null);
+									const requestId = rteDataSourcePicker.requestId;
+									rtePickerGenerationRef.current += 1;
+									rtePickerActiveRequestIdRef.current = null;
+									clearRteDataSourcePickerState();
+									respondToRteDataSourcePicker(requestId, null);
 								}}
 							/>
 						</MenuList>
