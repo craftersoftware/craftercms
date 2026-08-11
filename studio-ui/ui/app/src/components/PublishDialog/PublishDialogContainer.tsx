@@ -138,6 +138,12 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		return itemsDataSummary.itemPaths.some((path) => itemsByPath[path]?.savedAsDraft);
 	}, [itemsDataSummary.itemPaths, itemsByPath]);
 
+	const hardDependenciesWithoutPublishPermission = useMemo(() => {
+		return dependencyData?.items.some(
+			(item) => !item.canRequestPublish && dependencyData.typeByPath[item.path] === 'hard'
+		);
+	}, [dependencyData]);
+
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
 		if (state && mainItems && Array.isArray(mainItems) && isBlank(state.submissionComment)) {
@@ -220,7 +226,9 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		// The scheduled date is in the past
 		state.scheduledDateTime < new Date() ||
 		// All items to publish are empty folders.
-		arePublishingItemsFolders;
+		arePublishingItemsFolders ||
+		// When there are hard dependencies without publish permission
+		hardDependenciesWithoutPublishPermission;
 
 	useEffect(() => {
 		setState({ fetchingItems: true });
@@ -494,6 +502,13 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 													sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}
 												>
 													<FormattedMessage defaultMessage="Last applied changes can be reverted" />
+												</Alert>
+											</Fade>
+										)}
+										{hardDependenciesWithoutPublishPermission && (
+											<Fade in={hardDependenciesWithoutPublishPermission}>
+												<Alert severity="error" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+													<FormattedMessage defaultMessage="Package cannot be submitted because there are required references without publish permission" />
 												</Alert>
 											</Fade>
 										)}
