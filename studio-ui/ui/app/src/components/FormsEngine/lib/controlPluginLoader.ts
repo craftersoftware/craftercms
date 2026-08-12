@@ -126,7 +126,7 @@ export function preloadControlPluginsForFields(
 ): Promise<void> {
 	const locators = collectControlPluginLocators(fields, values, contentTypesLookup);
 	if (!locators.length) return Promise.resolve();
-	return Promise.all(
+	return Promise.allSettled(
 		locators.map((plugin) => {
 			const builder = {
 				site: siteId,
@@ -150,7 +150,12 @@ export function preloadControlPluginsForFields(
 			}
 			return loading;
 		})
-	).then(() => undefined);
+	).then((results) => {
+		const firstRejection = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+		if (firstRejection) {
+			throw firstRejection.reason;
+		}
+	});
 }
 
 /** Builds the Studio plugin file URL for a form-definition plugin ref (same shape as DS plugin load). */
