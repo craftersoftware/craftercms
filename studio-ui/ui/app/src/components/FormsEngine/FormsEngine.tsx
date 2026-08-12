@@ -452,7 +452,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			const parentLockResult = store.get(parentAtoms.lockResult);
 			const isParentLocked = parentLockResult.locked;
 			const invokePrepareFn = (locked: boolean, lockError: ApiResponse, affectedPackages: PublishPackage[]) => {
-				preloadControlPluginsForFields(siteId, contentType.fields)
+				preloadControlPluginsForFields(siteId, contentType.fields, update.values, effectRefs.current.contentTypesById)
 					.catch((error) => {
 						console.error('Failed to preload control plugins before embedded-form value parse.', error);
 					})
@@ -549,7 +549,7 @@ function FormBootstrap(props: FormsEngineProps) {
 					contentXml: buildContentXml(valuesWithoutFileName, contentTypesById)
 				});
 			};
-			preloadControlPluginsForFields(siteId, contentType.fields)
+			preloadControlPluginsForFields(siteId, contentType.fields, contentObject, contentTypesById)
 				.catch((error) => {
 					console.error('Failed to preload control plugins before create-form value parse.', error);
 				})
@@ -596,7 +596,12 @@ function FormBootstrap(props: FormsEngineProps) {
 						expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
 						fileName: createFileNameAtom(requirements.item.path)
 					});
-					preloadControlPluginsForFields(siteId, requirements.contentType.fields)
+					preloadControlPluginsForFields(
+						siteId,
+						requirements.contentType.fields,
+						requirements.contentObject,
+						effectRefs.current.contentTypesById
+					)
 						.catch((error) => {
 							console.error('Failed to preload control plugins before edit-form value parse.', error);
 						})
