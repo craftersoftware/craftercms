@@ -48,7 +48,11 @@ updates:
                 versions: [ ">=6.0.0" ]
 
     - package-ecosystem: "npm" # See documentation for possible values
-      directory: "/" # Location of package manifests
+      directories: # Location of package manifests
+          - "/studio-ui"
+          - "/js-sdk"
+          - "/social/ui"
+          - "/social/ui2"
       schedule:
           interval: "weekly"
           day: "wednesday"
@@ -59,7 +63,11 @@ updates:
               patterns:
                   - "*"
     - package-ecosystem: "npm" # See documentation for possible values
-      directory: "/" # Location of package manifests
+      directories: # Location of package manifests
+          - "/studio-ui"
+          - "/js-sdk"
+          - "/social/ui"
+          - "/social/ui2"
       schedule:
         interval: "weekly"
         day: "wednesday"
