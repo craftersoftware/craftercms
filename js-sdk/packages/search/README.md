@@ -76,7 +76,7 @@ Returns the result for a given query.
 | Parameters    |                |
 | ------------- |:--------------:|
 | query         | The query object |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 

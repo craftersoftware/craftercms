@@ -82,7 +82,7 @@ directly importing as a script in the browser, these functions will be under the
 named `craftercms.content` (i.e. `window.craftercms.content`).
 
 ### parseDescriptor
-Parse a [Descriptor](../models/src/descriptor.ts), [Item](../models/src/item.ts) or a GraphQL response into a [Content Instance](../models/src/ContentInstance.ts). It could also be a collection of any of these types.
+Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/descriptor.ts), [Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/item.ts) or a GraphQL response into a [Content Instance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts). It could also be a collection of any of these types.
 
 `parseDescriptor(response: Descriptor | Item | GraphQLResponse | Descriptor[] | Item[] | GraphQLResponse)`
 
@@ -92,7 +92,7 @@ Parse a [Descriptor](../models/src/descriptor.ts), [Item](../models/src/item.ts)
 
 #### Returns
 
-[ContentInstance](../models/src/ContentInstance.ts)
+[ContentInstance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts)
 
 #### Examples
 
@@ -153,11 +153,11 @@ Get an Item from the content store.
 | Parameters    |                |
 | ------------- |:--------------:|
 | path          | The item’s path in the content store |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[Item](../models/README.md#Item) - from the content store
+[Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Item) - from the content store
 
 #### Examples
 
@@ -194,11 +194,11 @@ Get the descriptor data of an Item in the content store.
 | Parameters    |                |
 | ------------- |:--------------:|
 | path          | The item’s path in the content store |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[Descriptor](../models/README.md#Descriptor) - from the content store
+[Descriptor](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Descriptor) - from the content store
 
 #### Examples
 
@@ -232,11 +232,11 @@ Get the list of Items directly under a folder in the content store.
 | Parameters    |                |
 | ------------- |:--------------:|
 | path          | The folder’s path |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[Item](../models/README.md#Item)[] - List of Items from the content store
+[Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Item)[] - List of Items from the content store
 
 #### Examples
 
@@ -265,11 +265,11 @@ Get the complete Item hierarchy under the specified folder in the content store.
 | ------------- |:--------------:|
 | path          | The folder’s path |
 | depth         | Amount of levels to include. Optional. Default is `1` |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[Item](../models/README.md#Item) - from the content store
+[Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Item) - from the content store
 
 #### Examples
 
@@ -301,11 +301,11 @@ Returns the navigation tree with the specified depth for the specified store URL
 | path           | The folder’s path |
 | depth          | Amount of levels to include. Optional. Default is `1` |
 | currentPageUrl | The URL of the current page. Optional. Default is `''` |
-| config         | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config         | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[NavigationItem](../models/README.md#NavigationItem) - from the content store
+[NavigationItem](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#NavigationItem) - from the content store
 
 #### Examples
 
@@ -334,11 +334,11 @@ Returns the navigation items that form the breadcrumb for the specified store UR
 | -------------- |:--------------:|
 | path            | The folder’s path |
 | root           | the root URL, basically the starting point of the breadcrumb. Optional. Default is `''` |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
-[NavigationItem](../models/README.md#NavigationItem)[] - List of NavigationItem from the content store
+[NavigationItem](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#NavigationItem)[] - List of NavigationItem from the content store
 
 #### Examples
 
@@ -367,7 +367,7 @@ Transforms a URL, based on the current site’s configuration.
 | --------------- |:--------------:|
 | transformerName | Name of the transformer to apply |
 | path             | URL that will be transformed |
-| config        | Crafter configuration. Optional. Default value in [here](../models/README.md#CrafterConfig). |
+| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
 
