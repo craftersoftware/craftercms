@@ -180,7 +180,7 @@ export function toAssetSelection(item: unknown): DataSourceAssetSelection {
 		const meta = candidate.meta as { path?: string; name?: string; type?: string };
 		const name = meta.name ?? (typeof candidate.name === 'string' ? candidate.name : '');
 		const path = meta.path ?? '';
-		if (!path && !name) {
+		if (!path) {
 			throw new Error('Unable to map data-source result to an asset selection: missing path.');
 		}
 		const relativeUrl = path; // `path` includes the full path to the file, including the filename
