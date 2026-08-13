@@ -15,7 +15,7 @@
     "bom": "mkdir -p target && yarn cyclonedx --output-file target/bom.json"
   },
   "devDependencies": {
-    "@babel/cli": "^7.28.6",
+    "@babel/cli": "^8.0.4",
     "@swc/cli": "^0.8.0",
     "@swc/core": "^1.15.18",
     "build-if-changed": "^1.5.5"
