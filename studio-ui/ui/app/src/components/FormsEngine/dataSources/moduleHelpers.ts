@@ -183,7 +183,7 @@ export function toAssetSelection(item: unknown): DataSourceAssetSelection {
 		if (!path && !name) {
 			throw new Error('Unable to map data-source result to an asset selection: missing path.');
 		}
-		const relativeUrl = path && name ? `${path.replace(/\/$/, '')}/${name}` : path || name;
+		const relativeUrl = path; // `path` includes the full path to the file, including the filename
 		return {
 			kind: 'asset',
 			relativeUrl,
