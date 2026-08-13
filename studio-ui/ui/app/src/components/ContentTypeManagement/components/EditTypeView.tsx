@@ -1269,7 +1269,11 @@ function parseConfigPlugins(
 				descriptor: {
 					...plugin.descriptor,
 					fields: createLookupTable(fields),
-					sections: asArray(plugin.descriptor?.sections) ?? []
+					sections:
+						asArray(plugin.descriptor?.sections).map((section) => ({
+							...section,
+							fields: asArray(section.fields) ?? []
+						})) ?? []
 				}
 			};
 		} else {
