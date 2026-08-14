@@ -186,7 +186,7 @@ export function ensureSingleSlash(url: string): string {
  */
 export function isExternalMediaUrl(url: string): boolean {
 	if (!url) return false;
-	return /^(https?:)?\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:');
+	return /^(https?:)?\/\//i.test(url) || /^(data|blob):/i.test(url);
 }
 
 /**
@@ -196,7 +196,7 @@ export function isExternalMediaUrl(url: string): boolean {
 export function resolveMediaUrl(guestBase: string, value: string): string {
 	if (!value) return value;
 	if (isExternalMediaUrl(value)) {
-		return ensureSingleSlash(value);
+		return value;
 	}
 	return ensureSingleSlash(`${guestBase}${value}`);
 }
