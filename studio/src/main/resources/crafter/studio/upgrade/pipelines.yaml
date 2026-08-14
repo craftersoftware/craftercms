@@ -656,6 +656,14 @@ pipelines:
                 operations:
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/5.0.0.23-to-5.0.0.24.sql
+            -   currentVersion: 5.0.0.24
+                nextVersion: 5.0.0.25
+                operations:
+                    -   type: xsltFileUpgrader
+                        path: /configuration/global-permission-mappings-config.xml
+                        template: crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.25.xslt
+                        commitDetails: Remove unused permissions
+
 
 
     # Pipeline to upgrade site repositories
