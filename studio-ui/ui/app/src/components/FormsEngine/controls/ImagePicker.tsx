@@ -31,7 +31,7 @@ import { listItemIconClasses } from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import { useImageInfo } from '../../../hooks/useImageInfo';
 import { svgIconClasses } from '@mui/material/SvgIcon';
-import { ensureSingleSlash } from '../../../utils/string';
+import { resolveMediaUrl } from '../../../utils/string';
 import { useDispatch } from 'react-redux';
 import Tooltip from '@mui/material/Tooltip';
 import { downloadMedia, getImageRestrictionMessages, showImageCropDialog } from '../lib/controlHelpers';
@@ -68,9 +68,9 @@ export function ImagePicker(props: ImagePickerProps) {
 	// endregion
 
 	const value = nnou(valueProp) ? valueProp : (defaultValue ?? '');
-	const { imageInfo, isFetchingDimensions, isFetchingMetadata, errorDimensions, errorMetadata } = useImageInfo(
-		value ? ensureSingleSlash(`${guestBase}${value}`) : ''
-	);
+	const mediaUrl = value ? resolveMediaUrl(guestBase, value) : '';
+	const { imageInfo, isFetchingDimensions, isFetchingMetadata, errorDimensions, errorMetadata } =
+		useImageInfo(mediaUrl);
 	const hasValue = Boolean(value);
 	const actions = dataSources?.actions ?? [];
 	const dataSourcesLoading = dataSources?.status === 'loading';
@@ -150,12 +150,7 @@ export function ImagePicker(props: ImagePickerProps) {
 			<FormsEngineField field={field}>
 				{hasValue ? (
 					<Card sx={{ display: 'flex' }}>
-						<CardMedia
-							component="img"
-							sx={{ width: '40%' }}
-							image={`${guestBase}${value}`}
-							alt="Live from space album cover"
-						/>
+						<CardMedia component="img" sx={{ width: '40%' }} image={mediaUrl} alt="" />
 						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 							<CardContent sx={{ flex: '1 0 auto' }}>
 								<Typography component="div" variant="body1" marginBottom={1}>
