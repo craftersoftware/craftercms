@@ -20,9 +20,9 @@ All of Crafter CMS packages can be used either via npm or in plain html/javascri
 - Download the bundle and import them in your page.
 - The bundles declare a global variable named `craftercms`. You can access all craftercms' packages and functions under this root.
 - The `search` package depends on `rxjs`, `@craftercms/utils`, `@craftercms/classes`; make sure to import those too before the `search` script.
- 
+
 **Tip**: Once you've imported the scripts, type `craftercms` on your browser's dev tools console to inspect the package(s)
- 
+
 #### Vanilla html/js example
 
  ```html
@@ -64,19 +64,19 @@ All of Crafter CMS packages can be used either via npm or in plain html/javascri
 
 ## Package Index
 
-The examples below assume usage in the style of using via npm. If you're using the bundles, 
+The examples below assume usage in the style of using via npm. If you're using the bundles,
 directly importing as a script in the browser, these functions will be under the global variable
 named `craftercms.search` (i.e. `window.craftercms.search`).
 
 ### search
 Returns the result for a given query.
 
-`search(query: Query)` 
+`search(query: Query)`
 
-| Parameters    |                |
-| ------------- |:--------------:|
-| query         | The query object |
-| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
+| Parameters    |                                                                                                                                                                                 |
+| ------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| query         |                                                                                The query object                                                                                 |
+| config        | Crafter configuration. Optional. Default value in [CrafterConfig](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/crafter-config.ts). |
 
 #### Returns
 
@@ -92,7 +92,7 @@ Map model
   import { map } from 'rxjs/operators';
   import { parseDescriptor, preParseSearchResults } from '@craftercms/content';
 
-  // First, set the Crafter configuration to cache your config. 
+  // First, set the Crafter configuration to cache your config.
   // All subsequent calls to `getConfig` will use that configuration.
   crafterConf.configure({
     baseUrl: 'http://localhost:8080',
@@ -117,11 +117,11 @@ Map model
     // { baseUrl: 'http://localhost:8080', site: 'wordify' }
   ).pipe(
     map(({ hits, ...rest }) => {
-      return { 
-        ...rest, 
+      return {
+        ...rest,
         hits: hits.map(({ _source }) => parseDescriptor(
           preParseSearchResults(_source)
-        )) 
+        ))
       };
     })
   ).subscribe((results) => {

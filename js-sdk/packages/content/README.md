@@ -20,9 +20,9 @@ All of Crafter CMS packages can be used either via npm or in plain html/javascri
 - Download the bundle and import them in your page.
 - The bundle declare a global variable named `craftercms`. You can access all craftercms' packages and functions under this root.
 - The `content` package depends on `rxjs`, `@craftercms/utils`, `@craftercms/classes`; make sure to import those too before the `content` script.
- 
+
 **Tip**: Once you've imported the scripts, type `craftercms` on your browser's dev tools console to inspect the package(s)
- 
+
 #### Vanilla html/js example
  ```html
 <div id="myFeature"></div>
@@ -61,14 +61,14 @@ You may pre-configure content services to a certain configuration to then you ma
   import { getItem } from '@craftercms/content';
   import { crafterConf } from '@craftercms/classes';
 
-  // Configure crafter services "globally". Your config will be cached. 
+  // Configure crafter services "globally". Your config will be cached.
   // All content services use the specified configuration on subsequent calls.
   crafterConf.configure({
     baseUrl: 'http://authoring.company.com',
     site: 'editorial'
   });
- 
-  // Second param "config" will use "http://authoring.company.com" as 
+
+  // Second param "config" will use "http://authoring.company.com" as
   // crafter base url and "editorial" as the site to query
   getItem('/site/website/index.xml').subscribe((item: Item) => {
     console.log(item);
@@ -77,7 +77,7 @@ You may pre-configure content services to a certain configuration to then you ma
 
 ## Package Index
 
-The examples below assume usage in the style of using via npm. If you're using the bundles, 
+The examples below assume usage in the style of using via npm. If you're using the bundles,
 directly importing as a script in the browser, these functions will be under the global variable
 named `craftercms.content` (i.e. `window.craftercms.content`).
 
@@ -102,7 +102,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
   import { map } from 'rxjs/operators';
   import { ContentInstance } from '@craftercms/models';
   import { getChildren, getItem, parseDescriptor } from '@craftercms/content';
-  
+
   getItem('/site/website/index.xml', { site: 'editorial' }).pipe(
     map(parseDescriptor)
   ).subscribe((content: ContentInstance) => {
@@ -118,7 +118,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 ### preParseSearchResults
 Inspects and parses elasticsearch hits and pre-parses objects before they can be sent to parseDescriptor
-@see https://github.com/craftersoftware/craftercms/issues/4057 
+@see https://github.com/craftersoftware/craftercms/issues/4057
 
 ```js
 import { createQuery, search } from '@craftercms/search';
@@ -150,14 +150,14 @@ Get an Item from the content store.
 
 `getItem(path: string, config?: CrafterConfig)`
 
-| Parameters    |                |
-| ------------- |:--------------:|
-| path          | The item’s path in the content store |
-| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
+| Parameters    |                                                                                                                                                                                 |
+| ------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| path          |                                                                      The item’s path in the content store                                                                       |
+| config        | Crafter configuration. Optional. Default value in [CrafterConfig](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/crafter-config.ts). |
 
 #### Returns
 
-[Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Item) - from the content store
+[Item](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/item.ts) - from the content store
 
 #### Examples
 
@@ -165,8 +165,8 @@ Get an Item from the content store.
 
 ```typescript
   import { Item } from '@craftercms/models';
-  import { getItem } from '@craftercms/content'; 
-  
+  import { getItem } from '@craftercms/content';
+
   getItem('/site/website/index.xml', { site: 'editorial' }).subscribe((item: Item) => {
     console.log(item);
   });
@@ -178,7 +178,7 @@ Get an Item from the content store.
   import { map } from 'rxjs/operators';
   import { ContentInstance } from '@craftercms/models';
   import { getItem, parseDescriptor } from '@craftercms/content';
-  
+
   getItem('/site/website/index.xml', { site: 'editorial' }).pipe(
     map(parseDescriptor)
   ).subscribe((content: ContentInstance) => {
@@ -189,7 +189,7 @@ Get an Item from the content store.
 ### Get Descriptor
 Get the descriptor data of an Item in the content store.
 
-`getDescriptor(path: string, config?: CrafterConfig)` 
+`getDescriptor(path: string, config?: CrafterConfig)`
 
 | Parameters    |                |
 | ------------- |:--------------:|
@@ -214,7 +214,7 @@ Get the descriptor data of an Item in the content store.
     console.log(descriptor);
   });
 
-  // Example 2: 
+  // Example 2:
   // - Omit config (must have configured earlier @see Usage section above)
   // - Parse the response
   getDescriptor('/site/website/index.xml').pipe(
@@ -227,7 +227,7 @@ Get the descriptor data of an Item in the content store.
 ### Get Children
 Get the list of Items directly under a folder in the content store.
 
-`getChildren(path: string, config?: CrafterConfig)` 
+`getChildren(path: string, config?: CrafterConfig)`
 
 | Parameters    |                |
 | ------------- |:--------------:|
@@ -249,7 +249,7 @@ Get the list of Items directly under a folder in the content store.
   getChildren('/site/website', { site: 'editorial' }).subscribe((children) => {
     console.log(children);
   });
-  
+
   // Example 2: Omits the config param (must have been previously configured, see Usage section above)
   getChildren('/site/website').subscribe((children) => {
     console.log(children);
@@ -259,7 +259,7 @@ Get the list of Items directly under a folder in the content store.
 ### Get Tree
 Get the complete Item hierarchy under the specified folder in the content store.
 
-`getTree(path: string, depth: number, config: CrafterConfig)` 
+`getTree(path: string, depth: number, config: CrafterConfig)`
 
 | Parameters    |                |
 | ------------- |:--------------:|
@@ -359,9 +359,9 @@ Returns the navigation items that form the breadcrumb for the specified store UR
 ```
 
 ### Transform
-Transforms a URL, based on the current site’s configuration. 
+Transforms a URL, based on the current site’s configuration.
 
-- `transform(transformerName: string, path: string, config: CrafterConfig)` 
+- `transform(transformerName: string, path: string, config: CrafterConfig)`
 
 | Parameters      |                |
 | --------------- |:--------------:|
@@ -397,7 +397,7 @@ string - URL transformed according to transformer applied.
   import { transform } from '@craftercms/content';
 
   // Assuming that you already set the configuration (as explained above)
-  
+
   // Example 1: Config supplied inline
   transform('renderUrlToStoreUrl', '/technology', { site: 'editorial' }).subscribe((path) => {
     console.log(path); // "/site/website/technology/index.xml"
