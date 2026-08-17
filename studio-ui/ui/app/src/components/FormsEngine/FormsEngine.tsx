@@ -762,7 +762,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 				if (changedFieldIds.has(XmlKeys.fileName)) {
 					const pageUrl = store.get(effectRefs.current.fileNameAtom);
 					if (pageUrl)
-						store.set(versionCommentAtom, formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl }));
+						store.set(
+							versionCommentAtom,
+							pageUrl
+								? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
+								: formatMessage({ defaultMessage: 'Created content' })
+						);
 				}
 				return;
 			}
@@ -777,7 +782,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return () => {
 			sub.unsubscribe();
 		};
-	}, [changedFieldIds, contentType.fields, effectRefs, setHasPendingChanges, fieldUpdates$, store, isCreateMode]);
+	}, [
+		changedFieldIds,
+		contentType.fields,
+		effectRefs,
+		setHasPendingChanges,
+		fieldUpdates$,
+		store,
+		isCreateMode,
+		formatMessage
+	]);
 
 	const sourceMapPaths = useMemo(() => Object.values(sourceMap ?? []).sort(), [sourceMap]);
 	useFetchContentItems(sourceMapPaths);
