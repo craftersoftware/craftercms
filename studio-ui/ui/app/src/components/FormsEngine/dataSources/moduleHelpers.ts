@@ -274,7 +274,11 @@ export function createBrowseAction(options: {
 				path: expanded,
 				contentTypes,
 				mimeTypes,
-				multiSelect: (ctx.remainingCapacity ?? 2) !== 1
+				multiSelect: (ctx.remainingCapacity ?? 2) !== 1,
+				initialParameters: {
+					sortBy: options.meta?.sortBy,
+					sortOrder: options.meta?.sortOrder
+				}
 			});
 			if (!items.length) return null;
 			return selection === 'asset' ? toAssetSelections(items) : toItemSelections(items);
@@ -307,7 +311,10 @@ export function createSearchAction(options: {
 		},
 		async run(ctx) {
 			const expanded = toSearchPath(expandPathOrRaw(ctx, path));
-			const initialParameters: Record<string, unknown> = {};
+			const initialParameters: Record<string, unknown> = {
+				sortBy: options.meta?.sortBy,
+				sortOrder: options.meta?.sortOrder
+			};
 			if (mimeTypes?.length) {
 				initialParameters.filters = { 'mime-type': mimeTypes };
 			}
