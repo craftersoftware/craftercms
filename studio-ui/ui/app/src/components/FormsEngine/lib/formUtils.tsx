@@ -797,6 +797,48 @@ export function generateDefaultChangesComment(
 }
 
 /**
+ * Produces the "save comment" for content being created at the supplied page URL (file name). An empty page URL
+ * produces the generic comment new content forms start off with.
+ **/
+export function produceCreationMessage(pageUrl: string, formatMessage: IntlShape['formatMessage']): string {
+	return pageUrl
+		? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
+		: formatMessage({ defaultMessage: 'Created content' });
+}
+
+/**
+ * Generates the default "save comment" for content being created, based on the page URL (file name) it will be
+ * created at.
+ * @param pageUrl The current value of the file name field.
+ * @param currentMessage The version comment currently held by the form.
+ * @param lastGeneratedMessage The comment this function generated last, used to detect user input on the comment.
+ * @returns The new comment, or undefined when the comment should be left untouched.
+ **/
+export function generateDefaultCreationComment(
+	pageUrl: string,
+	currentMessage: string,
+	lastGeneratedMessage: string,
+	formatMessage: IntlShape['formatMessage']
+): string | undefined {
+	const newMessage = pageUrl
+		? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
+		: formatMessage({ defaultMessage: 'Created content' });
+	if (
+		// Nothing to change
+		currentMessage === newMessage ||
+		// If message is blank, no point in checking if the user has altered the message.
+		(currentMessage !== '' &&
+			// The version comment has been manually altered by the user (i.e. if the current message isn't the last
+			// message generated here, we can assume the message has been altered by user input)
+			currentMessage !== lastGeneratedMessage)
+	) {
+		// Do not set a new message
+		return;
+	}
+	return newMessage;
+}
+
+/**
  * Creates a summary of the state the current stacked form being rendered (last one on the stack)
  **/
 export function getCurrentChildFormStateSummary(

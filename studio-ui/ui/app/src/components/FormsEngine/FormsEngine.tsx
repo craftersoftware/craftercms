@@ -96,6 +96,7 @@ import {
 	displayFormBeingSavedSnack,
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
+	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
@@ -104,6 +105,7 @@ import {
 	internalLockContentService,
 	internalUnlockContentService,
 	prepareEmbeddedItemForm,
+	produceCreationMessage,
 	setFieldAtoms,
 	useUnlockOnClose,
 	useValidateFormProps
@@ -494,7 +496,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
 				fileName: atom(''),
 				// Default version comment for new content.
-				versionComment: atom(formatMessage({ defaultMessage: 'Created content' }))
+				versionComment: atom(produceCreationMessage('', formatMessage))
 			});
 			const contentObject = createObjectWithSystemProps(contentType);
 			const values = createParsedValuesObject(
@@ -724,6 +726,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
 	});
+	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
+	// with the default comment the version comment atom was created with.
+	const lastCreationCommentRef = useRef(produceCreationMessage('', formatMessage));
 	const [collapseHeader, setCollapseHeader] = useState(false);
 	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
 	const [invalidForm, setInvalidForm] = useState(false);
@@ -757,16 +762,18 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// emitted is in changedFieldIds should tell if the field was rolled back.
 			setHasPendingChanges(changedFieldIds.size > 0);
 			const versionCommentAtom = effectRefs.current.versionCommentAtom;
-			// Create mode uses a fixed default comment; only update when the page URL (file-name) changes.
+			// Create mode bases the comment off of the page URL (file-name) instead of the fields changed. Note that any
+			// field update re-runs this since every field's validation depends on the file name.
 			if (isCreateMode) {
-				if (changedFieldIds.has(XmlKeys.fileName)) {
-					const pageUrl = store.get(effectRefs.current.fileNameAtom);
-					store.set(
-						versionCommentAtom,
-						pageUrl
-							? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
-							: formatMessage({ defaultMessage: 'Created content' })
-					);
+				const newMessage = generateDefaultCreationComment(
+					store.get(effectRefs.current.fileNameAtom),
+					store.get(versionCommentAtom).trim(),
+					lastCreationCommentRef.current,
+					formatMessage
+				);
+				if (newMessage) {
+					lastCreationCommentRef.current = newMessage;
+					store.set(versionCommentAtom, newMessage);
 				}
 				return;
 			}
