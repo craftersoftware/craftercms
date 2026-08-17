@@ -286,6 +286,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	const triggerReload = useCallback(() => setReloadNonce((nonce) => nonce + 1), []);
 	const effectiveUpdatePath = renamedPath ?? update?.path;
 	const customControls = useSelection((state) => state.uiConfig.controls);
+	const { formatMessage } = useIntl();
 
 	const contextApi = useMemo<FormsEngineFormApiContextProps>(() => {
 		const getInitialValues = () => stableFormContextRef.current.originalValues;
@@ -491,7 +492,9 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockResult: lockResultAtom,
 				readonly: atom(false),
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: atom('')
+				fileName: atom(''),
+				// Default version comment for new content.
+				versionComment: atom(formatMessage({ defaultMessage: 'Created content' }))
 			});
 			const contentObject = createObjectWithSystemProps(contentType);
 			const values = createParsedValuesObject(
@@ -718,6 +721,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const effectRefs = useUpdateRefs({
 		fieldsToRender,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
+		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
 	});
 	const [collapseHeader, setCollapseHeader] = useState(false);
@@ -752,9 +756,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// String-type fields have auto-rollback detection; the fieldUpdates$ will emit anyway. Checking if the fieldId
 			// emitted is in changedFieldIds should tell if the field was rolled back.
 			setHasPendingChanges(changedFieldIds.size > 0);
-			// No comment generation for content creation.
-			if (isCreateMode) return;
 			const versionCommentAtom = effectRefs.current.versionCommentAtom;
+			// Create mode uses a fixed default comment; only update when the page URL (file-name) changes.
+			if (isCreateMode) {
+				if (changedFieldIds.has(XmlKeys.fileName)) {
+					const pageUrl = store.get(effectRefs.current.fileNameAtom);
+					if (pageUrl)
+						store.set(versionCommentAtom, formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl }));
+				}
+				return;
+			}
 			const newMessage = generateDefaultChangesComment(
 				contentType.fields,
 				effectRefs.current.fieldsToRender,
