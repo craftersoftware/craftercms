@@ -761,13 +761,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 			if (isCreateMode) {
 				if (changedFieldIds.has(XmlKeys.fileName)) {
 					const pageUrl = store.get(effectRefs.current.fileNameAtom);
-					if (pageUrl)
-						store.set(
-							versionCommentAtom,
-							pageUrl
-								? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
-								: formatMessage({ defaultMessage: 'Created content' })
-						);
+					store.set(
+						versionCommentAtom,
+						pageUrl
+							? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
+							: formatMessage({ defaultMessage: 'Created content' })
+					);
 				}
 				return;
 			}
