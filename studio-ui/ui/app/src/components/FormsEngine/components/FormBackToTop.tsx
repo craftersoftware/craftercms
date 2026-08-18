@@ -20,17 +20,19 @@ import Fab from '@mui/material/Fab';
 import { ArrowUpward } from '@mui/icons-material';
 import Box from '@mui/material/Box';
 import React, { RefObject } from 'react';
+import { getScrollContainer } from '../lib/formUtils';
 
 interface FormBackToTopProps {
 	containerRef: RefObject<HTMLElement>;
-	getScrollContainer?: (element: HTMLElement) => HTMLElement;
 }
 
-export function FormBackToTop({ containerRef, getScrollContainer = (e) => e }: FormBackToTopProps) {
+export function FormBackToTop({ containerRef }: FormBackToTopProps) {
 	return (
 		<Box minHeight={100} justifyContent="center" alignItems="center" display="flex">
 			<Tooltip title={<FormattedMessage defaultMessage="Back to top" />}>
-				<Fab onClick={() => getScrollContainer(containerRef.current).scroll({ top: 0, behavior: 'smooth' })}>
+				<Fab
+					onClick={() => getScrollContainer(containerRef.current).scroll({ top: 0, behavior: 'smooth' })}
+				>
 					<ArrowUpward />
 				</Fab>
 			</Tooltip>

@@ -82,12 +82,9 @@ import { nou } from '../../../utils/object';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
-/**
- * Returns the scroll container for the form's container.
- * TODO: After much tweaking and testing, managed to get the form container box itself to be the scrolling element. Asses removal.
- **/
 export function getScrollContainer(container: HTMLElement): HTMLElement {
-	return container;
+	const mainContent = container.querySelector('[data-area-id="formMainContent"]');
+	return mainContent instanceof HTMLElement ? mainContent : container;
 }
 
 /**
