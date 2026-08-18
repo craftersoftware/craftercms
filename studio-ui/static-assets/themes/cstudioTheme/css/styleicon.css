@@ -82,13 +82,6 @@
 	min-width: 124px;
 }
 
-/*.iconNameR{
-	margin: 2px 0 0 0;
-	float: left;
-	height: 18px;
-	width: 80px;
-}*/
-
 .iconPlainPaper {
 	background: transparent url(../images/icons/icon_strip.gif) -300px 0 no-repeat;
 	display: block;
