@@ -311,7 +311,10 @@ div[id*='expandComponentError'].yui-dialog {
 	cursor: auto;
 	color: #000000;
 	direction: ltr;
-	font: normal normal normal 12px / normal;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: normal;
+	font-size: 12px;
 	font-size-adjust: none;
 	font-stretch: normal;
 	letter-spacing: normal;
