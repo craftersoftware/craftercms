@@ -230,6 +230,9 @@ studio-ui/static-assets/libs/jquery-ui/
 studio-ui/static-assets/libs/js-yaml/
 studio-ui/static-assets/libs/monaco/
 studio-ui/static-assets/libs/tinymce/
+!studio-ui/static-assets/libs/cropper/dist/
+!studio-ui/static-assets/libs/jQuery-contextMenu-master/dist/
+!studio-ui/static-assets/libs/jstree/dist/
 studio-ui/static-assets/themes/cstudioTheme/base.css
 studio-ui/static-assets/themes/cstudioTheme/base.css.map
 studio-ui/static-assets/themes/cstudioTheme/css/global.css
