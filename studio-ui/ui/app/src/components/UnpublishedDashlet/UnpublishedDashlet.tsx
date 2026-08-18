@@ -313,7 +313,7 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 									<ItemDisplay
 										item={item}
 										titleDisplayProp="path"
-										showPublishingTarget={false}
+										showPublishingTarget={true}
 										onClick={(e) =>
 											isPage(item.systemType) || item.availableActionsMap.view ? onItemClick(e, item) : null
 										}
