@@ -530,7 +530,7 @@ button.node-selector-item-icon {
 }
 
 #help-dialog .dialog-button {
-	background-image: url('/proxy/authoring/themes/cstudioTheme/images/overlay-green-button.png');
+	background-image: url('../images/overlay-green-button.png');
 	color: white;
 	cursor: pointer;
 	font-family: Arial, Helvetica;

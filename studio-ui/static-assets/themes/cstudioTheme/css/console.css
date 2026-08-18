@@ -785,7 +785,7 @@ input[type='checkbox'].content-type-selector--checkbox {
 }
 
 .cstudio-seethrough-dialog-button {
-	background-image: url('/proxy/authoring/themes/cstudioTheme/images/overlay-green-button.png');
+	background-image: url('../images/overlay-green-button.png');
 	bottom: 0;
 	color: white;
 	cursor: pointer;
