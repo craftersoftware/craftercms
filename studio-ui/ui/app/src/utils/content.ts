@@ -1208,8 +1208,8 @@ function doesImageMeetSizeRestrictions(file: HTMLImageElement, restrictions?: Im
  * @param restrictions - Optional size restrictions to validate the image against.
  * @returns Promise that resolves to true if the image meets the restrictions or no restrictions are provided, false otherwise.
  * */
-export function validateImageRestrictions(path: string, restrictions?: ImageRestrictions): Promise<boolean> {
-	if (!restrictions || (!isImage(path) && !isBlobUrl(path) && !path.startsWith('data:image/'))) {
+export function validateImageRestrictions(path: string, restrictions?: ImageRestrictions, mimeType?: string): Promise<boolean> {
+	if (!restrictions || (!(isImage(path) || mimeType?.startsWith('image/')) && !isBlobUrl(path) && !path.startsWith('data:image/'))) {
 		return Promise.resolve(true);
 	}
 	return new Promise((resolve) => {

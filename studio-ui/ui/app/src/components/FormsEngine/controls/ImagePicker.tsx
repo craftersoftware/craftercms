@@ -31,16 +31,22 @@ import { listItemIconClasses } from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import { useImageInfo } from '../../../hooks/useImageInfo';
 import { svgIconClasses } from '@mui/material/SvgIcon';
-import { resolveMediaUrl } from '../../../utils/string';
+import { isExternalMediaUrl, resolveMediaUrl } from '../../../utils/string';
 import { useDispatch } from 'react-redux';
 import Tooltip from '@mui/material/Tooltip';
-import { downloadMedia, getImageRestrictionMessages, showImageCropDialog } from '../lib/controlHelpers';
+import Alert from '@mui/material/Alert';
+import {
+	downloadMedia,
+	getImageRestrictionMessages,
+	ImageRestrictionSubtitle,
+	showImageCropDialog
+} from '../lib/controlHelpers';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import Skeleton from '@mui/material/Skeleton';
 import { nnou, nou } from '../../../utils/object';
 import { validateImageRestrictions } from '../../../utils/content';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
-import type { DataSourceSelection } from '../dataSources/types';
+import type { DataSourceAssetSelection, DataSourceSelection } from '../dataSources/types';
 import { showSystemNotification } from '../../../state/actions/system';
 import { EmptyState } from '../../EmptyState';
 
@@ -78,6 +84,7 @@ export function ImagePicker(props: ImagePickerProps) {
 	const actionsReady = Boolean(dataSources?.context) && actions.length > 0 && !dataSourcesLoading;
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
+	const [rejectedExternalUrl, setRejectedExternalUrl] = useState<string | null>(null);
 
 	useEffect(() => {
 		// If there's a default value and no value has been set yet, set it as the value.
@@ -96,9 +103,16 @@ export function ImagePicker(props: ImagePickerProps) {
 					? selected.path
 					: undefined;
 		if (!path) return;
-		validateImageRestrictions(path, restrictions)
+		setRejectedExternalUrl(null);
+		validateImageRestrictions(path, restrictions, (selected as DataSourceAssetSelection).mimeType)
 			.then((meetsRestrictions) => {
-				if (!meetsRestrictions) {
+				if (meetsRestrictions) {
+					setValue(path);
+				} else if (isExternalMediaUrl(path)) {
+					// Cropping requires writing the result to a site path, which isn't possible for an external URL. The
+					// crop would be discarded and the field would keep the offending URL, so reject the selection instead.
+					setRejectedExternalUrl(path);
+				} else {
 					showImageCropDialog({
 						dispatch,
 						path,
@@ -108,8 +122,6 @@ export function ImagePicker(props: ImagePickerProps) {
 						writeContent: true,
 						onCrop: (_blob: Blob, newPath: string) => setValue(newPath ?? path)
 					});
-				} else {
-					setValue(path);
 				}
 			})
 			.catch(() => {
@@ -132,6 +144,7 @@ export function ImagePicker(props: ImagePickerProps) {
 	) : null;
 
 	const handleRemoveImage = () => {
+		setRejectedExternalUrl(null);
 		setValue(null);
 	};
 
@@ -147,7 +160,22 @@ export function ImagePicker(props: ImagePickerProps) {
 			>
 				{actionMenuItems}
 			</Menu>
-			<FormsEngineField field={field}>
+			<FormsEngineField field={field} isValid={rejectedExternalUrl ? false : undefined}>
+				{rejectedExternalUrl && (
+					<Alert
+						severity="error"
+						variant="outlined"
+						sx={{ border: 'none' }}
+						onClose={() => setRejectedExternalUrl(null)}
+					>
+						<FormattedMessage
+							defaultMessage="The image at {url} was not applied."
+							values={{ url: rejectedExternalUrl }}
+						/>{' '}
+						<ImageRestrictionSubtitle restrictions={restrictions} />{' '}
+						<FormattedMessage defaultMessage="External images can't be cropped. Select an image that meets the requirements." />
+					</Alert>
+				)}
 				{hasValue ? (
 					<Card sx={{ display: 'flex' }}>
 						<CardMedia component="img" sx={{ width: '40%' }} image={mediaUrl} alt="" />
