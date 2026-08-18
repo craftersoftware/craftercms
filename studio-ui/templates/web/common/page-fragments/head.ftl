@@ -13,7 +13,7 @@
 ~ You should have received a copy of the GNU General Public License
 ~ along with this program. If not, see <http://www.gnu.org/licenses/>.
 -->
-<#include "/templates/system/common/versionInfo.ftl" />
+<#-- <#include "/templates/system/common/versionInfo.ftl" /> -->
 <#if envConfig.site?? == false || envConfig.site == "">
   <meta http-equiv="refresh" content="0;URL='/studio/user-dashboard/#/sites/all'" />
 <#else>
@@ -30,9 +30,6 @@
   <link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/css/font-awesome.min.css" />
   <link rel="stylesheet" type="text/css" href="/studio/static-assets/libs/datetimepicker/jquery.datetimepicker.css" />
   <link rel="stylesheet" type="text/css" href="/studio/static-assets/styles/uppy.css" />
-  <!--[if IE 9]>
-  <link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/css/ie9.css" />
-  <![endif]-->
 
   <script src="/studio/static-assets/yui/utilities/utilities.js"></script>
   <script src="/studio/static-assets/yui/button/button-min.js"></script>
