@@ -87,8 +87,8 @@ div.componentPropertyBox {
 
 /** For display of table layout within RTE wigets in RTE mode **/
 .crComponent table,
-.cstudioComponent table tr,
-.cstudioComponent table th,
-.cstudioComponent table td {
+.crComponent table tr,
+.crComponent table th,
+.crComponent table td {
 	border: none !important;
 }
