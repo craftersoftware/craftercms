@@ -1,0 +1,203 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* Utils */
+.clear {
+	clear: both;
+}
+
+.floatRight {
+	float: right;
+}
+
+.floatLeft {
+	float: left;
+}
+
+.borderNone {
+	border: 0;
+}
+.toppadding {
+	padding: 5px 0 0 0;
+}
+.topmargin {
+	margin: 5px 0 0 0;
+}
+.leftmargin {
+	margin-left: 6px;
+}
+
+/* End Of Utils */
+
+/* index Layout */
+
+.iconGuide {
+	margin: 0;
+	padding: 0;
+	width: 250px;
+}
+.headerStripIcon {
+	background: url(../images/bg/bar_bg.gif);
+	border-bottom: #a1a1a1 1px solid;
+	float: left;
+	margin: 0;
+	padding: 0;
+	height: 30px;
+	width: 250px;
+}
+
+.headerIcon {
+	background: #f0f0f0;
+	float: left;
+	width: 250px;
+}
+.iconLeft {
+	float: left;
+	padding: 10px 15px 0 15px;
+	width: 111px;
+}
+
+.iconRight {
+	float: left;
+	padding: 10px 15px 0 15px;
+	width: 111px;
+}
+
+.iconName {
+	margin: 2px 0 0 0;
+	float: left;
+	min-width: 124px;
+}
+
+/*.iconNameR{
+	margin: 2px 0 0 0;
+	float: left;
+	height: 18px;
+	width: 80px;
+}*/
+
+.iconPlainPaper {
+	background: transparent url(../images/icons/icon_strip.gif) -300px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconPuzzle {
+	background: transparent url(../images/icons/icon_strip.gif) -500px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+.iconPen {
+	background: transparent url(../images/icons/icon_strip.gif) -140px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconFlag {
+	background: transparent url(../images/icons/icon_strip.gif) -160px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconDoc {
+	background: transparent url(../images/icons/icon_strip.gif) -400px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconSchedule {
+	background: transparent url(../images/icons/icon_strip.gif) -180px 0 no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconDelete {
+	background: transparent url(../images/icons/icon_strip_vertical.gif) 0 -640px no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconInFlight {
+	background: transparent url(../images/icons/icon_strip_vertical.gif) 0 -1081px no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconLocked {
+	background: transparent url(../images/icons/icon_strip_vertical.gif) 0 -1061px no-repeat;
+	display: block;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconPaper {
+	background: transparent url(../images/icons/icon_strip.gif) -200px 0 no-repeat;
+	float: left;
+	height: 20px;
+	width: 20px;
+}
+
+.iconMinus {
+	background: transparent url(../images/icons/icon_strip.gif) -20px 0 no-repeat;
+	float: left;
+	height: 20px;
+	margin: 8px 0 5px 15px;
+	_margin: 8px 0 5px 8px;
+	width: 20px;
+}
+
+.widgetHeader {
+	float: left;
+	margin: 8px 0 0 0;
+}
+.iconSpace {
+	float: left;
+	height: 16px;
+	margin: 4px 0 0 0;
+	width: 20px;
+}
+
+.iconText {
+	float: left;
+	padding: 0 0 10px 0;
+	width: 120px;
+	text-decoration: line-through;
+}
+
+.glyphicon.revert {
+	-moz-transform: scale(-1, 1);
+	-webkit-transform: scale(-1, 1);
+	-o-transform: scale(-1, 1);
+	-ms-transform: scale(-1, 1);
+	transform: scale(-1, 1);
+}

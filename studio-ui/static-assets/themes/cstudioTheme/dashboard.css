@@ -1,0 +1,162 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* DASHLETS */
+
+.dashlet {
+	padding: 0;
+
+	margin: 20px 0;
+	background-color: white;
+}
+
+.dashlet .title {
+	padding: 5px 9px 5px 9px;
+}
+
+.dashlet .feed {
+	float: right;
+	height: 16px;
+	left: -8px;
+	position: relative;
+	top: -22px;
+	width: 16px;
+}
+.dashlet .feed a,
+.dashlet .feed a:active,
+.dashlet .feed a:hover {
+	display: block;
+	height: 16px;
+	text-decoration: none;
+	width: 16px;
+}
+
+.dashlet .toolbar {
+	padding: 5px 9px 5px 9px;
+}
+
+.dashlet .body {
+	overflow-x: hidden;
+}
+
+.dashlet .body a,
+.dashlet .body a:visited,
+.dashlet .body a:hover {
+	outline: none;
+	text-decoration: none;
+}
+
+.dashlet .body a:hover {
+	text-decoration: underline;
+}
+
+.dashlet .scrollableList {
+	height: 208px;
+	padding: 8px 0;
+	overflow: auto;
+	/* TODO: need to revisit this */
+	margin-right: 1px;
+}
+
+.dashlet .scrollablePanel {
+	height: 208px;
+	overflow: auto;
+	margin-right: 1px;
+}
+
+.dashlet .body > div {
+	padding-left: 8px;
+	padding-right: 8px;
+}
+
+.dashlet .msg {
+	padding-bottom: 8px;
+	padding-top: 8px;
+}
+
+.dashlet .text-list-item {
+	padding-bottom: 6px;
+}
+
+.dashlet .detail-list-item {
+	clear: both;
+	padding: 7px 9px;
+}
+
+div.dashlet div.detail-list-item.first-item {
+	float: none;
+	padding-top: 0;
+}
+
+.dashlet .detail-list-item.last-item {
+	border-bottom: none;
+}
+
+.dashlet .detail-list-item .icon,
+.dashlet .detail-list-item .avatar {
+	float: left;
+}
+
+.dashlet .detail-list-item .avatar img {
+	width: 32px;
+}
+
+.dashlet .detail-list-item .details,
+.dashlet .detail-list-item .person {
+	padding-left: 40px;
+}
+
+.dashlet .detail-list-item .details2 {
+	padding-left: 20px;
+}
+
+.yui-g.grid,
+.yui-gb.grid,
+.yui-gc.grid,
+.yui-gd.grid {
+	margin: 0 10px;
+}
+
+/* 3 column layout */
+
+.yui-gb.grid .column1,
+.yui-gb.grid .column3 {
+	width: 24%;
+}
+
+.yui-gb.grid .column2 {
+	width: 48%;
+}
+
+/* 4 column layout */
+.yui-g.grid .yui-g .yui-u {
+	width: 48%;
+}
+
+.ttThead th a,
+.ttThead th a:hover,
+.ttThead th a:visited {
+	color: #0176b1;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+#GoLiveQueue th:nth-child(2),
+#approvedScheduledItems th:nth-child(2),
+#recentlyMadeLive th:nth-child(2),
+#MyRecentActivity th:nth-child(2) {
+	padding-left: 0;
+}

@@ -211,7 +211,6 @@ studio-ui/templates/web/common/js-next-scripts.ftl
 studio-ui/static-assets/app/
 studio-ui/static-assets/styles/*.css
 studio-ui/static-assets/styles/*.css.map
-studio-ui/static-assets/themes/cstudioTheme/
 studio-ui/static-assets/scripts/*.umd.js*
 studio-ui/ui/app/public/*.umd.js*
 studio-ui/ui/app/public/shared-worker.js*
@@ -231,6 +230,10 @@ studio-ui/static-assets/libs/jquery-ui/
 studio-ui/static-assets/libs/js-yaml/
 studio-ui/static-assets/libs/monaco/
 studio-ui/static-assets/libs/tinymce/
+studio-ui/static-assets/themes/cstudioTheme/base.css
+studio-ui/static-assets/themes/cstudioTheme/base.css.map
+studio-ui/static-assets/themes/cstudioTheme/css/global.css
+studio-ui/static-assets/themes/cstudioTheme/css/global.css.map
 
 # js-sdk
 js-sdk/doc/

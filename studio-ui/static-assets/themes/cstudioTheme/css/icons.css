@@ -1,0 +1,280 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* ----------------- */
+/* Status icon rules */
+/* ----------------- */
+.status-icon {
+	display: inline-block;
+	height: 15px;
+	padding-left: 0 !important;
+	background-image: none;
+	float: none !important;
+}
+
+.cstudio-search-result .result-item {
+	float: left !important;
+}
+
+.status-icon.new::after {
+	/*
+  content: "*";
+  */
+}
+
+.status-icon.disabled,
+.dashboard-item.disabled {
+	text-decoration: line-through;
+}
+
+.dashlet-cell-wrp .status-icon.disabled.non-previewable-disabled {
+	color: #808080;
+}
+
+.acn-dropdown-menu .status-icon.disabled,
+.dashlet-cell-wrp .status-icon.disabled {
+	color: #0176b1;
+}
+
+/* Differences in the different component views (dropdown, search, etc) */
+
+.cstudio-search-result-body .status-icon.new::after {
+	content: '';
+}
+
+.status-icon.component.private {
+	background-position: 0 -1061px;
+}
+
+.status-icon.zoom-in {
+	background-image: url('../images/icons/white-zoom-in-16.png');
+	background-position: 4px 1px;
+	height: 18px;
+	background-repeat: no-repeat;
+}
+
+.status-icon.zoom-out {
+	background-image: url('../images/icons/white-zoom-out-16.png');
+	background-position: 4px 1px;
+	height: 18px;
+	background-repeat: no-repeat;
+}
+
+.status-icon.refresh {
+	background-image: url('../images/icons/white-refresh-16.png');
+	background-position: 4px 1px;
+	height: 18px;
+	background-repeat: no-repeat;
+}
+
+.status-icon.folder .icon-container.on-open,
+.acn-parent-folder .icon-container.on-open {
+	display: none;
+}
+
+.status-icon.folder.closed .icon-container.on-open,
+.acn-parent-folder.closed .icon-container.on-open {
+	display: none;
+}
+
+.status-icon.folder.open .icon-container.on-open,
+.acn-parent-folder.open .icon-container.on-open {
+	display: inline-block;
+}
+
+.status-icon.folder.open .icon-container.on-closed,
+.acn-parent-folder.open .icon-container.on-closed {
+	display: none;
+}
+
+.on-closed .edited,
+.on-open .edited {
+	color: #d0a70d;
+}
+
+.cstudio-admin-console-item .contenttypes::before {
+	content: '\f009';
+}
+
+.cstudio-admin-console-item .configuration::before {
+	content: '\f013';
+}
+
+.cstudio-admin-console-item .groups::before {
+	content: '\f0c0';
+}
+
+.cstudio-admin-console-item .audit::before {
+	content: '\f039';
+}
+
+.cstudio-admin-console-item .bulkoperations::before {
+	content: '\f0b2';
+}
+
+.cstudio-admin-console-item .workflowstates::before {
+	content: '\f013';
+}
+
+.cstudio-admin-console-item .logginglevels::before {
+	content: '\f149';
+}
+
+.cstudio-admin-console-item .logconsole::before {
+	content: '\f036';
+}
+
+.cstudio-admin-console-item .previewsync::before {
+	content: '\f021';
+}
+
+.cstudio-admin-console-item .syncfromrepository::before {
+	content: '\f021';
+}
+
+.icon-container > span {
+	font-size: 16px;
+}
+
+.icon-container {
+	display: inline-block;
+	min-width: 24px;
+}
+
+.studio-fa-stack {
+	position: relative;
+	display: inline-block;
+}
+
+.studio-fa-stack .fa {
+	position: absolute;
+	bottom: -2px;
+}
+
+.icon-container .studio-fa-stack span.studio-fa-stack-1x {
+	font-size: 12px;
+	left: 2px;
+}
+
+.f18 {
+	font-size: 18px;
+}
+
+.f14 {
+	font-size: 14px;
+}
+
+.f20 {
+	font-size: 20px;
+}
+
+.icon-yellow {
+	color: #f6cc2f;
+}
+
+.icon-orange {
+	color: #ff8c00;
+}
+
+.icon-red {
+	color: #ff0000;
+}
+
+.icon-light-blue {
+	color: #06c9ec;
+}
+
+.fa-inverse {
+	color: #fff;
+}
+
+.fa-spin {
+	-webkit-filter: blur(0);
+	filter: blur(0);
+}
+
+i.loading {
+	position: fixed;
+	left: 48%;
+	top: 50%;
+}
+
+.yui-simple-dialog .bd .yui-icon.fa-spin-fix {
+	font-size: 16.5px;
+	line-height: 17.5px;
+	width: 16.5px;
+	height: 17px;
+	letter-spacing: normal;
+	text-indent: -0.05px;
+}
+
+.icon-container .studio-fa-stack .fa-video-square {
+	bottom: -5px;
+	font-size: 20px;
+}
+
+.icon-container .studio-fa-stack .studio-fa-stack-1x.fa-image-plug {
+	bottom: -1px;
+	left: 0;
+}
+
+.icon-container .studio-fa-stack .studio-fa-stack-1x.fa-video-plug {
+	bottom: -2px;
+	left: 1px;
+}
+
+.cs-item-icon.icon-container .studio-fa-stack-2x {
+	color: #8fc6fd !important;
+}
+
+.cs-item-icon .live {
+	color: transparent;
+}
+
+.cs-item-icon .processing,
+#guide-processing {
+	color: #4879db;
+}
+
+.cs-item-icon .locked,
+#guide-locked {
+	color: #dd7e2c;
+}
+
+.cs-item-icon .never-published,
+#guide-neverpublished {
+	color: #14b0bf;
+}
+
+.cs-item-icon .deleted,
+#guide-deleted {
+	color: #ce2d2d;
+}
+
+.cs-item-icon .el-scheduled,
+#guide-scheduled {
+	color: #1fb507;
+}
+
+.cs-item-icon .in-workflow,
+#guide-inworkflow {
+	color: #245875;
+}
+
+.cs-item-icon .edited,
+#guide-edited {
+	color: #d0a70d;
+}

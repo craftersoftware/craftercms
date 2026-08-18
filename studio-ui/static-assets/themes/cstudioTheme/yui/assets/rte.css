@@ -1,0 +1,94 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* ---------------------------------------------------------------------------------
+    PLEASE DO NOT ADD ANY STYLES UNLESS THEY ARE RTE SPECIFIC AND COMMON TO ALL SITES.
+    All CSS should be from Site's Preview server
+----------------------------------------------------------------------------------- */
+
+/** RTE only - Place holder image **/
+.crafterEmbed {
+	border: 2px solid #333;
+	-moz-border-radius: 6px;
+	width: 300px;
+	height: 120px;
+}
+/** End of Place hold image **/
+
+/** Table Layout styles for display grid in RTE **/
+table.cstudioTableLayout,
+table.cstudioTableLayout caption,
+table.cstudioTableLayout tbody,
+table.cstudioTableLayout tfoot,
+table.cstudioTableLayout thead,
+table.cstudioTableLayout tr,
+table.cstudioTableLayout th,
+table.cstudioTableLayout td {
+	border: 1px solid #ccc !important;
+}
+/** End of Table Layout styles **/
+
+/** Right-Click property box for RTE **/
+div.componentPropertyBox {
+	background-color: #ffffff;
+	border: 1px solid #808080;
+}
+.componentPropertyBox span {
+	color: #444444 !important;
+	cursor: pointer;
+	font-size: 12px;
+	line-height: 15px;
+	/* padding: 0 10px; */
+	text-align: left;
+}
+
+.componentPropertyBox ul,
+.componentPropertyBox li {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+.componentPropertyBox li:hover {
+	background-color: #e2e2e2;
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+.componentPropertyBox a {
+	color: #444444 !important;
+	padding-left: 10px;
+	display: block;
+}
+
+.componentPropertyBox a:hover {
+	background-color: #e2e2e2;
+	display: block;
+}
+/** End of styles for Right-Click property box for RTE **/
+
+/** for display of widgets within RTE **/
+.crComponent {
+	padding: 0 1px 0 1px;
+}
+
+/** For display of table layout within RTE wigets in RTE mode **/
+.crComponent table,
+.cstudioComponent table tr,
+.cstudioComponent table th,
+.cstudioComponent table td {
+	border: none !important;
+}

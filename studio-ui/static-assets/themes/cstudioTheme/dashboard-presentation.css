@@ -1,0 +1,60 @@
+/*
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* DASHLETS */
+
+.dashlet {
+	border: 1px solid #bababa;
+	background-color: white;
+}
+
+.dashlet .title {
+	background-color: #d7e0e7;
+	background-image: url(images/dashlet-title-bg.png);
+	background-repeat: repeat-x;
+	border-bottom: 1px dashed #bababa;
+	color: #262d35;
+}
+
+.dashlet .feed {
+	background-image: url(images/feed-icon-16.png);
+	background-repeat: no-repeat;
+}
+
+.dashlet .toolbar {
+	background-color: #f6f6f6;
+	border-bottom: 1px solid #d3d3d3;
+}
+
+/*.dashlet .toolbar a
+{
+   color: #5497c4;
+}
+*/
+.dashlet .body {
+	background-color: #f9fcfd;
+}
+
+/*.dashlet .body a,
+.dashlet .body a:visited,
+.dashlet .body a:hover
+{
+   color: #4f94c9;
+}*/
+
+.dashlet .detail-list-item {
+	border-bottom: 1px dashed #e9e9e9;
+}
