@@ -85,6 +85,9 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
 		| PrimitiveAtom<number | string | null | undefined>
 		| undefined;
+	if (!orderDefaultAtom) {
+		throw new Error(`Missing "${ORDER_DEFAULT_FIELD_ID}" atom; computed nav order was not applied to the form.`);
+	}
 	const effectRefs = useUpdateRefs({
 		initialValue,
 		contextItem,
@@ -217,10 +220,6 @@ export function PageNavOrder(props: PageNavOrderProps) {
 							}}
 						/>
 					</Typography>
-					{/* TODO: Remove this alert when the 'content/reorder-items' new v2 API is implemented. */}
-					<Alert severity="warning" sx={{ mt: 2 }}>
-						Development draft. Waiting for 'content/reorder-items' new v2 API to be implemented.
-					</Alert>
 					<Paper elevation={0} sx={{ mt: 2 }}>
 						<SortableList
 							items={pagesOrderState.order ?? []}
