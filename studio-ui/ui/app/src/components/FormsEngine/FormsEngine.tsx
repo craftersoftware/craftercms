@@ -161,6 +161,8 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 	onCancelFullScreen?: EnhancedDialogProps['onCancelFullScreen'];
 	/** The form will render only the specified fields from the main content type being worked with */
 	fieldsToRender?: ContentTypeField[];
+	/** Id of a field the form should scroll into view once rendered. Expands the field's section if collapsed. */
+	fieldToScroll?: string;
 	// Controls like the Item Selector and Repeat use the onSave to update once the form they opened is "saved".
 	// Executing the onClose without the "timeout", causes values set at the control prior to closing to get lost somehow.
 	// The promise works as a timeout and allows the control to do async operations before the form acts on its result.
@@ -664,6 +666,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		stackIndex = 0,
 		stackTransitionEnded,
 		fieldsToRender,
+		fieldToScroll,
 		isDialog = false,
 		onSave,
 		onClose: onCloseProp
@@ -937,6 +940,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 			observer?.disconnect();
 		};
 	}, [mainContent]);
+
+	// Scroll to the field requested via the `fieldToScroll` prop, once the form body is rendered.
+	useEffect(() => {
+		if (!fieldToScroll || !mainContent) return;
+		// The field may be inside a collapsed section; it needs to be expanded for the field to be scrolled to.
+		const sectionId = contentTypeSections.find((section) => section.fields.includes(fieldToScroll))?.id;
+		const expandedAtom = sectionId ? atoms.expandedStateBySectionId[sectionId] : null;
+		const isExpanding = expandedAtom && !store.get(expandedAtom);
+		if (isExpanding) store.set(expandedAtom, true);
+		// When expanding, wait for the accordion transition; otherwise, the scroll lands mid-transition.
+		const timeout = setTimeout(
+			() => {
+				containerRef.current
+					?.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldToScroll}"]`)
+					?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+			},
+			isExpanding ? theme.transitions.duration.standard : 0
+		);
+		return () => clearTimeout(timeout);
+	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store, theme]);
 
 	const bodyFragment = (
 		<FormLayout

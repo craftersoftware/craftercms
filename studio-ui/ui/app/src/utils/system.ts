@@ -126,6 +126,7 @@ export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
 							? { create: { path: oldProps.path, contentTypeId: oldProps.contentTypeId } }
 							: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
 						readonly: oldProps.readonly ?? false,
+						fieldToScroll: oldProps.selectedFields?.[0] ?? undefined,
 						onSave(result) {
 							if (isPreviewAppUrl()) {
 								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
