@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -85,6 +85,7 @@ export function ImagePicker(props: ImagePickerProps) {
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
 	const [rejectedExternalUrl, setRejectedExternalUrl] = useState<string | null>(null);
+	const selectionRequestRef = useRef(0);
 
 	useEffect(() => {
 		// If there's a default value and no value has been set yet, set it as the value.
@@ -95,6 +96,7 @@ export function ImagePicker(props: ImagePickerProps) {
 
 	const imageRestrictionMessages = getImageRestrictionMessages(restrictions);
 	const applySelection = (selection: DataSourceSelection | DataSourceSelection[] | null) => {
+		const requestId = ++selectionRequestRef.current;
 		const selected = Array.isArray(selection) ? selection[0] : selection;
 		const path =
 			selected?.kind === 'asset' && typeof selected.relativeUrl === 'string'
@@ -106,6 +108,7 @@ export function ImagePicker(props: ImagePickerProps) {
 		setRejectedExternalUrl(null);
 		validateImageRestrictions(path, restrictions, (selected as DataSourceAssetSelection).mimeType)
 			.then((meetsRestrictions) => {
+				if (requestId !== selectionRequestRef.current) return;
 				if (meetsRestrictions) {
 					setValue(path);
 				} else if (isExternalMediaUrl(path)) {
@@ -125,6 +128,7 @@ export function ImagePicker(props: ImagePickerProps) {
 				}
 			})
 			.catch(() => {
+				if (requestId !== selectionRequestRef.current) return;
 				dispatch(
 					showSystemNotification({
 						message: formatMessage({ defaultMessage: 'Unable to validate image restrictions.' })
@@ -144,6 +148,7 @@ export function ImagePicker(props: ImagePickerProps) {
 	) : null;
 
 	const handleRemoveImage = () => {
+		selectionRequestRef.current += 1;
 		setRejectedExternalUrl(null);
 		setValue(null);
 	};
