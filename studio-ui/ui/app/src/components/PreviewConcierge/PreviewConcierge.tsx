@@ -1255,6 +1255,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const model = models[modelId] as ContentInstance;
 					const contentType = contentTypes[model.craftercms.contentTypeId];
 					if (type === 'content') {
+						// When editing an embedded component, we open the form of the parent. We need to select the parent field that belongs to the
+						// component being edited.
+						const hierarchyMap = upToDateRefs.current.guest.hierarchyMap;
+						const parentFieldId = hierarchyMap[modelId]?.parentContainerFieldPath;
+						const parentFieldIndex = hierarchyMap[modelId]?.parentContainerFieldIndex;
+						const selectedFields = parentFieldId ? [parentFieldId] : fields;
+						const fieldIndex = parentFieldIndex ? parentFieldIndex : index;
 						// Not quite sure if it ever happens that the item isn't already loaded.
 						(item ? (of(item) as Observable<ContentItem>) : fetchContentItemService(siteId, path)).subscribe((item) => {
 							itemActionDispatcher({
@@ -1266,8 +1273,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								formatMessage,
 								extraPayload: {
 									modelId: parentModelId ? modelId : null,
-									selectedFields: fields,
-									index
+									selectedFields,
+									index: fieldIndex
 								}
 							});
 						});
