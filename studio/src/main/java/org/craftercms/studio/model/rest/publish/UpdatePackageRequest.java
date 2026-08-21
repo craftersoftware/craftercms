@@ -21,7 +21,6 @@ import static org.craftercms.studio.api.v2.service.publish.PublishService.PACKAG
 
 import java.time.Instant;
 
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -30,10 +29,8 @@ import jakarta.validation.constraints.Size;
 public class UpdatePackageRequest {
 	private Instant schedule;
 	private boolean updateSchedule;
-	@NotEmpty
 	@Size(max = PACKAGE_COMMENT_MAX_LENGTH)
 	private String comment;
-	@NotEmpty
 	@Size(max = PACKAGE_TITLE_MAX_LENGTH)
 	private String title;
 	private boolean requestApproval;

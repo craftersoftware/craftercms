@@ -72,8 +72,10 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.*;
 import static org.apache.commons.collections4.CollectionUtils.*;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.ArrayUtils.contains;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.Strings.CS;
 import static org.apache.tika.io.FilenameUtils.getName;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
@@ -627,10 +629,10 @@ public class PublishServiceInternalImpl implements PublishService, ApplicationCo
 				}
 			}
 
-			if (submitterComment != null) {
+			if (isNotEmpty(submitterComment)) {
 				publishPackage.setSubmitterComment(submitterComment);
 			}
-			if (title != null) {
+			if (isNotEmpty(title)) {
 				publishPackage.setTitle(title);
 			}
 			if (updateSchedule) {
