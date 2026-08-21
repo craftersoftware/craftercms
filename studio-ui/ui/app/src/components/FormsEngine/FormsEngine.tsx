@@ -887,6 +887,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const saveFn = useSaveForm({
 		onSave,
 		isEmbedded,
+		isStackedForm,
 		isCreateMode,
 		isRepeatMode,
 		createPath: Boolean(create?.path) ? pathInSite : undefined, // pathInSite is the result of processing the create path with macros.
@@ -907,6 +908,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const [mainContent, setMainContent] = useState(null);
 	const collapseHeaderAllowed = useRef(false);
 	const sentinelRef = useRef<HTMLDivElement>(null);
+	const pendingFieldScrollRef = useRef<{ sectionId: string; scroll: () => void } | null>(null);
 
 	const mainContentRefCallback: RefCallback<HTMLDivElement> = (element) => {
 		setMainContent(element);
@@ -948,18 +950,20 @@ function FormOrchestrator(props: FormsEngineProps) {
 		const sectionId = contentTypeSections.find((section) => section.fields.includes(fieldToScroll))?.id;
 		const expandedAtom = sectionId ? atoms.expandedStateBySectionId[sectionId] : null;
 		const isExpanding = expandedAtom && !store.get(expandedAtom);
-		if (isExpanding) store.set(expandedAtom, true);
-		// When expanding, wait for the accordion transition; otherwise, the scroll lands mid-transition.
-		const timeout = setTimeout(
-			() => {
-				containerRef.current
-					?.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldToScroll}"]`)
-					?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-			},
-			isExpanding ? theme.transitions.duration.standard : 0
-		);
-		return () => clearTimeout(timeout);
-	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store, theme]);
+		const scrollToField = () => {
+			containerRef.current
+				?.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldToScroll}"]`)
+				?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		};
+		if (isExpanding) {
+			store.set(expandedAtom, true);
+			pendingFieldScrollRef.current = { sectionId, scroll: scrollToField };
+			return () => {
+				pendingFieldScrollRef.current = null;
+			};
+		}
+		scrollToField();
+	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store]);
 
 	const bodyFragment = (
 		<FormLayout
@@ -1069,6 +1073,17 @@ function FormOrchestrator(props: FormsEngineProps) {
 								<SectionAccordion
 									key={sectionIndex}
 									section={section}
+									slotProps={{
+										transition: {
+											onEntered: () => {
+												const pending = pendingFieldScrollRef.current;
+												if (pending?.sectionId === section.id) {
+													pending.scroll();
+													pendingFieldScrollRef.current = null;
+												}
+											}
+										}
+									}}
 									renderControl={(fieldId, fieldIndex) =>
 										renderFieldControl(
 											contentTypeFields[fieldId],

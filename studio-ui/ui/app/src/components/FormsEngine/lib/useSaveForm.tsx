@@ -38,7 +38,12 @@ import {
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
-import { moveAndUpdateContent, writeContent, WriteContentResponse } from '../../../services/content';
+import {
+	moveAndUpdateContent,
+	updateEmbeddedComponent,
+	writeContent,
+	WriteContentResponse
+} from '../../../services/content';
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -61,6 +66,8 @@ export interface UseSaveFormProps {
 	isRepeatMode: boolean;
 	isCreateMode: boolean;
 	isEmbedded: boolean;
+	/** True when this form was opened via pushForm on top of another form. */
+	isStackedForm?: boolean;
 	onBeforeSave?: FormsEngineProps['onSave'];
 	onSave?: FormsEngineProps['onSave'];
 	onClose?(): void;
@@ -76,7 +83,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const siteId = useActiveSiteId();
-	const { isEmbedded, isRepeatMode, isCreateMode, onClose, onMinimize, createPath } = props;
+	const { isEmbedded, isStackedForm = false, isRepeatMode, isCreateMode, onClose, onMinimize, createPath } = props;
 	const { id, contentType, contentObject, path: itemPath } = useContext(ItemMetaContext);
 	const isPage = contentType.type === 'page';
 	const stableFormContext = useContext(StableFormContext);
@@ -127,6 +134,28 @@ export function useSaveForm(props: UseSaveFormProps) {
 				onMinimize?.();
 			}
 		};
+
+		const showSaveError = (error: AjaxError | Error) => {
+			setIsSubmitting(false);
+			const message =
+				error instanceof AjaxError
+					? (error.response?.response?.message ?? error.response?.message)
+					: (error as Error).message;
+			showAlert({
+				dispatch,
+				children: (
+					<Box>
+						<Typography marginBottom={1}>
+							<FormattedMessage defaultMessage="An error occurred trying to save the form" />
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{message}
+						</Typography>
+					</Box>
+				)
+			});
+		};
+
 		// Repeat handled here. If true, execution ends inside if statement.
 		if (isRepeatMode) {
 			(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
@@ -150,7 +179,71 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 
 			const dom = fromString(xml);
-			(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
+
+			// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
+			if (isStackedForm) {
+				(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
+				return;
+			}
+
+			// Root embedded: merge the component into the parent document and write the parent.
+			setIsSubmitting(true);
+			const path = itemPath;
+			const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
+				const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
+				const saveOrCancel$ = affectedPackages?.length
+					? cancelPackages(siteId, {
+							packageIds: affectedPackages.map((pkg) => pkg.id),
+							comment: cancelPackagesComment
+						}).pipe(switchMap(() => writeService$))
+					: writeService$;
+
+				saveOrCancel$.subscribe({
+					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
+						const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+						const result = (await onSave?.({
+							dom,
+							xml,
+							values,
+							versionComment,
+							path
+						})) as FormSavePromiseResult;
+						const shouldClose = result.close || closeAfterSave;
+						if (!shouldClose && isAmended) {
+							triggerReload();
+						}
+						onSavePromiseHandler(result);
+					},
+					error: showSaveError
+				});
+			};
+
+			if (affectedPackages?.length) {
+				const dialogId = nanoid();
+				dispatch(
+					pushDialog({
+						id: dialogId,
+						component: createComponentId('ViewPackagesDialog'),
+						props: {
+							item,
+							cancelPackagesInitialComment: formatMessage(
+								{ defaultMessage: 'Cancel packages to write on "{path}"' },
+								{ path }
+							),
+							onContinue: (cancelPackagesUpdatedComment) => {
+								saveEmbeddedContent(cancelPackagesUpdatedComment);
+								dispatch(popDialog({ id: dialogId }));
+							},
+							onClose: () => {
+								setIsSubmitting(false);
+								dispatch(popDialog({ id: dialogId }));
+							}
+						}
+					})
+				);
+			} else {
+				saveEmbeddedContent();
+			}
 			return;
 		}
 		setIsSubmitting(true);
@@ -186,22 +279,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				}
 				onSavePromiseHandler(result);
 			},
-			error(error: AjaxError) {
-				setIsSubmitting(false);
-				showAlert({
-					dispatch,
-					children: (
-						<Box>
-							<Typography marginBottom={1}>
-								<FormattedMessage defaultMessage="An error occurred trying to save the form" />
-							</Typography>
-							<Typography variant="body2" color="textSecondary">
-								{error.response.response?.message ?? error.response.message}
-							</Typography>
-						</Box>
-					)
-				});
-			}
+			error: showSaveError
 		};
 
 		// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.

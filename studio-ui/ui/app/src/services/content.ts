@@ -296,6 +296,35 @@ export function updateField(
 }
 // endregion
 
+/**
+ * Replaces an embedded component node inside a parent content document and writes the parent back.
+ * Used when an embedded component form is opened as the root form (not stacked).
+ */
+export function updateEmbeddedComponent(
+	site: string,
+	path: string,
+	modelId: string,
+	componentXml: string,
+	options?: { unlock?: boolean; comment?: string }
+): Observable<AjaxResponse<WriteContentResponse>> {
+	return fetchContentDOM(site, path).pipe(
+		switchMap((doc) => {
+			const target = doc.querySelector(`[id="${modelId}"]`);
+			if (!target) {
+				throw new Error(`Embedded component with id "${modelId}" not found in "${path}"`);
+			}
+			const next = fromString(componentXml).documentElement;
+			target.replaceWith(doc.importNode(next, true));
+			const replaced = doc.querySelector(`[id="${modelId}"]`);
+			if (replaced) {
+				updateModifiedDateElement(replaced);
+			}
+			updateModifiedDateElement(doc.documentElement);
+			return fromPromise(beautify(serialize(doc))).pipe(switchMap((xml) => writeContent(site, path, xml, options)));
+		})
+	);
+}
+
 // region performMutation
 function performMutation(
 	site: string,

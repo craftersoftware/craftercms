@@ -124,7 +124,9 @@ export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
 					formProps: {
 						...(oldProps.isNewContent
 							? { create: { path: oldProps.path, contentTypeId: oldProps.contentTypeId } }
-							: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
+							: oldProps.isEmbedded || Boolean(oldProps.modelId)
+								? { update: { path: oldProps.path, modelId: oldProps.modelId } }
+								: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
 						readonly: oldProps.readonly ?? false,
 						fieldToScroll: oldProps.selectedFields?.[0] ?? undefined,
 						onSave(result) {
