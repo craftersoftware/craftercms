@@ -51,7 +51,7 @@ public class PackageSubmitterAnnotationHandler {
 		if (publishPackage.getSubmitterId() != user.getId()) {
 			throw new PackageSubmitterCheckException(
 					"Unable to update publish package '%s' in site '%s' because user is not the submitter"
-							.formatted(siteId, packageId));
+							.formatted(packageId, siteId));
 		}
 		return pjp.proceed();
 	}
