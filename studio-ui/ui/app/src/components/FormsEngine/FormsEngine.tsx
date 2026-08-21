@@ -104,6 +104,7 @@ import {
 	internalLockContentService,
 	internalUnlockContentService,
 	prepareEmbeddedItemForm,
+	scrollToFieldWhenSettled,
 	setFieldAtoms,
 	useUnlockOnClose,
 	useValidateFormProps
@@ -908,7 +909,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const [mainContent, setMainContent] = useState(null);
 	const collapseHeaderAllowed = useRef(false);
 	const sentinelRef = useRef<HTMLDivElement>(null);
-	const pendingFieldScrollRef = useRef<{ sectionId: string; scroll: () => void } | null>(null);
+	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
+	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
 	const mainContentRefCallback: RefCallback<HTMLDivElement> = (element) => {
 		setMainContent(element);
@@ -917,6 +919,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 			collapseHeaderAllowed.current = element.scrollHeight - element.clientHeight > 100;
 		}
 	};
+
+	const beginSettledFieldScroll = useCallback((fieldId: string) => {
+		cancelFieldScrollRef.current?.();
+		const root = containerRef.current;
+		if (!root) return;
+		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId);
+	}, []);
 
 	// Monitor when sentinel element crosses the threshold
 	useEffect(() => {
@@ -943,27 +952,32 @@ function FormOrchestrator(props: FormsEngineProps) {
 		};
 	}, [mainContent]);
 
-	// Scroll to the field requested via the `fieldToScroll` prop, once the form body is rendered.
+	// Scroll to the field requested via the `fieldToScroll` prop, once form body layout settles
+	// (lazy controls, RTEs, images can still grow after first paint).
 	useEffect(() => {
 		if (!fieldToScroll || !mainContent) return;
+		const cancelSettle = () => {
+			cancelFieldScrollRef.current?.();
+			cancelFieldScrollRef.current = null;
+		};
 		// The field may be inside a collapsed section; it needs to be expanded for the field to be scrolled to.
 		const sectionId = contentTypeSections.find((section) => section.fields.includes(fieldToScroll))?.id;
 		const expandedAtom = sectionId ? atoms.expandedStateBySectionId[sectionId] : null;
 		const isExpanding = expandedAtom && !store.get(expandedAtom);
-		const scrollToField = () => {
-			containerRef.current
-				?.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldToScroll}"]`)
-				?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
-		};
 		if (isExpanding) {
 			store.set(expandedAtom, true);
-			pendingFieldScrollRef.current = { sectionId, scroll: scrollToField };
+			pendingFieldScrollRef.current = {
+				sectionId,
+				start: () => beginSettledFieldScroll(fieldToScroll)
+			};
 			return () => {
 				pendingFieldScrollRef.current = null;
+				cancelSettle();
 			};
 		}
-		scrollToField();
-	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store]);
+		beginSettledFieldScroll(fieldToScroll);
+		return cancelSettle;
+	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store, beginSettledFieldScroll]);
 
 	const bodyFragment = (
 		<FormLayout
@@ -1078,7 +1092,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 											onEntered: () => {
 												const pending = pendingFieldScrollRef.current;
 												if (pending?.sectionId === section.id) {
-													pending.scroll();
+													pending.start();
 													pendingFieldScrollRef.current = null;
 												}
 											}

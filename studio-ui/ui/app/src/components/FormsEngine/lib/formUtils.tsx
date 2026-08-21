@@ -91,6 +91,58 @@ export function getScrollContainer(container: HTMLElement): HTMLElement {
 }
 
 /**
+ * Scrolls to a field after the form body layout settles (e.g. lazy controls, RTEs, images).
+ * Observes `[data-area-id="formBody"]` — the content that grows — not the fixed-height scroll container.
+ * Returns a disposer that cancels pending timers/observers.
+ */
+export function scrollToFieldWhenSettled(
+	root: HTMLElement,
+	fieldId: string,
+	{ quietMs = 250, maxWaitMs = 2500 }: { quietMs?: number; maxWaitMs?: number } = {}
+): () => void {
+	const formBody = root.querySelector('[data-area-id="formBody"]');
+	const scroll = () => {
+		root
+			.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldId}"]`)
+			?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+	};
+
+	if (!formBody) {
+		scroll();
+		return () => undefined;
+	}
+
+	let done = false;
+	let quietTimer: ReturnType<typeof setTimeout> | undefined;
+
+	const finish = () => {
+		if (done) return;
+		done = true;
+		clearTimeout(quietTimer);
+		clearTimeout(maxTimer);
+		observer.disconnect();
+		scroll();
+	};
+
+	const bumpQuiet = () => {
+		clearTimeout(quietTimer);
+		quietTimer = setTimeout(finish, quietMs);
+	};
+
+	const observer = new ResizeObserver(bumpQuiet);
+	observer.observe(formBody);
+	bumpQuiet();
+	const maxTimer = setTimeout(finish, maxWaitMs);
+
+	return () => {
+		done = true;
+		clearTimeout(quietTimer);
+		clearTimeout(maxTimer);
+		observer.disconnect();
+	};
+}
+
+/**
  * Creates a lookup table of section expanded state atoms, indexed by section name (e.g. `{ "Hero": atom(true), "SEO": atom(false) }`)
  */
 export const buildSectionExpandedStateAtoms = (contentTypeSections: ContentTypeSection[]) => {
