@@ -182,7 +182,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 			// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
 			if (isStackedForm) {
-				(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
+				(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
+					onSavePromiseHandler,
+					showSaveError
+				);
 				return;
 			}
 
