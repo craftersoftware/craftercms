@@ -534,7 +534,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
 
 			const objectId = contentObject[XmlKeys.modelId] as string;
-			initializeState(atoms, values, {
+			initializeState(atoms, create.embedded ? valuesWithoutFileName : values, {
 				id: objectId,
 				// TODO: Should/could we somehow deduce the target path?
 				path: null,
