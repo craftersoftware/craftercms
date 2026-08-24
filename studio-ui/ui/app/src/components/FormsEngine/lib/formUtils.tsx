@@ -102,9 +102,10 @@ export function scrollToFieldWhenSettled(
 ): () => void {
 	const formBody = root.querySelector('[data-area-id="formBody"]');
 	const scroll = () => {
-		root
-			.querySelector(`[data-area-id="formBody"] [data-field-id="${fieldId}"]`)
-			?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		(formBody
+			? formBody.querySelector(`[data-field-id="${fieldId}"]`)
+			: root.querySelector(`[data-field-id="${fieldId}"]`)
+		)?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
 	};
 
 	if (!formBody) {
