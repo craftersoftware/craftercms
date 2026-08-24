@@ -633,6 +633,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [x] **Form-controller design** — type-local FE2 ESM (`FormController` hooks), fetch via form_controller API, not `PluginDescriptor`. See §5.9. Implementation still open (below).
 - [x] **Control-plugin ownership** — after `importPlugin()`, ownership is validated against loaded `PluginDescriptor.id` (not the form-definition locator `pluginId`). See `controlPluginLoader.ts`.
 - [x] **Atomic FE plugin registration** — `registerPlugin` preflights all DS + control contributions before any registry commit.
+- [x] **Stacked drawer FormBootstrap remount** — drawer mounts only the top stacked form; `key` includes `stackFormCount` so the parent slot remounts when a child closes. Prep restores existing `formsStackData[stackIndex].atoms` / `itemMeta` on first mount of that instance so in-memory parent edits (e.g. NodeSelector) survive embedded create from a stacked form; reload and later prep effect runs still re-fetch.
 
 ### Remaining implementation / validation
 
@@ -660,7 +661,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
-- **2026-08-24** — Stacked drawer remounts `FormBootstrap` for the parent slot when a child closes (`key` includes `stackFormCount`). Prep now restores existing `formsStackData[stackIndex].atoms` / `itemMeta` on first mount of that instance so NodeSelector (and other in-memory parent edits) survive creating an embedded from a stacked form. Reload / later effect runs still re-prep.
+- **2026-08-24** — Stacked drawer remounts `FormBootstrap` for the parent slot when a child closes (`key` includes `stackFormCount`). Prep now restores existing `formsStackData[stackIndex].atoms` / `itemMeta` on first mount of that instance so NodeSelector (and other in-memory parent edits) survive creating an embedded from a stacked form. Reload / later effect runs still re-prep. Recorded under §8 completed design decisions — no open decision remains for this behavior.
 - **2026-08-03** — Convergence-gap audit reflected in §8: remaining work includes S3/WebDAV stubs, null control-map entries (`disabled` / `internal-name` / `link-input` / `link-textarea`), FE2 RTE plugin parity, and focused compatibility tests. Control-plugin `PluginDescriptor.id` ownership checks and atomic `registerPlugin` preflight were already implemented — recorded under completed design decisions, not left as open gaps.
 - **2026-08-03** — Refined §5.9: all `FormController` hooks may be async (host awaits); clarified on-disk path, form_controller API, and FE2 loader call site (`formControllerLoader` from form bootstrap — not `importPlugin`).
 - **2026-08-03** — Decided FE2 form-controller design (§5.9): keep type-local `form-controller.js` gated by `hasJsController`; load via authenticated form_controller API + ESM Blob import; export `FormController` hooks (`initialize`, `isFieldRelevant`, `onBeforeSave`) — **not** a `PluginDescriptor`. FE1 YUI controllers are incompatible (migrate by rewrite). TB must fix Client-side Controller to edit `form-controller.js` instead of Groovy. Implementation still TODO.
