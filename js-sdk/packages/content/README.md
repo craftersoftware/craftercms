@@ -315,7 +315,7 @@ Returns the navigation tree with the specified depth for the specified store URL
   import { getNavTree } from '@craftercms/content';
 
   // Example 1: Config supplied inline
-  getNavTree('/site/website', 3, '', { site: 'editorial', baseUrl: 'http://localhost:8080', {} }).subscribe((tree) => {
+  getNavTree('/site/website', 3, '', { site: 'editorial', baseUrl: 'http://localhost:8080', headers: {} }).subscribe((tree) => {
     console.log(tree);
   });
 
