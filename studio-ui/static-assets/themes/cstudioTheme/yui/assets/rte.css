@@ -22,7 +22,7 @@
 /** RTE only - Place holder image **/
 .crafterEmbed {
 	border: 2px solid #333;
-	-moz-border-radius: 6px;
+	border-radius: 6px;
 	width: 300px;
 	height: 120px;
 }

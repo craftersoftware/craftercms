@@ -13,7 +13,7 @@
 ~ You should have received a copy of the GNU General Public License
 ~ along with this program. If not, see <http://www.gnu.org/licenses/>.
 -->
-<#-- <#include "/templates/system/common/versionInfo.ftl" /> -->
+<#include "/templates/system/common/versionInfo.ftl" />
 <#if envConfig.site?? == false || envConfig.site == "">
   <meta http-equiv="refresh" content="0;URL='/studio/user-dashboard/#/sites/all'" />
 <#else>

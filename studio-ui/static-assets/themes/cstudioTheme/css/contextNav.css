@@ -391,7 +391,8 @@ div[id*='expandComponentError'].yui-dialog {
 
 #acnVersionWrapper h3,
 #submitPanel .acnBox h3 {
-	font: normal 1.8em;
+	font-weight: normal;
+	font-size: 1.8em;
 	margin: 0;
 	padding: 6px 0;
 }
@@ -588,7 +589,7 @@ div[id*='expandComponentError'].yui-dialog {
 	display: none;
 }
 
-#cstudio-wcm-popup-div.yui-panel .header-titl,
+#cstudio-wcm-popup-div.yui-panel .header-title,
 #cstudio-wcm-popup-div-login.yui-panel .header-title {
 	font-size: 14px;
 	color: black;
@@ -648,7 +649,8 @@ div[id*='expandComponentError'].yui-dialog {
 
 #cstudio-wcm-popup-div .contentTypePopupHeader,
 #cstudio-wcm-popup-div-login .contentTypePopupHeader {
-	font: normal 1.8em;
+	font-weight: normal;
+	font-size: 1.8em;
 	margin: 0;
 	padding: 6px 0;
 }
