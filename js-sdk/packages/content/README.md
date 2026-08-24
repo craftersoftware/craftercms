@@ -259,7 +259,7 @@ Get the list of Items directly under a folder in the content store.
 ### Get Tree
 Get the complete Item hierarchy under the specified folder in the content store.
 
-`getTree(path: string, depth: number, config: CrafterConfig)`
+`getTree(path: string, depth?: number, config?: CrafterConfig)`
 
 | Parameters    |                |
 | ------------- |:--------------:|
@@ -294,7 +294,7 @@ Get the complete Item hierarchy under the specified folder in the content store.
 ### Get Navigation Tree
 Returns the navigation tree with the specified depth for the specified store URL.
 
-`getNavTree(path: string, depth: number, currentPageUrl: string, config: CrafterConfig)`
+`getNavTree(path: string, depth?: number, currentPageUrl?: string, config?: CrafterConfig)`
 
 | Parameters     |                |
 | -------------- |:--------------:|
@@ -312,15 +312,15 @@ Returns the navigation tree with the specified depth for the specified store URL
 - Get the navigation tree of the root folder from the site (depth = 3):
 
 ```typescript
-  import { getTree } from '@craftercms/content';
+  import { getNavTree } from '@craftercms/content';
 
   // Example 1: Config supplied inline
-  getTree('/site/website', 3, { site: 'editorial' }).subscribe((tree) => {
+  getNavTree('/site/website', 3, '', { site: 'editorial' }).subscribe((tree) => {
     console.log(tree);
   });
 
   // Example 2: Services pre-configured (see "Usage" section above), config param omitted.
-  getTree('/site/website', 3).subscribe((tree) => {
+  getNavTree('/site/website', 3).subscribe((tree) => {
     console.log(tree);
   });
 ```
@@ -328,7 +328,7 @@ Returns the navigation tree with the specified depth for the specified store URL
 ### Get Navigation Breadcrumb
 Returns the navigation items that form the breadcrumb for the specified store URL.
 
-`getNavBreadcrumb(path: string, root: string, config: CrafterConfig)`
+`getNavBreadcrumb(path: string, root?: string, config?: CrafterConfig)`
 
 | Parameters     |                |
 | -------------- |:--------------:|
@@ -361,7 +361,7 @@ Returns the navigation items that form the breadcrumb for the specified store UR
 ### Transform
 Transforms a URL, based on the current site’s configuration.
 
-- `transform(transformerName: string, path: string, config: CrafterConfig)`
+- `transform(transformerName: string, path: string, config?: CrafterConfig)`
 
 | Parameters      |                |
 | --------------- |:--------------:|
