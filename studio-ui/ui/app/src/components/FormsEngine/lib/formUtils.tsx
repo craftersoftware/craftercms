@@ -931,6 +931,7 @@ export function prepareEmbeddedItemForm(props: {
 		fileName: atom(update.modelId)
 	});
 	const values = { ...update.values };
+	delete values[XmlKeys.fileName];
 	const validatorsData = { siteId, contentTypesById };
 
 	const descriptors = resolveControlDescriptors(customControls);
