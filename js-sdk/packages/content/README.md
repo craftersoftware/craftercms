@@ -259,7 +259,7 @@ Get the list of Items directly under a folder in the content store.
 ### Get Tree
 Get the complete Item hierarchy under the specified folder in the content store.
 
-`getTree(path: string, depth?: number, config?: CrafterConfig)`
+`getTree(path: string, depth?: number, config?: Partial<CrafterConfig>)`
 
 | Parameters    |                |
 | ------------- |:--------------:|
