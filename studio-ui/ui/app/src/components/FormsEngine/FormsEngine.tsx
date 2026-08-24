@@ -276,7 +276,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const [contentTypesLoaded, setContentTypesLoaded] = useState(Boolean(contentTypesById));
 	const { formsStackData, api } = useContext(StableGlobalContext);
 	const [itemMeta, setItemMeta] = useState<FormsEngineItemMetaContextProps>(formsStackData[stackIndex].itemMeta);
-	const [ready, setReady] = useState(false);
+	const [ready, setReady] = useState(() =>
+		Boolean(formsStackData[stackIndex]?.atoms?.valueByFieldId && formsStackData[stackIndex].itemMeta)
+	);
 	const [prepError, setPrepError] = useState<symbol>();
 	const store = useJotaiStore();
 	const theme = useTheme();
@@ -284,6 +286,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const username = useActiveUser()?.username;
 	const effectRefs = useUpdateRefs({ contentTypesById, username });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
+	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
+	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
+	const prepStartedRef = useRef(false);
 	const [renamedPath, setRenamedPath] = useState<string | null>(null);
 	const [reloadNonce, setReloadNonce] = useState(0);
 	const triggerReload = useCallback(() => setReloadNonce((nonce) => nonce + 1), []);
@@ -337,6 +342,15 @@ function FormBootstrap(props: FormsEngineProps) {
 	useEffect(() => {
 		// Guard statement: If content types are not loaded, we can't proceed.
 		if (!contentTypesLoaded) return;
+		const stackEntry = formsStackData[stackIndex];
+		const alreadyPrepared = Boolean(stackEntry?.atoms?.valueByFieldId && stackEntry.itemMeta);
+		if (!prepStartedRef.current && alreadyPrepared) {
+			prepStartedRef.current = true;
+			setItemMeta(stackEntry.itemMeta);
+			setReady(true);
+			return;
+		}
+		prepStartedRef.current = true;
 		// TODO: If props are changed, things can be left off... previous item locked, edits get lost, etc. Not sure how much support for prop changes we should implement.
 		const isChildForm = stackIndex > 0;
 		// In the form stack, the present form being opened would be in the last position [length-1], the parent form state would be on [length-2] if it is nested (e.g. Root => Component(L1) => Repeat(L2)|Component(L2)). Otherwise,the parent should be the root.
