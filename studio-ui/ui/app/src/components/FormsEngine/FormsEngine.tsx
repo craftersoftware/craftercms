@@ -502,6 +502,8 @@ function FormBootstrap(props: FormsEngineProps) {
 				contentObject,
 				contentTypesById,
 				(fieldId, value, isAdditional) => {
+					// If the form is for an embedded component, we don't need to set the fileName atom.
+					if (create.embedded && fieldId === XmlKeys.fileName) return;
 					setFieldAtoms(
 						stableFormContextRef,
 						contentType,

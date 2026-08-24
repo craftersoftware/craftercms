@@ -150,7 +150,9 @@ function TreeItemLabel({
 	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId'>;
 }) {
 	// If field.id is 'file-name', we'll be using `atoms.fileName` as the field value.
-	const value = useAtomValue(atoms.valueByFieldId[field.id]);
+	const atom = atoms.valueByFieldId[field.id];
+	if (!atom) return null;
+	const value = useAtomValue(atom);
 	const validityData = useLoadableAtom(atoms.validationByFieldId[field.id]);
 	const isValid = validityData.state === 'hasData' ? validityData?.data.isValid : true;
 	const isRequired = isFieldRequired(field);

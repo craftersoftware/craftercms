@@ -948,6 +948,8 @@ export function prepareEmbeddedItemForm(props: {
 	});
 
 	Object.entries(values).forEach(([fieldId, value]) => {
+		// Embedded components don't have a path/file-name.
+		if (fieldId === XmlKeys.fileName) return;
 		const isAdditionalField = additionalFieldsIds.includes(fieldId);
 		// System fields (e.g. content-type, display-template, etc.) are not part of the content type, but are part of the content object. We don't need atoms or validity checks for these.
 		if (!contentType.fields[fieldId] && !isAdditionalField) return;
