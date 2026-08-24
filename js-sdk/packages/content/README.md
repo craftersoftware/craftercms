@@ -394,17 +394,17 @@ string - URL transformed according to transformer applied.
 - Transform a render path into a store path
 
 ```typescript
-  import { transform } from '@craftercms/content';
+  import { urlTransform } from '@craftercms/content';
 
   // Assuming that you already set the configuration (as explained above)
 
   // Example 1: Config supplied inline
-  transform('renderUrlToStoreUrl', '/technology', { site: 'editorial' }).subscribe((path) => {
+  urlTransform('renderUrlToStoreUrl', '/technology', { site: 'editorial' }).subscribe((path) => {
     console.log(path); // "/site/website/technology/index.xml"
   });
 
   // Example 2: Services pre-configured (see "Usage" section above), config param omitted.
-  transform('renderUrlToStoreUrl', '/technology').subscribe((path) => {
+  urlTransform('renderUrlToStoreUrl', '/technology').subscribe((path) => {
     console.log(path); // "/site/website/technology/index.xml"
   })
 ```
