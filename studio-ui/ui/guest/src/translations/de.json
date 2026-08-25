@@ -11,6 +11,8 @@
   "words.yes": "Ja",
   "zoneMarker.allTypes": "Alle Arten",
   "zoneMarker.dropTargetInfo": "Ziel mit {type} als {modes}ablegen",
+  "zoneMarker.embedded": "eingebettet",
+  "zoneMarker.existing": "bestehend",
   "zoneMarker.existingShared": "bestehende gemeinsame",
   "zoneMarker.lockedBy": "Gesperrt von {username}",
   "zoneMarker.modifiedItem": "Der Artikel wurde geändert. Aktualisieren Sie die Seite, um die Bearbeitung zu aktivieren.",

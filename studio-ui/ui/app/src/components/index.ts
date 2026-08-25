@@ -124,6 +124,7 @@ export * from './ItemStateIcon';
 export * from './ItemStatesGrid';
 export * from './ItemTypeIcon';
 export * from './KeyboardShortcutsDialog';
+export * from './KeyboardShortcutsSwitch';
 export * from './Launcher';
 export * from './LauncherGlobalNav';
 export * from './LauncherLinkTile';

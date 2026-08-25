@@ -168,6 +168,7 @@ export const components = {
   ItemStatesGrid: lazy(() => import('../components/ItemStatesGrid')),
   ItemTypeIcon: lazy(() => import('../components/ItemTypeIcon')),
   KeyboardShortcutsDialog: lazy(() => import('../components/KeyboardShortcutsDialog')),
+  KeyboardShortcutsSwitch: lazy(() => import('../components/KeyboardShortcutsSwitch')),
   Launcher: lazy(() => import('../components/Launcher')),
   LauncherGlobalNav: lazy(() => import('../components/LauncherGlobalNav')),
   LauncherLinkTile: lazy(() => import('../components/LauncherLinkTile')),

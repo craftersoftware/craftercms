@@ -11,6 +11,8 @@
   "words.yes": "예",
   "zoneMarker.allTypes": "모든 유형",
   "zoneMarker.dropTargetInfo": " {type} 과 호환되는 드롭 타겟을 {modes}로 설정하세요.",
+  "zoneMarker.embedded": "내장형",
+  "zoneMarker.existing": "기존의",
   "zoneMarker.existingShared": "기존 공유",
   "zoneMarker.lockedBy": " {username}님이 잠갔습니다",
   "zoneMarker.modifiedItem": "항목이 수정되었습니다. 편집하려면 새로고침하세요.",

@@ -15,4 +15,4 @@
  */
 
 // The minimum `@craftercms/experience-builder` version that is compatible with the current version of the product.
-export default '5.0.0';
+export default '5.0.4';

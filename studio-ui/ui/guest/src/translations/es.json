@@ -11,6 +11,8 @@
   "words.yes": "Sí",
   "zoneMarker.allTypes": "Todos los tipos",
   "zoneMarker.dropTargetInfo": "Objetivo de caída compatible con {type} como {modes}",
+  "zoneMarker.embedded": "incrustado",
+  "zoneMarker.existing": "existente",
   "zoneMarker.existingShared": "compartido existente",
   "zoneMarker.lockedBy": "Bloqueado por {username}",
   "zoneMarker.modifiedItem": "El artículo fue modificado. Actualice para habilitar la edición.",

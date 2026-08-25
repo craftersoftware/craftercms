@@ -1,12 +1,12 @@
 {
   "name": "@craftercms/studio-ui",
   "description": "Services, components, models & utils to build CrafterCMS authoring extensions.",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/craftercms/studio-ui.git",
-    "directory": "ui/app/src"
+    "url": "https://github.com/craftersoftware/craftercms.git",
+    "directory": "studio-ui/ui/app/src"
   },
   "keywords": [
     "content management",
