@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export interface ProjectLifecycleEvent<T = 'SITE_READY_EVENT' | 'SITE_DELETING_EVENT' | 'SITE_DELETED_EVENT'> {
+export interface ProjectLifecycleEvent<T = 'SITE_READY_EVENT' | 'PROJECT_BOOTSTRAP_READY_EVENT' | 'SITE_DELETING_EVENT' | 'SITE_DELETED_EVENT'> {
   timestamp: number;
   siteUuid: string;
   eventType: T;

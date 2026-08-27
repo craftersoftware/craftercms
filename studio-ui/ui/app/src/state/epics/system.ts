@@ -54,7 +54,8 @@ import {
   showUnlockItemSuccessNotification,
   storeInitialized,
   closeSiteSocket,
-  emitSystemEvents
+  emitSystemEvents,
+  projectBootstrapReady
 } from '../actions/system';
 import { CrafterCMSEpic } from '../store';
 import {
@@ -464,10 +465,10 @@ const systemEpics: CrafterCMSEpic[] = [
       exhaustMap(() => fetchGlobalMenuItems().pipe(map(fetchGlobalMenuComplete), catchAjaxError(fetchGlobalMenuFailed)))
     ),
   // endregion
-  // region newProjectReady
+  // region newProjectReady, projectBootstrapReady
   (action$) =>
     action$.pipe(
-      ofType(newProjectReady.type),
+      ofType(newProjectReady.type, projectBootstrapReady.type),
       map(() => fetchSites())
     ),
   // endregion

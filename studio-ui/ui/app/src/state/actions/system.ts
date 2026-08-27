@@ -165,6 +165,7 @@ export const globalSocketStatus = /*#__PURE__*/ createAction<{ connected: boolea
 
 export const newProjectReady =
   /*#__PURE__*/ createAction<ProjectLifecycleEvent<'SITE_READY_EVENT'>>('SITE_READY_EVENT');
+export const projectBootstrapReady = /*#__PURE__*/ createAction<ProjectLifecycleEvent<'PROJECT_BOOTSTRAP_READY_EVENT'>>('SITE_BOOTSTRAP_READY_EVENT');
 export const projectBeingDeleted =
   /*#__PURE__*/ createAction<ProjectLifecycleEvent<'SITE_DELETING_EVENT'>>('SITE_DELETING_EVENT');
 export const projectDeleted =

@@ -21,7 +21,7 @@ import { useDispatch } from 'react-redux';
 import { isPlainObject } from '../../utils/object';
 import { SnackbarKey, useSnackbar } from 'notistack';
 import { getHostToHostBus } from '../../utils/subjects';
-import { blockUI, newProjectReady, showSystemNotification, unblockUI } from '../../state/actions/system';
+import { blockUI, newProjectReady, projectBootstrapReady, showSystemNotification, unblockUI } from '../../state/actions/system';
 import Launcher from '../Launcher/Launcher';
 import useSelection from '../../hooks/useSelection';
 import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingChangesCloseRequest';
@@ -138,7 +138,7 @@ function GlobalDialogManager() {
   useEffect(() => {
     const subscription = getHostToHostBus()
       .pipe(
-        filter((e: StandardAction<ProjectLifecycleEvent>) => e.type === newProjectReady.type),
+        filter((e: StandardAction<ProjectLifecycleEvent>) => e.type === newProjectReady.type || e.type === projectBootstrapReady.type),
         switchMap((e) =>
           // Not the most efficient approach to (re)fetch all sites (which already occurs when a new site is created), but it's not possible to
           // look site by uuid or to sync this even with the completion of the background fetch of the sites.

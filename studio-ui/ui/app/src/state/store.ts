@@ -33,6 +33,7 @@ import {
   emitSystemEvent,
   globalSocketStatus,
   newProjectReady,
+  projectBootstrapReady,
   projectBeingDeleted,
   projectDeleted,
   siteSocketStatus,
@@ -100,6 +101,7 @@ export function getStore(): Observable<CrafterCMSStore> {
                       ].includes(action.type) ||
                       // Projects lifecycle events (created, deleted, etc.) should always go through.
                       payload.eventType === newProjectReady.type ||
+                      payload.eventType === projectBootstrapReady.type ||
                       payload.eventType === projectBeingDeleted.type ||
                       payload.eventType === projectDeleted.type ||
                       // No siteId on the event should be applicable to all sites.
