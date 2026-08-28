@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 services:
   tomcat:
-    image: craftercms/delivery_tomcat:4.5.2 # craftercms version flag
+    image: craftercms/delivery_tomcat:4.5.3-SNAPSHOT # craftercms version flag
     platform: linux/amd64
     ports:
       - 9080:8080

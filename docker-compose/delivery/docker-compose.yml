@@ -30,7 +30,7 @@ services:
       - search_data:/usr/share/opensearch/data
       - search_logs:/usr/share/opensearch/logs
   tomcat:
-    image: craftercms/delivery_tomcat:4.5.2 # craftercms version flag
+    image: craftercms/delivery_tomcat:4.5.3-SNAPSHOT # craftercms version flag
     platform: linux/amd64
     depends_on:
       - search
@@ -47,7 +47,7 @@ services:
       - ES_HOST=search
       - ES_PORT=9200
   deployer:
-    image: craftercms/deployer:4.5.2 # craftercms version flag
+    image: craftercms/deployer:4.5.3-SNAPSHOT # craftercms version flag
     platform: linux/amd64
     depends_on:
       - search
