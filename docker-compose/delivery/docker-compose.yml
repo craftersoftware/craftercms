@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 services:
   search:
-    image: opensearchproject/opensearch:3.6.0
+    image: opensearchproject/opensearch:3.8.0
     ports:
       - 9202:9200
     environment:
