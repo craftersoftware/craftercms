@@ -147,16 +147,12 @@ export function GroupManagement() {
 			) : fetching ? (
 				<GroupsGridSkeletonTable numOfItems={limit} />
 			) : groups ? (
-				groups.length ? (
-					<GroupsGridUI
-						groups={groups}
-						onRowClicked={onRowClicked}
-						onPageChange={onPageChange}
-						onRowsPerPageChange={onRowsPerPageChange}
-					/>
-				) : (
-					<EmptyState title={<FormattedMessage id="groupsGrid.emptyStateMessage" defaultMessage="No Groups Found" />} />
-				)
+				<GroupsGridUI
+					groups={groups}
+					onRowClicked={onRowClicked}
+					onPageChange={onPageChange}
+					onRowsPerPageChange={onRowsPerPageChange}
+				/>
 			) : (
 				<></>
 			)}

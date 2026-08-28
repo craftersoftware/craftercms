@@ -164,18 +164,14 @@ export function UserManagement(props: UserManagementProps) {
 			) : fetching ? (
 				<UsersGridSkeletonTable numOfItems={limit} />
 			) : users ? (
-				users.length ? (
-					<UsersGridUI
-						users={users}
-						onRowClicked={onRowClicked}
-						onPageChange={onPageChange}
-						onRowsPerPageChange={onRowsPerPageChange}
-						showDisabled={showDisabled}
-						onShowDisabledChange={onShowDisabledChange}
-					/>
-				) : (
-					<EmptyState title={<FormattedMessage id="usersGrid.emptyStateMessage" defaultMessage="No Users Found" />} />
-				)
+				<UsersGridUI
+					users={users}
+					onRowClicked={onRowClicked}
+					onPageChange={onPageChange}
+					onRowsPerPageChange={onRowsPerPageChange}
+					showDisabled={showDisabled}
+					onShowDisabledChange={onShowDisabledChange}
+				/>
 			) : (
 				<></>
 			)}
