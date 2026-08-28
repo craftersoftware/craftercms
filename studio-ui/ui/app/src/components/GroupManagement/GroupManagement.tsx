@@ -31,7 +31,6 @@ import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingCha
 import SearchBar from '../SearchBar';
 import useDebouncedInput from '../../hooks/useDebouncedInput';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
-import { EmptyState } from '../EmptyState';
 
 export function GroupManagement() {
 	const [offset, setOffset] = useState(0);

@@ -32,7 +32,6 @@ import Paper from '@mui/material/Paper';
 import { useEnhancedDialogState } from '../../hooks/useEnhancedDialogState';
 import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingChangesCloseRequest';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
-import { EmptyState } from '../EmptyState';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { getStoredShowDisabledUsers, setStoredShowDisabledUsers } from '../../utils/state';
 
