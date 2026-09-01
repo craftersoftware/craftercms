@@ -73,7 +73,7 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 	return (
 		<Box
 			ref={containerRef}
-			className={className}
+			className={[className, 'monaco-workbench'].filter(Boolean).join(' ')}
 			sx={{
 				height,
 				width: '100%',

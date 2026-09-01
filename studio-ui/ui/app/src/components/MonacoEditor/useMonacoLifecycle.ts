@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { withMonaco } from '../../utils/system';
 import type Monaco from '../../models/Monaco';
 import { normalizeMonacoTheme } from './types';
-
+import './useWorker';
 type MonacoModel = ReturnType<Monaco['editor']['createModel']>;
 
 interface MonacoModelDefinition {
