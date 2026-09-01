@@ -259,12 +259,20 @@ Get the list of Items directly under a folder in the content store.
 ### Get Tree
 Get the complete Item hierarchy under the specified folder in the content store.
 
-`getTree(path: string, depth?: number, config?: Partial<CrafterConfig>)`
+```typescript
+getTree(path: string): Observable<Item>;
+getTree(path: string, depth: number): Observable<Item>;
+getTree(path: string, depth: number, config: Partial<CrafterConfig>): Observable<Item>;
+getTree(path: string, config: Partial<CrafterConfig>): Observable<Item>;
+getTree(path: string, depth: number | Partial<CrafterConfig> = 1, config?: Partial<CrafterConfig>): Observable<Item>;
+```
+
+When the second argument is a configuration object, depth defaults to `1`.
 
 | Parameters    |                |
 | ------------- |:--------------:|
 | path          | The folder’s path |
-| depth         | Amount of levels to include. Optional. Default is `1` |
+| depth         | Amount of levels to include. Optional when omitted or when config is passed as the second argument. Default is `1` |
 | config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
@@ -278,15 +286,23 @@ Get the complete Item hierarchy under the specified folder in the content store.
 ```typescript
   import { getTree } from '@craftercms/content';
 
-  // This call will get 3 levels of the tree under the specified folder
+  // Example 1: Services pre-configured, default depth (1)
+  getTree('/site/website').subscribe((tree) => {
+    console.log(tree);
+  });
 
-  // Example 1: Config supplied inline
+  // Example 2: Services pre-configured (see "Usage" section above), depth only
+  getTree('/site/website', 3).subscribe((tree) => {
+    console.log(tree);
+  });
+
+  // Example 3: Depth and config supplied inline
   getTree('/site/website', 3, { site: 'editorial' }).subscribe((tree) => {
     console.log(tree);
   });
 
-  // Example 2: Services pre-configured (see "Usage" section above), config param omitted.
-  getTree('/site/website', 3).subscribe((tree) => {
+  // Example 4: Config as second argument (depth defaults to 1)
+  getTree('/site/website', { site: 'editorial' }).subscribe((tree) => {
     console.log(tree);
   });
 ```
