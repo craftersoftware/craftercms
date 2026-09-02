@@ -85,7 +85,7 @@ export function CrafterCMSNextBridge(
 		setRequestForgeryToken();
 		getStore().subscribe({
 			next: (store) => setStore(store),
-			error: ({ message }) => setStoreError(message)
+			error: (error) => setStoreError(typeof error === 'string' ? error : error.message)
 		});
 	}, []);
 
