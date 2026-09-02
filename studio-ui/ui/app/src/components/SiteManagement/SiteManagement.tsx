@@ -60,6 +60,7 @@ import { previewSwitch } from '../../services/security';
 import { EmptyState } from '../EmptyState';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
+import { ErrorState } from '../ErrorState';
 
 const translations = defineMessages({
 	siteDeleted: {
@@ -83,7 +84,7 @@ export function SiteManagement() {
 	const [currentView, setCurrentView] = useState<'grid' | 'list'>(
 		getStoredGlobalMenuSiteViewPreference(user.username) ?? 'grid'
 	);
-	const { byId: sitesById, isFetching, active } = useSitesBranch();
+	const { byId: sitesById, isFetching, active, error } = useSitesBranch();
 	const sitesList = sitesById ? Object.values(sitesById) : null;
 	const [selectedSiteStatus, setSelectedSiteStatus] = useState<PublishingStatus>(null);
 	const [permissionsLookup, setPermissionsLookup] = useState<LookupTable<boolean>>(immutableEmptyObject);
@@ -227,7 +228,14 @@ export function SiteManagement() {
 				}
 			/>
 			<ErrorBoundary>
-				{isFetching ? (
+				{error ? (
+					<ErrorState
+						title={
+							<FormattedMessage defaultMessage="An error occurred while loading projects. Please contact your administrator." />
+						}
+						sxs={{ root: { mt: 4 } }}
+					/>
+				) : isFetching ? (
 					<SkeletonSitesGrid numOfItems={3} currentView={currentView} />
 				) : sitesList ? (
 					sitesList.length > 0 ? (

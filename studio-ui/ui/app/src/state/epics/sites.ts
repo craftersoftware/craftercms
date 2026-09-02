@@ -18,7 +18,7 @@ import { ofType, StateObservable } from 'redux-observable';
 import { map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { setSiteCookie } from '../../utils/auth';
 import { fetchAll } from '../../services/sites';
-import { catchAjaxError } from '../../utils/ajax';
+import { catchAjaxError, extractErrorPayload } from '../../utils/ajax';
 import {
 	changeSite,
 	changeSiteComplete,
@@ -72,7 +72,12 @@ export default [
 	(action$) =>
 		action$.pipe(
 			ofType(fetchSitesAction.type),
-			switchMap(() => fetchAll().pipe(map(fetchSitesComplete), catchAjaxError(fetchSitesFailed)))
+			switchMap(() =>
+				fetchAll().pipe(
+					map(fetchSitesComplete),
+					catchAjaxError((error) => fetchSitesFailed({ error: extractErrorPayload(error) }))
+				)
+			)
 		)
 	// endregion
 ] as CrafterCMSEpic[];

@@ -23,14 +23,15 @@ import { changeSiteComplete, fetchSites, fetchSitesComplete, fetchSitesFailed, p
 export const initialState: GlobalState['sites'] = {
 	byId: {},
 	active: null,
-	isFetching: false
+	isFetching: false,
+	error: null
 };
 
 const reducer = createReducer<GlobalState['sites']>(initialState, (builder) => {
 	builder
 		.addCase(storeInitialized, (state, { payload }) => ({
 			...state,
-			byId: createLookupTable(payload.sites),
+			byId: payload.sites ? createLookupTable(payload.sites) : {},
 			active: payload.activeSiteId
 		}))
 		.addCase(changeSiteComplete, (state, { payload }) =>
@@ -48,11 +49,13 @@ const reducer = createReducer<GlobalState['sites']>(initialState, (builder) => {
 		.addCase(fetchSitesComplete, (state, { payload }) => ({
 			...state,
 			byId: createLookupTable(payload),
-			isFetching: false
+			isFetching: false,
+			error: null
 		}))
 		.addCase(fetchSitesFailed, (state, action) => ({
 			...state,
-			isFetching: false
+			isFetching: false,
+			error: action.payload?.error
 		}))
 		.addCase(popSite, (state, { payload }) => {
 			if (payload?.siteId) {
