@@ -187,7 +187,7 @@ public class UiServiceImpl implements UiService {
 
 		bootstrap.setStudioContext(contextPath.startsWith(ROOT_PATH) ? contextPath.substring(1) : contextPath);
 		bootstrap.setPreviewAppBaseUri(origin);
-		bootstrap.setCookieDomain(request.getServerName());
+		bootstrap.setCookieDomain(getCookieDomain(request.getServerName(), bootstrap.isUseBaseDomain()));
 	}
 
 }
