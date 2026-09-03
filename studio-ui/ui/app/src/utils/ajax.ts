@@ -185,6 +185,12 @@ export const errorSelectorApi1: <T, O extends ObservableInput<any>>(err: any, ca
 	throw error;
 };
 
-export const extractErrorPayload = (error: AjaxError): ApiResponse | AjaxError => {
-	return error?.response?.response ?? error?.response ?? error;
+export const extractErrorPayload = (error: AjaxError): ApiResponse => {
+	const response = error?.response?.response ?? error?.response;
+	return typeof response === 'string'
+		? { code: error?.status, message: response }
+		: (response ?? {
+				code: error?.status,
+				message: 'An unknown error has occurred.'
+			});
 };

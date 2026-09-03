@@ -52,6 +52,8 @@ import { fetchActiveEnvironment } from '../services/environment';
 import { batchActions, dispatchDOMEvent } from './actions/misc';
 import { closeSingleFileUploadDialog } from './actions/dialogs';
 import { pushDialog, pushNonDialog } from './actions/dialogStack';
+import { fetchSitesFailed } from './actions/sites';
+import { extractErrorPayload } from '../utils/ajax';
 
 export type EpicMiddlewareDependencies = {
 	getIntl: () => IntlShape;
@@ -78,7 +80,7 @@ export function getStore(): Observable<CrafterCMSStore> {
 			switchMap(({ worker, ...auth }) =>
 				of(createStoreSync({ dependencies: { worker } })).pipe(
 					switchMap((store) =>
-						fetchStateInitialization().pipe(
+						fetchStateInitialization(store).pipe(
 							tap((requirements) => {
 								worker.port.onmessage = (e) => {
 									if (e.data?.type) {
@@ -206,7 +208,7 @@ export function createStoreSync(args: { preloadedState?: any; dependencies?: any
 	return store;
 }
 
-export function fetchStateInitialization(): Observable<{
+export function fetchStateInitialization(store: CrafterCMSStore): Observable<{
 	user: User;
 	sites: Site[];
 	properties: LookupTable<any>;
@@ -216,7 +218,12 @@ export function fetchStateInitialization(): Observable<{
 	const siteCookieValue = getSiteCookie();
 	return forkJoin({
 		user: me(),
-		sites: fetchAll(),
+		sites: fetchAll().pipe(
+			catchError((error) => {
+				store.dispatch(fetchSitesFailed({ error: extractErrorPayload(error) }));
+				return of(null);
+			})
+		),
 		properties: fetchGlobalProperties(),
 		activeSiteId:
 			// A site cookie may be set but the site may have been deleted.
@@ -227,7 +234,13 @@ export function fetchStateInitialization(): Observable<{
 						tap((siteExists) => !siteExists && removeSiteCookie()),
 						map((siteExists) => (siteExists ? siteCookieValue : null)),
 						// If the exists check fails (e.g. network/API error), don't break store init
-						catchError(() => of(null))
+						catchError(() => {
+							// If error, go to global menu page
+							if (window.location.pathname !== '/studio') {
+								window.location.href = '/studio';
+							}
+							return of(null);
+						})
 					)
 				: of(null),
 		activeEnvironment: fetchActiveEnvironment()
