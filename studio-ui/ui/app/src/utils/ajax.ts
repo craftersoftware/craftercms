@@ -186,12 +186,11 @@ export const errorSelectorApi1: <T, O extends ObservableInput<any>>(err: any, ca
 };
 
 export const extractErrorPayload = (error: AjaxError): ApiResponse => {
-	// Same fallback as catchAjaxError so fetchSitesFailed (and similar) always get an ApiResponse.
-	return (
-		error?.response?.response ??
-		error?.response ?? {
-			code: error?.status,
-			message: 'An unknown error has occurred.'
-		}
-	);
+	const response = error?.response?.response ?? error?.response;
+	return typeof response === 'string'
+		? { code: error?.status, message: response }
+		: (response ?? {
+				code: error?.status,
+				message: 'An unknown error has occurred.'
+			});
 };
