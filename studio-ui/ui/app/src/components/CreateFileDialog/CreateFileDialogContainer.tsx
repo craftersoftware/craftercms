@@ -85,13 +85,13 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 	const onSubmit = () => {
 		updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 		if (name) {
+			const fileName = getFileName(name);
 			validateActionPolicy(site, {
 				type: 'CREATE',
-				target: `${path}/${name}`
+				target: `${path}/${fileName}`
 			}).subscribe({
 				next: ({ allowed, modifiedValue, message }) => {
 					if (allowed) {
-						const fileName = getFileName(name);
 						const pathToCheckExists = modifiedValue ?? `${path}/${fileName}`;
 						setItemExists(false);
 						checkPathExistence(site, pathToCheckExists).subscribe({
@@ -112,7 +112,7 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 					} else {
 						setConfirm({
 							error: true,
-							body: formatMessage(translations.policyError, { fileName: name, detail: message })
+							body: formatMessage(translations.policyError, { fileName, detail: message })
 						});
 						updateSubmittingOrHasPendingChanges({ isSubmitting: false });
 					}
@@ -123,8 +123,7 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 	};
 
 	const onConfirm = () => {
-		const fileName = getFileName(name);
-		onCreateFile(site, path, fileName);
+		onCreateFile(site, path, getFileName(name));
 	};
 
 	const onConfirmCancel = () => {
