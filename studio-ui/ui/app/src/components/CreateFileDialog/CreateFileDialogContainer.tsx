@@ -22,11 +22,15 @@ import { checkPathExistence, createFile } from '../../services/content';
 import { validateActionPolicy } from '../../services/sites';
 import DialogBody from '../DialogBody/DialogBody';
 import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
 import ConfirmDialog from '../ConfirmDialog';
-import { CreateFileContainerProps } from './utils';
+import { CreateFileContainerProps, DEFAULT_TEMPLATE_EXTENSION, TEMPLATE_EXTENSIONS, TemplateExtension } from './utils';
 import { translations } from './translations';
 import useEnhancedDialogContext from '../EnhancedDialog/useEnhancedDialogContext';
 import useItemsByPath from '../../hooks/useItemsByPath';
@@ -42,12 +46,15 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 	const { onClose, onCreated, type, path, allowBraces } = props;
 	const { isSubmitting, hasPendingChanges } = useEnhancedDialogContext();
 	const [name, setName] = useState('');
+	const [extension, setExtension] = useState<TemplateExtension>(DEFAULT_TEMPLATE_EXTENSION);
 	const [confirm, setConfirm] = useState(null);
 	const dispatch = useDispatch();
 	const site = useActiveSiteId();
 	const { formatMessage } = useIntl();
 	const itemLookup = useItemsByPath();
-	const computedFilePath = `${path}/${getFileNameWithExtensionForItemType(type, name)}`;
+	const getFileName = (fileName: string) =>
+		getFileNameWithExtensionForItemType(type, fileName, type === 'template' ? extension : undefined);
+	const computedFilePath = `${path}/${getFileName(name)}`;
 	// When calling the validation API, we need to check if the item with the suggested name exists. This is an extra validation for the
 	// fileExists const.
 	const [itemExists, setItemExists] = useState(false);
@@ -64,7 +71,12 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 		createFile(site, path, fileName).subscribe({
 			next() {
 				updateSubmittingOrHasPendingChanges({ hasPendingChanges: false, isSubmitting: false });
-				onCreated?.({ path, fileName, mode: pickExtensionForItemType(type), openOnSuccess: true });
+				onCreated?.({
+					path,
+					fileName,
+					mode: pickExtensionForItemType(type, fileName, type === 'template' ? 'ftl' : undefined),
+					openOnSuccess: true
+				});
 			},
 			error: onError
 		});
@@ -73,13 +85,13 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 	const onSubmit = () => {
 		updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 		if (name) {
+			const fileName = getFileName(name);
 			validateActionPolicy(site, {
 				type: 'CREATE',
-				target: `${path}/${name}`
+				target: `${path}/${fileName}`
 			}).subscribe({
 				next: ({ allowed, modifiedValue, message }) => {
 					if (allowed) {
-						const fileName = getFileNameWithExtensionForItemType(type, name);
 						const pathToCheckExists = modifiedValue ?? `${path}/${fileName}`;
 						setItemExists(false);
 						checkPathExistence(site, pathToCheckExists).subscribe({
@@ -100,7 +112,7 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 					} else {
 						setConfirm({
 							error: true,
-							body: formatMessage(translations.policyError, { fileName: name, detail: message })
+							body: formatMessage(translations.policyError, { fileName, detail: message })
 						});
 						updateSubmittingOrHasPendingChanges({ isSubmitting: false });
 					}
@@ -111,8 +123,7 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 	};
 
 	const onConfirm = () => {
-		const fileName = getFileNameWithExtensionForItemType(type, name);
-		onCreateFile(site, path, fileName);
+		onCreateFile(site, path, getFileName(name));
 	};
 
 	const onConfirmCancel = () => {
@@ -127,6 +138,57 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 		hasPendingChanges !== newHasPending && updateSubmittingOrHasPendingChanges({ hasPendingChanges: newHasPending });
 	};
 
+	const onExtensionChange = (event: SelectChangeEvent<TemplateExtension>) => {
+		setExtension(event.target.value);
+		setItemExists(false);
+	};
+
+	const fileNameField = (
+		<TextField
+			label={<FormattedMessage id="createFileDialog.fileName" defaultMessage="File Name" />}
+			value={name}
+			fullWidth={type !== 'template'}
+			autoFocus
+			required
+			error={(!name && Boolean(isSubmitting)) || fileExists}
+			placeholder={formatMessage(translations.placeholder)}
+			helperText={
+				fileExists ? (
+					<FormattedMessage
+						id="createFileDialog.fileAlreadyExists"
+						defaultMessage="A file with that name already exists"
+					/>
+				) : !name && isSubmitting ? (
+					<FormattedMessage id="createFileDialog.fileNameRequired" defaultMessage="File name is required." />
+				) : (
+					<FormattedMessage
+						id="createFileDialog.helperText"
+						defaultMessage="Consisting of letters, numbers, dot (.), dash (-) and underscore (_)."
+					/>
+				)
+			}
+			disabled={isSubmitting}
+			margin={type === 'template' ? 'none' : 'normal'}
+			sx={type === 'template' ? { flex: 1 } : undefined}
+			slotProps={{
+				inputLabel: { shrink: true }
+			}}
+			onChange={(event) => onInputChanges(applyAssetNameRules(event.target.value, { allowBraces }))}
+		/>
+	);
+
+	const extensionField = (
+		<FormControl variant="outlined" sx={{ minWidth: 110, flexShrink: 0 }} disabled={isSubmitting}>
+			<Select id="createFileDialogExtension" value={extension} onChange={onExtensionChange}>
+				{TEMPLATE_EXTENSIONS.map((templateExtension) => (
+					<MenuItem key={templateExtension} value={templateExtension}>
+						{`.${templateExtension}`}
+					</MenuItem>
+				))}
+			</Select>
+		</FormControl>
+	);
+
 	return (
 		<>
 			<DialogBody>
@@ -138,36 +200,14 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 						}
 					}}
 				>
-					<TextField
-						label={<FormattedMessage id="createFileDialog.fileName" defaultMessage="File Name" />}
-						value={name}
-						fullWidth
-						autoFocus
-						required
-						error={(!name && Boolean(isSubmitting)) || fileExists}
-						placeholder={formatMessage(translations.placeholder)}
-						helperText={
-							fileExists ? (
-								<FormattedMessage
-									id="createFileDialog.fileAlreadyExists"
-									defaultMessage="A file with that name already exists"
-								/>
-							) : !name && isSubmitting ? (
-								<FormattedMessage id="createFileDialog.fileNameRequired" defaultMessage="File name is required." />
-							) : (
-								<FormattedMessage
-									id="createFileDialog.helperText"
-									defaultMessage="Consisting of letters, numbers, dot (.), dash (-) and underscore (_)."
-								/>
-							)
-						}
-						disabled={isSubmitting}
-						margin="normal"
-						slotProps={{
-							inputLabel: { shrink: true }
-						}}
-						onChange={(event) => onInputChanges(applyAssetNameRules(event.target.value, { allowBraces }))}
-					/>
+					{type === 'template' ? (
+						<Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 2, mb: 1 }}>
+							{fileNameField}
+							{extensionField}
+						</Box>
+					) : (
+						fileNameField
+					)}
 				</form>
 			</DialogBody>
 			<DialogFooter>
