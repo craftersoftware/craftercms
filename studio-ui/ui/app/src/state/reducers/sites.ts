@@ -44,7 +44,8 @@ const reducer = createReducer<GlobalState['sites']>(initialState, (builder) => {
 		)
 		.addCase(fetchSites, (state, action) => ({
 			...state,
-			isFetching: true
+			isFetching: true,
+			error: null
 		}))
 		.addCase(fetchSitesComplete, (state, { payload }) => ({
 			...state,
