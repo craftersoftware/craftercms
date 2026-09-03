@@ -21,7 +21,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import useItemsByPath from '../../hooks/useItemsByPath';
-import { getFileNameWithExtensionForItemType, getParentPath } from '../../utils/path';
+import { getFileExtension, getFileNameWithExtensionForItemType, getParentPath } from '../../utils/path';
 import { UNDEFINED } from '../../utils/constants';
 import { isBlank } from '../../utils/string';
 import SecondaryButton from '../SecondaryButton';
@@ -53,6 +53,7 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 	const value = item?.label ?? '';
 	const { isSubmitting, hasPendingChanges } = useEnhancedDialogContext();
 	const [name, setName] = useState(value);
+	const initialExtension = getFileExtension(value);
 	const dispatch = useDispatch();
 	const itemLookupTable = useItemsByPath();
 	const newAssetName = type !== 'asset' ? getFileNameWithExtensionForItemType(type, name) : name;
@@ -75,7 +76,7 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 	};
 
 	const onRenameAsset = (siteId: string, path: string, name: string) => {
-		const fileName = type !== 'asset' ? getFileNameWithExtensionForItemType(type, name) : name;
+		const fileName = type !== 'asset' ? getFileNameWithExtensionForItemType(type, name, initialExtension) : name;
 		renameContent(siteId, path, fileName).subscribe({
 			next() {
 				updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
