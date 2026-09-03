@@ -35,14 +35,13 @@ class CopyPlugin extends AbstractCommand {
 
 	def run(client) {
 		def body = [
-			siteId: siteOptions.siteId,
 			path  : path
 		]
 		if (parameters) {
 			body.parameters = parameters
 		}
 
-		def path = '/studio/api/2/marketplace/copy'
+		def path = "/studio/api/2/marketplace/${siteOptions.siteId}/copy"
 		def result = client.post(path, body)
 		if (result) {
 			println "Copy plugin response"

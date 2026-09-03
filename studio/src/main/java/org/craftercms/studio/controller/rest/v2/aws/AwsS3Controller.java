@@ -66,7 +66,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
  */
 @Validated
 @RestController
-@RequestMapping("/api/2/aws/s3")
+@RequestMapping("/api/2/aws/{siteId}/s3")
 public class AwsS3Controller {
 
 	protected final AwsS3Service s3Service;
@@ -91,7 +91,7 @@ public class AwsS3Controller {
 	 */
 	@GetMapping(value = "/list", produces = APPLICATION_JSON_VALUE)
 	public ResultList<S3Item> listItems(
-		@ValidSiteId @RequestParam(REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@ValidateNoTagsParam @RequestParam(REQUEST_PARAM_PROFILE_ID) String profileId,
 		@ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH, required = false, defaultValue = StringUtils.EMPTY) String path,
 		@ValidateNoTagsParam @RequestParam(value = REQUEST_PARAM_TYPE, required = false, defaultValue = StringUtils.EMPTY) String type,
@@ -117,7 +117,7 @@ public class AwsS3Controller {
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
 	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
-	public ResultOne<S3Item> uploadItem(HttpServletRequest request) throws IOException, InvalidParametersException,
+	public ResultOne<S3Item> uploadItem(@ValidSiteId @PathVariable String siteId, HttpServletRequest request) throws IOException, InvalidParametersException,
 		AwsException, SiteNotFoundException, ConfigurationProfileNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {
 			throw new InvalidParametersException("The request is not multipart");
@@ -126,7 +126,6 @@ public class AwsS3Controller {
 		try {
 			JakartaServletFileUpload upload = new JakartaServletFileUpload();
 			FileItemInputIterator iterator = upload.getItemIterator(request);
-			String siteId = null;
 			String profileId = null;
 			String path = null;
 			String filename = null;
@@ -136,9 +135,6 @@ public class AwsS3Controller {
 				try (InputStream stream = item.getInputStream()) {
 					if (item.isFormField()) {
 						switch (name) {
-							case REQUEST_PARAM_SITEID:
-								siteId = Streams.asString(stream);
-								break;
 							case REQUEST_PARAM_PROFILE_ID:
 								profileId = Streams.asString(stream);
 								break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -27,6 +27,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -59,8 +60,8 @@ public class PluginController {
 	 * Returns a single file for a given plugin
 	 */
 	@Valid
-	@GetMapping("/file")
-	public ResponseEntity<Resource> getPluginFile(@ValidSiteId @RequestParam String siteId,
+	@GetMapping("/{siteId}/file")
+	public ResponseEntity<Resource> getPluginFile(@ValidSiteId @PathVariable String siteId,
 						      @ValidExistingContentPath @ValidateSecurePathParam @RequestParam String type,
 						      @ValidExistingContentPath @ValidateSecurePathParam @RequestParam String name,
 						      @ValidExistingContentPath @ValidateSecurePathParam @RequestParam(required = false) String filename,

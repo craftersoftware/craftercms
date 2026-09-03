@@ -132,5 +132,5 @@ export const PACKAGE_REJECTED = 'REJECTED';
 
 export const PACKAGE_TYPE_INITIAL_PUBLISH = 'INITIAL_PUBLISH';
 
-export const webDAVUploadUri = '/api/2/webdav/upload';
-export const s3UploadUri = '/api/2/aws/s3/upload.json';
+export const webDAVUploadUri = '/api/2/webdav/{siteId}/upload';
+export const s3UploadUri = '/api/2/aws/{siteId}/s3/upload.json';

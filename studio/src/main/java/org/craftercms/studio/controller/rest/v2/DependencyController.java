@@ -52,10 +52,10 @@ public class DependencyController {
 	}
 
 	@PostMapping(value = PATH_PARAM_SITE + PUBLISH_DEPENDENCIES, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Map<String, Collection<LightItem>>> getPublishDependencies(@PathVariable @ValidSiteId String site,
+	public ResultOne<Map<String, Collection<LightItem>>> getPublishDependencies(@PathVariable @ValidSiteId String siteId,
 																				@RequestBody @Valid GetPublishDependenciesRequestBody request) throws SiteNotFoundException {
-		Collection<LightItem> softDeps = dependencyService.getSoftDependencies(site, request.getPaths());
-		Collection<LightItem> hardDeps = dependencyService.getHardDependencies(site, request.getPaths());
+		Collection<LightItem> softDeps = dependencyService.getSoftDependencies(siteId, request.getPaths());
+		Collection<LightItem> hardDeps = dependencyService.getHardDependencies(siteId, request.getPaths());
 
 		softDeps.removeAll(hardDeps);
 
@@ -69,10 +69,10 @@ public class DependencyController {
 	}
 
 	@PostMapping(value = PATH_PARAM_SITE + DEPENDENT_ITEMS, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Collection<LightItem>> getDependentItems(@PathVariable @ValidSiteId String site,
+	public ResultOne<Collection<LightItem>> getDependentItems(@PathVariable @ValidSiteId String siteId,
 															  @RequestBody @Valid GetDependentsRequestBody request)
 			throws ServiceLayerException {
-		Collection<LightItem> items = dependencyService.getDependentItems(site, request.getPath());
+		Collection<LightItem> items = dependencyService.getDependentItems(siteId, request.getPath());
 		var result = new ResultOne<Collection<LightItem>>();
 		result.setResponse(OK);
 		result.setEntity(RESULT_KEY_ITEMS, items);
@@ -80,10 +80,10 @@ public class DependencyController {
 	}
 
 	@PostMapping(value = PATH_PARAM_SITE + DEPENDENCIES, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Collection<LightItem>> getDependencies(@PathVariable @ValidSiteId String site,
+	public ResultOne<Collection<LightItem>> getDependencies(@PathVariable @ValidSiteId String siteId,
 															@RequestBody @Valid GetDependenciesRequestBody request)
 			throws ServiceLayerException {
-		Collection<LightItem> items = dependencyService.getDependencies(site, request.getPath());
+		Collection<LightItem> items = dependencyService.getDependencies(siteId, request.getPath());
 		var result = new ResultOne<Collection<LightItem>>();
 		result.setResponse(OK);
 		result.setEntity(RESULT_KEY_ITEMS, items);

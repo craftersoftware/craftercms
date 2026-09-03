@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,14 +18,11 @@ package org.craftercms.studio.model.rest.content;
 
 import java.util.Set;
 
-import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
-import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.SITE_ID;
 import org.craftercms.commons.validation.annotations.param.ValidExistingContentPath;
 import org.craftercms.commons.validation.annotations.param.ValidateSecurePathParam;
 import static org.craftercms.studio.api.v2.service.publish.PublishService.PACKAGE_COMMENT_MAX_LENGTH;
 import static org.craftercms.studio.api.v2.service.publish.PublishService.PACKAGE_TITLE_MAX_LENGTH;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
@@ -34,9 +31,6 @@ import jakarta.validation.constraints.Size;
  */
 public class DeleteRequestBody {
 
-	@NotBlank
-	@EsapiValidatedParam(type = SITE_ID)
-	private String siteId;
 	@NotEmpty
 	private Set<@NotEmpty @ValidExistingContentPath @ValidateSecurePathParam String> items;
 
@@ -46,14 +40,6 @@ public class DeleteRequestBody {
 	private String title;
 	@Size(max = PACKAGE_COMMENT_MAX_LENGTH)
 	private String comment;
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
-	}
 
 	public Set<String> getItems() {
 		return items;

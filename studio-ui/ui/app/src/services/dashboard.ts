@@ -43,8 +43,8 @@ interface FetchActivityOptions extends PaginationOptions {
 }
 
 export function fetchActivity(siteId: string, options?: FetchActivityOptions): Observable<PagedArray<Activity>> {
-	const qs = toQueryString({ siteId, ...options }, { arrayFormat: 'comma' });
-	return get(`/studio/api/2/dashboard/activity${qs}`).pipe(
+	const qs = toQueryString(options, { arrayFormat: 'comma' });
+	return get(`/studio/api/2/dashboard/${siteId}/activity${qs}`).pipe(
 		map(({ response: { activities, total, offset, limit } }) =>
 			Object.assign(activities, {
 				total,
@@ -58,8 +58,8 @@ export function fetchActivity(siteId: string, options?: FetchActivityOptions): O
 interface FetchMyActivityOptions extends Omit<FetchActivityOptions, 'usernames'> {}
 
 export function fetchMyActivity(siteId: string, options?: FetchMyActivityOptions): Observable<PagedArray<Activity>> {
-	const qs = toQueryString({ siteId, ...options });
-	return get(`/studio/api/2/dashboard/activity/me${qs}`).pipe(
+	const qs = toQueryString(options);
+	return get(`/studio/api/2/dashboard/${siteId}/activity/me${qs}`).pipe(
 		map(({ response: { activities, total, offset, limit } }) =>
 			Object.assign(activities, {
 				total,
@@ -101,8 +101,8 @@ export function fetchUnpublished(
 	siteId: string,
 	options: FetchUnpublishedOptions
 ): Observable<PagedArray<ContentItem>> {
-	const qs = toQueryString({ siteId, ...parseDashletOptions(options) });
-	return get(`/studio/api/2/dashboard/content/unpublished${qs}`).pipe(
+	const qs = toQueryString(parseDashletOptions(options));
+	return get(`/studio/api/2/dashboard/${siteId}/content/unpublished${qs}`).pipe(
 		map(({ response }) =>
 			createPagedArray(
 				response.unpublishedItems.map((item) => prepareVirtualItemProps(item)),
@@ -175,8 +175,8 @@ export interface ExpiredItem {
 }
 
 export function fetchExpired(siteId: string, options?: PaginationOptions): Observable<ExpiredItem[]> {
-	const qs = toQueryString({ siteId, ...options });
-	return get(`/studio/api/2/dashboard/content/expired${qs}`).pipe(
+	const qs = toQueryString(options);
+	return get(`/studio/api/2/dashboard/${siteId}/content/expired${qs}`).pipe(
 		map((response) =>
 			response?.response?.items.map((item) => ({
 				...item,
@@ -192,8 +192,8 @@ interface FetchExpiringOptions extends PaginationOptions {
 }
 
 export function fetchExpiring(siteId: string, options: FetchExpiringOptions): Observable<ExpiredItem[]> {
-	const qs = toQueryString({ siteId, ...options });
-	return get(`/studio/api/2/dashboard/content/expiring${qs}`).pipe(
+	const qs = toQueryString(options);
+	return get(`/studio/api/2/dashboard/${siteId}/content/expiring${qs}`).pipe(
 		map((response) =>
 			response?.response?.items.map((item) => ({
 				...item,
@@ -204,8 +204,8 @@ export function fetchExpiring(siteId: string, options: FetchExpiringOptions): Ob
 }
 
 export function fetchPublishingStats(siteId: string, days: number): Observable<PublishingStats> {
-	const qs = toQueryString({ siteId, days });
-	return get(`/studio/api/2/dashboard/publishing/stats${qs}`).pipe(
+	const qs = toQueryString({ days });
+	return get(`/studio/api/2/dashboard/${siteId}/publishing/stats${qs}`).pipe(
 		map((response) => response?.response?.publishingStats)
 	);
 }

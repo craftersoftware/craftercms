@@ -36,12 +36,13 @@ export function fetchConfigurationXML(
 	environment?: string
 ): Observable<string> {
 	const qs = toQueryString({
-		siteId: site,
 		module,
 		path: configPath,
 		environment
 	});
-	return get(`/studio/api/2/configuration/get_configuration${qs}`).pipe(map((response) => response?.response?.content));
+	return get(`/studio/api/2/configuration/${site}/get_configuration${qs}`).pipe(
+		map((response) => response?.response?.content)
+	);
 }
 
 export function fetchConfigurationDOM(
@@ -91,8 +92,7 @@ export function writeConfiguration(
 	content: string,
 	environment?: string
 ): Observable<boolean> {
-	return postJSON('/studio/api/2/configuration/write_configuration', {
-		siteId: site,
+	return postJSON(`/studio/api/2/configuration/${site}/write_configuration`, {
 		module,
 		path: partialPath,
 		content,
@@ -208,7 +208,7 @@ export function fetchHistory(
 	const parsedPath = encodeURIComponent(path.replace(/(\/config\/)(studio|engine)/g, ''));
 
 	return get(
-		`/studio/api/2/configuration/get_configuration_history.json?siteId=${site}&path=${parsedPath}&environment=${environment}&module=${module}`
+		`/studio/api/2/configuration/${site}/get_configuration_history.json?path=${parsedPath}&environment=${environment}&module=${module}`
 	).pipe(map((response) => response?.response.history.versions));
 }
 

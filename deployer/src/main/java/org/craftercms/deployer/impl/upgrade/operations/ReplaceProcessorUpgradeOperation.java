@@ -42,6 +42,7 @@ public class ReplaceProcessorUpgradeOperation extends AbstractProcessorUpgradeOp
 	protected String newProcessorName;
 
 	protected List<String> deleteProperties;
+	protected Map<String, String> properties;
 
 	@Override
 	@SuppressWarnings("rawtypes,unchecked")
@@ -59,6 +60,18 @@ public class ReplaceProcessorUpgradeOperation extends AbstractProcessorUpgradeOp
 		newProcessorName = getRequiredStringProperty(config, CONFIG_KEY_NEW_PROCESSOR);
 
 		deleteProperties = config.getList(String.class, CONFIG_KEY_DELETE_PROPERTIES, Collections.emptyList());
+
+		properties = new HashMap<>();
+		if (config.containsKey(CONFIG_KEY_PROPERTIES)) {
+			HierarchicalConfiguration propertyConfig = config.configurationAt(CONFIG_KEY_PROPERTIES);
+			if (propertyConfig != null) {
+				Iterator<String> it = propertyConfig.getKeys();
+				while (it.hasNext()) {
+					String key = it.next();
+					properties.put(key, propertyConfig.getString(key));
+				}
+			}
+		}
 	}
 
 	protected boolean matchesAllConditions(Map<String, Object> processorObj) {
@@ -81,6 +94,7 @@ public class ReplaceProcessorUpgradeOperation extends AbstractProcessorUpgradeOp
 		for (Map<String, Object> processorObj : pipelineObj) {
 			if (matchesAllConditions(processorObj)) {
 				processorObj.put(PROCESSOR_NAME_CONFIG_KEY, newProcessorName);
+				properties.forEach(processorObj::put);
 				deleteProperties.forEach(processorObj::remove);
 			}
 		}

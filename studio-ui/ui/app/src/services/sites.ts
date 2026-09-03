@@ -140,7 +140,7 @@ export function fetchSite(siteId: string): Observable<DetailedSite> {
 }
 
 export function hasInitialPublish(siteId: string): Observable<boolean> {
-	return get<FetchPublishingTargetsResponse>(`/studio/api/2/publish/available_targets?siteId=${siteId}`).pipe(
+	return get<FetchPublishingTargetsResponse>(`/studio/api/2/publish/${siteId}/available_targets`).pipe(
 		map((response) => response?.response?.published)
 	);
 }

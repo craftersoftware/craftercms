@@ -76,8 +76,8 @@ export function fetchDescriptorXML(
 	path: string,
 	options?: Partial<GetDescriptorOptions>
 ): Observable<string> {
-	const qs = toQueryString({ siteId: site, path, flatten: true, ...options });
-	return get(`/studio/api/2/content/descriptor${qs}`).pipe(pluck('response', 'xml'));
+	const qs = toQueryString({ path, flatten: true, ...options });
+	return get(`/studio/api/2/content/${site}/descriptor${qs}`).pipe(pluck('response', 'xml'));
 }
 
 export function fetchDescriptorDOM(
@@ -94,8 +94,8 @@ export function fetchContentItem(
 	options?: { preferContent: boolean }
 ): Observable<ContentItem> {
 	const { preferContent } = { preferContent: true, ...options };
-	const qs = toQueryString({ siteId, path, preferContent });
-	return get(`/studio/api/2/content/item_by_path${qs}`).pipe(
+	const qs = toQueryString({ path, preferContent });
+	return get(`/studio/api/2/content/${siteId}/item_by_path${qs}`).pipe(
 		map(({ response }) => prepareVirtualItemProps(response?.item))
 	);
 }
@@ -803,7 +803,7 @@ export function fetchItemsByContentType(
 		contentTypes = [contentTypes];
 	}
 
-	return postJSON(`/studio/api/2/search/search.json?siteId=${site}`, {
+	return postJSON(`/studio/api/2/search/${site}/search.json`, {
 		...options,
 		filters: { 'content-type': contentTypes }
 	}).pipe(
@@ -1025,7 +1025,7 @@ export function createFileUpload(
 	uploadUrl: string,
 	file: any,
 	path: string,
-	uploadMeta: (Record<string, unknown> & { site: string }) | (Record<string, unknown> & { siteId: string }),
+	uploadMeta: (Record<string, unknown> & { site: string }) | Record<string, unknown>,
 	xsrfArgumentName: string = '_csrf'
 ): Observable<StandardAction> {
 	const blob = file.blob ?? dataUriToBlob(file.dataUrl);
@@ -1154,13 +1154,12 @@ export function uploadToS3(
 	xsrfArgumentName: string
 ): Observable<StandardAction> {
 	return createFileUpload(
-		'/studio/api/2/aws/s3/upload.json',
+		`/studio/api/2/aws/${site}/s3/upload.json`,
 		file,
 		path,
 		{
 			name: file.name,
 			type: file.type,
-			siteId: site,
 			path,
 			profileId: profileId
 		},
@@ -1176,13 +1175,12 @@ export function uploadToWebDAV(
 	xsrfArgumentName: string
 ): Observable<StandardAction> {
 	return createFileUpload(
-		'/studio/api/2/webdav/upload',
+		`/studio/api/2/webdav/${site}/upload`,
 		file,
 		path,
 		{
 			name: file.name,
 			type: file.type,
-			siteId: site,
 			path,
 			profileId: profileId
 		},
@@ -1196,15 +1194,11 @@ export function getBulkUploadUrl(site: string, path: string): string {
 }
 
 export function fetchQuickCreateList(site: string): Observable<QuickCreateItem[]> {
-	return get(`/studio/api/2/content/list_quick_create_content.json${toQueryString({ siteId: site })}`).pipe(
-		pluck('response', 'items')
-	);
+	return get(`/studio/api/2/content/${site}/list_quick_create_content.json`).pipe(pluck('response', 'items'));
 }
 
 export function fetchItemHistory(site: string, path: string): Observable<ItemHistoryEntry[]> {
-	return get(`/studio/api/2/content/item_history${toQueryString({ siteId: site, path })}`).pipe(
-		pluck('response', 'items')
-	);
+	return get(`/studio/api/2/content/${site}/item_history${toQueryString({ path })}`).pipe(pluck('response', 'items'));
 }
 
 export function revertTo(site: string, path: string, commitId: string): Observable<AjaxResponse<ApiResponse>> {
@@ -1304,7 +1298,7 @@ export function fetchContentItems(
 		return of([] as FetchItemsByPathArray<ContentItem>);
 	}
 	const { preferContent = true } = options ?? {};
-	return postJSON('/studio/api/2/content/sandbox_items_by_path', { siteId, paths, preferContent }).pipe(
+	return postJSON(`/studio/api/2/content/${siteId}/sandbox_items_by_path`, { paths, preferContent }).pipe(
 		pluck('response'),
 		map(({ items, missingItems }) =>
 			Object.assign(items.map((item) => prepareVirtualItemProps(item)) as ContentItem[], {
@@ -1372,8 +1366,7 @@ export function paste(siteId: string, targetPath: string, clipboard: Clipboard):
 }
 
 export function duplicate(siteId: string, path: string): Observable<any> {
-	return postJSON('/studio/api/2/content/duplicate', {
-		siteId,
+	return postJSON(`/studio/api/2/content/${siteId}/duplicate`, {
 		path
 	}).pipe(pluck('response'));
 }
@@ -1385,8 +1378,7 @@ export function deleteItems(
 	comment: string,
 	optionalDependencies?: string[]
 ): Observable<boolean> {
-	return postJSON('/studio/api/2/content/delete', {
-		siteId,
+	return postJSON(`/studio/api/2/content/${siteId}/delete`, {
 		items,
 		optionalDependencies,
 		title,
@@ -1395,11 +1387,11 @@ export function deleteItems(
 }
 
 export function lock(siteId: string, path: string): Observable<boolean> {
-	return postJSON('/studio/api/2/content/item_lock_by_path', { siteId, path }).pipe(map(() => true));
+	return postJSON(`/studio/api/2/content/${siteId}/item_lock_by_path`, { path }).pipe(map(() => true));
 }
 
 export function unlock(siteId: string, path: string): Observable<boolean> {
-	return postJSON('/studio/api/2/content/item_unlock_by_path', { siteId, path }).pipe(
+	return postJSON(`/studio/api/2/content/${siteId}/item_unlock_by_path`, { path }).pipe(
 		map(() => true),
 		// Do not throw/report 409 (item is already unlocked) as an error.
 		catchError((error) => {
@@ -1428,18 +1420,18 @@ export function renameFolder(site: string, path: string, name: string) {
 }
 
 export function renameContent(siteId: string, path: string, name: string) {
-	return postJSON(`/studio/api/2/content/rename`, { siteId, path, name }).pipe(pluck('response'));
+	return postJSON(`/studio/api/2/content/${siteId}/rename`, { path, name }).pipe(pluck('response'));
 }
 
 export function checkPathExistence(siteId: string, path: string): Observable<boolean> {
-	return get(`/studio/api/2/content/exists${toQueryString({ siteId, path })}`).pipe(
+	return get(`/studio/api/2/content/${siteId}/exists${toQueryString({ path })}`).pipe(
 		map(({ response }) => response.exists)
 	);
 }
 
 export function fetchContentByCommitId(site: string, path: string, commitId: string): Observable<string | Blob> {
 	return getBinary(
-		`/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId })}`,
+		`/studio/api/2/content/${site}/get_content_by_commit_id${toQueryString({ path, commitId })}`,
 		void 0,
 		'blob'
 	).pipe(

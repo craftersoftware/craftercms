@@ -20,5 +20,5 @@ target:
       - processorName: httpMethodCallProcessor
         includeFiles: [ "^/?config/studio/scripts/classes/.*$" ]
         method: GET
-        url: ${target.studioUrl}/api/2/plugin/script/reload.json?siteId=${target.siteName}&token=${target.studioManagementToken}
+        url: ${target.studioUrl}/api/2/plugin/${target.siteName}/script/reload.json?token=${target.studioManagementToken}
       - processorName: fileOutputProcessor

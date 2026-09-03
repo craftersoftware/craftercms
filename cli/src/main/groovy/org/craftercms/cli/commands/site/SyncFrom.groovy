@@ -27,7 +27,6 @@ class SyncFrom extends AbstractSyncCommand {
 
 	def run(client) {
 		def params = [
-			siteId      : siteOptions.siteId,
 			remoteName  : remoteOptions.remoteName,
 			remoteBranch: remoteOptions.remoteBranch
 		]
@@ -35,7 +34,7 @@ class SyncFrom extends AbstractSyncCommand {
 			params.mergeStrategy = mergeStrategy
 		}
 
-		def path = '/studio/api/2/repository/pull_from_remote.json'
+		def path = "/studio/api/2/repository/${siteOptions.siteId}/pull_from_remote.json"
 		def result = client.post(path, params)
 		if (result) {
 			println result.response.message

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -54,8 +54,8 @@ public class SearchController {
 		this.searchService = searchService;
 	}
 
-	@PostMapping(value = "/search", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<SearchResult> search(@ValidSiteId @RequestParam String siteId, @Valid @RequestBody SearchParams params)
+	@PostMapping(value = "/{siteId}/search", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public ResultOne<SearchResult> search(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody SearchParams params)
 		throws AuthenticationException, ServiceLayerException {
 		SearchResult searchResult = searchService.search(siteId, params);
 

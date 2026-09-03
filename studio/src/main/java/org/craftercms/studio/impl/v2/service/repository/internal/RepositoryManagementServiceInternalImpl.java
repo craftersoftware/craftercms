@@ -228,7 +228,6 @@ public class RepositoryManagementServiceInternalImpl implements RepositoryManage
 		// TODO: SJ: Avoid using string literals
 		logger.debug("Insert the remote repository '{}' from site '{}' into the database",
 			remoteRepository.getRemoteName(), siteId);
-		remoteRepository.setSiteId(siteId);
 		if (isNotEmpty(remoteRepository.getRemotePassword())) {
 			logger.trace("Encrypt the password before inserting into the database for site '{}'", siteId);
 			String hashedPassword = encryptor.encrypt(remoteRepository.getRemotePassword());
@@ -246,7 +245,7 @@ public class RepositoryManagementServiceInternalImpl implements RepositoryManage
 		}
 
 		logger.debug("Insert the site remote record into database for site '{}'", siteId);
-		retryingDatabaseOperationFacade.retry(() -> remoteRepositoryDao.insertRemoteRepository(remoteRepository));
+		retryingDatabaseOperationFacade.retry(() -> remoteRepositoryDao.insertRemoteRepository(siteId, remoteRepository));
 	}
 
 	@Override

@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+# Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as published by
@@ -97,7 +97,7 @@ pipelines:
                                 value: ${target.engineUrl}/api/1/site/context/rebuild.json?crafterSite=${target.siteName}&token=${target.engineManagementToken}
                             -   property: jumpTo
                                 value: fileOutputProcessor
-            
+
             # Upgrade entrypoint
             -   currentVersion: 2.6
                 nextVersion: 4.1.3-t
@@ -114,3 +114,13 @@ pipelines:
                     -   type: replaceProcessorUpgrader
                         processor: authoringElasticsearchIndexingProcessor
                         newProcessor: authoringSearchIndexingProcessor
+            -   currentVersion: 4.1.3.0
+                nextVersion: 5.0.0.0
+                operations:
+                    -   type: replaceProcessorUpgrader
+                        processor: httpMethodCallProcessor
+                        newProcessor: httpMethodCallProcessor
+                        conditions:
+                            -   url: '.*/api/2/plugin/script/reload.json.*'
+                        properties:
+                            -   url: ${target.studioUrl}/api/2/plugin/${target.siteName}/script/reload.json?token=${target.studioManagementToken}

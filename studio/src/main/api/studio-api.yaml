@@ -849,7 +849,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/users/{id}/sites/{site}/roles:
+    /api/2/users/{id}/sites/{siteId}/roles:
         get:
             tags:
                 - users
@@ -865,7 +865,7 @@ paths:
                     required: true
                     schema:
                         type: string
-                -   name: site
+                -   name: siteId
                     in: path
                     description: The site ID
                     required: true
@@ -1076,7 +1076,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/users/me/sites/{site}/roles:
+    /api/2/users/me/sites/{siteId}/roles:
         get:
             tags:
                 - users
@@ -1086,7 +1086,7 @@ paths:
                     Required Permission: "LOGGED_IN"
             operationId: getCurrentUserSiteRoles
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: The site ID
                     required: true
@@ -1111,7 +1111,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/users/me/sites/{site}/permissions:
+    /api/2/users/me/sites/{siteId}/permissions:
         get:
             tags:
                 - users
@@ -1121,7 +1121,7 @@ paths:
                     Required Permission: "LOGGED_IN"
             operationId: getCurrentUserSitePermissions
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: The site ID
                     required: true
@@ -1148,7 +1148,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/users/me/sites/{site}/has_permissions:
+    /api/2/users/me/sites/{siteId}/has_permissions:
         post:
             tags:
                 - users
@@ -1158,7 +1158,7 @@ paths:
                     Required Permission: "LOGGED_IN"
             operationId: hasCurrentUserSitePermissions
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: The site ID
                     required: true
@@ -1577,7 +1577,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/aws/s3/list:
+    /api/2/aws/{siteId}/s3/list:
         get:
             tags:
                 - aws
@@ -1588,7 +1588,7 @@ paths:
                     Required Permission: "s3_read"
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The site ID
                     required: true
                     schema:
@@ -1638,12 +1638,19 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/aws/s3/upload:
+    /api/2/aws/{siteId}/s3/upload:
         post:
             tags:
                 - aws
             summary: Upload a file to an S3 bucket
             operationId: uploadItem
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             description: |
                     Module: Studio <br>
                     Required Permission: "s3_write"
@@ -1654,9 +1661,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The site ID
                                 profileId:
                                     type: string
                                     description: The profile ID
@@ -1671,7 +1675,6 @@ paths:
                                     format: binary
                                     description: The content of the file to upload
                             required:
-                                - siteId
                                 - profileId
                                 - filename
                                 - file
@@ -1694,12 +1697,19 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/aws/mediaconvert/upload:
+    /api/2/aws/{siteId}/mediaconvert/upload:
         post:
             tags:
                 - aws
             summary: Upload a file to an S3 bucket and trigger a MediaConvert job
             operationId: uploadVideo
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             description: |
                     Module: Studio <br>
                     Required Permission: "s3_write"
@@ -1710,9 +1720,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The site ID
                                 inputProfileId:
                                     type: string
                                     description: The MediaConvert profile ID
@@ -1724,7 +1731,6 @@ paths:
                                     format: binary
                                     description: The content of the file to upload
                             required:
-                                - siteId
                                 - inputProfileId
                                 - outputProfileId
                                 - file
@@ -1749,7 +1755,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/webdav/list:
+    /api/2/webdav/{siteId}/list:
         get:
             tags:
                 - webdav
@@ -1760,7 +1766,7 @@ paths:
             operationId: listItemsWebdav
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The site ID
                     required: true
                     schema:
@@ -1804,7 +1810,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/webdav/upload:
+    /api/2/webdav/{siteId}/upload:
         post:
             tags:
                 - webdav
@@ -1813,6 +1819,13 @@ paths:
                     Module: Studio <br>
                     Required Permission: "webdav_write"
             operationId: uploadItemWebdav
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -1820,9 +1833,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The site ID
                                 profileId:
                                     type: string
                                     description: The profile ID
@@ -1834,7 +1844,6 @@ paths:
                                     format: binary
                                     description: The content of the file to upload
                             required:
-                                - siteId
                                 - profileId
                                 - file
             responses:
@@ -2408,7 +2417,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/search/search:
+    /api/2/search/{siteId}/search:
         post:
             tags:
                 - search
@@ -2417,7 +2426,7 @@ paths:
             operationId: search
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The site ID
                     required: true
                     schema:
@@ -2822,7 +2831,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/add_remote:
+    /api/2/repository/{siteId}/add_remote:
         post:
             tags:
                 - repository
@@ -2831,6 +2840,13 @@ paths:
                     Module: Studio <br>
                     Required permission "add_remote"
             operationId: addRemoteRepository
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: Remote repository entity
                 required: true
@@ -2859,7 +2875,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/pull_from_remote:
+    /api/2/repository/{siteId}/pull_from_remote:
         post:
             tags:
                 - repository
@@ -2868,6 +2884,13 @@ paths:
                     Module: Studio <br>
                     Required permission "pull_from_remote"
             operationId: pullFromRemoteRepository
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: pull from remote repository request body
                 required: true
@@ -2876,9 +2899,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: Site ID
                                 remoteName:
                                     type: string
                                     description: Remote repository name to pull from
@@ -2890,7 +2910,6 @@ paths:
                                     format: theirs, ours, none
                                     description: Merge strategy to use when pulling content from remote repository
                             required:
-                                - siteId
                                 - remoteName
                                 - remoteBranch
             responses:
@@ -2927,7 +2946,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/push_to_remote:
+    /api/2/repository/{siteId}/push_to_remote:
         post:
             tags:
                 - repository
@@ -2936,6 +2955,13 @@ paths:
                     Module: Studio <br>
                     Required permission "push_to_remote"
             operationId: pushToRemoteRepository
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: push to remote repository request body
                 required: true
@@ -2944,9 +2970,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: Site ID
                                 remoteName:
                                     type: string
                                     description: Remote repository name to push to
@@ -2957,7 +2980,6 @@ paths:
                                     type: boolean
                                     description: Indicates whether to force push to remote or not
                             required:
-                                - siteId
                                 - remoteName
                                 - remoteBranch
             responses:
@@ -2981,7 +3003,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/remove_remote:
+    /api/2/repository/{siteId}/remove_remote:
         post:
             tags:
                 - repository
@@ -2990,6 +3012,13 @@ paths:
                     Module: Studio <br>
                     Required permission "remove_remote"
             operationId: removeRemoteRepository
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: remove remote repository request body
                 required: true
@@ -2998,14 +3027,10 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: Site ID
                                 remoteName:
                                     type: string
                                     description: Remote repository name of remote to be removed
                             required:
-                                - siteId
                                 - remoteName
             responses:
                 '200':
@@ -3026,7 +3051,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/list_remotes:
+    /api/2/repository/{siteId}/list_remotes:
         get:
             tags:
                 - repository
@@ -3037,7 +3062,7 @@ paths:
             operationId: listRemoteRepositories
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3065,7 +3090,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/status:
+    /api/2/repository/{siteId}/status:
         get:
             tags:
                 - repository
@@ -3076,7 +3101,7 @@ paths:
             operationId: repositoryStatus
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3102,7 +3127,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/resolve_conflict:
+    /api/2/repository/{siteId}/resolve_conflict:
         post:
             tags:
                 - repository
@@ -3111,6 +3136,13 @@ paths:
                     Module: Studio <br>
                     Required permission "resolve_conflict"
             operationId: resolveConflict
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: resolve conflict request body
                 required: true
@@ -3119,9 +3151,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site ID
                                 path:
                                     type: string
                                     description: Conflicted file path
@@ -3129,7 +3158,6 @@ paths:
                                     type: string
                                     description: resolution mechanism to use (ours, theirs)
                             required:
-                                - siteId
                                 - path
                                 - resolution
             responses:
@@ -3153,7 +3181,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/diff_conflicted_file:
+    /api/2/repository/{siteId}/diff_conflicted_file:
         get:
             tags:
                 - repository
@@ -3164,7 +3192,7 @@ paths:
             operationId: diffConflictedFile
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3207,7 +3235,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/commit_resolution:
+    /api/2/repository/{siteId}/commit_resolution:
         post:
             tags:
                 - repository
@@ -3216,6 +3244,13 @@ paths:
                     Module: Studio <br>
                     Required permission "commit_resolution"
             operationId: commitResolution
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: Commit resolution request body
                 required: true
@@ -3224,14 +3259,10 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site ID
                                 commitMessage:
                                     type: string
                                     description: Commit message
                             required:
-                                - siteId
                                 - commitMessage
             responses:
                 '200':
@@ -3254,7 +3285,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/repository/cancel_failed_pull:
+    /api/2/repository/{siteId}/cancel_failed_pull:
         post:
             tags:
                 - repository
@@ -3263,19 +3294,13 @@ paths:
                     Module: Studio <br>
                     Required permission "cancel_failed_pull"
             operationId: cancelFailedPull
-            requestBody:
-                description: cancel failed pull request body
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                siteId:
-                                    type: string
-                                    description: site ID
-                            required:
-                                - siteId
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             responses:
                 '200':
                     description: OK
@@ -3470,7 +3495,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/configuration/get_configuration:
+    /api/2/configuration/{siteId}/get_configuration:
         get:
             tags:
                 - configuration
@@ -3481,7 +3506,7 @@ paths:
             operationId: getConfiguration
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3528,7 +3553,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/configuration/write_configuration:
+    /api/2/configuration/{siteId}/write_configuration:
         post:
             tags:
                 - configuration
@@ -3537,6 +3562,13 @@ paths:
                     Module: Studio <br>
                     Required permission "write_configuration"
             operationId: writeConfiguration
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: write configuration request body
                 required: true
@@ -3545,9 +3577,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site ID
                                 module:
                                     type: string
                                     description: Module name (e.g. studio, engine)
@@ -3561,7 +3590,6 @@ paths:
                                     type: string
                                     description: configuration file content
                             required:
-                                - siteId
                                 - module
                                 - path
                                 - content
@@ -3586,7 +3614,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/configuration/clear_cache:
+    /api/2/configuration/{siteId}/clear_cache:
         get:
             tags:
                 - configuration
@@ -3597,7 +3625,7 @@ paths:
             operationId: clearConfigurationCache
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3614,7 +3642,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/configuration/get_configuration_history:
+    /api/2/configuration/{siteId}/get_configuration_history:
         get:
             tags:
                 - configuration
@@ -3625,7 +3653,7 @@ paths:
             operationId: getConfigurationHistory
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -3682,7 +3710,7 @@ paths:
     #     operationId: getTranslationConfig
     #     parameters:
     #       - name: siteId
-    #         in: query
+    #         in: path
     #         description: site ID
     #         required: true
     #         schema:
@@ -4000,7 +4028,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/plugin/file:
+    /api/2/plugin/{siteId}/file:
         # Override the server to change the prefix
         servers:
             -   url: http://localhost:8080/studio/1
@@ -4014,7 +4042,7 @@ paths:
             operationId: getPluginFile
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The site ID
                     required: true
                     schema:
@@ -4072,7 +4100,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/plugin/get_configuration:
+    /api/2/plugin/{siteId}/get_configuration:
         get:
             tags:
                 - plugin
@@ -4083,7 +4111,7 @@ paths:
             operationId: getPluginConfiguration
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The id of the site
                     required: true
                     schema:
@@ -4116,7 +4144,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/plugin/write_configuration:
+    /api/2/plugin/{siteId}/write_configuration:
         post:
             tags:
                 - plugin
@@ -4125,6 +4153,13 @@ paths:
                     Module: Studio <br>
                     Required permission "write_configuration" and "site member"
             operationId: writePluginConfiguration
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: write configuration request body
                 required: true
@@ -4133,9 +4168,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The id of the site
                                 pluginId:
                                     type: string
                                     description: The id of the plugin
@@ -4143,7 +4175,6 @@ paths:
                                     type: string
                                     description: configuration file content
                             required:
-                                - siteId
                                 - pluginId
                                 - content
             responses:
@@ -4165,7 +4196,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/plugin/script/reload:
+    /api/2/plugin/{siteId}/script/reload:
         get:
             tags:
                 - plugin
@@ -4174,7 +4205,7 @@ paths:
             operationId: reloadClasses
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -4204,7 +4235,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/list_quick_create_content:
+    /api/2/content/{siteId}/list_quick_create_content:
         get:
             tags:
                 - content
@@ -4215,7 +4246,7 @@ paths:
             operationId: quickCreateContent
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: Site ID
                     required: true
                     schema:
@@ -4243,7 +4274,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/get_delete_package:
+    /api/2/content/{siteId}/get_delete_package:
         post:
             tags:
                 - content
@@ -4252,22 +4283,25 @@ paths:
                     Module: Studio <br>
                     Required permission "content_read"
             operationId: getDeletePackage
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 content:
                     application/json:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    description: Site ID
-                                    type: string
                                 paths:
                                     description: Content paths to get a delete package for
                                     type: array
                                     items:
                                         type: string
                             required:
-                                - siteId
                                 - paths
             responses:
                 '200':
@@ -4299,7 +4333,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/delete:
+    /api/2/content/{siteId}/delete:
         post:
             tags:
                 - content
@@ -4308,6 +4342,13 @@ paths:
                     Module: Studio <br>
                     Required permission "content_delete"
             operationId: contentDelete
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: parameters for delete content
                 required: true
@@ -4316,9 +4357,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site identifier
                                 items:
                                     type: array
                                     description: path(s) of content item(s)
@@ -4332,7 +4370,6 @@ paths:
                                     type: string
                                     description: deletion comment by the user performing the delete
                             required:
-                                - siteId
                                 - items
             responses:
                 '200':
@@ -4357,7 +4394,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/rename:
+    /api/2/content/{siteId}/rename:
         post:
             tags:
                 - content
@@ -4366,6 +4403,13 @@ paths:
                     Module: Studio <br>
                     Required permission "content_write"
             operationId: contentRename
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: parameters for rename content
                 required: true
@@ -4374,9 +4418,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site identifier
                                 path:
                                     type: string
                                     description: full path to the item to rename
@@ -4384,7 +4425,6 @@ paths:
                                     type: string
                                     description: new item name (just the name, no path)
                             required:
-                                - siteId
                                 - path
                                 - name
             responses:
@@ -4870,7 +4910,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/exists:
+    /api/2/content/{siteId}/exists:
         get:
             tags:
                 - content
@@ -4881,7 +4921,7 @@ paths:
             operationId: contentExists
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -4915,7 +4955,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/item_by_path:
+    /api/2/content/{siteId}/item_by_path:
         get:
             tags:
                 - content
@@ -4926,7 +4966,7 @@ paths:
             operationId: getDetailedItemByPath
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -4966,7 +5006,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/sandbox_items_by_path:
+    /api/2/content/{siteId}/sandbox_items_by_path:
         post:
             tags:
                 - content
@@ -4975,6 +5015,13 @@ paths:
                     Module: Studio <br>
                     Required permission "get_children" and "site member"
             operationId: getContentItemsByPath
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -4982,9 +5029,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    description: Site ID
-                                    type: string
                                 paths:
                                     description: item paths to get
                                     type: array
@@ -4994,7 +5038,6 @@ paths:
                                     description: when set to true, return an item instead of a folder if the path can match either
                                     type: boolean
                             required:
-                                - siteId
                                 - paths
             responses:
                 '200':
@@ -5025,7 +5068,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/descriptor:
+    /api/2/content/{siteId}/descriptor:
         get:
             tags:
                 - content
@@ -5034,7 +5077,7 @@ paths:
             operationId: getDescriptor
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: The site ID
                     required: true
                     schema:
@@ -5125,7 +5168,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/duplicate:
+    /api/2/content/{siteId}/duplicate:
         post:
             tags:
                 - content
@@ -5134,6 +5177,13 @@ paths:
                     Module: Studio <br>
                     Required permission "Write"
             operationId: duplicateItem
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5141,14 +5191,10 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The id of the site
                                 path:
                                     type: string
                                     description: The path of the item to duplicate
                             required:
-                                - siteId
                                 - path
             responses:
                 '200':
@@ -5174,7 +5220,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/item_lock_by_path:
+    /api/2/content/{siteId}/item_lock_by_path:
         post:
             tags:
                 - content
@@ -5183,6 +5229,13 @@ paths:
                     Module: Studio <br>
                     Required permission "content_write"
             operationId: itemLockByPath
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5190,14 +5243,10 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The id of the site
                                 path:
                                     type: string
                                     description: Path of item to lock
                             required:
-                                - siteId
                                 - path
             responses:
                 '200':
@@ -5225,7 +5274,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/item_unlock_by_path:
+    /api/2/content/{siteId}/item_unlock_by_path:
         post:
             tags:
                 - content
@@ -5234,6 +5283,13 @@ paths:
                     Module: Studio <br>
                     Required permission "item_unlock" or lock owner
             operationId: itemUnlockByPath
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5241,14 +5297,10 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: The id of the site
                                 path:
                                     type: string
                                     description: The path of the item to unlock
                             required:
-                                - siteId
                                 - path
             responses:
                 '200':
@@ -5274,7 +5326,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/get_content_by_commit_id:
+    /api/2/content/{siteId}/get_content_by_commit_id:
         get:
             tags:
                 - content
@@ -5285,7 +5337,7 @@ paths:
             operationId: getContentByCommitId
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -5326,7 +5378,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/content/item_history:
+    /api/2/content/{siteId}/item_history:
         get:
             tags:
                 - content
@@ -5337,7 +5389,7 @@ paths:
             operationId: getItemHistory
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -5790,7 +5842,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/marketplace/installed:
+    /api/2/marketplace/{siteId}/installed:
         get:
             tags:
                 - marketplace
@@ -5801,7 +5853,7 @@ paths:
             operationId: getInstalledPlugins
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -5829,7 +5881,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/marketplace/install:
+    /api/2/marketplace/{siteId}/install:
         post:
             tags:
                 - marketplace
@@ -5838,6 +5890,13 @@ paths:
                     Module: Studio <br>
                     Required permission "install_plugins"
             operationId: installPlugin
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5845,9 +5904,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    description: The id of the site
-                                    type: string
                                 pluginId:
                                     description: The id of the plugin
                                     type: string
@@ -5859,7 +5915,6 @@ paths:
                                     additionalProperties:
                                         type: string
                             required:
-                                - siteId
                                 - pluginId
                                 - pluginVersion
             responses:
@@ -5883,7 +5938,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/marketplace/copy:
+    /api/2/marketplace/{siteId}/copy:
         post:
             tags:
                 - marketplace
@@ -5892,6 +5947,13 @@ paths:
                     Module: Studio <br>
                     Required permission "install_plugins"
             operationId: copyPlugin
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5899,9 +5961,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    description: The id of the site
-                                    type: string
                                 path:
                                     description: The path of the local plugin source folder
                                     type: string
@@ -5911,7 +5970,6 @@ paths:
                                     additionalProperties:
                                         type: string
                             required:
-                                - siteId
                                 - path
             responses:
                 '200':
@@ -5932,7 +5990,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/marketplace/remove:
+    /api/2/marketplace/{siteId}/remove:
         post:
             tags:
                 - marketplace
@@ -5941,6 +5999,13 @@ paths:
                     Module: Studio <br>
                     Required permission "remove_plugins"
             operationId: removePlugin
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 required: true
                 content:
@@ -5948,16 +6013,12 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    description: The id of the site
-                                    type: string
                                 pluginId:
                                     description: The id of the plugin
                                     type: string
                                 force:
                                     description: Indicates if the plugin should be removed even if there are dependant items
                             required:
-                                - siteId
                                 - pluginId
             responses:
                 '200':
@@ -5982,7 +6043,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/marketplace/usage:
+    /api/2/marketplace/{siteId}/usage:
         get:
             tags:
                 - marketplace
@@ -5993,11 +6054,11 @@ paths:
             operationId: pluginUsage
             parameters:
                 -   name: siteId
-                    description: The id of the site
+                    in: path
+                    description: Site ID
+                    required: true
                     schema:
                         type: string
-                    required: true
-                    in: query
                 -   name: pluginId
                     description: The id of the plugin
                     schema:
@@ -6622,7 +6683,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/publish/available_targets:
+    /api/2/publish/{siteId}/available_targets:
         get:
             tags:
                 - publishing
@@ -6633,7 +6694,7 @@ paths:
             operationId: getAvailablePublishingTargets
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -6672,7 +6733,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/publish/has_initial_publish:
+    /api/2/publish/{siteId}/has_initial_publish:
         get:
             tags:
                 - publishing
@@ -6683,7 +6744,7 @@ paths:
             operationId: hasInitialPublish
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -6737,8 +6798,7 @@ paths:
                                     type: boolean
                                     description: true to enable, false to disable
                             required:
-                                - siteId
-                                - enabled
+                                - enable
             responses:
                 '200':
                     description: OK
@@ -6969,7 +7029,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/activity:
+    /api/2/dashboard/{siteId}/activity:
         get:
             tags:
                 - dashboard
@@ -6980,7 +7040,7 @@ paths:
             operationId: getDashboardActivities
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7064,7 +7124,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/activity/me:
+    /api/2/dashboard/{siteId}/activity/me:
         get:
             tags:
                 - dashboard
@@ -7075,7 +7135,7 @@ paths:
             operationId: getDashboardMyActivities
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7151,7 +7211,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/content/unpublished:
+    /api/2/dashboard/{siteId}/content/unpublished:
         get:
             tags:
                 - dashboard
@@ -7162,7 +7222,7 @@ paths:
             operationId: getDashboardContentUnpublished
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7226,7 +7286,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/publishing/stats:
+    /api/2/dashboard/{siteId}/publishing/stats:
         get:
             tags:
                 - dashboard
@@ -7237,7 +7297,7 @@ paths:
             operationId: getDashboardPublishingStats
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7272,7 +7332,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/content/expiring:
+    /api/2/dashboard/{siteId}/content/expiring:
         get:
             tags:
                 - dashboard
@@ -7283,7 +7343,7 @@ paths:
             operationId: getDashboardContentExpiring
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7350,7 +7410,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/dashboard/content/expired:
+    /api/2/dashboard/{siteId}/content/expired:
         get:
             tags:
                 - dashboard
@@ -7361,7 +7421,7 @@ paths:
             operationId: getDashboardContentExpired
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7425,7 +7485,7 @@ paths:
     #      operationId: getItemsForTranslation
     #      parameters:
     #        - name: siteId
-    #          in: query
+    #          in: path
     #          description: site ID
     #          required: true
     #          schema:
@@ -7621,7 +7681,7 @@ paths:
     #      operationId: getTranslationTargetLocales
     #      parameters:
     #        - name: siteId
-    #          in: query
+    #          in: path
     #          description: site ID
     #          required: true
     #          schema:
@@ -7768,7 +7828,7 @@ paths:
     #        '500':
     #          $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/item_states:
+    /api/2/workflow/{siteId}/item_states:
         get:
             tags:
                 - workflow
@@ -7779,7 +7839,7 @@ paths:
             operationId: getItemStates
             parameters:
                 -   name: siteId
-                    in: query
+                    in: path
                     description: site ID
                     required: true
                     schema:
@@ -7852,6 +7912,13 @@ paths:
                     Module: Studio <br>
                     Required permission "set_item_states"
             operationId: setItemStates
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: List of items to set workflow state(s)
                 required: true
@@ -7860,9 +7927,6 @@ paths:
                         schema:
                             type: object
                             properties:
-                                siteId:
-                                    type: string
-                                    description: site ID
                                 items:
                                     type: array
                                     description: path(s) of item(s)
@@ -7887,7 +7951,6 @@ paths:
                                     type: boolean
                                     description: true if item is to be set as modified, otherwise false
                             required:
-                                - siteId
                                 - items
             responses:
                 '200':
@@ -7908,7 +7971,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/update_item_states_by_query:
+    /api/2/workflow/{siteId}/update_item_states_by_query:
         post:
             tags:
                 - workflow
@@ -7917,6 +7980,13 @@ paths:
                     Module: Studio <br>
                     Required permission "set_item_states"
             operationId: updateItemStates
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: Site ID
+                    required: true
+                    schema:
+                        type: string
             requestBody:
                 description: List of items to set workflow state(s)
                 required: true
@@ -7928,9 +7998,6 @@ paths:
                                 query:
                                     type: object
                                     properties:
-                                        siteId:
-                                            type: string
-                                            description: site ID
                                         path:
                                             type: string
                                             description: path regex of item(s)
@@ -7938,8 +8005,6 @@ paths:
                                             type: integer
                                             format: int64
                                             description: state bitmap mask to filter by state
-                                    required:
-                                        - siteId
                                 update:
                                     type: object
                                     properties:
@@ -7983,7 +8048,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/{site}/affected_packages:
+    /api/2/workflow/{siteId}/affected_packages:
         get:
             tags:
                 - workflow
@@ -7993,7 +8058,7 @@ paths:
                     Required permission "publish_get_queue"
             operationId: getWorkflowAffectedPackages
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: site ID
                     required: true
@@ -8037,7 +8102,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/{site}/approve:
+    /api/2/workflow/{siteId}/approve:
         post:
             tags:
                 - workflow
@@ -8047,7 +8112,7 @@ paths:
                     Required permission "publish_review"
             operationId: workflowApprove
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: site ID
                     required: true
@@ -8101,7 +8166,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/{site}/reject:
+    /api/2/workflow/{siteId}/reject:
         post:
             tags:
                 - workflow
@@ -8111,7 +8176,7 @@ paths:
                     Required permission "publish_review"
             operationId: workflowReject
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: site ID
                     required: true
@@ -8158,7 +8223,7 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/workflow/{site}/cancel:
+    /api/2/workflow/{siteId}/cancel:
         post:
             tags:
                 - workflow
@@ -8168,7 +8233,7 @@ paths:
                     Required permission "publish_cancel"
             operationId: cancelPublishPackages
             parameters:
-                -   name: site
+                -   name: siteId
                     in: path
                     description: site ID
                     required: true
@@ -9706,9 +9771,6 @@ components:
         RemoteRepository:
             type: object
             properties:
-                siteId:
-                    type: string
-                    description: site identifier
                 remoteName:
                     type: string
                     description: remote repository name
@@ -9743,7 +9805,6 @@ components:
                     type: string
                     description: private key to access
             required:
-                - siteId
                 - remoteName
                 - remoteUrl
                 - authenticationType

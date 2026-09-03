@@ -18,13 +18,9 @@ import { post } from '../utils/ajax';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SearchResult } from '../models/Search';
-import { toQueryString } from '../utils/object';
 
 export function search(site: string, parameters: any = {}): Observable<SearchResult> {
-	const qs = toQueryString({
-		siteId: site
-	});
-	return post(`/studio/api/2/search/search.json${qs}`, parameters, {
+	return post(`/studio/api/2/search/${site}/search.json`, parameters, {
 		'Content-Type': 'application/json'
 	}).pipe(map((response) => response?.response?.result));
 }

@@ -38,7 +38,6 @@ class AddRemote extends AbstractCommand {
 
 	def run(client) {
 		def params = [
-			siteId            : siteOptions.siteId,
 			remoteName        : remoteName,
 			remoteUrl         : remoteUrl,
 			authenticationType: authAware.authType
@@ -57,7 +56,7 @@ class AddRemote extends AbstractCommand {
 			params.remotePrivateKey = authAware.privateKey.text.trim()
 		}
 
-		def path = '/studio/api/2/repository/add_remote.json'
+		def path = "/studio/api/2/repository/${siteOptions.siteId}/add_remote.json"
 		def result = client.post(path, params)
 		if (result) {
 			println result.response.message

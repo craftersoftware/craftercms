@@ -27,9 +27,8 @@ class ListRemotes extends AbstractCommand {
 	SiteOptions siteOptions
 
 	def run(client) {
-		def path = '/studio/api/2/repository/list_remotes.json'
-		def query = [siteId: siteOptions.siteId]
-		def result = client.get(path, query)
+		def path = "/studio/api/2/repository/${siteOptions.siteId}/list_remotes.json"
+		def result = client.get(path)
 		if (!result) {
 			return
 		}

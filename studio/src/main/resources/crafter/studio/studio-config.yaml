@@ -349,7 +349,7 @@ studio.security.sessionTimeout: 480
 studio.security.inactivityTimeout: 30
 # Comma separated list of URLs that should not be tracked as user activity
 studio.security.activity.excludeUrls: >
-    /api/2/publish/status.*,/api/2/content/children_by_path.*,/api/2/content/sandbox_items_by_path.*
+    /api/2/publish/.+/status.*,/api/2/content/.+/children.*,/api/2/content/.+/sandbox_items_by_path.*
 # Configuration for the user activity cache
 studio.security.activity.cache.config: initialCapacity=25,maximumSize=100
 
@@ -359,7 +359,7 @@ studio.security.publicUrls: >
     /api/2/system/available_languages.*,
     /api/2/monitoring/.+,/api/2/users/forgot_password.*,/api/2/users/set_password.*,/static-assets/.+,
     /api/2/users/validate_token.*,/api/2/users/forgot_password.*,
-    /api/2/plugin/script/reload.*
+    /api/2/plugin/.+/script/reload.*
 # Salt for encrypting
 studio.security.cipher.salt: DgGN9xhq3GOn6zxg
 # Key for encrypting

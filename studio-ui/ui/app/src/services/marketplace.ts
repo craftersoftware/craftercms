@@ -73,7 +73,7 @@ export function installMarketplacePlugin(
 	pluginVersion: MarketplacePluginVersion,
 	parameters?: LookupTable<string>
 ): Observable<boolean> {
-	return postJSON('/studio/api/2/marketplace/install', { siteId, pluginId, pluginVersion, parameters }).pipe(
+	return postJSON(`/studio/api/2/marketplace/${siteId}/install`, { pluginId, pluginVersion, parameters }).pipe(
 		map(() => true)
 	);
 }
@@ -83,34 +83,35 @@ export function uninstallMarketplacePlugin(
 	pluginId: string,
 	force: boolean = false
 ): Observable<boolean> {
-	return postJSON('/studio/api/2/marketplace/remove', {
-		siteId,
+	return postJSON(`/studio/api/2/marketplace/${siteId}/remove`, {
 		pluginId,
 		force
 	}).pipe(map(() => true));
 }
 
 export function getPluginConfiguration(siteId: string, pluginId: string): Observable<string> {
-	const qs = toQueryString({ siteId, pluginId });
-	return get(`/studio/api/2/plugin/get_configuration${qs}`).pipe(map((response) => response?.response?.content));
+	const qs = toQueryString({ pluginId });
+	return get(`/studio/api/2/plugin/${siteId}/get_configuration${qs}`).pipe(
+		map((response) => response?.response?.content)
+	);
 }
 
 export function setPluginConfiguration(siteId: string, pluginId: string, content: string): Observable<boolean> {
-	return postJSON('/studio/api/2/plugin/write_configuration', { siteId, pluginId, content }).pipe(map(() => true));
+	return postJSON(`/studio/api/2/plugin/${siteId}/write_configuration`, { pluginId, content }).pipe(map(() => true));
 }
 
 export function fetchMarketplacePluginUsage(siteId: string, pluginId: string): Observable<ContentItem[]> {
-	const qs = toQueryString({ siteId, pluginId });
-	return get(`/studio/api/2/marketplace/usage${qs}`).pipe(
+	const qs = toQueryString({ pluginId });
+	return get(`/studio/api/2/marketplace/${siteId}/usage${qs}`).pipe(
 		map((response) => response?.response?.items),
 		switchMap((items) => (items.length === 0 ? of(items) : fetchContentItems(siteId, items)))
 	);
 }
 
 export function fetchInstalledMarketplacePlugins(siteId: string): Observable<PluginRecord[]> {
-	return get<Api2ResponseFormat<{ plugins: PluginRecord[] }>>(
-		`/studio/api/2/marketplace/installed?siteId=${siteId}`
-	).pipe(map((response) => response?.response?.plugins));
+	return get<Api2ResponseFormat<{ plugins: PluginRecord[] }>>(`/studio/api/2/marketplace/${siteId}/installed`).pipe(
+		map((response) => response?.response?.plugins)
+	);
 }
 
 export function createSite(site: MarketplaceSite): Observable<boolean> {

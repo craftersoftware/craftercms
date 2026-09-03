@@ -51,8 +51,7 @@ export interface FetchDeleteDependenciesResponse {
 }
 
 export function fetchDeleteDependencies(siteId: string, paths: string[]): Observable<FetchDeleteDependenciesResponse> {
-	return postJSON('/studio/api/2/content/get_delete_package', {
-		siteId,
+	return postJSON(`/studio/api/2/content/${siteId}/get_delete_package`, {
 		paths
 	}).pipe(map((response) => response?.response?.items));
 }
