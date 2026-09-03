@@ -56,7 +56,7 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 	const initialExtension = getFileExtension(value);
 	const dispatch = useDispatch();
 	const itemLookupTable = useItemsByPath();
-	const newAssetName = type !== 'asset' ? getFileNameWithExtensionForItemType(type, name) : name;
+	const newAssetName = type !== 'asset' ? getFileNameWithExtensionForItemType(type, name, initialExtension) : name;
 	const newAssetPath = `${getParentPath(path)}/${newAssetName}`;
 	const assetExists = newAssetName !== value && itemLookupTable[newAssetPath] !== UNDEFINED;
 	const isValid = !isBlank(name) && !assetExists && name !== value;
