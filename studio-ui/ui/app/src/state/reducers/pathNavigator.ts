@@ -51,16 +51,26 @@ import StandardAction from '../../models/StandardAction';
 import { CaseReducer } from '@reduxjs/toolkit/src/createReducer';
 import GlobalState from '../../models/GlobalState';
 
+/**
+ * A result is stale when the navigator has been moved to a different path since the request was issued. Applying it
+ * would revert the navigation the user has already made.
+ */
+const isStaleResult = (chunk, requestedPath: string) =>
+	Boolean(requestedPath) && withoutIndex(requestedPath) !== withoutIndex(chunk.currentPath);
+
 const updatePath = (state, payload) => {
-	const { id, parent, children } = payload;
+	const { id, path: requestedPath, parent, children } = payload;
+	const chunk = state[id];
+	if (!chunk || isStaleResult(chunk, requestedPath)) {
+		return;
+	}
 	if (
 		// If it's not the first page, and the fetched data has no children, stay on the previous page.
 		!(children.offset >= children.limit && children.length === 0)
 	) {
-		const chunk = state[id];
-		const path = parent?.path ?? state[id].currentPath;
+		const path = parent?.path ?? chunk.currentPath;
 		chunk.currentPath = path;
-		chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
+		chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(chunk.rootPath));
 		chunk.itemsInPath = children.length === 0 ? [] : children.map((item) => item.path);
 		chunk.levelDescriptor = children.levelDescriptor?.path;
 		chunk.total = children.total;
@@ -161,8 +171,15 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			state[payload.id].error = payload.error;
 		})
 		.addCase(pathNavigatorFetchPath, (state, { payload }) => {
-			state[payload.id].isFetching = true;
-			state[payload.id].error = null;
+			const chunk = state[payload.id];
+			chunk.isFetching = true;
+			chunk.error = null;
+			if (payload.path) {
+				// Move to the requested path right away so that refreshes issued while this request is in flight fetch
+				// (and are validated against) the path the user navigated to, instead of the one being left behind.
+				chunk.currentPath = payload.path;
+				chunk.breadcrumb = getIndividualPaths(withoutIndex(payload.path), withoutIndex(chunk.rootPath));
+			}
 		})
 		.addCase(pathNavigatorFetchPathComplete, (state, { payload }) => {
 			updatePath(state, payload);
@@ -172,14 +189,22 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 				updatePath(state, path);
 			});
 		})
-		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, error } }) => {
-			state[id].isFetching = false;
-			state[id].error = error;
+		.addCase(pathNavigatorFetchPathFailed, (state, { payload: { id, path, error } }) => {
+			const chunk = state[id];
+			if (!chunk || isStaleResult(chunk, path)) {
+				return;
+			}
+			chunk.isFetching = false;
+			chunk.error = error;
 		})
-		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { ids, error } }) => {
-			ids.forEach((id) => {
-				state[id].isFetching = false;
-				state[id].error = error;
+		.addCase(pathNavigatorBulkFetchPathFailed, (state, { payload: { requests, error } }) => {
+			requests.forEach(({ id, path }) => {
+				const chunk = state[id];
+				if (!chunk || isStaleResult(chunk, path)) {
+					return;
+				}
+				chunk.isFetching = false;
+				chunk.error = error;
 			});
 		})
 		.addCase(pathNavigatorFetchParentItems, (state, { payload: { id, path } }) => {
@@ -187,8 +212,11 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 			state[id].currentPath = path;
 			state[id].error = null;
 		})
-		.addCase(pathNavigatorFetchParentItemsComplete, (state, { payload: { id, children } }) => {
+		.addCase(pathNavigatorFetchParentItemsComplete, (state, { payload: { id, path, children } }) => {
 			const chunk = state[id];
+			if (!chunk || isStaleResult(chunk, path)) {
+				return;
+			}
 			const { currentPath, rootPath } = chunk;
 			chunk.itemsInPath = children.map((item) => item.path);
 			chunk.levelDescriptor = children.levelDescriptor?.path ?? null;
