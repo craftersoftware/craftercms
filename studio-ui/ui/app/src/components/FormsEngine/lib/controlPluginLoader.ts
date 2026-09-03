@@ -15,12 +15,15 @@
  */
 
 import { type ComponentType, use } from 'react';
-import type { FormDefinitionPlugin } from '../../../models/ContentType';
+import type ContentType from '../../../models/ContentType';
+import type { ContentTypeField, FormDefinitionPlugin } from '../../../models/ContentType';
 import type PluginDescriptor from '../../../models/PluginDescriptor';
+import type LookupTable from '../../../models/LookupTable';
 import { buildFileUrl, importPlugin } from '../../../services/plugin';
 import { getRegisteredControlContribution } from '../controls/registry';
 import type { DataSourceBinding } from '../dataSources/types';
 import type { ControlProps } from '../types';
+import { XmlKeys } from './formConsts';
 
 export interface LoadedControlPlugin {
 	/** Resolved control Component + bindings; `url` is the plugin file URL used for cache/errors. */
@@ -37,6 +40,122 @@ const loadedControlPluginCache = new Map<string, Promise<LoadedControlPlugin>>()
 
 function loadedCacheKey(url: string, controlType: string): string {
 	return `${url}::${controlType}`;
+}
+
+function toFieldList(
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null
+): ContentTypeField[] {
+	if (!fields) return [];
+	return Array.isArray(fields) ? fields : Object.values(fields);
+}
+
+/** Same shape as `arrayFieldExtractor`: raw XML deserializes to `{ item: [] }`, parsed values are arrays. */
+function toItemList(value: unknown): unknown[] {
+	return Array.isArray(value) ? value : ((value as Record<'item', unknown[]> | null | undefined)?.item ?? []);
+}
+
+/**
+ * Collects unique form-definition plugin locators from a field tree (including repeat nested fields
+ * and node-selector embedded content types when `values` + `contentTypesLookup` are provided).
+ * "Which plugin files does this form need?"
+ */
+export function collectControlPluginLocators(
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null,
+	values?: LookupTable<unknown> | null,
+	contentTypesLookup?: LookupTable<ContentType> | null
+): FormDefinitionPlugin[] {
+	const out: FormDefinitionPlugin[] = [];
+	const seen = new Set<string>();
+	const walk = (list: ContentTypeField[], currentValues?: LookupTable<unknown> | null) => {
+		for (const field of list) {
+			const plugin = field.properties?.plugin as FormDefinitionPlugin | undefined;
+			if (plugin?.pluginId && plugin.type && plugin.name && plugin.filename) {
+				const key = `${plugin.pluginId}|${plugin.type}|${plugin.name}|${plugin.filename}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					out.push(plugin);
+				}
+			}
+			if (field.fields) {
+				const nestedFields = toFieldList(field.fields);
+				// Always walk nested field defs once so type-level plugins are found without values.
+				walk(nestedFields);
+				// With values, walk each repeat item so nested node-selectors can resolve embeds.
+				if (field.type === 'repeat' && currentValues) {
+					for (const item of toItemList(currentValues[field.id])) {
+						if (item && typeof item === 'object') {
+							walk(nestedFields, item as LookupTable<unknown>);
+						}
+					}
+				}
+			}
+			// Mirror createParsedValueForField: embedded node-selector components use another content type's fields.
+			if (field.type === 'node-selector' && currentValues && contentTypesLookup) {
+				for (const item of toItemList(currentValues[field.id])) {
+					const component = (item as { component?: LookupTable<unknown> } | null | undefined)?.component;
+					if (!component) continue;
+					const contentTypeId = (component[XmlKeys.contentTypeId] as string | undefined)?.trim();
+					const contentType = contentTypeId ? contentTypesLookup[contentTypeId] : undefined;
+					if (contentType?.fields) {
+						walk(toFieldList(contentType.fields), component);
+					}
+				}
+			}
+		}
+	};
+	walk(toFieldList(fields), values);
+	return out;
+}
+
+/**
+ * Demand-loads every control plugin referenced by `fields` so `valueRetriever` /
+ * `valueSerializer` / `validator` contributions are registered before form bootstrap
+ * parse, validation, and save. Safe to call repeatedly; uses the same URL-keyed
+ * importPlugin cache as control rendering.
+ * “Load those plugins now, not when React first draws the control.”
+ *
+ * Pass `values` + `contentTypesLookup` when parsing content that may include node-selector
+ * embeds so embedded content-type control plugins are registered before
+ * `createParsedValueForField` walks `item.component`.
+ */
+export function preloadControlPluginsForFields(
+	siteId: string,
+	fields: LookupTable<ContentTypeField> | ContentTypeField[] | undefined | null,
+	values?: LookupTable<unknown> | null,
+	contentTypesLookup?: LookupTable<ContentType> | null
+): Promise<void> {
+	const locators = collectControlPluginLocators(fields, values, contentTypesLookup);
+	if (!locators.length) return Promise.resolve();
+	return Promise.allSettled(
+		locators.map((plugin) => {
+			const builder = {
+				site: siteId,
+				type: plugin.type,
+				name: plugin.name,
+				file: plugin.filename,
+				id: plugin.pluginId
+			};
+			const url = buildFileUrl(builder);
+			let loading = controlPluginCache.get(url);
+			if (!loading) {
+				loading = importPlugin(builder).catch((reason) => {
+					controlPluginCache.delete(url);
+					console.error(
+						`Failed to preload control plugin from \`${url}\` (needed for valueRetriever/valueSerializer/validator).`,
+						reason
+					);
+					throw reason;
+				});
+				controlPluginCache.set(url, loading);
+			}
+			return loading;
+		})
+	).then((results) => {
+		const firstRejection = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+		if (firstRejection) {
+			throw firstRejection.reason;
+		}
+	});
 }
 
 /** Builds the Studio plugin file URL for a form-definition plugin ref (same shape as DS plugin load). */
