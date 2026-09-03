@@ -189,7 +189,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 						options={timeZones}
 						disabled={disabled || disableTimezoneSelection}
 						getOptionLabel={(timezone) =>
-							timezone + (selectedDate ? ` (GMT${getZDateOffset(selectedDate, timezone)})` : '')
+							timezone + (selectedDate && Boolean(timezone) ? ` (GMT${getZDateOffset(selectedDate, timezone)})` : '')
 						}
 						value={selectedTimezone}
 						onChange={handleTimezoneChange}

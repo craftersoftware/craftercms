@@ -64,9 +64,6 @@ export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorContro
 	input: (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
 	'internal-name': undefined,
 	label: undefined,
-	'link-input': undefined,
-	'link-textarea': undefined,
-	'linked-dropdown': undefined,
 	'locale-selector': undefined,
 	'node-selector': (field, currentValue, messages, meta) =>
 		nodeSelectorValidator(field, currentValue as NodeSelectorItem[], messages, meta),

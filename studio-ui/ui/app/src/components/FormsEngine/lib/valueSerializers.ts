@@ -54,9 +54,6 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	string: (field, value) => prepareString(field, value as string),
 	'internal-name': undefined,
 	label: undefined,
-	'link-input': undefined,
-	'link-textarea': undefined,
-	'linked-dropdown': undefined,
 	'locale-selector': undefined,
 	repeat: (field, value, contentTypesLookup) => prepareRepeat(field, value as RepeatItem[], contentTypesLookup),
 	'node-selector': (field, value, contentTypesLookup) =>

@@ -29,9 +29,6 @@ import forceHttpsDescriptor from './forceHttps';
 import imagePickerDescriptor from './imagePicker';
 import internalNameDescriptor from './internalName';
 import labelDescriptor from './label';
-import linkInputDescriptor from './linkInput';
-import linkTextareaDescriptor from './linkTextarea';
-import linkedDropdownDescriptor from './linkedDropdown';
 import localeSelectorDescriptor from './localeSelector';
 import nodeSelectorDescriptor from './nodeSelector';
 import numericInputDescriptor from './numericInput';
@@ -64,9 +61,6 @@ export const controlDescriptors: Record<BuiltInControlType, DescriptorContentTyp
 	input: inputDescriptor,
 	'internal-name': internalNameDescriptor,
 	label: labelDescriptor,
-	'link-input': linkInputDescriptor,
-	'link-textarea': linkTextareaDescriptor,
-	'linked-dropdown': linkedDropdownDescriptor,
 	'locale-selector': localeSelectorDescriptor,
 	'node-selector': nodeSelectorDescriptor,
 	'numeric-input': numericInputDescriptor,
