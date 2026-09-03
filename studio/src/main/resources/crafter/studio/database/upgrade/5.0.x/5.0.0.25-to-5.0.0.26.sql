@@ -15,7 +15,7 @@
  */
 
 UPDATE item
-SET system_type = 'renderingTemplate'
+SET system_type = 'renderingTemplate', mime_type = 'text/x-freemarker'
 WHERE system_type <> 'folder'
 AND path like '/templates/%'
 AND (path like '%.ftlx' OR path like '%.ftlh') ;
