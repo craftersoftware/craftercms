@@ -220,7 +220,7 @@ const reducer = createReducer(initialState, {
 		if (state.status === EditingStatus.LISTENING) {
 			const { highlightMode } = state;
 			const iceId = record.iceIds[0];
-			const movableRecordId = getMovableParentRecord(iceId);
+			const movableRecordId = getMovableParentRecord(iceId, record.element);
 			if (highlightMode === HighlightMode.ALL) {
 				const highlight = getHoverData(record.id);
 				if (notNullOrUndefined(movableRecordId)) {
@@ -705,7 +705,8 @@ const reducer = createReducer(initialState, {
 		if (iceRecord.recordType === 'component') {
 			if (state.highlightMode === HighlightMode.MOVE_TARGETS) {
 				// If in move mode, dynamically switch components to their movable item record so users can manipulate.
-				const movableRecordId = getMovableParentRecord(iceId);
+				const registryEntriesForIce = getRecordsFromIceId(iceId);
+				const movableRecordId = getMovableParentRecord(iceId, registryEntriesForIce?.[0]?.element);
 				iceId = notNullOrUndefined(movableRecordId) ? movableRecordId : iceId;
 			}
 		} else if (iceRecord.recordType === 'repeat-item' || iceRecord.recordType === 'node-selector-item') {

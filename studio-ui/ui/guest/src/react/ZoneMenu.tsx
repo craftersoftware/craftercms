@@ -33,6 +33,7 @@ import {
 	deleteItem,
 	duplicateItem,
 	getCachedContentItem,
+	getCachedContentTypes,
 	getCachedModel,
 	getCachedModels,
 	getCachedPermissions,
@@ -55,7 +56,7 @@ import { post } from '../utils/communicator';
 import { requestEdit, snackGuestMessage } from '@craftercms/studio-ui/state/actions/preview';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { getParentModelId } from '../utils/ice';
+import { getParentModelId, resolvePlacementForZone } from '../utils/ice';
 import { fromICEId, get } from '../elementRegistry';
 import { beforeWrite$ } from '../store/util';
 import { useStore } from './GuestContext';
@@ -96,17 +97,31 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const iceRecord = getById(record.iceIds[0]);
 	const recordType = iceRecord.recordType;
 
+	// Shared components can live in multiple fields; resolve this zone's placement via DOM context
+	// instead of modelHierarchyMap's single parent pointer.
+	const placement = useMemo(
+		() =>
+			recordType === 'component'
+				? resolvePlacementForZone(
+						modelId,
+						record.element,
+						getCachedModels(),
+						getCachedContentTypes(),
+						modelHierarchyMap
+					)
+				: null,
+		[modelId, record.element, recordType]
+	);
+
 	const collection = useMemo(() => {
 		if (['node-selector-item', 'repeat-item'].includes(recordType)) {
 			return extractCollection(getCachedModel(modelId), fieldId, index);
 		} else if (recordType === 'component') {
-			// ToDo: Find container collection
-			const mapEntry = modelHierarchyMap[modelId];
-			if (mapEntry && mapEntry.parentId) {
+			if (placement?.parentId) {
 				return extractCollection(
-					getCachedModel(mapEntry.parentId),
-					mapEntry.parentContainerFieldPath,
-					mapEntry.parentContainerFieldIndex
+					getCachedModel(placement.parentId),
+					placement.parentContainerFieldPath,
+					placement.parentContainerFieldIndex
 				);
 			} else {
 				return null;
@@ -114,30 +129,35 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		} else {
 			return null;
 		}
-	}, [modelId, fieldId, index, recordType]);
+	}, [modelId, fieldId, index, recordType, placement]);
 	const elementIndex = useMemo(() => {
-		// If the record is a component, get the index from searching the
-		// model id inside the container collection (previously computed).
-		return recordType === 'component'
-			? collection?.indexOf(modelId)
-			: parseInt(isSimple(index) ? String(index) : popPiece(String(index)));
-	}, [recordType, collection, modelId, index]);
+		if (recordType === 'component') {
+			if (placement) {
+				const placementIndex = placement.parentContainerFieldIndex;
+				return parseInt(isSimple(placementIndex) ? String(placementIndex) : popPiece(String(placementIndex)));
+			}
+			return collection?.indexOf(modelId);
+		}
+		return parseInt(isSimple(index) ? String(index) : popPiece(String(index)));
+	}, [recordType, collection, modelId, index, placement]);
 	const nodeSelectorItemRecord = useMemo(
 		// region
 		() =>
 			recordType === 'component'
-				? getById(
-						exists({
-							modelId: modelHierarchyMap[modelId].parentId,
-							fieldId: modelHierarchyMap[modelId].parentContainerFieldPath,
-							index: modelHierarchyMap[modelId].parentContainerFieldIndex
-						})
-					)
+				? placement
+					? getById(
+							exists({
+								modelId: placement.parentId,
+								fieldId: placement.parentContainerFieldPath,
+								index: placement.parentContainerFieldIndex
+							})
+						)
+					: null
 				: ['node-selector-item', 'repeat-item'].includes(recordType)
 					? iceRecord
 					: null,
 		// endregion
-		[modelId, recordType, iceRecord]
+		[placement, recordType, iceRecord]
 	);
 	// TODO: Revisit how we detect files. Checking it has a key property doesn't feel robust.
 	// File validations only applies to node-selector, not to repeating-group

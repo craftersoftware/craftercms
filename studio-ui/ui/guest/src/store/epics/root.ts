@@ -820,7 +820,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							return merge(...sources);
 						}
 					} else if (state.highlightMode === HighlightMode.MOVE_TARGETS && state.status === EditingStatus.LISTENING) {
-						const movableRecordId = iceRegistry.getMovableParentRecord(record.iceIds[0]);
+						const movableRecordId = iceRegistry.getMovableParentRecord(record.iceIds[0], record.element);
 						if (notNullOrUndefined(movableRecordId)) {
 							// Inform host of the field selection
 							// post();
@@ -842,7 +842,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 						state.status === EditingStatus.FIELD_SELECTED &&
 						state.highlightMode === HighlightMode.MOVE_TARGETS
 					) {
-						const movableRecordId = iceRegistry.getMovableParentRecord(record.iceIds[0]);
+						const movableRecordId = iceRegistry.getMovableParentRecord(record.iceIds[0], record.element);
 						if (state.highlighted[movableRecordId] === void 0) {
 							post(clearSelectedZones.type);
 							return of(startListening());
