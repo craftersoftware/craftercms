@@ -18,7 +18,13 @@ import type { Dispatch } from 'redux';
 import type { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
 import type { SearchProps } from '../../Search';
 import type { FormsEngineGlobalApiContextProps } from '../lib/formsEngineContext';
-import { showBrowseFilesDialog, showSearchDialog, showSingleFileUploadDialog } from '../lib/controlHelpers';
+import {
+	showBrowseExternalAssetDialog,
+	showBrowseFilesDialog,
+	showExternalAssetUploadDialog,
+	showSearchDialog,
+	showSingleFileUploadDialog
+} from '../lib/controlHelpers';
 import type { DataSourceServices } from './types';
 
 /** Redux dispatch + site + forms API needed to bridge dialog / `pushForm` UI into promise services. */
@@ -55,6 +61,23 @@ export function createDataSourceServices({
 				});
 			});
 		},
+		browseExternalAssets(request) {
+			return new Promise((resolve) => {
+				showBrowseExternalAssetDialog({
+					dispatch,
+					path: request.path,
+					profileId: request.profileId,
+					profileType: request.profileType,
+					type: request.type,
+					multiSelect: request.multiSelect,
+					preselectedPaths: request.preselectedPaths,
+					onClose: () => resolve([]),
+					onSuccess(items) {
+						resolve(Array.isArray(items) ? items : [items]);
+					}
+				});
+			});
+		},
 		search(request) {
 			return new Promise((resolve) => {
 				showSearchDialog({
@@ -77,6 +100,19 @@ export function createDataSourceServices({
 					siteId,
 					path: request.path,
 					fileTypes: request.fileTypes,
+					onUploadComplete: resolve
+				});
+			});
+		},
+		uploadExternalAssets(request) {
+			return new Promise((resolve) => {
+				showExternalAssetUploadDialog({
+					dispatch,
+					path: request.path,
+					profileId: request.profileId,
+					profileType: request.profileType,
+					fileTypes: request.fileTypes,
+					onClose: () => resolve(null),
 					onUploadComplete: resolve
 				});
 			});

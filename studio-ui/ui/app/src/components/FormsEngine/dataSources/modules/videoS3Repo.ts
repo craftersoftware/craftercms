@@ -14,4 +14,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export { videoS3RepoDataSourceModule as default } from './remoteStubs';
+import { DATA_SOURCE_API_VERSION, type DataSourceModule } from '../types';
+import { createInstanceFromRecord, defineDataSourceModule } from '../defineModule';
+import { createExternalBrowseAction, propString, VIDEO_MIME_TYPES } from '../moduleHelpers';
+
+export const videoS3RepoDataSourceModule: DataSourceModule = defineDataSourceModule({
+	apiVersion: DATA_SOURCE_API_VERSION,
+	type: 'video-S3-repo',
+	interfaces: ['video'],
+	capabilities: ['browse'],
+	create({ record }) {
+		const path = propString(record, 'path');
+		const profileId = propString(record, 'profileId');
+
+		return createInstanceFromRecord(record, videoS3RepoDataSourceModule, {
+			capabilities: ['browse'],
+			getActions() {
+				return [
+					createExternalBrowseAction({
+						label: `Browse - ${record.title}`,
+						path,
+						profileId,
+						profileType: 'aws',
+						type: 'video',
+						mimeTypes: VIDEO_MIME_TYPES,
+						selection: 'asset',
+						meta: { path, profileId, mimeTypes: VIDEO_MIME_TYPES }
+					})
+				];
+			}
+		});
+	}
+});
+
+export default videoS3RepoDataSourceModule;

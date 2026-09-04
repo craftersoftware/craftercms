@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-08-03
+Last updated: 2026-08-05
 
 ---
 
@@ -646,7 +646,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [ ] Align project-plugin auto-wiring with TB2 catalog discovery (`site-config-tools.xml` vs `ui.xml`) and define FE1 package migration.
 - [ ] Normalize plugin identity/locator vocabulary and resolve `file` vs `filename` across XML, frontend, docs, and backend.
 - [ ] Fix the `hasJsController` / “Client-side Controller” UI path currently opening `controller.groovy` (and wire FE2 to consume the flag).
-- [ ] **S3 / WebDAV capability stubs** — remote modules load but ops hard-fail via `unsupportedRemoteError` until `DataSourceServices` gains dedicated platform support.
+- [ ] **S3 / WebDAV capability stubs** — All remote browse and upload modules work via `browseExternalAssets` / `uploadExternalAssets`. Remaining gap: `video-S3-transcoding` still hard-fails via `unsupportedRemoteError` until dedicated transcoding platform support exists.
 - [ ] **Non-rendering control-map entries** — `disabled`, `internal-name`, `link-input`, `link-textarea` (and any other null map slots) need real FE2 controls or an explicit retire/alias decision.
 - [ ] **FE2 Crafter-specific RTE plugin parity** — audit FE1 TinyMCE/Crafter plugins vs current `rteUtils` externals (`craftercms_paste`, `editform`, …) and implement missing FE2 equivalents.
 - [ ] **Focused compatibility / plugin tests** — no Jest/Vitest harness in `ui/app` yet; need coverage for locator≠descriptor id, multi-control URL, registry conflicts, atomic registration failure, partial DS resolve, and TB plugin locator round-trip.
@@ -660,6 +660,14 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-08-05** — Implemented WebDAV uploads (`img-WebDAV-upload`, `video-WebDAV-upload`, `WebDAV-upload`) on `uploadExternalAssets` (`profileType: 'webdav'`). Removed emptied `remoteStubs.ts`; only `video-S3-transcoding` remains as a hard-fail stub.
+- **2026-08-05** — Implemented `S3-upload` FE2 upload (`item` selection, no file-type filter) on the shared `uploadExternalAssets` path.
+- **2026-08-05** — Implemented `img-S3-upload` FE2 upload (`IMAGE_MIME_TYPES`, `profileType: 'aws'`) on the shared `uploadExternalAssets` path.
+- **2026-08-05** — Implemented `video-S3-upload`: registered `ExternalAssetUploadDialog`, added `uploadExternalAssets` / `createExternalUploadAction`, and mapped S3 response `item.url` into asset selections. Remaining remote upload stubs still open.
+- **2026-08-05** — Implemented `WebDAV-repo` (item) and `video-WebDAV-repo` (asset, `type: 'video'`) FE2 browse (`profileType: 'webdav'`, `repoPath` + `profileId`). All remote browse stubs are now real; only upload/transcoding stubs remain.
+- **2026-08-05** — Implemented `video-S3-repo` (asset, `type: 'video'`) and `S3-repo` (item, no type filter) FE2 browse on the shared `browseExternalAssets` path.
+- **2026-08-04** — Implemented `img-WebDAV-repo` FE2 browse on the same `browseExternalAssets` / `BrowseExternalAssetDialog` path as S3 (`profileType: 'webdav'`, `repoPath` + `profileId`, `type: 'image'`).
+- **2026-08-04** — Implemented `img-S3-repo` FE2 browse: registered `BrowseExternalAssetDialog` in `studioUI`, added `showBrowseExternalAssetDialog` + `DataSourceServices.browseExternalAssets` + `createExternalBrowseAction`, and replaced the stub module with a real browse action (`profileType: 'aws'`, `type: 'image'`). Remaining S3/WebDAV stubs still open.
 - **2026-08-03** — Convergence-gap audit reflected in §8: remaining work includes S3/WebDAV stubs, null control-map entries (`disabled` / `internal-name` / `link-input` / `link-textarea`), FE2 RTE plugin parity, and focused compatibility tests. Control-plugin `PluginDescriptor.id` ownership checks and atomic `registerPlugin` preflight were already implemented — recorded under completed design decisions, not left as open gaps.
 - **2026-08-03** — Refined §5.9: all `FormController` hooks may be async (host awaits); clarified on-disk path, form_controller API, and FE2 loader call site (`formControllerLoader` from form bootstrap — not `importPlugin`).
 - **2026-08-03** — Decided FE2 form-controller design (§5.9): keep type-local `form-controller.js` gated by `hasJsController`; load via authenticated form_controller API + ESM Blob import; export `FormController` hooks (`initialize`, `isFieldRelevant`, `onBeforeSave`) — **not** a `PluginDescriptor`. FE1 YUI controllers are incompatible (migrate by rewrite). TB must fix Client-side Controller to edit `form-controller.js` instead of Groovy. Implementation still TODO.
