@@ -67,6 +67,7 @@ import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
+import { buildContentXml } from './valueSerializers';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
 import {
@@ -910,13 +911,22 @@ export function prepareEmbeddedItemForm(props: {
 			isAdditionalField
 		);
 	});
-	const xmlDoc = fromString(parentStackData.itemMeta.contentXml);
-	const element = xmlDoc.querySelector(`[id="${update.modelId}"]`);
-	const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
-	const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
-	const contentObject = (
-		parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
-	).item[index].component;
+	const element = fromString(parentStackData.itemMeta.contentXml ?? '').querySelector(`[id="${update.modelId}"]`);
+	let contentObject: LookupTable<unknown>;
+	let contentXml: string;
+	if (element) {
+		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
+		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
+		contentObject = (
+			parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
+		).item[index].component;
+		contentXml = element.outerHTML;
+	} else {
+		// Created (or edited) in-session; not yet serialized into parent contentXml
+		contentObject = update.values;
+		const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = update.values;
+		contentXml = buildContentXml(valuesWithoutFileName, contentTypesById);
+	}
 	return {
 		atoms,
 		values,
@@ -926,7 +936,7 @@ export function prepareEmbeddedItemForm(props: {
 			sourceMap: null,
 			pathInSite: parentPathInSite,
 			contentType,
-			contentXml: element.outerHTML,
+			contentXml,
 			contentObject
 		}
 	};
