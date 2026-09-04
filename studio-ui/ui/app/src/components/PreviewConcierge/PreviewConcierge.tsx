@@ -96,7 +96,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
 import { useDispatch, useStore } from 'react-redux';
 import { getPersonFullName, nnou } from '../../utils/object';
-import { findParentModelId, getModelIdFromInheritedField, isInheritedField } from '../../utils/model';
+import { findParentModelId, getModelIdFromInheritedField, isEmbedded, isInheritedField } from '../../utils/model';
 import RubbishBin from '../RubbishBin/RubbishBin';
 import { useSnackbar } from 'notistack';
 import {
@@ -793,7 +793,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							site: siteId,
 							iceGroupId: payload.iceId || UNDEFINED,
 							modelId: payload.embeddedItemId || UNDEFINED,
-							isHidden: Boolean(payload.embeddedItemId)
+							isHidden: Boolean(payload.embeddedItemId),
+							isEmbedded: Boolean(payload.embeddedItemId)
 						})
 					);
 					break;
@@ -1250,9 +1251,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case requestEdit.type: {
 					let { store } = upToDateRefs.current;
 					const { modelId, parentModelId, fields, typeOfEdit: type, index } = payload;
-					const path = models[parentModelId ? parentModelId : modelId].craftercms.path;
-					let item = store.getState().content.itemsByPath[path];
 					const model = models[modelId] as ContentInstance;
+					const embedded = isEmbedded(model);
+					const resolvedParentModelId =
+						parentModelId ??
+						(embedded ? findParentModelId(modelId, upToDateRefs.current.guest.hierarchyMap, models) : null);
+					const path = models[resolvedParentModelId ?? modelId].craftercms.path;
+					let item = store.getState().content.itemsByPath[path];
 					const contentType = contentTypes[model.craftercms.contentTypeId];
 					if (type === 'content') {
 						// Not quite sure if it ever happens that the item isn't already loaded.
@@ -1265,9 +1270,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								authoringBase,
 								formatMessage,
 								extraPayload: {
-									modelId: parentModelId ? modelId : null,
+									modelId: embedded ? modelId : undefined,
 									selectedFields: fields,
-									index
+									index,
+									isEmbedded: embedded
 								}
 							});
 						});
