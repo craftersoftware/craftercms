@@ -1020,7 +1020,14 @@ function CreateDataSourcePicker(props: {
 						<FormLabel id="creationStrategyLabel">
 							<FormattedMessage defaultMessage="Creation Strategy" />
 						</FormLabel>
-						<IconButton size="small" sx={{ ml: 1 }} color="primary" component="a" href="/studio" target="_blank">
+						<IconButton
+							size="small"
+							sx={{ ml: 1 }}
+							color="primary"
+							component="a"
+							href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-modeling.html#shared-components-vs-embedded-components"
+							target="_blank"
+						>
 							<HelpOutline fontSize="inherit" />
 						</IconButton>
 					</Box>
