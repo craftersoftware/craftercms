@@ -544,19 +544,7 @@ export function createModelHierarchyDescriptorMap(
 							.filter((componentId) => typeof componentId === 'string')
 							.forEach((componentId, index) => {
 								lookup[currentModelId].children.push(componentId);
-								if (lookup[componentId]) {
-									if (lookup[componentId].parentId !== null && lookup[componentId].parentId !== model.craftercms.id) {
-										console.error.apply(
-											console,
-											[
-												`Model ${componentId} was found in multiple parents (${lookup[componentId].parentId} and ${model.craftercms.id}). ` +
-													`Same model twice on a single page may have unexpected behaviours for in-context editing.`,
-												// @ts-ignore
-												typeof componentId !== 'string' && componentId
-											].filter(Boolean)
-										);
-									}
-								} else {
+								if (!lookup[componentId]) {
 									// This assignment it's to avoid having to optionally chain multiple times
 									// the access to `lookup[component]` below.
 									lookup[componentId] = lookup[componentId] ?? ({} as any);

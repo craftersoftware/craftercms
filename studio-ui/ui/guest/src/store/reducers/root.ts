@@ -91,6 +91,7 @@ import { getCachedModels, getCachedContentItems, modelHierarchyMap } from '../..
 import { isEditActionAvailable } from '../../utils/util';
 import type { BuiltInControlType } from '@craftercms/studio-ui/components/FormsEngine/lib/controlMap';
 import { type ContentTypeFieldValidations } from '@craftercms/studio-ui/src/models/ContentType';
+import { value, extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 
 type CaseReducer<S = GuestState, A extends GuestStandardAction = GuestStandardAction> = Reducer<S, A>;
 
@@ -635,9 +636,12 @@ const reducer = createReducer(initialState, {
 		const dropTargets = getContentTypeDropTargets(
 			instance.craftercms.contentTypeId,
 			(record: ICERecord, hierarchyMap: ModelHierarchyMap) => {
-				const { field: { validations = [] } = {} } = getReferentialEntries(record);
+				const { field: { validations = [] } = {}, model, fieldId, index } = getReferentialEntries(record);
 				const allowDuplicates = (validations as ContentTypeFieldValidations)?.allowDuplicates?.value ?? false;
-				const isComponentDuplicate = hierarchyMap[record.modelId]?.children?.includes(instanceId);
+				const collection = nullOrUndefined(index)
+					? value(model, fieldId)
+					: extractCollectionItem(model, fieldId, index);
+				const isComponentDuplicate = Array.isArray(collection) && collection.includes(instanceId);
 				if (isComponentDuplicate) isInstanceDuplicateInZone = true;
 
 				return (
