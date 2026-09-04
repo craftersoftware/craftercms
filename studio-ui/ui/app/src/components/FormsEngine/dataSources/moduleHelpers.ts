@@ -269,12 +269,13 @@ export function createBrowseAction(options: {
 			...options.meta
 		},
 		async run(ctx) {
+			const multiSelect = Array.isArray(ctx.value); // Values of fields that allow multiSelect are arrays. When no values are set, the value is an empty string or an empty array.
 			const expanded = expandPathOrRaw(ctx, path);
 			const items = await ctx.services.browseFiles({
 				path: expanded,
 				contentTypes,
 				mimeTypes,
-				multiSelect: (ctx.remainingCapacity ?? 2) !== 1
+				multiSelect: multiSelect ? (ctx.remainingCapacity ?? 2) !== 1 : false
 			});
 			if (!items.length) return null;
 			return selection === 'asset' ? toAssetSelections(items) : toItemSelections(items);
