@@ -125,6 +125,8 @@ export interface LightItem {
 	label: string;
 	systemType: SystemType;
 	mimeType: string;
+	canApprove?: boolean;
+	canRequestPublish?: boolean;
 }
 
 export interface ContentItem extends LightItem {
