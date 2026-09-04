@@ -66,11 +66,10 @@ import usePossibleTranslation from '../../hooks/usePossibleTranslation';
 import TranslationOrText from '../../models/TranslationOrText';
 import { useIntl } from 'react-intl';
 
-export interface PathNavigatorTreeProps
-	extends Pick<
-		PathNavigatorTreeItemProps,
-		'showNavigableAsLinks' | 'showPublishingTarget' | 'showWorkflowState' | 'showItemMenu'
-	> {
+export interface PathNavigatorTreeProps extends Pick<
+	PathNavigatorTreeItemProps,
+	'showNavigableAsLinks' | 'showPublishingTarget' | 'showWorkflowState' | 'showItemMenu'
+> {
 	id: string;
 	label: TranslationOrText;
 	rootPath: string;
@@ -89,7 +88,7 @@ export interface PathNavigatorTreeProps
 	onNodeClick?: PathNavigatorTreeUIProps['onLabelClick'];
 	active?: PathNavigatorTreeItemProps['active'];
 	classes?: Partial<Record<'header', string>>;
-	sxs?: PartialSxRecord<'header'>;
+	sxs?: PartialSxRecord<'header' | 'activeItem'>;
 }
 
 export interface PathNavigatorTreeStateProps {
@@ -353,7 +352,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 		<>
 			<PathNavigatorTreeUI
 				classes={{ header: classes?.header }}
-				sxs={{ header: sxs?.header }}
+				sxs={{ header: sxs?.header, activeItem: sxs?.activeItem }}
 				title={translatedLabel}
 				active={active}
 				icon={expandedIcon && collapsedIcon ? (state.collapsed ? collapsedIcon : expandedIcon) : icon}

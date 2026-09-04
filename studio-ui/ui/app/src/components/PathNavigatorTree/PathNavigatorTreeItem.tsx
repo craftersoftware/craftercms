@@ -59,6 +59,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 }
 
 export type PathNavigatorTreeBreadcrumbsClassKey =
+	| 'activeItem'
 	| 'searchRoot'
 	| 'searchInput'
 	| 'searchCleanButton'
@@ -148,6 +149,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 				childrenByParentPath={childrenByParentPath}
 				errorByPath={errorByPath}
 				active={active}
+				sxs={sxs}
 				onLabelClick={onLabelClick}
 				onIconClick={onIconClick}
 				onOpenItemMenu={onOpenItemMenu}
@@ -447,7 +449,12 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 					}
 				},
 				[`& > .${treeItemClasses.content} > .${treeItemClasses.label}`]: {
-					...(active[path] ? { backgroundColor: (theme) => theme.palette.action.selected } : {})
+					...(active[path]
+						? {
+								backgroundColor: (theme) => theme.palette.action.selected,
+								...sxs?.activeItem
+							}
+						: {})
 				},
 				[`& .${treeItemClasses.iconContainer}`]: {
 					width: '26px',

@@ -51,6 +51,11 @@ import GridViewIcon from '@mui/icons-material/GridOnRounded';
 import ReorderRoundedIcon from '@mui/icons-material/ReorderRounded';
 import { SORT_AUTO } from '../Search/utils';
 import Checkbox from '@mui/material/Checkbox';
+import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+
+const TREE_PANEL_DEFAULT_WIDTH = 270;
+const TREE_PANEL_MIN_WIDTH = 240;
+const TREE_PANEL_MAX_WIDTH = 480;
 
 export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	// region const { ... } = props;
@@ -75,6 +80,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		onCheckboxChecked,
 		handleSearchKeyword,
 		onPathSelected,
+		treeSelectedPath,
 		onSelectButtonClick,
 		onChangePage,
 		onChangeRowsPerPage,
@@ -89,32 +95,56 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 		disableSubmission,
 		allSelected,
 		someSelected,
-		onSelectAll
+		onSelectAll,
+		isCurrentPathLeaf
 	} = props;
 	// endregion
 	const { formatMessage } = useIntl();
 	const [sortMenuOpen, setSortMenuOpen] = useState(false);
 	const buttonRef = useRef(undefined);
+	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);
 
 	return (
 		<>
-			<DialogBody sx={{ minHeight: '60vh', padding: 0 }}>
-				<Box display="flex" sx={{ overflow: 'hidden' }}>
-					<Box
-						sx={{
-							width: '270px',
-							minWidth: '270px',
+			<DialogBody sx={{ minHeight: '60vh', padding: 0, position: 'relative' }}>
+				<ResizeableDrawer
+					open
+					width={treePanelWidth}
+					minWidth={TREE_PANEL_MIN_WIDTH}
+					maxWidth={TREE_PANEL_MAX_WIDTH}
+					onWidthChange={setTreePanelWidth}
+					sxs={{
+						drawerPaper: {
+							position: 'absolute',
+							top: 0,
+							bottom: 0,
+							height: 'auto'
+						},
+						resizeHandle: { backgroundColor: 'transparent' },
+						drawerBody: {
 							padding: '16px',
-							overflow: 'auto',
-							rowGap: (theme) => theme.spacing(1)
-						}}
-						display="flex"
-						flexDirection="column"
-						rowGap="20px"
-					>
-						<FolderBrowserTreeView rootPath={path} onPathSelected={onPathSelected} selectedPath={currentPath} />
-					</Box>
-					<Box component="section" sx={{ flexGrow: 1, padding: '16px', overflow: 'auto' }}>
+							overflowY: 'auto',
+							overflowX: 'hidden'
+						}
+					}}
+				>
+					<FolderBrowserTreeView
+						rootPath={path}
+						onPathSelected={onPathSelected}
+						selectedPath={currentPath}
+						highlightedPath={treeSelectedPath}
+					/>
+				</ResizeableDrawer>
+				<Box
+					component="section"
+					sx={{
+						marginLeft: `${treePanelWidth}px`,
+						minHeight: '60vh',
+						minWidth: 0,
+						padding: '16px',
+						overflow: 'auto'
+					}}
+				>
 						<Paper
 							sx={{
 								paddingLeft: (theme) => theme.spacing(1),
@@ -355,14 +385,20 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									})
 								: new Array(numOfLoaderItems).fill(null).map((x, i) => <MediaSkeletonCard key={i} />)}
 						</Box>
-						{items && items.length === 0 && (
-							<EmptyState
-								sxs={{ root: { flexGrow: 1 } }}
-								title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
-							/>
-						)}
+						{items &&
+							items.length === 0 &&
+							(isCurrentPathLeaf ? (
+								<EmptyState
+									sxs={{ root: { flexGrow: 1 } }}
+									title={<FormattedMessage defaultMessage="This item has no children." />}
+								/>
+							) : (
+								<EmptyState
+									sxs={{ root: { flexGrow: 1 } }}
+									title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
+								/>
+							))}
 					</Box>
-				</Box>
 			</DialogBody>
 			<DialogFooter>
 				<SecondaryButton onClick={onCloseButtonClick}>
