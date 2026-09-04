@@ -270,4 +270,19 @@ public abstract class StudioUtils {
 		}
 		return ContentType.Type.unknown;
 	}
+
+	/**
+	 * Get the cookie domain for the given hostname and useBaseDomain flag
+	 *
+	 * @param hostname      the hostname to get the cookie domain for
+	 * @param useBaseDomain the useBaseDomain flag
+	 * @return the cookie domain
+	 */
+	public static String getCookieDomain(String hostname, boolean useBaseDomain) {
+		if (!useBaseDomain || !hostname.contains(".") || hostname.matches("\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b")) {
+			return hostname;
+		}
+		String[] segments = hostname.split("\\.");
+		return segments[segments.length - 2] + "." + segments[segments.length - 1];
+	}
 }

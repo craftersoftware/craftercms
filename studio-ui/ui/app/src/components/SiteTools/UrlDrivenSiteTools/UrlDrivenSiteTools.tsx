@@ -25,11 +25,13 @@ import { useLocation, useNavigate } from 'react-router';
 import { SiteToolsContext, SiteToolsContextProps } from '../siteToolsContext';
 
 interface UrlDrivenSiteToolsProps {
-	footerHtml: string;
+	footerHtml?: string;
 }
 
-export function UrlDrivenSiteTools(props: UrlDrivenSiteToolsProps) {
-	const { footerHtml } = props;
+export function UrlDrivenSiteTools(props: UrlDrivenSiteToolsProps = {}) {
+	const { footerHtml: footerHtmlProp } = props;
+	const { footerHtml: envFooterHtml } = useEnv();
+	const footerHtml = footerHtmlProp ?? envFooterHtml ?? '';
 	const [width, setWidth] = useState(240);
 	const location = useLocation();
 	const [activeToolId, setActiveToolId] = useState(location.pathname.replace('/', ''));

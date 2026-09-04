@@ -15,9 +15,32 @@
  */
 
 import { get } from '../utils/ajax';
-import { map } from 'rxjs/operators';
+import { map, shareReplay } from 'rxjs/operators';
 import { Observable } from 'rxjs';
+import { Api2ResponseFormat } from '../models/ApiResponse';
+import { UiBootstrap } from '../models/UiBootstrap';
+import { setRequestForgeryToken } from '../utils/auth';
+
+let uiBootstrap$: Observable<UiBootstrap> | null = null;
 
 export function fetchActiveEnvironment(): Observable<string> {
 	return get('/studio/api/2/ui/system/active_environment').pipe(map((response) => response?.response?.environment));
+}
+
+export function fetchUiBootstrap(): Observable<UiBootstrap> {
+	if (!uiBootstrap$) {
+		uiBootstrap$ = get<Api2ResponseFormat<{ bootstrap: UiBootstrap }>>('/studio/api/2/ui/bootstrap').pipe(
+			map(({ response }) => response.bootstrap),
+			// Cache the result to avoid multiple requests
+			shareReplay(1)
+		);
+	}
+	return uiBootstrap$;
+}
+
+export function applyUiBootstrapSideEffects(bootstrap: UiBootstrap): void {
+	if (bootstrap.cookieDomain) {
+		document.domain = bootstrap.cookieDomain;
+	}
+	setRequestForgeryToken(bootstrap.xsrfHeader);
 }

@@ -358,6 +358,7 @@ public interface StudioConfiguration {
 
 	// System
 	String CONFIGURATION_AVAILABLE_LANGUAGES = "studio.configuration.availableLanguages";
+	String CONFIGURATION_DEFAULT_LANGUAGE = "studio.configuration.defaultLanguage";
 
 	void loadConfig();
 

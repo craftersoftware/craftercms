@@ -110,6 +110,37 @@ public final class StudioConstants {
 	public static final NormalizedRole SYSTEM_ADMIN_NORMALIZED_ROLE = new NormalizedRole(SYSTEM_ADMIN_ROLE);
 	public static final NormalizedRole ADMIN_NORMALIZED_ROLE = new NormalizedRole(ADMIN_ROLE);
 
+	/**
+	 * Sentinel value used when a cookie is missing or has not been set.
+	 */
+	public static final String UNSET = "UNSET";
+
+	/**
+	 * Default CSRF header and parameter names (Spring CookieCsrfTokenRepository defaults).
+	 */
+	public static final String XSRF_HEADER_NAME = "X-XSRF-TOKEN";
+	public static final String XSRF_PARAMETER_NAME = "_csrf";
+
+	/**
+	 * Cookie that stores the active site ID for Studio UI and preview.
+	 */
+	public static final String SITE_COOKIE_NAME = "crafterSite";
+
+	/**
+	 * Cookie that stores the preferred Studio UI language.
+	 */
+	public static final String LANGUAGE_COOKIE_NAME = "crafterStudioLanguage";
+
+	/**
+	 * Root path / path separator.
+	 */
+	public static final String ROOT_PATH = "/";
+
+	/**
+	 * Path attribute used for Studio cookies that should be available across authoring URLs.
+	 */
+	public static final String COOKIE_PATH = ROOT_PATH;
+
 	public static final String INDEX_FILE = "index.xml";
 
 	public static final List<String> TOP_LEVEL_FOLDERS = List.of(

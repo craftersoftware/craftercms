@@ -14,14 +14,4 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<script type="text/plain" id="globalBootData">
-	{
-	  <#assign env_config = envConfig???then(envConfig + _csrf, {})/>
-	  <#outputformat "HTML">
-	  "xsrfHeader": "${env_config.headerName!_csrf.headerName!'X-XSRF-TOKEN'}",
-	  "xsrfArgument": "${env_config.parameterName!_csrf.parameterName!'_csrf'}",
-	  "useBaseDomain": ${env_config.useBaseDomain!'false'}
-	  </#outputformat>
-	}
-</script>
 <script type="module" src="/src/main.legacy.tsx"></script>

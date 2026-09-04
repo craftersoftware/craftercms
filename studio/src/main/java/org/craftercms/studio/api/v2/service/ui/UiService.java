@@ -16,10 +16,13 @@
 
 package org.craftercms.studio.api.v2.service.ui;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.model.ui.MenuItem;
+import org.craftercms.studio.model.ui.UiBootstrap;
 
 import java.util.List;
 
@@ -46,5 +49,15 @@ public interface UiService {
 	 * @throws AuthenticationException authentication error
 	 */
 	String getActiveEnvironment() throws AuthenticationException;
+
+	/**
+	 * Returns the server-derived context required to start a Studio UI application.
+	 *
+	 * @param request current HTTP request
+	 * @param response current HTTP response
+	 * @return bootstrap context; user and site fields are empty when there is no authenticated user
+	 */
+	UiBootstrap getBootstrap(HttpServletRequest request, HttpServletResponse response)
+		throws AuthenticationException, ServiceLayerException, UserNotFoundException;
 
 }

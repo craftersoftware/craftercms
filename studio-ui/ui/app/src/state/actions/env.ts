@@ -18,7 +18,9 @@ import { createAction } from '@reduxjs/toolkit';
 import { Version } from '../../models/monitoring/Version';
 import { AjaxError } from 'rxjs/ajax';
 import StandardAction from '../../models/StandardAction';
+import { UiBootstrap } from '../../models/UiBootstrap';
 
 export const fetchSystemVersion = /*#__PURE__*/ createAction<StandardAction>('FETCH_SYSTEM_VERSION');
 export const fetchSystemVersionComplete = /*#__PURE__*/ createAction<Version>('FETCH_SYSTEM_VERSION_COMPLETE');
 export const fetchSystemVersionFailed = /*#__PURE__*/ createAction<AjaxError>('FETCH_SYSTEM_VERSION_FAILED');
+export const uiBootstrapLoaded = /*#__PURE__*/ createAction<UiBootstrap>('UI_BOOTSTRAP_LOADED');

@@ -356,7 +356,7 @@ studio.security.activity.cache.config: initialCapacity=25,maximumSize=100
 # Public URLs, comma separated list of regular expressions.
 # The regex should not include extension and should match the query string too.
 studio.security.publicUrls: >
-    /api/2/system/available_languages.*,
+    /api/2/ui/bootstrap.*,/api/2/system/available_languages.*,
     /api/2/monitoring/.+,/api/2/users/forgot_password.*,/api/2/users/set_password.*,/static-assets/.+,
     /api/2/users/validate_token.*,/api/2/users/forgot_password.*,
     /api/2/plugin/script/reload.*
@@ -1122,6 +1122,8 @@ studio.monitoring.content.cron: '0 0 12 * * ?' # Every day at noon
 ###################################################
 ##              System Configuration             ##
 ###################################################
+# Default Studio UI language when the language cookie is missing or unset
+studio.configuration.defaultLanguage: en
 studio.configuration.availableLanguages:
     -   id: en
         label: English

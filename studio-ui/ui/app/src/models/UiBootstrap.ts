@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,15 +14,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import CrafterCMSNextBridge from './components/CrafterCMSNextBridge';
-import Global from './pages/Global';
+export interface UiBootstrap {
+	xsrfHeader: string;
+	xsrfArgument: string;
+	xsrfToken: string;
+	useBaseDomain: boolean;
+	environment: string;
+	passwordRequirementsMinComplexity: number;
+	footerHtml?: string;
+	user?: string | null;
+	role?: string | null;
+	site?: string | null;
+	siteId?: string | null;
+	siteTitle?: string | null;
+	language: string;
+	studioContext: string;
+	previewAppBaseUri: string;
+	cookieDomain: string;
+}
 
-createRoot(document.getElementById('root')).render(
-	<StrictMode>
-		<CrafterCMSNextBridge>
-			<Global />
-		</CrafterCMSNextBridge>
-	</StrictMode>
-);
+export default UiBootstrap;

@@ -17,7 +17,7 @@
 <#if envConfig.site?? == false || envConfig.site == "">
 	<meta http-equiv="refresh" content="0;URL='/studio/user-dashboard/#/sites/all'" />
 <#else>
-
+	<script src="/studio/static-assets/scripts/ui-bootstrap-boot.js"></script>
 	<link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/yui/assets/skin.css" />
 	<link rel="stylesheet" type="text/css" href="/studio/static-assets/yui/container/assets/skins/sam/container.css"/>
 	<link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/base.css" />
@@ -54,11 +54,6 @@
 	<script src="/studio/static-assets/libs/bootstrap/popper.min.js"></script>
 	<script src="/studio/static-assets/libs/bootstrap/bootstrap.min.js"></script>
 	<script src="/studio/static-assets/libs/datetimepicker/jquery.datetimepicker.js"></script>
-
-	<#outputformat "HTML">
-		<script>document.domain = "${cookieDomain}";</script>
-	</#outputformat>
-
 </#if>
 
 <link rel="shortcut icon" href="/studio/static-assets/img/favicon.ico">

@@ -15,7 +15,6 @@
  */
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { fetchActiveEnvironment } from '../../services/environment';
 import { fetchConfigurationXML, fetchSiteConfigurationFiles, writeConfiguration } from '../../services/configuration';
 import { SiteConfigurationFileWithId } from '../../models/SiteConfigurationFile';
 import Box from '@mui/material/Box';
@@ -61,6 +60,7 @@ import { encrypt } from '../../services/security';
 import ResizeBar from '../ResizeBar';
 import { useSelection } from '../../hooks/useSelection';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
+import useEnv from '../../hooks/useEnv';
 import { useMount } from '../../hooks/useMount';
 import { ConfirmDialogProps } from '../ConfirmDialog';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
@@ -92,8 +92,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const { username } = useActiveUser();
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
+	const { activeEnvironment: environment } = useEnv();
 	const { formatMessage } = useIntl();
-	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
 	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(
 		() => JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null
@@ -138,14 +138,6 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				})
 			);
 		}
-		fetchActiveEnvironment().subscribe({
-			next(env) {
-				setEnvironment(env);
-			},
-			error({ response }) {
-				dispatch(pushErrorDialog({ props: { error: response } }));
-			}
-		});
 	});
 
 	useUnmount(() => {

@@ -18,11 +18,22 @@ import { registerComponents } from './env/registerComponents';
 import { createCodebaseBridge } from './env/codebase-bridge';
 import { publishCrafterGlobal } from './env/craftercms';
 import { setRequestForgeryToken } from './utils/auth';
+import { applyUiBootstrapSideEffects, fetchUiBootstrap } from './services/environment';
 
-publishCrafterGlobal();
-registerComponents();
-setRequestForgeryToken();
-createCodebaseBridge();
-
-const crafterCMSCodebaseBridgeReadyEvent = new Event('CrafterCMS.CodebaseBridgeReady');
-document.dispatchEvent(crafterCMSCodebaseBridgeReadyEvent);
+const eventCodebaseBridgeReady = new Event('CrafterCMS.CodebaseBridgeReady');
+fetchUiBootstrap().subscribe({
+	next: (bootstrap) => {
+		applyUiBootstrapSideEffects(bootstrap);
+		publishCrafterGlobal();
+		registerComponents();
+		createCodebaseBridge();
+		document.dispatchEvent(eventCodebaseBridgeReady);
+	},
+	error: () => {
+		setRequestForgeryToken();
+		publishCrafterGlobal();
+		registerComponents();
+		createCodebaseBridge();
+		document.dispatchEvent(eventCodebaseBridgeReady);
+	}
+});

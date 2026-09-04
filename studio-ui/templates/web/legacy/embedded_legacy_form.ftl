@@ -15,9 +15,7 @@
 -->
 <html>
 <head>
-	<script>
-		document.domain = "${Request.serverName}";
-	</script>
+	<script src="/studio/static-assets/scripts/ui-bootstrap-boot.js"></script>
 	<script src="/studio/static-assets/libs/amplify/lib/amplify.core.js"></script>
 	<script src="/studio/static-assets/yui/utilities/utilities.js"></script>
 	<script src="/studio/static-assets/yui/container/container-min.js"></script>

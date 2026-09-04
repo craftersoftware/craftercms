@@ -14,12 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 import React from 'react';
-import { GlobalAppContextProvider, GlobalApp, GlobalAppProps } from '../components/GlobalApp';
+import { GlobalAppContextProvider, GlobalApp } from '../components/GlobalApp';
 
-export default function Global(props: GlobalAppProps) {
+export default function Global() {
 	return (
 		<GlobalAppContextProvider>
-			<GlobalApp {...props} />
+			<GlobalApp />
 		</GlobalAppContextProvider>
 	);
 }

@@ -16,18 +16,33 @@
 
 import { createReducer } from '@reduxjs/toolkit';
 import { GlobalState } from '../../models/GlobalState';
-import { fetchSystemVersionComplete } from '../actions/env';
+import { fetchSystemVersionComplete, uiBootstrapLoaded } from '../actions/env';
 import { Version } from '../../models/monitoring/Version';
 import { siteSocketStatus, storeInitialized } from '../actions/system';
+import { UiBootstrap } from '../../models/UiBootstrap';
 
-interface GlobalBootData {
-	xsrfHeader: string;
-	xsrfArgument: string;
-	useBaseDomain: boolean;
+export function mapUiBootstrapToEnv(
+	bootstrap: UiBootstrap
+): Pick<
+	GlobalState['env'],
+	| 'xsrfHeader'
+	| 'xsrfArgument'
+	| 'useBaseDomain'
+	| 'activeEnvironment'
+	| 'passwordRequirementsMinComplexity'
+	| 'footerHtml'
+	| 'guestBase'
+> {
+	return {
+		xsrfHeader: bootstrap.xsrfHeader,
+		xsrfArgument: bootstrap.xsrfArgument,
+		useBaseDomain: bootstrap.useBaseDomain,
+		activeEnvironment: bootstrap.environment,
+		passwordRequirementsMinComplexity: bootstrap.passwordRequirementsMinComplexity,
+		footerHtml: bootstrap.footerHtml ?? '',
+		guestBase: bootstrap.previewAppBaseUri || window.location.origin
+	};
 }
-
-const json = import.meta.env.DEV ? '' : document.getElementById('globalBootData').textContent;
-const data: GlobalBootData = import.meta.env.DEV ? {} : JSON.parse(json);
 
 export const envInitialState: GlobalState['env'] = ((origin: string) => ({
 	authoringBase: import.meta.env.VITE_AUTHORING_BASE ?? `${origin}/studio`,
@@ -35,9 +50,9 @@ export const envInitialState: GlobalState['env'] = ((origin: string) => ({
 		? `${import.meta.env.VITE_AUTHORING_BASE}/logout`
 		: `${origin}/studio/logout`,
 	guestBase: import.meta.env.VITE_GUEST_BASE ?? origin,
-	xsrfHeader: data.xsrfHeader ?? 'X-XSRF-TOKEN',
-	xsrfArgument: data.xsrfArgument ?? '_csrf',
-	useBaseDomain: data.useBaseDomain ?? false,
+	xsrfHeader: 'X-XSRF-TOKEN',
+	xsrfArgument: '_csrf',
+	useBaseDomain: false,
 	siteCookieName: 'crafterSite',
 	previewLandingBase: import.meta.env.VITE_PREVIEW_LANDING ?? `${origin}/studio/preview-landing`,
 	version: null,
@@ -45,11 +60,17 @@ export const envInitialState: GlobalState['env'] = ((origin: string) => ({
 	packageVersion: null,
 	packageBuildDate: null,
 	activeEnvironment: null,
+	passwordRequirementsMinComplexity: 4,
+	footerHtml: '',
 	socketConnected: false
 }))(window.location.origin);
 
 const reducer = createReducer<GlobalState['env']>(envInitialState, (builder) => {
 	builder
+		.addCase(uiBootstrapLoaded, (state, { payload }) => ({
+			...state,
+			...mapUiBootstrapToEnv(payload)
+		}))
 		.addCase(fetchSystemVersionComplete, (state, { payload }: { payload: Version }) => ({
 			...state,
 			version: payload.packageVersion.replace('-SNAPSHOT', ''),

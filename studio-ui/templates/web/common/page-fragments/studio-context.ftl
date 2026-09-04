@@ -16,10 +16,11 @@
 
 <script>
 (function (origin) {
+	const bootstrap = window.__crafterUiBootstrap || {};
 
 	function getSiteId() {
 		const urlParams = new URLSearchParams(window.location.hash);
-		return urlParams.get('site') ?? "${envConfig.site}";
+		return urlParams.get('site') ?? bootstrap.site ?? bootstrap.siteId ?? "${envConfig.site}";
 	}
 	const siteId = getSiteId();
 
@@ -29,25 +30,25 @@
 	 */
 	<#outputformat "HTML">
 	CStudioAuthoringContext = {
-		user: "${envConfig.user}",
-		role: "${envConfig.role}",
+		user: bootstrap.user ?? "${envConfig.user}",
+		role: bootstrap.role ?? "${envConfig.role}",
 		site: siteId,
 		siteId,
 		authenticationType: "${envConfig.authenticationType}",
 		baseUri: `${'$'}{origin}/studio`,
 		authoringAppBaseUri: `${'$'}{origin}/studio`,
 		formServerUri: `${'$'}{origin}/form`,
-		previewAppBaseUri: origin,
+		previewAppBaseUri: bootstrap.previewAppBaseUri || origin,
 		contextMenuOffsetPage: false,
 		homeUri: `${'$'}{origin}/site-dashboard`,
 		navContext: 'default',
-		cookieDomain: "${cookieDomain!'UNSET'}",
+		cookieDomain: bootstrap.cookieDomain || "${cookieDomain!'UNSET'}",
 		isPreview: false,
 		liveAppBaseUri: '',
 		graphQLBaseURI: `${'$'}{origin}/api/1/site/graphql`,
-		xsrfHeaderName: "${_csrf.headerName}",
-		xsrfParameterName: "${_csrf.parameterName}",
-		passwordRequirementsMinComplexity: ${envConfig.passwordRequirementsMinComplexity}
+		xsrfHeaderName: bootstrap.xsrfHeader || "${_csrf.headerName}",
+		xsrfParameterName: bootstrap.xsrfArgument || "${_csrf.parameterName}",
+		passwordRequirementsMinComplexity: bootstrap.passwordRequirementsMinComplexity ?? ${envConfig.passwordRequirementsMinComplexity}
 	};
 	</#outputformat>
 
@@ -67,6 +68,7 @@
 	}
 
 	var lang = (
+		bootstrap.language ||
 		localStorage.getItem(CStudioAuthoringContext.user + '_crafterStudioLanguage') ||
 		localStorage.getItem('crafterStudioLanguage') ||
 		'en'

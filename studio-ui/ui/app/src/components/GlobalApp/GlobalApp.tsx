@@ -42,6 +42,7 @@ import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
 import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
+import useEnv from '../../hooks/useEnv';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -58,12 +59,18 @@ const AboutCrafterCMSView = () => import('../AboutCrafterCMSView/AboutCrafterCMS
 const AccountManagement = lazy(() => import('../AccountManagement/AccountManagement'));
 
 export interface GlobalAppProps {
-	passwordRequirementsMinComplexity: number;
-	footerHtml: string;
+	passwordRequirementsMinComplexity?: number;
+	footerHtml?: string;
 }
 
-export function GlobalApp(props: GlobalAppProps) {
-	const { passwordRequirementsMinComplexity } = props;
+export function GlobalApp(props: GlobalAppProps = {}) {
+	const { passwordRequirementsMinComplexity: passwordRequirementsMinComplexityProp, footerHtml: footerHtmlProp } =
+		props;
+	const { passwordRequirementsMinComplexity: envPasswordRequirementsMinComplexity, footerHtml: envFooterHtml } =
+		useEnv();
+	const passwordRequirementsMinComplexity =
+		passwordRequirementsMinComplexityProp ?? envPasswordRequirementsMinComplexity ?? 4;
+	const footerHtml = footerHtmlProp ?? envFooterHtml ?? '';
 	const globalNavigation = useGlobalNavigation();
 
 	if (!globalNavigation.items) {
@@ -72,7 +79,7 @@ export function GlobalApp(props: GlobalAppProps) {
 
 	const router = createHashRouter(
 		createRoutesFromElements(
-			<Route path="/" element={<GlobalAppInternal {...props} />}>
+			<Route path="/" element={<GlobalAppInternal footerHtml={footerHtml} />}>
 				<Route path={GlobalRoutes.Projects} element={<SiteManagement />} />
 				{/* Leaving this route for backwards compatibility. Main route is now 'projects' */}
 				<Route path="/sites" element={<SiteManagement />} />
@@ -128,8 +135,8 @@ function RouteNotFound() {
 	);
 }
 
-export function GlobalAppInternal(props: GlobalAppProps) {
-	const { footerHtml } = props;
+export function GlobalAppInternal(props: Pick<GlobalAppProps, 'footerHtml'>) {
+	const { footerHtml = '' } = props;
 	const [width, setWidth] = useState(240);
 	const [{ openSidebar }] = useGlobalAppState();
 	const { items } = useGlobalNavigation();

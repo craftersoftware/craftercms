@@ -14,9 +14,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ElementType, Fragment, lazy, PropsWithChildren, ReactNode, Suspense, useLayoutEffect, useState } from 'react';
+import React, {
+	ElementType,
+	Fragment,
+	lazy,
+	PropsWithChildren,
+	ReactNode,
+	Suspense,
+	useLayoutEffect,
+	useState
+} from 'react';
 import { ThemeOptions } from '@mui/material/styles';
-import { setRequestForgeryToken } from '../../utils/auth';
 import { CrafterCMSStore, getStore } from '../../state/store';
 import { SnackbarProvider, SnackbarProviderProps } from 'notistack';
 import I18nProvider from '../I18nProvider';
@@ -73,7 +81,6 @@ export function CrafterCMSNextBridge(
 	useLayoutEffect(() => {
 		registerComponents();
 		publishCrafterGlobal();
-		setRequestForgeryToken();
 		getStore().subscribe({
 			next: (store) => setStore(store),
 			error: (message) => setStoreError(message)

@@ -172,6 +172,8 @@ export interface GlobalState {
 		packageBuildDate: string;
 		useBaseDomain: boolean;
 		activeEnvironment: string;
+		passwordRequirementsMinComplexity: number;
+		footerHtml: string;
 		socketConnected: boolean;
 	};
 	preview: {

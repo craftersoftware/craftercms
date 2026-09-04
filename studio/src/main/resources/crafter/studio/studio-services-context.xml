@@ -256,6 +256,9 @@
 	<bean id="uiService" class="org.craftercms.studio.impl.v2.service.ui.UiServiceImpl">
 		<constructor-arg name="userService" ref="userServiceInternal"/>
 		<constructor-arg name="uiServiceInternal" ref="uiServiceInternal"/>
+		<constructor-arg name="entitlementValidator" ref="crafter.entitlementValidator"/>
+		<constructor-arg name="csrfTokenRepository" ref="csrfTokenRepository"/>
+		<constructor-arg name="csrfTokenRequestHandler" ref="csrfTokenRequestHandler"/>
 		<property name="studioConfiguration" ref="studioConfiguration"/>
 	</bean>
 

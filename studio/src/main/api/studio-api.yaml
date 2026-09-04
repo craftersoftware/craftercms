@@ -1523,6 +1523,30 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
+    /api/2/ui/bootstrap:
+        get:
+            tags:
+                - ui
+            summary: Get the context required to bootstrap the Studio UI
+            operationId: getUiBootstrap
+            description: |
+                    Module: Studio <br>
+                    Required Permission: None
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    response:
+                                        $ref: '#/components/schemas/ApiResponse'
+                                    bootstrap:
+                                        $ref: '#/components/schemas/UiBootstrap'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
     /api/2/ui/views/global_menu:
         get:
             tags:
@@ -8829,6 +8853,60 @@ components:
                 url:
                     type: string
                     description: 'Preview URL of the item'
+
+        UiBootstrap:
+            type: object
+            properties:
+                xsrfHeader:
+                    type: string
+                xsrfArgument:
+                    type: string
+                xsrfToken:
+                    type: string
+                    description: |
+                        The XSRF token value to send back on state-changing requests.
+                useBaseDomain:
+                    type: boolean
+                environment:
+                    type: string
+                passwordRequirementsMinComplexity:
+                    type: integer
+                footerHtml:
+                    type: string
+                user:
+                    type: string
+                    nullable: true
+                role:
+                    type: string
+                    nullable: true
+                site:
+                    type: string
+                    nullable: true
+                siteId:
+                    type: string
+                    nullable: true
+                siteTitle:
+                    type: string
+                    nullable: true
+                language:
+                    type: string
+                studioContext:
+                    type: string
+                previewAppBaseUri:
+                    type: string
+                cookieDomain:
+                    type: string
+            required:
+                - xsrfHeader
+                - xsrfArgument
+                - xsrfToken
+                - useBaseDomain
+                - environment
+                - passwordRequirementsMinComplexity
+                - language
+                - studioContext
+                - previewAppBaseUri
+                - cookieDomain
 
         MenuItem:
             type: object

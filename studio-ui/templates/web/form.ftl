@@ -54,11 +54,6 @@
 
   <script src="/studio/static-assets/libs/momentjs/moment.min.js"></script>
   <script src="/studio/static-assets/libs/momentjs/moment-timezone-with-data-2000-2030.min.js"></script>
-
-  <#outputformat "HTML">
-  <script>document.domain = "${Request.serverName}";</script>
-  </#outputformat>
-
 </head>
 
 <body class="yui-skin-cstudioTheme form-engine-body">

@@ -17,8 +17,6 @@
 import { registerComponents } from './env/registerComponents';
 import { createCodebaseBridge } from './env/codebase-bridge';
 import { publishCrafterGlobal } from './env/craftercms';
-import { setRequestForgeryToken } from './utils/auth';
-import { unescapeHTML } from './utils/string';
 import { createRoot } from 'react-dom/client';
 import React, { StrictMode } from 'react';
 import CrafterCMSNextBridge from './components/CrafterCMSNextBridge';
@@ -26,14 +24,12 @@ import SiteTools from './pages/SiteTools';
 
 registerComponents();
 publishCrafterGlobal();
-setRequestForgeryToken();
 createCodebaseBridge();
 
-const footerData = JSON.parse(document.getElementById('siteToolsFooterData').textContent);
 createRoot(document.getElementById('root')).render(
 	<StrictMode>
 		<CrafterCMSNextBridge>
-			<SiteTools footerHtml={unescapeHTML(footerData.description)} />
+			<SiteTools />
 		</CrafterCMSNextBridge>
 	</StrictMode>
 );

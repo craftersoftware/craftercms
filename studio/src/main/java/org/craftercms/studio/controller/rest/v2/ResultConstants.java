@@ -42,6 +42,7 @@ public final class ResultConstants {
 	public static final String RESULT_KEY_MENU_ITEMS = "menuItems";
 
 	public static final String RESULT_KEY_ENVIRONMENT = "environment";
+	public static final String RESULT_KEY_BOOTSTRAP = "bootstrap";
 
 	public static final String RESULT_KEY_BLUEPRINTS = "blueprints";
 

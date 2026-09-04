@@ -22,16 +22,6 @@
 		<link rel="shortcut icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>${contentModel['internal-name']} - ${contentModel['common-title']!'CrafterCMS'}</title>
-		<script type="text/plain" id="globalBootData">
-			{
-			  <#assign env_config = envConfig???then(envConfig + _csrf, {})/>
-			  <#outputformat "HTML">
-			  "xsrfHeader": "${env_config.headerName!_csrf.headerName!'X-XSRF-TOKEN'}",
-			  "xsrfArgument": "${env_config.parameterName!_csrf.parameterName!'_csrf'}",
-			  "useBaseDomain": ${env_config.useBaseDomain!'false'}
-			  </#outputformat>
-			}
-		</script>
 	</head>
 	<body>
 		<noscript>You need to enable JavaScript to run this app.</noscript>

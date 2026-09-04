@@ -48,7 +48,8 @@ import {
 	sharedWorkerUnauthenticated
 } from './actions/auth';
 import { SHARED_WORKER_NAME } from '../utils/constants';
-import { fetchActiveEnvironment } from '../services/environment';
+import { applyUiBootstrapSideEffects, fetchUiBootstrap } from '../services/environment';
+import { envInitialState, mapUiBootstrapToEnv } from './reducers/env';
 import { batchActions, dispatchDOMEvent } from './actions/misc';
 import { closeSingleFileUploadDialog } from './actions/dialogs';
 import { pushDialog, pushNonDialog } from './actions/dialogStack';
@@ -73,12 +74,22 @@ export function getStore(): Observable<CrafterCMSStore> {
 		);
 	} else {
 		store$ = new BehaviorSubject(null);
-		return registerSharedWorker().pipe(
-			tap(({ token }) => setJwt(token)),
-			switchMap(({ worker, ...auth }) =>
-				of(createStoreSync({ dependencies: { worker } })).pipe(
-					switchMap((store) =>
-						fetchStateInitialization().pipe(
+		return fetchUiBootstrap().pipe(
+			tap(applyUiBootstrapSideEffects),
+			switchMap((bootstrap) =>
+				registerSharedWorker().pipe(
+					tap(({ token }) => setJwt(token)),
+					switchMap(({ worker, ...auth }) => {
+						const store = createStoreSync({
+							preloadedState: {
+								env: {
+									...envInitialState,
+									...mapUiBootstrapToEnv(bootstrap)
+								}
+							},
+							dependencies: { worker }
+						});
+						return fetchStateInitialization().pipe(
 							tap((requirements) => {
 								worker.port.onmessage = (e) => {
 									if (e.data?.type) {
@@ -114,11 +125,17 @@ export function getStore(): Observable<CrafterCMSStore> {
 										}
 									}
 								};
-								store.dispatch(storeInitialized({ auth, ...requirements }));
+								store.dispatch(
+									storeInitialized({
+										auth,
+										...requirements,
+										activeEnvironment: bootstrap.environment
+									})
+								);
 								store$.next(store);
 							})
-						)
-					)
+						);
+					})
 				)
 			),
 			switchMap(() => store$.pipe(take(1)))
@@ -211,7 +228,6 @@ export function fetchStateInitialization(): Observable<{
 	sites: Site[];
 	properties: LookupTable<any>;
 	activeSiteId: string;
-	activeEnvironment: string;
 }> {
 	const siteCookieValue = getSiteCookie();
 	return forkJoin({
@@ -229,8 +245,7 @@ export function fetchStateInitialization(): Observable<{
 						// If the exists check fails (e.g. network/API error), don't break store init
 						catchError(() => of(null))
 					)
-				: of(null),
-		activeEnvironment: fetchActiveEnvironment()
+				: of(null)
 	});
 }
 
