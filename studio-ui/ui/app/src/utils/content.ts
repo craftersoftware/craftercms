@@ -552,7 +552,7 @@ export function createModelHierarchyDescriptorMap(
 								// Because there's no real warranty that the parent of a model will be processed first
 								lookup[componentId] = createModelHierarchyDescriptor(
 									componentId,
-									model.craftercms.id,
+									lookup[componentId].parentId ?? model.craftercms.id,
 									lookup[componentId].parentContainerFieldPath ?? cleanCarryOver(`${fieldCarryOver}.${field.id}`),
 									lookup[componentId].parentContainerFieldIndex ?? cleanCarryOver(`${indexCarryOver}.${index}`),
 									lookup[componentId].children
