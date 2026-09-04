@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License version 3 as published by
@@ -60,7 +60,7 @@
     <!--									-->
     <!-- ////////////////////////////////// -->
     <mvc:annotation-driven validator="commonValidator">
-        <mvc:path-matching registered-suffixes-only="true" />
+        <mvc:path-matching/>
     </mvc:annotation-driven>
 
     <!--
@@ -277,6 +277,11 @@
     <bean id="crafter.httpHeadersRewriteFilter" class="org.craftercms.engine.servlet.filter.HttpHeadersRewriteFilter">
         <constructor-arg name="cacheTemplate" ref="crafter.cacheTemplate"/>
     </bean>
+
+	<bean id="crafter.suffixStrippingFilter" class="org.craftercms.commons.http.SuffixStrippingFilter">
+		<constructor-arg name="suffixes" value="${crafter.engine.api.stripSuffixes.suffixes}"/>
+		<constructor-arg name="includedUrls" value="${crafter.engine.api.stripSuffixes.includedUrls}"/>
+	</bean>
 
     <!-- ////////////////////////////////// -->
     <!--								 	-->

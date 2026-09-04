@@ -30,7 +30,7 @@
     <!--									-->
     <!-- ////////////////////////////////// -->
     <mvc:annotation-driven validator="commonValidator">
-        <mvc:path-matching registered-suffixes-only="true"/>
+        <mvc:path-matching/>
     </mvc:annotation-driven>
 
     <!--
@@ -54,8 +54,6 @@
         <property name="order" value="#{T(org.springframework.core.Ordered).LOWEST_PRECEDENCE}"/>
         <property name="interceptors" ref="crafter.interceptors"/>
         <property name="urlMap" ref="crafter.urlMappings"/>
-        <!-- This property became false by default in Spring 5.3 -->
-        <property name="useTrailingSlashMatch" value="true"/>
 
         <!-- https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/servlet/handler/AbstractHandlerMapping.html#setPatternParser(org.springframework.web.util.pattern.PathPatternParser)
         Since Spring 6.0, this is populated to a PathPatternParser by default. Setting to null to keep current behavior.

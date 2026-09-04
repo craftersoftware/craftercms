@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,25 +16,13 @@
 package org.craftercms.deployer.impl.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
-import org.craftercms.commons.validation.annotations.param.ValidateNoTagsParam;
-import org.craftercms.commons.validation.annotations.param.ValidateSecurePathParam;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.SITE_ID;
 
 /**
  * Holds the parameters to create a Target
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateTargetRequest {
     @NotEmpty
     @ValidSiteId(message = "Value is not a valid environment name")

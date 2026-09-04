@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -30,6 +30,7 @@ import org.craftercms.commons.i10n.I10nUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -81,8 +82,8 @@ public class HttpMessageConvertingResponseWriter {
             throw new HttpMediaTypeNotAcceptableException(producibleMediaTypes);
         }
 
-        List<MediaType> mediaTypes = new ArrayList<MediaType>(compatibleMediaTypes);
-        MediaType.sortBySpecificityAndQuality(mediaTypes);
+        List<MediaType> mediaTypes = new ArrayList<>(compatibleMediaTypes);
+        MimeTypeUtils.sortBySpecificity(mediaTypes);
 
         MediaType selectedMediaType = null;
         for (MediaType mediaType : mediaTypes) {
@@ -151,12 +152,12 @@ public class HttpMessageConvertingResponseWriter {
     protected MediaType getMostSpecificMediaType(MediaType acceptType, MediaType produceType) {
         produceType = produceType.copyQualityValue(acceptType);
 
-        return MediaType.SPECIFICITY_COMPARATOR.compare(acceptType, produceType) <= 0 ? acceptType : produceType;
+		return acceptType.isMoreSpecific(produceType) ? acceptType : produceType;
     }
 
     /**
      * Return the media types supported by all provided message converters sorted by specificity via
-     * {@link MediaType#sortBySpecificity(List)}.
+     * {@link MediaTypeUtils#sortBySpecificity(List)}.
      */
     protected List<MediaType> getAllSupportedMediaTypes(List<HttpMessageConverter<?>> messageConverters) {
         Set<MediaType> allSupportedMediaTypes = new LinkedHashSet<MediaType>();
@@ -166,7 +167,7 @@ public class HttpMessageConvertingResponseWriter {
 
         List<MediaType> result = new ArrayList<MediaType>(allSupportedMediaTypes);
 
-        MediaType.sortBySpecificity(result);
+        MimeTypeUtils.sortBySpecificity(result);
 
         return Collections.unmodifiableList(result);
     }

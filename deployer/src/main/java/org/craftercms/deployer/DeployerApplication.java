@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -45,7 +45,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.annotation.Primary;
@@ -144,19 +143,6 @@ public class DeployerApplication implements WebMvcConfigurer {
 		store.setStoreFolder(processorsStateFolder);
 
 		return store;
-	}
-
-	@Bean
-	@Primary
-	public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
-		ObjectMapper objectMapper = builder.createXmlMapper(false).build();
-		objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-		return objectMapper;
-	}
-
-	@Bean
-	public RestTemplate restTemplate(RestTemplateBuilder builder) {
-		return builder.build();
 	}
 
 	@Bean(destroyMethod = "shutdown")

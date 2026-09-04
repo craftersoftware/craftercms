@@ -22,7 +22,7 @@
 
     <!-- Custom expression handler -->
     <bean id="studioMessagingSecurityExpressionHandler"
-          class="org.craftercms.studio.impl.v2.utils.spring.security.messaging.StudioSecurityExpressionHandler">
+          class="org.craftercms.studio.impl.v2.utils.spring.security.messaging.StudioMessageSecurityExpressionHandler">
         <constructor-arg name="securityService" ref="studio.securityService"/>
     </bean>
 

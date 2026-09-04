@@ -21,6 +21,8 @@ spring:
   freemarker:
     # If Spring should check its default template location (always false since we handle our own Freemarker templates)
     checkTemplateLocation: false
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 
 ####################################################
 ##               Deployer Properties              ##

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -382,7 +382,7 @@ public class MarketplaceServiceInternalImpl implements MarketplaceServiceInterna
         throws MarketplaceException {
 
         validate();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
             .path(Paths.PLUGIN_SEARCH)
             .queryParam(Constants.PARAM_VERSION, version)
             .queryParam(Constants.PARAM_EDITION, edition)
@@ -424,7 +424,7 @@ public class MarketplaceServiceInternalImpl implements MarketplaceServiceInterna
         validate();
 
         logger.debug("Load plugin descriptor for plugin '{}' version '{}'", id, version);
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
             .path(Paths.GET_PLUGIN)
             .pathSegment(id, version.toString())
             .queryParam(Constants.PARAM_SHOW_PENDING, showPending);

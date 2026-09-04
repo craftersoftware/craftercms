@@ -19,6 +19,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.craftercms.commons.crypto.CryptoException;
 import org.craftercms.commons.crypto.TextEncryptor;
+import org.craftercms.commons.http.NamedCookieManager;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.site.SiteService;
@@ -50,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.util.CookieGenerator;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -133,8 +133,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
      */
     protected final int inactivityTimeout;
 
-    private CookieGenerator refreshTokenCookieGenerator;
-    private CookieGenerator previewCookieGenerator;
+	private NamedCookieManager refreshTokenCookieManager;
+	private NamedCookieManager previewCookieManager;
 
     /**
      * Cache used to track the activity of the users
@@ -193,13 +193,11 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
         userActivity = CacheBuilder.from(studioConfiguration.getProperty(ACTIVITY_CACHE_CONFIG_KEY)).build();
         jwtSignKey = new HmacKey(signPassword.getBytes(UTF_8));
         jwtEncryptKey = new PbkdfKey(encryptPassword);
-        refreshTokenCookieGenerator.setCookieHttpOnly(true); // Always HTTPOnly to protect the refresh token
-        previewCookieGenerator.setCookieHttpOnly(true);
     }
 
     @Override
     public boolean hasValidRefreshToken(Authentication auth, HttpServletRequest request, HttpServletResponse response) {
-        var cookie = getCookie(request, refreshTokenCookieGenerator.getCookieName());
+        var cookie = getCookie(request, refreshTokenCookieManager.getName());
         var refreshToken = cookie != null ? cookie.getValue() : null;
         var userId = getUserId(auth);
 
@@ -209,7 +207,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
         if (!valid) {
             SecurityContextHolder.clearContext();
             request.getSession().invalidate();
-            refreshTokenCookieGenerator.removeCookie(response);
+            refreshTokenCookieManager.deleteCookie(response);
         }
 
         return valid;
@@ -221,7 +219,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
         var userId = getUserId(auth);
 
         retryingDatabaseOperationFacade.retry(() -> securityDao.upsertRefreshToken(userId, refreshToken));
-        refreshTokenCookieGenerator.addCookie(response, refreshToken);
+        refreshTokenCookieManager.addCookie(refreshToken, response);
     }
 
     @Override
@@ -229,16 +227,16 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
         String siteName = getCookieValue(CRAFTER_SITE_COOKIE_NAME, request);
         if (isEmpty(siteName)) {
             logger.debug("No site name found in '{}' cookie, removing preview cookie", CRAFTER_SITE_COOKIE_NAME);
-            previewCookieGenerator.removeCookie(response);
+            previewCookieManager.deleteCookie(response);
         } else if (!securityService.isSiteMember(auth.getName(), siteName)) {
             logger.debug("User '{}' is not a member of site '{}', removing preview cookie", auth.getName(), siteName);
-            previewCookieGenerator.removeCookie(response);
+            previewCookieManager.deleteCookie(response);
             if (!silent) {
                 throw new SiteNotFoundException(siteName);
             }
         } else {
             String previewCookie = createPreviewCookie(siteName);
-            previewCookieGenerator.addCookie(response, previewCookie);
+            previewCookieManager.addCookie(previewCookie, response);
             logger.debug("Refreshed preview cookie for user '{}'", auth.getName());
         }
     }
@@ -251,7 +249,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
      * @throws ServiceLayerException if the cookie cannot be encrypted
      */
     private String createPreviewCookie(final String siteName) throws ServiceLayerException {
-        long timestamp = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(previewCookieGenerator.getCookieMaxAge());
+        long timestamp = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(previewCookieManager.getMaxAge());
 
         String token = format("%s|%s", siteName, timestamp);
         try {
@@ -263,7 +261,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
 
     @Override
     public void deletePreviewCookie(HttpServletResponse response) {
-        previewCookieGenerator.removeCookie(response);
+        previewCookieManager.deleteCookie(response);
     }
 
     @Override
@@ -496,11 +494,11 @@ public class AccessTokenServiceInternalImpl implements AccessTokenServiceInterna
         userActivity.put(getUserId(authentication), now());
     }
 
-    public void setRefreshTokenCookieGenerator(final CookieGenerator refreshTokenCookieGenerator) {
-        this.refreshTokenCookieGenerator = refreshTokenCookieGenerator;
-    }
+	public void setRefreshTokenCookieManager(final NamedCookieManager refreshTokenCookieManager) {
+		this.refreshTokenCookieManager = refreshTokenCookieManager;
+	}
 
-    public void setPreviewCookieGenerator(final CookieGenerator previewCookieGenerator) {
-        this.previewCookieGenerator = previewCookieGenerator;
-    }
+	public void setPreviewCookieManager(final NamedCookieManager previewCookieManager) {
+		this.previewCookieManager = previewCookieManager;
+	}
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License version 3 as published by
@@ -73,7 +73,7 @@
 
     <bean id="dbAuthenticationProvider"
           class="org.craftercms.studio.impl.v2.security.authentication.db.DbAuthenticationProvider">
-        <property name="userDetailsService" ref="studioUserDetailsService"/>
+        <constructor-arg name="userDetailsService" ref="studioUserDetailsService"/>
         <property name="passwordEncoder" ref="passwordEncoder"/>
         <property name="preAuthenticationChecks" ref="deletedUserDetailsChecker"/>
     </bean>
@@ -244,10 +244,7 @@
     <!-- CSRF -->
 
     <!-- If we replace the session in the future we can remove CSRF completely -->
-    <bean id="csrfTokenRepository" class="org.springframework.security.web.csrf.CookieCsrfTokenRepository">
-        <!-- The UI needs to have access to the cookie -->
-        <property name="cookieHttpOnly" value="false"/>
-    </bean>
+    <bean id="csrfTokenRepository" class="org.springframework.security.web.csrf.CookieCsrfTokenRepository" factory-method="withHttpOnlyFalse"/>
 
     <bean id="csrfTokenRequestHandler" class="org.craftercms.studio.api.v2.security.StudioCsrfTokenRequestHandler" />
 

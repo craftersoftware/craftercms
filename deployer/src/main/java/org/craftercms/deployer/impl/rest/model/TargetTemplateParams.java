@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -17,8 +17,6 @@ package org.craftercms.deployer.impl.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
 import org.craftercms.commons.validation.annotations.param.ValidUsername;
 import org.craftercms.commons.validation.annotations.param.ValidateNoTagsParam;
@@ -35,7 +33,6 @@ import static org.craftercms.commons.validation.annotations.param.EsapiValidatio
 /**
  * Common parameters to be consumed by target templates
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class TargetTemplateParams {
 
     @NotBlank

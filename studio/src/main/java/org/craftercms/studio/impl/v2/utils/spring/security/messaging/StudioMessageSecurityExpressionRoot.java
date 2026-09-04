@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,6 +15,8 @@
  */
 package org.craftercms.studio.impl.v2.utils.spring.security.messaging;
 
+import java.util.function.Supplier;
+
 import org.craftercms.studio.api.v2.service.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +30,12 @@ import org.springframework.security.messaging.access.expression.MessageSecurityE
  * @author joseross
  * @since 4.0.0
  */
-public class StudioMessageSecurityExpressionRoot extends MessageSecurityExpressionRoot {
+public class StudioMessageSecurityExpressionRoot<T> extends MessageSecurityExpressionRoot<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(StudioMessageSecurityExpressionRoot.class);
     protected final SecurityService securityService;
 
-    public StudioMessageSecurityExpressionRoot(Authentication authentication, Message<?> message,
+    public StudioMessageSecurityExpressionRoot(Supplier<? extends Authentication> authentication, Message<T> message,
                                                SecurityService securityService) {
         super(authentication, message);
         this.securityService = securityService;

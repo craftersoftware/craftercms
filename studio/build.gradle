@@ -62,6 +62,7 @@ dependencies {
 	implementation libs.spring.security.core
 	implementation libs.spring.security.config
 	implementation libs.spring.security.web
+	implementation libs.spring.security.access
 	implementation libs.spring.websocket
 	implementation libs.spring.messaging
 	implementation libs.spring.security.messaging

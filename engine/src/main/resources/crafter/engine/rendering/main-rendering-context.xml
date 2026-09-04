@@ -78,7 +78,6 @@
     </bean>
 
     <bean id="crafter.contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
-        <property name="favorPathExtension" value="true"/>
         <property name="defaultContentType" value="application/json"/>
         <property name="mediaTypes">
             <map>
@@ -129,7 +128,7 @@
         <constructor-arg name="defaultLocaleResolver">
             <!-- The standalone resolver used when there is no translation config -->
             <bean class="org.craftercms.engine.targeting.impl.ConfigAwareCookieLocaleResolver">
-                <property name="cookieName" value="${crafter.engine.locale.cookie.name}"/>
+                <constructor-arg name="cookieName" value="${crafter.engine.locale.cookie.name}"/>
             </bean>
         </constructor-arg>
     </bean>

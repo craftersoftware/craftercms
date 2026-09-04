@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,9 +16,11 @@
 package org.craftercms.commons.rest;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -64,7 +66,7 @@ public class HttpMessageConvertingResponseErrorHandler implements ResponseErrorH
     }
 
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
         HttpStatusCode status = response.getStatusCode();
         HttpMessageConverterExtractor<?> responseExtractor = new HttpMessageConverterExtractor<>(responseType,
             messageConverters);

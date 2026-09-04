@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -21,6 +21,7 @@ import org.craftercms.studio.model.AuthenticationType;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 /**
  * Extension of {@link DaoAuthenticationProvider} that returns an instance of {@link AuthenticatedUser}
@@ -29,6 +30,9 @@ import org.springframework.security.core.userdetails.UserDetails;
  * @since 4.0
  */
 public class DbAuthenticationProvider extends DaoAuthenticationProvider {
+	public DbAuthenticationProvider(final UserDetailsService userDetailsService) {
+		super(userDetailsService);
+	}
 
     @Override
     protected Authentication createSuccessAuthentication(Object principal, Authentication authentication,

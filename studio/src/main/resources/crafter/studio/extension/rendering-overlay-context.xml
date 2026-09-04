@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -78,7 +78,7 @@
     </util:map>
 
     <mvc:annotation-driven validator="commonValidator">
-        <mvc:path-matching registered-suffixes-only="true" />
+        <mvc:path-matching/>
     </mvc:annotation-driven>
 
     <!--
@@ -223,7 +223,6 @@
         <property name="order" value="0" />
         <property name="contentNegotiationManager">
             <bean class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
-                <property name="favorPathExtension" value="true"/>
                 <!-- We ignore accept header since most of the time views that can't be resolved will be resolved as application/xml -->
                 <property name="ignoreAcceptHeader" value="true" />
                 <property name="defaultContentType" value="text/html" />

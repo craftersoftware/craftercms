@@ -1491,6 +1491,11 @@
         <constructor-arg name="enabled" value="#{studioConfiguration.getProperty('studio.forwarded.headers.enabled')}"/>
     </bean>
 
+	<bean id="crafter.suffixStrippingFilter" class="org.craftercms.commons.http.SuffixStrippingFilter">
+		<constructor-arg name="suffixes" value="#{studioConfiguration.getProperty('studio.api.stripSuffixes.suffixes')}"/>
+		<constructor-arg name="includedUrls" value="#{studioConfiguration.getProperty('studio.api.stripSuffixes.includedUrls')}"/>
+	</bean>
+
     <util:list id="sitePolicyValidators">
         <bean class="org.craftercms.studio.impl.v2.service.policy.validators.FileSizePolicyValidator"/>
         <bean class="org.craftercms.studio.impl.v2.service.policy.validators.MimeTypePolicyValidator"/>
@@ -1607,38 +1612,38 @@
         <constructor-arg name="previewTokenEncryptor" ref="crafter.textEncryptor"/>
         <constructor-arg name="securityService" ref="studio.securityService"/>
         <property name="audience" value="#{studioConfiguration.getProperty('studio.security.token.audience')}"/>
-        <property name="refreshTokenCookieGenerator">
-            <bean class="org.springframework.web.util.CookieGenerator">
-                <property name="cookieName"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.name')}"/>
-                <property name="cookieMaxAge"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.maxAge')}"/>
-                <property name="cookiePath"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.path')}"/>
-                <property name="cookieSecure"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.secure')}"/>
-                <property name="cookieHttpOnly"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.httpOnly')}"/>
-                <property name="cookieDomain"
-                          value="#{studioConfiguration.getProperty('studio.security.token.cookie.domain')}"/>
-            </bean>
-        </property>
-        <property name="previewCookieGenerator">
-            <bean class="org.springframework.web.util.CookieGenerator">
-                <property name="cookieName"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.name')}"/>
-                <property name="cookieMaxAge"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.maxAge')}"/>
-                <property name="cookiePath"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.path')}"/>
-                <property name="cookieSecure"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.secure')}"/>
-                <property name="cookieHttpOnly"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.httpOnly')}"/>
-                <property name="cookieDomain"
-                          value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.domain')}"/>
-            </bean>
-        </property>
+		<property name="refreshTokenCookieManager">
+			<bean class="org.craftercms.commons.http.NamedCookieManager">
+				<constructor-arg name="name"
+					  value="#{studioConfiguration.getProperty('studio.security.token.cookie.name')}"/>
+				<constructor-arg name="maxAge"
+					  value="#{studioConfiguration.getProperty('studio.security.token.cookie.maxAge')}"/>
+				<constructor-arg name="path"
+					  value="#{studioConfiguration.getProperty('studio.security.token.cookie.path')}"/>
+				<constructor-arg name="secure"
+					  value="#{studioConfiguration.getProperty('studio.security.token.cookie.secure')}"/>
+				<constructor-arg name="httpOnly"
+					  value="true"/>
+				<constructor-arg name="domain"
+					  value="#{studioConfiguration.getProperty('studio.security.token.cookie.domain')}"/>
+			</bean>
+		</property>
+		<property name="previewCookieManager">
+			<bean class="org.craftercms.commons.http.NamedCookieManager">
+				<constructor-arg name="name"
+					  value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.name')}"/>
+				<constructor-arg name="maxAge"
+					  value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.maxAge')}"/>
+				<constructor-arg name="path"
+					  value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.path')}"/>
+				<constructor-arg name="secure"
+					  value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.secure')}"/>
+				<constructor-arg name="httpOnly"
+					  value="true"/>
+				<constructor-arg name="domain"
+					  value="#{studioConfiguration.getProperty('studio.security.token.previewCookie.domain')}"/>
+			</bean>
+		</property>
     </bean>
 
     <bean id="accessTokenService" class="org.craftercms.studio.impl.v2.service.security.AccessTokenServiceImpl">

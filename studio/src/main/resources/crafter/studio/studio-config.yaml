@@ -441,8 +441,6 @@ studio.security.token.cookie.path: /studio
 studio.security.token.cookie.domain: null
 # Indicates if the refresh token cookie should be secure (should be true for production environments behind HTTPS)
 studio.security.token.cookie.secure: false
-# Indicates if the refresh token cookie should be HTTPOnly
-studio.security.token.cookie.httpOnly: true
 
 ##############################################################
 ##                      Preview Cookie                      ##
@@ -457,8 +455,6 @@ studio.security.token.previewCookie.path: /
 studio.security.token.previewCookie.domain: null
 # Indicates if the preview cookie should be secure (should be true for production environments behind HTTPS)
 studio.security.token.previewCookie.secure: false
-# Indicates if the preview cookie should be HTTPOnly
-studio.security.token.previewCookie.httpOnly: true
 
 # Use base domain instead of subdomain for the crafterSite cookie
 studio.cookie.useBaseDomain: false
@@ -1113,3 +1109,12 @@ studio.configuration.site.startup.cleanup.enabled: true
 # Number of threads for site startup cleanup (meaning the number of sites that will be cleaned in parallel on startup)
 studio.configuration.site.startup.cleanup.threadCount: 10
 studio.configuration.site.startup.cleanup.timeoutSeconds: 7200
+
+##################################################
+##           Suffix-stripping filter            ##
+##################################################
+# Suffixes to strip from requested urls
+# This adds backwards compatibility to deprecated .json and .xml format suffixes
+studio.api.stripSuffixes.suffixes: .json,.xml
+# Urls to include for suffix stripping
+studio.api.stripSuffixes.includedUrls: /api/**,/refresh.json,/authType.json

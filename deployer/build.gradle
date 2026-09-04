@@ -63,6 +63,7 @@ dependencies {
 	implementation libs.jakarta.validation.api
 	implementation libs.hibernate.validator
 	implementation libs.spring.boot.starter.web
+	implementation libs.spring.boot.starter.restclient
 	implementation libs.spring.boot.starter
 	implementation libs.spring.boot.starter.log4j2
 	implementation libs.jackson.databind

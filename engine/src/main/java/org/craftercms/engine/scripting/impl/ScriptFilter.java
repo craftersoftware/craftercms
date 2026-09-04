@@ -32,6 +32,7 @@ import org.craftercms.engine.scripting.ScriptFactory;
 import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.util.ConfigUtils;
 import org.springframework.security.web.util.matcher.*;
+import org.craftercms.engine.util.spring.security.matcher.AntPathRequestMatcher;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
 
@@ -58,7 +59,7 @@ public class ScriptFilter implements Filter {
     public static final String FILTER_MAPPINGS_CACHE_KEY = "filterMappings";
 
     private ServletContext servletContext;
-    private CacheTemplate cacheTemplate;
+    private final CacheTemplate cacheTemplate;
     protected PathMatcher pathMatcher;
     protected boolean disableVariableRestrictions;
 
@@ -66,7 +67,7 @@ public class ScriptFilter implements Filter {
 
     protected RequestMatcher excludedUrlsMatcher;
 
-    public ScriptFilter(CacheTemplate cacheTemplate) {
+    public ScriptFilter(final CacheTemplate cacheTemplate) {
         pathMatcher = new AntPathMatcher();
         excludedUrlsMatcher = new NegatedRequestMatcher(AnyRequestMatcher.INSTANCE);
         this.cacheTemplate = cacheTemplate;
