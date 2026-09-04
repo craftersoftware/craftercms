@@ -21,7 +21,7 @@ import { ContentType, ContentTypeField } from '../models/ContentType';
 import LookupTable from '../models/LookupTable';
 import ContentInstance, { ContentInstanceBase } from '../models/ContentInstance';
 import { deserialize, fromString, getInnerHtml, getInnerHtmlNumber, serialize, wrapElementInAuxDocument } from './xml';
-import { fileNameFromPath, replaceAccentedVowels, unescapeHTML } from './string';
+import { fileNameFromPath, isExternalMediaUrl, replaceAccentedVowels, unescapeHTML } from './string';
 import { getRootPath, isRootPath, withIndex, withoutIndex } from './path';
 import { isFolder, isNavigable, isPreviewable } from '../components/PathNavigator/utils';
 import {
@@ -1208,8 +1208,15 @@ function doesImageMeetSizeRestrictions(file: HTMLImageElement, restrictions?: Im
  * @param restrictions - Optional size restrictions to validate the image against.
  * @returns Promise that resolves to true if the image meets the restrictions or no restrictions are provided, false otherwise.
  * */
-export function validateImageRestrictions(path: string, restrictions?: ImageRestrictions): Promise<boolean> {
-	if (!restrictions || (!isImage(path) && !isBlobUrl(path) && !path.startsWith('data:image/'))) {
+export function validateImageRestrictions(
+	path: string,
+	restrictions?: ImageRestrictions,
+	mimeType?: string
+): Promise<boolean> {
+	// External URLs (including blob/data URLs) may have no extension or a query string, so extension detection can't be
+	// used to rule them out. They're loaded and validated; non-images resolve as valid via the error handler below.
+	const isValidationCandidate = isImage(path) || mimeType?.startsWith('image/') || isExternalMediaUrl(path);
+	if (!restrictions || !isValidationCandidate) {
 		return Promise.resolve(true);
 	}
 	return new Promise((resolve) => {

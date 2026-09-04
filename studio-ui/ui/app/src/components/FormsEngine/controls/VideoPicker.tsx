@@ -29,7 +29,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import { DeleteOutlined, DownloadOutlined, EditOutlined } from '@mui/icons-material';
 import { svgIconClasses } from '@mui/material';
-import { ensureSingleSlash } from '../../../utils/string';
+import { resolveMediaUrl } from '../../../utils/string';
 import useVideoInfo from '../../../hooks/useVideoInfo';
 import Skeleton from '@mui/material/Skeleton';
 import { downloadMedia } from '../lib/controlHelpers';
@@ -47,13 +47,11 @@ export interface VideoPickerProps extends ControlProps {
 export function VideoPicker(props: VideoPickerProps) {
 	const { field, value, setValue, readonly: formReadonly, dataSources } = props;
 	const { guestBase } = useEnv();
-	// TODO: For testing, by using 3000 as the guestBase both the fetch in `useImageInfo` and the download functionality will work
-	// const guestBase = 'http://localhost:3000';
 	const hasValue = Boolean(value);
+	const mediaUrl = value ? resolveMediaUrl(guestBase, value) : '';
 	const { formatMessage } = useIntl();
-	const { videoInfo, isFetchingMetadata, isFetchingDimensions, errorDimensions, errorMetadata } = useVideoInfo(
-		value ? ensureSingleSlash(`${guestBase}${value}`) : ''
-	);
+	const { videoInfo, isFetchingMetadata, isFetchingDimensions, errorDimensions, errorMetadata } =
+		useVideoInfo(mediaUrl);
 	const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
 
@@ -99,7 +97,7 @@ export function VideoPicker(props: VideoPickerProps) {
 			<FormsEngineField field={field}>
 				{hasValue ? (
 					<Card sx={{ display: 'flex' }}>
-						<CardMedia component="video" sx={{ width: '40%' }} image={ensureSingleSlash(`${guestBase}${value}`)} />
+						<CardMedia component="video" sx={{ width: '40%' }} image={mediaUrl} />
 						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 							<CardContent sx={{ flex: '1 0 auto' }}>
 								<Typography component="div" variant="body1" marginBottom={1}>
