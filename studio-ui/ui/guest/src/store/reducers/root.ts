@@ -91,6 +91,7 @@ import { getCachedModels, getCachedContentItems, modelHierarchyMap } from '../..
 import { isEditActionAvailable } from '../../utils/util';
 import type { BuiltInControlType } from '@craftercms/studio-ui/components/FormsEngine/lib/controlMap';
 import { type ContentTypeFieldValidations } from '@craftercms/studio-ui/src/models/ContentType';
+import { value, extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 
 type CaseReducer<S = GuestState, A extends GuestStandardAction = GuestStandardAction> = Reducer<S, A>;
 
@@ -220,7 +221,7 @@ const reducer = createReducer(initialState, {
 		if (state.status === EditingStatus.LISTENING) {
 			const { highlightMode } = state;
 			const iceId = record.iceIds[0];
-			const movableRecordId = getMovableParentRecord(iceId);
+			const movableRecordId = getMovableParentRecord(iceId, record.element);
 			if (highlightMode === HighlightMode.ALL) {
 				const highlight = getHoverData(record.id);
 				if (notNullOrUndefined(movableRecordId)) {
@@ -635,9 +636,12 @@ const reducer = createReducer(initialState, {
 		const dropTargets = getContentTypeDropTargets(
 			instance.craftercms.contentTypeId,
 			(record: ICERecord, hierarchyMap: ModelHierarchyMap) => {
-				const { field: { validations = [] } = {} } = getReferentialEntries(record);
+				const { field: { validations = [] } = {}, model, fieldId, index } = getReferentialEntries(record);
 				const allowDuplicates = (validations as ContentTypeFieldValidations)?.allowDuplicates?.value ?? false;
-				const isComponentDuplicate = hierarchyMap[record.modelId]?.children?.includes(instanceId);
+				const collection = nullOrUndefined(index)
+					? value(model, fieldId)
+					: extractCollectionItem(model, fieldId, index);
+				const isComponentDuplicate = Array.isArray(collection) && collection.includes(instanceId);
 				if (isComponentDuplicate) isInstanceDuplicateInZone = true;
 
 				return (
@@ -705,7 +709,8 @@ const reducer = createReducer(initialState, {
 		if (iceRecord.recordType === 'component') {
 			if (state.highlightMode === HighlightMode.MOVE_TARGETS) {
 				// If in move mode, dynamically switch components to their movable item record so users can manipulate.
-				const movableRecordId = getMovableParentRecord(iceId);
+				const registryEntriesForIce = getRecordsFromIceId(iceId);
+				const movableRecordId = getMovableParentRecord(iceId, registryEntriesForIce?.[0]?.element);
 				iceId = notNullOrUndefined(movableRecordId) ? movableRecordId : iceId;
 			}
 		} else if (iceRecord.recordType === 'repeat-item' || iceRecord.recordType === 'node-selector-item') {
