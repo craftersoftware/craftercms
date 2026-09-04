@@ -172,10 +172,17 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const componentPath = models[componentId]?.craftercms.path;
 	const { field, contentType } = useMemo(() => getReferentialEntries(record.iceIds[0]), [record.iceIds]);
 
-	// Use componentId to find the container modelId. If not a component, is unlikely to have a container, but in
-	// cases where a page is being referenced by another model, we fall back to modelId.
-	// If the current modelId is not being referenced by any other model (no parentModelId found), we use modelId.
-	const containerModelId = findParentModelId(componentId ?? modelId, modelHierarchyMap, models) ?? modelId;
+	// Content-root of the container that owns this zone. For components, prefer placement.parentId so shared
+	// components (multiple parents; hierarchy map keeps one) use this zone's parent, not another placement's.
+	let containerModelId;
+	if (recordType === 'component' && placement?.parentId) {
+		const immediateParentId = placement.parentId;
+		containerModelId = models[immediateParentId]?.craftercms.path
+			? immediateParentId
+			: (findParentModelId(immediateParentId, modelHierarchyMap, models) ?? immediateParentId);
+	} else {
+		containerModelId = findParentModelId(componentId ?? modelId, modelHierarchyMap, models) ?? modelId;
+	}
 	const containerItemAvailableActions = models[containerModelId]
 		? getCachedContentItem(models[containerModelId].craftercms.path).availableActionsMap
 		: null;
@@ -281,7 +288,18 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			if (record.inherited) {
 				modelIdToEdit = getModelIdFromInheritedField(modelId, fieldId);
 			}
-			const parentModelId = getParentModelId(modelIdToEdit, getCachedModels(), modelHierarchyMap);
+			// For components, resolve edit parent from this zone's placement (not hierarchy map's single parent).
+			let parentModelId: string | null;
+			if (recordType === 'component' && placement?.parentId) {
+				const cachedModels = getCachedModels();
+				parentModelId = cachedModels[modelIdToEdit]?.craftercms.path
+					? null
+					: cachedModels[placement.parentId]?.craftercms.path
+						? placement.parentId
+						: findParentModelId(placement.parentId, modelHierarchyMap, cachedModels);
+			} else {
+				parentModelId = getParentModelId(modelIdToEdit, getCachedModels(), modelHierarchyMap);
+			}
 			post(
 				requestEdit({
 					typeOfEdit,
