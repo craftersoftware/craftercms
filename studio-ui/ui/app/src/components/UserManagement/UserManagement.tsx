@@ -32,7 +32,6 @@ import Paper from '@mui/material/Paper';
 import { useEnhancedDialogState } from '../../hooks/useEnhancedDialogState';
 import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingChangesCloseRequest';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
-import { EmptyState } from '../EmptyState';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { getStoredShowDisabledUsers, setStoredShowDisabledUsers } from '../../utils/state';
 
@@ -164,18 +163,14 @@ export function UserManagement(props: UserManagementProps) {
 			) : fetching ? (
 				<UsersGridSkeletonTable numOfItems={limit} />
 			) : users ? (
-				users.length ? (
-					<UsersGridUI
-						users={users}
-						onRowClicked={onRowClicked}
-						onPageChange={onPageChange}
-						onRowsPerPageChange={onRowsPerPageChange}
-						showDisabled={showDisabled}
-						onShowDisabledChange={onShowDisabledChange}
-					/>
-				) : (
-					<EmptyState title={<FormattedMessage id="usersGrid.emptyStateMessage" defaultMessage="No Users Found" />} />
-				)
+				<UsersGridUI
+					users={users}
+					onRowClicked={onRowClicked}
+					onPageChange={onPageChange}
+					onRowsPerPageChange={onRowsPerPageChange}
+					showDisabled={showDisabled}
+					onShowDisabledChange={onShowDisabledChange}
+				/>
 			) : (
 				<></>
 			)}
