@@ -96,7 +96,7 @@
 		"rollup-plugin-postcss": "^4.0.2",
 		"rollup-plugin-svg": "^2.0.0",
 		"rollup-plugin-swc3": "^0.12.1",
-		"yargs": "^18.0.0"
+		"yargs": "^18.1.0"
 	},
 	"type": "module"
 }
