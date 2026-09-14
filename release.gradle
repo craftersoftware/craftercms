@@ -93,7 +93,7 @@ ext.runReleaseBundleMatrix = { String s3Path ->
 	]
 
 	platformVariants.each { platformProps ->
-		def args = ['./gradlew', 'clean', 'build', 'deploy', 'bundle']
+		def args = ['./gradlew', 'deploy', 'bundle']
 		platformProps.each { key, value ->
 			args << "-P${key}=${value}"
 		}
@@ -204,11 +204,17 @@ tasks.register('releasePublishMaven') {
 	}
 }
 
+// This task allows us to clean and build without the need of spawning a separate shell
+tasks.register('releaseCleanBuild', GradleBuild) {
+	dir = projectDir
+	tasks = ['clean', 'build']
+}
+
 /** Builds multi-platform community bundles and optionally publishes them to S3. */
 tasks.register('releasePackage') {
 	group = 'release'
 	description = 'Builds multi-platform bundles and optionally publishes them to S3'
-	dependsOn 'releasePreFlight'
+	dependsOn 'releasePreFlight', 'releaseCleanBuild'
 	doLast {
 		runReleaseBundleMatrix(releaseS3Path)
 	}
