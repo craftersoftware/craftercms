@@ -42,6 +42,7 @@ import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.HTTPParameterName;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller for integration with Crafter Profile.
@@ -63,7 +64,7 @@ public class ProfileRestController {
 
 	private final Validator validator = ESAPI.validator();
 
-	@RequestMapping(value = "/get", method = RequestMethod.GET)
+	@RequestMapping(value = "/get", method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> getProfile(HttpSession session) {
 
@@ -76,7 +77,7 @@ public class ProfileRestController {
 		return profile;
 	}
 
-	@PostMapping("/set")
+	@PostMapping(value = "/set", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResponseEntity<Object> setProfile(@RequestBody SetProfileRequest profileRequest, HttpSession session) {
 		Map<String, Object> parameterMap = profileRequest.getParameters();
 		if (parameterMap.size() > MAXIMUM_PROPERTY_COUNT) {

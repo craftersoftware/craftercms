@@ -16,7 +16,7 @@
 
 package org.craftercms.studio.impl.v2.repository;
 
-import org.craftercms.studio.api.v2.annotation.RetryingRepositoryOperation;
+import org.craftercms.studio.api.v2.annotation.retrying.RetryingRepositoryOperation;
 import org.craftercms.studio.api.v2.repository.RetryingRepositoryOperationFacade;
 import org.eclipse.jgit.api.GitCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;

@@ -19,14 +19,18 @@ import ContentType, { ContentTypeField } from '../../../models/ContentType';
 import type { BuiltInControlType } from './controlMap';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
+import { getPluginControlValueRetriever } from '../controls/registry';
 import { systemFieldsNotInType, XmlKeys } from './formConsts';
 import { deserialize, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
+import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { Matcher } from 'path-expression-matcher';
+import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
+import type { ValueRetriever } from './controlValueTypes';
 
-export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
+export type { ValueRetriever } from './controlValueTypes';
 
 export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControlType, ValueRetriever | null> = {
 	'auto-filename': textFieldExtractor,
@@ -45,9 +49,6 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	string: textFieldExtractor,
 	'internal-name': textFieldExtractor,
 	label: textFieldExtractor,
-	'link-input': textFieldExtractor,
-	'link-textarea': textFieldExtractor,
-	'linked-dropdown': textFieldExtractor,
 	'locale-selector': textFieldExtractor,
 	repeat: arrayFieldExtractor,
 	'node-selector': arrayFieldExtractor,
@@ -57,7 +58,7 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	rte: textFieldExtractor,
 	textarea: textFieldExtractor,
 	time: null,
-	'transcoded-video-picker': textFieldExtractor,
+	'transcoded-video-picker': arrayFieldExtractor,
 	uuid: uuidExtractor,
 	'video-picker': textFieldExtractor,
 	colorPicker: textOrNullExtractor,
@@ -99,12 +100,14 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
  * @param xmlDeserializedValues The raw deserialized values from the content XML
  * @param contentTypesLookup A lookup table of content types
  * @param fieldCallback A callback to run for each field
+ * @param customControls A lookup table with custom controls to extend the OOB controls descriptors
  **/
 export function createParsedValuesObject(
 	contentTypeFields: LookupTable<ContentTypeField> | ContentTypeField[],
 	xmlDeserializedValues: LookupTable<unknown>,
 	contentTypesLookup: LookupTable<ContentType>,
-	fieldCallback?: (fieldId: string, value: unknown) => void
+	fieldCallback?: (fieldId: string, value: unknown, isAdditionalField?: boolean) => void,
+	customControls?: LookupTable<DescriptorContentType>
 ): LookupTable<unknown> {
 	const values = {};
 	systemFieldsNotInType.forEach((systemFieldId) => {
@@ -113,11 +116,36 @@ export function createParsedValuesObject(
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
+	const descriptors = resolveControlDescriptors(customControls);
 	(Array.isArray(contentTypeFields) ? contentTypeFields : Object.values(contentTypeFields)).forEach((field) => {
+		const descriptor = descriptors[field.type];
+		const additionalFieldIds = descriptor ? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor) : [];
+
+		additionalFieldIds.forEach((additionalFieldId) => {
+			const additionalField: ContentTypeField = {
+				...field,
+				id: additionalFieldId,
+				type: additionalFieldControlType(additionalFieldId),
+				defaultValue: undefined
+			};
+			values[additionalFieldId] = createParsedValueForField(
+				xmlDeserializedValues[additionalFieldId],
+				additionalField,
+				contentTypesLookup
+			);
+			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
+		});
 		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
 		fieldCallback?.(field.id, values[field.id]);
 	});
 	return values;
+}
+
+/** Maps additional-field id conventions (e.g. `orderDefault_f`) to a retriever-backed control type. */
+function additionalFieldControlType(additionalFieldId: string): BuiltInControlType {
+	if (/_(?:f|i|l)$/.test(additionalFieldId)) return 'numeric-input';
+	if (/_b$/.test(additionalFieldId)) return 'checkbox';
+	return 'input';
 }
 
 export function createParsedValueForField<T = unknown>(
@@ -157,12 +185,16 @@ export function createParsedValueForField<T = unknown>(
 }
 
 export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: unknown): T {
-	const retriever: ValueRetriever<T> | undefined = valueRetrieverLookup[field.type];
+	// Prefer the built-in map when the type is known there (including explicit `null` = no conversion).
+	// Only consult plugin contributions for types absent from the built-in map.
+	const retriever: ValueRetriever<T> | null | undefined = Object.hasOwn(valueRetrieverLookup, field.type)
+		? (valueRetrieverLookup[field.type] as ValueRetriever<T> | null)
+		: (getPluginControlValueRetriever(field.type) as ValueRetriever<T> | undefined);
 	const defaultValue = field.defaultValue as string;
 	// Value considering the defaultValue
 	const fieldValue = value ?? (nnou(defaultValue) && defaultValue !== '' ? defaultValue : undefined);
+	// Built-in `null` and omitted plugin `valueRetriever` both mean identity (pass-through).
 	if (!retriever) {
-		console.warn(`No value retriever for field ${field.id} of type ${field.type}`);
 		return fieldValue as T;
 	}
 	return retriever(fieldValue, field);

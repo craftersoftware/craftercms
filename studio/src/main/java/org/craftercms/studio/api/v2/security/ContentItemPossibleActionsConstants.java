@@ -24,59 +24,48 @@ import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsC
 
 public final class ContentItemPossibleActionsConstants {
 
-	/*
-		TODO:
-		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
-		types and system types.
+	/**
+	 * Common possible actions shared by all content item types.
 	 */
-	public static final long PAGE = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_CREATE + CONTENT_PASTE + CONTENT_EDIT +
-		CONTENT_CUT + CONTENT_DUPLICATE + CONTENT_CHANGE_TYPE + CONTENT_REVERT +
-		CONTENT_EDIT_CONTROLLER + CONTENT_EDIT_TEMPLATE + FOLDER_CREATE + CONTENT_DELETE +
-		CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE + PUBLISH +
-		ITEM_UNLOCK;
-
-	public static final long ASSET = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_RENAME + CONTENT_CUT +
-		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
-		ITEM_UNLOCK;
-
-	/*
-		TODO:
-		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
-		types and system types.
-	 */
-	public static final long COMPONENT = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT +
-		CONTENT_CUT + CONTENT_DUPLICATE + CONTENT_CHANGE_TYPE + CONTENT_REVERT +
-		CONTENT_EDIT_CONTROLLER + CONTENT_EDIT_TEMPLATE + CONTENT_DELETE +
-		CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE + PUBLISH +
-		ITEM_UNLOCK;
-
-	/*
-		TODO:
-		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
-		types and system types.
-	 */
-	public static final long DOCUMENT = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
+	public static final long COMMON = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
 		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_CUT +
 		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
 		ITEM_UNLOCK;
 
-	public static final long RENDERING_TEMPLATE = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_RENAME + CONTENT_CUT +
-		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
-		ITEM_UNLOCK;
+	/*
+		TODO:
+		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
+		types and system types.
+	 */
+	public static final long PAGE = COMMON + CONTENT_CREATE + CONTENT_PASTE + CONTENT_CHANGE_TYPE +
+		CONTENT_EDIT_CONTROLLER + CONTENT_EDIT_TEMPLATE + FOLDER_CREATE +
+		CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE;
+
+	public static final long ASSET = COMMON + CONTENT_RENAME;
 
 	/*
 		TODO:
 		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
 		types and system types.
 	 */
-	public static final long TAXONOMY = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_CUT +
-		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
-		ITEM_UNLOCK;
+	public static final long COMPONENT = COMMON + CONTENT_CHANGE_TYPE + CONTENT_EDIT_CONTROLLER +
+		CONTENT_EDIT_TEMPLATE + CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE;
+
+	/*
+		TODO:
+		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
+		types and system types.
+	 */
+	public static final long DOCUMENT = COMMON;
+
+	public static final long RENDERING_TEMPLATE = COMMON + CONTENT_RENAME;
+
+	/*
+		TODO:
+		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
+		types and system types.
+	 */
+	public static final long TAXONOMY = COMMON;
 
 	public static final long CONTENT_TYPE = PUBLISH + PUBLISH_REQUEST;
 
@@ -97,20 +86,14 @@ public final class ContentItemPossibleActionsConstants {
 
 	public static final long CONFIG_FOLDER = 0L;
 
-	public static final long SCRIPT = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_RENAME + CONTENT_CUT +
-		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
-		ITEM_UNLOCK;
+	public static final long SCRIPT = COMMON + CONTENT_RENAME;
 
 	/*
 		TODO:
 		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
 		types and system types.
 	 */
-	public static final long LEVEL_DESCRIPTOR = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +
-		CONTENT_GET_DEPENDENCIES + PUBLISH_REQUEST + CONTENT_EDIT + CONTENT_CUT +
-		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
-		ITEM_UNLOCK;
+	public static final long LEVEL_DESCRIPTOR = COMMON;
 
 	// Semantics Matrix for available actions
 	public static final long ITEM_STATE_NEW = CONTENT_READ + CONTENT_COPY + CONTENT_READ_VERSION_HISTORY +

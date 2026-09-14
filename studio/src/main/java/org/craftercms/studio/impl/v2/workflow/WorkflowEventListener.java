@@ -19,7 +19,7 @@ package org.craftercms.studio.impl.v2.workflow;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;

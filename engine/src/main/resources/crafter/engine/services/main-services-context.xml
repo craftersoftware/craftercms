@@ -303,6 +303,10 @@
 		<constructor-arg name="dateConverter" ref="crafter.stringToUtcDateConverter"/>
 	</bean>
 
+	<bean id="crafter.includeByUrlItemPredicate" class="org.craftercms.engine.util.predicates.IncludeByUrlPredicate">
+		<constructor-arg name="includeRegexes" value="${crafter.engine.site.default.descriptors.allowed.paths}"/>
+	</bean>
+
 	<bean id="crafter.excludeLevelDescriptorItemFilter" class="org.craftercms.engine.service.filter.ExcludeByNameItemFilter">
 		<constructor-arg name="excludeRegex"
 				 value="${crafter.core.merger.strategy.inheritLevels.levelDescriptor.name}"/>
@@ -320,10 +324,15 @@
 		<constructor-arg name="predicate" ref="crafter.expiredDtItemPredicate"/>
 	</bean>
 
+	<bean id="crafter.includeByUrlItemFilter" class="org.craftercms.engine.util.predicates.PredicateBasedFilter">
+		<constructor-arg name="predicate" ref="crafter.includeByUrlItemPredicate"/>
+	</bean>
+
 	<util:list id="crafter.defaultItemPredicates">
 		<ref bean="crafter.disabledItemPredicate"/>
 		<ref bean="crafter.expiredItemPredicate"/>
 		<ref bean="crafter.expiredDtItemPredicate"/>
+		<ref bean="crafter.includeByUrlItemPredicate"/>
 	</util:list>
 
 	<util:list id="crafter.defaultItemFilters">
@@ -331,6 +340,7 @@
 		<ref bean="crafter.excludeDisabledItemFilter"/>
 		<ref bean="crafter.excludeExpiredItemFilter"/>
 		<ref bean="crafter.excludeExpiredDtItemFilter"/>
+		<ref bean="crafter.includeByUrlItemFilter"/>
 	</util:list>
 
 	<bean id="crafter.siteItemService" class="org.craftercms.engine.service.impl.SiteItemServiceImpl">

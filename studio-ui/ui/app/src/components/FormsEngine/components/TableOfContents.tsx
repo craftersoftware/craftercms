@@ -24,14 +24,14 @@ import SearchBar from '../../SearchBar';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
 import Box from '@mui/material/Box';
 import { useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai/index';
-import { isEmptyValue, isFieldRequired, validatorsMap } from '../lib/validators';
+import { hasFieldValidator, isEmptyValue, isFieldRequired } from '../lib/validators';
 import { atom } from 'jotai';
 import { immutableEmptyArray } from '../../../utils/array';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
 import FieldStateIndicator from './FieldStateIndicator';
-import { nnou } from '../../../utils/object';
+import { XmlKeys } from '../lib/formConsts';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
@@ -147,14 +147,28 @@ function TreeItemLabel({
 	atoms
 }: {
 	field: ContentTypeField;
-	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId'>;
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 }) {
-	// If field.id is 'file-name', we'll be using `atoms.fileName` as the field value.
-	const value = useAtomValue(atoms.valueByFieldId[field.id]);
-	const validityData = useLoadableAtom(atoms.validationByFieldId[field.id]);
+	const valueAtom = field.id === XmlKeys.fileName ? atoms.fileName : atoms.valueByFieldId[field.id];
+	const validationAtom = atoms.validationByFieldId[field.id];
+	if (!valueAtom || !validationAtom) return null;
+	return <TreeItemLabelContent field={field} valueAtom={valueAtom} validationAtom={validationAtom} />;
+}
+
+function TreeItemLabelContent({
+	field,
+	valueAtom,
+	validationAtom
+}: {
+	field: ContentTypeField;
+	valueAtom: NonNullable<FormsEngineAtoms['valueByFieldId'][string] | FormsEngineAtoms['fileName']>;
+	validationAtom: FormsEngineAtoms['validationByFieldId'][string];
+}) {
+	const value = useAtomValue(valueAtom);
+	const validityData = useLoadableAtom(validationAtom);
 	const isValid = validityData.state === 'hasData' ? validityData?.data.isValid : true;
 	const isRequired = isFieldRequired(field);
-	const hasValidator = nnou(validatorsMap[field.type]);
+	const hasValidator = hasFieldValidator(field.type);
 	return (
 		<Box display="flex" justifyContent="space-between" alignItems="center">
 			<span>{field.name}</span>

@@ -130,4 +130,12 @@ public interface SiteItemService {
 	SiteItem getSiteTree(String url, int depth, String includeByNameRegex, String excludeByNameRegex,
 			     Map<String, String> nodeXPathAndExpectedValuePairs);
 
+	/**
+	 * Checks if the item exists at the given path.
+	 *
+	 * @param path the path to check
+	 * @return true if the item exists, false otherwise
+	 */
+	boolean exists(String path);
+
 }

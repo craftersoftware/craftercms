@@ -16,7 +16,7 @@
 
 package org.craftercms.studio.impl.v2.dal;
 
-import org.craftercms.studio.api.v2.annotation.RetryingDatabaseOperation;
+import org.craftercms.studio.api.v2.annotation.retrying.RetryingDatabaseOperation;
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 
 import java.util.function.Supplier;

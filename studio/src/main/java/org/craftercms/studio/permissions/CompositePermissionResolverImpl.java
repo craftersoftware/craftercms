@@ -41,7 +41,6 @@ import static org.craftercms.studio.permissions.StudioPermissionsConstants.*;
  * @author avasquez
  */
 public class CompositePermissionResolverImpl implements PermissionResolver<String, Map<String, Object>> {
-	public static final String PATH_LIST_RESOURCE_ID = "pathList";
 
 	private final UserService userService;
 	private final StudioConfiguration studioConfiguration;

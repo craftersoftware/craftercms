@@ -72,11 +72,6 @@ public class AccessTokenAuthenticationListener {
 	}
 
 	@EventListener
-	public void onUserUpdated(UserUpdatedEvent event) {
-		accessTokenService.deleteRefreshToken(event.getUserId());
-	}
-
-	@EventListener
 	public void onUserDisabled(DisabledUserEvent event) {
 		accessTokenService.deleteUsersTokens(event.getUserIds());
 	}

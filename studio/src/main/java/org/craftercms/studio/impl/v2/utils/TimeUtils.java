@@ -25,7 +25,7 @@ import org.springframework.util.function.ThrowingSupplier;
 public class TimeUtils {
 	/**
 	 * High order function to inject execution time if the given logger level is enabled.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param supplier     method to calculate the execution time
 	 * @param methodLogger logger of the method
@@ -49,7 +49,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the given logger level is enabled.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param action       method to calculate the execution time
 	 * @param methodLogger logger of the method
@@ -65,7 +65,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the given logger level is enabled.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param action       method to calculate the execution time
 	 * @param methodLogger logger of the method
@@ -80,7 +80,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the given logger level is enabled.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param supplier     method to calculate the execution time for
 	 * @param methodLogger logger of the method
@@ -99,7 +99,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the logger is enabled trace.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param supplier method to calculate the execution time for
 	 * @param logger   logger of the method
@@ -111,7 +111,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the logger is enabled trace.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param action  method to calculate the execution time for
 	 * @param logger  logger of the method
@@ -126,7 +126,7 @@ public class TimeUtils {
 
 	/**
 	 * High order function to inject execution time if the logger is enabled trace.
-	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.LogExecutionTime} annotation when possible
+	 * Instead of this method, use {@link org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime} annotation when possible
 	 *
 	 * @param action       method to calculate the execution time
 	 * @param methodLogger logger of the method

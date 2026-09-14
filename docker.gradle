@@ -371,7 +371,7 @@ tasks.register('buildDeliveryTomcat') {
 tasks.register('buildDeployer') {
     group = "Build"
     description = "Builds the Deployer Docker image"
-    dependsOn prepareAuthoringBundle
+    dependsOn prepareAuthoringBundle, prepareDeliveryBundle
 	def injected = project.objects.newInstance(InjectedExecOps)
     def imageBuildDir = "${imagesBuildDir}/deployer"
 
@@ -397,6 +397,15 @@ tasks.register('buildDeployer') {
             exclude "apache-tomcat"
             exclude "opensearch"
             exclude "**/*.pid"
+            exclude 'mariaDB4j-app.jar'
+        }
+        copy {
+            from "${deliveryBundleRoot}/bin/"
+            into "${imageBuildDir}/bin"
+            include '*-site.groovy'
+            include '*-site.sh'
+            include 'grapes/**'
+            duplicatesStrategy = 'include'
         }
 
 		injected.execOps.exec {

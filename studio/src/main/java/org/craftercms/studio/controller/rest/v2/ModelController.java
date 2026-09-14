@@ -19,10 +19,11 @@ import java.beans.ConstructorProperties;
 
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.service.content.ContentTypeService;
 import org.craftercms.studio.model.contentType.ModelDefinitions;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,7 +41,7 @@ public class ModelController {
 		this.contentTypeService = contentTypeService;
 	}
 
-	@PostMapping("/{siteId}/definitions")
+	@PostMapping(value = "/{siteId}/definitions", produces = APPLICATION_JSON_VALUE)
 	@LogExecutionTime
 	public ModelDefinitions getModelDefinitions(@ValidSiteId @PathVariable("siteId") String siteId) throws ServiceLayerException {
 		ModelDefinitions result = new ModelDefinitions(contentTypeService.getAllModelDefinitions(siteId));

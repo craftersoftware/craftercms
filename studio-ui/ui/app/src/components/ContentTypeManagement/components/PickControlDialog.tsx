@@ -21,9 +21,9 @@ import controlDescriptors from '../descriptors/controls';
 import { nou } from '../../../utils/object';
 import { ContentType, ContentTypeField } from '../../../models';
 import PickFieldDialog from './PickFieldDialog';
-import { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import { DescriptorContentType } from '../utils';
 import { ContentTypeManagementConfig } from './EditTypeView';
+import { systemFieldsIds } from '../../../utils/constants';
 
 export interface PickControlDialogProps extends EnhancedDialogProps {
 	sectionId: string;
@@ -36,18 +36,6 @@ export interface PickControlDialogProps extends EnhancedDialogProps {
 }
 
 const types = Object.values(controlDescriptors).sort((a, b) => (a?.name > b?.name ? 1 : -1));
-
-// TODO: finalize handling of systemFields
-export const systemFieldsIds: BuiltInControlType[] = [
-	'file-name',
-	'auto-filename',
-	'internal-name',
-	'disabled',
-	'page-nav-order',
-	'locale-selector',
-	'expired-date',
-	'forcehttps'
-];
 
 export function PickControlDialog(props: PickControlDialogProps) {
 	const {
@@ -79,16 +67,17 @@ export function PickControlDialog(props: PickControlDialogProps) {
 		return { sectionFields };
 	}, [fieldIdPath, sectionId, type]);
 
-	// Before rendering the PickFieldDialog we need to do two things:
+	// Before rendering the PickFieldDialog we need to:
 	// 1. Filter out the controls that are in the controlExclusions list.
 	// 2. Filter out OOB controls not in the configuration list.
 	// 3. Add the configDescriptors (plugins) to the list of controls.
+	// 4. Exclude rootOnly controls when inserting into a nested/repeat field path.
 	const typesFullList = [
 		...types.filter((type) => {
 			return configControls?.[type.id] && !(controlExclusions ?? []).includes(type.id);
 		}),
 		...(configDescriptors ?? [])
-	];
+	].filter((controlType) => !(fieldIdPath && controlType.metadata?.rootOnly));
 
 	return (
 		<PickFieldDialog

@@ -71,14 +71,12 @@ public final class ContentItemAvailableActionsConstants {
 		0b0000000000000000000000000000000000000000000010000000000000000000L;
 	public static final long PUBLISH =
 		0b0000000000000000000000000000000000000000000100000000000000000000L;
-	// Approve is now a package-level action
-	public static final long RETIRED_PUBLISH_APPROVED =
+	public static final long PUBLISH_APPROVE =
 		0b0000000000000000000000000000000000000000001000000000000000000000L;
 	// Items can be "scheduled" (submitted to publish) at any time (it will be just PUBLISH)
 	public static final long RETIRED_PUBLISH_SCHEDULE =
 		0b0000000000000000000000000000000000000000010000000000000000000000L;
-	// Reject is now a package-level action
-	public static final long RETIRED_PUBLISH_REJECT =
+	public static final long PUBLISH_REJECT =
 		0b0000000000000000000000000000000000000000100000000000000000000000L;
 	public static final long ITEM_UNLOCK =
 		0b0000000000000000000000000000000000000001000000000000000000000000L;
@@ -181,7 +179,7 @@ public final class ContentItemAvailableActionsConstants {
 	public static final long BITMAP_CONTENT_DELETE =
 		CONTENT_DELETE + CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE;
 	// publish
-	public static final long BITMAP_PUBLISH = PUBLISH;
+	public static final long BITMAP_PUBLISH = PUBLISH + PUBLISH_APPROVE + PUBLISH_REJECT;
 	// item_unlock
 	public static final long BITMAP_ITEM_UNLOCK =
 		ITEM_UNLOCK;
@@ -201,7 +199,7 @@ public final class ContentItemAvailableActionsConstants {
 		long result = 0;
 		if (permissions.contains(PERMISSION_PUBLISH_REQUEST)) {
 			result |= PUBLISH_REQUEST;
-			if (permissions.contains(PERMISSION_PUBLISH_REQUEST) && permissions.contains(PERMISSION_PUBLISH_APPROVE)) {
+			if (permissions.contains(PERMISSION_PUBLISH_REVIEW)) {
 				result |= PUBLISH;
 			}
 		}
@@ -218,6 +216,8 @@ public final class ContentItemAvailableActionsConstants {
 			case PERMISSION_FOLDER_CREATE -> BITMAP_FOLDER_CREATE;
 			case PERMISSION_CONTENT_DELETE -> BITMAP_CONTENT_DELETE;
 			case PERMISSION_ITEM_UNLOCK -> BITMAP_ITEM_UNLOCK;
+			case PERMISSION_PUBLISH_REQUEST -> PUBLISH_REQUEST;
+			case PERMISSION_PUBLISH_REVIEW -> PUBLISH_APPROVE | PUBLISH_REJECT;
 			default -> {
 				logger.debug("Permission '{}' is not declared with content item available actions", permission);
 				yield BITMAP_UNDEFINED;

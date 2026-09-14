@@ -318,6 +318,8 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	metadata?: {
 		suffixes?: string[];
 		additionalFields?: string[];
+		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+		rootOnly?: boolean;
 	};
 };
 
@@ -561,7 +563,8 @@ export const createStableFormContextProps = (
 		itemMeta: createFieldItemMetaContext(type), // TODO: Property may be removed from this context altogether
 		originalValues: null,
 		props: null,
-		state: null
+		state: null,
+		affectedPluginControlFields: []
 	};
 	if (createRootTypeSections) {
 		Object.assign(
@@ -720,6 +723,7 @@ function convertDataSourceStructToXmlStruct(
 		interface: dataSource.interface,
 		title: dataSource.title,
 		type: dataSource.type,
+		plugin: dataSource.plugin,
 		properties: {
 			// TODO: Ideally, suppress these objects into simple key-value pairs.
 			//   <properties>

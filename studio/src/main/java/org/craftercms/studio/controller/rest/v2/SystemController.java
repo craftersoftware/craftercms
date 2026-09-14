@@ -40,6 +40,7 @@ import static org.craftercms.studio.api.v2.service.system.SystemPropertiesServic
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.*;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_LANGUAGES;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Provides access to system properties
@@ -59,7 +60,7 @@ public class SystemController {
 		this.configurationService = configurationService;
 	}
 
-	@GetMapping(PROPERTIES)
+	@GetMapping(value = PROPERTIES, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Map<String, String>> getSystemProperties(@RequestParam @NotEmpty
 															  List<@Size(max = 50) @ValidateNoTagsParam @ValidateStringParam(whitelistedPatterns = PROPERTY_NAME_ALLOWED_PATTERN) String> properties) {
 		ResultOne<Map<String, String>> result = new ResultOne<>();
@@ -68,7 +69,7 @@ public class SystemController {
 		return result;
 	}
 
-	@PostMapping(PROPERTIES)
+	@PostMapping(value = PROPERTIES, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result setSystemProperties(@Valid @RequestBody UpdateSystemPropertiesRequest request) {
 		systemPropertiesService.setSystemProperties(request.getProperties());
 		Result result = new Result();
@@ -76,7 +77,7 @@ public class SystemController {
 		return result;
 	}
 
-	@GetMapping(AVAILABLE_LANGUAGES)
+	@GetMapping(value = AVAILABLE_LANGUAGES, produces = APPLICATION_JSON_VALUE)
 	public ResultList<Language> getAvailableLanguages() throws ServiceLayerException {
 		var result = new ResultList<Language>();
 		result.setEntities(RESULT_KEY_LANGUAGES, configurationService.getAvailableLanguages());

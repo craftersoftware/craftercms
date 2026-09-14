@@ -30,8 +30,8 @@ import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteUrlExcepti
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.exception.configuration.ConfigurationException;
 import org.craftercms.studio.api.v2.exception.marketplace.MarketplaceException;
 import org.craftercms.studio.api.v2.service.marketplace.MarketplaceService;

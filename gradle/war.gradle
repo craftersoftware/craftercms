@@ -57,8 +57,10 @@ ext.configureFilteredWarResource = { warTask, sourceDir, targetPath ->
 	warTask.from(sourceDir) {
 		into targetPath
 		filter(ReplaceTokens, tokens: [
-			buildNumber: buildMetadata.buildNumber,
-			timestamp  : buildMetadata.timestamp
+			buildNumber  : buildMetadata.buildNumber,
+			UIbuildNumber: buildMetadata.UIbuildNumber,
+			timestamp    : buildMetadata.timestamp,
+			version      : project.version.toString()
 		])
 	}
 }

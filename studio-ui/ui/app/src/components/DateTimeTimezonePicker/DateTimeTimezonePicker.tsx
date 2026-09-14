@@ -31,6 +31,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import {
 	createAtLeastHalfHourInFutureDate,
 	createTransposedToTimezoneDate,
+	getUserTimeZone,
 	getZDateOffset
 } from '../../utils/datetime';
 import Box from '@mui/material/Box';
@@ -39,6 +40,7 @@ import type { PartialSxRecord } from '../../models';
 export interface DateTimeTimezonePickerProps {
 	id?: string;
 	value: string | Date | number | null;
+	timezoneValue?: string;
 	disabled?: boolean;
 	disablePast?: boolean;
 	autoUpdatePastDate?: boolean;
@@ -51,6 +53,7 @@ export interface DateTimeTimezonePickerProps {
 	size?: TextFieldProps['size'];
 	onError?: DateTimePickerProps['onError'];
 	onChange?(date: Date): void;
+	onTimezoneChange?(timezone: string): void;
 }
 
 export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
@@ -59,6 +62,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 	const {
 		id,
 		value: dateProp,
+		timezoneValue,
 		disabled = false,
 		disablePast = false,
 		autoUpdatePastDate = false,
@@ -70,12 +74,16 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 		sxs = {},
 		size = 'small',
 		onChange,
+		onTimezoneChange,
 		onError
 	} = props;
 	const hour12 = dateTimeFormatOptions?.hour12;
 	const timeZones = useMemo(() => moment.tz.names(), []);
 	const [selectedDate, setSelectedDate] = useState<Moment | null>(null);
-	const [selectedTimezone, setSelectedTimezone] = useState<string | null>(resolvedLocaleData.timeZone ?? null);
+	const [selectedTimezone, setSelectedTimezone] = useState<string | null>(
+		timezoneValue ? timezoneValue : (resolvedLocaleData.timeZone ?? null)
+	);
+	const defaultTimezone = getUserTimeZone();
 	// The control timezone lags behind selectedTimezone. It is only updated when there's a different
 	// selectedTimezone to the navigator's locale, and the value (date) prop changes.
 	const [controlTimezone, setControlTimezone] = useState<string | null>(resolvedLocaleData.timeZone ?? null);
@@ -88,6 +96,12 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 		disablePast,
 		onChange
 	});
+	// Keep local timezone state aligned when the bound form value loads/changes after mount.
+	useEffect(() => {
+		if (timezoneValue != null) {
+			setSelectedTimezone(timezoneValue);
+		}
+	}, [timezoneValue]);
 	const handleChange = ((newValue) => {
 		if (!newValue) return;
 		// Only set the value change if the date is valid and different from current.
@@ -100,6 +114,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 		event.preventDefault();
 		event.stopPropagation();
 		setSelectedTimezone(value);
+		onTimezoneChange?.(value);
 	}) as AutocompleteProps<string, false, true, boolean>['onChange'];
 	useEffect(() => {
 		if (!dateProp) {
@@ -176,9 +191,9 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 						options={timeZones}
 						disabled={disabled || disableTimezoneSelection}
 						getOptionLabel={(timezone) =>
-							timezone + (selectedDate ? ` (GMT${getZDateOffset(selectedDate, timezone)})` : '')
+							timezone + (selectedDate && Boolean(timezone) ? ` (GMT${getZDateOffset(selectedDate, timezone)})` : '')
 						}
-						value={selectedTimezone}
+						value={Boolean(selectedTimezone) ? selectedTimezone : defaultTimezone}
 						onChange={handleTimezoneChange}
 						popupIcon={<PublicRoundedIcon />}
 						disableClearable={true}

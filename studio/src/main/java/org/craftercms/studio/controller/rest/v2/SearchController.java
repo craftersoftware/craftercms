@@ -32,6 +32,7 @@ import jakarta.validation.Valid;
 import java.beans.ConstructorProperties;
 
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_RESULT;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Controller to access the search service
@@ -53,7 +54,7 @@ public class SearchController {
 		this.searchService = searchService;
 	}
 
-	@PostMapping(value = "/search")
+	@PostMapping(value = "/search", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<SearchResult> search(@ValidSiteId @RequestParam String siteId, @Valid @RequestBody SearchParams params)
 		throws AuthenticationException, ServiceLayerException {
 		SearchResult searchResult = searchService.search(siteId, params);

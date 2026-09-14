@@ -22,10 +22,11 @@ import org.craftercms.commons.security.permissions.annotations.ProtectedResource
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
-import org.craftercms.studio.api.v2.annotation.RequireSiteExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
 import org.craftercms.studio.api.v2.annotation.publish.PackageIds;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPathList;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.security.publish.PeerReviewCapable;
 import org.craftercms.studio.api.v2.service.workflow.WorkflowService;
@@ -35,7 +36,6 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
-import static org.craftercms.studio.permissions.CompositePermissionResolverImpl.PATH_LIST_RESOURCE_ID;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.*;
 
 @RequireSiteReady
@@ -68,7 +68,7 @@ public class WorkflowServiceImpl implements WorkflowService {
 	@RequireSiteExists
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_SET_ITEM_STATES)
 	public void updateItemStates(@SiteId String siteId,
-				     @ProtectedResourceId(PATH_LIST_RESOURCE_ID) List<String> paths, boolean clearSystemProcessing,
+				     @ContentPathList List<String> paths, boolean clearSystemProcessing,
 				     boolean clearUserLocked, Boolean live, Boolean staged, Boolean isNew, Boolean modified) throws SiteNotFoundException {
 		workflowServiceInternal.updateItemStates(siteId, paths, clearSystemProcessing, clearUserLocked, live, staged, isNew, modified);
 	}
@@ -85,7 +85,9 @@ public class WorkflowServiceImpl implements WorkflowService {
 
 	@Override
 	@RequireSiteExists
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_APPROVE)
+	// Notice that here we just validate the user is a member of the site. The actual permission checking will
+	// be done in the internal service by checking all the items in the packages.
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	@PeerReviewCapable
 	public void approvePackages(@SiteId String siteId, @PackageIds Collection<Long> packageIds, Instant schedule, boolean updateSchedule, String comment)
 		throws AuthenticationException, ServiceLayerException {
@@ -94,7 +96,9 @@ public class WorkflowServiceImpl implements WorkflowService {
 
 	@Override
 	@RequireSiteExists
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_REJECT)
+	// Notice that here we just validate the user is a member of the site. The actual permission checking will
+	// be done in the internal service by checking all the items in the packages.
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public void rejectPackages(@SiteId String siteId, Collection<Long> packageIds, String comment) throws ServiceLayerException, AuthenticationException {
 		workflowServiceInternal.rejectPackages(siteId, packageIds, comment);
 	}

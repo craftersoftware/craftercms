@@ -22,7 +22,7 @@
     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
 	<aop:aspectj-autoproxy proxy-target-class="true"/>
 	<bean id="studio.retryingRepositoryOperation"
-	      class="org.craftercms.studio.api.v2.annotation.RetryingDatabaseOperationAnnotationHandler">
+	      class="org.craftercms.studio.api.v2.annotation.retrying.RetryingDatabaseOperationAnnotationHandler">
 		<property name="maxRetries" value="3"/>
 		<property name="maxSleep" value="100"/>
 	</bean>

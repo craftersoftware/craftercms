@@ -62,7 +62,7 @@ public class RepositoryManagementController {
 	}
 
 	@ResponseStatus(HttpStatus.CREATED)
-	@PostMapping(ADD_REMOTE)
+	@PostMapping(value = ADD_REMOTE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result addRemote(HttpServletResponse response, @Valid @RequestBody RemoteRepository remoteRepository)
 		throws ServiceLayerException, InvalidRemoteUrlException {
 		Result result = new Result();
@@ -82,7 +82,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(PULL_FROM_REMOTE)
+	@PostMapping(value = PULL_FROM_REMOTE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<MergeResult> pullFromRemote(@Valid @RequestBody PullFromRemoteRequest pullFromRemoteRequest)
 		throws InvalidRemoteUrlException, ServiceLayerException,
 		InvalidRemoteRepositoryCredentialsException, RemoteRepositoryNotFoundException {
@@ -96,7 +96,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(PUSH_TO_REMOTE)
+	@PostMapping(value = PUSH_TO_REMOTE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result pushToRemote(HttpServletResponse response, @Valid @RequestBody PushToRemoteRequest pushToRemoteRequest)
 		throws InvalidRemoteUrlException, ServiceLayerException,
 		InvalidRemoteRepositoryCredentialsException, RemoteRepositoryNotFoundException {
@@ -114,7 +114,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(REMOVE_REMOTE)
+	@PostMapping(value = REMOVE_REMOTE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result removeRemote(HttpServletResponse response, @Valid @RequestBody RemoveRemoteRequest removeRemoteRequest)
 		throws SiteNotFoundException, RemoteNotRemovableException {
 		boolean res = repositoryManagementService.removeRemote(removeRemoteRequest.getSiteId(),
@@ -130,7 +130,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@GetMapping(STATUS)
+	@GetMapping(value = STATUS, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<RepositoryStatus> getRepositoryStatus(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId)
 		throws ServiceLayerException {
 		RepositoryStatus status = repositoryManagementService.getRepositoryStatus(siteId);
@@ -140,7 +140,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(RESOLVE_CONFLICT)
+	@PostMapping(value = RESOLVE_CONFLICT, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<RepositoryStatus> resolveConflict(@Valid @RequestBody ResolveConflictRequest resolveConflictRequest)
 		throws ServiceLayerException {
 		String path = resolveConflictRequest.getPath();
@@ -155,7 +155,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@GetMapping(DIFF_CONFLICTED_FILE)
+	@GetMapping(value = DIFF_CONFLICTED_FILE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<DiffConflictedFile> getDiffForConflictedFile(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
 								      @ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH) String path)
 		throws ServiceLayerException {
@@ -170,7 +170,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(COMMIT_RESOLUTION)
+	@PostMapping(value = COMMIT_RESOLUTION, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<RepositoryStatus> commitConflictResolution(@Valid @RequestBody CommitResolutionRequest commitResolutionRequest)
 		throws ServiceLayerException {
 		RepositoryStatus status = repositoryManagementService.commitResolution(commitResolutionRequest.getSiteId(),
@@ -181,7 +181,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(CANCEL_FAILED_PULL)
+	@PostMapping(value = CANCEL_FAILED_PULL, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<RepositoryStatus> cancelFailedPull(@Valid @RequestBody CancelFailedPullRequest cancelFailedPullRequest)
 		throws ServiceLayerException {
 		RepositoryStatus status = repositoryManagementService.cancelFailedPull(cancelFailedPullRequest.getSiteId());
@@ -191,7 +191,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(UNLOCK)
+	@PostMapping(value = UNLOCK, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result unlockRepository(@Valid @RequestBody UnlockRepositoryRequest unlockRepositoryRequest) throws ServiceLayerException {
 		repositoryManagementService.unlockRepository(unlockRepositoryRequest.getSiteId(), unlockRepositoryRequest.getRepositoryType());
 		Result result = new Result();
@@ -199,7 +199,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@GetMapping(CORRUPTED)
+	@GetMapping(value = CORRUPTED, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Boolean> isRepositoryCorrupted(@ValidSiteId @RequestParam(required = false) String siteId,
 							@RequestParam GitRepositories repositoryType)
 		throws ServiceLayerException {
@@ -210,7 +210,7 @@ public class RepositoryManagementController {
 		return result;
 	}
 
-	@PostMapping(REPAIR)
+	@PostMapping(value = REPAIR, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result repairCorruptedRepository(@Valid @RequestBody RepairRepositoryRequest request)
 		throws ServiceLayerException {
 		repositoryManagementService.repairCorrupted(request.getSiteId(), request.getRepositoryType());

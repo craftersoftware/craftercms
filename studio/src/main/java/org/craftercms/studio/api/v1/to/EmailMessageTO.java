@@ -21,9 +21,9 @@ public class EmailMessageTO implements Serializable {
 
 
 	private static final long serialVersionUID = -509714280274105998L;
-	protected String subject;
-	protected String content;
-	protected String to;
+	protected final String subject;
+	protected final String content;
+	protected final String to;
 
 	public EmailMessageTO(String subject, String content, String to) {
 		this.subject = subject;
@@ -35,24 +35,12 @@ public class EmailMessageTO implements Serializable {
 		return subject;
 	}
 
-	public void setSubject(String subject) {
-		this.subject = subject;
-	}
-
 	public String getContent() {
 		return content;
 	}
 
-	public void setContent(String content) {
-		this.content = content;
-	}
-
 	public String getTo() {
 		return to;
-	}
-
-	public void setTo(String to) {
-		this.to = to;
 	}
 
 }

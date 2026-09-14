@@ -426,6 +426,29 @@ public class XsltTest {
 		testXsltTemplate(template, content, expected, params);
 	}
 
+	@DataProvider(name = "siteConfig5000TestData")
+	public Object[][] siteConfig5000TestData() {
+		return new Object[][]{
+			new Object[] {
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.0/add/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.0/add/expected.xml"),
+				emptyMap()
+			},
+			new Object[] {
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.0/existed/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config/5.0.0.0/existed/expected.xml"),
+				emptyMap()
+			}
+		};
+	}
+
+	@Test(dataProvider = "siteConfig5000TestData")
+	public void siteConfig5000Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
+		testXsltTemplate(template, content, expected, params);
+	}
+
 	@DataProvider(name = "globalPermissions50010TestData")
 	public Object[][] globalPermissions50010TestData() {
 		return new Object[][]{
@@ -525,6 +548,23 @@ public class XsltTest {
 
 	@Test(dataProvider = "globalPermissions50023TestData")
 	public void globalPermissions50023Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
+		testXsltTemplate(template, content, expected, params);
+	}
+
+	@DataProvider(name = "globalPermissions50025TestData")
+	public Object[][] globalPermissions50025TestData() {
+		return new Object[][]{
+				new Object[] {
+						new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.25.xslt"),
+						new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.25/input.xml"),
+						new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.25/expected.xml"),
+						emptyMap()
+				}
+		};
+	}
+
+	@Test(dataProvider = "globalPermissions50025TestData")
+	public void globalPermissions50025Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 

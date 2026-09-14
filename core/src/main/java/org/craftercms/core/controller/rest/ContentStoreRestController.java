@@ -33,6 +33,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,7 +94,7 @@ public class ContentStoreRestController extends RestControllerBase implements In
 		itemFilter = compositeItemFilter;
 	}
 
-	@RequestMapping(value = URL_ITEM, method = RequestMethod.GET)
+	@RequestMapping(value = URL_ITEM, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Item getItem(WebRequest request, HttpServletResponse response,
 			    @RequestParam(REQUEST_PARAM_CONTEXT_ID) String contextId,
 			    @RequestParam(REQUEST_PARAM_URL) String url,
@@ -115,7 +117,7 @@ public class ContentStoreRestController extends RestControllerBase implements In
 		}
 	}
 
-	@RequestMapping(value = URL_CHILDREN, method = RequestMethod.GET)
+	@RequestMapping(value = URL_CHILDREN, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public List<Item> getChildren(WebRequest request, HttpServletResponse response,
 				      @RequestParam(REQUEST_PARAM_CONTEXT_ID) String contextId,
 				      @RequestParam(REQUEST_PARAM_URL) String url,
@@ -139,7 +141,7 @@ public class ContentStoreRestController extends RestControllerBase implements In
 		}
 	}
 
-	@RequestMapping(value = URL_TREE, method = RequestMethod.GET)
+	@RequestMapping(value = URL_TREE, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Tree getTree(WebRequest request, HttpServletResponse response,
 			    @RequestParam(REQUEST_PARAM_CONTEXT_ID) String contextId,
 			    @RequestParam(REQUEST_PARAM_URL) String url,

@@ -46,6 +46,7 @@ import static org.apache.commons.io.FilenameUtils.removeExtension;
 import static org.apache.commons.lang3.StringUtils.removeStart;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_RESULT;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Controller that executes Rest scripts from plugins
@@ -70,7 +71,7 @@ public class PluginController extends ManagementTokenAware {
 		this.marketplaceService = marketplaceService;
 	}
 
-	@GetMapping("/get_configuration")
+	@GetMapping(value = "/get_configuration", produces = APPLICATION_JSON_VALUE)
 	public ResultOne<String> getPluginConfiguration(@ValidSiteId String siteId, String pluginId) throws ServiceLayerException {
 		String content = marketplaceService.getPluginConfigurationAsString(siteId, pluginId);
 
@@ -80,7 +81,7 @@ public class PluginController extends ManagementTokenAware {
 		return result;
 	}
 
-	@PostMapping("/write_configuration")
+	@PostMapping(value = "/write_configuration", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result writeConfiguration(@Valid @RequestBody WriteConfigurationRequest request)
 		throws UserNotFoundException, ServiceLayerException, AuthenticationException {
 		marketplaceService.writePluginConfiguration(request.getSiteId(), request.getPluginId(), request.getContent());
@@ -93,7 +94,7 @@ public class PluginController extends ManagementTokenAware {
 	/**
 	 * Reloads the groovy classes for the given site
 	 */
-	@GetMapping("/script/reload")
+	@GetMapping(value = "/script/reload", produces = APPLICATION_JSON_VALUE)
 	public Result reloadClasses(@ValidSiteId @RequestParam String siteId, @RequestParam String token)
 		throws InvalidParametersException, InvalidManagementTokenException {
 		validateToken(token);
@@ -109,7 +110,7 @@ public class PluginController extends ManagementTokenAware {
 	/**
 	 * Executes a rest script for the given site
 	 */
-	@RequestMapping("/script/**")
+	@RequestMapping(value = "/script/**")
 	public ResultOne<Object> runScript(@ValidSiteId @RequestParam String siteId, HttpServletRequest request, HttpServletResponse response)
 		throws ResourceException, ScriptException, ConfigurationException {
 		// No better way to do this for now, later can be replaced by "/script/{*scriptUrl}"

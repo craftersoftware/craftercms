@@ -49,6 +49,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 public class ConfigAwarePreviewAccessTokenFilter extends GenericFilterBean {
 	private final static String PREVIEW_SITE_TOKEN_NAME = "crafterPreview";
 	private final static String PREVIEW_SITE_TOKEN_HEADER_NAME = "X-Crafter-Preview";
+	private final static String ALLOW_ALL_SITES_WILDCARD = "*";
 
 	private final TextEncryptor textEncryptor;
 	private final SiteAwareCorsConfigurationSource corsConfigSource;
@@ -122,7 +123,7 @@ public class ConfigAwarePreviewAccessTokenFilter extends GenericFilterBean {
 
 		String previewSitesFromToken = tokens[0];
 		List<String> allowedSites = Arrays.asList(previewSitesFromToken.split(","));
-		if (!allowedSites.contains(site)) {
+		if (!allowedSites.contains(site) && !allowedSites.contains(ALLOW_ALL_SITES_WILDCARD)) {
 			String message = format("User is not authorized to preview site '%s', '%s' header or '%s' token does not match",
 				site, PREVIEW_SITE_TOKEN_HEADER_NAME, PREVIEW_SITE_TOKEN_NAME);
 			logger.debug(message);

@@ -84,32 +84,47 @@ public class PermissionMappingsProviderImpl implements PermissionMappingsProvide
 		return mappings;
 	}
 
+	private SitePermissionMappingsImpl getGlobalPermissionMappings() throws ServiceLayerException {
+		var cacheKey = CONFIGURATION_GLOBAL_SYSTEM_SITE + CACHE_KEY;
+		SitePermissionMappingsImpl mappings = cache.getIfPresent(cacheKey);
+		if (mappings == null) {
+			logger.debug("Cache miss for global permission mappings cache key '{}'", cacheKey);
+			mappings = fetchGlobalPermissionMappings();
+			cache.put(cacheKey, mappings);
+		}
+		return mappings;
+	}
+
+	private SitePermissionMappingsImpl fetchGlobalPermissionMappings() throws ServiceLayerException {
+		SitePermissionMappingsImpl globalPermissionMappings = new SitePermissionMappingsImpl(true);
+		String globalRolesConfigPath = studioConfiguration.getProperty(CONFIGURATION_GLOBAL_CONFIG_BASE_PATH) +
+				FILE_SEPARATOR + studioConfiguration.getProperty(CONFIGURATION_GLOBAL_ROLE_MAPPINGS_FILE_NAME);
+		Document globalRoleMappingsDocument = configurationService
+				.getGlobalConfigurationAsDocument(globalRolesConfigPath);
+
+		String globalPermissionsConfigPath = studioConfiguration.getProperty(CONFIGURATION_GLOBAL_CONFIG_BASE_PATH)
+				+ FILE_SEPARATOR +
+				studioConfiguration.getProperty(CONFIGURATION_GLOBAL_PERMISSION_MAPPINGS_FILE_NAME);
+		Document globalPermissionMappingsDocument = configurationService
+				.getGlobalConfigurationAsDocument(globalPermissionsConfigPath);
+
+		loadRoles(globalRoleMappingsDocument, globalPermissionMappings);
+		loadPermissions(globalPermissionMappingsDocument, globalPermissionMappings);
+		return globalPermissionMappings;
+	}
+
 	private SitePermissionMappingsImpl fetchSitePermissionMappings(String site) throws ServiceLayerException {
-		SitePermissionMappingsImpl sitePermissionMappings = new SitePermissionMappingsImpl();
+		SitePermissionMappingsImpl sitePermissionMappings = new SitePermissionMappingsImpl(getGlobalPermissionMappings());
 
 		if (isNotEmpty(site) && !CS.equals(site, studioConfiguration.getProperty(CONFIGURATION_GLOBAL_SYSTEM_SITE))) {
 			Document roleMappingsDocument = configurationService.getConfigurationAsDocument(site, MODULE_STUDIO,
-				studioConfiguration.getProperty(CONFIGURATION_SITE_ROLE_MAPPINGS_FILE_NAME),
-				studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE));
+					studioConfiguration.getProperty(CONFIGURATION_SITE_ROLE_MAPPINGS_FILE_NAME),
+					studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE));
 			Document permissionsMappingsDocument = configurationService.getConfigurationAsDocument(site, MODULE_STUDIO,
-				studioConfiguration.getProperty(CONFIGURATION_SITE_PERMISSION_MAPPINGS_FILE_NAME),
-				studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE));
+					studioConfiguration.getProperty(CONFIGURATION_SITE_PERMISSION_MAPPINGS_FILE_NAME),
+					studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE));
 			loadRoles(roleMappingsDocument, sitePermissionMappings);
 			loadPermissions(permissionsMappingsDocument, sitePermissionMappings);
-		} else {
-			String globalRolesConfigPath = studioConfiguration.getProperty(CONFIGURATION_GLOBAL_CONFIG_BASE_PATH) +
-					FILE_SEPARATOR + studioConfiguration.getProperty(CONFIGURATION_GLOBAL_ROLE_MAPPINGS_FILE_NAME);
-			Document globalRoleMappingsDocument = configurationService
-					.getGlobalConfigurationAsDocument(globalRolesConfigPath);
-
-			String globalPermissionsConfigPath = studioConfiguration.getProperty(CONFIGURATION_GLOBAL_CONFIG_BASE_PATH)
-					+ FILE_SEPARATOR +
-					studioConfiguration.getProperty(CONFIGURATION_GLOBAL_PERMISSION_MAPPINGS_FILE_NAME);
-			Document globalPermissionMappingsDocument = configurationService
-					.getGlobalConfigurationAsDocument(globalPermissionsConfigPath);
-
-			loadRoles(globalRoleMappingsDocument, sitePermissionMappings);
-			loadPermissions(globalPermissionMappingsDocument, sitePermissionMappings);
 		}
 		return sitePermissionMappings;
 	}

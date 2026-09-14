@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,19 +33,15 @@ import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_AUTHORING_URL;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_LIVE_URL;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_PLUGIN_FOLDER_PATTERN;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_SANDBOX_BRANCH;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_ELEMENT_SITE_URLS;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_CONTENT_MONITORING;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_DATE_TIME_FORMAT_OPTIONS;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_LIVE_ENVIRONMENT;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_LOCALE;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_PROTECTED_FOLDER_PATTERNS;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_PUBLISHER;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_REQUIRE_PEER_REVIEW;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_STAGING_ENVIRONMENT;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_TIME_ZONE;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_CONFIG_XML_ELEMENT_WORKFLOW;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
@@ -58,12 +53,10 @@ import org.craftercms.studio.api.v1.to.RepositoryConfigTO;
 import org.craftercms.studio.api.v1.to.SiteConfigTO;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_DEFAULT_TIME_ZONE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_GENERAL_CONFIG_FILE_NAME;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_PUBLISHED_LIVE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_PUBLISHED_STAGING;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_SANDBOX_BRANCH;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.Node;
@@ -96,7 +89,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 	protected static final String PATTERN_RENDERING_TEMPLATE = "rendering-template";
 	protected static final String PATTERN_SCRIPTS = "scripts";
 	protected static final String PATTERN_CONFIGURATION = "config";
-	protected static final String PATTERN_LEVEL_DESCRIPTOR = "level-descriptor";
 
 	/**
 	 * xml element names
@@ -176,16 +168,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 
 	@Override
 	@Valid
-	public List<String> getLevelDescriptorPatterns(@ValidateStringParam String site) throws SiteNotFoundException {
-		SiteConfigTO config = loadConfiguration(site);
-		if (config.getRepositoryConfig() != null) {
-			return config.getRepositoryConfig().getLevelDescriptorPatterns();
-		}
-		return null;
-	}
-
-	@Override
-	@Valid
 	public List<String> getDocumentPatterns(@ValidateStringParam String site) throws SiteNotFoundException {
 		SiteConfigTO config = loadConfiguration(site);
 		if (config.getRepositoryConfig() != null) {
@@ -202,21 +184,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 			return config.getRepositoryConfig().getLevelDescriptorName();
 		}
 		return null;
-	}
-
-	@Override
-	@Valid
-	public String getDefaultTimezone(@ValidateStringParam String site) throws SiteNotFoundException {
-		SiteConfigTO config = loadConfiguration(site);
-		String timeZone = config.getTimezone();
-		if (StringUtils.isEmpty(timeZone)) {
-			timeZone = studioConfiguration.getProperty(CONFIGURATION_DEFAULT_TIME_ZONE);
-			if (StringUtils.isEmpty(timeZone)) {
-				timeZone = TimeZone.getDefault().getID();
-
-			}
-		}
-		return timeZone;
 	}
 
 	@Override
@@ -246,14 +213,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 					Node configNode = root.selectSingleNode("/site-config");
 					String name = configNode.valueOf("display-name");
 					siteConfig = new SiteConfigTO();
-					siteConfig.setTimezone(configNode.valueOf(SITE_CONFIG_XML_ELEMENT_LOCALE + "/" +
-						SITE_CONFIG_XML_ELEMENT_DATE_TIME_FORMAT_OPTIONS + "/" +
-						SITE_CONFIG_XML_ELEMENT_TIME_ZONE));
-					String sandboxBranch = configNode.valueOf(SITE_CONFIG_ELEMENT_SANDBOX_BRANCH);
-					if (StringUtils.isEmpty(sandboxBranch)) {
-						sandboxBranch = studioConfiguration.getProperty(REPO_SANDBOX_BRANCH);
-					}
-					siteConfig.setSandboxBranch(sandboxBranch);
 					String stagingEnvironmentEnabledValue =
 						configNode.valueOf(SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY +
 							"/" + SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT);
@@ -458,7 +417,6 @@ public class ServicesConfigImpl implements ServicesConfig {
 							case PATTERN_DOCUMENT -> repo.setDocumentPatterns(patterns);
 							case PATTERN_RENDERING_TEMPLATE -> repo.setRenderingTemplatePatterns(patterns);
 							case PATTERN_SCRIPTS -> repo.setScriptsPatterns(patterns);
-							case PATTERN_LEVEL_DESCRIPTOR -> repo.setLevelDescriptorPatterns(patterns);
 							case PATTERN_CONFIGURATION -> repo.setConfigurationPatterns(patterns);
 							default ->
 								LOGGER.warn("Unknown pattern key: '{}' is provided in site '{}'", patternKey, siteName);

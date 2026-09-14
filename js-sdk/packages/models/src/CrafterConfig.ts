@@ -17,28 +17,28 @@
 import { LookupTable } from '@craftercms/models';
 
 export interface CrafterConfig {
-  site: string;
-  /** @deprecated Use `fetchConfig.mode` instead */
-  cors?: boolean | RequestInit['mode'];
-  fetchConfig?: RequestInit;
-  baseUrl: string;
-  searchId?: string;
-  endpoints?: Endpoints;
-  // TODO: Remove this?
-  contentTypeRegistry?: LookupTable;
-  // TODO: Remove this in favour of fetchConfig.headers? Most make all sdk service use fetch.
-  headers: LookupTable;
+	site: string;
+	/** @deprecated Use `fetchConfig.mode` instead */
+	cors?: boolean | RequestInit['mode'];
+	fetchConfig?: RequestInit;
+	baseUrl: string;
+	searchId?: string;
+	endpoints?: Endpoints;
+	// TODO: Remove this?
+	contentTypeRegistry?: LookupTable;
+	// TODO: Remove this in favour of fetchConfig.headers? Most make all sdk service use fetch.
+	headers: LookupTable;
 }
 
 export interface Endpoints {
-  GET_ITEM_URL: string;
-  GET_DESCRIPTOR: string;
-  GET_CHILDREN: string;
-  GET_TREE: string;
-  GET_NAV_TREE: string;
-  GET_BREADCRUMB: string;
-  TRANSFORM_URL: string;
-  SEARCH: string;
+	GET_ITEM_URL: string;
+	GET_DESCRIPTOR: string;
+	GET_CHILDREN: string;
+	GET_TREE: string;
+	GET_NAV_TREE: string;
+	GET_BREADCRUMB: string;
+	TRANSFORM_URL: string;
+	SEARCH: string;
 }
 
 export default CrafterConfig;

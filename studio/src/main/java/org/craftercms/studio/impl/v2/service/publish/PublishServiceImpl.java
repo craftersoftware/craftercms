@@ -23,18 +23,21 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.RequireSiteExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
 import org.craftercms.studio.api.v2.annotation.publish.PackageId;
 import org.craftercms.studio.api.v2.annotation.publish.RequirePackageExists;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPathList;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishItemWithMetadata;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.security.HasAllPermissions;
 import org.craftercms.studio.api.v2.security.publish.PeerReviewCapable;
+import org.craftercms.studio.api.v2.security.publish.PackageSubmitter;
 import org.craftercms.studio.api.v2.service.publish.PublishService;
 import org.craftercms.studio.model.publish.PublishingTarget;
 import org.craftercms.studio.permissions.CompositePermission;
@@ -94,7 +97,9 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequireSiteReady
-	@HasAllPermissions(type = CompositePermission.class, actions = {PERMISSION_PUBLISH_REQUEST, PERMISSION_PUBLISH_APPROVE})
+	// Notice that here we just validate the user is a member of the site. The actual permission checking will
+	// need to be done in the publish service once the package is entirely calculated.
+	@HasAllPermissions(type = CompositePermission.class, actions = PERMISSION_CONTENT_READ)
 	@PeerReviewCapable
 	public long publish(@SiteId String siteId, String publishingTarget, List<PublishRequestPath> paths,
 						List<String> commitIds, Instant schedule, String title, String comment, boolean submitAll)
@@ -104,7 +109,9 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequireSiteReady
-	@HasPermission(type = CompositePermission.class, action = PERMISSION_PUBLISH_REQUEST)
+	// Notice that here we just validate the user is a member of the site. The actual permission checking will
+	// need to be done in the publish service once the package is entirely calculated.
+	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_READ)
 	public long requestPublish(@SiteId String siteId, String publishingTarget, List<PublishRequestPath> paths,
 							   List<String> commitIds, Instant schedule, String title, String comment, boolean submitAll)
 		throws AuthenticationException, ServiceLayerException {
@@ -127,7 +134,7 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequireSiteExists
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_REQUEST)
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public CalculatedPublishPackageResult calculatePublishPackage(@SiteId String siteId, String publishingTarget, Collection<PublishRequestPath> paths,
 																  Collection<String> commitIds)
 		throws ServiceLayerException, IOException {
@@ -136,7 +143,7 @@ public class PublishServiceImpl implements PublishService {
 
 	@Override
 	@RequirePackageExists
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_REQUEST)
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public CalculatedPublishPackageResult recalculatePublishPackage(@SiteId String site, @PackageId long packageId, String target)
 		throws ServiceLayerException {
 		return publishServiceInternal.recalculatePublishPackage(site, packageId, target);
@@ -177,7 +184,7 @@ public class PublishServiceImpl implements PublishService {
 	@RequirePackageExists
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_GET_QUEUE)
 	public Collection<PublishItem> getPublishItems(@SiteId String siteId, @PackageId final long packageId,
-												   final int offset, final int limit)
+												   final Integer offset, final Integer limit)
 		throws PublishPackageNotFoundException, SiteNotFoundException {
 		return publishServiceInternal.getPublishItems(siteId, packageId, offset, limit);
 	}
@@ -185,13 +192,13 @@ public class PublishServiceImpl implements PublishService {
 	@Override
 	@RequireSiteExists
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_GET_QUEUE)
-	public Collection<PublishItem> getFailedPublishItems(@SiteId final String siteId, @PackageId final long packageId, int offset, int limit) {
+	public Collection<PublishItem> getFailedPublishItems(@SiteId final String siteId, @PackageId final long packageId, Integer offset, Integer limit) {
 		return publishServiceInternal.getFailedPublishItems(siteId, packageId, offset, limit);
 	}
 
 	@Override
 	@RequireSiteExists
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_PUBLISH_REQUEST)
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public List<PublishingTarget> getAvailablePublishingTargets(@SiteId String siteId) throws SiteNotFoundException {
 		return publishServiceInternal.getAvailablePublishingTargets(siteId);
 	}
@@ -201,6 +208,15 @@ public class PublishServiceImpl implements PublishService {
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public boolean isSitePublished(@SiteId String siteId) throws SiteNotFoundException, RepositoryException {
 		return publishServiceInternal.isSitePublished(siteId);
+	}
+
+	@Override
+	@RequireSiteExists
+	@PackageSubmitter
+	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
+	public void updatePublishPackage(@SiteId String site, @PackageId long packageId, Instant schedule,
+			boolean updateSchedule, String submitterComment, String title, boolean requestApproval) throws InvalidPackageStateException, AuthenticationException, SiteNotFoundException {
+		publishServiceInternal.updatePublishPackage(site, packageId, schedule, updateSchedule, submitterComment, title, requestApproval);
 	}
 
 	@SuppressWarnings("unused")

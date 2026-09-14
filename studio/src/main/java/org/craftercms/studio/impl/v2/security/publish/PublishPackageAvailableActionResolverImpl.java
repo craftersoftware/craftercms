@@ -17,6 +17,7 @@
 package org.craftercms.studio.impl.v2.security.publish;
 
 import java.beans.ConstructorProperties;
+import java.util.Collection;
 import java.util.List;
 
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
@@ -24,10 +25,14 @@ import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Group;
+import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
+import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActionResolver;
 import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.APPROVE;
 import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.getPossibleActionsForPackageStates;
+
+import org.craftercms.studio.api.v2.service.publish.PublishService;
 import org.craftercms.studio.api.v2.service.security.UserService;
 import org.craftercms.studio.api.v2.security.PermissionMappingsProvider;
 import org.craftercms.studio.api.v2.security.SitePermissionMappings;
@@ -45,14 +50,17 @@ public class PublishPackageAvailableActionResolverImpl implements PublishPackage
 	private final PermissionMappingsProvider permissionMappingProvider;
 	private final UserService userService;
 	private final ServicesConfig servicesConfig;
+	private final PublishDAO publishDao;
 
-	@ConstructorProperties({"permissionMappingProvider", "userService", "servicesConfig"})
+	@ConstructorProperties({"permissionMappingProvider", "userService", "servicesConfig", "publishDao"})
 	public PublishPackageAvailableActionResolverImpl(PermissionMappingsProvider permissionMappingProvider,
 													 UserService userService,
-													 ServicesConfig servicesConfig) {
+													 ServicesConfig servicesConfig,
+													 PublishDAO publishDao) {
 		this.permissionMappingProvider = permissionMappingProvider;
 		this.userService = userService;
 		this.servicesConfig = servicesConfig;
+		this.publishDao = publishDao;
 	}
 
 	@Override
@@ -63,10 +71,11 @@ public class PublishPackageAvailableActionResolverImpl implements PublishPackage
 			return 0;
 		}
 		String siteId = publishPackage.getSite().getSiteId();
+		Collection<PublishItem> publishItems = publishDao.getPublishItems(siteId, publishPackage.getId());
 		SitePermissionMappings permissionMappings = permissionMappingProvider.getPermissionMappings(siteId);
 		List<Group> groups = userService.getUserGroups(-1, user);
 		boolean isSubmitter = publishPackage.getSubmitter().getUsername().equals(getCurrentUsername());
-		long userAllowedActions = permissionMappings.getPublishPackageAvailableActions(user, groups);
+		long userAllowedActions = permissionMappings.getPublishPackageAvailableActions(user, groups, publishItems, userService.isSystemAdmin(user));
 		long packageStateActions = getPossibleActionsForPackageStates(publishPackage.getPackageState(),
 			publishPackage.getApprovalState());
 

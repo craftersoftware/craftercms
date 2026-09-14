@@ -26,7 +26,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { initialFieldViewState, useVersionsDialogContext } from './VersionsDialogContext';
 import DefaultDiffView from './FieldsTypesDiffViews/DefaultDiffView';
 import TextDiffView from './FieldsTypesDiffViews/TextDiffView';
-import { DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditorProps } from '../MonacoEditor';
 import ContentInstance from '../../models/ContentInstance';
 
 export interface CompareFieldPanelProps {
@@ -38,7 +38,7 @@ export interface CompareFieldPanelProps {
 }
 
 export interface DiffComponentProps extends Pick<DiffViewComponentBaseProps, 'aXml' | 'bXml' | 'field'> {
-	editorProps?: DiffEditorProps;
+	editorProps?: MonacoDiffEditorProps;
 }
 
 export function CompareFieldPanel(props: CompareFieldPanelProps) {

@@ -55,7 +55,7 @@ public class AvailableActionsResolverImpl implements AvailableActionsResolver {
 	public long getSiteWideActions(String siteId, String username) throws ServiceLayerException, UserNotFoundException {
 		List<Group> groups = userService.getUserGroups(-1, username);
 		SitePermissionMappings sitePermissionMappings = permissionMappingsProvider.getPermissionMappings(siteId);
-		return sitePermissionMappings.getSiteWideItemAvailableActions(username, groups);
+		return sitePermissionMappings.getSiteWideItemAvailableActions(username, groups, userService.isSystemAdmin(username));
 	}
 
 	private long calculateAvailableActions(String username, String path,

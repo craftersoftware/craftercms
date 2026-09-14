@@ -64,7 +64,7 @@ public class MonitoringController extends ManagementTokenAware {
 		this.monitorService = monitorService;
 	}
 
-	@GetMapping(value = ROOT_URL + MEMORY_URL)
+	@GetMapping(value = ROOT_URL + MEMORY_URL, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<MemoryInfo> getCurrentMemory(@RequestParam(name = "token") String token)
 			throws InvalidManagementTokenException, InvalidParametersException {
 		validateToken(token, true);
@@ -74,7 +74,7 @@ public class MonitoringController extends ManagementTokenAware {
 		return result;
 	}
 
-	@GetMapping(value = ROOT_URL + STATUS_URL)
+	@GetMapping(value = ROOT_URL + STATUS_URL, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<StatusInfo> getCurrentStatus(@RequestParam(name = "token") String token)
 			throws InvalidManagementTokenException, InvalidParametersException {
 		validateToken(token, true);
@@ -84,7 +84,7 @@ public class MonitoringController extends ManagementTokenAware {
 		return result;
 	}
 
-	@GetMapping(value = ROOT_URL + VERSION_URL)
+	@GetMapping(value = ROOT_URL + VERSION_URL, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<VersionInfo> getCurrentVersion(@RequestParam(name = "token", required = false) String token)
 			throws InvalidManagementTokenException, IOException, InvalidParametersException {
 		validateToken(token);
@@ -94,7 +94,7 @@ public class MonitoringController extends ManagementTokenAware {
 		return result;
 	}
 
-	@GetMapping(value = ROOT_URL + SYSINFO_URL)
+	@GetMapping(value = ROOT_URL + SYSINFO_URL, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<SysInfo> getCurrentSysInfo(@RequestParam(name = REQUEST_PARAM_TOKEN) String token)
 			throws InvalidManagementTokenException, IOException, InvalidParametersException {
 		validateToken(token, true);

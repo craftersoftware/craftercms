@@ -14,8 +14,12 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { createAction } from "@reduxjs/toolkit";
+import { createAction } from '@reduxjs/toolkit';
 
-export const internal_getNav = /*#__PURE__*/ createAction<{ url: string, depth?: Number, currentPageUrl?: string }>('GET_NAV');
+export const internal_getNav = /*#__PURE__*/ createAction<{ url: string; depth?: Number; currentPageUrl?: string }>(
+	'GET_NAV'
+);
 
-export const internal_getNavBreadcrumb = /*#__PURE__*/ createAction<{ url: string, root?: string }>('GET_NAV_BREADCRUMB');
+export const internal_getNavBreadcrumb = /*#__PURE__*/ createAction<{ url: string; root?: string }>(
+	'GET_NAV_BREADCRUMB'
+);

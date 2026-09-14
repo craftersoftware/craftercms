@@ -15,7 +15,7 @@
  */
 package org.craftercms.studio.impl.v2.repository;
 
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.eclipse.jgit.errors.ConfigInvalidException;
 import org.eclipse.jgit.lib.StoredConfig;

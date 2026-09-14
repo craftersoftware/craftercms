@@ -38,7 +38,7 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.dal.AuditLog;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_INITIAL_PUBLISH;

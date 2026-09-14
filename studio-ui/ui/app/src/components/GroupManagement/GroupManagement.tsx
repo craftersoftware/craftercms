@@ -31,7 +31,6 @@ import { useWithPendingChangesCloseRequest } from '../../hooks/useWithPendingCha
 import SearchBar from '../SearchBar';
 import useDebouncedInput from '../../hooks/useDebouncedInput';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
-import { EmptyState } from '../EmptyState';
 
 export function GroupManagement() {
 	const [offset, setOffset] = useState(0);
@@ -147,16 +146,12 @@ export function GroupManagement() {
 			) : fetching ? (
 				<GroupsGridSkeletonTable numOfItems={limit} />
 			) : groups ? (
-				groups.length ? (
-					<GroupsGridUI
-						groups={groups}
-						onRowClicked={onRowClicked}
-						onPageChange={onPageChange}
-						onRowsPerPageChange={onRowsPerPageChange}
-					/>
-				) : (
-					<EmptyState title={<FormattedMessage id="groupsGrid.emptyStateMessage" defaultMessage="No Groups Found" />} />
-				)
+				<GroupsGridUI
+					groups={groups}
+					onRowClicked={onRowClicked}
+					onPageChange={onPageChange}
+					onRowsPerPageChange={onRowsPerPageChange}
+				/>
 			) : (
 				<></>
 			)}

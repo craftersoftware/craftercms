@@ -39,6 +39,9 @@ export function useExtractDataSources(
 			.split(',')
 			.map((id) => id.trim())
 			.filter((id) => id.length > 0);
-		return dataSources.filter((ds) => dataSourceIds.includes(ds.id));
+		const dataSourcesById = new Map(dataSources.map((dataSource) => [dataSource.id, dataSource]));
+		return dataSourceIds
+			.map((id) => dataSourcesById.get(id))
+			.filter((dataSource): dataSource is DataSource => Boolean(dataSource));
 	}, [dataSources, dataSourceIdString]);
 }

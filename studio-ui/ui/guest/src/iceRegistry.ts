@@ -29,7 +29,7 @@ import { LookupTable } from '@craftercms/studio-ui/models/LookupTable';
 import { ICEProps, ICERecord, ICERecordRegistration, ReferentialEntries } from './models/InContextEditing';
 import { notNullOrUndefined, nou, nullOrUndefined, pluckProps } from '@craftercms/studio-ui/utils/object';
 import { forEach } from '@craftercms/studio-ui/utils/array';
-import { determineRecordType, findComponentContainerFields } from './utils/ice';
+import { determineRecordType, findComponentContainerFields, resolvePlacementForZone } from './utils/ice';
 import { isSimple, removeLastPiece } from '@craftercms/studio-ui/utils/string';
 import { ModelHierarchyMap } from '@craftercms/studio-ui/utils/content';
 import { Observer, Subject, Subscription } from 'rxjs';
@@ -473,9 +473,8 @@ export function isMovableType(id: number): boolean {
 	return recordType === 'node-selector-item' || recordType === 'repeat-item';
 }
 
-export function getMovableParentRecord(id: number): number {
+export function getMovableParentRecord(id: number, contextElement?: Element): number {
 	const { recordType, modelId, index, fieldId } = getReferentialEntries(id);
-	const modelHierarchyMap = contentController.modelHierarchyMap;
 	if (isMovableType(id)) {
 		return id;
 	} else if (recordType === 'field' || recordType === 'component') {
@@ -483,11 +482,19 @@ export function getMovableParentRecord(id: number): number {
 			// Can be...
 			// - Field of a component (possible move target)
 			// - Field of a page
-			return modelHierarchyMap[modelId]
+			// - Bare component (fieldId null/undefined); shared components may have multiple placements
+			const placement = resolvePlacementForZone(
+				modelId,
+				contextElement,
+				contentController.getCachedModels(),
+				contentController.getCachedContentTypes(),
+				contentController.modelHierarchyMap
+			);
+			return placement
 				? exists({
-						modelId: modelHierarchyMap[modelId].parentId,
-						fieldId: modelHierarchyMap[modelId].parentContainerFieldPath,
-						index: modelHierarchyMap[modelId].parentContainerFieldIndex
+						modelId: placement.parentId,
+						fieldId: placement.parentContainerFieldPath,
+						index: placement.parentContainerFieldIndex
 					})
 				: null;
 		} else {

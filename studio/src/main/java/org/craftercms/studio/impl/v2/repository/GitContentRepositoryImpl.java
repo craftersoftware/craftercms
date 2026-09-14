@@ -84,7 +84,7 @@ import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoun
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.core.ContextManager;
 import org.craftercms.studio.api.v2.dal.ProcessedCommitsDAO;
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
@@ -1554,9 +1554,12 @@ public class GitContentRepositoryImpl implements GitContentRepository, GitPublis
 			}
 			try {
 				boolean create = !branchExists(publishedRepo, sandboxBranch);
-				helper.checkoutBranch(publishedRepo, sourceSandboxBranch, sandboxBranch, create);
-			} catch (GitAPIException e) {
-				throw new ServiceLayerException(format("Failed to duplicate site '%s' to '%s'", sourceSiteId, siteId), e);
+				if (create) {
+					helper.createBranch(publishedRepo, siteId, sourceSandboxBranch, sandboxBranch);
+				}
+			} catch (RepositoryException e) {
+				throw new ServiceLayerException(format("Failed to duplicate site '%s' to '%s'", sourceSiteId, siteId),
+						e);
 			}
 		} finally {
 			generalLockService.unlock(repoLockKey);

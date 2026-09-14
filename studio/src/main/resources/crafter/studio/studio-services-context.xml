@@ -399,6 +399,7 @@
 		<constructor-arg name="siteService" ref="sitesServiceInternal"/>
 		<constructor-arg name="auditService" ref="auditServiceInternal"/>
 		<constructor-arg name="dependencyService" ref="dependencyServiceInternal"/>
+		<constructor-arg name="permissionEvaluator" ref="crafter.studioCompositePermissionEvaluator"/>
 	</bean>
 
 	<bean id="dashboardService" class="org.craftercms.studio.impl.v2.service.dashboard.DashboardServiceImpl">
@@ -436,6 +437,7 @@
 		<property name="publishDao" ref="publishDao"/>
 		<property name="servicesConfig" ref="cstudioServicesConfig"/>
 		<property name="retryingDatabaseOperationFacade" ref="studio.retryingDatabaseOperationFacade"/>
+		<property name="permissionEvaluator" ref="crafter.studioCompositePermissionEvaluator"/>
 	</bean>
 
 	<bean id="studio.activityStreamService"
@@ -1265,7 +1267,7 @@
 	</bean>
 
 	<bean id="requireSiteReadyHandler"
-	      class="org.craftercms.studio.api.v2.annotation.RequireSiteStateAnnotationHandler">
+	      class="org.craftercms.studio.api.v2.annotation.precondition.RequireSiteStateAnnotationHandler">
 		<constructor-arg name="sitesService" ref="sitesService"/>
 	</bean>
 

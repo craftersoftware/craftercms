@@ -101,8 +101,7 @@
 				<permission>cancel_failed_pull</permission>
 				<permission>publish_cancel</permission>
 				<permission>publish_request</permission>
-				<permission>publish_approve</permission>
-				<permission>publish_reject</permission>
+				<permission>publish_review</permission>
 			</allowed-permissions>
 		</rule>
 	</role>
@@ -126,7 +125,7 @@
 		<rule regex="/.*">
 			<allowed-permissions>
 				<permission>publish_request</permission>
-				<permission>publish_approve</permission>
+				<permission>publish_review</permission>
 			</allowed-permissions>
 		</rule>
 	</role>

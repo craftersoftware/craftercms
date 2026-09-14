@@ -291,6 +291,17 @@ public class PublishPackage {
 		PackageState(final long exponent) {
 			this.value = Math.round(Math.pow(2, exponent));
 		}
+
+		/**
+		 * Check if this state is present in the given package state bitmap
+		 *
+		 * @param packageState the package state bitmap
+		 * @return true if this state is present in the given package state bitmap,
+		 *         false otherwise
+		 */
+		public boolean matches(final long packageState) {
+			return (this.value & packageState) != 0;
+		}
 	}
 
 	/**

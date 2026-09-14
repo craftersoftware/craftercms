@@ -21,8 +21,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.craftercms.commons.validation.annotations.param.ValidateSecurePathParam;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.exception.configuration.ConfigurationException;
 import org.craftercms.studio.api.v2.service.scripting.ScriptingService;
 

@@ -90,7 +90,7 @@
 		</property>
 	</bean>
 
-	<bean id="retryingOperation" class="org.craftercms.studio.api.v2.annotation.RetryingDatabaseOperationAnnotationHandler">
+	<bean id="retryingOperation" class="org.craftercms.studio.api.v2.annotation.retrying.RetryingDatabaseOperationAnnotationHandler">
 		<property name="maxRetries"
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).DB_RETRYING_OPERATION_MAX_ATTEMPTS)}"/>
 		<property name="maxSleep"
@@ -98,7 +98,7 @@
 	</bean>
 
 	<bean id="studio.retryingRepositoryOperation"
-	      class="org.craftercms.studio.api.v2.annotation.RetryingRepositoryOperationAnnotationHandler">
+	      class="org.craftercms.studio.api.v2.annotation.retrying.RetryingRepositoryOperationAnnotationHandler">
 		<property name="maxRetries"
 			  value="#{studioConfiguration.getProperty(T(org.craftercms.studio.api.v2.utils.StudioConfiguration).REPO_RETRYING_OPERATION_MAX_ATTEMPTS)}"/>
 		<property name="maxSleep"

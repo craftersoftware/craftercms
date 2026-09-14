@@ -203,7 +203,7 @@ studio-ui/ui/uppy/lib/
 studio-ui/.yarn/cache/*.flock
 studio-ui/.yarn/cache/*.tmp
 studio-ui/scripts/settings_local.sh
-studio-ui/main.dev.tsx
+studio-ui/ui/app/src/main.dev.tsx
 studio-ui/ui/app/.env.development
 studio-ui/ui/app/src/translations/src.json
 studio-ui/ui/app/src/translations/whitelists/

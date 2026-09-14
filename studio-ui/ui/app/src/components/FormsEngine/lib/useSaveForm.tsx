@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -38,7 +38,12 @@ import {
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
-import { moveAndUpdateContent, writeContent, WriteContentResponse } from '../../../services/content';
+import {
+	moveAndUpdateContent,
+	updateEmbeddedComponent,
+	writeContent,
+	WriteContentResponse
+} from '../../../services/content';
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -46,7 +51,7 @@ import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import ContentType from '../../../models/ContentType';
+import ContentType, { ContentTypeField } from '../../../models/ContentType';
 import { cancelPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -55,12 +60,20 @@ import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { atom, PrimitiveAtom, useAtom } from 'jotai';
 import { showSystemNotification } from '../../../state/actions/system';
-
+import {
+	AffectedPluginControlField,
+	collectAffectedPluginControlFields,
+	preloadControlPluginsForFields
+} from './controlPluginLoader';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
 	isCreateMode: boolean;
 	isEmbedded: boolean;
+	/** True when this form was opened via pushForm on top of another form. */
+	isStackedForm?: boolean;
+	/** Repeat stacked forms: sub-fields of the repeat group (same set as bootstrap). */
+	fieldsToRender?: ContentTypeField[];
 	onBeforeSave?: FormsEngineProps['onSave'];
 	onSave?: FormsEngineProps['onSave'];
 	onClose?(): void;
@@ -76,7 +89,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const siteId = useActiveSiteId();
-	const { isEmbedded, isRepeatMode, isCreateMode, onClose, onMinimize, createPath } = props;
+	const {
+		isEmbedded,
+		isStackedForm = false,
+		isRepeatMode,
+		isCreateMode,
+		onClose,
+		onMinimize,
+		createPath,
+		fieldsToRender
+	} = props;
 	const { id, contentType, contentObject, path: itemPath } = useContext(ItemMetaContext);
 	const isPage = contentType.type === 'page';
 	const stableFormContext = useContext(StableFormContext);
@@ -93,6 +115,22 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
 	return async (draft?: boolean) => {
+		const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
+			const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
+			return showAlert({
+				dispatch,
+				message: formatMessage(
+					{
+						defaultMessage:
+							'Cannot save: one or more control plugins failed to load ({fields}). If the problem continues, contact your administrator.'
+					},
+					{ fields: fieldList }
+				)
+			});
+		};
+		// Bootstrap may have recorded preload failures for this form instance. Clear them and let the
+		// preload below re-attempt the import; `controlPluginCache` drops failed entries so a retry is possible.
+		stableFormContext.affectedPluginControlFields = [];
 		const values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 		const validityStates = await Promise.all(
 			Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) => jotai.get(validityDataAtom))
@@ -127,6 +165,59 @@ export function useSaveForm(props: UseSaveFormProps) {
 				onMinimize?.();
 			}
 		};
+
+		const showSaveError = (error: AjaxError | Error) => {
+			setIsSubmitting(false);
+			const message =
+				error instanceof AjaxError
+					? (error.response?.response?.message ?? error.response?.message)
+					: (error as Error).message;
+			showAlert({
+				dispatch,
+				children: (
+					<Box>
+						<Typography marginBottom={1}>
+							<FormattedMessage defaultMessage="An error occurred trying to save the form" />
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{message}
+						</Typography>
+					</Box>
+				)
+			});
+		};
+
+		const contentTypesById = store.getState().contentTypes.byId;
+		// Re-walk current values (incl. embeds added after open) so serializers exist before XML build.
+		// Runs before the repeat early-return so a failed bootstrap preload can retry on save in
+		// repeat stacked forms as well as create/edit/embedded.
+		// Repeat mode: only the repeat item's fields (fieldsToRender). Root/embedded: full content type.
+		const fieldsForPluginPreload = isRepeatMode ? fieldsToRender : contentType.fields;
+		const pluginPreloadFailures = await preloadControlPluginsForFields(
+			siteId,
+			fieldsForPluginPreload,
+			values,
+			contentTypesById
+		);
+		if (pluginPreloadFailures.length) {
+			const affected = collectAffectedPluginControlFields(
+				fieldsForPluginPreload,
+				pluginPreloadFailures,
+				values,
+				contentTypesById
+			);
+			const fields =
+				affected.length > 0
+					? affected
+					: // Defensive: import failed but no field mapped — still block save.
+						pluginPreloadFailures.map((failure) => ({
+							fieldId: failure.plugin.name,
+							fieldName: failure.plugin.name
+						}));
+			stableFormContext.affectedPluginControlFields = fields;
+			return blockSaveForPluginFailures(fields);
+		}
+
 		// Repeat handled here. If true, execution ends inside if statement.
 		if (isRepeatMode) {
 			(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
@@ -135,7 +226,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 		complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
 		const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-		const xml = buildContentXml(valuesWithoutFileName, store.getState().contentTypes.byId);
+		const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
 		// Embedded handled here. If true, execution ends inside if statement.
 		if (isEmbedded) {
 			// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
@@ -150,7 +241,74 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 
 			const dom = fromString(xml);
-			(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
+
+			// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
+			if (isStackedForm) {
+				(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
+					onSavePromiseHandler,
+					showSaveError
+				);
+				return;
+			}
+
+			// Root embedded: merge the component into the parent document and write the parent.
+			setIsSubmitting(true);
+			const path = itemPath;
+			const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
+				const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
+				const saveOrCancel$ = affectedPackages?.length
+					? cancelPackages(siteId, {
+							packageIds: affectedPackages.map((pkg) => pkg.id),
+							comment: cancelPackagesComment
+						}).pipe(switchMap(() => writeService$))
+					: writeService$;
+
+				saveOrCancel$.subscribe({
+					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
+						const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+						const result = (await onSave?.({
+							dom,
+							xml,
+							values,
+							versionComment,
+							path
+						})) as FormSavePromiseResult;
+						const shouldClose = result.close || closeAfterSave;
+						if (!shouldClose && isAmended) {
+							triggerReload();
+						}
+						onSavePromiseHandler(result);
+					},
+					error: showSaveError
+				});
+			};
+
+			if (affectedPackages?.length) {
+				const dialogId = nanoid();
+				dispatch(
+					pushDialog({
+						id: dialogId,
+						component: createComponentId('ViewPackagesDialog'),
+						props: {
+							item,
+							cancelPackagesInitialComment: formatMessage(
+								{ defaultMessage: 'Cancel packages to write on "{path}"' },
+								{ path }
+							),
+							onContinue: (cancelPackagesUpdatedComment) => {
+								saveEmbeddedContent(cancelPackagesUpdatedComment);
+								dispatch(popDialog({ id: dialogId }));
+							},
+							onClose: () => {
+								setIsSubmitting(false);
+								dispatch(popDialog({ id: dialogId }));
+							}
+						}
+					})
+				);
+			} else {
+				saveEmbeddedContent();
+			}
 			return;
 		}
 		setIsSubmitting(true);
@@ -186,22 +344,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				}
 				onSavePromiseHandler(result);
 			},
-			error(error: AjaxError) {
-				setIsSubmitting(false);
-				showAlert({
-					dispatch,
-					children: (
-						<Box>
-							<Typography marginBottom={1}>
-								<FormattedMessage defaultMessage="An error occurred trying to save the form" />
-							</Typography>
-							<Typography variant="body2" color="textSecondary">
-								{error.response.response?.message ?? error.response.message}
-							</Typography>
-						</Box>
-					)
-				});
-			}
+			error: showSaveError
 		};
 
 		// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.

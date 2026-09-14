@@ -42,6 +42,7 @@ import static org.craftercms.commons.validation.annotations.param.EsapiValidatio
 import static org.craftercms.studio.controller.rest.v2.RequestConstants.*;
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.*;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_AUDIT_LOG;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Validated
 @RestController
@@ -49,7 +50,7 @@ public class AuditController {
 
 	private AuditService auditService;
 
-	@GetMapping(API_2 + AUDIT)
+	@GetMapping(value = API_2 + AUDIT, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<AuditLog> getAuditLog(
 		@ValidSiteId
 		@RequestParam(value = REQUEST_PARAM_SITEID, required = false, defaultValue = "") String siteId,
@@ -88,7 +89,7 @@ public class AuditController {
 		return result;
 	}
 
-	@GetMapping(API_2 + AUDIT + PATH_PARAM_ID)
+	@GetMapping(value = API_2 + AUDIT + PATH_PARAM_ID, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<AuditLog> getAuditLogEntry(@PathVariable(REQUEST_PARAM_ID) long auditLogId,
 						    @ValidSiteId
 						    @RequestParam(value = REQUEST_PARAM_SITEID, required = false, defaultValue = "") String siteId) throws SiteNotFoundException {

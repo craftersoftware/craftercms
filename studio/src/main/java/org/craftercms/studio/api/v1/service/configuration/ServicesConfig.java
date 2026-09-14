@@ -80,27 +80,12 @@ public interface ServicesConfig {
 	List<String> getConfigurationPatterns(String site) throws SiteNotFoundException;
 
 	/**
-	 * get level descriptor item URI patterns
-	 *
-	 * @return level descriptor item URI patterns
-	 */
-	List<String> getLevelDescriptorPatterns(String site) throws SiteNotFoundException;
-
-	/**
 	 * get the name of level descriptor
 	 *
 	 * @param site
 	 * @return level descriptor name
 	 */
 	String getLevelDescriptorName(String site) throws SiteNotFoundException;
-
-	/**
-	 * get the default timezone value
-	 *
-	 * @param site
-	 * @return default timezone
-	 */
-	String getDefaultTimezone(String site) throws SiteNotFoundException;
 
 	/**
 	 * Get the pattern for the plugin folder in the given site

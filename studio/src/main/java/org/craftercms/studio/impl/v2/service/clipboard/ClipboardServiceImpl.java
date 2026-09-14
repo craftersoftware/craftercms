@@ -20,10 +20,10 @@ import org.craftercms.commons.security.permissions.annotations.HasPermission;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.ContentPath;
-import org.craftercms.studio.api.v2.annotation.RequireContentExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireContentExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPath;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.service.clipboard.ClipboardService;
 import org.craftercms.studio.model.clipboard.Operation;
 

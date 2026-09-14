@@ -170,6 +170,7 @@ import org.craftercms.studio.api.v2.exception.contentType.ContentTypeInvalidLoca
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.repository.ContentWriteItem;
 import org.craftercms.studio.api.v2.repository.GitContentRepository;
+import org.craftercms.studio.api.v2.security.PermissionCheckingUtils;
 import org.craftercms.studio.api.v2.security.SemanticsAvailableActionsResolver;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.service.audit.AuditService;
@@ -230,7 +231,7 @@ import org.craftercms.studio.model.rest.content.WriteContentResult;
 import org.craftercms.studio.model.rest.content.WriteContentResult.WriteContentResultItem;
 import org.craftercms.studio.model.rest.content.order.ItemOrder;
 import org.craftercms.studio.model.rest.content.order.ReorderItemRequest;
-import static org.craftercms.studio.permissions.CompositePermissionResolverImpl.PATH_LIST_RESOURCE_ID;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_LIST_RESOURCE_ID;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_RESOURCE_ID;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_DELETE;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
@@ -252,6 +253,7 @@ import org.springframework.util.MimeType;
 import org.springframework.util.function.ThrowingSupplier;
 
 import com.google.common.collect.Lists;
+import com.thoughtworks.xstream.core.SecurityUtils;
 
 /**
  * Internal implementation of {@link ContentService}
@@ -732,10 +734,7 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 			throw new ServiceLayerException(format("Item list after lifecycle processing is empty, nothing to write for site '%s' path '%s'", siteId, targetPath));
 		}
 
-		Map<String, Object> resource = Map.of(SITE_ID_RESOURCE_ID, siteId, PATH_LIST_RESOURCE_ID, affectedPaths);
-		if (!permissionEvaluator.isAllowed(getCurrentUsername(), resource, PERMISSION_CONTENT_WRITE)) {
-			throw new ActionDeniedException(PERMISSION_CONTENT_WRITE, affectedPaths);
-		}
+		PermissionCheckingUtils.checkPermissions(permissionEvaluator, PermissionCheckingUtils.getSecuredResource(siteId, affectedPaths), List.of(PERMISSION_CONTENT_WRITE));
 
 		// Check permissions for the oldPath for move operations
 		if (sourcePath != null) {

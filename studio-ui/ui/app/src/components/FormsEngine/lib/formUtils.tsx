@@ -67,6 +67,7 @@ import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
+import { buildContentXml } from './valueSerializers';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
 import {
@@ -79,13 +80,68 @@ import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
 import { isPagePath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
+import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
+import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
 /**
  * Returns the scroll container for the form's container.
- * TODO: After much tweaking and testing, managed to get the form container box itself to be the scrolling element. Asses removal.
  **/
 export function getScrollContainer(container: HTMLElement): HTMLElement {
-	return container;
+	const mainContent = container.querySelector('[data-area-id="formMainContent"]');
+	return mainContent instanceof HTMLElement ? mainContent : container;
+}
+
+/**
+ * Scrolls to a field after the form body layout settles (e.g. lazy controls, RTEs, images).
+ * Observes `[data-area-id="formBody"]` — the content that grows — not the fixed-height scroll container.
+ * Returns a disposer that cancels pending timers/observers.
+ */
+export function scrollToFieldWhenSettled(
+	root: HTMLElement,
+	fieldId: string,
+	{ quietMs = 250, maxWaitMs = 2500 }: { quietMs?: number; maxWaitMs?: number } = {}
+): () => void {
+	const formBody = root.querySelector('[data-area-id="formBody"]');
+	const scroll = () => {
+		(formBody
+			? formBody.querySelector(`[data-field-id="${fieldId}"]`)
+			: root.querySelector(`[data-field-id="${fieldId}"]`)
+		)?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+	};
+
+	if (!formBody) {
+		scroll();
+		return () => undefined;
+	}
+
+	let done = false;
+	let quietTimer: ReturnType<typeof setTimeout> | undefined;
+
+	const finish = () => {
+		if (done) return;
+		done = true;
+		clearTimeout(quietTimer);
+		clearTimeout(maxTimer);
+		observer.disconnect();
+		scroll();
+	};
+
+	const bumpQuiet = () => {
+		clearTimeout(quietTimer);
+		quietTimer = setTimeout(finish, quietMs);
+	};
+
+	const observer = new ResizeObserver(bumpQuiet);
+	observer.observe(formBody);
+	bumpQuiet();
+	const maxTimer = setTimeout(finish, maxWaitMs);
+
+	return () => {
+		done = true;
+		clearTimeout(quietTimer);
+		clearTimeout(maxTimer);
+		observer.disconnect();
+	};
 }
 
 /**
@@ -309,6 +365,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		originalValues: null,
 		props: null,
 		state: null,
+		affectedPluginControlFields: [],
 		...mixin
 	};
 	return data;
@@ -489,7 +546,8 @@ export function setFieldAtoms(
 	fieldId: string,
 	atomsTarget: FormsEngineAtoms,
 	value: unknown,
-	validatorsData?: ValidatorsData
+	validatorsData?: ValidatorsData,
+	isAdditional?: boolean
 ): void {
 	let field = fieldLookup[fieldId];
 	if (!field) {
@@ -507,6 +565,20 @@ export function setFieldAtoms(
 				values: undefined,
 				id: 'folder-name',
 				name: 'Folder Name'
+			};
+		} else if (isAdditional) {
+			field = {
+				defaultValue: undefined,
+				description: '',
+				fields: undefined,
+				helpText: '',
+				properties: undefined,
+				sortable: false,
+				type: '',
+				validations: undefined,
+				values: undefined,
+				id: fieldId,
+				name: fieldId
 			};
 		} else {
 			!systemFieldsNotInType.includes(fieldId) &&
@@ -780,6 +852,43 @@ export function generateDefaultChangesComment(
 }
 
 /**
+ * Generates the default "save comment" for content being created, based on the page URL (file name) it will be
+ * created at.
+ * @param pageUrl The current value of the file name field.
+ * @param currentMessage The version comment currently held by the form.
+ * @param lastGeneratedMessage The comment this function generated last, used to detect user input on the comment.
+ * @returns The new comment, or undefined when the comment should be left untouched.
+ **/
+export function generateDefaultCreationComment(
+	pageUrl: string,
+	formatMessage: IntlShape['formatMessage'],
+	currentMessage?: string,
+	lastGeneratedMessage?: string,
+): string | undefined {
+	const newMessage = pageUrl
+		? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
+		: formatMessage({ defaultMessage: 'Created content' });
+
+	if (!currentMessage || !lastGeneratedMessage) {
+		return newMessage;
+	}
+		
+	if (
+		// Nothing to change
+		currentMessage === newMessage ||
+		// If message is blank, no point in checking if the user has altered the message.
+		(currentMessage !== '' &&
+			// The version comment has been manually altered by the user (i.e. if the current message isn't the last
+			// message generated here, we can assume the message has been altered by user input)
+			currentMessage !== lastGeneratedMessage)
+	) {
+		// Do not set a new message
+		return;
+	}
+	return newMessage;
+}
+
+/**
  * Creates a summary of the state the current stacked form being rendered (last one on the stack)
  **/
 export function getCurrentChildFormStateSummary(
@@ -833,6 +942,7 @@ export function prepareEmbeddedItemForm(props: {
 	parentPathInSite: string;
 	siteId: string;
 	contentTypesById?: LookupTable<ContentType>;
+	customControls?: LookupTable<DescriptorContentType>;
 }): { atoms: FormsEngineAtoms; values: LookupTable<unknown>; itemMeta: FormsEngineItemMetaContextProps } {
 	const {
 		username,
@@ -845,7 +955,8 @@ export function prepareEmbeddedItemForm(props: {
 		lockError,
 		affectedPackages,
 		siteId,
-		contentTypesById
+		contentTypesById,
+		customControls
 	} = props;
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
@@ -858,27 +969,58 @@ export function prepareEmbeddedItemForm(props: {
 		expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
 		fileName: atom(update.modelId)
 	});
-	const values = update.values;
+	const values = { ...update.values };
+	delete values[XmlKeys.fileName];
 	const validatorsData = { siteId, contentTypesById };
-	Object.entries(values).forEach(([fieldId, value]) => {
-		// System fields (e.g. content-type, display-template, etc.) are not part of the content type, but are part of the content object. We don't need atoms or validity checks for these.
-		if (!contentType.fields[fieldId]) return;
-		const [valueAtom, validityAtom] = createFieldAtoms(
-			contentType.fields[fieldId],
-			value,
-			stableFormContextRef,
-			validatorsData
-		);
-		atoms.valueByFieldId[fieldId] = valueAtom;
-		atoms.validationByFieldId[fieldId] = validityAtom;
+
+	const descriptors = resolveControlDescriptors(customControls);
+	const additionalFieldsIds: string[] = [];
+	// Retrieve all additional fields ids from the contentType fields.
+	Object.values(contentType.fields).forEach((field) => {
+		const descriptor = descriptors[field.type];
+		if (!descriptor) return;
+		additionalFieldsIds.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
 	});
-	const xmlDoc = fromString(parentStackData.itemMeta.contentXml);
-	const element = xmlDoc.querySelector(`[id="${update.modelId}"]`);
-	const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
-	const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
-	const contentObject = (
-		parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
-	).item[index].component;
+	// Ensure descriptor additional fields exist in values so atoms are created (same as main/repeat bootstrap).
+	additionalFieldsIds.forEach((additionalFieldId) => {
+		if (!(additionalFieldId in values)) {
+			values[additionalFieldId] = undefined;
+		}
+	});
+
+	Object.entries(values).forEach(([fieldId, value]) => {
+		// Embedded components don't have a path/file-name.
+		if (fieldId === XmlKeys.fileName) return;
+		const isAdditionalField = additionalFieldsIds.includes(fieldId);
+		// System fields (e.g. content-type, display-template, etc.) are not part of the content type, but are part of the content object. We don't need atoms or validity checks for these.
+		if (!contentType.fields[fieldId] && !isAdditionalField) return;
+		setFieldAtoms(
+			stableFormContextRef,
+			contentType,
+			contentType.fields,
+			fieldId,
+			atoms,
+			value,
+			validatorsData,
+			isAdditionalField
+		);
+	});
+	const element = fromString(parentStackData.itemMeta.contentXml ?? '').querySelector(`[id="${update.modelId}"]`);
+	let contentObject: LookupTable<unknown>;
+	let contentXml: string;
+	if (element) {
+		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
+		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
+		contentObject = (
+			parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
+		).item[index].component;
+		contentXml = element.outerHTML;
+	} else {
+		// Created (or edited) in-session; not yet serialized into parent contentXml
+		contentObject = update.values;
+		const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = update.values;
+		contentXml = buildContentXml(valuesWithoutFileName, contentTypesById);
+	}
 	return {
 		atoms,
 		values,
@@ -888,7 +1030,7 @@ export function prepareEmbeddedItemForm(props: {
 			sourceMap: null,
 			pathInSite: parentPathInSite,
 			contentType,
-			contentXml: element.outerHTML,
+			contentXml,
 			contentObject
 		}
 	};
@@ -926,4 +1068,24 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 	} else {
 		return ensureSingleSlash(`${basePath}/${fileName}.xml`);
 	}
+}
+
+export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
+	const additionalFields = descriptor.metadata?.additionalFields ?? [];
+	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+}
+
+/**
+ * Merges ui.xml custom control descriptors under code-default descriptors.
+ * Code defaults win on key collision so OOB controls are not overridden by ui.xml entries.
+ */
+export function resolveControlDescriptors(
+	customControls?: LookupTable<DescriptorContentType>
+): LookupTable<DescriptorContentType> {
+	return { ...customControls, ...controlDescriptors };
+}
+
+// TODO: are there going to be other placeholders besides {id}?
+export function processAdditionalFieldMacro(parentFieldId: string, fieldId: string): string {
+	return fieldId.replaceAll('{id}', parentFieldId);
 }

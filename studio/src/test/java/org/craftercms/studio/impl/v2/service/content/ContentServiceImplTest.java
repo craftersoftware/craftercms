@@ -18,9 +18,9 @@ package org.craftercms.studio.impl.v2.service.content;
 
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
-import org.craftercms.studio.api.v2.annotation.RequireContentExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireContentExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
 import org.craftercms.studio.api.v2.service.content.ContentService;
 import org.junit.After;
 import org.junit.Before;

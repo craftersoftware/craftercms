@@ -17,7 +17,7 @@
 package org.craftercms.studio.impl.v2.service.dependency;
 
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
-import org.craftercms.studio.api.v2.annotation.RequireContentExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireContentExists;
 import org.craftercms.studio.api.v2.repository.ContentRepository;
 import org.craftercms.studio.impl.v2.service.dependency.internal.DependencyServiceInternalImpl;
 import org.junit.Before;

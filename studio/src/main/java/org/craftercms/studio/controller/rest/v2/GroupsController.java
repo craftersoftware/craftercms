@@ -71,7 +71,7 @@ public class GroupsController {
 	 * @param sort    sort parameter
 	 * @return Response containing list of groups
 	 */
-	@GetMapping
+	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public PaginatedResultList<Group> getAllGroups(
 		@RequestParam(value = REQUEST_PARAM_KEYWORD, required = false) String keyword,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
@@ -98,7 +98,7 @@ public class GroupsController {
 	 * @return Response object
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResultOne<Group> createGroup(@Valid @RequestBody Group group)
 		throws GroupAlreadyExistsException, ServiceLayerException, AuthenticationException {
 		Group newGroup =
@@ -115,7 +115,7 @@ public class GroupsController {
 	 * @param updateRequest {@link UpdateGroupRequest} to update
 	 * @return Response object
 	 */
-	@PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResultOne<Group> updateGroup(@Valid @RequestBody UpdateGroupRequest updateRequest)
 		throws ServiceLayerException, GroupNotFoundException, AuthenticationException, GroupExternallyManagedException {
 		Group group = buildGroup(updateRequest);
@@ -140,7 +140,7 @@ public class GroupsController {
 	 * @param groupIds Group identifier
 	 * @return Response object
 	 */
-	@DeleteMapping
+	@DeleteMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public Result deleteGroups(@RequestParam(REQUEST_PARAM_ID) List<Long> groupIds)
 		throws ServiceLayerException, GroupNotFoundException, AuthenticationException, GroupExternallyManagedException {
 		groupService.deleteGroup(groupIds);
@@ -155,7 +155,7 @@ public class GroupsController {
 	 * @param groupId Group identifier
 	 * @return Response containing requested group
 	 */
-	@GetMapping(PATH_PARAM_ID)
+	@GetMapping(value = PATH_PARAM_ID, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResultOne<Group> getGroup(@PathVariable(REQUEST_PARAM_ID) int groupId)
 		throws ServiceLayerException, GroupNotFoundException {
 		Group group = groupService.getGroup(groupId);
@@ -171,7 +171,7 @@ public class GroupsController {
 	 * @param groupName Group name
 	 * @return Response containing requested group
 	 */
-	@GetMapping(PATH_PARAM_GROUP_NAME)
+	@GetMapping(value = PATH_PARAM_GROUP_NAME, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResultOne<Group> getGroupByName(@PathVariable(REQUEST_GROUP_NAME) String groupName)
 		throws ServiceLayerException, GroupNotFoundException {
 		Group group = groupService.getGroupByName(groupName);
@@ -190,7 +190,7 @@ public class GroupsController {
 	 * @param sort    Sort order
 	 * @return Response containing list od users
 	 */
-	@GetMapping(PATH_PARAM_ID + MEMBERS)
+	@GetMapping(value = PATH_PARAM_ID + MEMBERS, produces = MediaType.APPLICATION_JSON_VALUE)
 	public PaginatedResultList<UserResponse> getGroupMembers(
 		@PathVariable(REQUEST_PARAM_ID) int groupId,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
@@ -218,7 +218,7 @@ public class GroupsController {
 	 * @param addGroupMembers Add members request body (json representation)
 	 * @return Response object
 	 */
-	@PostMapping(value = PATH_PARAM_ID + MEMBERS, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = PATH_PARAM_ID + MEMBERS, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResultList<UserResponse> addGroupMembers(@PathVariable(REQUEST_PARAM_ID) int groupId,
 							@RequestBody AddGroupMembers addGroupMembers)
 		throws ServiceLayerException, UserNotFoundException, GroupNotFoundException, AuthenticationException {
@@ -242,7 +242,7 @@ public class GroupsController {
 	 * @param usernames List of usernames
 	 * @return Response object
 	 */
-	@DeleteMapping(PATH_PARAM_ID + MEMBERS)
+	@DeleteMapping(value = PATH_PARAM_ID + MEMBERS, produces = MediaType.APPLICATION_JSON_VALUE)
 	public Result removeGroupMembers(
 		@PathVariable(REQUEST_PARAM_ID) int groupId,
 		@RequestParam(value = REQUEST_PARAM_USER_ID, required = false) List<Long> userIds,

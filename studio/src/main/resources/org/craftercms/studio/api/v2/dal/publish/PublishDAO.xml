@@ -217,9 +217,11 @@
 	<update id="updatePackage" parameterType="org.craftercms.studio.api.v2.dal.publish.PublishPackage">
 		UPDATE publish_package
 		SET target                      = #{publishPackage.target},
+			title                       = #{publishPackage.title},
 		    schedule                    = #{publishPackage.schedule},
 		    approval_state              = #{publishPackage.approvalState},
 		    package_state               = #{publishPackage.packageState},
+		    submitter_comment           = #{publishPackage.submitterComment},
 		    live_error                  = #{publishPackage.liveError},
 		    staging_error               = #{publishPackage.stagingError},
 		    reviewer_id                 = #{publishPackage.reviewerId},

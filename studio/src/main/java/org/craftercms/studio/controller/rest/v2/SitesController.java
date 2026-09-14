@@ -58,6 +58,7 @@ import java.util.List;
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.*;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.*;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Validated
 @RestController
@@ -78,7 +79,7 @@ public class SitesController {
 		this.policyService = policyService;
 	}
 
-	@GetMapping("/available_blueprints")
+	@GetMapping(value = "/available_blueprints", produces = APPLICATION_JSON_VALUE)
 	public ResultList<PluginDescriptor> getAvailableBlueprints() throws ServiceLayerException {
 		List<PluginDescriptor> blueprintDescriptors = sitesService.getAvailableBlueprints();
 		ResultList<PluginDescriptor> result = new ResultList<>();
@@ -87,7 +88,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping("/create_site_from_marketplace")
+	@PostMapping(value = "/create_site_from_marketplace", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public Result createSite(@Valid @RequestBody CreateSiteFromMarketplaceRequest request)
 			throws RemoteRepositoryNotFoundException, InvalidRemoteRepositoryException, ServiceLayerException,
@@ -100,7 +101,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping
+	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public Result createSite(@Valid @RequestBody CreateSiteRequest request)
 			throws ServiceLayerException, InvalidRemoteRepositoryCredentialsException, RemoteRepositoryNotFoundException, InvalidRemoteRepositoryException {
@@ -110,7 +111,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping("/{siteId}")
+	@PostMapping(value = "/{siteId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result updateSite(@ValidSiteId @PathVariable String siteId,
 							 @Valid @RequestBody UpdateSiteRequest request)
 			throws SiteNotFoundException, SiteAlreadyExistsException, InvalidParametersException {
@@ -122,7 +123,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping("/{siteId}/unlock")
+	@PostMapping(value = "/{siteId}/unlock", produces = APPLICATION_JSON_VALUE)
 	public Result unlockSite(@ValidSiteId @PathVariable String siteId) throws SiteNotFoundException, InvalidSiteStateException {
 		sitesService.unlockSite(siteId);
 		var result = new Result();
@@ -130,7 +131,7 @@ public class SitesController {
 		return result;
 	}
 
-	@DeleteMapping("/{siteId}")
+	@DeleteMapping(value = "/{siteId}", produces = APPLICATION_JSON_VALUE)
 	public Result deleteSite(@ValidSiteId @PathVariable String siteId)
 			throws ServiceLayerException {
 		sitesService.deleteSite(siteId);
@@ -140,7 +141,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping("/{siteId}/policy/validate")
+	@PostMapping(value = "/{siteId}/policy/validate", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultList<ValidationResult> validatePolicy(@ValidSiteId @PathVariable String siteId,
 													   @Valid @RequestBody ValidatePolicyRequest request)
 			throws ConfigurationException, IOException, ContentNotFoundException {
@@ -152,7 +153,7 @@ public class SitesController {
 		return result;
 	}
 
-	@PostMapping("/{siteId}/duplicate")
+	@PostMapping(value = "/{siteId}/duplicate", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public Result duplicateSite(@ValidSiteId @PathVariable("siteId") String sourceSiteId, @Valid @RequestBody DuplicateSiteRequest request)
 			throws ServiceLayerException {
@@ -165,7 +166,7 @@ public class SitesController {
 		return result;
 	}
 
-	@GetMapping(SITE_ID + EXISTS)
+	@GetMapping(value = SITE_ID + EXISTS, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Boolean> siteExists(@ValidSiteId @PathVariable String siteId) {
 		boolean exists = sitesService.exists(siteId);
 		var result = new ResultOne<Boolean>();
@@ -174,7 +175,7 @@ public class SitesController {
 		return result;
 	}
 
-	@GetMapping(SITE_ID)
+	@GetMapping(value = SITE_ID, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<SiteDetails> getSite(@ValidSiteId @PathVariable String siteId) throws ServiceLayerException {
 		SiteDetails site = sitesService.getSiteDetails(siteId);
 		var result = new ResultOne<SiteDetails>();
@@ -183,7 +184,7 @@ public class SitesController {
 		return result;
 	}
 
-	@GetMapping(SITE_ID + MONITOR)
+	@GetMapping(value = SITE_ID + MONITOR, produces = APPLICATION_JSON_VALUE)
 	public ResultList<SiteMonitor> monitorSite(@ValidSiteId @PathVariable String siteId) throws ServiceLayerException {
 		Collection<SiteMonitor> siteMonitors = sitesService.monitorSite(siteId);
 		ResultList<SiteMonitor> result = new ResultList<>();
@@ -192,7 +193,7 @@ public class SitesController {
 		return result;
 	}
 
-	@GetMapping(MONITOR)
+	@GetMapping(value = MONITOR, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<AllSitesMonitors> monitorAllSites() {
 		AllSitesMonitors monitorResult = sitesService.monitorAllSites();
 		ResultOne<AllSitesMonitors> result = new ResultOne<>();

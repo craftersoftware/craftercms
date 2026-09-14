@@ -25,15 +25,19 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.collections4.CollectionUtils;
+
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.ADMIN_NORMALIZED_ROLE;
 import org.craftercms.studio.api.v2.dal.Group;
+import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.security.NormalizedGroup;
 import org.craftercms.studio.api.v2.dal.security.NormalizedRole;
 import static org.craftercms.studio.api.v2.dal.security.NormalizedRole.WILDCARD_ROLE;
 import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.mapSiteWidePermissionsToItemAvailableActions;
 import org.craftercms.studio.api.v2.security.RolePermissionMappings;
 import org.craftercms.studio.api.v2.security.SitePermissionMappings;
-import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.mapSiteWidePermissionsToPackageAvailableActions;
+import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions;
+
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_READ;
 
 /**
@@ -43,8 +47,22 @@ import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMI
  */
 public class SitePermissionMappingsImpl implements SitePermissionMappings {
 
-	private final Map<NormalizedRole, RolePermissionMappingsImpl> rolePermissions = new HashMap<>();
-	private final Map<NormalizedGroup, List<NormalizedRole>> groupToRolesMapping = new HashMap<>();
+	private final Map<NormalizedRole, RolePermissionMappingsImpl> rolePermissions;
+	private final Map<NormalizedGroup, List<NormalizedRole>> groupToRolesMapping;
+	private final boolean isGlobal;
+	private SitePermissionMappingsImpl parent;
+
+	SitePermissionMappingsImpl(boolean isGlobal) {
+		this.rolePermissions = new HashMap<>();
+		this.groupToRolesMapping = new HashMap<>();
+		this.isGlobal = isGlobal;
+	}
+
+	SitePermissionMappingsImpl(SitePermissionMappingsImpl parent) {
+		// We call this for site level only
+		this(false);
+		this.parent = parent;
+	}
 
 	@Override
 	public long getAvailableActions(String username, List<Group> groups, String path) {
@@ -56,32 +74,58 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 				availableActions |= rolePermissionMappings.getActionsForPath(path);
 			}
 		}
+		if (parent != null) {
+			availableActions |= parent.getAvailableActions(username, groups, path);
+		}
 		return availableActions;
 	}
 
 	@Override
-	public long getSiteWideItemAvailableActions(String username, List<Group> groups) {
-		return mapSiteWidePermissionsToItemAvailableActions(getSiteWidePermissions(username, groups));
+	public long getSiteWideItemAvailableActions(String username, List<Group> groups, boolean isSystemAdmin) {
+		Set<String> permissions = new HashSet<>(getSiteWidePermissions(username, groups, isSystemAdmin));
+		return mapSiteWidePermissionsToItemAvailableActions(permissions);
 	}
 
 	@Override
-	public long getPublishPackageAvailableActions(String username, List<Group> groups) {
-		return mapSiteWidePermissionsToPackageAvailableActions(getSiteWidePermissions(username, groups));
+	public long getPublishPackageAvailableActions(String username, List<Group> groups,
+			Collection<PublishItem> publishItems, boolean isSystemAdmin) {
+		long result = 0;
+		// List is empty for initial publish
+		if (isEmpty(publishItems)) {
+			Collection<String> siteWidePermissions = getSiteWidePermissions(username, groups, isSystemAdmin);
+			result = PublishPackageAvailableActions.mapPermissionsToPackageAvailableActions(siteWidePermissions);
+		} else {
+			result = publishItems.stream()
+					.map(pi -> getUserPermissions(username, groups, pi.getPath(), isSystemAdmin))
+					.map(PublishPackageAvailableActions::mapPermissionsToPackageAvailableActions)
+					.reduce((a, b) -> a & b).orElse(0L);
+		}
+		return result;
 	}
 
 	@Override
 	public boolean isSiteAdmin(String username, Collection<Group> groups) {
-		return getRolesForUser(username, groups).contains(ADMIN_NORMALIZED_ROLE);
+		return getRolesForUser(username, groups).contains(ADMIN_NORMALIZED_ROLE)
+				|| (parent != null && parent.isSiteAdmin(username, groups));
 	}
 
-	private Collection<String> getSiteWidePermissions(String username, Collection<Group> groups) {
+	private Collection<String> getSiteWidePermissions(String username, Collection<Group> groups, boolean isSystemAdmin) {
 		List<NormalizedRole> rolesList = getRolesForUser(username, groups);
 		Set<String> permissions = new HashSet<>();
-		for (NormalizedRole role : rolesList) {
-			RolePermissionMappings rolePermissionMappings = rolePermissions.get(role);
-			if (rolePermissionMappings != null) {
+		if (isSystemAdmin) {
+			rolePermissions.values().forEach(rolePermissionMappings -> {
 				permissions.addAll(rolePermissionMappings.getSiteWidePermissions());
+			});
+		} else {
+			for (NormalizedRole role : rolesList) {
+				RolePermissionMappings rolePermissionMappings = rolePermissions.get(role);
+				if (rolePermissionMappings != null) {
+					permissions.addAll(rolePermissionMappings.getSiteWidePermissions());
+				}
 			}
+		}
+		if (parent != null) {
+			permissions.addAll(parent.getSiteWidePermissions(username, groups, isSystemAdmin));
 		}
 		return permissions;
 	}
@@ -123,8 +167,14 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 						permissions.addAll(rolePermissionMappings.getAllPermissions());
 					}
 				});
-				permissions.add(PERMISSION_CONTENT_READ);
+				// Only add read if the user actually has a role for the site
+				if (!isGlobal) {
+					permissions.add(PERMISSION_CONTENT_READ);
+				}
 			}
+		}
+		if (parent != null) {
+			permissions.addAll(parent.getUserPermissions(username, groups, isSystemAdmin));
 		}
 		return permissions;
 	}
@@ -145,8 +195,14 @@ public class SitePermissionMappingsImpl implements SitePermissionMappings {
 						permissions.addAll(rolePermissionMappings.getPermissionsForPath(path));
 					}
 				});
-				permissions.add(PERMISSION_CONTENT_READ);
+				// Only add read if the user actually has a role for the site
+				if (!isGlobal) {
+					permissions.add(PERMISSION_CONTENT_READ);
+				}
 			}
+		}
+		if (parent != null) {
+			permissions.addAll(parent.getUserPermissions(username, groups, path, isSystemAdmin));
 		}
 		return permissions;
 	}

@@ -19,10 +19,10 @@ import * as iceRegistry from '../iceRegistry';
 import { Editor, EditorEvent } from 'tinymce';
 import * as contentController from '../contentController';
 import { ContentTypeFieldValidations } from '@craftercms/studio-ui/models/ContentType';
-import { post } from '../utils/communicator';
+import { fromTopic, post } from '../utils/communicator';
 import { GuestStandardAction } from '../store/models/GuestStandardAction';
-import { EMPTY, Observable, Subject } from 'rxjs';
-import { startWith } from 'rxjs/operators';
+import { EMPTY, Observable, Subject, Subscription } from 'rxjs';
+import { filter, startWith, take } from 'rxjs/operators';
 import { nou } from '@craftercms/studio-ui/utils/object';
 import { snackGuestMessage } from '@craftercms/studio-ui/state/actions/preview';
 import { editComponentInline, exitComponentInlineEdit } from '../store/actions';
@@ -32,6 +32,12 @@ import { Editor as EditorReact } from '@tinymce/tinymce-react';
 import { getTinyMceInitOptions } from '@craftercms/studio-ui/components/FormsEngine/lib/rteUtils';
 import { getCurrentIntl } from '../utils/i18n';
 import { RteSetup } from '../models/Rte';
+import {
+	cancelRteDataSourcePicker,
+	rteDataSourcePickerResult,
+	showRteDataSourcePicker
+} from '@craftercms/studio-ui/state/actions/dialogs';
+import { v4 as uuid } from 'uuid';
 
 export function initTinyMCE(
 	path: string,
@@ -54,7 +60,7 @@ export function initTinyMCE(
 	}
 
 	const dispatch$ = new Subject<GuestStandardAction>();
-	const { field, model } = iceRegistry.getReferentialEntries(record.iceIds[0]);
+	const { field, model, contentTypeId } = iceRegistry.getReferentialEntries(record.iceIds[0]);
 	const type = field?.type;
 	const inlineElsRegex =
 		/^(B|BIG|I|SMALL|TT|ABBR|ACRINYM|CITE|CODE|DFN|EM|KBD|STRONG|SAMP|VAR|A|BDO|BR|IMG|MAP|OBJECT|Q|SCRIPT|SPAN|SUB|SUP|BUTTON|INPUT|LABEL|SELECT|TEXTAREA)$/;
@@ -119,6 +125,57 @@ export function initTinyMCE(
 
 	record.element.classList.remove(emptyFieldClass);
 
+	// The editor runs inside the preview iframe, but data sources can only be resolved by the host:
+	// their actions carry React nodes and closures over Studio dialogs that don't exist here. The
+	// guest identifies the field, the host presents the picker and replies with the selected url.
+	let isDataSourcePickerOpen = false;
+	let dataSourcePickerRequestId: string = null;
+	let dataSourcePickerSubscription: Subscription;
+	function stopListeningToHostDataSourcePicker() {
+		isDataSourcePickerOpen = false;
+		dataSourcePickerRequestId = null;
+		dataSourcePickerSubscription?.unsubscribe();
+		dataSourcePickerSubscription = null;
+	}
+	/** Lets the host drop the request (and close what it presented for it) when there's no one left to reply to. */
+	function cancelHostDataSourcePicker() {
+		const id = dataSourcePickerRequestId;
+		stopListeningToHostDataSourcePicker();
+		if (id) {
+			post(cancelRteDataSourcePicker({ id }));
+		}
+	}
+	const openHostDataSourcePicker: EditorReact['props']['init']['file_picker_callback'] = (cb, value, meta) => {
+		const id = uuid();
+		// Replacing an in-flight request: let the host know the prior one will no longer be consumed.
+		cancelHostDataSourcePicker();
+		isDataSourcePickerOpen = true;
+		dataSourcePickerRequestId = id;
+		dataSourcePickerSubscription = fromTopic(rteDataSourcePickerResult.type)
+			.pipe(
+				filter(({ payload }) => payload?.id === id),
+				take(1)
+			)
+			.subscribe(({ payload }) => {
+				// `take(1)` already completed the subscription; only the picking state needs resetting.
+				isDataSourcePickerOpen = false;
+				dataSourcePickerRequestId = null;
+				if (payload?.url) {
+					cb(payload.url, { alt: payload.name });
+				}
+			});
+		post(
+			showRteDataSourcePicker({
+				id,
+				contentTypeId,
+				fieldId: record.fieldId[0],
+				filetype: meta.filetype,
+				objectId: model?.craftercms?.id,
+				path: model?.craftercms?.path
+			})
+		);
+	};
+
 	const setupId = rteSetup?.id ?? 'generic';
 	const rteConfig = getTinyMceInitOptions(
 		field,
@@ -160,6 +217,8 @@ export function initTinyMCE(
 		},
 		getCurrentIntl().locale,
 		{},
+		undefined,
+		undefined,
 		(editor: Editor) => {
 			let changed = false;
 			const pluginManager = window.tinymce.util.Tools.resolve('tinymce.PluginManager');
@@ -209,6 +268,7 @@ export function initTinyMCE(
 			function cancel({ saved }: { saved: boolean }) {
 				const finalContent = saved ? getContent() : originalRawContent;
 
+				cancelHostDataSourcePicker();
 				destroyEditor();
 
 				originalElement.innerHTML = finalContent;
@@ -258,6 +318,12 @@ export function initTinyMCE(
 				// In some cases the 'blur' event is getting caught somewhere along
 				// the way. Focusout seems to be more reliable.
 				editor.on('focusout', (e: EditorEvent<FocusEvent & { forced?: boolean }>) => {
+					// The data source picker renders on the host, outside of this iframe, so focus
+					// legitimately leaves the editor while the author picks. Tearing it down here would
+					// destroy the editor the pending selection is meant to be inserted into.
+					if (isDataSourcePickerOpen) {
+						return;
+					}
 					// Only consider 'focusout' events that are trusted and not at the bubbling phase.
 					if (e.forced || (e.isTrusted && e.eventPhase !== 3)) {
 						let relatedTarget = e.relatedTarget as HTMLElement;
@@ -404,7 +470,8 @@ export function initTinyMCE(
 					},
 					'loaded'
 				);
-		}
+		},
+		openHostDataSourcePicker
 	);
 
 	const maxLength = validations?.maxLength ? parseInt(validations.maxLength.value) : null;

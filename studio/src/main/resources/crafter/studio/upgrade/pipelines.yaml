@@ -464,6 +464,10 @@ pipelines:
                 nextVersion: 5.0-t
             -   currentVersion: 4.5.0.0
                 nextVersion: 5.0-t
+            -   currentVersion: 4.5.0.5
+                nextVersion: 5.0-t
+            -   currentVersion: 4.5.1.2
+                nextVersion: 5.0-t
             # Entry point for 5.0 upgrade
             -   currentVersion: 5.0-t
                 nextVersion: 5.0-t2
@@ -486,6 +490,10 @@ pipelines:
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/4.x-to-5.x/5.0-t3-to-5.0-t4.cleanup.sql
             -   currentVersion: 5.0-t5
+                nextVersion: 5.0-t6
+                operations:
+                    -   type: publishedRepositoryBareUpgrader
+            -   currentVersion: 5.0-t6
                 nextVersion: 5.0.0.0
                 operations:
                     -   type: xsltFileUpgrader
@@ -647,6 +655,24 @@ pipelines:
                     path: /configuration/global-permission-mappings-config.xml
                     template: crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.23.xslt
                     commitDetails: Remove unused permissions
+            -   currentVersion: 5.0.0.23
+                nextVersion: 5.0.0.24
+                operations:
+                    -   type: dbScriptUpgrader
+                        filename: upgrade/5.0.x/5.0.0.23-to-5.0.0.24.sql
+            -   currentVersion: 5.0.0.24
+                nextVersion: 5.0.0.25
+                operations:
+                    -   type: xsltFileUpgrader
+                        path: /configuration/global-permission-mappings-config.xml
+                        template: crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.25.xslt
+                        commitDetails: Remove unused permissions
+            -   currentVersion: 5.0.0.25
+                nextVersion: 5.0.0.26
+                operations:
+                    -   type: dbScriptUpgrader
+                        filename: upgrade/5.0.x/5.0.0.25-to-5.0.0.26.sql
+
 
 
     # Pipeline to upgrade site repositories
@@ -795,6 +821,8 @@ pipelines:
                         commitDetails: Sync Studio version to 4.1.2
             -   currentVersion: 4.1.2
                 nextVersion: 5.0-t
+            -   currentVersion: 4.5.0.0
+                nextVersion: 5.0-t
             # Entry point for 5.0 upgrade
             -   currentVersion: 5.0-t
                 nextVersion: 5.0.0.0
@@ -902,6 +930,12 @@ configurations:
                         -   type: xsltFileUpgrader
                             template: crafter/studio/upgrade/4.2.x/config/site-config/site-config-v4.2.0.0.xslt
                             commitDetails: Add Component type pattern
+                -   currentVersion: 4.2.0.0
+                    nextVersion: 5.0.0.0
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt
+                            commitDetails: Add FTLH and FTLX to rendering template patterns
 
     permission-mappings-config:
         module: studio

@@ -34,7 +34,7 @@ import static org.craftercms.studio.permissions.StudioPermissionsConstants.SITE_
  * Instances will keep a map of rules to available actions for a given role.
  * It will also keep a set of site wide permissions. These are meant to be merged for all roles and then be used
  * to determine site-wide actions. e.g.: a user can be assigned a role with PUBLISH_REQUEST permission and another
- * one with PUBLISH_APPROVE permission. Such user would get the PUBLISH available action.
+ * one with PUBLISH_REVIEW permission. Such user would get the PUBLISH available action.
  */
 public class RolePermissionMappingsImpl implements RolePermissionMappings {
 

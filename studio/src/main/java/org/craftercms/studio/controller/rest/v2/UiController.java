@@ -32,6 +32,7 @@ import java.beans.ConstructorProperties;
 
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ENVIRONMENT;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_MENU_ITEMS;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Controller that provides the UI elements the current user has access to.
@@ -49,7 +50,7 @@ public class UiController {
 		this.uiService = uiService;
 	}
 
-	@GetMapping("/views/global_menu")
+	@GetMapping(value = "/views/global_menu", produces = APPLICATION_JSON_VALUE)
 	public ResultList<MenuItem> getGlobalMenu() throws AuthenticationException, ServiceLayerException, UserNotFoundException {
 		ResultList<MenuItem> result = new ResultList<>();
 		result.setResponse(ApiResponse.OK);
@@ -57,7 +58,7 @@ public class UiController {
 		return result;
 	}
 
-	@GetMapping("/system/active_environment")
+	@GetMapping(value = "/system/active_environment", produces = APPLICATION_JSON_VALUE)
 	public ResultOne<String> getActiveEnvironment() throws AuthenticationException {
 		ResultOne<String> result = new ResultOne<>();
 		result.setResponse(ApiResponse.OK);

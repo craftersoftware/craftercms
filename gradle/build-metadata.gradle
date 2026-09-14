@@ -18,6 +18,7 @@
  * Shared build metadata for manifest attributes and resource token replacement.
  * Matches Maven buildnumber-maven-plugin behavior:
  *   - buildNumber: SCM revision (git commit), or 'unknown' if unavailable
+ *   - UIbuildNumber: SCM revision of studio-ui, part of this repo since the monorepo migration
  *   - timestamp: epoch milliseconds for the Build-On manifest attribute
  *   - crafterManifestTitle: human-friendly Implementation-Title, set in each module's build.gradle
  */
@@ -38,9 +39,12 @@ def resolveBuildTimestamp = {
 	return System.currentTimeMillis().toString()
 }
 
+def scmBuildNumber = resolveScmBuildNumber()
+
 ext.crafterBuildMetadata = [
-	buildNumber: resolveScmBuildNumber(),
-	timestamp  : resolveBuildTimestamp()
+	buildNumber  : scmBuildNumber,
+	UIbuildNumber: findProperty('UIbuildNumber')?.toString() ?: scmBuildNumber,
+	timestamp    : resolveBuildTimestamp()
 ]
 
 ext.crafterManifestAttributes = {

@@ -17,36 +17,47 @@
 import React, { useEffect, useRef } from 'react';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useTheme } from '@mui/material/styles';
-import { fetchPreviewImage } from '../../../services/contentTypes';
+import { fetchContentTypePreviewImageUrl } from '../../../services/contentTypes';
 import CardMedia, { CardMediaProps } from '@mui/material/CardMedia';
 import { consolidateSx } from '../../../utils/system';
 import Skeleton from '@mui/material/Skeleton';
 
 export interface ContentTypeCardMediaProps extends CardMediaProps {
 	typeId: string;
+	thumbnailFileName?: string;
 	skeleton?: boolean;
 }
 
 export function TypeCardMedia(props: ContentTypeCardMediaProps) {
-	const { typeId, sx, skeleton, ...cardMediaProps } = props;
+	const { typeId, thumbnailFileName, sx, skeleton, ...cardMediaProps } = props;
 	const elementRef = useRef<HTMLImageElement>(undefined);
 	const siteId = useActiveSiteId();
 	const theme = useTheme();
 	useEffect(() => {
 		if (!typeId) return;
-		const sub = fetchPreviewImage(siteId, typeId).subscribe((response) => {
+		let objectUrl: string | undefined;
+		const sub = fetchContentTypePreviewImageUrl(siteId, typeId, thumbnailFileName || undefined).subscribe((imgUrl) => {
 			const img = elementRef.current;
-			const imgUrl = URL.createObjectURL(new Blob([response.response]));
+			if (!img) {
+				if (imgUrl.startsWith('blob:')) URL.revokeObjectURL(imgUrl);
+				return;
+			}
+			const isObjectUrl = imgUrl.startsWith('blob:');
+			if (isObjectUrl) objectUrl = imgUrl;
 			img.src = imgUrl;
-			img.onload = () => {
-				// Image has loaded, revoke the object URL to free memory.
-				URL.revokeObjectURL(imgUrl);
-			};
+			if (isObjectUrl) {
+				img.onload = () => {
+					// Image has loaded, revoke the object URL to free memory.
+					URL.revokeObjectURL(imgUrl);
+					if (objectUrl === imgUrl) objectUrl = undefined;
+				};
+			}
 		});
 		return () => {
 			sub.unsubscribe();
+			if (objectUrl) URL.revokeObjectURL(objectUrl);
 		};
-	}, [siteId, typeId]);
+	}, [siteId, typeId, thumbnailFileName]);
 	return (
 		<CardMedia
 			sx={consolidateSx(

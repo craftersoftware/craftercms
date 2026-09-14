@@ -15,7 +15,7 @@
  */
 
 import { ContentTypeField } from '../../../models';
-import { DiffEditor, DiffEditorProps } from '@monaco-editor/react';
+import { MonacoDiffEditor, MonacoDiffEditorProps } from '../../MonacoEditor';
 import { useVersionsDialogContext } from '../VersionsDialogContext';
 import { DiffViewComponentBaseProps, removeTags } from '../utils';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -27,7 +27,7 @@ import { textViewLanguageMap } from '../../ViewVersionDialog/utils';
 
 export interface TextDiffViewProps extends Pick<DiffViewComponentBaseProps, 'aXml' | 'bXml'> {
 	field?: ContentTypeField;
-	editorProps?: DiffEditorProps;
+	editorProps?: MonacoDiffEditorProps;
 }
 
 export function TextDiffView(props: TextDiffViewProps) {
@@ -51,7 +51,7 @@ export function TextDiffView(props: TextDiffViewProps) {
 	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 	const language = textViewLanguageMap[field?.type] || 'xml';
 
-	const monacoOptions: DiffEditorProps['options'] = {
+	const monacoOptions: MonacoDiffEditorProps['options'] = {
 		readOnly: true,
 		automaticLayout: true,
 		fontSize: 14,
@@ -64,7 +64,7 @@ export function TextDiffView(props: TextDiffViewProps) {
 	};
 
 	return (
-		<DiffEditor
+		<MonacoDiffEditor
 			height="100%"
 			language={language}
 			original={originalContent}

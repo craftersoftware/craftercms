@@ -30,7 +30,7 @@ import {
 	ValidationKeys
 } from '../models/ContentType';
 import { LookupTable } from '../models/LookupTable';
-import { camelize, capitalize, isBlank, toColor } from '../utils/string';
+import { camelize, capitalize, ensureSingleSlash, isBlank, toColor } from '../utils/string';
 import { Observable, of } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
 import { map, switchMap } from 'rxjs/operators';
@@ -50,6 +50,7 @@ import {
 } from '../utils/contentType';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
 import { ajax, AjaxResponse } from 'rxjs/ajax';
+import { DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL } from '../utils/constants';
 
 // FE2 TODO: Verify removal
 // const typeMap = {
@@ -421,9 +422,15 @@ function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentTyp
 
 	// get receptacles dataSources
 	legacyDataSourceArray.forEach((datasource: LegacyDataSource) => {
-		// TODO: Delete datasource.properties after props have been added to the root object? Must update code usages of datasource.properties.
-		dataSources[datasource.id] = { ...datasource, properties: {} };
-		const legacyDatasource = { ...datasource };
+		// Keep only the typed DataSource shape. Legacy XML may carry extra keys; plugin coords are preserved explicitly.
+		dataSources[datasource.id] = {
+			id: datasource.id,
+			type: datasource.type,
+			title: datasource.title,
+			interface: datasource.interface,
+			properties: {},
+			...(datasource.plugin ? { plugin: datasource.plugin } : {})
+		};
 		asArray(datasource.properties?.property).forEach((property) => {
 			let value: unknown = property.value;
 			switch (property.type) {
@@ -439,10 +446,8 @@ function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentTyp
 				//   break;
 			}
 			dataSources[datasource.id].properties[property.name] = value;
-			// Also update legacyDatasource, since dropTargetsLookup references it for 'components' type datasources.
-			legacyDatasource.properties[property.name] = value;
 		});
-		if (legacyDatasource.type === 'components') {
+		if (datasource.type === 'components') {
 			dropTargetsLookup[datasource.id] = dataSources[datasource.id];
 		}
 	});
@@ -660,6 +665,28 @@ export function dissociateTemplate(site: string, contentTypeId: string): Observa
 export function fetchPreviewImage(site: string, contentTypeId: string): Observable<AjaxResponse<Blob>> {
 	const qs = toQueryString({ contentTypeId });
 	return getBinary(`/studio/api/2/configuration/content_types/${site}/preview_image${qs}`);
+}
+
+/**
+ * Returns a URL for a content type thumbnail.
+ * When `thumbnailFileName` is provided, loads that file from the type's config folder (works with unsaved draft filenames)
+ * and returns an object URL. When empty/absent, returns the static default placeholder (does not use preview_image,
+ * which would still serve the saved form-definition thumbnail until save).
+ */
+export function fetchContentTypePreviewImageUrl(
+	site: string,
+	contentTypeId: string,
+	thumbnailFileName?: string
+): Observable<string> {
+	if (thumbnailFileName) {
+		const path = ensureSingleSlash(`/config/studio/content-types/${contentTypeId}/${thumbnailFileName}`);
+		return getBinary(
+			`/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId: 'HEAD' })}`,
+			void 0,
+			'blob'
+		).pipe(map((ajax) => URL.createObjectURL(ajax.response as Blob)));
+	}
+	return of(DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL);
 }
 
 /**

@@ -41,7 +41,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
 	@Override
 	public boolean configExists(String path) {
-		return siteItemService.getSiteItem(path) != null;
+		return siteItemService.exists(path);
 	}
 
 	@Override

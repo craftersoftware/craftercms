@@ -21,20 +21,29 @@ import { DateTimeTimezonePicker, type DateTimeTimezonePickerProps } from '../../
 import SecondaryButton from '../../SecondaryButton';
 import { FormattedMessage } from 'react-intl';
 import Box from '@mui/material/Box';
-import { StableFormContext } from '../lib/formsEngineContext';
+import { StableFormContext, useStableFormContext } from '../lib/formsEngineContext';
 import { processPopulateExpression, validateDatePopulateExpression } from '../lib/controlHelpers';
 import { getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
+import { PrimitiveAtom, useAtom } from 'jotai';
 
 export interface DateTimeProps extends ControlProps {
 	value: string;
 }
 
-// TODO: Timezone selector handling is pending. FE1 uses an extra `_tz` field to store the timezone value.
 export function DateTime(props: DateTimeProps) {
 	const { field, value: valueProp, setValue, readonly: formReadonly, autoFocus } = props;
 	const htmlId = useId();
 	const stableFormContext = useContext(StableFormContext);
 	const isCreateMode = Boolean(stableFormContext?.props?.create);
+
+	const formContext = useStableFormContext();
+	const timezoneAtom = formContext.atoms.valueByFieldId[`${field.id}_tz`] as PrimitiveAtom<string> | undefined;
+	if (!timezoneAtom) {
+		throw new Error(
+			`Missing timezone atom for field "${field.id}_tz". Additional fields must be created during form bootstrap.`
+		);
+	}
+	const [timezoneValue, setTimezoneValue] = useAtom(timezoneAtom);
 
 	// region field properties/validations
 
@@ -102,10 +111,12 @@ export function DateTime(props: DateTimeProps) {
 				<DateTimeTimezonePicker
 					id={htmlId}
 					value={value}
+					timezoneValue={timezoneValue}
 					disablePast={!allowPastDate}
 					disabled={readonly}
 					autoFocus={autoFocus}
 					onChange={handleChange}
+					onTimezoneChange={(tz) => setTimezoneValue(tz)}
 					disableTimezoneSelection={!useCustomTimezone}
 					pickers={pickers}
 					size="medium"

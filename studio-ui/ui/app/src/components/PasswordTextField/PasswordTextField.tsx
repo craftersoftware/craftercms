@@ -37,7 +37,7 @@ const translations = defineMessages({
 });
 
 const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProps>((props, ref) => {
-	const { visibilitySwitch = true, initialVisible = false, sxs } = props;
+	const { visibilitySwitch = true, initialVisible = false, sxs, slotProps, InputProps, ...textFieldProps } = props;
 	const { formatMessage } = useIntl();
 	const [showPassword, setShowPassword] = useState(initialVisible);
 	const inputRef = useRef<HTMLInputElement>(undefined);
@@ -50,33 +50,41 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 		}, 0);
 	};
 
+	const visibilityAdornment = (
+		<InputAdornment position="end">
+			<IconButton
+				edge="end"
+				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
+				onClick={handleClickShowPassword}
+				size="large"
+			>
+				{showPassword ? <VisibilityOff /> : <Visibility />}
+			</IconButton>
+		</InputAdornment>
+	);
+
 	return (
 		<TextField
-			{...props}
+			{...textFieldProps}
 			sx={sxs?.root}
 			ref={ref}
 			type={showPassword ? 'text' : 'password'}
 			slotProps={{
+				...slotProps,
 				htmlInput: {
+					...slotProps?.htmlInput,
 					ref: inputRef
 				},
 				input: visibilitySwitch
 					? {
-							...props.InputProps,
-							endAdornment: (
-								<InputAdornment position="end">
-									<IconButton
-										edge="end"
-										aria-label={formatMessage(translations.toggleVisibilityButtonText)}
-										onClick={handleClickShowPassword}
-										size="large"
-									>
-										{showPassword ? <VisibilityOff /> : <Visibility />}
-									</IconButton>
-								</InputAdornment>
-							)
+							...slotProps?.input,
+							...InputProps,
+							endAdornment: visibilityAdornment
 						}
-					: props.InputProps
+					: {
+							...slotProps?.input,
+							...InputProps
+						}
 			}}
 		/>
 	);

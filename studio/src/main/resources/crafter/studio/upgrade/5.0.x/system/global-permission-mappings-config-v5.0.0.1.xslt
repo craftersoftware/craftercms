@@ -51,15 +51,12 @@
 				<xsl:element name="permission">
 					<xsl:text>publish_request</xsl:text>
 				</xsl:element>
-				<xsl:element name="permission">
-					<xsl:text>publish_approve</xsl:text>
-				</xsl:element>
 			</xsl:if>
 
-			<xsl:if test="ancestor::role/@name = 'system_admin'">
-				<xsl:if test="not(permission = 'publish_reject')">
+			<xsl:if test="ancestor::role[1]/rule/allowed-permissions/permission[text() = 'publish'] or ancestor::role/@name = 'system_admin'">
+				<xsl:if test="not(permission = 'publish_review')">
 					<xsl:element name="permission">
-						<xsl:text>publish_reject</xsl:text>
+						<xsl:text>publish_review</xsl:text>
 					</xsl:element>
 				</xsl:if>
 			</xsl:if>

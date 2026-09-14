@@ -16,8 +16,8 @@
 package org.craftercms.studio.impl.v2.service.policy;
 
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.exception.configuration.ConfigurationException;
 import org.craftercms.studio.api.v2.service.policy.PolicyService;
 import org.craftercms.studio.model.policy.Action;

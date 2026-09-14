@@ -26,7 +26,6 @@ import upgrade.exceptions.UpgradeException
 class PostUpgradeHooks {
 
 	private static final List<PostUpgradeHook> AUTHORING_4_0_X = [
-		new MakePublishedRepoBareHook(),
 		new RemoveOldSearchIndexesDirHook(),
 		new StartCrafterHook(),
 		new ReindexAllTargetsHook(),
@@ -42,7 +41,6 @@ class PostUpgradeHooks {
 
 	// Notice this applies to any version >= 4.1.0
 	private static final List<PostUpgradeHook> AUTHORING_4_1_x = [
-		new MakePublishedRepoBareHook(),
 		new PostUpgradeCompletedHook(false)
 	]
 

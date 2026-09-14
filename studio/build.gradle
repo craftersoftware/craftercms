@@ -83,7 +83,7 @@ dependencies {
 	implementation libs.spring.ldap.core
 	implementation libs.spring.security.ldap
 	implementation libs.spring.data.commons
-	implementation libs.jackson.datatype.jsr310
+	implementation libs.jackson3.databind
 	implementation libs.jackson.databind
 	implementation libs.aws.sts
 	implementation libs.aws.s3

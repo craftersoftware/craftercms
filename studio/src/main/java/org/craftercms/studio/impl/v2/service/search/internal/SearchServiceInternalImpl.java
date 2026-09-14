@@ -646,7 +646,7 @@ public class SearchServiceInternalImpl implements SearchService {
 				builder.aggregations(name, a -> a
 					.terms(t -> t
 						.field(facet.getField())
-						.minDocCount(1)
+						.minDocCount(1L)
 						.size(1000)
 					)
 				);

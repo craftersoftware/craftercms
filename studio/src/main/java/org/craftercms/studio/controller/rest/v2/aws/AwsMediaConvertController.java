@@ -50,6 +50,7 @@ import static org.craftercms.studio.controller.rest.v2.RequestConstants.REQUEST_
 import static org.craftercms.studio.controller.rest.v2.RequestConstants.REQUEST_PARAM_SITE_ID;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEM;
 import static org.craftercms.studio.controller.rest.ValidationUtils.validateValue;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller for AWS MediaConvert
@@ -78,7 +79,7 @@ public class AwsMediaConvertController {
 	 * @throws SiteNotFoundException                 if the site is not found
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
-	@PostMapping("/upload")
+	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
 	public ResultOne<MediaConvertResult> uploadVideo(HttpServletRequest request)
 		throws IOException, AwsException, InvalidParametersException, ConfigurationProfileNotFoundException, SiteNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {

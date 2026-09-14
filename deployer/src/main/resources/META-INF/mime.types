@@ -1487,7 +1487,7 @@ text/vnd.wap.wml				wml
 text/vnd.wap.wmlscript				wmls
 text/x-asm					s asm
 text/x-c					c cc cxx cpp h hh dic
-text/x-freemarker           ftl
+text/x-freemarker           ftl ftlx ftlh
 text/x-fortran					f for f77 f90
 text/x-groovy               groovy
 text/x-handlebars-template        hbs

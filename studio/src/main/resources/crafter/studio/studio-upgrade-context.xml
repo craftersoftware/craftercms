@@ -196,4 +196,9 @@
 	<bean id="contentTypeConfigMergeUpgrader" scope="prototype" parent="upgradeOperation"
 	      class="org.craftercms.studio.impl.v2.upgrade.operations.contentType.ContentTypeConfigMergeUpgrader">
 	</bean>
+
+	<bean id="publishedRepositoryBareUpgrader" scope="prototype"
+	      class="org.craftercms.studio.impl.v2.upgrade.operations.repo.PublishedRepositoryBareUpgradeOperation">
+		<constructor-arg name="siteService" ref="sitesServiceInternal"/>
+	</bean>
 </beans>

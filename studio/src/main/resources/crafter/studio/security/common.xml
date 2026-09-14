@@ -185,11 +185,15 @@
 		<constructor-arg name="publishDao" ref="publishDao"/>
 	</bean>
 
-	<bean id="studio.requireSiteExistsAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.RequireSiteExistsAnnotationHandler">
+	<bean id="studio.packageSubmitterAnnotationHandler" class="org.craftercms.studio.api.v2.security.publish.PackageSubmitterAnnotationHandler">
+		<constructor-arg name="publishDao" ref="publishDao"/>
+	</bean>
+
+	<bean id="studio.requireSiteExistsAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExistsAnnotationHandler">
 		<constructor-arg name="sitesService" ref="sitesService"/>
 	</bean>
 
-	<bean id="studio.requireContentExistsAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.RequireContentExistsAnnotationHandler">
+	<bean id="studio.requireContentExistsAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.precondition.RequireContentExistsAnnotationHandler">
 		<constructor-arg name="contentRepository" ref="contentRepository"/>
 	</bean>
 
@@ -197,9 +201,9 @@
 		<constructor-arg name="publishDao" ref="publishDao"/>
 	</bean>
 
-	<bean id="studio.requireSiteBootstrapCompleteAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.RequireSiteBootstrapCompleteAnnotationHandler"/>
+	<bean id="studio.requireSiteBootstrapCompleteAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.precondition.RequireSiteBootstrapCompleteAnnotationHandler"/>
 
-	<bean id="studio.logExecutionTimeAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.LogExecutionTimeAnnotationHandler"/>
+	<bean id="studio.logExecutionTimeAnnotationHandler" class="org.craftercms.studio.api.v2.annotation.logging.LogExecutionTimeAnnotationHandler"/>
 
 	<!-- CORS -->
 
@@ -284,6 +288,7 @@
 		<property name="contentTypeService" ref="contentTypeServiceInternal"/>
 		<property name="userService" ref="userServiceInternal"/>
 		<property name="itemDAO" ref="itemDao"/>
+		<property name="siteDAO" ref="siteDao"/>
 	</bean>
 
 	<bean id="studio.loginPageFilter"

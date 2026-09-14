@@ -55,10 +55,6 @@ public class RepositoryConfigTO implements Serializable {
 	 * Configuration path patterns
 	 */
 	protected List<String> configurationPatterns = null;
-	/**
-	 * level descriptors path patterns
-	 **/
-	protected List<String> levelDescriptorPatterns = null;
 
 	/**
 	 * @param pagePatterns the pagePatterns to set
@@ -152,13 +148,5 @@ public class RepositoryConfigTO implements Serializable {
 
 	public void setConfigurationPatterns(List<String> configurationPatterns) {
 		this.configurationPatterns = configurationPatterns;
-	}
-
-	public List<String> getLevelDescriptorPatterns() {
-		return this.levelDescriptorPatterns;
-	}
-
-	public void setLevelDescriptorPatterns(List<String> patterns) {
-		this.levelDescriptorPatterns = patterns;
 	}
 }

@@ -34,6 +34,7 @@ import java.beans.ConstructorProperties;
 import java.util.List;
 
 import static org.craftercms.core.controller.rest.ContentStoreRestController.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller to retrieve content from the site (items and trees). It's basically a wrapper for
@@ -55,7 +56,7 @@ public class SiteContentStoreRestController extends RestControllerBase {
 		this.wrappedController = wrappedController;
 	}
 
-	@RequestMapping(value = URL_ITEM, method = RequestMethod.GET)
+	@RequestMapping(value = URL_ITEM, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Item getItem(WebRequest request, HttpServletResponse response,
 			    @ValidExistingContentPath
 			    @RequestParam(REQUEST_PARAM_URL) String url,
@@ -63,7 +64,7 @@ public class SiteContentStoreRestController extends RestControllerBase {
 		return wrappedController.getItem(request, response, getCurrentContextId(), url, flatten);
 	}
 
-	@RequestMapping(value = URL_CHILDREN, method = RequestMethod.GET)
+	@RequestMapping(value = URL_CHILDREN, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public List<Item> getChildren(WebRequest request, HttpServletResponse response,
 				      @ValidExistingContentPath
 				      @RequestParam(REQUEST_PARAM_URL) String url,
@@ -71,7 +72,7 @@ public class SiteContentStoreRestController extends RestControllerBase {
 		return wrappedController.getChildren(request, response, getCurrentContextId(), url, flatten);
 	}
 
-	@RequestMapping(value = URL_TREE, method = RequestMethod.GET)
+	@RequestMapping(value = URL_TREE, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Tree getTree(WebRequest request, HttpServletResponse response,
 			    @ValidExistingContentPath
 			    @RequestParam(REQUEST_PARAM_URL) String url,

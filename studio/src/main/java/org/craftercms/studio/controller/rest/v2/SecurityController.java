@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 import java.beans.ConstructorProperties;
 
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller that provides access to security operations
@@ -54,7 +55,7 @@ public class SecurityController {
 		this.accessTokenService = accessTokenService;
 	}
 
-	@PostMapping("/encrypt")
+	@PostMapping(value = "/encrypt", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<String> encryptText(@Valid @RequestBody EncryptRequest request) throws ServiceLayerException {
 		String encrypted = encryptionService.encrypt(request.getSiteId(), request.getText());
 
@@ -65,7 +66,7 @@ public class SecurityController {
 		return result;
 	}
 
-	@GetMapping("/tokens")
+	@GetMapping(value = "/tokens", produces = APPLICATION_JSON_VALUE)
 	public ResultList<PersistentAccessToken> getAccessTokens() {
 		var result = new ResultList<PersistentAccessToken>();
 		result.setEntities(RESULT_KEY_TOKENS, accessTokenService.getAccessTokens());
@@ -73,7 +74,7 @@ public class SecurityController {
 		return result;
 	}
 
-	@PostMapping("/tokens")
+	@PostMapping(value = "/tokens", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@ResponseStatus(HttpStatus.CREATED)
 	public ResultOne<PersistentAccessToken> createAccessToken(@Valid @RequestBody CreateAccessTokenRequest request) throws ServiceLayerException {
 		var result = new ResultOne<PersistentAccessToken>();
@@ -82,7 +83,7 @@ public class SecurityController {
 		return result;
 	}
 
-	@PostMapping("/tokens/{tokenId}")
+	@PostMapping(value = "/tokens/{tokenId}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<PersistentAccessToken> updateAccessToken(@PathVariable long tokenId, @RequestBody UpdateAccessTokenRequest request) {
 		var result = new ResultOne<PersistentAccessToken>();
 		result.setEntity(RESULT_KEY_TOKEN, accessTokenService.updateAccessToken(tokenId, request.isEnabled()));
@@ -90,7 +91,7 @@ public class SecurityController {
 		return result;
 	}
 
-	@DeleteMapping("/tokens/{tokenId}")
+	@DeleteMapping(value = "/tokens/{tokenId}", produces = APPLICATION_JSON_VALUE)
 	public Result deleteAccessToken(@PathVariable long tokenId) {
 		accessTokenService.deleteAccessToken(tokenId);
 		var result = new Result();
@@ -98,7 +99,7 @@ public class SecurityController {
 		return result;
 	}
 
-	@PostMapping("/preview/switch")
+	@PostMapping(value = "/preview/switch", produces = APPLICATION_JSON_VALUE)
 	public Result switchPreviewSite(Authentication authentication, HttpServletRequest request, HttpServletResponse response)
 		throws ServiceLayerException {
 		accessTokenService.refreshPreviewCookie(authentication, request, response, false);

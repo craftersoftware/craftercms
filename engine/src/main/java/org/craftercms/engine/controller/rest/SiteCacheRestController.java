@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.beans.ConstructorProperties;
 import java.util.Map;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller for site cache operations. The controller uses a map of cache types mapped to
@@ -63,7 +64,7 @@ public class SiteCacheRestController extends RestControllerBase {
 		this.configuredToken = configuredToken;
 	}
 
-	@RequestMapping(value = URL_CLEAR, method = RequestMethod.GET)
+	@RequestMapping(value = URL_CLEAR, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> clear(HttpServletRequest request, @RequestParam String token,
 									 @RequestParam(required = false) String cacheType) throws InvalidManagementTokenException {
 		validateToken(token);
@@ -71,7 +72,7 @@ public class SiteCacheRestController extends RestControllerBase {
 		return createResponseMessage(getCacheRestOperations(cacheType).clear(request));
 	}
 
-	@RequestMapping(value = URL_STATS, method = RequestMethod.GET)
+	@RequestMapping(value = URL_STATS, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public CacheStatistics getStatistics(@RequestParam String token,
 										 @RequestParam(required = false) String cacheType) throws InvalidManagementTokenException {
 		validateToken(token);

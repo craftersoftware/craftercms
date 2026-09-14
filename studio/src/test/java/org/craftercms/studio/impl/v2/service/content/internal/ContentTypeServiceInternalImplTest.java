@@ -16,13 +16,17 @@
 
 package org.craftercms.studio.impl.v2.service.content.internal;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v2.dal.security.NormalizedRole;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.service.content.ContentService;
 import org.craftercms.studio.model.contentType.ContentType;
+import org.craftercms.studio.model.contentType.CopyDependency;
+import org.craftercms.studio.model.contentType.DeleteDependency;
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
@@ -38,7 +42,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.StreamSupport;
 
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -148,12 +156,54 @@ public class ContentTypeServiceInternalImplTest {
 		when(contentService.getContent(SITE_ID, CONTENT_TYPE_DEFINITION_PATH)).thenReturn(inputStream);
 		ContentType contentType = service.loadContentType(SITE_ID, CONTENT_TYPE);
 
-		String expectedJson = "{\"previewable\":true,\"imageThumbnail\":\"page-test1.png\",\"noThumbnail\":false,\"quickCreate\":true," +
-				"\"quickCreatePath\":\"/site/website/tests/{year}/{month}\",\"type\":\"unknown\",\"pathExcludes\":[\"^/site/website/tests/excluded.*\"," +
-				"\"^/site/website/tests/excluded2.*\"],\"pathIncludes\":[\"^/site/website/tests/.*\"],\"id\":\"myContentType\"," +
-				"\"label\":\"Test Content Type\",\"allowedRoles\":[{\"name\":\"author\"},{\"name\":\"admin\"}]," +
-				"\"deleteDependencies\":[{\"pattern\":\"^/site/website/articles/.*\",\"removeEmptyFolder\":true}]," +
-				"\"copyDependencies\":[{\"pattern\":\"^/site/website/articles/.*\",\"target\":\"/site/website/articles2\"}]}";
-		assertEquals(expectedJson, new ObjectMapper().writeValueAsString(contentType));
+		JsonNode expected = new ObjectMapper().readTree("""
+				{
+					"previewable": true,
+					"imageThumbnail": "page-test1.png",
+					"noThumbnail": false,
+					"quickCreate": true,
+					"quickCreatePath": "/site/website/tests/{year}/{month}",
+					"type": "unknown",
+					"pathExcludes": ["^/site/website/tests/excluded.*", "^/site/website/tests/excluded2.*"],
+					"pathIncludes": ["^/site/website/tests/.*"],
+					"id": "myContentType",
+					"label": "Test Content Type",
+					"allowedRoles": [{"name": "author"}, {"name": "admin"}],
+					"deleteDependencies": [{"pattern": "^/site/website/articles/.*", "removeEmptyFolder": true}],
+					"copyDependencies": [{"pattern": "^/site/website/articles/.*", "target": "/site/website/articles2"}]
+				}
+				""");
+
+		assertEquals(expected.get("previewable").asBoolean(), contentType.isPreviewable());
+		assertEquals(expected.get("imageThumbnail").asText(), contentType.getImageThumbnail());
+		assertEquals(expected.get("noThumbnail").asBoolean(), contentType.isNoThumbnail());
+		assertEquals(expected.get("quickCreate").asBoolean(), contentType.isQuickCreate());
+		assertEquals(expected.get("quickCreatePath").asText(), contentType.getQuickCreatePath());
+		assertEquals(ContentType.Type.valueOf(expected.get("type").asText()), contentType.getType());
+		assertEquals(jsonTextValues(expected.get("pathExcludes")), List.copyOf(contentType.getPathExcludes()));
+		assertEquals(jsonTextValues(expected.get("pathIncludes")), List.copyOf(contentType.getPathIncludes()));
+		assertEquals(expected.get("id").asText(), contentType.getId());
+		assertEquals(expected.get("label").asText(), contentType.getLabel());
+		assertEquals(
+			StreamSupport.stream(expected.get("allowedRoles").spliterator(), false)
+				.map(role -> new NormalizedRole(role.get("name").asText()))
+				.collect(toSet()),
+			new HashSet<>(contentType.getAllowedRoles()));
+		assertEquals(
+			List.of(new DeleteDependency(
+				expected.get("deleteDependencies").get(0).get("pattern").asText(),
+				expected.get("deleteDependencies").get(0).get("removeEmptyFolder").asBoolean())),
+			contentType.getDeleteDependencies());
+		assertEquals(
+			List.of(new CopyDependency(
+				expected.get("copyDependencies").get(0).get("pattern").asText(),
+				expected.get("copyDependencies").get(0).get("target").asText())),
+			contentType.getCopyDependencies());
+	}
+
+	private static List<String> jsonTextValues(JsonNode arrayNode) {
+		return StreamSupport.stream(arrayNode.spliterator(), false)
+			.map(JsonNode::asText)
+			.toList();
 	}
 }

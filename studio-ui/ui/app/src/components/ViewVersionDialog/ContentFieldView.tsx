@@ -34,7 +34,7 @@ import Typography from '@mui/material/Typography';
 import { FormattedMessage } from 'react-intl';
 import CheckboxGroupView from './FieldTypesViews/CheckboxGroupView';
 import TextView from './FieldTypesViews/TextView';
-import { EditorProps } from '@monaco-editor/react';
+import { MonacoEditorProps } from '../MonacoEditor';
 import { ViewComponentBaseProps } from './utils';
 import { getContentInstanceXmlValueFromProp } from '../../utils/content';
 import FileNameView from './FieldTypesViews/FileNameView';
@@ -50,7 +50,7 @@ export interface ContentFieldViewProps {
 }
 
 export interface ViewComponentProps extends Pick<ViewComponentBaseProps, 'xml' | 'field'> {
-	editorProps?: EditorProps;
+	editorProps?: MonacoEditorProps;
 }
 
 export const typesViewMap = {

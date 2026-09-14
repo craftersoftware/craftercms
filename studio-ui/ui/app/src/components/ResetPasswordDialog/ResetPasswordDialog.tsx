@@ -30,6 +30,7 @@ import { showSystemNotification } from '../../state/actions/system';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import { PasswordStrengthDisplayPopper } from '../PasswordStrengthDisplayPopper';
 import { pushErrorDialog } from '../../utils/system';
+import { USER_PASSWORD_MAX_LENGTH } from '../UserManagement/utils';
 
 interface ResetPasswordDialogProps {
 	open: boolean;
@@ -109,7 +110,9 @@ function ResetPasswordDialogUI(props: ResetPasswordDialogProps) {
 					}}
 					onFocus={(e) => setAnchorEl(e.target)}
 					onBlur={() => setAnchorEl(null)}
-					inputProps={{ autoComplete: 'new-password' }}
+					slotProps={{
+						htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
+					}}
 				/>
 				<PasswordStrengthDisplayPopper
 					open={Boolean(anchorEl)}

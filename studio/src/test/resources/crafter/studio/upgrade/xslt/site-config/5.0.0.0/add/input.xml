@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License version 3 as published by
+  ~ the Free Software Foundation.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<!-- site-config.xml
+
+    This contains the primary site configuration.
+
+-->
+<site-config>
+	<version>4.2.0.0</version>
+	<wem-project>{siteName}</wem-project>
+	<display-name>{siteName}</display-name>
+
+	<repository rootPrefix="/site">
+		<patterns>
+			<pattern-group name="page">
+				<pattern>/site/website/([^&lt;]+)\.xml</pattern>
+			</pattern-group>
+
+			<pattern-group name="component">
+				<pattern>/site/components/([^&lt;]+)\.xml</pattern>
+			</pattern-group>
+
+			<pattern-group name="asset">
+				<pattern>/static-assets/([^&lt;"']+)</pattern>
+			</pattern-group>
+
+			<pattern-group name="rendering-template">
+				<pattern>/templates/([^&lt;"]+)\.ftl</pattern>
+			</pattern-group>
+
+			<pattern-group name="scripts">
+				<pattern>/scripts/([^&lt;"]+)\.groovy</pattern>
+			</pattern-group>
+
+			<pattern-group name="config">
+				<pattern>/config/(?!studio/content-types/)([^&lt;"']+)\.xml</pattern>
+			</pattern-group>
+		</patterns>
+	</repository>
+</site-config>

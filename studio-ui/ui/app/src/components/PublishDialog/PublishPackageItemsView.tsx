@@ -16,7 +16,7 @@
 
 import Box from '@mui/material/Box';
 import { listItemSecondaryActionClasses } from '@mui/material';
-import { useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
@@ -45,6 +45,7 @@ import useItemsByPath from '../../hooks/useItemsByPath';
 import { fetchContentItem } from '../../services/content';
 import { List, type RowComponentProps } from 'react-window';
 import DraftChip from '../DraftChip';
+import Tooltip from '@mui/material/Tooltip';
 
 export interface PublishItemsProps {
 	itemMap: Record<string, LightItem>;
@@ -214,11 +215,24 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 													<MoreVertRounded />
 												</IconButton>
 												{dependencyTypeMap?.[path] === 'soft' && (
-													<Checkbox
-														size="small"
-														checked={selectedDependenciesMap[path]}
-														onChange={(e, checked) => onCheckboxChange?.(e, checked, path)}
-													/>
+													<Tooltip
+														title={
+															!itemMap[path].canRequestPublish ? (
+																<FormattedMessage defaultMessage="This reference can't be selected because you don't have permission to publish it." />
+															) : (
+																''
+															)
+														}
+													>
+														<span>
+															<Checkbox
+																size="small"
+																disabled={!itemMap[path].canRequestPublish}
+																checked={selectedDependenciesMap[path]}
+																onChange={(e, checked) => onCheckboxChange?.(e, checked, path)}
+															/>
+														</span>
+													</Tooltip>
 												)}
 											</Box>
 										}

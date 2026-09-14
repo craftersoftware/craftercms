@@ -57,7 +57,7 @@ import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepository
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageType.PUBLISH_ALL;
 import org.craftercms.studio.api.v2.dal.repository.RepoOperation;

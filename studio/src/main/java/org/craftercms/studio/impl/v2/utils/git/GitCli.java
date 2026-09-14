@@ -463,6 +463,40 @@ public class GitCli {
 		}
 	}
 
+	/**
+	 * Set the repository to be bare
+	 *
+	 * @param repoDir the git repository directory
+	 * @throws GitCliException if the git config command fails
+	 */
+	public void setBareRepository(File repoDir) throws GitCliException {
+		GitCommandLine setBareCl = new GitCommandLine(repoDir, "config", "--bool", "core.bare", "true");
+		try {
+			executeGitCommand(setBareCl);
+		} catch (Exception e) {
+			throw new GitCliException("Git set-bare-repository failed on directory " + repoDir.getAbsolutePath(), e);
+		}
+	}
+
+	/**
+	 * Update (create if it doesn't exist) a ref.
+	 * This method will update the target ref to the source ref.
+	 * If the target ref does not exist, it will be created.
+	 *
+	 * @param repoDir   the git repository directory
+	 * @param sourceRef the source ref
+	 * @param targetRef the target ref
+	 * @throws GitCliException if the git update-ref command fails
+	 */
+	public void updateRef(File repoDir, String sourceRef, String targetRef) throws IOException {
+		GitCommandLine updateRefCl = new GitCommandLine(repoDir, "update-ref", targetRef, sourceRef);
+		try {
+			executeGitCommand(updateRefCl);
+		} catch (Exception e) {
+			throw new GitCliException("Git update-ref failed on directory " + repoDir.getAbsolutePath(), e);
+		}
+	}
+
 	protected class GitCommandLine extends ArrayList<String> {
 
 		private final File directory;

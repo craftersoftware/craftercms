@@ -21,7 +21,7 @@ import { ContentType, ContentTypeField } from '../models/ContentType';
 import LookupTable from '../models/LookupTable';
 import ContentInstance, { ContentInstanceBase } from '../models/ContentInstance';
 import { deserialize, fromString, getInnerHtml, getInnerHtmlNumber, serialize, wrapElementInAuxDocument } from './xml';
-import { fileNameFromPath, replaceAccentedVowels, unescapeHTML } from './string';
+import { fileNameFromPath, isExternalMediaUrl, replaceAccentedVowels, unescapeHTML } from './string';
 import { getRootPath, isRootPath, withIndex, withoutIndex } from './path';
 import { isFolder, isNavigable, isPreviewable } from '../components/PathNavigator/utils';
 import {
@@ -544,19 +544,7 @@ export function createModelHierarchyDescriptorMap(
 							.filter((componentId) => typeof componentId === 'string')
 							.forEach((componentId, index) => {
 								lookup[currentModelId].children.push(componentId);
-								if (lookup[componentId]) {
-									if (lookup[componentId].parentId !== null && lookup[componentId].parentId !== model.craftercms.id) {
-										console.error.apply(
-											console,
-											[
-												`Model ${componentId} was found in multiple parents (${lookup[componentId].parentId} and ${model.craftercms.id}). ` +
-													`Same model twice on a single page may have unexpected behaviours for in-context editing.`,
-												// @ts-ignore
-												typeof componentId !== 'string' && componentId
-											].filter(Boolean)
-										);
-									}
-								} else {
+								if (!lookup[componentId]) {
 									// This assignment it's to avoid having to optionally chain multiple times
 									// the access to `lookup[component]` below.
 									lookup[componentId] = lookup[componentId] ?? ({} as any);
@@ -564,7 +552,7 @@ export function createModelHierarchyDescriptorMap(
 								// Because there's no real warranty that the parent of a model will be processed first
 								lookup[componentId] = createModelHierarchyDescriptor(
 									componentId,
-									model.craftercms.id,
+									lookup[componentId].parentId ?? model.craftercms.id,
 									lookup[componentId].parentContainerFieldPath ?? cleanCarryOver(`${fieldCarryOver}.${field.id}`),
 									lookup[componentId].parentContainerFieldIndex ?? cleanCarryOver(`${indexCarryOver}.${index}`),
 									lookup[componentId].children
@@ -1208,8 +1196,15 @@ function doesImageMeetSizeRestrictions(file: HTMLImageElement, restrictions?: Im
  * @param restrictions - Optional size restrictions to validate the image against.
  * @returns Promise that resolves to true if the image meets the restrictions or no restrictions are provided, false otherwise.
  * */
-export function validateImageRestrictions(path: string, restrictions?: ImageRestrictions): Promise<boolean> {
-	if (!restrictions || (!isImage(path) && !isBlobUrl(path) && !path.startsWith('data:image/'))) {
+export function validateImageRestrictions(
+	path: string,
+	restrictions?: ImageRestrictions,
+	mimeType?: string
+): Promise<boolean> {
+	// External URLs (including blob/data URLs) may have no extension or a query string, so extension detection can't be
+	// used to rule them out. They're loaded and validated; non-images resolve as valid via the error handler below.
+	const isValidationCandidate = isImage(path) || mimeType?.startsWith('image/') || isExternalMediaUrl(path);
+	if (!restrictions || !isValidationCandidate) {
 		return Promise.resolve(true);
 	}
 	return new Promise((resolve) => {

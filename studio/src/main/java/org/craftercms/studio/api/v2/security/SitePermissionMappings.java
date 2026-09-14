@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.craftercms.studio.api.v2.dal.Group;
+import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 
 /**
  * Read-only mapping of user groups to available actions for a given site.
@@ -41,23 +42,26 @@ public interface SitePermissionMappings {
 	/**
 	 * Get the site wide available actions for a given user.
 	 * Site-wide actions are performed on the item-level, but are allowed on site-wide
-	 * permissions. e.g.: publish_request permission will allow PUBLISH_REQUEST
+	 * permissions. e.g.: publish_review permission will allow PUBLISH_REVIEW
 	 * action for any item in the site
 	 *
 	 * @param username username of the user
 	 * @param groups groups the user belongs to
+	 * @param isSystemAdmin true if the user is a system admin, false otherwise
 	 * @return available actions bitmap
 	 */
-	long getSiteWideItemAvailableActions(String username, List<Group> groups);
+	long getSiteWideItemAvailableActions(String username, List<Group> groups, boolean isSystemAdmin);
 
 	/**
 	 * Get the actions a user has permissions to perform on publish packages
 	 *
 	 * @param username username of the user
 	 * @param groups groups the user belongs to
+	 * @param publishItems the publish items
+	 * @param isSystemAdmin true if the user is a system admin, false otherwise
 	 * @return available actions bitmap
 	 */
-	long getPublishPackageAvailableActions(String username, List<Group> groups);
+	long getPublishPackageAvailableActions(String username, List<Group> groups, Collection<PublishItem> publishItems, boolean isSystemAdmin);
 
 	/**
 	 * Check if the user is a site admin

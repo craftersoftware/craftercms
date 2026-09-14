@@ -14,8 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-return ["version"  : "${project.version}",
-	"id"       : "${buildNumber}",
-	"uiId"     : "${UIbuildNumber}",
-	"buildDate": new Date($ { timestamp })
+return ["version":"@version@",
+         "id":"@buildNumber@",
+          "uiId":"@UIbuildNumber@",
+          "buildDate":new Date(@timestamp@)
 ]

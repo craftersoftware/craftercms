@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller to access scheduled jobs for the current site.
@@ -41,7 +42,7 @@ public class SiteScheduledJobsController extends RestControllerBase {
 	public static final String URL_ROOT = "/site/jobs";
 	public static final String URL_LIST = "/list";
 
-	@GetMapping(URL_LIST)
+	@GetMapping(value = URL_LIST, produces = APPLICATION_JSON_VALUE)
 	@SuppressWarnings("unchecked")
 	public List<Map<String, String>> listScheduledJobs() throws SchedulerException {
 		List<Map<String, String>> jobs = new LinkedList<>();

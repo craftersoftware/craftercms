@@ -80,6 +80,7 @@ dependencies {
 	implementation libs.jaxb.api
 	implementation libs.log4j.api
 	implementation libs.log4j.core
+	annotationProcessor libs.log4j.core
 	implementation libs.log4j.jakarta.web
 	implementation libs.log4j.slf4j2.impl
 	implementation libs.bcpg.jdk18on

@@ -31,6 +31,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { EmptyState } from '../EmptyState';
 
 export interface UsersGridUIProps {
 	users: PagedArray<User>;
@@ -87,30 +88,40 @@ export function UsersGridUI(props: UsersGridUIProps) {
 						</GlobalAppGridRow>
 					</TableHead>
 					<TableBody>
-						{users?.map((user) => (
-							<GlobalAppGridRow key={user.id} onClick={() => onRowClicked(user)}>
-								<GlobalAppGridCell align="center" className="avatar">
-									<Avatar sx={{ margin: '0 auto' }}>
-										{user.firstName.charAt(0)}
-										{user.lastName?.charAt(0) ?? ''}
-									</Avatar>
-								</GlobalAppGridCell>
-								<GlobalAppGridCell align="left" className="pl20 width20">
-									{user.firstName} {user.lastName}
-								</GlobalAppGridCell>
-								<GlobalAppGridCell align="left" className="width20">
-									<Typography variant="body2" noWrap title={user.username}>
-										{user.username}
-									</Typography>
-								</GlobalAppGridCell>
-								<GlobalAppGridCell align="left" className="width40">
-									{user.email}
-								</GlobalAppGridCell>
-								<GlobalAppGridCell align="right" className="width20">
-									{!user.enabled && <Chip label={<FormattedMessage defaultMessage="Disabled" />} size="small" />}
+						{users?.length ? (
+							users.map((user) => (
+								<GlobalAppGridRow key={user.id} onClick={() => onRowClicked(user)}>
+									<GlobalAppGridCell align="center" className="avatar">
+										<Avatar sx={{ margin: '0 auto' }}>
+											{user.firstName.charAt(0)}
+											{user.lastName?.charAt(0) ?? ''}
+										</Avatar>
+									</GlobalAppGridCell>
+									<GlobalAppGridCell align="left" className="pl20 width20">
+										{user.firstName} {user.lastName}
+									</GlobalAppGridCell>
+									<GlobalAppGridCell align="left" className="width20">
+										<Typography variant="body2" noWrap title={user.username}>
+											{user.username}
+										</Typography>
+									</GlobalAppGridCell>
+									<GlobalAppGridCell align="left" className="width40">
+										{user.email}
+									</GlobalAppGridCell>
+									<GlobalAppGridCell align="right" className="width20">
+										{!user.enabled && <Chip label={<FormattedMessage defaultMessage="Disabled" />} size="small" />}
+									</GlobalAppGridCell>
+								</GlobalAppGridRow>
+							))
+						) : (
+							<GlobalAppGridRow className="hoverDisabled">
+								<GlobalAppGridCell colSpan={5} align="center">
+									<EmptyState
+										title={<FormattedMessage id="usersGrid.emptyStateMessage" defaultMessage="No Users Found" />}
+									/>
 								</GlobalAppGridCell>
 							</GlobalAppGridRow>
-						))}
+						)}
 					</TableBody>
 				</Table>
 			</TableContainer>

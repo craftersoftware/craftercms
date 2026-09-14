@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST service that provides several methods to handle Crafter's cache engine.
@@ -63,7 +64,7 @@ public class CacheRestController extends RestControllerBase {
 		this.authorizationToken = authorizationToken;
 	}
 
-	@RequestMapping(value = URL_CLEAR_ALL_SCOPES, method = RequestMethod.GET)
+	@RequestMapping(value = URL_CLEAR_ALL_SCOPES, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> clearAllScopes(@RequestParam String token)
 		throws CacheException, InvalidManagementTokenException {
 		validateToken(token);
@@ -75,7 +76,7 @@ public class CacheRestController extends RestControllerBase {
 		return createResponseMessage("All cache scopes have been cleared");
 	}
 
-	@RequestMapping(value = URL_CLEAR_SCOPE, method = RequestMethod.GET)
+	@RequestMapping(value = URL_CLEAR_SCOPE, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> clearScope(@RequestParam(REQUEST_PARAM_CONTEXT_ID) String contextId,
 					      @RequestParam String token)
 		throws InvalidContextException, CacheException, InvalidManagementTokenException {

@@ -23,6 +23,7 @@ import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.ItemDAO;
 import org.craftercms.studio.api.v2.dal.ItemState;
+import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobStore;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobStoreResolver;
@@ -60,6 +61,7 @@ public class SemanticsAvailableActionsResolverImpl implements SemanticsAvailable
 	private ServicesConfig servicesConfig;
 	private StudioBlobStoreResolver studioBlobStoreResolver;
 	private ContentTypeService contentTypeService;
+	private SiteDAO siteDAO;
 
 	@Override
 	public long calculateContentItemAvailableActions(String username, String siteId, ContentItem detailedItem)
@@ -142,6 +144,13 @@ public class SemanticsAvailableActionsResolverImpl implements SemanticsAvailable
 			result &= ~CONTENT_RENAME;
 			result &= ~CONTENT_DUPLICATE;
 			result &= ~CONTENT_COPY;
+		}
+
+		boolean isPublished = siteDAO.getSite(siteId).getPublishedRepoCreated();
+		if (!isPublished) {
+			// If initial publish is not done, the user cannot request a publish (PUBLISH_REQUEST will be added back later if there is a site-wide rule
+			// granting the permission)
+			result &= ~PUBLISH_REQUEST;
 		}
 
 		List<String> protectedFolderPatterns = servicesConfig.getProtectedFolderPatterns(siteId);
@@ -274,5 +283,10 @@ public class SemanticsAvailableActionsResolverImpl implements SemanticsAvailable
 	@SuppressWarnings("unused")
 	public void setItemDAO(final ItemDAO itemDAO) {
 		this.itemDAO = itemDAO;
+	}
+
+	@SuppressWarnings("unused")
+	public void setSiteDAO(final SiteDAO siteDAO) {
+		this.siteDAO = siteDAO;
 	}
 }

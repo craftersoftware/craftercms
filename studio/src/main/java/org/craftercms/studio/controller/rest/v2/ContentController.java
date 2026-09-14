@@ -113,7 +113,7 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(LIST_QUICK_CREATE_CONTENT)
+	@GetMapping(value = LIST_QUICK_CREATE_CONTENT, produces = APPLICATION_JSON_VALUE)
 	public ResultList<QuickCreateItem> listQuickCreateContent(@NotBlank @ValidSiteId @RequestParam(name = "siteId") String siteId)
 			throws ServiceLayerException {
 		List<QuickCreateItem> items = contentTypeService.getQuickCreatableContentTypes(siteId);
@@ -123,7 +123,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(GET_DELETE_PACKAGE)
+	@PostMapping(value = GET_DELETE_PACKAGE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Map<String, Collection<LightItem>>> getDeletePackage(@RequestBody @Valid GetDeletePackageRequestBody request) throws SiteNotFoundException {
 		List<LightItem> childItems = contentService.getChildItems(request.getSiteId(), request.getPaths());
 		Collection<LightItem> dependentItems = dependencyService.getDependentPaths(request.getSiteId(), request.getPaths());
@@ -136,7 +136,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = DELETE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = DELETE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result delete(@RequestBody @Validated DeleteRequestBody deleteRequestBody)
 			throws UserNotFoundException, ServiceLayerException, AuthenticationException {
 		UnwrappedResult<DeleteContentResult> result = UnwrappedResult.of(contentService.deleteContent(deleteRequestBody.getSiteId(),
@@ -146,7 +146,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = GET_CHILDREN_BY_PATHS, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = GET_CHILDREN_BY_PATHS, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public Result getChildrenByPaths(@PathVariable @ValidSiteId String siteId, @Valid @RequestBody GetChildrenBulkRequest request)
 			throws ServiceLayerException, UserNotFoundException {
 		Map<String, PathParams> paramsMap = request.getPaths().stream()
@@ -170,7 +170,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = PASTE_ITEMS, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = PASTE_ITEMS, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public ResultList<String> pasteItems(@ValidSiteId @PathVariable String siteId,
 										 @Valid @RequestBody PasteRequest request) throws Exception {
 		var result = new ResultList<String>();
@@ -182,7 +182,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = DUPLICATE_ITEM, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = DUPLICATE_ITEM, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public ResultOne<String> duplicateItem(@Valid @RequestBody DuplicateRequest request) throws Exception {
 		var result = new ResultOne<String>();
 		result.setResponse(OK);
@@ -207,7 +207,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = SANDBOX_ITEMS_BY_PATH, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = SANDBOX_ITEMS_BY_PATH, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public GetContentItemsByPathResult getSandboxItemsByPath(@RequestBody @Valid GetSandboxItemsByPathRequestBody request)
 			throws ServiceLayerException, UserNotFoundException {
 		String siteId = request.getSiteId();
@@ -232,7 +232,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(ITEM_LOCK_BY_PATH)
+	@PostMapping(value = ITEM_LOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result itemLockByPath(@RequestBody @Valid LockItemByPathRequest request)
 			throws UserNotFoundException, ServiceLayerException {
 		contentService.lockContent(request.getSiteId(), request.getPath());
@@ -241,7 +241,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(ITEM_UNLOCK_BY_PATH)
+	@PostMapping(value = ITEM_UNLOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result itemUnlockByPath(@RequestBody @Valid UnlockItemByPathRequest request)
 			throws ContentNotFoundException, SiteNotFoundException, RepositoryException {
 		contentService.unlockContent(request.getSiteId(), request.getPath());
@@ -265,7 +265,7 @@ public class ContentController {
 				.body(resource);
 	}
 
-	@PostMapping(value = SITE_ID, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = SITE_ID, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResponseEntity<Result> write(@PathVariable @ValidSiteId String siteId,
 										@Valid @RequestBody WriteContentRequest writeContentRequest)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
@@ -273,7 +273,7 @@ public class ContentController {
 				writeContentRequest.getComment());
 	}
 
-	@PutMapping(value = SITE_ID, consumes = MULTIPART_FORM_DATA_VALUE)
+	@PutMapping(value = SITE_ID, consumes = MULTIPART_FORM_DATA_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResponseEntity<Result> upload(@PathVariable @ValidSiteId String siteId,
 										 @RequestParam MultipartFile file,
 										 @NotEmpty @ValidNewContentPath @RequestPart(REQUEST_PARAM_PATH) String path,
@@ -300,7 +300,7 @@ public class ContentController {
 				.body(result);
 	}
 
-	@PostMapping(value = RENAME, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = RENAME, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result rename(@Valid @RequestBody RenameRequestBody renameRequestBody)
 			throws AuthenticationException, UserNotFoundException, ServiceLayerException, ValidationException {
 		contentService.renameContent(renameRequestBody.getSiteId(), renameRequestBody.getPath(), renameRequestBody.getName());
@@ -309,7 +309,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = MOVE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = MOVE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result move(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody MoveRequestBody moveRequestBody)
 			throws AuthenticationException, UserNotFoundException, ServiceLayerException, ValidationException {
 		UnwrappedResult<WriteContentResult> result = UnwrappedResult.of(
@@ -319,7 +319,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = MOVE_AND_UPDATE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = MOVE_AND_UPDATE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result moveAndUpdate(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody MoveAndUpdateRequestBody requestBody)
 			throws AuthenticationException, ServiceLayerException, UserNotFoundException {
 		UnwrappedResult<WriteContentResult> result = UnwrappedResult.of(
@@ -329,7 +329,7 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(value = ITEM_HISTORY)
+	@GetMapping(value = ITEM_HISTORY, produces = APPLICATION_JSON_VALUE)
 	public ResultList<ItemVersion> getHistory(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
 											  @ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH) String path) throws ServiceLayerException {
 		ResultList<ItemVersion> result = new ResultList<>();
@@ -339,7 +339,7 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(SITE_HISTORY)
+	@GetMapping(value = SITE_HISTORY, produces = APPLICATION_JSON_VALUE)
 	public ResultList<RepositoryVersion> history(@ValidSiteId @PathVariable String siteId,
 												 @NotEmpty @RequestParam(defaultValue = Constants.HEAD) String start,
 												 @Positive @RequestParam(defaultValue = "10") int limit) throws ServiceLayerException {
@@ -349,7 +349,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(REVERT)
+	@PostMapping(value = REVERT, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result revert(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody RevertRequestBody revertRequestBody)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		contentService.revert(siteId, revertRequestBody.getPath(), revertRequestBody.getCommitId());
@@ -358,7 +358,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(FOLDER)
+	@PostMapping(value = FOLDER, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	@ResponseStatus(HttpStatus.CREATED)
 	public Result createFolder(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody CreateFolderRequestBody requestBody)
 			throws UserNotFoundException, ServiceLayerException, AuthenticationException {
@@ -373,7 +373,7 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(GET_ITEMS_ORDER)
+	@GetMapping(value = GET_ITEMS_ORDER, produces = APPLICATION_JSON_VALUE)
 	public ResultList<ItemOrder> getItemsOrder(@ValidSiteId @PathVariable String siteId, @NotEmpty @ValidExistingContentPath @RequestParam String parentPath) throws ServiceLayerException {
 		ResultList<ItemOrder> result = new ResultList<>();
 		List<ItemOrder> itemsOrder = contentService.getItemsOrder(siteId, parentPath);
@@ -382,7 +382,7 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(REORDER_ITEM)
+	@PostMapping(value = REORDER_ITEM, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Double> reorderItem(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody ReorderItemRequest request) throws ServiceLayerException {
 		ResultOne<Double> result = new ResultOne<>();
 		result.setEntity(RESULT_KEY_ORDER, contentService.reorderItem(siteId, request));

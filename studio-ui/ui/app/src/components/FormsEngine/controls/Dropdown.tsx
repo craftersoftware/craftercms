@@ -14,33 +14,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import useContentTypes from '../../../hooks/useContentTypes';
-import useActiveSiteId from '../../../hooks/useActiveSiteId';
-import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ListSubheader from '@mui/material/ListSubheader';
 import Skeleton from '@mui/material/Skeleton';
-import { useKVPLoader } from '../dataSourceHooks/useKVPLoader';
+import { useDataSourceListOptions, type DataSourceListOptionGroup } from '../dataSourceHooks/useDataSourceListOptions';
 
 export interface DropdownProps extends ControlProps {
 	value: string;
 }
 
 export function Dropdown(props: DropdownProps) {
-	const { field, contentType, value, setValue, readonly, autoFocus } = props;
-	const contentTypes = useContentTypes();
-	const effectRefs = useUpdateRefs({ contentTypes });
+	const { field, value, setValue, readonly, autoFocus, dataSources } = props;
 	const maxLength = field.validations.maxLength?.value;
 	const handleChange = (event: SelectChangeEvent) => setValue(event.target.value);
-	const optionGroups = useKVPLoader(
-		useActiveSiteId(),
-		useMemo(() => (field.properties.datasource.value as string).split(','), [field.properties.datasource?.value]),
-		effectRefs.current.contentTypes[contentType.id].dataSources
-	);
+	const optionGroups = useDataSourceListOptions(dataSources);
 	if (!optionGroups) {
 		return (
 			<FormsEngineField field={field} max={maxLength} length={value.length}>
@@ -48,22 +39,23 @@ export function Dropdown(props: DropdownProps) {
 			</FormsEngineField>
 		);
 	}
-	// TODO: Add argument typing
-	const renderGroup = (group) =>
+	const renderGroup = (group: DataSourceListOptionGroup) =>
 		group.items.map((option, index) => (
-			<MenuItem key={`${group.id}_${index}`} value={option.key}>
+			<MenuItem key={`${group.id}_${option.key}_${index}`} value={option.key}>
 				{option.value}
 			</MenuItem>
 		));
 	return (
 		<FormsEngineField field={field} max={maxLength} length={value.length}>
 			<Select value={value} label="" onChange={handleChange} disabled={readonly} autoFocus={autoFocus}>
-				{optionGroups.length > 1
-					? optionGroups.map((group) => [
-							<ListSubheader key={group.id}>{group.label}</ListSubheader>,
-							renderGroup(group)
-						])
-					: renderGroup(optionGroups[0])}
+				{optionGroups.length === 0
+					? null
+					: optionGroups.length > 1
+						? optionGroups.map((group) => [
+								<ListSubheader key={group.id}>{group.label}</ListSubheader>,
+								renderGroup(group)
+							])
+						: renderGroup(optionGroups[0])}
 			</Select>
 		</FormsEngineField>
 	);

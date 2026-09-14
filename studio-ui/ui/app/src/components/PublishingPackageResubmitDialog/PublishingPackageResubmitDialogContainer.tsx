@@ -78,7 +78,7 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 	} = usePublishState({ mainItems });
 	const { updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
 	const disabled = isSubmitting;
-	const hasPublishPermission = permissionsBySite[siteId].includes('publish_approve');
+	const hasPublishPermission = permissionsBySite[siteId].includes('publish_review');
 	const showRequestApproval = hasPublishPermission;
 	const isRequestPublish = !hasPublishPermission || state.requestApproval;
 	// Submit button should be disabled when

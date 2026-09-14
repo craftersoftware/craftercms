@@ -351,6 +351,20 @@ public interface PublishDAO {
 	}
 
 	/**
+	 * Resubmit a package.
+	 * This is meant to be used the submitter is editing a package that was already
+	 * approved by a reviewer.
+	 * It will add the IN_WORKFLOW bit to the package items.
+	 *
+	 * @param publishPackage the package to resubmit
+	 */
+	@Transactional
+	default void resubmitPackage(final PublishPackage publishPackage) {
+		updatePackage(publishPackage);
+		updateItemStateBits(publishPackage.getId(), IN_WORKFLOW.value, 0L);
+	}
+
+	/**
 	 * Recalculate the state bits for the items in the given complete package.
 	 * It will update the state bits for the items in the package based on remaining submitted/approved packages
 	 * This method is meant to preserve certain bits ( workflow, scheduled, destination) that would otherwise be cleared
@@ -417,7 +431,7 @@ public interface PublishDAO {
 	 * @param limit     the max number of items to return
 	 * @return failed PublishItem records for the package
 	 */
-	default Collection<PublishItem> getFailedPublishItems(String siteId, long packageId, int offset, int limit) {
+	default Collection<PublishItem> getFailedPublishItems(String siteId, long packageId, Integer offset, Integer limit) {
 		return getPublishItemsInternal(siteId, packageId, LIVE_FAILED.value | STAGING_FAILED.value, offset, limit);
 	}
 

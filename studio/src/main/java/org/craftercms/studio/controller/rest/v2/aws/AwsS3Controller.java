@@ -57,6 +57,7 @@ import static org.craftercms.studio.controller.rest.ValidationUtils.validateValu
 import static org.craftercms.studio.controller.rest.v2.RequestConstants.*;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEM;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEMS;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller for AWS S3 service.
@@ -88,7 +89,7 @@ public class AwsS3Controller {
 	 * @throws SiteNotFoundException                 if the site is not found
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
-	@GetMapping("/list")
+	@GetMapping(value = "/list", produces = APPLICATION_JSON_VALUE)
 	public ResultList<S3Item> listItems(
 		@ValidSiteId @RequestParam(REQUEST_PARAM_SITEID) String siteId,
 		@ValidateNoTagsParam @RequestParam(REQUEST_PARAM_PROFILE_ID) String profileId,
@@ -115,7 +116,7 @@ public class AwsS3Controller {
 	 * @throws SiteNotFoundException                 if the site is not found
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
-	@PostMapping("/upload")
+	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
 	public ResultOne<S3Item> uploadItem(HttpServletRequest request) throws IOException, InvalidParametersException,
 		AwsException, SiteNotFoundException, ConfigurationProfileNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {

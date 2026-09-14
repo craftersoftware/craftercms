@@ -121,6 +121,9 @@ public class GitRepositoryHelper implements DisposableBean {
 
 	public static final String CONFIG_KEY_RESOURCE = "resource";
 	public static final String CONFIG_KEY_FOLDER = "folder";
+	public static final String CONFIG_KEY_BARE = "bare";
+	public static final String CONFIG_KEY_CORE = "core";
+	public static final String PUBLISHED_TMP = "published-tmp";
 
 	// firstname lastname
 	public static final String USERNAME_FORMAT = "%s %s";
@@ -295,16 +298,20 @@ public class GitRepositoryHelper implements DisposableBean {
 
 	/**
 	 * Get the repository 'git' directory
-	 * The 'git-dir' is the directory where the git repository is stored. It is '.git' for
-	 * non-bare repositories (SANDBOX, GLOBAL) and the root directory for bare repositories (PUBLISHED).
+	 * The 'git-dir' is the directory where the git repository is stored. It is
+	 * '.git' for
+	 * non-bare repositories (SANDBOX, GLOBAL) and the root directory for bare
+	 * repositories (PUBLISHED).
 	 *
 	 * @param repoType the type of repository
 	 * @param siteId   the site id (empty for the global repository)
-	 * @return the path to the repository 'git' directory, or the root directory if the repository is bare
+	 * @return the path to the repository 'git' directory, or the root directory if
+	 *         the repository is bare
 	 */
 	public Path getRepoGitDir(GitRepositories repoType, String siteId) {
 		Path repoPath = buildRepoPath(repoType, siteId);
-		if (repoType != PUBLISHED) {
+		// If published repository is not bare, return the .git directory
+		if (repoType != PUBLISHED || repoPath.resolve(GIT_ROOT).toFile().exists()) {
 			repoPath = repoPath.resolve(GIT_ROOT);
 		}
 		return repoPath;
@@ -1451,21 +1458,25 @@ public class GitRepositoryHelper implements DisposableBean {
 	}
 
 	/**
-	 * Checkout a branch, optionally creating it if it doesn't exist
+	 * Create a branch
 	 *
 	 * @param repository   the repository
-	 * @param sourceBranch starting point of the branch to checkout
-	 * @param targetBranch the branch to checkout
-	 * @param create       if the branch should be created if it doesn't exist
-	 * @throws GitAPIException if an error occurs
+	 * @param site         the site
+	 * @param sourceBranch starting point of the branch to create
+	 * @param targetBranch the branch to create
+	 * @throws RepositoryException if an error occurs
 	 */
-	public void checkoutBranch(Repository repository, String sourceBranch, String targetBranch, boolean create) throws GitAPIException {
-		try (Git git = new Git(repository)) {
-			CheckoutCommand checkoutCommand = git.checkout()
-				.setName(targetBranch)
-				.setCreateBranch(create)
-				.setStartPoint(sourceBranch);
-			retryingRepositoryOperationFacade.call(checkoutCommand);
+	public void createBranch(Repository repository, String site, String sourceBranch, String targetBranch)
+			throws RepositoryException {
+		try {
+			gitCli.updateRef(repository.getDirectory(), getBranchRefName(sourceBranch), getBranchRefName(targetBranch));
+		} catch (IOException e) {
+			logger.error("Failed to create branch in site '{}' source branch '{}' target branch '{}'", site,
+					sourceBranch, targetBranch, e);
+			throw new RepositoryException(
+					format("Failed to create branch in site '%s' source branch '%s' target branch '%s'", site,
+							sourceBranch, targetBranch),
+					e);
 		}
 	}
 
@@ -1533,5 +1544,41 @@ public class GitRepositoryHelper implements DisposableBean {
 	 */
 	public String getBranchRefName(final String branchName) {
 		return format(REFS_HEADS_FORMAT, branchName);
+	}
+
+	/**
+	 * Check if the repository is bare
+	 *
+	 * @param siteId the site id
+	 * @return true if the published repository is bare, false otherwise
+	 * @throws RepositoryException
+	 */
+	public boolean isPublishedRepositoryBare(String siteId) throws RepositoryException {
+		try {
+			return getRepository(siteId, PUBLISHED)
+					.getConfig().getBoolean(CONFIG_KEY_CORE, null, CONFIG_KEY_BARE, false);
+		} catch (Exception e) {
+			logger.error("Error checking if published repository for site '{}' is a bare repository", siteId, e);
+			throw new RepositoryException(
+					format("Error checking if published repository for site '%s' is a bare repository", siteId), e);
+		}
+	}
+
+	/**
+	 * Set the repository to be bare
+	 *
+	 * @param siteId the site id
+	 * @throws IOException if an error occurs while setting the repository to be
+	 *                     bare
+	 */
+	public void setBareRepository(String siteId) throws IOException {
+		Path repositoryPath = buildRepoPath(PUBLISHED, siteId);
+		String publishedCacheKey = getRepoCacheKey(siteId, PUBLISHED);
+		Repository repository = repositoryCache.getIfPresent(publishedCacheKey);
+		if (repository != null) {
+			repository.close();
+		}
+		repositoryCache.invalidate(publishedCacheKey);
+		gitCli.setBareRepository(repositoryPath.toFile());
 	}
 }

@@ -23,7 +23,7 @@ public interface RetryingDatabaseOperationFacade {
 
 	/**
 	 * Retries the database operation {@code op} up to the configured maximum retries.
-	 * See {@link org.craftercms.studio.api.v2.annotation.RetryingDatabaseOperationAnnotationHandler}
+	 * See {@link org.craftercms.studio.api.v2.annotation.retrying.RetryingDatabaseOperationAnnotationHandler}
 	 *
 	 * @param op operation to execute
 	 */
@@ -31,7 +31,7 @@ public interface RetryingDatabaseOperationFacade {
 
 	/**
 	 * Retries the database operation {@code op} up to the configured maximum retries.
-	 * See {@link org.craftercms.studio.api.v2.annotation.RetryingDatabaseOperationAnnotationHandler}
+	 * See {@link org.craftercms.studio.api.v2.annotation.retrying.RetryingDatabaseOperationAnnotationHandler}
 	 *
 	 * @param op operation to execute
 	 */

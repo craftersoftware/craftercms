@@ -35,18 +35,15 @@ public final class PublishPackageAvailableActions {
 	public static final long RESUBMIT = 1L << 3;
 
 	/**
-	 * Map site wide permissions to package available actions
+	 * Map  permissions to package available actions
 	 *
-	 * @param permissions site wide permissions
+	 * @param permissions permissions
 	 * @return bitmap of available actions
 	 */
-	public static long mapSiteWidePermissionsToPackageAvailableActions(final Collection<String> permissions) {
+	public static long mapPermissionsToPackageAvailableActions(final Collection<String> permissions) {
 		long result = 0;
-		if (permissions.contains(PERMISSION_PUBLISH_APPROVE)) {
-			result |= APPROVE;
-		}
-		if (permissions.contains(PERMISSION_PUBLISH_REJECT)) {
-			result |= REJECT;
+		if (permissions.contains(PERMISSION_PUBLISH_REVIEW)) {
+			result |= APPROVE | REJECT;
 		}
 		if (permissions.contains(PERMISSION_PUBLISH_CANCEL)) {
 			result |= CANCEL;
@@ -67,7 +64,7 @@ public final class PublishPackageAvailableActions {
 	 */
 	public static long getPossibleActionsForPackageStates(final long packageState,
 														  final ApprovalState approvalState) {
-		if (matchesState(packageState, READY)) {
+		if (READY.matches(packageState)) {
 			long result = switch (approvalState) {
 				case SUBMITTED -> APPROVE | REJECT;
 				case APPROVED -> REJECT;
@@ -75,16 +72,9 @@ public final class PublishPackageAvailableActions {
 			};
 			return result | CANCEL;
 		}
-		if (matchesState(packageState, COMPLETED) || matchesState(packageState, CANCELLED)) {
+		if(COMPLETED.matches(packageState) || CANCELLED.matches(packageState)) {
 			return RESUBMIT;
 		}
 		return 0;
-	}
-
-	/**
-	 * Check if a package state bitmap contains a specific state's flag
-	 */
-	private static boolean matchesState(final long bitmap, PackageState state) {
-		return (state.value & bitmap) != 0;
 	}
 }

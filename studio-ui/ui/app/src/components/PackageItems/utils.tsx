@@ -28,6 +28,8 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import Checkbox from '@mui/material/Checkbox';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import { DraftChip } from '../DraftChip';
+import Tooltip from '@mui/material/Tooltip';
+import { FormattedMessage } from 'react-intl';
 
 export function renderTreeNode(props: {
 	itemMap: LookupTable<LightItem>;
@@ -92,14 +94,27 @@ export function renderTreeNode(props: {
 								<MoreVertRounded />
 							</IconButton>
 							{isSoft && (
-								<Checkbox
-									size="small"
-									checked={selectedDependencies?.includes(node.path)}
-									onClick={(e) => e.stopPropagation()}
-									onChange={(e, checked) => {
-										onCheckboxChange?.(e, checked, node.path);
-									}}
-								/>
+								<Tooltip
+									title={
+										!itemMap[node.path].canRequestPublish ? (
+											<FormattedMessage defaultMessage="This reference can't be selected because you don't have permission to publish it." />
+										) : (
+											''
+										)
+									}
+								>
+									<span>
+										<Checkbox
+											size="small"
+											checked={selectedDependencies?.includes(node.path)}
+											disabled={!itemMap[node.path].canRequestPublish}
+											onClick={(e) => e.stopPropagation()}
+											onChange={(e, checked) => {
+												onCheckboxChange?.(e, checked, node.path);
+											}}
+										/>
+									</span>
+								</Tooltip>
 							)}
 						</Box>
 					</Box>

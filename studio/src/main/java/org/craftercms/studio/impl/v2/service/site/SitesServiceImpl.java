@@ -26,7 +26,11 @@ import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryCredentialsException;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
-import org.craftercms.studio.api.v2.annotation.*;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteBootstrapComplete;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteState;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.PublishStatus;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
@@ -105,7 +109,6 @@ public class SitesServiceImpl implements SitesService {
 	}
 
 	@Override
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public boolean exists(@SiteId String siteId) {
 		return sitesServiceInternal.exists(siteId);
 	}

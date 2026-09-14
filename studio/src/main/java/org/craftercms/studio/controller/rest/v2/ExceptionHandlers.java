@@ -59,6 +59,7 @@ import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundExce
 import org.craftercms.studio.api.v2.exception.repository.InvalidRemoteException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryNotFoundException;
 import org.craftercms.studio.api.v2.exception.security.ActionsDeniedException;
+import org.craftercms.studio.api.v2.exception.security.PackageSubmitterCheckException;
 import org.craftercms.studio.api.v2.exception.security.PeerReviewCheckException;
 import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.Result;
@@ -191,6 +192,12 @@ public class ExceptionHandlers {
 	@ResponseStatus(HttpStatus.FORBIDDEN)
 	public Result handlePeerReviewException(HttpServletRequest request, PeerReviewCheckException e) {
 		return handleExceptionInternal(request, e, ApiResponse.PEER_REVIEW_CHECK_FAILED);
+	}
+
+	@ExceptionHandler(PackageSubmitterCheckException.class)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	public Result handlePackageSubmitterCheckException(HttpServletRequest request, PackageSubmitterCheckException e) {
+		return handleExceptionInternal(request, e, ApiResponse.PACKAGE_SUBMITTER_CHECK_FAILED);
 	}
 
 	@ExceptionHandler(ActionsDeniedException.class)

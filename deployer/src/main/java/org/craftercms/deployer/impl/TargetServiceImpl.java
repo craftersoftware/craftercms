@@ -435,8 +435,8 @@ public class TargetServiceImpl implements TargetService, ApplicationListener<App
 			if (loadMode.isCreate()) {
 				FileUtils.deleteQuietly(configFile);
 			}
-
-			throw new TargetServiceException(format("Failed to load target for configuration file '%s'", configFile), e);
+			String relativePath = targetConfigFolder.toPath().relativize(configFile.toPath()).toString();
+			throw new TargetServiceException(format("Failed to load target for configuration file '%s'", relativePath), e);
 		}
 	}
 

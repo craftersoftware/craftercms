@@ -15,15 +15,12 @@
  */
 package org.craftercms.studio.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.DefaultContentTypeResolver;
-import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.JacksonJsonMessageConverter;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.security.messaging.web.csrf.CsrfChannelInterceptor;
@@ -31,6 +28,8 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
@@ -88,16 +87,12 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	@Override
 	public boolean configureMessageConverters(List<MessageConverter> messageConverters) {
-		// Configure Jackson converter with Java Time module support
-		// so that Java 8 date/time types are properly serialized/deserialized
+		// Configure Jackson converter so that Java 8 date/time types are properly serialized/deserialized
 		DefaultContentTypeResolver resolver = new DefaultContentTypeResolver();
 		resolver.setDefaultMimeType(MimeTypeUtils.APPLICATION_JSON);
-		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-		ObjectMapper objectMapper=  com.fasterxml.jackson.databind.json.JsonMapper.builder()
-				.addModule(new JavaTimeModule())
-				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS) // Serialize dates as formatted strings
-				.build();
-		converter.setObjectMapper(objectMapper);
+		JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter(
+				JsonMapper.builder()
+						.disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)); // Serialize dates as formatted strings
 		converter.setContentTypeResolver(resolver);
 		messageConverters.add(converter);
 		return false;

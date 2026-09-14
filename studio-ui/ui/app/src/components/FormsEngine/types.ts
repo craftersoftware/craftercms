@@ -19,6 +19,7 @@ import ContentType from '../../models/ContentType';
 import { createStore } from 'jotai/index';
 import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
+import type { ResolvedDataSources } from './dataSources/types';
 
 export interface ControlProps {
 	value: unknown;
@@ -27,6 +28,7 @@ export interface ControlProps {
 	contentType: ContentType;
 	readonly: boolean;
 	autoFocus: boolean;
+	dataSources?: ResolvedDataSources;
 }
 
 export type JotaiStore = ReturnType<typeof createStore>;

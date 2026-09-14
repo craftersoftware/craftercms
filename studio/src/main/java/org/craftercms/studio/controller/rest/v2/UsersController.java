@@ -96,7 +96,7 @@ public class UsersController {
 	 * @param sort   Sort order
 	 * @return Response containing list of users
 	 */
-	@GetMapping
+	@GetMapping(produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<UserResponse> getAllUsers(
 		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITE_ID, required = false) String siteId,
 		@EsapiValidatedParam(type = SEARCH_KEYWORDS) @RequestParam(value = REQUEST_PARAM_KEYWORD, required = false) String keyword,
@@ -132,7 +132,7 @@ public class UsersController {
 	 * @return Response object
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@PostMapping(consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<UserResponse> createUser(@Valid @RequestBody CreateUserRequest user)
 		throws UserAlreadyExistsException, ServiceLayerException, AuthenticationException {
 		UserResponse newUser = new UserResponse(userService.createUser(buildUser(user)));
@@ -172,7 +172,7 @@ public class UsersController {
 	 * @param user User to update
 	 * @return Response object
 	 */
-	@PatchMapping(consumes = APPLICATION_JSON_VALUE)
+	@PatchMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest user)
 		throws ServiceLayerException, UserNotFoundException, AuthenticationException, UserExternallyManagedException {
 		User userRequest = buildUser(user);
@@ -215,7 +215,7 @@ public class UsersController {
 	 * @param enableUsers Enable users request body (json representation)
 	 * @return Response object
 	 */
-	@PatchMapping(value = ENABLE, consumes = APPLICATION_JSON_VALUE)
+	@PatchMapping(value = ENABLE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultList<UserResponse> enableUsers(@Valid @RequestBody EnableUsers enableUsers)
 		throws ServiceLayerException, UserNotFoundException, UserExternallyManagedException {
 		ValidationUtils.validateEnableUsers(enableUsers);
@@ -234,7 +234,7 @@ public class UsersController {
 	 * @param enableUsers Disable users request body (json representation)
 	 * @return Response object
 	 */
-	@PatchMapping(value = DISABLE, consumes = APPLICATION_JSON_VALUE)
+	@PatchMapping(value = DISABLE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultList<UserResponse> disableUsers(@Valid @RequestBody EnableUsers enableUsers)
 		throws ServiceLayerException, UserNotFoundException, UserExternallyManagedException {
 		ValidationUtils.validateEnableUsers(enableUsers);
@@ -254,7 +254,7 @@ public class UsersController {
 	 * @param userId User identifier
 	 * @return Response containing list of sites
 	 */
-	@GetMapping(PATH_PARAM_ID + SITES)
+	@GetMapping(value = PATH_PARAM_ID + SITES, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<Site> getUserSites(
 		@NotNull @PathVariable(REQUEST_PARAM_ID) String userId,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
@@ -288,7 +288,7 @@ public class UsersController {
 	 * @param site   The site ID
 	 * @return Response containing list of roles
 	 */
-	@GetMapping(PATH_PARAM_ID + SITES + PATH_PARAM_SITE + ROLES)
+	@GetMapping(value = PATH_PARAM_ID + SITES + PATH_PARAM_SITE + ROLES, produces = APPLICATION_JSON_VALUE)
 	public ResultList<String> getUserSiteRoles(@NotNull @PathVariable(REQUEST_PARAM_ID) String userId,
 						   @NotNull @ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site)
 		throws ServiceLayerException, UserNotFoundException, ValidationException {
@@ -317,7 +317,7 @@ public class UsersController {
 	 *
 	 * @return Response containing current authenticated user
 	 */
-	@GetMapping(ME)
+	@GetMapping(value = ME, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<AuthenticatedUser> getCurrentUser() throws AuthenticationException, ServiceLayerException {
 		AuthenticatedUser user = SecurityUtils.getCurrentUser();
 
@@ -333,7 +333,7 @@ public class UsersController {
 	 *
 	 * @return Response containing current authenticated user sites
 	 */
-	@GetMapping(ME + SITES)
+	@GetMapping(value = ME + SITES, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<Site> getCurrentUserSites(
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit)
@@ -356,7 +356,7 @@ public class UsersController {
 	 *
 	 * @return Response containing current authenticated user roles
 	 */
-	@GetMapping(ME + SITES + PATH_PARAM_SITE + ROLES)
+	@GetMapping(value = ME + SITES + PATH_PARAM_SITE + ROLES, produces = APPLICATION_JSON_VALUE)
 	public ResultList<String> getCurrentUserSiteRoles(@NotBlank @ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site)
 		throws AuthenticationException, ServiceLayerException, UserNotFoundException {
 		List<String> roles = userService.getCurrentUserSiteRoles(site);
@@ -368,24 +368,7 @@ public class UsersController {
 		return result;
 	}
 
-	/**
-	 * Get the SSO SP logout URL for the current authenticated user. The system should redirect to this logout URL
-	 * <strong>AFTER</strong> local logout. Response entity can be null if user is not authenticated through SSO
-	 * or if logout is disabled
-	 *
-	 * @return Response containing SSO logout URL for the current authenticated user
-	 * @deprecated since 3.2, all logout redirects are now handled by Spring Security
-	 */
-	@GetMapping(ME + LOGOUT_SSO_URL)
-	@ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-	public Result getCurrentUserSsoLogoutUrl() {
-		Result result = new Result();
-		result.setResponse(DEPRECATED);
-
-		return result;
-	}
-
-	@GetMapping(FORGOT_PASSWORD)
+	@GetMapping(value = FORGOT_PASSWORD, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<String> forgotPassword(@NotBlank @RequestParam(value = REQUEST_PARAM_USERNAME) String username) {
 		int delay = studioConfiguration.getProperty(SECURITY_SET_PASSWORD_DELAY, Integer.class);
 		try {
@@ -405,7 +388,7 @@ public class UsersController {
 		return result;
 	}
 
-	@PostMapping(ME + CHANGE_PASSWORD)
+	@PostMapping(value = ME + CHANGE_PASSWORD, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<UserResponse> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest)
 		throws PasswordDoesNotMatchException, ServiceLayerException, UserExternallyManagedException,
 		AuthenticationException, UserNotFoundException {
@@ -424,7 +407,7 @@ public class UsersController {
 		return result;
 	}
 
-	@PostMapping(SET_PASSWORD)
+	@PostMapping(value = SET_PASSWORD, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<UserResponse> setPassword(@Valid @RequestBody SetPasswordRequest setPasswordRequest)
 		throws UserNotFoundException, UserExternallyManagedException, ServiceLayerException {
 		int delay = studioConfiguration.getProperty(SECURITY_SET_PASSWORD_DELAY, Integer.class);
@@ -441,7 +424,7 @@ public class UsersController {
 		return result;
 	}
 
-	@PostMapping(PATH_PARAM_ID + RESET_PASSWORD)
+	@PostMapping(value = PATH_PARAM_ID + RESET_PASSWORD, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result resetPassword(@NotBlank @EsapiValidatedParam(type = USERNAME) @PathVariable(REQUEST_PARAM_ID) String userId,
 				    @Valid @RequestBody ResetPasswordRequest resetPasswordRequest)
 		throws UserNotFoundException, UserExternallyManagedException, ServiceLayerException {

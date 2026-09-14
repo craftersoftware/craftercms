@@ -18,15 +18,20 @@ package org.craftercms.studio.impl.v2.service.workflow.internal;
 
 import java.time.Instant;
 import static java.time.Instant.now;
+import static java.util.stream.Collectors.toSet;
+
 import java.util.Collection;
 import java.util.List;
 
+import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.AuditLog;
+
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_APPROVE_PUBLISH_PACKAGE;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_CANCEL_PUBLISH_PACKAGE;
@@ -38,6 +43,7 @@ import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.User;
 import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
+import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.APPROVED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState.REJECTED;
@@ -46,6 +52,7 @@ import org.craftercms.studio.api.v2.event.workflow.WorkflowEvent;
 import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.PackageAlreadyApprovedException;
 import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
+import org.craftercms.studio.api.v2.security.PermissionCheckingUtils;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.service.audit.AuditService;
 import org.craftercms.studio.api.v2.service.item.ItemService;
@@ -56,6 +63,8 @@ import static org.craftercms.studio.api.v2.utils.StudioUtils.getSandboxRepoLockK
 import org.craftercms.studio.impl.v2.utils.DateUtils;
 import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getAuthentication;
 import static org.craftercms.studio.impl.v2.utils.security.SecurityUtils.getCurrentUser;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_PUBLISH_REVIEW;
+
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +84,8 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 	private ServicesConfig servicesConfig;
 	private ApplicationEventPublisher eventPublisher;
 	private RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
+
+	private PermissionEvaluator permissionEvaluator;
 
 	@Override
 	public int getItemStatesTotal(String siteId, String path, Long states) {
@@ -101,17 +112,28 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 	public void approvePackages(final String siteId, final Collection<Long> packageIds,
 				   final Instant schedule, final boolean updateSchedule, final String comment)
 		throws AuthenticationException, ServiceLayerException {
+		checkReviewPermissions(siteId, packageIds);
 		for (Long packageId : packageIds) {
 			doReviewPackage(siteId, packageId, p -> {
-				if (APPROVED == p.getApprovalState()) {
-					throw new PackageAlreadyApprovedException(siteId, packageId);
-				}
 				if (updateSchedule) {
 					p.setSchedule(schedule);
 				}
 				p.setApprovalState(APPROVED);
 				p.setReviewerComment(comment);
 			}, OPERATION_APPROVE_PUBLISH_PACKAGE, WorkflowEvent.WorkFlowEventType.APPROVE);
+		}
+	}
+
+	/**
+	 * Check if the current user has the permission to review the packages
+	 *
+	 * @param siteId     the siteId
+	 * @param packageIds the packageIds
+	 */
+	private void checkReviewPermissions(String siteId, Collection<Long> packageIds) {
+		for (long packageId : packageIds) {
+			PermissionCheckingUtils.checkPermissions(permissionEvaluator, publishDao, siteId, packageId,
+					List.of(PERMISSION_PUBLISH_REVIEW));
 		}
 	}
 
@@ -134,7 +156,9 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 
 	@Override
 	public void rejectPackages(final String siteId, final Collection<Long> packageIds, final String comment)
-		throws ServiceLayerException, AuthenticationException {
+			throws ServiceLayerException, AuthenticationException {
+		checkReviewPermissions(siteId, packageIds);
+
 		for (Long packageId : packageIds) {
 			doReviewPackage(siteId, packageId, p -> {
 				p.setApprovalState(REJECTED);
@@ -252,6 +276,10 @@ public class WorkflowServiceInternalImpl implements WorkflowService, Application
 
 	public void setRetryingDatabaseOperationFacade(final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade) {
 		this.retryingDatabaseOperationFacade = retryingDatabaseOperationFacade;
+	}
+
+	public void setPermissionEvaluator(final PermissionEvaluator permissionEvaluator) {
+		this.permissionEvaluator = permissionEvaluator;
 	}
 
 	private interface PackageReview {

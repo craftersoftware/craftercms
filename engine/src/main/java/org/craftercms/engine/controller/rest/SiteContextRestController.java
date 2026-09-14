@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller for operations related for the {@link org.craftercms.engine.service.context.SiteContext}
@@ -64,14 +65,14 @@ public class SiteContextRestController extends RestControllerBase {
 		this.contextManager = contextManager;
 	}
 
-	@GetMapping(value = URL_CONTEXT_ID)
+	@GetMapping(value = URL_CONTEXT_ID, produces = APPLICATION_JSON_VALUE)
 	public Map<String, String> getContextId(@RequestParam String token) throws InvalidManagementTokenException {
 		validateToken(token);
 
 		return Collections.singletonMap(MODEL_ATTR_ID, SiteContext.getCurrent().getContext().getId());
 	}
 
-	@GetMapping(value = URL_DESTROY)
+	@GetMapping(value = URL_DESTROY, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> destroy(@RequestParam String token) throws InvalidManagementTokenException {
 		validateToken(token);
 
@@ -83,7 +84,7 @@ public class SiteContextRestController extends RestControllerBase {
 			"for the site is received in the future, a new site context will be created and registered.", siteName));
 	}
 
-	@GetMapping(URL_REBUILD_ALL)
+	@GetMapping(value = URL_REBUILD_ALL, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> rebuildAll(@RequestParam String token) throws InvalidManagementTokenException {
 		validateToken(token);
 		contextManager.startRebuildAll();
@@ -91,7 +92,7 @@ public class SiteContextRestController extends RestControllerBase {
 		return createResponseMessage("Started rebuild of all site contexts");
 	}
 
-	@GetMapping(value = URL_REBUILD)
+	@GetMapping(value = URL_REBUILD, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> rebuild(HttpServletRequest request, @RequestParam String token)
 		throws InvalidManagementTokenException {
 		validateToken(token);
@@ -110,7 +111,7 @@ public class SiteContextRestController extends RestControllerBase {
 		}
 	}
 
-	@GetMapping(URL_GRAPHQL + URL_REBUILD)
+	@GetMapping(value = URL_GRAPHQL + URL_REBUILD, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> rebuildSchema(HttpServletRequest request, @RequestParam String token)
 		throws InvalidManagementTokenException {
 		validateToken(token);
@@ -129,7 +130,7 @@ public class SiteContextRestController extends RestControllerBase {
 		}
 	}
 
-	@GetMapping(URL_STATUS)
+	@GetMapping(value = URL_STATUS, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> getStatus(@RequestParam String token) throws InvalidManagementTokenException {
 		validateToken(token);
 

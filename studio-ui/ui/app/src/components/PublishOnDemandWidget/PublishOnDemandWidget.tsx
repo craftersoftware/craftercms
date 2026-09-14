@@ -134,7 +134,7 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
 	const [selectedMode, setSelectedMode] = useState<PublishOnDemandMode>(() => pickMode(mode));
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const permissionsBySite = usePermissionsBySite();
-	const hasPublishPermission = permissionsBySite[siteId]?.includes('publish_approve');
+	const hasPublishPermission = permissionsBySite[siteId]?.includes('publish_review');
 	const [hasInitialPublish, setHasInitialPublish] = useState(false);
 	const initialPublishItem = useContentItem('/site/website/index.xml');
 	const [initialPublishingTarget, setInitialPublishingTarget] = useState(null);

@@ -94,7 +94,11 @@ gradle.taskGraph.whenReady { graph ->
 			if (name == ':test') {
 				return rootProject.path
 			}
-			return name.substring(0, name.length() - ':test'.length())
+			def projectPath = name.substring(0, name.length() - ':test'.length())
+			if (!projectPath.startsWith(':')) {
+				projectPath = ':'+ projectPath
+			}
+			projectPath
 		}.toSet()
 
 	graph.allTasks.findAll { it instanceof Test }.each { task ->

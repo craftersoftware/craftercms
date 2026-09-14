@@ -54,7 +54,7 @@ public class SiteSearchController extends RestControllerBase {
 		this.searchService = searchService;
 	}
 
-	@PostMapping(URL_SEARCH)
+	@PostMapping(value = URL_SEARCH, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public void search(@RequestBody Map<String, Object> request, @RequestParam Map<String, Object> parameters,
 			   HttpServletResponse response)
 		throws IOException {

@@ -349,18 +349,23 @@ export function processPathMacros(dependencies: {
 	return processedPath;
 }
 
-export const pickExtensionForItemType = (systemType: string, name?: string) => {
+export const pickExtensionForItemType = (systemType: string, name?: string, extension?: string) => {
 	if (systemType === 'asset') {
 		return getFileExtension(name);
+	} else if (systemType === 'controller') {
+		return 'groovy';
+	} else if (extension) {
+		return extension.replace(/^\./, '');
 	} else {
-		return systemType === 'controller' ? `groovy` : `ftl`;
+		return 'ftl';
 	}
 };
 
-export const getFileNameWithExtensionForItemType = (type: string, name: string) =>
-	`${name}.${pickExtensionForItemType(type)}`
-		.replace(/(\.groovy)(\.groovy)|(\.ftl)(\.ftl)/g, '$1$3')
-		.replace(/\.{2,}/g, '.');
+export const getFileNameWithExtensionForItemType = (type: string, name: string, extension?: string) => {
+	const pickedExtension = pickExtensionForItemType(type, name, extension);
+	const normalizedName = name.replace(new RegExp(`\\.${pickedExtension}$`), '');
+	return `${normalizedName}.${pickedExtension}`.replace(/\.{2,}/g, '.');
+};
 
 /**
  * Determines if the given path corresponds to a page path.

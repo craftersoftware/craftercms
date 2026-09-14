@@ -19,10 +19,13 @@ package org.craftercms.studio.model.rest;
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.studio.api.v1.constant.GitRepositories;
 
+import jakarta.validation.constraints.NotNull;
+
 public class UnlockRepositoryRequest {
 
 	@ValidSiteId
 	private String siteId;
+	@NotNull
 	private GitRepositories repositoryType;
 
 	public String getSiteId() {

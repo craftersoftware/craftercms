@@ -74,6 +74,7 @@ import { ViewPackagesDialogStateProps } from '../components/ViewPackagesDialog';
 import type { FolderMoveAlertDialogStateProps } from '../components/FolderMoveAlertDialog/FolderMoveAlertDialog';
 import type { PublishingStatus } from './Publishing';
 import type { Archetype } from '../components/ContentTypeManagement/descriptors/archetypes';
+import type { DescriptorContentType } from '../components/ContentTypeManagement/utils';
 
 export type HighlightMode = 'all' | 'move';
 
@@ -277,6 +278,8 @@ export interface GlobalState {
 		references: LookupTable;
 		xml: string;
 		remoteGitBranch: string;
+		/** Custom/config control descriptors keyed by control type id (from UI config). */
+		controls: LookupTable<DescriptorContentType>;
 	};
 	pathNavigator: LookupTable<PathNavigatorStateProps>;
 	pathNavigatorTree: LookupTable<PathNavigatorTreeStateProps>;

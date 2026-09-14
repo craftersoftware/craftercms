@@ -69,9 +69,7 @@ public class HasAllPermissionsAnnotationHandler extends AbstractPermissionAnnota
 		}
 
 		try {
-			for (String action : actions) {
-				allowed = allowed && permissionEvaluator.isAllowed(securedResource, action);
-			}
+			allowed = PermissionCheckingUtils.hasAllPermissions(permissionEvaluator, securedResource, actions);
 		} catch (PermissionException e) {
 			throw new PermissionException(ERROR_KEY_EVALUATION_FAILED, e);
 		}

@@ -19,7 +19,7 @@ package org.craftercms.studio.impl.v2.repository;
 import org.craftercms.commons.git.utils.GitUtils;
 import org.craftercms.studio.api.v1.constant.GitRepositories;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.service.site.SitesService;

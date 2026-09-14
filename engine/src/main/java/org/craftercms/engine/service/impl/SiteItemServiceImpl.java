@@ -233,6 +233,11 @@ public class SiteItemServiceImpl implements SiteItemService {
 		}
 	}
 
+	@Override
+	public boolean exists(String path) {
+		return storeService.exists(getSiteContext().getContext(), path);
+	}
+
 	protected SiteContext getSiteContext() {
 		SiteContext siteContext = SiteContext.getCurrent();
 		if (siteContext == null) {

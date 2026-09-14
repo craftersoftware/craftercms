@@ -21,7 +21,7 @@ import { createEpicMiddleware, Epic } from 'redux-observable';
 import { StandardAction } from '../models/StandardAction';
 import epic from './epics/root';
 import { BehaviorSubject, forkJoin, fromEvent, Observable, of } from 'rxjs';
-import { filter, map, switchMap, take, tap } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, take, tap } from 'rxjs/operators';
 import { fetchGlobalProperties, me } from '../services/users';
 import { exists, fetchAll } from '../services/sites';
 import LookupTable from '../models/LookupTable';
@@ -225,7 +225,9 @@ export function fetchStateInitialization(): Observable<{
 				? exists(siteCookieValue).pipe(
 						// If the site doesn't exist, delete the cookie so it doesn't cause further issues
 						tap((siteExists) => !siteExists && removeSiteCookie()),
-						map((siteExists) => (siteExists ? siteCookieValue : null))
+						map((siteExists) => (siteExists ? siteCookieValue : null)),
+						// If the exists check fails (e.g. network/API error), don't break store init
+						catchError(() => of(null))
 					)
 				: of(null),
 		activeEnvironment: fetchActiveEnvironment()

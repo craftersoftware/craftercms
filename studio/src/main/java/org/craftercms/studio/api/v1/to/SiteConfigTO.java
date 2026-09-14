@@ -37,11 +37,6 @@ public class SiteConfigTO implements Serializable {
 	 **/
 	protected RepositoryConfigTO repositoryConfig = null;
 
-	/**
-	 * default timezone
-	 **/
-	protected String timezone = null;
-
 	protected boolean stagingEnvironmentEnabled;
 
 	/**
@@ -53,11 +48,6 @@ public class SiteConfigTO implements Serializable {
 	 * live environment
 	 **/
 	protected String liveEnvironment;
-
-	/**
-	 * sandbox branch
-	 **/
-	protected String sandboxBranch = null;
 
 	/**
 	 * Map of fields &amp; boosting to use in search
@@ -101,22 +91,6 @@ public class SiteConfigTO implements Serializable {
 
 	public void setRepositoryConfig(RepositoryConfigTO repositoryConfig) {
 		this.repositoryConfig = repositoryConfig;
-	}
-
-	public void setTimezone(String timezone) {
-		this.timezone = timezone;
-	}
-
-	public String getTimezone() {
-		return timezone;
-	}
-
-	public String getSandboxBranch() {
-		return sandboxBranch;
-	}
-
-	public void setSandboxBranch(String sandboxBranch) {
-		this.sandboxBranch = sandboxBranch;
 	}
 
 	public String getStagingEnvironment() {

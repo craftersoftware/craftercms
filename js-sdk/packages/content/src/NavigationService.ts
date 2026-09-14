@@ -32,16 +32,30 @@ type NavBreadcrumbReturnType = Observable<NavigationItem[]>;
 export function getNavTree(path: string): NavTreeReturnType;
 export function getNavTree(path: string, depth: number): NavTreeReturnType;
 export function getNavTree(path: string, depth: number, currentPageUrl: string): NavTreeReturnType;
-export function getNavTree(path: string, depth: number, currentPageUrl: string, config: CrafterConfig): NavTreeReturnType;
-export function getNavTree(path: string, depth: number = 1, currentPageUrl: string = '', config?: CrafterConfig): NavTreeReturnType {
-  config = crafterConf.mix(config);
-  const requestURL = composeUrl(config, config.endpoints.GET_NAV_TREE);
-  return SDKService.httpGet(requestURL, {
-    crafterSite: config.site,
-    currentPageUrl,
-    url: path,
-    depth
-  }, config.headers);
+export function getNavTree(
+	path: string,
+	depth: number,
+	currentPageUrl: string,
+	config: CrafterConfig
+): NavTreeReturnType;
+export function getNavTree(
+	path: string,
+	depth: number = 1,
+	currentPageUrl: string = '',
+	config?: CrafterConfig
+): NavTreeReturnType {
+	config = crafterConf.mix(config);
+	const requestURL = composeUrl(config, config.endpoints.GET_NAV_TREE);
+	return SDKService.httpGet(
+		requestURL,
+		{
+			crafterSite: config.site,
+			currentPageUrl,
+			url: path,
+			depth
+		},
+		config.headers
+	);
 }
 
 /**
@@ -53,21 +67,25 @@ export function getNavBreadcrumb(path: string): NavBreadcrumbReturnType;
 export function getNavBreadcrumb(path: string, root: string): NavBreadcrumbReturnType;
 export function getNavBreadcrumb(path: string, root: string, config: CrafterConfig): NavBreadcrumbReturnType;
 export function getNavBreadcrumb(path: string, root: string = '', config?: CrafterConfig): NavBreadcrumbReturnType {
-  config = crafterConf.mix(config);
-  const requestURL = composeUrl(config, config.endpoints.GET_BREADCRUMB);
-  return SDKService.httpGet(requestURL, {
-    crafterSite: config.site,
-    url: path,
-    root
-  }, config.headers);
+	config = crafterConf.mix(config);
+	const requestURL = composeUrl(config, config.endpoints.GET_BREADCRUMB);
+	return SDKService.httpGet(
+		requestURL,
+		{
+			crafterSite: config.site,
+			url: path,
+			root
+		},
+		config.headers
+	);
 }
 
 /**
  * Navigation Service API
  */
 export const NavigationService = {
-  getNavTree,
-  getNavBreadcrumb
+	getNavTree,
+	getNavBreadcrumb
 };
 
 export default NavigationService;

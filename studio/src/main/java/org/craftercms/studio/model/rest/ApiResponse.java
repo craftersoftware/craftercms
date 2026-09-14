@@ -54,6 +54,8 @@ public class ApiResponse {
 		"You don't have permission to perform this task, please contact your administrator", StringUtils.EMPTY);
 	public static final ApiResponse PEER_REVIEW_CHECK_FAILED = new ApiResponse(2002, "Peer-review check failed",
 		"Users are not allowed to approve their own packages when peer-review is enabled", StringUtils.EMPTY);
+	public static final ApiResponse PACKAGE_SUBMITTER_CHECK_FAILED = new ApiResponse(2003, "Package submitter check failed",
+		"Users are not allowed to update publish packages that they did not submit", StringUtils.EMPTY);
 
 	// 4000 - 5000
 	public static final ApiResponse GROUP_NOT_FOUND = new ApiResponse(4000, "Group not found",

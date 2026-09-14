@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.Collections;
 import java.util.Map;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller for operations related to site mappings.
@@ -45,7 +46,7 @@ public class SiteMappingsRestController {
 		this.siteResolver = siteResolver;
 	}
 
-	@RequestMapping(value = URL_RELOAD, method = RequestMethod.GET)
+	@RequestMapping(value = URL_RELOAD, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Map<String, String> reloadMappings(HttpServletResponse response) {
 		if (siteResolver instanceof ReloadableMappingsSiteResolver) {
 			((ReloadableMappingsSiteResolver) siteResolver).reloadMappings();

@@ -101,7 +101,10 @@
 	<!--									-->
 	<!-- ////////////////////////////////// -->
 
-	<util:list id="crafter.defaultItemPredicates"/>
+	<util:list id="crafter.defaultItemPredicates">
+		<!-- Allow items matching the include regexes only -->
+		<ref bean="crafter.includeByUrlItemPredicate"/>
+	</util:list>
 
 	<bean id="crafter.cacheTemplate" class="org.craftercms.core.util.cache.impl.NoopCacheTemplate">
 		<constructor-arg name="cacheService" ref="crafter.cacheService"/>

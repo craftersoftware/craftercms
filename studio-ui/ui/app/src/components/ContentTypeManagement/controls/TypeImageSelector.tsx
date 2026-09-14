@@ -18,7 +18,7 @@ import OutlinedInput, { OutlinedInputProps } from '@mui/material/OutlinedInput';
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
@@ -28,25 +28,35 @@ import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { TypeBuilderControl } from '../utils';
+import type { ImageRestrictions } from '../../ImageEditorDialog/types';
+import { showImageCropDialog } from '../../FormsEngine/lib/controlHelpers';
+import { validateImageRestrictions } from '../../../utils/content';
+import { showSystemNotification } from '../../../state/actions/system';
+import { ensureSingleSlash } from '../../../utils/string';
+import { getFileNameFromPath } from '../../../utils/path';
+import { uploadFile } from '../../../services/content';
+import { pushErrorDialog } from '../../../utils/system';
 
 export interface TypeImageSelectorProps extends TypeBuilderControl {
 	value: string;
 }
 
-// TODO: in legacy - there are image size restrictions, and the cropper was shown if the image was too large
-/*
-	WIDTHCONSTRAINS = 775;
-	HEIGHTCONSTRAINS = 767;
-*/
+/** Content-type thumbnail size caps (WIDTHCONSTRAINS / HEIGHTCONSTRAINS). */
+const TYPE_IMAGE_RESTRICTIONS: ImageRestrictions = {
+	maxWidth: 775,
+	maxHeight: 767
+};
 
 /**
  * Enables image selection through the ImageUploadDialog.
+ * Opens ImageEditorDialog to crop when the upload exceeds the size restrictions.
  */
 export function TypeImageSelector(props: TypeImageSelectorProps) {
 	const { field, value, setValue, autoFocus } = props;
 	const htmlId = useId();
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const basePath = '/config/studio/content-types';
 	const stableFormContext = useStableFormContext();
 	// stableFormContext.originalValues is of type `ContentType`, and `id` is the current contentTypeId.
@@ -70,20 +80,60 @@ export function TypeImageSelector(props: TypeImageSelectorProps) {
 					fileTypes: ['image/*'],
 					onClose: () => dispatch(popDialog({ id })),
 					onUploadComplete: (result) => {
+						dispatch(popDialog({ id }));
 						if (result.successful.length) {
 							const uploaded = result.successful[0];
-							setValue(uploaded.name);
+							const path = uploaded.meta?.path ?? ensureSingleSlash(`${basePath}${contentTypeId}/${uploaded.name}`);
+							const mimeType = uploaded.type;
+							// Config-folder paths aren't loadable as img src; use a blob URL for validation / cropper display.
+							const objectUrl = URL.createObjectURL(uploaded.data);
+							validateImageRestrictions(objectUrl, TYPE_IMAGE_RESTRICTIONS, mimeType)
+								.then((meetsRestrictions) => {
+									if (meetsRestrictions) {
+										URL.revokeObjectURL(objectUrl);
+										setValue(uploaded.name);
+									} else {
+										// Blob URLs force writeContent: false in showImageCropDialog; upload the cropped result ourselves.
+										showImageCropDialog({
+											dispatch,
+											path: objectUrl,
+											mimeType,
+											restrictions: TYPE_IMAGE_RESTRICTIONS,
+											writeContent: false,
+											onCrop: (blob: Blob) => {
+												URL.revokeObjectURL(objectUrl);
+												const formData = new FormData();
+												formData.append('file', blob, uploaded.name);
+												formData.append('path', path);
+												uploadFile(siteId, formData).subscribe({
+													next: () => setValue(getFileNameFromPath(path)),
+													error: ({ response }) => {
+														dispatch(pushErrorDialog({ props: { error: response?.response } }));
+													}
+												});
+											}
+										});
+									}
+								})
+								.catch(() => {
+									URL.revokeObjectURL(objectUrl);
+									dispatch(
+										showSystemNotification({
+											message: formatMessage({ defaultMessage: 'Unable to validate image restrictions.' })
+										})
+									);
+								});
 						} else if (result.failed.length) {
-							// Show error notification or alert
-							dispatch({
-								type: 'SHOW_SYSTEM_NOTIFICATION',
-								payload: {
-									message: `Failed to upload image: ${result.failed[0]?.name}`,
+							dispatch(
+								showSystemNotification({
+									message: formatMessage(
+										{ defaultMessage: 'Failed to upload image: {name}' },
+										{ name: result.failed[0]?.name }
+									),
 									options: { variant: 'error' }
-								}
-							});
+								})
+							);
 						}
-						dispatch(popDialog({ id }));
 					}
 				}
 			})

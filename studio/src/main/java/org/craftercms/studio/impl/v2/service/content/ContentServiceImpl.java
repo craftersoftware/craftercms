@@ -37,15 +37,16 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.ContentPath;
-import org.craftercms.studio.api.v2.annotation.RequireContentExists;
-import org.craftercms.studio.api.v2.annotation.RequireSiteBootstrapComplete;
-import org.craftercms.studio.api.v2.annotation.RequireSiteReady;
-import org.craftercms.studio.api.v2.annotation.SiteId;
 import org.craftercms.studio.api.v2.annotation.policy.ActionSourcePath;
 import org.craftercms.studio.api.v2.annotation.policy.ActionTargetFilename;
 import org.craftercms.studio.api.v2.annotation.policy.ActionTargetPath;
 import org.craftercms.studio.api.v2.annotation.policy.ValidateAction;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireContentExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteBootstrapComplete;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPath;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPathList;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.User;
 import org.craftercms.studio.api.v2.dal.item.ContentItem;
@@ -64,7 +65,6 @@ import org.craftercms.studio.model.rest.content.WriteContentResult;
 import org.craftercms.studio.model.rest.content.order.ItemOrder;
 import org.craftercms.studio.model.rest.content.order.ReorderItemRequest;
 import org.craftercms.studio.permissions.CompositePermission;
-import static org.craftercms.studio.permissions.CompositePermissionResolverImpl.PATH_LIST_RESOURCE_ID;
 import org.craftercms.studio.permissions.PermissionOrOwnership;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_RESOURCE_ID;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_DELETE;
@@ -107,7 +107,7 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteBootstrapComplete
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_READ)
 	public List<LightItem> getChildItems(@SiteId String siteId,
-										 @ProtectedResourceId(PATH_LIST_RESOURCE_ID) List<String> paths) throws SiteNotFoundException {
+										 @ContentPathList List<String> paths) throws SiteNotFoundException {
 		return contentServiceInternal.getChildItems(siteId, paths);
 	}
 
@@ -116,7 +116,7 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteBootstrapComplete
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_DELETE)
 	public DeleteContentResult deleteContent(@SiteId String siteId,
-											 @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Set<String> paths,
+											 @ContentPathList Set<String> paths,
 											 String publishTitle,
 											 String publishComment)
 			throws ServiceLayerException, AuthenticationException, UserNotFoundException {
@@ -128,7 +128,7 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteBootstrapComplete
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_GET_CHILDREN)
 	public GetChildrenByPathsBulkResult getChildrenByPaths(@SiteId String siteId,
-														   @ProtectedResourceId(PATH_LIST_RESOURCE_ID) List<String> paths,
+														   @ContentPathList List<String> paths,
 														   Map<String, PathParams> pathParams)
 			throws ServiceLayerException, UserNotFoundException {
 		return contentServiceInternal.getChildrenByPaths(siteId, paths, pathParams);
@@ -174,7 +174,7 @@ public class ContentServiceImpl implements ContentService {
 	@RequireSiteBootstrapComplete
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_GET_CHILDREN)
 	public List<ContentItem> getContentItemsByPath(@SiteId String siteId,
-												   @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Collection<String> paths,
+												   @ContentPathList Collection<String> paths,
 												   boolean preferContent)
 			throws ServiceLayerException, UserNotFoundException {
 		return contentServiceInternal.getContentItemsByPath(siteId, paths, preferContent);

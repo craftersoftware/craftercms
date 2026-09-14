@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
  *     <li>OR the user is NOT the submitter of the package.</li>
  * </ul>
  * This annotation should be used in conjunction with {@link HasPermission} (or similar) to ensure the
- * user has {@code PERMISSION_PUBLISH_APPROVE} permission.
+ * user has {@code PERMISSION_PUBLISH_REVIEW} permission.
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

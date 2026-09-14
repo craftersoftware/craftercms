@@ -16,12 +16,12 @@
 
 package org.craftercms.studio.api.v2.annotation.publish;
 
-import org.craftercms.studio.api.v2.annotation.RequireSiteExists;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
 
 /**
  * Annotation to mark the method or class that requires a package to exist

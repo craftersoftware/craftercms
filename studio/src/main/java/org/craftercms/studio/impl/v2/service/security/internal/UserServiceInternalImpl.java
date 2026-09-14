@@ -377,7 +377,6 @@ public class UserServiceInternalImpl implements UserService, ApplicationEventPub
 			if (oldUser.isEnabled() && !user.isEnabled()) {
 				eventPublisher.publishEvent(new DisabledUserEvent(List.of(oldUser.getId())));
 			} else {
-				// Force a re-authentication if the user is currently logged-in
 				eventPublisher.publishEvent(new UserUpdatedEvent(oldUser.getId()));
 			}
 		} catch (Exception e) {

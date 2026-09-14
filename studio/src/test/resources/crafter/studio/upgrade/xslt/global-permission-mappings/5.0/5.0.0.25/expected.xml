@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  *
+  * This program is free software: you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 3 as published by
+  * the Free Software Foundation.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<!--
+    This file contains global permissions configuration for Crafter Studio. Permissions per site are managed
+    within Crafter Studio's UI.
+
+    The structure of this file is:
+    <permissions>
+        <site id="###GLOBAL###"> (global management)
+            <role name="">
+                <rule regex="/.*">
+                    <allowed-permissions>
+                        <permission>Read</permission>
+                        <permission>Write</permission>
+                        <permission>Delete</permission>
+                        <permission>Create Folder</permission>
+                         <permission>Publish</permission>
+                    </allowed-permissions>
+                </rule>
+            </role>
+        </site>
+    </permissions>
+
+    This binds a set of permissions to a role globally for the entire application.
+-->
+<permissions>
+	<role name="system_admin">
+		<rule regex="/.*">
+			<allowed-permissions>
+				<permission>content_read</permission>
+				<permission>content_copy</permission>
+				<permission>content_write</permission>
+				<permission>folder_create</permission>
+				<permission>create_site</permission>
+				<permission>duplicate_site</permission>
+				<permission>read_groups</permission>
+				<permission>create_groups</permission>
+				<permission>update_groups</permission>
+				<permission>delete_groups</permission>
+				<permission>read_users</permission>
+				<permission>create_users</permission>
+				<permission>update_users</permission>
+				<permission>read_cluster</permission>
+				<permission>audit_log</permission>
+				<permission>read_logs</permission>
+				<permission>add_remote</permission>
+				<permission>list_remotes</permission>
+				<permission>pull_from_remote</permission>
+				<permission>push_to_remote</permission>
+				<permission>remove_remote</permission>
+				<permission>s3_read</permission>
+				<permission>s3_write</permission>
+				<permission>content_delete</permission>
+				<permission>webdav_read</permission>
+				<permission>webdav_write</permission>
+				<permission>write_configuration</permission>
+				<permission>write_global_configuration</permission>
+				<permission>encryption_tool</permission>
+				<permission>get_children</permission>
+				<permission>edit_site</permission>
+				<permission>manage_access_token</permission>
+				<permission>search_plugins</permission>
+				<permission>list_plugins</permission>
+				<permission>install_plugins</permission>
+				<permission>remove_plugins</permission>
+				<permission>delete_site</permission>
+				<permission>unlock_repository</permission>
+				<permission>item_unlock</permission>
+				<permission>publish_status</permission>
+				<permission>repair_repository</permission>
+				<permission>content_search</permission>
+				<permission>view_logs</permission>
+				<permission>view_log_levels</permission>
+				<permission>configure_log_levels</permission>
+				<permission>content_create</permission>
+				<permission>publish_get_queue</permission>
+				<permission>change_content_type</permission>
+				<permission>site_status</permission>
+				<permission>resolve_conflict</permission>
+				<permission>site_diff_conflicted_file</permission>
+				<permission>commit_resolution</permission>
+				<permission>cancel_failed_pull</permission>
+				<permission>publish_cancel</permission>
+				<permission>publish_request</permission>
+				<permission>publish_approve</permission>
+				<permission>publish_reject</permission>
+				<permission>system_properties_read</permission>
+				<permission>system_properties_manage</permission>
+			</allowed-permissions>
+		</rule>
+	</role>
+	<role name="site_admin">
+		<rule regex="/.*">
+			<allowed-permissions>
+				<permission>search_plugins</permission>
+				<permission>audit_log</permission>
+				<permission>read_users</permission>
+			</allowed-permissions>
+		</rule>
+	</role>
+	<role name="site_developer">
+		<rule regex="/.*">
+			<allowed-permissions>
+				<permission>audit_log</permission>
+				<permission>read_users</permission>
+			</allowed-permissions>
+		</rule>
+	</role>
+</permissions>

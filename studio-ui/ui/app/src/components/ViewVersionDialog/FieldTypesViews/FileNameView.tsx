@@ -16,14 +16,14 @@
 
 import React from 'react';
 import { ViewComponentBaseProps } from '../utils';
-import { EditorProps } from '@monaco-editor/react';
+import { MonacoEditorProps } from '../../MonacoEditor';
 import { fromString } from '../../../utils/xml';
 import { getContentFileNameFromPath } from '../../../utils/content';
 import TextView from './TextView';
 import { XmlKeys } from '../../FormsEngine/lib/formConsts';
 
 export interface FileNameViewProps extends Pick<ViewComponentBaseProps, 'xml'> {
-	editorProps?: EditorProps;
+	editorProps?: MonacoEditorProps;
 }
 
 export function FileNameView(props: FileNameViewProps) {

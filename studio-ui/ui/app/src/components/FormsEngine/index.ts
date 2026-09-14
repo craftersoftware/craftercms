@@ -19,3 +19,5 @@ export { default } from './FormsEngine';
 export * from './FormsEngine';
 
 export * from './FormsEngineDialog';
+
+export * from './dataSources';

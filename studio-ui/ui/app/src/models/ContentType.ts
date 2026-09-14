@@ -153,12 +153,20 @@ export interface NewContentTypeField extends ContentTypeField {
 	NEW?: true;
 }
 
+export interface FormDefinitionPlugin {
+	type: string;
+	name: string;
+	filename: string;
+	pluginId: string;
+}
+
 export interface DataSource {
 	id: string;
 	type: string;
 	title: string;
 	interface: string;
 	properties: LookupTable;
+	plugin?: FormDefinitionPlugin;
 }
 
 export interface NewDataSource extends DataSource {
@@ -254,12 +262,7 @@ export interface LegacyFormDefinitionField {
 	constraints: { constraint: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	fields?: { field: LegacyFormDefinitionField | Array<LegacyFormDefinitionField> };
-	plugin: {
-		type: string;
-		name: string;
-		filename: string;
-		pluginId: string;
-	};
+	plugin: FormDefinitionPlugin;
 	// Repeat groups carry these both at the top and inside "properties" (duplicated)
 	minOccurs?: string;
 	maxOccurs?: string;
@@ -288,6 +291,7 @@ export interface LegacyDataSource {
 	type: string; // data source id
 	interface: string; // ?
 	properties: { property: LegacyFormDefinitionProperty[] | LegacyFormDefinitionProperty };
+	plugin?: FormDefinitionPlugin;
 }
 
 // Note: nearly identical to `LegacyFormDefinition`

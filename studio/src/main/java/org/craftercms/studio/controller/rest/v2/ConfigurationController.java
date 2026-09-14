@@ -29,7 +29,7 @@ import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
-import org.craftercms.studio.api.v2.annotation.LogExecutionTime;
+import org.craftercms.studio.api.v2.annotation.logging.LogExecutionTime;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
@@ -44,6 +44,7 @@ import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KE
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_HISTORY;
 import org.craftercms.studio.model.config.TranslationConfiguration;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import org.craftercms.studio.model.rest.ConfigurationHistory;
 import org.craftercms.studio.model.rest.Result;
 import org.craftercms.studio.model.rest.ResultOne;
@@ -70,7 +71,7 @@ public class ConfigurationController {
 		this.studioConfiguration = studioConfiguration;
 	}
 
-	@GetMapping(CLEAR_CACHE)
+	@GetMapping(value = CLEAR_CACHE, produces = APPLICATION_JSON_VALUE)
 	public Result clearCache(@ValidSiteId @RequestParam String siteId) {
 		configurationService.invalidateConfiguration(siteId);
 		var result = new Result();
@@ -78,7 +79,7 @@ public class ConfigurationController {
 		return result;
 	}
 
-	@GetMapping(GET_CONFIGURATION)
+	@GetMapping(value = GET_CONFIGURATION, produces = APPLICATION_JSON_VALUE)
 	@LogExecutionTime
 	public ResultOne<String> getConfiguration(@ValidSiteId @RequestParam(name = "siteId", required = true) String siteId,
 						  @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "module", required = true) String module,
@@ -98,7 +99,7 @@ public class ConfigurationController {
 		return result;
 	}
 
-	@PostMapping(WRITE_CONFIGURATION)
+	@PostMapping(value = WRITE_CONFIGURATION, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result writeConfiguration(@Validated @RequestBody WriteConfigurationRequest wcRequest)
 		throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		InputStream is = IOUtils.toInputStream(wcRequest.getContent(), UTF_8);
@@ -114,7 +115,7 @@ public class ConfigurationController {
 		return result;
 	}
 
-	@GetMapping(GET_CONFIGURATION_HISTORY)
+	@GetMapping(value = GET_CONFIGURATION_HISTORY, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<ConfigurationHistory> getConfigurationHistory(@ValidSiteId @RequestParam(name = "siteId", required = true) String siteId,
 								       @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "module", required = true) String module,
 								       @ValidConfigurationPath @RequestParam(name = "path", required = true) String path,
@@ -128,7 +129,7 @@ public class ConfigurationController {
 		return result;
 	}
 
-	@GetMapping(TRANSLATION)
+	@GetMapping(value = TRANSLATION, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<TranslationConfiguration> getTranslationConfiguration(@ValidSiteId @RequestParam String siteId) throws ServiceLayerException {
 		ResultOne<TranslationConfiguration> result = new ResultOne<>();
 		result.setEntity(RESULT_KEY_CONFIG, configurationService.getTranslationConfiguration(siteId));

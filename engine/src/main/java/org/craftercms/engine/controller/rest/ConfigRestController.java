@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.Map;
 
 import static java.util.Collections.singletonMap;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 
 /**
@@ -48,7 +49,7 @@ public class ConfigRestController {
 	/**
 	 * Indicates if the system is currently configured for preview
 	 */
-	@GetMapping(URL_MODE_PREVIEW)
+	@GetMapping(value = URL_MODE_PREVIEW, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Boolean> getModePreview() {
 		return singletonMap("preview", modePreview);
 	}

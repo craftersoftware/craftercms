@@ -52,8 +52,6 @@ public final class StudioConstants {
 
 	public static final String CONTENT_TYPE = "content-type";
 
-	public static final String PERMISSION_VALUE_READ = "read";
-
 	/**
 	 * Repository Constants
 	 */
@@ -131,20 +129,15 @@ public final class StudioConstants {
 	public static final String SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT = "enable-staging-environment";
 	public static final String SITE_CONFIG_XML_ELEMENT_STAGING_ENVIRONMENT = "staging-environment";
 	public static final String SITE_CONFIG_XML_ELEMENT_LIVE_ENVIRONMENT = "live-environment";
-	public static final String SITE_CONFIG_ELEMENT_SANDBOX_BRANCH = "sandbox-branch";
 	public static final String SITE_CONFIG_ELEMENT_PLUGIN_FOLDER_PATTERN = "plugin-folder-pattern";
 	public static final String SITE_CONFIG_ELEMENT_SITE_URLS = "site-urls";
 	public static final String SITE_CONFIG_ELEMENT_AUTHORING_URL = "authoring-url";
-	public static final String SITE_CONFIG_ELEMENT_STAGING_URL = "staging-url";
 	public static final String SITE_CONFIG_ELEMENT_LIVE_URL = "live-url";
 	public static final String SITE_CONFIG_ELEMENT_ADMIN_EMAIL_ADDRESS = "admin-email-address";
 	public static final String SITE_CONFIG_XML_ELEMENT_WORKFLOW = "workflow";
 	public static final String SITE_CONFIG_XML_ELEMENT_PUBLISHER = "publisher";
 	public static final String SITE_CONFIG_XML_ELEMENT_REQUIRE_PEER_REVIEW = "requirePeerReview";
 	public static final String SITE_CONFIG_XML_ELEMENT_PROTECTED_FOLDER_PATTERNS = "protected-folders-patterns/pattern";
-	public static final String SITE_CONFIG_XML_ELEMENT_LOCALE = "locale";
-	public static final String SITE_CONFIG_XML_ELEMENT_DATE_TIME_FORMAT_OPTIONS = "dateTimeFormatOptions";
-	public static final String SITE_CONFIG_XML_ELEMENT_TIME_ZONE = "timeZone";
 	public static final String SITE_CONFIG_XML_ELEMENT_CONTENT_MONITORING = "contentMonitoring";
 
 	/**

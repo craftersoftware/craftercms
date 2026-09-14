@@ -117,6 +117,11 @@ export function UploadDialogContainer(props: UploadDialogContainerProps) {
 			locale: {
 				strings: { noDuplicates: formatMessage(translations.noDuplicates) },
 				pluralize: (n: number) => (n === 1 ? 0 : 1)
+			},
+			onBeforeFileAdded: () => {
+				// There's a default duplicate check in Uppy (if an item was already added in current session). We're overriding this behavior to handle the duplicate files
+				// later when the file is added to the list of files to upload.
+				return true;
 			}
 		}).use(XHRUpload, xhrOptions);
 		onFileAdded &&

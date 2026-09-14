@@ -107,7 +107,7 @@ public class WorkflowController {
 		return toRet;
 	}
 
-	@PostMapping(value = ITEM_STATES, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = ITEM_STATES, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public Result updateItemStates(@Valid @RequestBody ItemStatesPostRequestBody requestBody)
 		throws SiteNotFoundException {
 		ItemStatesUpdate update = requestBody.getUpdate();
@@ -120,7 +120,7 @@ public class WorkflowController {
 		return result;
 	}
 
-	@PostMapping(value = UPDATE_ITEM_STATES_BY_QUERY, produces = APPLICATION_JSON_VALUE)
+	@PostMapping(value = UPDATE_ITEM_STATES_BY_QUERY, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
 	public Result updateItemStatesByQuery(@Valid @RequestBody UpdateItemStatesByQueryRequestBody requestBody)
 		throws SiteNotFoundException, InvalidParametersException {
 		UpdateItemStatesByQueryRequestBody.Query query = requestBody.getQuery();
@@ -150,7 +150,7 @@ public class WorkflowController {
 		return result;
 	}
 
-	@PostMapping(value = PATH_PARAM_SITE + APPROVE, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = PATH_PARAM_SITE + APPROVE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result approve(@Valid @PathVariable @NotEmpty @ValidSiteId String site,
 						  @Valid @RequestBody ApproveRequestBody request)
 		throws UserNotFoundException, ServiceLayerException, AuthenticationException {
@@ -162,7 +162,7 @@ public class WorkflowController {
 		return result;
 	}
 
-	@PostMapping(value = PATH_PARAM_SITE + REJECT, consumes = APPLICATION_JSON_VALUE)
+	@PostMapping(value = PATH_PARAM_SITE + REJECT, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result reject(@Valid @PathVariable @NotEmpty @ValidSiteId String site,
 						 @Valid @RequestBody ReviewPackageRequestBody rejectRequestBody)
 		throws ServiceLayerException, AuthenticationException {
@@ -173,7 +173,7 @@ public class WorkflowController {
 		return result;
 	}
 
-	@PostMapping(PATH_PARAM_SITE + CANCEL)
+	@PostMapping(value = PATH_PARAM_SITE + CANCEL, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result cancel(@Valid @PathVariable @NotEmpty @ValidSiteId String site,
 						 @Valid @RequestBody ReviewPackageRequestBody cancelPackageRequest)
 		throws ServiceLayerException, AuthenticationException {

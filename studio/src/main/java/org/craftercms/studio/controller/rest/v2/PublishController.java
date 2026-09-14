@@ -30,6 +30,7 @@ import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v2.dal.PublishStatus;
 import org.craftercms.studio.api.v2.dal.publish.PublishItemWithMetadata;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.service.publish.PublishService;
@@ -61,7 +62,7 @@ import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.*
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.*;
 import static org.craftercms.studio.model.rest.ApiResponse.CREATED;
 import static org.craftercms.studio.model.rest.ApiResponse.OK;
-import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Validated
 @RestController
@@ -77,7 +78,7 @@ public class PublishController {
 		this.sitesService = sitesService;
 	}
 
-	@GetMapping(PATH_PARAM_SITE + PACKAGES)
+	@GetMapping(value = PATH_PARAM_SITE + PACKAGES, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<PublishPackage> getPublishPackages(@ValidSiteId @PathVariable String site,
 								      @EsapiValidatedParam(type = ALPHANUMERIC) @Size(max = 20)
 									  @Pattern(regexp = ALPHANUMERIC_LOWERCASE_PATTERN)
@@ -114,7 +115,7 @@ public class PublishController {
 		return result;
 	}
 
-	@GetMapping(PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE)
+	@GetMapping(value = PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE, produces = APPLICATION_JSON_VALUE)
 	public GetPackageResult getPublishPackage(@PathVariable @ValidSiteId String site,
 							   @PathVariable @Positive long packageId)
 		throws ServiceLayerException, UserNotFoundException {
@@ -125,7 +126,18 @@ public class PublishController {
 		return result;
 	}
 
-	@GetMapping(PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE + ITEMS)
+	@PostMapping(value = PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result updatePublishPackage(@PathVariable @ValidSiteId String site,
+			@PathVariable @Positive long packageId, @Validated @RequestBody UpdatePackageRequest request)
+			throws InvalidPackageStateException, SiteNotFoundException, AuthenticationException {
+		publishService.updatePublishPackage(site, packageId, request.getSchedule(), request.isUpdateSchedule(),
+				request.getComment(), request.getTitle(), request.isRequestApproval());
+		Result result = new Result();
+		result.setResponse(OK);
+		return result;
+	}
+
+	@GetMapping(value = PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE + ITEMS, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<PublishItemWithMetadata> getPublishPackageItems(@PathVariable @ValidSiteId String site,
 										   @PathVariable @Positive long packageId,
 										   @RequestParam(name = REQUEST_PARAM_PATH, required = false) String path,
@@ -150,7 +162,7 @@ public class PublishController {
 		return result;
 	}
 
-	@GetMapping(PATH_PARAM_SITE + STATUS)
+	@GetMapping(value = PATH_PARAM_SITE + STATUS, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<PublishStatus> getPublishingStatus(@PathVariable @ValidSiteId String site)
 			throws SiteNotFoundException, RepositoryException {
 		PublishStatus status = sitesService.getPublishingStatus(site);
@@ -183,7 +195,7 @@ public class PublishController {
 		return result;
 	}
 
-	@PostMapping(PATH_PARAM_SITE + CALCULATE)
+	@PostMapping(value = PATH_PARAM_SITE + CALCULATE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<CalculatedPublishPackageResult> calculatePublishPackage(@PathVariable @NotEmpty @ValidSiteId String site,
 										 @Validated @RequestBody CalculatePublishPackageRequest request)
 		throws ServiceLayerException, IOException {
@@ -196,7 +208,7 @@ public class PublishController {
 		return result;
 	}
 
-	@PostMapping(PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE + RECALCULATE)
+	@PostMapping(value = PATH_PARAM_SITE + PACKAGE + PATH_PARAM_PACKAGE + RECALCULATE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<CalculatedPublishPackageResult> recalculate(@PathVariable @NotEmpty @ValidSiteId String site,
 								     @PathVariable @Positive long packageId,
 								     @Valid @RequestBody RecalculatePublishPackageRequest request)
@@ -210,7 +222,7 @@ public class PublishController {
 		return result;
 	}
 
-	@PostMapping(PATH_PARAM_SITE + ENABLE_PUBLISHER)
+	@PostMapping(value = PATH_PARAM_SITE + ENABLE_PUBLISHER, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public Result enablePublisher(@PathVariable @NotEmpty @ValidSiteId String site, @RequestBody EnablePublisherRequest request) {
 		sitesService.enablePublishing(site, request.isEnable());
 		Result result = new Result();
@@ -219,7 +231,7 @@ public class PublishController {
 	}
 
 	@ResponseStatus(HttpStatus.CREATED)
-	@PostMapping(PATH_PARAM_SITE + PACKAGE)
+	@PostMapping(value = PATH_PARAM_SITE + PACKAGE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<Long> publish(@PathVariable @NotEmpty @ValidSiteId String site,
 				       @Validated @RequestBody PublishPackageRequest request)
 		throws ServiceLayerException, UserNotFoundException, AuthenticationException {

@@ -1281,35 +1281,6 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
-    /api/2/users/me/logout/sso/url:
-        get:
-            tags:
-                - users
-            summary: Get the SSO Service Provide logout URL for the current authenticated user
-            description: |
-                Module: Studio <br>
-
-                * Required Permission: "LOGGED_IN"
-                * The system should redirect to this logout URL `AFTER` local logout. Response entity can be null if user is
-                  not authenticated through SSO or if logout is disabled
-            operationId: getCurrentUserSsoLogoutUrl
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    response:
-                                        $ref: '#/components/schemas/ApiResponse'
-                                    logoutUrl:
-                                        type: string
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
-
     /api/2/users/me/change_password:
         post:
             tags:
@@ -2200,7 +2171,7 @@ paths:
             summary: Check if a site exists
             description: |
                     Module: Studio <br>
-                    Required permission "site_member"
+                    Required permission "LOGGED_IN"
             operationId: siteExists
             tags:
                 - sites
@@ -6100,12 +6071,14 @@ paths:
                                             items:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/site/website/article1/index.xml"
                                                       label: "Article 1"
                                                       systemType: page
                                                       mimeType: application/xml
+                                                      canApprove: true
+                                                      canRequestPublish: true
                                             deletedItems:
                                                 type: array
                                                 items:
@@ -6115,21 +6088,25 @@ paths:
                                             hardDependencies:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/templates/web/article.ftl"
                                                       label: article.ftl
                                                       systemType: renderingTemplate
                                                       mimeType: text/x-freemarker
+                                                      canApprove: true
+                                                      canRequestPublish: false
                                             softDependencies:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/static-assets/images/background.png"
                                                       label: background.png
                                                       systemType: asset
                                                       mimeType: image/png
+                                                      canApprove: false
+                                                      canRequestPublish: true
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '401':
@@ -6146,7 +6123,7 @@ paths:
             summary: Publishes the given content to the target (staging or live)
             description: |
                     Module: Studio <br>
-                    Required permission "publish_request". Additionally requires "publish_approve" when requestApproval is false. <br />
+                    Required permission "publish_request". Additionally requires "publish_review" when requestApproval is false. <br />
             operationId: publish
             parameters:
                 -   name: siteId
@@ -6360,6 +6337,63 @@ paths:
                     $ref: '#/components/responses/NotFound'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
+        post:
+            tags:
+                - publishing
+            summary: Update a publish package
+            description: |
+                    Module: Studio <br>
+                    Meant to be used by the submitter of the package. <br>
+                    Required permission "content_read". <br>
+                    Package must be in READY state and must not be REJECTED. <br>
+                    For already approved packages, set requestApproval to true to resubmit the package for approval
+                    (sets approval state to SUBMITTED). <br>
+                    If requestApproval is false and the package is approved, the user needs "publish_review"
+                    permission for all items in the package. This path fails if peer review is enabled for the site.
+            operationId: updatePublishPackage
+            parameters:
+                -   name: siteId
+                    in: path
+                    description: site ID
+                    required: true
+                    schema:
+                        type: string
+                -   name: packageId
+                    in: path
+                    description: package ID
+                    required: true
+                    schema:
+                        type: integer
+                        format: int64
+            requestBody:
+                description: update publish package request body
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdatePackageRequest'
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    response:
+                                        $ref: '#/components/schemas/ApiResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
+                '404':
+                    $ref: '#/components/responses/NotFound'
+                '409':
+                    $ref: '#/components/responses/Conflict'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
 
     /api/2/publish/{siteId}/package/{packageId}/items:
         get:
@@ -6506,12 +6540,14 @@ paths:
                                             items:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/site/website/article1/index.xml"
                                                       label: "Article 1"
                                                       systemType: page
                                                       mimeType: application/xml
+                                                      canApprove: true
+                                                      canRequestPublish: true
                                             deletedItems:
                                                 type: array
                                                 items:
@@ -6521,21 +6557,25 @@ paths:
                                             hardDependencies:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/templates/web/article.ftl"
                                                       label: article.ftl
                                                       systemType: renderingTemplate
                                                       mimeType: text/x-freemarker
+                                                      canApprove: true
+                                                      canRequestPublish: false
                                             softDependencies:
                                                 type: array
                                                 items:
-                                                    $ref: '#/components/schemas/LightItem'
+                                                    $ref: '#/components/schemas/PublishDependency'
                                                 example:
                                                     - path: "/static-assets/images/background.png"
                                                       label: background.png
                                                       systemType: asset
                                                       mimeType: image/png
+                                                      canApprove: false
+                                                      canRequestPublish: true
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '401':
@@ -6589,7 +6629,7 @@ paths:
             summary: Get available publishing targets for site
             description: |
                     Module: Studio <br>
-                    Required permission "publish_request"
+                    Required permission "content_read"
             operationId: getAvailablePublishingTargets
             parameters:
                 -   name: siteId
@@ -8004,7 +8044,7 @@ paths:
             summary: Approve request publish submission
             description: |
                     Module: Studio <br>
-                    Required permission "publish_approve"
+                    Required permission "publish_review"
             operationId: workflowApprove
             parameters:
                 -   name: site
@@ -8068,7 +8108,7 @@ paths:
             summary: Reject publish package
             description: |
                     Module: Studio <br>
-                    Required permission "publish_cancel"
+                    Required permission "publish_review"
             operationId: workflowReject
             parameters:
                 -   name: site
@@ -9968,6 +10008,20 @@ components:
                     type: string
                     description: MIME-type of the content item file
 
+        PublishDependency:
+            type: object
+            description: publish dependency object
+            allOf:
+                -   $ref: '#/components/schemas/LightItem'
+                -   type: object
+                    properties:
+                        canApprove:
+                            type: boolean
+                            description: true if current user can approve the publish dependency, otherwise false
+                        canRequestPublish:
+                            type: boolean
+                            description: true if current user can request publish for the publish dependency, otherwise false
+
         PublishTaskProgress:
             type: object
             description: publishing task progress report object
@@ -10118,6 +10172,32 @@ components:
                     items:
                         type: string
                     description: the commit ids to publish
+
+        UpdatePackageRequest:
+            type: object
+            properties:
+                schedule:
+                    type: string
+                    format: date-time
+                    description: schedule when to publish the package. Used only when updateSchedule is true
+                updateSchedule:
+                    type: boolean
+                    description: if true, update schedule using the schedule parameter. Otherwise, keep the current schedule
+                    default: false
+                comment:
+                    type: string
+                    description: submitter comment. If omitted or null, the current comment is kept
+                title:
+                    type: string
+                    description: package title. If omitted or null, the current title is kept
+                    maxLength: 200
+                requestApproval:
+                    type: boolean
+                    description: |
+                        if true and the package is approved, set the approval state to SUBMITTED
+                        (resubmit for approval). If false and the package is approved, keep APPROVED
+                        (requires publish_review; not allowed when peer review is enabled)
+                    default: false
 
         PublishingStatus:
             type: object

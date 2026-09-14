@@ -89,7 +89,7 @@
                             <xsl:text>publish_request</xsl:text>
                         </xsl:element>
                         <xsl:element name="permission">
-                            <xsl:text>publish_approve</xsl:text>
+                            <xsl:text>publish_review</xsl:text>
                         </xsl:element>
                     </xsl:if>
                 </xsl:otherwise>
@@ -118,28 +118,18 @@
                 <xsl:text>publish_request</xsl:text>
             </xsl:element>
         </xsl:if>
-        <xsl:if test="not(permission = 'publish_approve')">
+        <xsl:if test="not(permission = 'publish_review')">
             <xsl:element name="permission">
-                <xsl:text>publish_approve</xsl:text>
-            </xsl:element>
-        </xsl:if>
-        <xsl:if test="not(permission = 'publish_reject')">
-            <xsl:element name="permission">
-                <xsl:text>publish_reject</xsl:text>
+                <xsl:text>publish_review</xsl:text>
             </xsl:element>
         </xsl:if>
     </xsl:template>
 
     <!-- Add permissions to reviewer role -->
     <xsl:template match="allowed-permissions" mode="reviewer">
-        <xsl:if test="not(permission = 'publish_approve')">
+        <xsl:if test="not(permission = 'publish_review')">
             <xsl:element name="permission">
-                <xsl:text>publish_approve</xsl:text>
-            </xsl:element>
-        </xsl:if>
-        <xsl:if test="not(permission = 'publish_reject')">
-            <xsl:element name="permission">
-                <xsl:text>publish_reject</xsl:text>
+                <xsl:text>publish_review</xsl:text>
             </xsl:element>
         </xsl:if>
     </xsl:template>
@@ -151,14 +141,9 @@
                 <xsl:text>publish_request</xsl:text>
             </xsl:element>
         </xsl:if>
-        <xsl:if test="not(permission = 'publish_approve')">
+        <xsl:if test="not(permission = 'publish_review')">
             <xsl:element name="permission">
-                <xsl:text>publish_approve</xsl:text>
-            </xsl:element>
-        </xsl:if>
-        <xsl:if test="not(permission = 'publish_reject')">
-            <xsl:element name="permission">
-                <xsl:text>publish_reject</xsl:text>
+                <xsl:text>publish_review</xsl:text>
             </xsl:element>
         </xsl:if>
     </xsl:template>

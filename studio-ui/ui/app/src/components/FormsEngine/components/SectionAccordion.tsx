@@ -19,6 +19,7 @@ import Typography from '@mui/material/Typography';
 import AccordionDetails, { AccordionDetailsProps } from '@mui/material/AccordionDetails';
 import type { AccordionProps } from '@mui/material/Accordion';
 import Accordion from '@mui/material/Accordion';
+import type { TransitionProps } from '@mui/material/transitions';
 import React, { ReactNode, useContext } from 'react';
 import { ContentTypeSection } from '../../../models';
 import { useTheme } from '@mui/material/styles';
@@ -35,6 +36,7 @@ export interface SectionAccordionProps extends Omit<AccordionProps, 'slotProps' 
 	slotProps?: Partial<{
 		accordionSummary: Partial<AccordionSummaryProps>;
 		accordionDetails: Partial<AccordionDetailsProps>;
+		transition: Partial<TransitionProps>;
 	}>;
 }
 
@@ -55,6 +57,7 @@ export function SectionAccordion({
 			{...accordionProps}
 			expanded={isExpanded}
 			onChange={(e, expanded) => setExpanded(expanded)}
+			slotProps={slotProps?.transition ? { transition: slotProps.transition } : undefined}
 			sx={consolidateSx(
 				colorize &&
 					section.color && {

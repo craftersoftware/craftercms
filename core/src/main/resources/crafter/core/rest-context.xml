@@ -18,9 +18,11 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
 	<mvc:annotation-driven/>
 
@@ -45,7 +47,6 @@
 		<property name="defaultViews">
 			<list>
 				<ref bean="crafter.jsonView"/>
-				<ref bean="crafter.xmlView"/>
 			</list>
 		</property>
 	</bean>
@@ -72,14 +73,30 @@
 			  value="${crafter.core.rest.views.json.renderSingleAttributeAsRootObject}"/>
 	</bean>
 
-	<!-- XML -->
-
+    <!-- XML -->
 	<bean id="crafter.xmlMarshaller" class="org.craftercms.core.util.xml.marshalling.xstream.CrafterXStreamMarshaller">
 		<property name="unsupportedClasses" value="org.springframework.validation.BindingResult"/>
+		<property name="typePermissions">
+			<list>
+				<!-- Must be first: clears XStream's built-in allow-list -->
+				<util:constant static-field="com.thoughtworks.xstream.security.NoTypePermission.NONE"/>
+				<util:constant static-field="com.thoughtworks.xstream.security.NullPermission.NULL"/>
+				<util:constant static-field="com.thoughtworks.xstream.security.PrimitiveTypePermission.PRIMITIVES"/>
+				<bean class="com.thoughtworks.xstream.security.ExplicitTypePermission">
+					<constructor-arg>
+						<array>
+							<value>java.lang.String</value>
+							<value>java.util.Map</value>
+							<value>java.util.List</value>
+							<value>java.util.HashMap</value>
+							<value>java.util.ArrayList</value>
+							<value>java.util.LinkedHashMap</value>
+						</array>
+					</constructor-arg>
+				</bean>
+			</list>
+		</property>
 	</bean>
 
-	<bean id="crafter.xmlView" class="org.springframework.web.servlet.view.xml.MarshallingView">
-		<constructor-arg index="0" ref="crafter.xmlMarshaller"/>
-	</bean>
 
 </beans>

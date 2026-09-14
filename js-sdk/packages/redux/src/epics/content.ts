@@ -21,122 +21,157 @@ import { ofType } from 'redux-observable';
 
 import { ContentStoreService, NavigationService } from '@craftercms/content';
 import {
-  getItem,
-  getItemComplete,
-  getDescriptor,
-  getDescriptorComplete,
-  getChildren,
-  getChildrenComplete,
-  getTree,
-  getTreeComplete,
-  getNavComplete,
-  getNavBreadcrumbComplete
+	getItem,
+	getItemComplete,
+	getDescriptor,
+	getDescriptorComplete,
+	getChildren,
+	getChildrenComplete,
+	getTree,
+	getTreeComplete,
+	getNavComplete,
+	getNavBreadcrumbComplete
 } from '../actions/content';
-import { Item, NavigationItem } from "@craftercms/models";
-import { internal_getNav, internal_getNavBreadcrumb } from "../actions/content_internal";
+import { Item, NavigationItem } from '@craftercms/models';
+import { internal_getNav, internal_getNavBreadcrumb } from '../actions/content_internal';
 
-export const getItemEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-    ofType(getItem.type),
-    mergeMap(({ payload }) =>
-      ContentStoreService.getItem(payload)
-        .pipe(
-          map((item: Item) => getItemComplete({
-            item,
-            url: payload
-          })),
-          catchError(() => of(getItemComplete({
-            url: payload
-          })))
-        ))
-  );
+export const getItemEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(getItem.type),
+		mergeMap(({ payload }) =>
+			ContentStoreService.getItem(payload).pipe(
+				map((item: Item) =>
+					getItemComplete({
+						item,
+						url: payload
+					})
+				),
+				catchError(() =>
+					of(
+						getItemComplete({
+							url: payload
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const getDescriptorEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-      ofType(getDescriptor.type),
-      mergeMap(({ payload }) =>
-        ContentStoreService.getDescriptor(payload)
-          .pipe(
-              map(descriptor => getDescriptorComplete({
-                descriptor,
-                url: payload
-              })),
-              catchError(() => of(getDescriptorComplete({
-                url: payload
-              })))
-          ))
+export const getDescriptorEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(getDescriptor.type),
+		mergeMap(({ payload }) =>
+			ContentStoreService.getDescriptor(payload).pipe(
+				map((descriptor) =>
+					getDescriptorComplete({
+						descriptor,
+						url: payload
+					})
+				),
+				catchError(() =>
+					of(
+						getDescriptorComplete({
+							url: payload
+						})
+					)
+				)
+			)
+		)
+	);
 
-  );
+export const getChildrenEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(getChildren.type),
+		mergeMap(({ payload }) =>
+			ContentStoreService.getChildren(payload).pipe(
+				map((children: Item[]) =>
+					getChildrenComplete({
+						children,
+						url: payload
+					})
+				),
+				catchError(() =>
+					of(
+						getChildrenComplete({
+							url: payload
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const getChildrenEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-      ofType(getChildren.type),
-      mergeMap(({ payload }) =>
-      ContentStoreService.getChildren(payload)
-          .pipe(
-              map((children: Item[]) => getChildrenComplete({
-                children,
-                url: payload
-              })),
-              catchError(() => of(getChildrenComplete({
-                url: payload
-              })))
-          ))
-  );
+export const getTreeEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(getTree.type),
+		mergeMap(({ payload }) =>
+			ContentStoreService.getTree(payload.url, payload.depth).pipe(
+				map((tree: Item) =>
+					getTreeComplete({
+						tree,
+						url: payload.url
+					})
+				),
+				catchError(() =>
+					of(
+						getTreeComplete({
+							url: payload.url
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const getTreeEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-      ofType(getTree.type),
-      mergeMap(({ payload }) =>
-      ContentStoreService.getTree(payload.url, payload.depth)
-          .pipe(
-              map((tree: Item) => getTreeComplete({
-                tree,
-                url: payload.url
-              })),
-              catchError(() => of(getTreeComplete({
-                url: payload.url
-              })))
-          ))
-  );
+export const getNavEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(internal_getNav.type),
+		mergeMap(({ payload }) =>
+			NavigationService.getNavTree(payload.url, payload.depth, payload.currentPageUrl).pipe(
+				map((nav: NavigationItem) =>
+					getNavComplete({
+						nav,
+						url: payload.url
+					})
+				),
+				catchError(() =>
+					of(
+						getNavComplete({
+							url: payload.url
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const getNavEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-      ofType(internal_getNav.type),
-      mergeMap(({ payload }) =>
-      NavigationService.getNavTree(payload.url, payload.depth, payload.currentPageUrl)
-          .pipe(
-              map((nav: NavigationItem) => getNavComplete({
-                nav,
-                url: payload.url
-              })),
-              catchError(() => of(getNavComplete({
-                url: payload.url
-              })))
-          ))
-  );
+export const getNavBreadcrumbEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(internal_getNavBreadcrumb.type),
+		mergeMap(({ payload }) =>
+			NavigationService.getNavBreadcrumb(payload.url, payload.root).pipe(
+				map((breadcrumb: NavigationItem[]) =>
+					getNavBreadcrumbComplete({
+						breadcrumb,
+						url: payload.url
+					})
+				),
+				catchError(() =>
+					of(
+						getNavBreadcrumbComplete({
+							url: payload.url
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const getNavBreadcrumbEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-      ofType(internal_getNavBreadcrumb.type),
-      mergeMap(({ payload }) =>
-      NavigationService.getNavBreadcrumb(payload.url, payload.root)
-          .pipe(
-              map((breadcrumb: NavigationItem[]) => getNavBreadcrumbComplete({
-                breadcrumb,
-                url: payload.url
-              })),
-              catchError(() => of(getNavBreadcrumbComplete({
-                url: payload.url
-              })))
-          ))
-  );
-
-  export const allContentEpics = [
-    getItemEpic,
-    getDescriptorEpic,
-    getChildrenEpic,
-    getTreeEpic,
-    getNavEpic,
-    getNavBreadcrumbEpic
-  ];
+export const allContentEpics = [
+	getItemEpic,
+	getDescriptorEpic,
+	getChildrenEpic,
+	getTreeEpic,
+	getNavEpic,
+	getNavBreadcrumbEpic
+];

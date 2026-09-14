@@ -24,7 +24,7 @@ import { useSpreadState } from '../../hooks/useSpreadState';
 import { useDispatch } from 'react-redux';
 import LookupTable from '../../models/LookupTable';
 import { BrowseFilesDialogUI, viewModes } from '.';
-import { BrowseFilesDialogContainerProps, initialParameters } from './utils';
+import { BrowseFilesDialogContainerProps, contentItemToMediaItem, initialParameters } from './utils';
 import { checkPathExistence } from '../../services/content';
 import { FormattedMessage } from 'react-intl';
 import EmptyState from '../EmptyState';
@@ -40,6 +40,8 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 
 import { createComponentId } from '../../utils/system';
+import { useItemsByPath } from '../../hooks/useItemsByPath';
+import { lookupItemByPath } from '../../utils/content';
 
 const defaultPreselectedPaths = [];
 
@@ -82,6 +84,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		(items?.length > 0 && selectedInCurrentPage.length > 0 && selectedInCurrentPage.length < items?.length) ?? false;
 	const browsePath = path.replace(/\/+$/, '');
 	const [currentPath, setCurrentPath] = useState(browsePath);
+	const [treeSelectedPath, setTreeSelectedPath] = useState<string>();
 	const [fetchingBrowsePathExists, setFetchingBrowsePathExists] = useState(false);
 	const [browsePathExists, setBrowsePathExists] = useState(false);
 	const [sortKeys, setSortKeys] = useState([]);
@@ -90,6 +93,8 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	const [fetchingPreselectedItems, setFetchingPreselectedItems] = useState(false);
 	const disableSubmission = fetchingPreselectedItems || (!selectedArray.length && !selectedCard);
 	const preselectedLookup = createPresenceTable(preselectedPaths);
+	const itemsByPath = useItemsByPath();
+	const isCurrentPathLeaf = Boolean(treeSelectedPath); // treeSelectedPath is set when a leaf page is selected in the tree view
 
 	const fetchItems = useCallback(() => {
 		// Since lookahead regex is not supported by opensearch, we are excluding the current path from the search using a
@@ -195,7 +200,28 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	};
 
 	const onPathSelected = (path: string) => {
-		setCurrentPath(withoutIndex(path));
+		const item = lookupItemByPath(path, itemsByPath);
+		const nextPath = withoutIndex(path);
+		setCurrentPath(nextPath);
+
+		// If the selected path is a page and has no children, select the page itself.
+		if (item?.systemType === 'page' && item.childrenCount === 0) {
+			const mediaItem = items?.find((searchItem) => searchItem.path === item.path) ?? contentItemToMediaItem(item);
+			multiSelect ? replaceSelectedLookup({ [mediaItem.path]: mediaItem }) : setSelectedCard(mediaItem);
+			setTreeSelectedPath(withoutIndex(mediaItem.path));
+		} else if (treeSelectedPath) {
+			multiSelect ? replaceSelectedLookup() : setSelectedCard(null);
+			setTreeSelectedPath(null);
+		}
+	};
+
+	const replaceSelectedLookup = (lookup?: LookupTable<MediaItem>) => {
+		const cleared = Object.fromEntries(Object.keys(selectedLookup).map((key) => [key, null]));
+		if (!lookup || Object.keys(lookup).length === 0) {
+			setSelectedLookup(cleared);
+		} else {
+			setSelectedLookup({ ...cleared, ...lookup });
+		}
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
@@ -266,6 +292,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 			handleSearchKeyword={handleSearchKeyword}
 			onCloseButtonClick={onCloseButtonClick}
 			onPathSelected={onPathSelected}
+			treeSelectedPath={treeSelectedPath}
 			onSelectButtonClick={onSelectButtonClick}
 			numOfLoaderItems={numOfLoaderItems}
 			onRefresh={onRefresh}
@@ -277,6 +304,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 			onSelectAll={onSelectAll}
 			allSelected={allSelectedInCurrentPage}
 			someSelected={someSelectedInCurrentPage}
+			isCurrentPathLeaf={isCurrentPathLeaf}
 		/>
 	) : (
 		<EmptyState

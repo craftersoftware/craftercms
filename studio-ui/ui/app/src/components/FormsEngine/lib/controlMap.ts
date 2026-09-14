@@ -33,9 +33,6 @@ export type BuiltInControlType =
 	| 'input'
 	| 'internal-name'
 	| 'label'
-	| 'link-input' // TODO: Not in BPs, seems not to be in use
-	| 'link-textarea' // TODO: Not in BPs, seems not to be in use
-	| 'linked-dropdown' // TODO: Not in BPs, seems not to be in use
 	| 'locale-selector'
 	| 'node-selector'
 	| 'numeric-input'
@@ -67,20 +64,17 @@ export const controlMap: Record<BuiltInControlType, ElementType> = {
 	input: lazy(() => import('../controls/Text')),
 	'internal-name': null,
 	label: lazy(() => import('../controls/Label')),
-	'link-input': null,
-	'link-textarea': null,
-	'linked-dropdown': null,
 	'locale-selector': lazy(() => import('../controls/LocaleSelector')),
 	'node-selector': lazy(() => import('../controls/NodeSelector')),
 	'numeric-input': lazy(() => import('../controls/Numeric')),
-	'page-nav-order': null,
+	'page-nav-order': lazy(() => import('../controls/PageNavOrder')),
 	repeat: lazy(() => import('../controls/Repeat')),
 	rte: lazy(() => import('../controls/RichTextEditor')),
 	textarea: lazy(() => import('../controls/Textarea')),
 	time: lazy(() => import('../controls/Time')),
-	'transcoded-video-picker': null,
+	'transcoded-video-picker': lazy(() => import('../controls/TranscodedVideoPicker')),
 	uuid: lazy(() => import('../controls/Uuid')),
-	'video-picker': null,
+	'video-picker': lazy(() => import('../controls/VideoPicker')),
 	colorPicker: lazy(() => import('../controls/ColorPicker')),
 	'expired-date': lazy(() => import('../controls/DateTime')),
 	'input-email': lazy(() => import('../controls/Text')),

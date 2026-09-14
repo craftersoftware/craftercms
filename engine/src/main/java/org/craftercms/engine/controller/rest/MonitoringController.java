@@ -40,6 +40,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.SITE_ID;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller to provide monitoring information &amp; site logs
@@ -62,7 +63,7 @@ public class MonitoringController extends MonitoringRestControllerBase {
 		this.siteHealthCheckService = siteHealthCheckService;
 	}
 
-	@GetMapping(MonitoringRestControllerBase.ROOT_URL + LOG_URL)
+	@GetMapping(value = MonitoringRestControllerBase.ROOT_URL + LOG_URL, produces = APPLICATION_JSON_VALUE)
 	public List<Map<String, Object>> getLoggedEvents(@RequestParam @ValidSiteId String site,
 							 @Positive @RequestParam long since,
 							 @RequestParam String token) throws InvalidManagementTokenException {
@@ -71,7 +72,7 @@ public class MonitoringController extends MonitoringRestControllerBase {
 	}
 
 	@Override
-	@GetMapping(ROOT_URL + STATUS_URL)
+	@GetMapping(value = ROOT_URL + STATUS_URL, produces = APPLICATION_JSON_VALUE)
 	public ResponseEntity getCurrentStatus(@RequestParam(name = "crafterSite", required = false) String site,
 					       @RequestParam(name = "token") String token)
 		throws InvalidManagementTokenException {

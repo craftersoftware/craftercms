@@ -1,2 +1,2 @@
-<#assign buildId="${buildNumber}"/>
-<#assign buildOn="${timestamp}"/>
+<#assign buildId="@buildNumber@"/>
+<#assign buildOn="@timestamp@"/>

@@ -261,7 +261,6 @@
 		<property name="defaultViews">
 			<list>
 				<ref bean="crafter.jsonView"/>
-				<ref bean="crafter.xmlView"/>
 				<ref bean="studio.binaryView"/>
 			</list>
 		</property>

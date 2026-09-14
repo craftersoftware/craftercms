@@ -96,7 +96,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
 import { useDispatch, useStore } from 'react-redux';
 import { getPersonFullName, nnou } from '../../utils/object';
-import { findParentModelId, getModelIdFromInheritedField, isInheritedField } from '../../utils/model';
+import { findParentModelId, getModelIdFromInheritedField, isEmbedded, isInheritedField } from '../../utils/model';
 import RubbishBin from '../RubbishBin/RubbishBin';
 import { useSnackbar } from 'notistack';
 import {
@@ -135,16 +135,20 @@ import { useContentTypes } from '../../hooks/useContentTypes';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import { useActiveSite } from '../../hooks/useActiveSite';
-import { getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
+import { getFileNameFromPath, getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
 import {
+	cancelRteDataSourcePicker,
 	closeItemMegaMenu,
 	imageEditCancelled,
 	imageEdited,
 	itemMegaMenuClosed,
+	rteDataSourcePickerResult,
 	rtePickerActionResult,
 	showImageEditorDialog,
 	showItemMegaMenu,
+	showRteDataSourcePicker,
 	showRtePickerActions,
+	type ShowRteDataSourcePickerPayload,
 	type ShowRtePickerActionsPayload
 } from '../../state/actions/dialogs';
 import { UNDEFINED } from '../../utils/constants';
@@ -192,6 +196,22 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { ImageRestrictionSubtitle } from '../FormsEngine/lib/controlHelpers';
 import { getCurrentLocale } from '../../utils/i18n';
+import Dialog from '@mui/material/Dialog';
+import MenuList from '@mui/material/MenuList';
+import DialogHeader from '../DialogHeader';
+import DialogBody from '../DialogBody';
+import GroupedDataSourceActionMenuItems from '../FormsEngine/components/GroupedDataSourceActionMenuItems';
+import { getRteDataSourcePropertyNames, rteSelectionToUrl } from '../FormsEngine/lib/rteUtils';
+import { getControlDataSourceBindings } from '../FormsEngine/dataSources/bindings';
+import { createDataSourceServices } from '../FormsEngine/dataSources/services';
+import { resolveFieldDataSources } from '../FormsEngine/dataSources/useFieldDataSources';
+import { buildActionGroups, invokeActionChoice } from '../FormsEngine/dataSources/actionAdapters';
+import type {
+	DataSourceFieldContext,
+	DataSourceSelection,
+	ResolvedDataSourceAction
+} from '../FormsEngine/dataSources/types';
+import { getField } from '../../utils/contentType';
 
 const issueDescriptorRequest = (props: {
 	site: string;
@@ -356,6 +376,17 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const [dataSourceActionsListState, setDataSourceActionsListState] = useSpreadState<DataSourcesActionsListProps>(
 		dataSourceActionsListInitialState
 	);
+	const [rteDataSourcePicker, setRteDataSourcePicker] = useState<{
+		requestId: string;
+		actions: ResolvedDataSourceAction[];
+		context: DataSourceFieldContext;
+	}>(null);
+	// Tracks the in-flight/open picker so overlapping requests can cancel the prior guest requestId
+	// and ignore stale resolveFieldDataSources / invokeActionChoice completions.
+	const rteDataSourcePickerRef = useRef(rteDataSourcePicker);
+	const rtePickerActiveRequestIdRef = useRef<string | null>(null);
+	const rtePickerGenerationRef = useRef(0);
+	rteDataSourcePickerRef.current = rteDataSourcePicker;
 	const toggleEditMode = (nextHighlightMode?: HighlightMode) => {
 		dispatch(
 			setPreviewEditMode({
@@ -394,6 +425,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		showToolsPanel,
 		toolsPanelWidth,
 		browseFilesDialogState,
+		openRteDataSourcePicker,
+		cancelActiveRteDataSourcePicker,
 		dialogs,
 		stack,
 		keyboardShortcutsEnabled,
@@ -478,6 +511,114 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			payload
 		});
 	};
+
+	// region XB rich text editor data source picker
+	// The in-context editor lives in the preview iframe, where data sources can't be resolved: their
+	// actions carry React nodes and closures over Studio dialogs that only exist here. The guest asks
+	// (showRteDataSourcePicker), the host resolves & presents, and replies with the selected url.
+
+	// The guest holds the editor in "picking" state until it hears back, so every exit path must reply.
+	function respondToRteDataSourcePicker(
+		requestId: string,
+		selection: DataSourceSelection | DataSourceSelection[] | null
+	) {
+		const url = rteSelectionToUrl(selection);
+		getHostToGuestBus().next(
+			rteDataSourcePickerResult(url ? { id: requestId, url, name: getFileNameFromPath(url) } : { id: requestId })
+		);
+	}
+
+	function clearRteDataSourcePickerState() {
+		rteDataSourcePickerRef.current = null;
+		setRteDataSourcePicker(null);
+	}
+
+	/**
+	 * Cancels the active/in-flight picker so the guest leaves "picking" state; bumps generation to drop stale work.
+	 * When `requestId` is supplied, only that request is cancelled: a late cancellation for a request the host has
+	 * already replaced must not take down its successor.
+	 */
+	function cancelActiveRteDataSourcePicker(requestId?: string) {
+		const activeRequestId = rtePickerActiveRequestIdRef.current;
+		if (requestId != null && requestId !== activeRequestId) {
+			return;
+		}
+		rtePickerGenerationRef.current += 1;
+		rtePickerActiveRequestIdRef.current = null;
+		if (activeRequestId) {
+			respondToRteDataSourcePicker(activeRequestId, null);
+		}
+		if (rteDataSourcePickerRef.current) {
+			clearRteDataSourcePickerState();
+		}
+	}
+
+	function closeRteDataSourcePicker() {
+		cancelActiveRteDataSourcePicker();
+	}
+
+	async function openRteDataSourcePicker(request: ShowRteDataSourcePickerPayload) {
+		// Overlapping open: cancel the prior request so the guest cannot remain stuck in picking.
+		if (rtePickerActiveRequestIdRef.current != null) {
+			cancelActiveRteDataSourcePicker();
+		}
+		const generation = ++rtePickerGenerationRef.current;
+		rtePickerActiveRequestIdRef.current = request.id;
+
+		const { siteId, contentTypes, dispatch, formatMessage } = upToDateRefs.current;
+		const isStale = () => generation !== rtePickerGenerationRef.current;
+		const dismiss = (error: unknown) => {
+			if (isStale()) return;
+			console.error('Unable to present the rich text editor data sources.', error);
+			dispatch(showSystemNotification({ message: formatMessage(guestMessages.noDataSourcesSet) }));
+			rtePickerActiveRequestIdRef.current = null;
+			respondToRteDataSourcePicker(request.id, null);
+		};
+		try {
+			const contentType = contentTypes?.[request.contentTypeId];
+			const field = contentType ? getField(contentType, request.fieldId, contentTypes) : null;
+			if (!field) {
+				return dismiss(`Field "${request.fieldId}" was not found on "${request.contentTypeId}".`);
+			}
+			const { context, actions } = await resolveFieldDataSources({
+				siteId,
+				contentType,
+				field,
+				bindings: getControlDataSourceBindings(field.type),
+				value: null,
+				readonly: false,
+				services: createDataSourceServices({ dispatch, siteId, formsApi: { pushForm: () => undefined } }),
+				expandPath: (path) =>
+					processPathMacros({ path, objectId: request.objectId ?? '', fullParentPath: request.path }),
+				contentTypes
+			});
+			if (isStale()) return;
+			const propertyNames = getRteDataSourcePropertyNames(request.filetype);
+			const candidates = actions.filter((action) => propertyNames.includes(action.binding.propertyName));
+			if (!candidates.length) {
+				return dismiss(`No data sources are configured for "${request.fieldId}" (${request.filetype}).`);
+			}
+			const grouped = buildActionGroups(candidates);
+			// A single option needs no menu; go straight to the data source's own dialog.
+			if (grouped.customActions.length === 0 && grouped.groups.length === 1 && grouped.groups[0].choices.length === 1) {
+				invokeActionChoice(grouped.groups[0].choices[0], context).then(
+					(selection) => {
+						if (isStale()) return;
+						rtePickerActiveRequestIdRef.current = null;
+						respondToRteDataSourcePicker(request.id, selection);
+					},
+					(error) => dismiss(error)
+				);
+			} else {
+				const picker = { requestId: request.id, actions: candidates, context };
+				rteDataSourcePickerRef.current = picker;
+				setRteDataSourcePicker(picker);
+			}
+		} catch (error) {
+			dismiss(error);
+		}
+	}
+	// endregion
 
 	useEffect(() => {
 		if (nnou(uiConfig.xml)) {
@@ -652,7 +793,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							site: siteId,
 							iceGroupId: payload.iceId || UNDEFINED,
 							modelId: payload.embeddedItemId || UNDEFINED,
-							isHidden: Boolean(payload.embeddedItemId)
+							isHidden: Boolean(payload.embeddedItemId),
+							isEmbedded: Boolean(payload.embeddedItemId)
 						})
 					);
 					break;
@@ -663,11 +805,15 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case 'CHECK_OUT_GUEST': {
 					const path = getPathFromPreviewURL(payload.url);
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					dispatch(guestCheckOut({ path }));
 					break;
 				}
 				// endregion
 				case guestCheckIn.type: {
+					// A fresh check-in means the guest reloaded (possibly without checking out, e.g. when the
+					// iFrame url changes abruptly), so any picker request from the previous page is orphaned.
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					getHostToGuestBus().next(
 						hostCheckIn({
 							editMode: false,
@@ -722,6 +868,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case guestCheckOut.type: {
 					requestedSourceMapPaths.current = {};
+					// The editor that requested the picker is gone with the page; nobody is left to reply to.
+					upToDateRefs.current.cancelActiveRteDataSourcePicker();
 					dispatch(action);
 					break;
 				}
@@ -1103,9 +1251,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case requestEdit.type: {
 					let { store } = upToDateRefs.current;
 					const { modelId, parentModelId, fields, typeOfEdit: type, index } = payload;
-					const path = models[parentModelId ? parentModelId : modelId].craftercms.path;
-					let item = store.getState().content.itemsByPath[path];
 					const model = models[modelId] as ContentInstance;
+					const embedded = isEmbedded(model);
+					const resolvedParentModelId =
+						parentModelId ??
+						(embedded ? findParentModelId(modelId, upToDateRefs.current.guest.hierarchyMap, models) : null);
+					const path = models[resolvedParentModelId ?? modelId].craftercms.path;
+					let item = store.getState().content.itemsByPath[path];
 					const contentType = contentTypes[model.craftercms.contentTypeId];
 					if (type === 'content') {
 						// Not quite sure if it ever happens that the item isn't already loaded.
@@ -1118,9 +1270,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								authoringBase,
 								formatMessage,
 								extraPayload: {
-									modelId: parentModelId ? modelId : null,
+									modelId: embedded ? modelId : undefined,
 									selectedFields: fields,
-									index
+									index,
+									isEmbedded: embedded
 								}
 							});
 						});
@@ -1196,6 +1349,14 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					break;
 				}
 				// endregion
+				case showRteDataSourcePicker.type: {
+					upToDateRefs.current.openRteDataSourcePicker(payload as ShowRteDataSourcePickerPayload);
+					break;
+				}
+				case cancelRteDataSourcePicker.type: {
+					upToDateRefs.current.cancelActiveRteDataSourcePicker(payload?.id);
+					break;
+				}
 				case showRtePickerActions.type: {
 					const typedPayload: ShowRtePickerActionsPayload = payload;
 					const { setDataSourceActionsListState, showToolsPanel, toolsPanelWidth, browseFilesDialogState } =
@@ -1408,10 +1569,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				// Changing the site will force-reload the iFrame and 'beforeunload'
 				// event won't trigger withing; guest won't be submitting it's own checkout
 				// in such cases.
+				upToDateRefs.current.cancelActiveRteDataSourcePicker();
 				dispatch(guestCheckOut({ path: guest.path }));
 			}
 		}
-	}, [siteId, guest, dispatch]);
+	}, [siteId, guest, dispatch, upToDateRefs]);
 
 	// Initialize RTE config
 	useEffect(() => {
@@ -1482,6 +1644,37 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				{...dataSourceActionsListState}
 				onClose={() => setDataSourceActionsListState({ show: false })}
 			/>
+			<Dialog open={Boolean(rteDataSourcePicker)} onClose={closeRteDataSourcePicker} fullWidth maxWidth="xs">
+				<DialogHeader
+					title={<FormattedMessage defaultMessage="Choose how to add media" />}
+					onCloseButtonClick={closeRteDataSourcePicker}
+				/>
+				<DialogBody>
+					{rteDataSourcePicker && (
+						<MenuList>
+							<GroupedDataSourceActionMenuItems
+								actions={rteDataSourcePicker.actions}
+								context={rteDataSourcePicker.context}
+								onResult={(selection) => {
+									const requestId = rteDataSourcePicker.requestId;
+									rtePickerGenerationRef.current += 1;
+									rtePickerActiveRequestIdRef.current = null;
+									clearRteDataSourcePickerState();
+									respondToRteDataSourcePicker(requestId, selection);
+								}}
+								onError={(error) => {
+									console.error('Unable to select rich-text media.', error);
+									const requestId = rteDataSourcePicker.requestId;
+									rtePickerGenerationRef.current += 1;
+									rtePickerActiveRequestIdRef.current = null;
+									clearRteDataSourcePickerState();
+									respondToRteDataSourcePicker(requestId, null);
+								}}
+							/>
+						</MenuList>
+					)}
+				</DialogBody>
+			</Dialog>
 		</>
 	);
 }

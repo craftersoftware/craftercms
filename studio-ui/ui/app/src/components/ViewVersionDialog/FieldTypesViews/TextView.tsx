@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import Editor, { EditorProps } from '@monaco-editor/react';
+import { MonacoEditor, MonacoEditorProps } from '../../MonacoEditor';
 import React from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useVersionsDialogContext } from '../../CompareVersionsDialog/VersionsDialogContext';
@@ -26,7 +26,7 @@ import { XmlKeys } from '../../FormsEngine/lib/formConsts';
 
 export interface TextViewProps extends Pick<ViewComponentBaseProps, 'xml'> {
 	field?: ContentTypeField;
-	editorProps?: EditorProps;
+	editorProps?: MonacoEditorProps;
 }
 
 export function TextView(props: TextViewProps) {
@@ -38,7 +38,7 @@ export function TextView(props: TextViewProps) {
 	const value = cleanText ? removeTags(content ?? '') : content;
 	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 	const language = textViewLanguageMap[field?.type] || 'xml';
-	const monacoOptions: EditorProps['options'] = {
+	const monacoOptions: MonacoEditorProps['options'] = {
 		readOnly: true,
 		automaticLayout: true,
 		fontSize: 14,
@@ -50,12 +50,12 @@ export function TextView(props: TextViewProps) {
 	};
 
 	return (
-		<Editor
+		<MonacoEditor
 			height="100%"
 			language={language}
 			value={value}
 			theme={prefersDarkMode ? 'vs-dark' : 'vs'}
-			{...(editorProps as EditorProps)}
+			{...editorProps}
 			options={monacoOptions}
 		/>
 	);

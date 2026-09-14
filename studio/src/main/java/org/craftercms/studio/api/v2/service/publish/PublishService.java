@@ -27,11 +27,16 @@ import org.craftercms.studio.api.v2.dal.publish.PublishItem.PublishState;
 import org.craftercms.studio.api.v2.dal.publish.PublishItemWithMetadata;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage.ApprovalState;
+import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.PublishPackageNotFoundException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
+import org.craftercms.studio.api.v2.exception.security.PeerReviewCheckException;
 import org.craftercms.studio.impl.v2.publish.Publisher;
 import org.craftercms.studio.api.v2.dal.item.LightItem;
 import org.craftercms.studio.model.publish.PublishingTarget;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -263,10 +268,10 @@ public interface PublishService {
 	 * @param siteId    the site id
 	 * @param packageId the package id
 	 * @param offset    the offset to start from
-	 * @param limit     the max number of items to return
+	 * @param limit     the max number of items to return (null to return all items)
 	 * @return the publish items
 	 */
-	Collection<PublishItem> getPublishItems(String siteId, long packageId, int offset, int limit) throws PublishPackageNotFoundException, SiteNotFoundException;
+	Collection<PublishItem> getPublishItems(String siteId, long packageId, Integer offset, Integer limit) throws PublishPackageNotFoundException, SiteNotFoundException;
 
 	/**
 	 * Get the failed publish items for a package
@@ -275,10 +280,10 @@ public interface PublishService {
 	 * @param siteId    the site id
 	 * @param packageId the package id
 	 * @param offset    the offset to start from
-	 * @param limit     the max number of items to return
+	 * @param limit     the max number of items to return (null to return all items)
 	 * @return the failed publish items
 	 */
-	Collection<PublishItem> getFailedPublishItems(String siteId, long packageId, int offset, int limit);
+	Collection<PublishItem> getFailedPublishItems(String siteId, long packageId, Integer offset, Integer limit);
 
 	/**
 	 * Get the total number of published items in the last <code>days</code>number of days matching the action
@@ -289,6 +294,35 @@ public interface PublishService {
 	 * @return the number of published items matching the filters
 	 */
 	int getNumberOfPublishedItemsByAction(String siteId, int days, PublishItem.Action action);
+
+	/**
+	 * Update a publish package.
+	 * Notice this method is meant to be used by the submitter of the package.
+	 * For already approved packages, use the requestApproval parameter to resubmit the package for approval.
+	 * If requestApproval is false and the package is approved, the user needs to have permissions to
+	 * approve all the items in the package. Notice this path will fail if peer review is enabled
+	 * for the site (since the current user is required to be the submitter of the package)
+	 *
+	 * @param siteId             the site id
+	 * @param packageId        the package id
+	 * @param schedule         publish schedule date
+	 * @param updateSchedule   if true, the schedule will be updated
+	 * @param submitterComment publish package submitter comment
+	 * @param title            publish package title
+	 * @param requestApproval  if true, the approval state of the package will be
+	 *                         set to SUBMITTED
+	 * @throws InvalidPackageStateException if the package is not in READY state
+	 * @throws AuthenticationException if the current user cannot be resolved
+	 * @throws SiteNotFoundException if the site is not found
+	 * @throws PeerReviewCheckException if the following conditions are true:
+	 * - The site has peer review enabled
+	 * - The current user is the submitter of the package
+	 * - The package is approved
+	 * - requestApproval is false
+	 */
+	void updatePublishPackage(String siteId, long packageId, Instant schedule,
+			boolean updateSchedule, String submitterComment, String title, boolean requestApproval)
+			throws InvalidPackageStateException, AuthenticationException, SiteNotFoundException;
 
 	/**
 	 * A request to include a path in a publish request.
@@ -310,8 +344,38 @@ public interface PublishService {
 	 * @param hardDependencies the hard dependencies of the items
 	 * @param softDependencies the soft dependencies of the items
 	 */
-	record CalculatedPublishPackageResult(Collection<LightItem> items, Collection<String> deletedItems,
-										  Collection<LightItem> hardDependencies,
-										  Collection<LightItem> softDependencies) {
+	record CalculatedPublishPackageResult(Collection<PublishDependency> items, Collection<String> deletedItems,
+										  Collection<PublishDependency> hardDependencies,
+										  Collection<PublishDependency> softDependencies) {
+	}
+
+	/**
+	 * LightItem wrapper with flags to indicate if the current user can approve or request publish for the item
+	 */
+	public static class PublishDependency {
+		@JsonUnwrapped
+		private final LightItem item;
+		@JsonProperty
+		private final boolean canApprove;
+		@JsonProperty
+		private final boolean canRequestPublish;
+
+		public PublishDependency(LightItem item, boolean canApprove, boolean canRequestPublish) {
+			this.item = item;
+			this.canApprove = canApprove;
+			this.canRequestPublish = canRequestPublish;
+		}
+
+		public LightItem getItem() {
+			return item;
+		}
+
+		public boolean canApprove() {
+			return canApprove;
+		}
+
+		public boolean canRequestPublish() {
+			return canRequestPublish;
+		}
 	}
 }

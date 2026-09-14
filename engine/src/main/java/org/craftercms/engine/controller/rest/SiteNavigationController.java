@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.beans.ConstructorProperties;
 import java.util.List;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * REST controller to access site navigation services.
@@ -53,14 +54,14 @@ public class SiteNavigationController extends RestControllerBase {
 		this.navBreadcrumbBuilder = navBreadcrumbBuilder;
 	}
 
-	@GetMapping(URL_TREE)
+	@GetMapping(value = URL_TREE, produces = APPLICATION_JSON_VALUE)
 	public NavItem getNavTree(@ValidExistingContentPath @RequestParam String url,
 				  @RequestParam(required = false, defaultValue = "1") int depth,
 				  @ValidExistingContentPath @RequestParam(required = false, defaultValue = "") String currentPageUrl) {
 		return navTreeBuilder.getNavTree(url, depth, currentPageUrl);
 	}
 
-	@GetMapping(URL_BREADCRUMB)
+	@GetMapping(value = URL_BREADCRUMB, produces = APPLICATION_JSON_VALUE)
 	public List<NavItem> getNavBreadcrumb(@ValidExistingContentPath
 					      @RequestParam String url,
 					      @ValidExistingContentPath

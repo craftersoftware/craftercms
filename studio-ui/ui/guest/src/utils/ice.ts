@@ -15,14 +15,20 @@
  */
 
 import { LookupTable } from '@craftercms/studio-ui/models/LookupTable';
-import { ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
+import { ContentType, ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
 import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
 import { nullOrUndefined, notNullOrUndefined, nou } from '@craftercms/studio-ui/utils/object';
 import * as Model from '@craftercms/studio-ui/utils/model';
 import { forEach, mergeArraysAlternatively } from '@craftercms/studio-ui/utils/array';
 import { isSimple, isSymmetricCombination, popPiece } from '@craftercms/studio-ui/utils/string';
-import { ModelHierarchyMap } from '@craftercms/studio-ui/utils/content';
+import { ModelHierarchyDescriptor, ModelHierarchyMap } from '@craftercms/studio-ui/utils/content';
+import { pageControllersFieldId, pageControllersLegacyFieldId } from '@craftercms/studio-ui/utils/constants';
 import { RecordTypes, ReferentialEntries } from '../models/InContextEditing';
+
+export type ComponentPlacement = Pick<
+	ModelHierarchyDescriptor,
+	'parentId' | 'parentContainerFieldPath' | 'parentContainerFieldIndex'
+>;
 
 export function findComponentContainerFields(
 	fields: LookupTable<ContentTypeField> | ContentTypeField[]
@@ -48,6 +54,158 @@ export function getParentModelId(
 	children: ModelHierarchyMap
 ): string {
 	return nullOrUndefined(Model.prop(models[modelId], 'path')) ? findParentModelId(modelId, children, models) : null;
+}
+
+/**
+ * Finds every node-selector (or node-selector nested in a repeat) reference to `modelId`.
+ * Shared components can appear in multiple fields/parents; `modelHierarchyMap` only keeps one.
+ */
+export function findComponentPlacements(
+	modelId: string,
+	models: LookupTable<ContentInstance>,
+	contentTypes: LookupTable<ContentType>
+): ComponentPlacement[] {
+	const placements: ComponentPlacement[] = [];
+	const cleanCarryOver = (carryOver: string) => carryOver.replace(/(^\.+)|(\.+$)/g, '').replace(/\.{2,}/g, '.');
+	const getFields = (contentTypeId: string) =>
+		contentTypes[contentTypeId]?.fields ? Object.values(contentTypes[contentTypeId].fields) : null;
+
+	function process(
+		model: ContentInstance,
+		source: ContentInstance,
+		fields: ContentTypeField[],
+		fieldCarryOver = '',
+		indexCarryOver = ''
+	) {
+		fields?.forEach((field) => {
+			if (!source[field.id]) return;
+			if (field.type === 'node-selector') {
+				if (field.id === pageControllersFieldId || field.id === pageControllersLegacyFieldId) return;
+				source[field.id]
+					.filter((componentId) => typeof componentId === 'string')
+					.forEach((componentId, index) => {
+						if (componentId === modelId) {
+							placements.push({
+								parentId: model.craftercms.id,
+								parentContainerFieldPath: cleanCarryOver(`${fieldCarryOver}.${field.id}`),
+								parentContainerFieldIndex: cleanCarryOver(`${indexCarryOver}.${index}`)
+							});
+						}
+					});
+			} else if (field.type === 'repeat') {
+				source[field.id].forEach((repeatItem: ContentInstance, index) => {
+					process(
+						model,
+						repeatItem,
+						Object.values(field.fields),
+						cleanCarryOver(`${fieldCarryOver}.${field.id}`),
+						cleanCarryOver(`${indexCarryOver}.${index}`)
+					);
+				});
+			}
+		});
+	}
+
+	Object.values(models).forEach((model) => {
+		process(model, model, getFields(model.craftercms.contentTypeId));
+	});
+	return placements;
+}
+
+function placementFromHierarchyMap(modelId: string, hierarchyMap?: ModelHierarchyMap): ComponentPlacement | null {
+	const entry = hierarchyMap?.[modelId];
+	if (entry?.parentId) {
+		return {
+			parentId: entry.parentId,
+			parentContainerFieldPath: entry.parentContainerFieldPath,
+			parentContainerFieldIndex: entry.parentContainerFieldIndex
+		};
+	}
+	return null;
+}
+
+function placementsMatch(a: ComponentPlacement, b: ComponentPlacement): boolean {
+	return (
+		a.parentId === b.parentId &&
+		a.parentContainerFieldPath === b.parentContainerFieldPath &&
+		String(a.parentContainerFieldIndex) === String(b.parentContainerFieldIndex)
+	);
+}
+
+/**
+ * Picks the placement that owns the given zone instance.
+ * When a component is referenced from multiple fields, uses DOM ancestry
+ * (`data-craftercms-*` attrs) to disambiguate; falls back to hierarchy map / first match.
+ */
+export function resolvePlacementForZone(
+	modelId: string,
+	contextElement: Element | null | undefined,
+	models: LookupTable<ContentInstance>,
+	contentTypes: LookupTable<ContentType>,
+	hierarchyMap?: ModelHierarchyMap
+): ComponentPlacement | null {
+	const placements = findComponentPlacements(modelId, models, contentTypes);
+	if (placements.length === 0) {
+		return placementFromHierarchyMap(modelId, hierarchyMap);
+	}
+	if (placements.length === 1) {
+		return placements[0];
+	}
+
+	if (contextElement) {
+		let el: Element | null = contextElement;
+		while (el) {
+			const elModelId = el.getAttribute('data-craftercms-model-id');
+			const elFieldId = el.getAttribute('data-craftercms-field-id');
+			const elIndex = el.getAttribute('data-craftercms-index');
+
+			if (elModelId && elFieldId != null && elIndex != null) {
+				const exact = placements.find(
+					(p) =>
+						p.parentId === elModelId &&
+						p.parentContainerFieldPath === elFieldId &&
+						String(p.parentContainerFieldIndex) === String(elIndex)
+				);
+				if (exact) return exact;
+			}
+
+			// Collection field wrapper (no index): narrow by parent + field, then by which item contains the zone.
+			if (elModelId && elFieldId != null && elIndex == null) {
+				const fieldPlacements = placements.filter(
+					(p) => p.parentId === elModelId && p.parentContainerFieldPath === elFieldId
+				);
+				if (fieldPlacements.length === 1) {
+					return fieldPlacements[0];
+				}
+				if (fieldPlacements.length > 1) {
+					for (const placement of fieldPlacements) {
+						const itemSelector = `[data-craftercms-model-id="${placement.parentId}"][data-craftercms-field-id="${placement.parentContainerFieldPath}"][data-craftercms-index="${placement.parentContainerFieldIndex}"]`;
+						const itemEl = el.querySelector(itemSelector);
+						if (itemEl?.contains(contextElement) || itemEl === contextElement) {
+							return placement;
+						}
+					}
+					// Items may be the component roots themselves (model-id = component).
+					const componentItems = el.querySelectorAll(`[data-craftercms-model-id="${modelId}"]`);
+					for (let i = 0; i < componentItems.length; i++) {
+						if (componentItems[i] === contextElement || componentItems[i].contains(contextElement)) {
+							const byOrder = fieldPlacements[i];
+							if (byOrder) return byOrder;
+						}
+					}
+				}
+			}
+
+			el = el.parentElement;
+		}
+	}
+
+	const fromMap = placementFromHierarchyMap(modelId, hierarchyMap);
+	if (fromMap) {
+		const matched = placements.find((p) => placementsMatch(p, fromMap));
+		if (matched) return matched;
+	}
+	return placements[0];
 }
 
 function findParentModelId(

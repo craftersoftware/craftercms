@@ -20,49 +20,45 @@
  * Query Object
  */
 export class Query {
+	uuid: string;
 
-  uuid: string;
+	/**
+	 * Creates an empty query
+	 * @constructor
+	 */
+	constructor(public params: Object = {}) {}
 
-  /**
-   * Creates an empty query
-   * @constructor
-   */
-  constructor(public params: Object = {}) {
+	/**
+	 * Sets a single value parameter in the query object
+	 * @param {string} name - Name of the parameter
+	 * @param {object} value - Value of the parameter
+	 */
+	setParam(name, value) {
+		this.params[name] = value;
+	}
 
-  }
+	/**
+	 * Adds a value for a parameter in the query object
+	 * @param {string} name - Name of the parameter
+	 * @param {object} value - Value of the parameter
+	 */
+	addParam(name, value) {
+		if (this.params[name]) {
+			if (Array.isArray(this.params[name])) {
+				this.params[name].push(value);
+			} else {
+				this.params[name] = [this.params[name], value];
+			}
+		} else {
+			this.params[name] = value;
+		}
+	}
 
-  /**
-   * Sets a single value parameter in the query object
-   * @param {string} name - Name of the parameter
-   * @param {object} value - Value of the parameter
-   */
-  setParam(name, value) {
-    this.params[name] = value;
-  }
-
-  /**
-   * Adds a value for a parameter in the query object
-   * @param {string} name - Name of the parameter
-   * @param {object} value - Value of the parameter
-   */
-  addParam(name, value) {
-    if (this.params[name]) {
-      if (Array.isArray(this.params[name])) {
-        this.params[name].push(value);
-      } else {
-        this.params[name] = [this.params[name], value];
-      }
-    } else {
-      this.params[name] = value;
-    }
-  }
-
-  /**
-   * Sets the actual query.
-   * @param {string} query - Query string
-   */
-  set query(query) {
-    this.params = query;
-  }
-
+	/**
+	 * Sets the actual query.
+	 * @param {string} query - Query string
+	 */
+	set query(query) {
+		this.params = query;
+	}
 }

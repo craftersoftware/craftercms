@@ -18,12 +18,16 @@ package org.craftercms.studio.impl.v2.service.dependency;
 
 import org.craftercms.commons.security.permissions.DefaultPermission;
 import org.craftercms.commons.security.permissions.annotations.HasPermission;
-import org.craftercms.commons.security.permissions.annotations.ProtectedResourceId;
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.dependency.DependencyResolver;
-import org.craftercms.studio.api.v2.annotation.*;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireContentExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteExists;
+import org.craftercms.studio.api.v2.annotation.precondition.RequireSiteReady;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPath;
+import org.craftercms.studio.api.v2.annotation.resourceids.ContentPathList;
+import org.craftercms.studio.api.v2.annotation.resourceids.SiteId;
 import org.craftercms.studio.api.v2.dal.item.LightItem;
 import org.craftercms.studio.api.v2.service.dependency.DependencyService;
 import org.craftercms.studio.permissions.CompositePermission;
@@ -34,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.craftercms.studio.permissions.CompositePermissionResolverImpl.PATH_LIST_RESOURCE_ID;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_READ;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
 
@@ -51,7 +54,7 @@ public class DependencyServiceImpl implements DependencyService {
 	@RequireSiteReady
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public Collection<LightItem> getSoftDependencies(@SiteId String siteId,
-						      @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Set<String> paths) {
+						      @ContentPathList Set<String> paths) {
 		return dependencyServiceInternal.getSoftDependencies(siteId, paths);
 	}
 
@@ -59,7 +62,7 @@ public class DependencyServiceImpl implements DependencyService {
 	@RequireSiteReady
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public Collection<LightItem> getPublishingSoftDependencies(@SiteId String siteId,
-															   @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Set<String> paths, String target) {
+															   @ContentPathList Set<String> paths, String target) {
 		return dependencyServiceInternal.getPublishingSoftDependencies(siteId, paths, target);
 	}
 
@@ -67,7 +70,7 @@ public class DependencyServiceImpl implements DependencyService {
 	@RequireSiteReady
 	@HasPermission(type = CompositePermission.class, action = PERMISSION_CONTENT_READ)
 	public Collection<LightItem> getDependentPaths(@SiteId String siteId,
-					      @ProtectedResourceId(PATH_LIST_RESOURCE_ID) List<String> paths) throws SiteNotFoundException {
+					      @ContentPathList List<String> paths) throws SiteNotFoundException {
 		return dependencyServiceInternal.getDependentPaths(siteId, paths);
 	}
 
@@ -75,13 +78,13 @@ public class DependencyServiceImpl implements DependencyService {
 	@RequireSiteReady
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
 	public Collection<LightItem> getHardDependencies(@SiteId String site, String publishingTarget,
-													 @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Collection<String> paths) throws ServiceLayerException {
+													 @ContentPathList Collection<String> paths) throws ServiceLayerException {
 		return dependencyServiceInternal.getHardDependencies(site, publishingTarget, paths);
 	}
 
 	@Override
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
-	public Collection<LightItem> getHardDependencies(@SiteId String site, @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Collection<String> paths) throws SiteNotFoundException {
+	public Collection<LightItem> getHardDependencies(@SiteId String site, @ContentPathList Collection<String> paths) throws SiteNotFoundException {
 		return dependencyServiceInternal.getHardDependencies(site, paths);
 	}
 
@@ -140,7 +143,7 @@ public class DependencyServiceImpl implements DependencyService {
 	@Override
 	@RequireSiteExists
 	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_READ)
-	public List<LightItem> getItemSpecificDependencies(@SiteId String siteId, @ProtectedResourceId(PATH_LIST_RESOURCE_ID) Collection<String> paths) {
+	public List<LightItem> getItemSpecificDependencies(@SiteId String siteId, @ContentPathList Collection<String> paths) {
 		return dependencyServiceInternal.getItemSpecificDependencies(siteId, paths);
 	}
 

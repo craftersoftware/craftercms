@@ -15,6 +15,7 @@
  */
 
 import { ElasticParams, MediaItem, SearchItem } from '../../models/Search';
+import { ContentItem } from '../../models/Item';
 import StandardAction from '../../models/StandardAction';
 import { EnhancedDialogProps } from '../EnhancedDialog';
 import React from 'react';
@@ -71,11 +72,13 @@ export interface BrowseFilesDialogUIProps {
 	disableSubmission?: boolean;
 	allSelected: boolean;
 	someSelected: boolean;
+	isCurrentPathLeaf: boolean;
 	onCardSelected(item: MediaItem): void;
 	onPreviewImage?(item: MediaItem): void;
 	onCheckboxChecked(path: string, selected: boolean): void;
 	handleSearchKeyword(keyword: string): void;
-	onPathSelected(path: string): void;
+	onPathSelected(path: string, item?: ContentItem): void;
+	treeSelectedPath: string;
 	onSelectButtonClick(): void;
 	onChangePage(page: number): void;
 	onChangeRowsPerPage(event): void;
@@ -97,3 +100,17 @@ export const initialParameters: ElasticParams = {
 };
 
 export const viewModes: MediaCardViewModes[] = ['card', 'compact', 'row'];
+
+export function contentItemToMediaItem(item: ContentItem): MediaItem {
+	return {
+		path: item.path,
+		name: item.label,
+		type: item.contentTypeId,
+		mimeType: item.mimeType ?? '',
+		previewUrl: item.previewUrl ?? '',
+		lastModifier: item.modifier?.username ?? '',
+		lastModified: item.dateModified ?? '',
+		size: 0,
+		snippets: ''
+	};
+}

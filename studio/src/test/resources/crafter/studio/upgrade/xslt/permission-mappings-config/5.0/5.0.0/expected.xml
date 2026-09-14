@@ -85,8 +85,7 @@
                 <permission>publish_get_queue</permission>
                 <permission>publish_cancel</permission>
                 <permission>publish_request</permission>
-                <permission>publish_approve</permission>
-                <permission>publish_reject</permission>
+                <permission>publish_review</permission>
             </allowed-permissions>
         </rule>
     </role>
@@ -183,8 +182,7 @@
                 <permission>set_item_states</permission>
                 <permission>publish_get_queue</permission>
                 <permission>publish_request</permission>
-                <permission>publish_approve</permission>
-                <permission>publish_reject</permission>
+                <permission>publish_review</permission>
             </allowed-permissions>
         </rule>
     </role>
@@ -200,8 +198,7 @@
                 <permission>content_search</permission>
                 <permission>read_configuration</permission>
                 <permission>publish_get_queue</permission>
-                <permission>publish_approve</permission>
-                <permission>publish_reject</permission>
+                <permission>publish_review</permission>
             </allowed-permissions>
         </rule>
     </role>
@@ -232,7 +229,7 @@
                 <permission>publish_get_queue</permission>
                 <permission>publish_cancel</permission>
                 <permission>publish_request</permission>
-                <permission>publish_approve</permission>
+                <permission>publish_review</permission>
             </allowed-permissions>
         </rule>
     </role>

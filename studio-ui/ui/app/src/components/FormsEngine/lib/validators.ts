@@ -33,14 +33,15 @@ import { getValidationValue } from './formUtils';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import type { CheckboxGroupProps } from '../controls/CheckboxGroup';
 import { macroCreatorLookupTable } from '../../ContentTypeManagement/controls/PathWithMacroCreator';
+import { getPluginControlValidator } from '../controls/registry';
 
-interface ValidatorMetaData {
+export interface ValidatorMetaData {
 	siteId: string;
 	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
 }
-type ValidatorFunctionDef = (
+export type ValidatorFunctionDef = (
 	field: ContentTypeField,
 	currentValue: unknown,
 	messages: FieldValidityState['messages'],
@@ -64,9 +65,6 @@ export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorContro
 	input: (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
 	'internal-name': undefined,
 	label: undefined,
-	'link-input': undefined,
-	'link-textarea': undefined,
-	'linked-dropdown': undefined,
 	'locale-selector': undefined,
 	'node-selector': (field, currentValue, messages, meta) =>
 		nodeSelectorValidator(field, currentValue as NodeSelectorItem[], messages, meta),
@@ -140,6 +138,23 @@ export async function fileNameValidator(
 }
 
 /**
+ * Built-in map first (including explicit `undefined` = no type validator).
+ * Plugin contributions only for types absent from the built-in map.
+ * Required/empty checks stay in {@link validateFieldValue}, not here.
+ */
+export function getFieldValidator(fieldType: string): ValidatorFunctionDef | undefined {
+	if (Object.hasOwn(validatorsMap, fieldType)) {
+		return validatorsMap[fieldType as BuiltInControlType | DescriptorControlType];
+	}
+	return getPluginControlValidator(fieldType);
+}
+
+/** True when a built-in or plugin type validator is registered for `fieldType`. */
+export function hasFieldValidator(fieldType: string): boolean {
+	return nnou(getFieldValidator(fieldType));
+}
+
+/**
  * Validates the value of a field based on its type, requirements, and metadata.
  *
  * @param {ContentTypeField} field - The field metadata, including its type and validation rules.
@@ -164,7 +179,7 @@ export async function validateFieldValue(
 		messages.push(defineMessage({ defaultMessage: 'This field is required.' }));
 		return Promise.resolve({ isValid: false, messages });
 	}
-	const validator = validatorsMap[field.type as BuiltInControlType | DescriptorControlType];
+	const validator = getFieldValidator(field.type);
 	// If there's a validator, run it. If not, it's valid.
 	const isValid = nnou(validator) ? await validator(field, validateValue, messages, meta) : true;
 	return Promise.resolve({ isValid, messages });

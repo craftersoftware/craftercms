@@ -55,6 +55,7 @@ import static org.craftercms.studio.controller.rest.ValidationUtils.validateValu
 import static org.craftercms.studio.controller.rest.v2.RequestConstants.*;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEM;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEMS;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * Rest controller for WebDAV service
@@ -89,7 +90,7 @@ public class WebdavController {
 	 * @throws SiteNotFoundException                 if site does not exist
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
-	@GetMapping("list")
+	@GetMapping(value = "list", produces = APPLICATION_JSON_VALUE)
 	public ResultList<WebDavItem> listItems(
 		@NotBlank @ValidSiteId @RequestParam(REQUEST_PARAM_SITEID) String siteId,
 		@NotBlank @RequestParam(REQUEST_PARAM_PROFILE_ID) String profileId,
@@ -114,7 +115,7 @@ public class WebdavController {
 	 * @throws SiteNotFoundException                 if site does not exist
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
-	@PostMapping("/upload")
+	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
 	public ResultOne<WebDavItem> uploadItem(HttpServletRequest request) throws IOException, WebDavException,
 		InvalidParametersException, SiteNotFoundException, ConfigurationProfileNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {

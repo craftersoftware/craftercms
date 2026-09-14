@@ -169,6 +169,8 @@
 
 			<pattern-group name="rendering-template">
 				<pattern>/templates/([^&lt;"]+)\.ftl</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlh</pattern>
+				<pattern>/templates/([^&lt;"]+)\.ftlx</pattern>
 			</pattern-group>
 
 			<pattern-group name="scripts">

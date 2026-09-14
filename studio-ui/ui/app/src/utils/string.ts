@@ -180,6 +180,27 @@ export function ensureSingleSlash(url: string): string {
 	return /^(http|https):\/\//g.test(url) ? url.replace(/([^:]\/)\/+/g, '$1') : url.replace(/\/+/g, '/');
 }
 
+/**
+ * True when the value is already a loadable absolute/remote media URL (http(s), data, or blob).
+ * Site-relative paths like `/static-assets/...` return false.
+ */
+export function isExternalMediaUrl(url: string): boolean {
+	if (!url) return false;
+	return /^(https?:)?\/\//i.test(url) || /^(data|blob):/i.test(url);
+}
+
+/**
+ * Resolves a media field value for preview / fetch / download.
+ * Absolute/remote URLs are returned as-is; site paths are prefixed with `guestBase` (FE1 image-picker parity).
+ */
+export function resolveMediaUrl(guestBase: string, value: string): string {
+	if (!value) return value;
+	if (isExternalMediaUrl(value)) {
+		return value;
+	}
+	return ensureSingleSlash(`${guestBase}${value}`);
+}
+
 export function getSimplifiedVersion(version: string, options: { minor?: boolean; patch?: boolean } = {}) {
 	if (!version) {
 		return version;
