@@ -1718,7 +1718,7 @@ __metadata:
     babel-plugin-formatjs: "npm:^11.2.4"
     build-if-changed: "npm:^1.5.5"
     clsx: "npm:^2.1.1"
-    diff: "npm:^8.0.3"
+    diff: "npm:^9.0.0"
     dompurify: "npm:^3.3.3"
     eslint: "npm:^10.10.0"
     eslint-plugin-formatjs: "npm:^6.3.0"
@@ -7374,10 +7374,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"diff@npm:*, diff@npm:^8.0.3":
+"diff@npm:*":
   version: 8.0.3
   resolution: "diff@npm:8.0.3"
   checksum: 10/52f957e1fa53db4616ff5f4811b92b22b97a160c12a2f86f22debd4181227b0f6751aa8fd711d6a8fcf4618acb13b86bc702e6d9d6d6ed82acfd00c9cb26ace2
+  languageName: node
+  linkType: hard
+
+"diff@npm:^9.0.0":
+  version: 9.0.0
+  resolution: "diff@npm:9.0.0"
+  checksum: 10/f8b5e38a6a7ec73d1850ccb7ff19cda1d02502dc0f2c562ada0f40d7211bfb3075c2f3742104619a1f8f47ae333d48a6c77bffb080a2df900db36935080ea4fb
   languageName: node
   linkType: hard
 

@@ -80,7 +80,7 @@
 		"@uppy/progress-bar": "^4.3.2",
 		"autosuggest-highlight": "^3.3.4",
 		"clsx": "^2.1.1",
-		"diff": "^8.0.3",
+		"diff": "^9.0.0",
 		"dompurify": "^3.3.3",
 		"fast-xml-parser": "^5.5.3",
 		"graphiql": "^5.4.0",
