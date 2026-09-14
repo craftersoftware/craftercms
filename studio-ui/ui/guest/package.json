@@ -79,9 +79,9 @@
 		"uuid": "^13.0.0"
 	},
 	"devDependencies": {
-		"@formatjs/cli": "^6.13.1",
+		"@formatjs/cli": "^6.16.28",
 		"@rollup/plugin-json": "^6.1.0",
-		"@rollup/plugin-swc": "^0.4.0",
+		"@rollup/plugin-swc": "^0.4.1",
 		"@swc/core": "^1.15.18",
 		"@types/jquery": "^3.5.34",
 		"@types/js-cookie": "^3.0.6",
