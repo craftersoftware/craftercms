@@ -37,7 +37,7 @@
 	"dependencies": {
 		"@transloadit/prettier-bytes": "^1.1.0",
 		"classnames": "^2.5.1",
-		"preact": "^10.29.0"
+		"preact": "^10.29.8"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.28.6",
