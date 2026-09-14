@@ -1566,7 +1566,7 @@ __metadata:
     prop-types: "npm:^15.8.1"
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
-    react-hotkeys-hook: "npm:^5.2.4"
+    react-hotkeys-hook: "npm:^5.3.3"
     react-intl: "npm:^8.1.3"
     react-is: "npm:^19.2.4"
     react-redux: "npm:^9.2.0"
@@ -1743,26 +1743,26 @@ __metadata:
     react: "npm:19.2.4"
     react-advanced-cropper: "npm:^0.20.1"
     react-animations: "npm:^1.0.0"
-    react-colorful: "npm:^5.6.1"
+    react-colorful: "npm:^5.8.1"
     react-dom: "npm:19.2.4"
-    react-hotkeys-hook: "npm:^5.2.4"
+    react-hotkeys-hook: "npm:^5.3.3"
     react-intl: "npm:^8.1.3"
     react-redux: "npm:^9.2.0"
     react-router: "npm:^7.13.1"
-    react-window: "npm:^2.2.7"
+    react-window: "npm:^2.3.1"
     react-window-infinite-loader: "npm:^2.0.1"
     redux: "npm:^5.0.1"
     redux-observable: "npm:^3.0.0-rc.3"
     rimraf: "npm:^6.1.3"
     rollup: "npm:^4.59.0"
     rxjs: "npm:^7.8.2"
-    slugify: "npm:^1.6.6"
+    slugify: "npm:^1.6.9"
     tiny-invariant: "npm:^1.3.3"
     typescript: "npm:^5.9.3"
     unique-names-generator: "npm:^4.7.1"
     uppy: "npm:^5.2.3"
     uuid: "npm:^13.0.0"
-    video.js: "npm:8.23.8"
+    video.js: "npm:8.24.1"
     vite: "npm:^7.3.1"
     vite-plugin-monaco-editor: "npm:^1.1.0"
     zxcvbn: "npm:^4.4.2"
@@ -5601,6 +5601,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@videojs/http-streaming@npm:^3.17.5":
+  version: 3.17.5
+  resolution: "@videojs/http-streaming@npm:3.17.5"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    "@videojs/vhs-utils": "npm:^4.1.2"
+    aes-decrypter: "npm:^4.0.2"
+    global: "npm:^4.4.0"
+    m3u8-parser: "npm:^7.2.0"
+    mpd-parser: "npm:^1.4.0"
+    mux.js: "npm:7.1.0"
+    video.js: "npm:^7 || ^8"
+  peerDependencies:
+    video.js: ^8.19.0
+  checksum: 10/48863642e4e71ed5caadebe6b90d9959ce292e7fd3e6ff60ab27868525b66fcc6dd978eac92fd9a831b17090f32bfabd516b5e3dfe0fef44bd668d6e35e34328
+  languageName: node
+  linkType: hard
+
 "@videojs/vhs-utils@npm:^4.0.0, @videojs/vhs-utils@npm:^4.1.1":
   version: 4.1.1
   resolution: "@videojs/vhs-utils@npm:4.1.1"
@@ -5608,6 +5626,16 @@ __metadata:
     "@babel/runtime": "npm:^7.12.5"
     global: "npm:^4.4.0"
   checksum: 10/060b9e95aa75ed480bb597c2051b5ba362a9e1cfa5fdf6a51671bc00c8afe3ceee61ce2006157af40429799857d6637b72e5b9aeb7c20f6c999bd823715962b9
+  languageName: node
+  linkType: hard
+
+"@videojs/vhs-utils@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "@videojs/vhs-utils@npm:4.1.2"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    global: "npm:^4.4.0"
+  checksum: 10/6bc2515fdfb973499c4cba1742c746b26ef5f876f8cc474774d149f226d2b939f23a1cdf67a2411df03139b279bba7ea4c9171e41ae16e88939c68cea817a10e
   languageName: node
   linkType: hard
 
@@ -10766,6 +10794,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mpd-parser@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "mpd-parser@npm:1.4.0"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    "@videojs/vhs-utils": "npm:^4.1.2"
+    "@xmldom/xmldom": "npm:^0.8.3"
+    global: "npm:^4.4.0"
+  bin:
+    mpd-to-m3u8-json: bin/parse.js
+  checksum: 10/226664225caa5cbc462194d88796cda92a29af4cadd9635878e8836488c7111cf393d79292fa2de906d4fad517673155ba53312454f6dbfb01cc324bd254481b
+  languageName: node
+  linkType: hard
+
 "ms@npm:^2.0.0, ms@npm:^2.1.3":
   version: 2.1.3
   resolution: "ms@npm:2.1.3"
@@ -12123,13 +12165,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-colorful@npm:^5.6.1":
-  version: 5.6.1
-  resolution: "react-colorful@npm:5.6.1"
+"react-colorful@npm:^5.8.1":
+  version: 5.8.1
+  resolution: "react-colorful@npm:5.8.1"
   peerDependencies:
     react: ">=16.8.0"
     react-dom: ">=16.8.0"
-  checksum: 10/3e02ba013454818d0c323949bd961fb2c19ac18130dfc67a4032aa5b03787c5ffe7ff159c4b97dc3475072d576828ca0c4b8e8ce85b55eaf484180596cdf0403
+  checksum: 10/4b896fc53c052c2a6bfde4cbc0cc59e6fe907782f0d7f08fc7336b37aa4daf4b3a32cbca53b39031829a07f98417a4ea7eee68a2e2dd67f42918b90acd1d611e
   languageName: node
   linkType: hard
 
@@ -12153,13 +12195,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hotkeys-hook@npm:^5.2.4":
-  version: 5.2.4
-  resolution: "react-hotkeys-hook@npm:5.2.4"
+"react-hotkeys-hook@npm:^5.3.3":
+  version: 5.3.3
+  resolution: "react-hotkeys-hook@npm:5.3.3"
   peerDependencies:
     react: ">=16.8.0"
     react-dom: ">=16.8.0"
-  checksum: 10/118ffdc15e8932e0c67d2f0479d088ba50d759b4f5974e2394bc720286918530291bbde317b39cbde7ee1239813038ae7b90f6eb24794783036944b3fa2a1ba2
+  checksum: 10/3145c62c1ed042d83e036a71d770d177fb98f1b295835fd278dc14dc663678e5ea2e18524e538354e2c5f18d0256c38ac8534251e357fdf95c055c6e13647276
   languageName: node
   linkType: hard
 
@@ -12317,13 +12359,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-window@npm:*, react-window@npm:^2.2.7":
+"react-window@npm:*":
   version: 2.2.7
   resolution: "react-window@npm:2.2.7"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
   checksum: 10/94fc2aad2702d66a778c41e3caa6c47281b92cd4f3c04bfc8ee733581e08e9310697d00d86c50121f3328911492fcba272ab28e4d3cd399d95d0b15ce0d840e9
+  languageName: node
+  linkType: hard
+
+"react-window@npm:^2.3.1":
+  version: 2.3.1
+  resolution: "react-window@npm:2.3.1"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  checksum: 10/1c76b54159910cc35ade8a7b7eda67d1ee86c49d798f3fa12f34904adeee4ee105c9e8ad22e4592710a197d4a3eeb0b2b142fc27c15847f1277fe01cf0b26f8c
   languageName: node
   linkType: hard
 
@@ -13146,10 +13198,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"slugify@npm:^1.6.6":
-  version: 1.6.6
-  resolution: "slugify@npm:1.6.6"
-  checksum: 10/d0737cdedc834c50f74227bc1a1cf4f449f3575893f031b0e8c59f501c73526c866a23e47261b262c7acdaaaaf30d6f9e8aaae22772b3f56e858ac84c35efa7b
+"slugify@npm:^1.6.9":
+  version: 1.6.9
+  resolution: "slugify@npm:1.6.9"
+  checksum: 10/101599a77585ac3b3fe49662db8666260c8ee1c5090d28a13c6ecabf16b42057e69ea209654797f46b13faee4c53224f48784044bd734a9443b7b88e0357110e
   languageName: node
   linkType: hard
 
@@ -14090,7 +14142,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"video.js@npm:8.23.8, video.js@npm:^7 || ^8":
+"video.js@npm:8.24.1":
+  version: 8.24.1
+  resolution: "video.js@npm:8.24.1"
+  dependencies:
+    "@babel/runtime": "npm:^7.28.4"
+    "@videojs/http-streaming": "npm:^3.17.5"
+    "@videojs/vhs-utils": "npm:^4.1.2"
+    "@videojs/xhr": "npm:2.7.0"
+    aes-decrypter: "npm:^4.0.2"
+    global: "npm:4.4.0"
+    m3u8-parser: "npm:^7.2.0"
+    mpd-parser: "npm:^1.4.0"
+    mux.js: "npm:^7.0.1"
+    videojs-contrib-quality-levels: "npm:4.1.0"
+    videojs-font: "npm:4.2.0"
+    videojs-vtt.js: "npm:0.15.5"
+  checksum: 10/f2416f0e2906d856e2d9eb172e39294ae78711ba9e22ddccfafa9ce3fb571af62ff9b399a80a6080e0b1ce96ec7b0776f70c03be88411900ef2323be0b8380f5
+  languageName: node
+  linkType: hard
+
+"video.js@npm:^7 || ^8":
   version: 8.23.8
   resolution: "video.js@npm:8.23.8"
   dependencies:
