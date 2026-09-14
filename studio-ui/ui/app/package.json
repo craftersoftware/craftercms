@@ -118,7 +118,7 @@
 		"typescript": "^5.9.3",
 		"unique-names-generator": "^4.7.1",
 		"uppy": "^5.2.3",
-		"uuid": "^13.0.0",
+		"uuid": "^14.0.2",
 		"video.js": "8.24.1",
 		"zxcvbn": "^4.4.2"
 	},

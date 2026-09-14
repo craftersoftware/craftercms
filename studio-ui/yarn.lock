@@ -1788,7 +1788,7 @@ __metadata:
     rollup-plugin-swc3: "npm:^0.12.1"
     rxjs: "npm:^7.8.2"
     typescript: "npm:^5.9.3"
-    uuid: "npm:^13.0.0"
+    uuid: "npm:^14.0.2"
     yargs: "npm:^18.1.0"
   languageName: unknown
   linkType: soft
@@ -1828,7 +1828,7 @@ __metadata:
     jquery: "npm:^3.7.1"
     jquery-ui: "npm:^1.14.2"
     jquery-ui-css: "npm:^1.11.5"
-    js-yaml: "npm:^4.1.1"
+    js-yaml: "npm:^5.4.2"
     monaco-editor: "npm:0.54.0"
     monaco-editor-webpack-plugin: "npm:^7.1.1"
     npm-run-all: "npm:^4.1.5"
@@ -1969,7 +1969,7 @@ __metadata:
     typescript: "npm:^5.9.3"
     unique-names-generator: "npm:^4.7.1"
     uppy: "npm:^5.2.3"
-    uuid: "npm:^13.0.0"
+    uuid: "npm:^14.0.2"
     video.js: "npm:8.24.1"
     vite: "npm:^7.3.1"
     vite-plugin-monaco-editor: "npm:^1.1.0"
@@ -10433,17 +10433,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "js-yaml@npm:4.1.1"
-  dependencies:
-    argparse: "npm:^2.0.1"
-  bin:
-    js-yaml: bin/js-yaml.js
-  checksum: 10/a52d0519f0f4ef5b4adc1cde466cb54c50d56e2b4a983b9d5c9c0f2f99462047007a6274d7e95617a21d3c91fde3ee6115536ed70991cd645ba8521058b78f77
-  languageName: node
-  linkType: hard
-
 "js-yaml@npm:^4.3.2":
   version: 4.3.2
   resolution: "js-yaml@npm:4.3.2"
@@ -10452,6 +10441,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10/05c44b9c73e4901d92703b155e76518df64bf01ac62e4c036b47de4b391e19b72e32656e8954d51b436307f08cc9d0c0d4ec617d061cf2f65fffee9f3114bee7
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^5.4.2":
+  version: 5.4.2
+  resolution: "js-yaml@npm:5.4.2"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.mjs
+  checksum: 10/f2461abd1d6268fb226733f0a0e0aa48004bb824116e3dfa75f1a1279001936343b672066dfecdb852ac3ca883452706c383a760aa90430cb68ba395aa2cbc84
   languageName: node
   linkType: hard
 
@@ -14890,7 +14890,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:*, uuid@npm:^13.0.0":
+"uuid@npm:*":
   version: 13.0.0
   resolution: "uuid@npm:13.0.0"
   bin:
@@ -14905,6 +14905,15 @@ __metadata:
   bin:
     uuid: dist/bin/uuid
   checksum: 10/35aa60614811a201ff90f8ca5e9ecb7076a75c3821e17f0f5ff72d44e36c2d35fcbc2ceee9c4ac7317f4cc41895da30e74f3885e30313bee48fda6338f250538
+  languageName: node
+  linkType: hard
+
+"uuid@npm:^14.0.2":
+  version: 14.0.2
+  resolution: "uuid@npm:14.0.2"
+  bin:
+    uuid: dist-node/bin/uuid
+  checksum: 10/e8263a76ad7b2d1f246df5a48a5bdf30d886eedbb1d3d74c75356d02b2966f5fffd7790b85afdb3682e4e732d13fca7974626419814f45de6847f78ce03c745e
   languageName: node
   linkType: hard
 

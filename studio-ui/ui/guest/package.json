@@ -76,7 +76,7 @@
 		"redux-observable": "^3.0.0-rc.3",
 		"rxjs": "^7.8.2",
 		"typescript": "^5.9.3",
-		"uuid": "^13.0.0"
+		"uuid": "^14.0.2"
 	},
 	"devDependencies": {
 		"@formatjs/cli": "^6.16.28",
