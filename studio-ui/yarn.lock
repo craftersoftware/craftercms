@@ -1560,7 +1560,7 @@ __metadata:
     "@types/react-dom": "npm:^19.2.3"
     "@types/react-is": "npm:^19.2.0"
     build-if-changed: "npm:^1.5.5"
-    js-cookie: "npm:^3.0.5"
+    js-cookie: "npm:^3.0.8"
     npm-run-all: "npm:^4.1.5"
     postcss: "npm:^8.5.15"
     prop-types: "npm:^15.8.1"
@@ -1728,12 +1728,12 @@ __metadata:
     jabber: "npm:^1.5.3"
     jotai: "npm:^2.20.3"
     jotai-effect: "npm:^2.4.1"
-    js-cookie: "npm:^3.0.5"
-    marked: "npm:^17.0.4"
-    marked-highlight: "npm:^2.2.3"
-    moment-timezone: "npm:^0.6.0"
-    monaco-graphql: "npm:^1.7.3"
-    nanoid: "npm:^5.1.6"
+    js-cookie: "npm:^3.0.8"
+    marked: "npm:^18.0.13"
+    marked-highlight: "npm:^2.2.4"
+    moment-timezone: "npm:^0.6.3"
+    monaco-graphql: "npm:^1.9.0"
+    nanoid: "npm:^6.0.1"
     ncp: "npm:^2.0.0"
     notistack: "npm:3.0.2"
     npm-run-all: "npm:^4.1.5"
@@ -8888,21 +8888,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql-language-service@npm:^5.5.0":
-  version: 5.5.0
-  resolution: "graphql-language-service@npm:5.5.0"
-  dependencies:
-    debounce-promise: "npm:^3.1.2"
-    nullthrows: "npm:^1.0.0"
-    vscode-languageserver-types: "npm:^3.17.1"
-  peerDependencies:
-    graphql: ^15.5.0 || ^16.0.0 || ^17.0.0
-  bin:
-    graphql: dist/temp-bin.js
-  checksum: 10/7f398395cab50faaad717d107413df5424ac102bf33ac4a5e4ef34bf7c2e13a27d51fd93456601f560874801bf93bec281589164d901bab3aef56f4518782f60
-  languageName: node
-  linkType: hard
-
 "graphql-language-service@npm:^5.7.0":
   version: 5.7.0
   resolution: "graphql-language-service@npm:5.7.0"
@@ -9857,10 +9842,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-cookie@npm:^3.0.5":
-  version: 3.0.5
-  resolution: "js-cookie@npm:3.0.5"
-  checksum: 10/366494b1630b9fb8abaef3659748db5dfd52c58c6fc3459b9f0a03b492593bc1b01c6dfcc066b46f6413c28edb3a00cc68fb61ea8cdf6991bedf1f100f8a389d
+"js-cookie@npm:^3.0.8":
+  version: 3.0.8
+  resolution: "js-cookie@npm:3.0.8"
+  checksum: 10/6bc10dc1ef0ad4780cd43a0413702d0b8d9d8d167c4fb605ae66c388270dece6b4cad4c8944654cc67b6e0e7639da379a7b48e7b7ad8711a80f60aba6a915548
   languageName: node
   linkType: hard
 
@@ -10372,12 +10357,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked-highlight@npm:^2.2.3":
-  version: 2.2.3
-  resolution: "marked-highlight@npm:2.2.3"
+"marked-highlight@npm:^2.2.4":
+  version: 2.2.4
+  resolution: "marked-highlight@npm:2.2.4"
   peerDependencies:
-    marked: ">=4 <18"
-  checksum: 10/ae66c9141700ae168d000155baa9a3fc304eba36edd960e04d0c6bdcfd0408fada6ad4f2645e08a60662d68f72cef9500bd93ad80f5dce19e6b5cbaf14c9350b
+    marked: ">=4 <19"
+  checksum: 10/e23a990e2496583074667b1607c05b920ace83291a8754af2a22f05aa4a35563f7d04bd102c283a23e386745e7137ec77766131b489021f35b1ea18b2fc99b53
   languageName: node
   linkType: hard
 
@@ -10390,12 +10375,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^17.0.4":
-  version: 17.0.4
-  resolution: "marked@npm:17.0.4"
+"marked@npm:^18.0.13":
+  version: 18.0.13
+  resolution: "marked@npm:18.0.13"
   bin:
     marked: bin/marked.js
-  checksum: 10/a26c24db0882be6301d3947cee6e9fa70350ab9593cdf0c8c301ce64bb6125db158729fd5c7073106d0f176db6cb04749db19a0752637b071d5ec318d266f928
+  checksum: 10/09a240faefc9f9b60e868b22f3e89201ad49c471e349dc3f6b76e6bfa0feecf10e887198518d6cfcab28cb4888292a44aaf9a64fcfd9580b31cc32976a53bfc5
   languageName: node
   linkType: hard
 
@@ -10692,12 +10677,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moment-timezone@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "moment-timezone@npm:0.6.0"
+"moment-timezone@npm:^0.6.3":
+  version: 0.6.3
+  resolution: "moment-timezone@npm:0.6.3"
   dependencies:
     moment: "npm:^2.29.4"
-  checksum: 10/324df65c9ed622c75d4e39dc5daf01dfcd8b4cb4eb63dec3270ddbfed3f5357e4d4b22a39bf3b4fe1fe2d78b21307abddfb13e7aa6a19b69b7f33bb712c8ad55
+  checksum: 10/55ae516386b87fc2207d7911ef61ecef240ba4b21aece36d0b9f33802e1457db0c21b197ae4fde3b6d819d4bde3d835da0ba3c08de740b158e067c874d16082a
   languageName: node
   linkType: hard
 
@@ -10734,20 +10719,6 @@ __metadata:
     dompurify: "npm:3.1.7"
     marked: "npm:14.0.0"
   checksum: 10/654aa19e8ed859627f8c545026e41955fd015eeac4a26330a5176b955e0afbcd590bbfba06fa9f22fa1bc97d7a33100059e26c754f9541b64d753379a6396711
-  languageName: node
-  linkType: hard
-
-"monaco-graphql@npm:^1.7.3":
-  version: 1.7.3
-  resolution: "monaco-graphql@npm:1.7.3"
-  dependencies:
-    graphql-language-service: "npm:^5.5.0"
-    picomatch-browser: "npm:^2.2.6"
-  peerDependencies:
-    graphql: ^15.5.0 || ^16.0.0 || ^17.0.0
-    monaco-editor: ">= 0.20.0 < 0.53"
-    prettier: ^2.8.0 || ^3.0.0
-  checksum: 10/1d0ae9642ba8599e78275395f53cafba473e87272f0027f74fc05dda56a57267715dc0f6eee38b9e18b9c7f9ccc4107dda33862063d069ca3597ad0fd1e4cf5a
   languageName: node
   linkType: hard
 
@@ -10830,12 +10801,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:^5.0.9, nanoid@npm:^5.1.6":
+"nanoid@npm:^5.0.9":
   version: 5.1.6
   resolution: "nanoid@npm:5.1.6"
   bin:
     nanoid: bin/nanoid.js
   checksum: 10/4109dbcf596d7f297a9b42f459b8f01694a03ebbdd2f41408d963ad54e5ec7234cbe7b4acad137751f31add11bb4fb3415a3e688082516745812811f05570014
+  languageName: node
+  linkType: hard
+
+"nanoid@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "nanoid@npm:6.0.1"
+  bin:
+    nanoid: bin/nanoid.js
+  checksum: 10/e49582351f6fff22c275a58504950e923b74c611fc1eac9589a98e89506270d2d1e3b61ed6429df6e7529e54ff71d9f0c5fbb1c540aaee81ae33a523e88ca668
   languageName: node
   linkType: hard
 
