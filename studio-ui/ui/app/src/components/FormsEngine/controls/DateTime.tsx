@@ -40,7 +40,7 @@ export function DateTime(props: DateTimeProps) {
 	const timezoneAtom = formContext.atoms.valueByFieldId[`${field.id}_tz`] as PrimitiveAtom<string> | undefined;
 	if (!timezoneAtom) {
 		throw new Error(
-			`The date/time field "${field.id}" cannot be displayed because its timezone companion field "${field.id}_tz" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured. Please contact your administrator.`
+			`The date/time field "${field.id}" cannot be displayed because its timezone companion field "${field.id}_tz" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured. Try reloading the form; if the problem persists, please contact your administrator.`
 		);
 	}
 	const [timezoneValue, setTimezoneValue] = useAtom(timezoneAtom);

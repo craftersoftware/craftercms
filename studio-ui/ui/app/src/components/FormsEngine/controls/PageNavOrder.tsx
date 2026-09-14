@@ -93,7 +93,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		| undefined;
 	if (!orderDefaultAtom) {
 		throw new Error(
-			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured. Please contact your administrator.`
+			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
 		);
 	}
 	const effectRefs = useUpdateRefs({
