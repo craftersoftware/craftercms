@@ -4,29 +4,42 @@
 			"@babel/preset-env",
 			{
 				"modules": false,
-				"loose": true,
-				"targets": "defaults"
+				"targets": "defaults",
+				"exclude": ["transform-typeof-symbol"]
 			}
 		],
-		"@babel/preset-react"
+		[
+			"@babel/preset-react",
+			{
+				"runtime": "classic"
+			}
+		]
 	],
+	"assumptions": {
+		"arrayLikeIsIterable": true,
+		"constantReexports": true,
+		"ignoreFunctionLength": true,
+		"ignoreToPrimitiveHint": true,
+		"mutableTemplateObject": true,
+		"noClassCalls": true,
+		"noDocumentAll": true,
+		"objectRestNoSymbols": true,
+		"privateFieldsAsProperties": true,
+		"pureGetters": true,
+		"setClassMethods": true,
+		"setComputedProperties": true,
+		"setPublicClassFields": true,
+		"setSpreadProperties": true,
+		"skipForOfIteratorClosing": true,
+		"superIsCallableConstructor": true
+	},
 	"plugins": [
-		[
-			"@babel/plugin-proposal-class-properties",
-			{
-				"loose": true
-			}
-		],
-		[
-			"@babel/plugin-proposal-object-rest-spread",
-			{
-				"loose": true
-			}
-		],
+		"@babel/plugin-proposal-class-properties",
+		"@babel/plugin-proposal-object-rest-spread",
 		[
 			"@babel/plugin-transform-react-jsx",
 			{
-				"loose": true,
+				"runtime": "classic",
 				"pragma": "h",
 				"pragmaFrag": "Fragment"
 			}
@@ -37,11 +50,6 @@
 				"loose": true
 			}
 		],
-		[
-			"@babel/plugin-transform-private-methods",
-			{
-				"loose": true
-			}
-		]
+		"@babel/plugin-transform-private-methods"
 	]
 }
