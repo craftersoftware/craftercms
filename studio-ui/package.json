@@ -103,6 +103,6 @@
 	},
 	"dependencies": {
 		"@prettier/plugin-xml": "3.4.2",
-		"prettier": "^3.8.1"
+		"prettier": "^3.9.6"
 	}
 }

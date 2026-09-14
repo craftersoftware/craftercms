@@ -1599,7 +1599,7 @@ __metadata:
     build-if-changed: "npm:^1.5.5"
     css-loader: "npm:^7.1.4"
     file-loader: "npm:^6.2.0"
-    grunt: "npm:^1.6.1"
+    grunt: "npm:^1.6.3"
     jquery: "npm:^3.7.1"
     jquery-ui: "npm:^1.14.2"
     jquery-ui-css: "npm:^1.11.5"
@@ -1720,9 +1720,9 @@ __metadata:
     ncp: "npm:^2.0.0"
     notistack: "npm:3.0.2"
     npm-run-all: "npm:^4.1.5"
-    prettier: "npm:^3.8.1"
+    prettier: "npm:^3.9.6"
     prop-types: "npm:^15.8.1"
-    query-string: "npm:^9.3.1"
+    query-string: "npm:^9.5.1"
     react: "npm:19.2.4"
     react-advanced-cropper: "npm:^0.20.1"
     react-animations: "npm:^1.0.0"
@@ -1771,7 +1771,7 @@ __metadata:
     glob-gitignore: "npm:^1.0.15"
     globals: "npm:^17.4.0"
     npm-run-all: "npm:^4.1.5"
-    prettier: "npm:^3.8.1"
+    prettier: "npm:^3.9.6"
     rimraf: "npm:^6.1.3"
     rollup: "npm:^4.59.0"
     rollup-plugin-copy: "npm:^3.5.0"
@@ -7225,6 +7225,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"decode-uri-component@npm:^0.5.0":
+  version: 0.5.0
+  resolution: "decode-uri-component@npm:0.5.0"
+  checksum: 10/7bd7ed31824ea982a54c1e3ab6284a4541a09125ad6b419d3c5db976ceb700334f15bd5f82af5fe9925e2f9f78b750b6dd60fc80a8fc0498ae2b55da8177e49b
+  languageName: node
+  linkType: hard
+
 "decompress-response@npm:^6.0.0":
   version: 6.0.0
   resolution: "decompress-response@npm:6.0.0"
@@ -8887,18 +8894,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"grunt-cli@npm:~1.4.3":
-  version: 1.4.3
-  resolution: "grunt-cli@npm:1.4.3"
+"grunt-cli@npm:^1.4.3":
+  version: 1.5.0
+  resolution: "grunt-cli@npm:1.5.0"
   dependencies:
     grunt-known-options: "npm:~2.0.0"
     interpret: "npm:~1.1.0"
     liftup: "npm:~3.0.1"
-    nopt: "npm:~4.0.1"
-    v8flags: "npm:~3.2.0"
+    nopt: "npm:~5.0.0"
+    v8flags: "npm:^4.0.1"
   bin:
     grunt: bin/grunt
-  checksum: 10/794da5899789bf94c19ee5dd8bee0e69b1bf2135dd0082c6f8f33a71c711a131fd43717528ec8fd43cbfb7d9962cb6fed882d1e957c835633e4ca6b29a20cd24
+  checksum: 10/124493f25b761581dcc0863078ca2953da1c81d5f4e57c17487a05e29283131c353cc87163125e777417534c8d80e419cefcf4bd8b9220c33f0d52d7b00a60ff
   languageName: node
   linkType: hard
 
@@ -8946,26 +8953,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"grunt@npm:^1.6.1":
-  version: 1.6.1
-  resolution: "grunt@npm:1.6.1"
+"grunt@npm:^1.6.3":
+  version: 1.6.3
+  resolution: "grunt@npm:1.6.3"
   dependencies:
     dateformat: "npm:~4.6.2"
     eventemitter2: "npm:~0.4.13"
     exit: "npm:~0.1.2"
     findup-sync: "npm:~5.0.0"
     glob: "npm:~7.1.6"
-    grunt-cli: "npm:~1.4.3"
+    grunt-cli: "npm:^1.4.3"
     grunt-known-options: "npm:~2.0.0"
     grunt-legacy-log: "npm:~3.0.0"
     grunt-legacy-util: "npm:~2.0.1"
     iconv-lite: "npm:~0.6.3"
-    js-yaml: "npm:~3.14.0"
-    minimatch: "npm:~3.0.4"
-    nopt: "npm:~3.0.6"
+    js-yaml: "npm:^3.15.0"
+    minimatch: "npm:^3.1.5"
+    nopt: "npm:^5.0.0"
   bin:
     grunt: bin/grunt
-  checksum: 10/c7414bedff592c3d64fe8648b7e7c0ce79d621e6ea077f887479af8f4e6e0c5fded915597529bda62aa13a5ecaae0572c7674845178b6f2b9f30246109ad78f2
+  checksum: 10/8b3741c3556cc416df7e76f2a30d2ecb3e81db9dee5214080b26403c9ec526899a63b8fbc8cfc84556a7a5a02b43dd810bc75693098baecfe35b302f5bfd0883
   languageName: node
   linkType: hard
 
@@ -9791,6 +9798,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"js-yaml@npm:^3.15.0":
+  version: 3.15.2
+  resolution: "js-yaml@npm:3.15.2"
+  dependencies:
+    argparse: "npm:^1.0.7"
+    esprima: "npm:^4.0.0"
+  bin:
+    js-yaml: bin/js-yaml.js
+  checksum: 10/320b5471c1b7309a15d9c0068ba273e2da7382a369038a9746c92ef649087c3d6d2a5c676810154efb4eb2ca9584179c8ae14e2fc2e4bd558d964e6bf4fafd3d
+  languageName: node
+  linkType: hard
+
 "js-yaml@npm:^4.1.1":
   version: 4.1.1
   resolution: "js-yaml@npm:4.1.1"
@@ -9799,18 +9818,6 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10/a52d0519f0f4ef5b4adc1cde466cb54c50d56e2b4a983b9d5c9c0f2f99462047007a6274d7e95617a21d3c91fde3ee6115536ed70991cd645ba8521058b78f77
-  languageName: node
-  linkType: hard
-
-"js-yaml@npm:~3.14.0":
-  version: 3.14.1
-  resolution: "js-yaml@npm:3.14.1"
-  dependencies:
-    argparse: "npm:^1.0.7"
-    esprima: "npm:^4.0.0"
-  bin:
-    js-yaml: bin/js-yaml.js
-  checksum: 10/9e22d80b4d0105b9899135365f746d47466ed53ef4223c529b3c0f7a39907743fdbd3c4379f94f1106f02755b5e90b2faaf84801a891135544e1ea475d1a1379
   languageName: node
   linkType: hard
 
@@ -10452,15 +10459,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:~3.0.4":
-  version: 3.0.8
-  resolution: "minimatch@npm:3.0.8"
-  dependencies:
-    brace-expansion: "npm:^1.1.7"
-  checksum: 10/6df5373cb1ea79020beb6887ff5576c58cfabcfd32c5a65c2cf58f326e4ee8eae84f129e5fa50b8a4347fa1d1e583f931285c9fb3040d984bdfb5109ef6607ec
-  languageName: node
-  linkType: hard
-
 "minipass-collect@npm:^1.0.2":
   version: 1.0.2
   resolution: "minipass-collect@npm:1.0.2"
@@ -10758,7 +10756,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nopt@npm:^5.0.0":
+"nopt@npm:^5.0.0, nopt@npm:~5.0.0":
   version: 5.0.0
   resolution: "nopt@npm:5.0.0"
   dependencies:
@@ -10766,29 +10764,6 @@ __metadata:
   bin:
     nopt: bin/nopt.js
   checksum: 10/00f9bb2d16449469ba8ffcf9b8f0eae6bae285ec74b135fec533e5883563d2400c0cd70902d0a7759e47ac031ccf206ace4e86556da08ed3f1c66dda206e9ccd
-  languageName: node
-  linkType: hard
-
-"nopt@npm:~3.0.6":
-  version: 3.0.6
-  resolution: "nopt@npm:3.0.6"
-  dependencies:
-    abbrev: "npm:1"
-  bin:
-    nopt: ./bin/nopt.js
-  checksum: 10/2f582a44f7a4e495f21b6668008eda47f6e9c50c27efc00494aa67360791c9240da537661371786afc5d5712f353d3debb863a7201b536fe35fb393ceadc8a23
-  languageName: node
-  linkType: hard
-
-"nopt@npm:~4.0.1":
-  version: 4.0.3
-  resolution: "nopt@npm:4.0.3"
-  dependencies:
-    abbrev: "npm:1"
-    osenv: "npm:^0.1.4"
-  bin:
-    nopt: bin/nopt.js
-  checksum: 10/037a9274c8f038a8e6ac026d14cd798bbfa9a98a5d958f4829e13b6381b44cb8576d070d4dc6d83ba514068eea7b2ceae023a3b6b63a3dbff331ad2167b611c2
   languageName: node
   linkType: hard
 
@@ -10996,30 +10971,6 @@ __metadata:
     prelude-ls: "npm:^1.2.1"
     type-check: "npm:^0.4.0"
   checksum: 10/fa28d3016395974f7fc087d6bbf0ac7f58ac3489f4f202a377e9c194969f329a7b88c75f8152b33fb08794a30dcd5c079db6bb465c28151357f113d80bbf67da
-  languageName: node
-  linkType: hard
-
-"os-homedir@npm:^1.0.0":
-  version: 1.0.2
-  resolution: "os-homedir@npm:1.0.2"
-  checksum: 10/af609f5a7ab72de2f6ca9be6d6b91a599777afc122ac5cad47e126c1f67c176fe9b52516b9eeca1ff6ca0ab8587fe66208bc85e40a3940125f03cdb91408e9d2
-  languageName: node
-  linkType: hard
-
-"os-tmpdir@npm:^1.0.0":
-  version: 1.0.2
-  resolution: "os-tmpdir@npm:1.0.2"
-  checksum: 10/5666560f7b9f10182548bf7013883265be33620b1c1b4a4d405c25be2636f970c5488ff3e6c48de75b55d02bde037249fe5dbfbb4c0fb7714953d56aed062e6d
-  languageName: node
-  linkType: hard
-
-"osenv@npm:^0.1.4":
-  version: 0.1.5
-  resolution: "osenv@npm:0.1.5"
-  dependencies:
-    os-homedir: "npm:^1.0.0"
-    os-tmpdir: "npm:^1.0.0"
-  checksum: 10/779d261920f2a13e5e18cf02446484f12747d3f2ff82280912f52b213162d43d312647a40c332373cbccd5e3fb8126915d3bfea8dde4827f70f82da76e52d359
   languageName: node
   linkType: hard
 
@@ -11860,12 +11811,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^3.5.3, prettier@npm:^3.8.1":
+"prettier@npm:^3.5.3":
   version: 3.8.1
   resolution: "prettier@npm:3.8.1"
   bin:
     prettier: bin/prettier.cjs
   checksum: 10/3da1cf8c1ef9bea828aa618553696c312e951f810bee368f6887109b203f18ee869fe88f66e65f9cf60b7cb1f2eae859892c860a300c062ff8ec69c381fc8dbd
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^3.9.6":
+  version: 3.9.6
+  resolution: "prettier@npm:3.9.6"
+  bin:
+    prettier: bin/prettier.cjs
+  checksum: 10/1dd1a1e0e40ec3b91cda9d294c4a95022aef61880ca3f441aad99b1252279f58a766c4cece81132c01550dcff1fd445efbd8812ea4a2374313e7fc6c8136f11f
   languageName: node
   linkType: hard
 
@@ -11950,7 +11910,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.1.0, query-string@npm:^9.3.1":
+"query-string@npm:^9.1.0":
   version: 9.3.1
   resolution: "query-string@npm:9.3.1"
   dependencies:
@@ -11958,6 +11918,17 @@ __metadata:
     filter-obj: "npm:^5.1.0"
     split-on-first: "npm:^3.0.0"
   checksum: 10/c56a2242ba749b14413998f620fa52dafaf6fe4fbc4572e46c3d7f5ad1ef2811d4ed4d256f53ed8b9d5e073d2dd672c20cc05ae363b65c8745120e81a5d520a6
+  languageName: node
+  linkType: hard
+
+"query-string@npm:^9.5.1":
+  version: 9.5.1
+  resolution: "query-string@npm:9.5.1"
+  dependencies:
+    decode-uri-component: "npm:^0.5.0"
+    filter-obj: "npm:^5.1.0"
+    split-on-first: "npm:^3.0.0"
+  checksum: 10/579a03bd71fe481fad6a3db2fadf325e0ad9b4185050c889f3501fd2f5a485711462366d1840d245fe0d093062ee71a877c896683e19f1873fafb46e266354d8
   languageName: node
   linkType: hard
 
@@ -13964,12 +13935,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"v8flags@npm:~3.2.0":
-  version: 3.2.0
-  resolution: "v8flags@npm:3.2.0"
-  dependencies:
-    homedir-polyfill: "npm:^1.0.1"
-  checksum: 10/4c88e2681f12153ae5e45de678ba724ebd2daf2619d4fbe5cc8075b07b2095522dbfd0cb55e510a1d27ea0ed0db4a5e6fc6d18d312f7d8fc098a3c6a79b7ffc6
+"v8flags@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "v8flags@npm:4.0.1"
+  checksum: 10/69863ede75ff79579654951c78724c084bc337d0ebe1d9bffc6924f3f2bd0b40a9eb4c568fc795201d5eb72311b77e5d75a7e1544faa12355412360dc37d76e2
   languageName: node
   linkType: hard
 
