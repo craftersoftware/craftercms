@@ -1603,7 +1603,7 @@ __metadata:
     jquery: "npm:^3.7.1"
     jquery-ui: "npm:^1.14.2"
     jquery-ui-css: "npm:^1.11.5"
-    js-yaml: "npm:^4.1.1"
+    js-yaml: "npm:^5.2.2"
     monaco-editor: "npm:0.54.0"
     monaco-editor-webpack-plugin: "npm:^7.1.1"
     npm-run-all: "npm:^4.1.5"
@@ -9808,6 +9808,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10/05c44b9c73e4901d92703b155e76518df64bf01ac62e4c036b47de4b391e19b72e32656e8954d51b436307f08cc9d0c0d4ec617d061cf2f65fffee9f3114bee7
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^5.2.2":
+  version: 5.2.2
+  resolution: "js-yaml@npm:5.2.2"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.mjs
+  checksum: 10/2b4c2933af12c97e1c4894a4f27fe9b06dab70a64a96bb50624b4429bef6bf11008bde20d868bce52a36784473314efc30078ba6025b58cf7537961e23b1ae9c
   languageName: node
   linkType: hard
 
