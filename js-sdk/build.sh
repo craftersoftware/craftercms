@@ -293,13 +293,13 @@ compilePackage() {
 #######################################
 compilePackageES5() {
   if containsElement "${3}" "${TSC_PACKAGES[@]}"; then
-    toRelative "======      [${3}]: COMPILING: ${TSC} -p ${1}/tsconfig-build.json --target es5 -d false --outDir ${2} --importHelpers true --sourceMap"
+    toRelative "======      [${3}]: COMPILING: ${TSC} -p ${1}/tsconfig-build.json --target es2015 -d false --outDir ${2} --importHelpers true --sourceMap"
     local package_name=$(basename "${2}")
-    $TSC -p ${1}/tsconfig-build.json --target es5 -d false --outDir ${2} --importHelpers true --sourceMap
+    $TSC -p ${1}/tsconfig-build.json --target es2015 -d false --outDir ${2} --importHelpers true --sourceMap
   else
-    toRelative "======      [${3}]: COMPILING: ${NGC} -p ${1}/tsconfig-build.json --target es5 -d false --outDir ${2} --importHelpers true --sourceMap"
+    toRelative "======      [${3}]: COMPILING: ${NGC} -p ${1}/tsconfig-build.json --target es2015 -d false --outDir ${2} --importHelpers true --sourceMap"
     local package_name=$(basename "${2}")
-    $NGC -p ${1}/tsconfig-build.json --target es5 -d false --outDir ${2} --importHelpers true --sourceMap
+    $NGC -p ${1}/tsconfig-build.json --target es2015 -d false --outDir ${2} --importHelpers true --sourceMap
   fi
 
   for DIR in ${1}/*; do
