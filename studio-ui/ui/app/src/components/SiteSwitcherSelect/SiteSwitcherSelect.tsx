@@ -29,7 +29,7 @@ import { PREVIEW_URL_PATH } from '../../utils/constants';
 import useMinimizedDialogWarning from '../../hooks/useMinimizedDialogWarning';
 import SiteStatusIndicator from '../SiteStatusIndicator/SiteStatusIndicator';
 import { previewSwitch } from '../../services/security';
-import { BaseSelectProps } from '@mui/material/Select/Select';
+import { BaseSelectProps } from '@mui/material/Select';
 import { PartialSxRecord } from '../../models';
 import { outlinedInputClasses } from '@mui/material/OutlinedInput';
 

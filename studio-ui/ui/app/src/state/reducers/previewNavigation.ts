@@ -20,7 +20,7 @@ import { changeCurrentUrl, goToLastPage, goToNextPage, guestCheckIn } from '../a
 import { changeSiteComplete } from '../actions/sites';
 import { deleteContentEvent, deleteContentEvents, emitSystemEvent, emitSystemEvents } from '../actions/system';
 import { getPreviewURLFromPath } from '../../utils/path';
-import type { CaseReducer } from '@reduxjs/toolkit/src/createReducer';
+import type { CaseReducer } from '@reduxjs/toolkit';
 
 function cleanseUrl(url: string) {
 	const clean = url || '/';

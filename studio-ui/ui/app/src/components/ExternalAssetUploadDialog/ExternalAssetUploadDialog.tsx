@@ -22,7 +22,7 @@ import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { SingleFileUpload } from '../SingleFileUpload';
 import useEnv from '../../hooks/useEnv';
 import type { Uppy } from 'uppy';
-import type { UppyFile, Meta, Body } from '@uppy/utils/lib/UppyFile';
+import type { UppyFile, Meta, Body } from '@uppy/core';
 import { s3UploadUri, webDAVUploadUri } from '../../utils/constants';
 
 export interface ExternalAssetUploadDialogBaseProps {
@@ -33,7 +33,7 @@ export interface ExternalAssetUploadDialogBaseProps {
 	onUploadStart?(): void;
 	onUploadComplete?(result: any): void;
 	onUploadError?({ file, error, response }): void;
-	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy, callback: () => void) => void;
+	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy<Meta, Body>, callback: () => void) => void;
 }
 
 export interface ExternalAssetUploadDialogProps extends ExternalAssetUploadDialogBaseProps, EnhancedDialogProps {}

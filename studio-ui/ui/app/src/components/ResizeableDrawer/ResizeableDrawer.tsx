@@ -19,9 +19,9 @@ import Drawer from '@mui/material/Drawer';
 import React, { useCallback, useRef, useState } from 'react';
 import palette from '../../styles/palette';
 import { PartialSxRecord } from '../../models';
-import { DrawerClasses } from '@mui/material/Drawer/drawerClasses';
+import { DrawerClasses } from '@mui/material/Drawer';
 import { SxProps } from '@mui/system';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Box from '@mui/material/Box';
 
 export type ResizeableDrawerClassKey =

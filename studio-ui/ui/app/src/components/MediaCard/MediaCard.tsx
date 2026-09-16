@@ -26,7 +26,7 @@ import palette from '../../styles/palette';
 import SystemIcon from '../SystemIcon';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models/CustomRecord';
-import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx';
 import { consolidateSx } from '../../utils/system';
 import { useIntl } from 'react-intl';
 

@@ -19,6 +19,7 @@ import { useIntl } from 'react-intl';
 import { useSelection } from '../../hooks/useSelection';
 import React, { useEffect } from 'react';
 import { Uppy, type XHRUploadOptions as UppyXHRUploadOptions, XHRUpload } from 'uppy';
+import type { Body, Meta } from '@uppy/core';
 import { translations } from './translations';
 import { getBulkUploadUrl } from '../../services/content';
 import { getGlobalHeaders } from '../../utils/ajax';
@@ -88,7 +89,7 @@ export function UploadDialogContainer(props: UploadDialogContainerProps) {
 			onUploadSuccess,
 			meta
 		} = propRefs.current;
-		const xhrOptions: UppyXHRUploadOptions & {
+		const xhrOptions: UppyXHRUploadOptions<Meta, Body> & {
 			validateStatus?(statusCode: number, responseText: string, response: unknown): boolean;
 		} = {
 			endpoint: endpoint ?? getBulkUploadUrl(site, path),
@@ -112,7 +113,7 @@ export function UploadDialogContainer(props: UploadDialogContainerProps) {
 		allowedMetaFields && (xhrOptions.allowedMetaFields = allowedMetaFields);
 		// These (validateStatus, getResponseData, getResponseError) are unlikely to have closures inside them that would go stale.
 		validateStatus && (xhrOptions.validateStatus = validateStatus);
-		const instance = new Uppy({
+		const instance = new Uppy<Meta, Body>({
 			meta: Object.assign({ site }, meta),
 			locale: {
 				strings: { noDuplicates: formatMessage(translations.noDuplicates) },

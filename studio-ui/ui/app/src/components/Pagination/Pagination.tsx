@@ -24,7 +24,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { PartialSxRecord } from '../../models/CustomRecord';
 import { Theme } from '@mui/material';
 import { inputBaseClasses } from '@mui/material/InputBase';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { UNDEFINED } from '../../utils/constants';
 
 export type PaginationClassKey = TablePaginationClassKey;

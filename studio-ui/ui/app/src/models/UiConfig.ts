@@ -15,7 +15,7 @@
  */
 
 import { Theme } from '@mui/material';
-import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx';
 import { CSSProperties } from 'react';
 
 export interface StateStylingProps {

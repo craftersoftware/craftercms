@@ -1142,8 +1142,7 @@ export function uploadBlob(
 		});
 
 		uppy.on('upload-error', (file, error, response) => {
-			response.error = response;
-			subscriber.error(response);
+			subscriber.error(Object.assign({}, response, { error: response }));
 		});
 
 		uppy.addFile({ name: fileData.name, type: fileData.type, data: fileData.blob });

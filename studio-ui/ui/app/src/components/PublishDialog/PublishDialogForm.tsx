@@ -35,7 +35,7 @@ import { capitalize } from '../../utils/string';
 import { InternalDialogState } from './utils';
 import { PartialSxRecord, PublishingTarget } from '../../models';
 import { Theme, Typography } from '@mui/material';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Link from '@mui/material/Link';
 import { fetchPublishingTargets, FetchPublishingTargetsResponse } from '../../services/publishing';
 import useActiveSiteId from '../../hooks/useActiveSiteId';

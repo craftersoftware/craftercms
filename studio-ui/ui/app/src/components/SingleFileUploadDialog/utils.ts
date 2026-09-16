@@ -17,7 +17,7 @@
 import StandardAction from '../../models/StandardAction';
 import { EnhancedDialogState } from '../../hooks/useEnhancedDialogState';
 import { EnhancedDialogProps } from '../EnhancedDialog';
-import type { UppyFile, Meta, Body } from '@uppy/utils/lib/UppyFile';
+import type { UppyFile, Meta, Body } from '@uppy/core';
 import type { Uppy } from 'uppy';
 
 export interface SingleFileUploadDialogBaseProps {
@@ -33,7 +33,7 @@ export interface SingleFileUploadDialogProps extends SingleFileUploadDialogBaseP
 	onUploadStart?(): void;
 	onUploadComplete?(result: any): void;
 	onUploadError?({ file, error, response }): void;
-	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy, callback: () => void) => void;
+	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy<Meta, Body>, callback: () => void) => void;
 }
 
 export interface SingleFileUploadDialogStateProps extends SingleFileUploadDialogBaseProps, EnhancedDialogState {

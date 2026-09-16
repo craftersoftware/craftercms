@@ -48,7 +48,7 @@ import { fetchSiteUiConfig } from '../actions/configuration';
 import { contentEvent, deleteContentEvent, deleteContentEvents, moveContentEvent } from '../actions/system';
 import SocketEvent, { MoveContentEventPayload } from '../../models/SocketEvent';
 import StandardAction from '../../models/StandardAction';
-import { CaseReducer } from '@reduxjs/toolkit/src/createReducer';
+import { CaseReducer } from '@reduxjs/toolkit';
 import GlobalState from '../../models/GlobalState';
 
 const updatePath = (state, payload) => {

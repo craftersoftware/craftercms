@@ -34,7 +34,7 @@ import ItemPublishingTargetIcon from '../ItemPublishingTargetIcon/ItemPublishing
 import useUnmount from '../../hooks/useUnmount';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
 
 export type ItemMegaMenuUIClassKey =

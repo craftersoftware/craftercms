@@ -25,7 +25,7 @@ import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 
 export type PathNavigatorHeaderClassKey = 'root' | 'content';
 
