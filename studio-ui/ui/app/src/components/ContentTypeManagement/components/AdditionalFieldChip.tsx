@@ -31,14 +31,15 @@ export function AdditionalFieldChip(props: { parentFieldId: string; fieldId: str
 	const additionalFieldId = processAdditionalFieldMacro(parentFieldId, fieldId);
 
 	return (
-        <Box
-            sx={{
-                display: "flex",
-                alignItems: "center",
-                mb: 1
-            }}>
-            <SubdirectoryArrowRightRoundedIcon sx={{ ml: 3 }} />
-            <Box
+		<Box
+			sx={{
+				display: 'flex',
+				alignItems: 'center',
+				mb: 1
+			}}
+		>
+			<SubdirectoryArrowRightRoundedIcon sx={{ ml: 3 }} />
+			<Box
 				sx={[
 					{
 						width: '100%',
@@ -70,8 +71,8 @@ export function AdditionalFieldChip(props: { parentFieldId: string; fieldId: str
 					</Tooltip>
 				</Box>
 			</Box>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default AdditionalFieldChip;

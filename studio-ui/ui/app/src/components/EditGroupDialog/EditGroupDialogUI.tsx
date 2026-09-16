@@ -100,8 +100,8 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 	} = transferListState;
 
 	return (
-        <>
-            <Box
+		<>
+			<Box
 				component="header"
 				sx={{
 					padding: '30px 40px',
@@ -140,8 +140,8 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 					</Tooltip>
 				</Box>
 			</Box>
-            <Divider />
-            <DialogBody sx={{ p: 0 }}>
+			<Divider />
+			<DialogBody sx={{ p: 0 }}>
 				<Box component="section" sx={{ padding: '30px 40px', paddingBottom: 0 }}>
 					<Typography variant="subtitle1" sx={{ textTransform: 'uppercase', marginBottom: '10px' }}>
 						<FormattedMessage id="editGroupDialog.groupDetails" defaultMessage="Group Details" />
@@ -153,11 +153,12 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 						}}
 					>
 						<Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                p: "15px 0 0 0"
-                            }}>
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								p: '15px 0 0 0'
+							}}
+						>
 							<InputLabel htmlFor="groupName" sx={{ flexBasis: '180px', marginTop: '0 !important' }}>
 								<Typography variant="subtitle2">
 									<FormattedMessage id="words.name" defaultMessage="Name" />
@@ -180,10 +181,11 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 							)}
 						</Box>
 						<Box
-                            sx={{
-                                display: "flex",
-                                p: "0 0 15px"
-                            }}>
+							sx={{
+								display: 'flex',
+								p: '0 0 15px'
+							}}
+						>
 							<Box sx={{ flexBasis: '180px' }} />
 							<FormHelperText
 								error={groupNameError}
@@ -211,11 +213,12 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 							/>
 						</Box>
 						<Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                p: "15px  0"
-                            }}>
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								p: '15px  0'
+							}}
+						>
 							<InputLabel htmlFor="groupDescription" sx={{ flexBasis: '180px', marginTop: '0 !important' }}>
 								<Typography variant="subtitle2">
 									<FormattedMessage id="words.description" defaultMessage="Description" />
@@ -310,10 +313,11 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 						)
 					) : (
 						<Box
-                            sx={{
-                                display: "flex",
-                                justifyContent: "center"
-                            }}>
+							sx={{
+								display: 'flex',
+								justifyContent: 'center'
+							}}
+						>
 							<Typography variant="subtitle2" color="textSecondary">
 								<FormattedMessage
 									id="editGroupDialog.groupMemberHelperText"
@@ -324,8 +328,8 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 					)}
 				</Box>
 			</DialogBody>
-        </>
-    );
+		</>
+	);
 }
 
 export default EditGroupDialogUI;

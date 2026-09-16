@@ -111,9 +111,11 @@ export function RepoStatusUI(props: RepoStatusUIProps) {
 					}
 				}}
 			/>
-			<Box sx={{
-                padding: 2
-            }}>
+			<Box
+				sx={{
+					padding: 2
+				}}
+			>
 				<Grid container spacing={2}>
 					{status.conflicting.length > 0 && (
 						<Grid size={{ md: 12 }}>

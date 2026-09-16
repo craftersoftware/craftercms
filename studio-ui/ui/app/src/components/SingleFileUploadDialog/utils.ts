@@ -45,7 +45,8 @@ export interface SingleFileUploadDialogStateProps extends SingleFileUploadDialog
 }
 
 export interface SingleFileUploadDialogContainerProps
-	extends SingleFileUploadDialogBaseProps,
+	extends
+		SingleFileUploadDialogBaseProps,
 		Pick<
 			SingleFileUploadDialogProps,
 			'site' | 'customFileName' | 'fileTypes' | 'onUploadStart' | 'onUploadComplete' | 'onUploadError' | 'onFileAdded'

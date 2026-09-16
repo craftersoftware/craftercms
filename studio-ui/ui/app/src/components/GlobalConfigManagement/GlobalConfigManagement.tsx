@@ -199,11 +199,11 @@ export function GlobalConfigManagement() {
 	};
 
 	return (
-        <Paper elevation={0}>
-            <GlobalAppToolbar
+		<Paper elevation={0}>
+			<GlobalAppToolbar
 				title={<FormattedMessage id="globalMenu.globalConfigEntryLabel" defaultMessage="Global Config" />}
 			/>
-            <ConditionalLoadingState isLoading={enable}>
+			<ConditionalLoadingState isLoading={enable}>
 				<Box
 					component="section"
 					sx={{
@@ -233,11 +233,12 @@ export function GlobalConfigManagement() {
 						onInit={onAceInit}
 					/>
 					<Box
-                        sx={{
-                            p: "10px",
-                            display: "flex",
-                            justifyContent: "space-between"
-                        }}>
+						sx={{
+							p: '10px',
+							display: 'flex',
+							justifyContent: 'space-between'
+						}}
+					>
 						<SecondaryButton onClick={() => setViewSample(true)}>
 							<FormattedMessage id="globalConfig.viewSample" defaultMessage="View Sample" />
 						</SecondaryButton>
@@ -264,15 +265,15 @@ export function GlobalConfigManagement() {
 					</Box>
 				</Box>
 			</ConditionalLoadingState>
-            <ConfigurationSamplePreviewDialog
+			<ConfigurationSamplePreviewDialog
 				onUseSampleClick={onUseSampleClick}
 				open={viewSample}
 				onClose={() => setViewSample(false)}
 				onClosed={() => aceEditorRef.current.focus()}
 				content={sample}
 			/>
-        </Paper>
-    );
+		</Paper>
+	);
 }
 
 export default GlobalConfigManagement;

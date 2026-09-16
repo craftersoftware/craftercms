@@ -27,8 +27,7 @@ export interface UninstallPluginDialogProps extends UninstallPluginDialogBasePro
 }
 
 export interface UninstallPluginDialogContainerProps
-	extends UninstallPluginDialogBaseProps,
-		Pick<UninstallPluginDialogProps, 'onComplete' | 'onClose' | 'isSubmitting'> {}
+	extends UninstallPluginDialogBaseProps, Pick<UninstallPluginDialogProps, 'onComplete' | 'onClose' | 'isSubmitting'> {}
 
 export interface UninstallPluginDialogBodyProps {
 	isSubmitting: boolean;

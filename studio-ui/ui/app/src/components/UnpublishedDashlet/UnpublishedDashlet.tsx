@@ -234,7 +234,7 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 	// endregion
 
 	return (
-        <DashletCard
+		<DashletCard
 			{...props}
 			borderLeftColor={borderLeftColor}
 			title={<FormattedMessage id="unpublishedDashlet.widgetTitle" defaultMessage="Unpublished Work" />}
@@ -300,8 +300,8 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 				)
 			}
 		>
-            {loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: false, showCheckbox: true })}
-            {items && (
+			{loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: false, showCheckbox: true })}
+			{items && (
 				<List sx={{ pb: 0 }}>
 					{items.map((item, index) => (
 						<ListItemButton key={index} onClick={(e) => onSelectItem(e, item)} sx={{ pt: 0, pb: 0 }}>
@@ -321,9 +321,12 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 									/>
 								}
 								secondary={
-									<Typography variant="body2" sx={{
-                                        color: "text.secondary"
-                                    }}>
+									<Typography
+										variant="body2"
+										sx={{
+											color: 'text.secondary'
+										}}
+									>
 										<FormattedMessage
 											id="unpublishedDashlet.entrySecondaryText"
 											defaultMessage="Edited by {name} on {date}"
@@ -340,8 +343,8 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 					))}
 				</List>
 			)}
-            {/* TODO: remove or statement once backend is fixed (total doesn't match) */}
-            {(total === 0 || (total && items?.length === 0)) && (
+			{/* TODO: remove or statement once backend is fixed (total doesn't match) */}
+			{(total === 0 || (total && items?.length === 0)) && (
 				<DashletEmptyMessage>
 					<FormattedMessage
 						id="unpublishedDashlet.noUnpublishedItems"
@@ -349,8 +352,8 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 					/>
 				</DashletEmptyMessage>
 			)}
-        </DashletCard>
-    );
+		</DashletCard>
+	);
 }
 
 export default UnpublishedDashlet;

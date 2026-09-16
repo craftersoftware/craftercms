@@ -104,16 +104,17 @@ export function GlobalApp(props: GlobalAppProps) {
 function RouteNotFound() {
 	const { pathname } = useLocation();
 	return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%"
-            }}>
-            <Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column',
+				height: '100%'
+			}}
+		>
+			<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 				<LauncherOpenerButton />
 			</Box>
-            <EmptyState
+			<EmptyState
 				sxs={{
 					root: {
 						height: '100%',
@@ -129,8 +130,8 @@ function RouteNotFound() {
 					/>
 				}
 			/>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export function GlobalAppInternal(props: GlobalAppProps) {
@@ -159,8 +160,8 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 		)}`;
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
-        <Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
-            <ResizeableDrawer
+		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
+			<ResizeableDrawer
 				sxs={{
 					drawerPaper: {
 						top: '0',
@@ -219,26 +220,31 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					/>
 				</Box>
 			</ResizeableDrawer>
-            <Box
-                sx={[{
-                    height: "100%",
-                    width: "100%",
-                    paddingLeft: openSidebar ? `${width}px` : 0
-                }, (theme) => ({
-					transition: theme.transitions.create('padding-left', {
-						easing: theme.transitions.easing.easeOut,
-						duration: theme.transitions.duration.enteringScreen
+			<Box
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${width}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
 					})
-				})]}>
+				]}
+			>
 				<Suspense
 					fallback={
 						<>
 							<GlobalAppToolbar title={<Skeleton width="140px" />} />
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    height: '100%'
-                                }}>
+								sx={{
+									display: 'flex',
+									height: '100%'
+								}}
+							>
 								<LoadingState />
 							</Box>
 						</>
@@ -247,8 +253,8 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					<Outlet />
 				</Suspense>
 			</Box>
-        </Paper>
-    );
+		</Paper>
+	);
 }
 
 export default GlobalApp;

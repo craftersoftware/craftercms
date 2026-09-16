@@ -228,8 +228,8 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 	};
 
 	return (
-        <>
-            <DialogBody
+		<>
+			<DialogBody
 				sx={{
 					overflow: 'auto',
 					minHeight: '50vh',
@@ -262,14 +262,15 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 						>
 							{contentType && (
 								<Box
-                                    sx={{
-                                        pt: 1,
-                                        pb: 1,
-                                        pr: 2,
-                                        pl: 2,
-                                        borderBottom: 1,
-                                        borderColor: "divider"
-                                    }}>
+									sx={{
+										pt: 1,
+										pb: 1,
+										pr: 2,
+										pl: 2,
+										borderBottom: 1,
+										borderColor: 'divider'
+									}}
+								>
 									<Typography variant="body2" color="textSecondary">
 										{contentType.id}
 									</Typography>
@@ -322,11 +323,12 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 									))}
 							</List>
 							<Box
-                                sx={{
-                                    width: "100%",
-                                    borderTop: 1,
-                                    borderColor: "divider"
-                                }}>
+								sx={{
+									width: '100%',
+									borderTop: 1,
+									borderColor: 'divider'
+								}}
+							>
 								<Button onClick={() => onToggleShowOnlyChanges()}>
 									{showOnlyChanges ? (
 										<FormattedMessage defaultMessage="Entire version" />
@@ -401,10 +403,11 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 										))
 								) : selectedField ? (
 									<Box
-                                        sx={{
-                                            p: 2,
-                                            height: "100%"
-                                        }}>
+										sx={{
+											p: 2,
+											height: '100%'
+										}}
+									>
 										<FieldVersionToolbar
 											field={selectedField}
 											contentTypeFields={filteredContentTypeFields}
@@ -450,8 +453,8 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 					</>
 				)}
 			</DialogBody>
-        </>
-    );
+		</>
+	);
 }
 
 export default CompareVersionsDialogContainer;

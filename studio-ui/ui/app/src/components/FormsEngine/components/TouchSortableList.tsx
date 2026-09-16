@@ -38,18 +38,19 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 	const handleMove = (action: SortAction, moveToEdge: boolean, index: number) =>
 		sortableListActionProcessor(action, moveToEdge, items, index, onChange);
 	return (
-        <List>
-            {items.map((item, index) => (
+		<List>
+			{items.map((item, index) => (
 				<ListItem key={index} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
 					<ListItemText
 						disableTypography
 						primary={
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    placeContent: 'space-between'
-                                }}>
+								sx={{
+									display: 'flex',
+									alignItems: 'center',
+									placeContent: 'space-between'
+								}}
+							>
 								<Typography>{item.value}</Typography>
 								<Box sx={{ display: 'flex' }}>
 									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', false, index)}>
@@ -79,8 +80,8 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 					/>
 				</ListItem>
 			))}
-        </List>
-    );
+		</List>
+	);
 }
 
 export default TouchSortableList;

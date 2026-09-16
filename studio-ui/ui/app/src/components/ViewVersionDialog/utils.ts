@@ -52,8 +52,7 @@ export interface ViewVersionDialogStateProps extends ViewVersionDialogBaseProps,
 }
 
 export interface ViewVersionDialogContainerProps
-	extends ViewVersionDialogBaseProps,
-		Pick<ViewVersionDialogProps, 'contentTypesBranch'> {
+	extends ViewVersionDialogBaseProps, Pick<ViewVersionDialogProps, 'contentTypesBranch'> {
 	showXml: boolean;
 }
 

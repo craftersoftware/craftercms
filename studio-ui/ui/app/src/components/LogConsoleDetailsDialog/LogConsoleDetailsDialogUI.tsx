@@ -31,45 +31,49 @@ export function LogConsoleDetailsDialogUI(props: LogConsoleDetailsDialogProps) {
 	useUnmount(onClosed);
 
 	return (
-        <>
-            <DialogHeader
+		<>
+			<DialogHeader
 				title={<FormattedMessage id="logConsoleDetailsDialog.title" defaultMessage="Log Details" />}
 				onCloseButtonClick={onClose}
 			/>
-            <DialogBody>
+			<DialogBody>
 				<Box
-                    sx={{
-                        display: "flex",
-                        p: "10px 0",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.level" defaultMessage="Level" />
 					</Typography>
 					<Box
-                        sx={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.level}</Typography>
 					</Box>
 				</Box>
 				<Box
-                    sx={{
-                        display: "flex",
-                        p: "10px 0",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.timestamp" defaultMessage="Timestamp" />
 					</Typography>
 					<Box
-                        sx={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>
 							{new Intl.DateTimeFormat(localeBranch.localeCode, localeBranch.dateTimeFormatOptions).format(
 								new Date(logEvent.timestamp)
@@ -78,62 +82,68 @@ export function LogConsoleDetailsDialogUI(props: LogConsoleDetailsDialogProps) {
 					</Box>
 				</Box>
 				<Box
-                    sx={{
-                        display: "flex",
-                        p: "10px 0",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.thread" defaultMessage="Thread" />
 					</Typography>
 					<Box
-                        sx={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.thread}</Typography>
 					</Box>
 				</Box>
 				<Box
-                    sx={{
-                        display: "flex",
-                        p: "10px 0",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.project" defaultMessage="Project" />
 					</Typography>
 					<Box
-                        sx={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.site}</Typography>
 					</Box>
 				</Box>
 				<Box
-                    sx={{
-                        display: "flex",
-                        p: "10px 0",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.message" defaultMessage="Message" />
 					</Typography>
 					<Box
-                        sx={{
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.message}</Typography>
 					</Box>
 				</Box>
 			</DialogBody>
-        </>
-    );
+		</>
+	);
 }
 
 export default LogConsoleDetailsDialogUI;

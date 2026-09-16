@@ -55,15 +55,15 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 		: (publishPackage.schedule ?? publishPackage.publishedOn ?? publishPackage.submittedOn);
 
 	return (
-        <Box>
-            {publishPackage.approvalState === PACKAGE_REJECTED && (
+		<Box>
+			{publishPackage.approvalState === PACKAGE_REJECTED && (
 				<Alert severity="error" sx={{ mb: 2 }} icon={<BlockOutlinedIcon />}>
 					<FormattedMessage defaultMessage="This package has been rejected." />
 				</Alert>
 			)}
 
-            {/* region Submission details */}
-            <Box sx={{ display: 'block' }}>
+			{/* region Submission details */}
+			<Box sx={{ display: 'block' }}>
 				<Typography variant="subtitle1" gutterBottom sx={{ mb: 1, fontWeight: 'bold' }}>
 					<FormattedMessage defaultMessage="Submission details" />
 				</Typography>
@@ -79,9 +79,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 								<FormattedMessage defaultMessage="Submitter" />
 							</Typography>
-							<Stack direction="row" spacing={1} sx={{
-                                alignItems: "center"
-                            }}>
+							<Stack
+								direction="row"
+								spacing={1}
+								sx={{
+									alignItems: 'center'
+								}}
+							>
 								<PersonAvatar person={publishPackage.submitter} />
 								<Typography variant="body1" sx={{ ml: 1 }}>
 									{getPersonFullName(publishPackage.submitter)}
@@ -92,9 +96,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 								<FormattedMessage defaultMessage="Publishing Target" />
 							</Typography>
-							<Stack direction="row" spacing={1} sx={{
-                                alignItems: "center"
-                            }}>
+							<Stack
+								direction="row"
+								spacing={1}
+								sx={{
+									alignItems: 'center'
+								}}
+							>
 								<ItemPublishingTargetIcon item={statusItems[publishPackage.target] as ContentItem} />
 								{publishPackage.target === 'live' ? (
 									<FormattedMessage defaultMessage="Live" />
@@ -124,17 +132,18 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 					</Grid>
 				</Paper>
 			</Box>
-            {/* endregion */}
+			{/* endregion */}
 
-            {/* region Review details */}
-            {Boolean(publishPackage.reviewer) && (
+			{/* region Review details */}
+			{Boolean(publishPackage.reviewer) && (
 				<Box sx={{ mt: 2 }}>
 					<Typography
-                        variant="subtitle1"
-                        sx={{
-                            fontWeight: "bold",
-                            mb: 1
-                        }}>
+						variant="subtitle1"
+						sx={{
+							fontWeight: 'bold',
+							mb: 1
+						}}
+					>
 						<FormattedMessage defaultMessage="Review details" />
 					</Typography>
 					<Paper sx={{ p: 1.5 }}>
@@ -192,7 +201,7 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 					</Paper>
 				</Box>
 			)}
-            {/* endregion */}
-        </Box>
-    );
+			{/* endregion */}
+		</Box>
+	);
 }

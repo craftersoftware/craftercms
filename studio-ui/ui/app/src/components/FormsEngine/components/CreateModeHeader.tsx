@@ -33,14 +33,15 @@ export function CreateModeHeader({ path, collapse = false }: { path: string; col
 	const { contentType } = useContext(ItemMetaContext);
 	const itemType = contentType.type;
 	return (
-        <Container sx={{ py: 1 }}>
-            <Typography
-                variant="h6"
-                component="h2"
-                sx={{
-                    display: "flex",
-                    alignItems: "center"
-                }}>
+		<Container sx={{ py: 1 }}>
+			<Typography
+				variant="h6"
+				component="h2"
+				sx={{
+					display: 'flex',
+					alignItems: 'center'
+				}}
+			>
 				<ItemTypeIcon item={{ systemType: itemType, mimeType: 'application/xml' }} sx={{ color: 'info.main', mr: 1 }} />
 				<FormattedMessage
 					defaultMessage='Create new "{name}" {type}'
@@ -51,11 +52,11 @@ export function CreateModeHeader({ path, collapse = false }: { path: string; col
 					}}
 				/>
 			</Typography>
-            <Collapse in={!collapse}>
+			<Collapse in={!collapse}>
 				<Typography color="textSecondary" variant="body2" children={path} />
 			</Collapse>
-        </Container>
-    );
+		</Container>
+	);
 }
 
 export default CreateModeHeader;

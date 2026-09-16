@@ -61,8 +61,8 @@ export function KeyValueMap(props: KeyValueMapProps) {
 	};
 
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field} sx={{ mt: 2 }}>
-            {options.map((option, index) => (
+		<FormsEngineField htmlFor={htmlId} field={field} sx={{ mt: 2 }}>
+			{options.map((option, index) => (
 				<Box key={index} sx={{ display: 'flex', gap: 2, mt: 2 }}>
 					<TextField
 						fullWidth
@@ -88,10 +88,11 @@ export function KeyValueMap(props: KeyValueMapProps) {
 						onChange={(e) => handleChange(e, 'value', index)}
 					/>
 					<Box
-                        sx={{
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
 							<IconButton onClick={() => addOption(index)}>
 								<AddCircleOutlineRoundedIcon />
@@ -105,12 +106,13 @@ export function KeyValueMap(props: KeyValueMapProps) {
 					</Box>
 				</Box>
 			))}
-            {options.length === 0 && (
+			{options.length === 0 && (
 				<Box
-                    sx={{
-                        display: "flex",
-                        justifyContent: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						justifyContent: 'center'
+					}}
+				>
 					<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
 						<IconButton onClick={() => addOption(0)}>
 							<AddCircleOutlineRoundedIcon />
@@ -118,8 +120,8 @@ export function KeyValueMap(props: KeyValueMapProps) {
 					</Tooltip>
 				</Box>
 			)}
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default KeyValueMap;

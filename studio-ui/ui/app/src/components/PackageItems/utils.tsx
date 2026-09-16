@@ -55,24 +55,26 @@ export function renderTreeNode(props: {
 	const isDependency = Boolean(dependencyTypeMap?.[node.path]);
 	const isSoft = dependencyTypeMap?.[node.path] === 'soft';
 	return (
-        <TreeItem
+		<TreeItem
 			key={node.path}
 			itemId={node.path}
 			data-is-item={isItem}
 			label={
 				isItem ? (
 					<Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							alignItems: 'center'
+						}}
+					>
 						<div>
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    gap: 1
-                                }}>
+								sx={{
+									display: 'flex',
+									gap: 1
+								}}
+							>
 								<ItemDisplay
 									item={itemMap[node.path]}
 									showNavigableAsLinks={false}
@@ -90,13 +92,15 @@ export function renderTreeNode(props: {
 								title={node.path}
 								noWrap
 								sx={{
-                                    color: "text.secondary"
-                                }}
+									color: 'text.secondary'
+								}}
 							/>
 						</div>
-						<Box sx={{
-                            display: "flex"
-                        }}>
+						<Box
+							sx={{
+								display: 'flex'
+							}}
+						>
 							<IconButton
 								className="tree-item-more-section"
 								onClick={(e) => {
@@ -133,10 +137,11 @@ export function renderTreeNode(props: {
 					</Box>
 				) : (
 					<Box
-                        sx={{
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<FolderOpenRoundedIcon sx={{ fontSize: '1.1rem', mr: '5px' }} />
 						<span title={node.path}>{node.label}</span>
 					</Box>
@@ -159,5 +164,5 @@ export function renderTreeNode(props: {
 						)
 			}
 		/>
-    );
+	);
 }

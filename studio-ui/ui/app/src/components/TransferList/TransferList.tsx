@@ -54,10 +54,12 @@ export function TransferList(props: TransferListProps) {
 	const { formatMessage } = useIntl();
 
 	return (
-        <Box sx={{
-            display: "flex"
-        }}>
-            <TransferListColumn
+		<Box
+			sx={{
+				display: 'flex'
+			}}
+		>
+			<TransferListColumn
 				title={source.title}
 				items={source.items}
 				disabledItems={source.disabledItems}
@@ -74,7 +76,7 @@ export function TransferList(props: TransferListProps) {
 				onFetchMore={source.onFetchMore}
 				hasMoreItems={source.hasMoreItems}
 			/>
-            <Box
+			<Box
 				component="section"
 				sx={{
 					display: 'flex',
@@ -138,7 +140,7 @@ export function TransferList(props: TransferListProps) {
 					</>
 				)}
 			</Box>
-            <TransferListColumn
+			<TransferListColumn
 				title={target.title}
 				items={target.items}
 				disabledItems={target.disabledItems}
@@ -155,8 +157,8 @@ export function TransferList(props: TransferListProps) {
 				onFetchMore={target.onFetchMore}
 				hasMoreItems={target.hasMoreItems}
 			/>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default TransferList;

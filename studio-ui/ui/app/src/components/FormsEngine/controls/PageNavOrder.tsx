@@ -89,8 +89,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		contextItem?.path ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
 	const pageLabel = contextItem?.label || internalName || fileName || currentPath || '';
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
-		| PrimitiveAtom<number | string | null | undefined>
-		| undefined;
+		PrimitiveAtom<number | string | null | undefined> | undefined;
 	if (!orderDefaultAtom) {
 		throw new Error(
 			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
@@ -185,10 +184,11 @@ export function PageNavOrder(props: PageNavOrderProps) {
 			)}
 			<Box
 				sx={{
-					display: "flex",
-					flexDirection: "row",
+					display: 'flex',
+					flexDirection: 'row',
 					gap: 2
-				}}>
+				}}
+			>
 				<RadioGroup
 					row
 					value={String(value)}
@@ -222,7 +222,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					</Button>
 				)}
 			</Box>
-            <EnhancedDialog
+			<EnhancedDialog
 				open={orderDialogState.open}
 				onClose={orderDialogState.onClose}
 				maxWidth="sm"
@@ -264,8 +264,8 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					</PrimaryButton>
 				</DialogFooter>
 			</EnhancedDialog>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 /**

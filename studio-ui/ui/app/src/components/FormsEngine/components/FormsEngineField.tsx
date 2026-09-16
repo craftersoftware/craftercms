@@ -133,7 +133,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		}
 	}, [autoFocus]);
 	return (
-        <FormControl
+		<FormControl
 			ref={ref}
 			fullWidth
 			error={!isValid}
@@ -142,17 +142,19 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			required={isRequired}
 			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
 		>
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center'
+				}}
+			>
 				<Box
-                    sx={{
-                        display: "flex",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<FormLabel
 						htmlFor={htmlFor}
 						id={labelId}
@@ -170,10 +172,11 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					)}
 				</Box>
 				<Box
-                    sx={{
-                        display: "flex",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					{lengthBlock}
 					{action}
 					{menu && (
@@ -225,7 +228,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					)}
 				</Box>
 			</Box>
-            {hasHelpText && (
+			{hasHelpText && (
 				<Collapse in={showHelp}>
 					<Alert severity="info" variant="outlined" sx={{ border: 'none' }}>
 						<Typography
@@ -238,7 +241,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					</Alert>
 				</Collapse>
 			)}
-            {sourceMap?.[fieldId] && fieldId !== XmlKeys['fileName'] && (
+			{sourceMap?.[fieldId] && fieldId !== XmlKeys['fileName'] && (
 				<Alert
 					variant="standard"
 					severity="info"
@@ -297,15 +300,15 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					)}
 				</Alert>
 			)}
-            {children}
-            {hasDescription && <FormHelperText>{field.description}</FormHelperText>}
-            {!isValid &&
+			{children}
+			{hasDescription && <FormHelperText>{field.description}</FormHelperText>}
+			{!isValid &&
 				validityData.state === 'hasData' &&
 				validityData.data?.messages?.map((messageData, key) => (
 					<FormHelperText key={key}>{translateValidityMessage(messageData, formatMessage)}</FormHelperText>
 				))}
-        </FormControl>
-    );
+		</FormControl>
+	);
 });
 
 /**

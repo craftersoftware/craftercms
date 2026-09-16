@@ -45,12 +45,13 @@ export interface UsersGridUIProps {
 export function UsersGridUI(props: UsersGridUIProps) {
 	const { users, onRowClicked, onPageChange, onRowsPerPageChange, showDisabled, onShowDisabledChange } = props;
 	return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column"
-            }}>
-            <TableContainer>
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
+			<TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>
 						<GlobalAppGridRow className="hoverDisabled">
@@ -129,7 +130,7 @@ export function UsersGridUI(props: UsersGridUIProps) {
 					</TableBody>
 				</Table>
 			</TableContainer>
-            <Pagination
+			<Pagination
 				mode="table"
 				count={users.total}
 				rowsPerPage={users.limit}
@@ -137,8 +138,8 @@ export function UsersGridUI(props: UsersGridUIProps) {
 				onPageChange={(e, page: number) => onPageChange(page)}
 				onRowsPerPageChange={onRowsPerPageChange}
 			/>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default UsersGridUI;

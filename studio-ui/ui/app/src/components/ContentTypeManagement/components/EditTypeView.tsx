@@ -489,9 +489,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						showAlert({
 							children: (
 								<Box>
-									<Typography sx={{
-                                        marginBottom: 1
-                                    }}>
+									<Typography
+										sx={{
+											marginBottom: 1
+										}}
+									>
 										<FormattedMessage defaultMessage="Error saving content type" />
 									</Typography>
 									<Typography variant="body2" color="textSecondary">

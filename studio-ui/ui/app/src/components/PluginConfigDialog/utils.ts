@@ -25,5 +25,4 @@ export interface PluginConfigDialogProps extends PluginConfigDialogBaseProps, En
 }
 
 export interface PluginConfigDialogContainerProps
-	extends PluginConfigDialogBaseProps,
-		Pick<PluginConfigDialogProps, 'onSaved' | 'onClose' | 'isSubmitting'> {}
+	extends PluginConfigDialogBaseProps, Pick<PluginConfigDialogProps, 'onSaved' | 'onClose' | 'isSubmitting'> {}

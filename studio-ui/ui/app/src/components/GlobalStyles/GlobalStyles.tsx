@@ -32,10 +32,10 @@ export function GlobalStyles(props: GlobalStylesProps) {
 	const theme = useTheme();
 	const dynamicStyles = useMemo(
 		() =>
-			(({
-                body: { background: theme.palette.background.paper },
+			({
+				body: { background: theme.palette.background.paper },
 
-                '.minimized-bar-portal-root': {
+				'.minimized-bar-portal-root': {
 					right: '0',
 					bottom: '20px',
 					display: 'flex',
@@ -50,7 +50,7 @@ export function GlobalStyles(props: GlobalStylesProps) {
 						pointerEvents: 'all'
 					}
 				}
-            }) as Interpolation<Theme>),
+			}) as Interpolation<Theme>,
 		[theme.palette.background.paper, theme.zIndex.modal]
 	);
 	return (

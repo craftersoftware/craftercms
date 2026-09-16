@@ -126,7 +126,7 @@ export function PublishCommitDialog(props: PublishCommitDialogProps) {
 		setState({ commitIds: commitId });
 	}, [commitId, setState, fnRefs]);
 	return (
-        <EnhancedDialog
+		<EnhancedDialog
 			{...dialogProps}
 			onWithPendingChangesCloseRequest={pendingChangesCloseRequest}
 			onClosed={() => {
@@ -135,16 +135,17 @@ export function PublishCommitDialog(props: PublishCommitDialogProps) {
 			isSubmitting={isSubmitting}
 			title={<FormattedMessage id="publishCommitDialog.title" defaultMessage="Publish Commit" />}
 		>
-            {publishSuccessful ? (
+			{publishSuccessful ? (
 				<>
 					<DialogBody>
 						<Box
-                            sx={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                margin: 2
-                            }}>
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								margin: 2
+							}}
+						>
 							<CheckCircleOutlineRoundedIcon sx={{ mb: 1, color: 'success.main', width: 50, height: 50 }} />
 							<Typography>
 								<FormattedMessage
@@ -189,8 +190,8 @@ export function PublishCommitDialog(props: PublishCommitDialogProps) {
 					</DialogFooter>
 				</>
 			)}
-        </EnhancedDialog>
-    );
+		</EnhancedDialog>
+	);
 }
 
 export default PublishCommitDialog;

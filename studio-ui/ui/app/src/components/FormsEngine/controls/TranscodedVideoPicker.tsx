@@ -102,8 +102,8 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 	};
 
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field}>
-            {hasValue ? (
+		<FormsEngineField htmlFor={htmlId} field={field}>
+			{hasValue ? (
 				<FieldBox dashed={true}>
 					<List dense>
 						{value?.map((item, index) => (
@@ -153,19 +153,20 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 				/>
 			) : (
 				<Box
-                    sx={{
-                        display: "flex",
-                        gap: 1,
-                        flexWrap: "wrap"
-                    }}>
+					sx={{
+						display: 'flex',
+						gap: 1,
+						flexWrap: 'wrap'
+					}}
+				>
 					{actionMenuItems}
 				</Box>
 			)}
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+			<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
 				{actionMenuItems}
 			</Menu>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default TranscodedVideoPicker;

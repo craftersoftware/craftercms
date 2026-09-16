@@ -54,23 +54,27 @@ export function PublisherStatusDashlet(props: PublisherStatusDashletProps) {
 	}, [onRefresh]);
 
 	return (
-        <DashletCard {...props} sxs={{ content: { pt: 2 }, ...props.sxs }} borderLeftColor={borderLeftColor}>
-            {loading && (
+		<DashletCard {...props} sxs={{ content: { pt: 2 }, ...props.sxs }} borderLeftColor={borderLeftColor}>
+			{loading && (
 				<>
 					<Skeleton />
 					<Skeleton />
 				</>
 			)}
-            {publishingStatus && (
+			{publishingStatus && (
 				<>
 					<FormattedMessage defaultMessage="Publisher Status" />{' '}
-					<Typography component="div" children={getPublishingStatusMessage(publishingStatus, formatMessage)} sx={{
-                        mt: 2
-                    }} />
+					<Typography
+						component="div"
+						children={getPublishingStatusMessage(publishingStatus, formatMessage)}
+						sx={{
+							mt: 2
+						}}
+					/>
 				</>
 			)}
-        </DashletCard>
-    );
+		</DashletCard>
+	);
 }
 
 export default PublisherStatusDashlet;

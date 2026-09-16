@@ -90,8 +90,8 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 	};
 
 	return (
-        <>
-            <DialogBody sx={{ transition: 'height 0.3s ease-in-out', minHeight: '40vh' }}>
+		<>
+			<DialogBody sx={{ transition: 'height 0.3s ease-in-out', minHeight: '40vh' }}>
 				{selectedView === 0 ? (
 					<SelectField
 						configLookup={configLookup}
@@ -106,10 +106,11 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 					<Box>
 						<Box sx={{ display: 'flex', mb: 1 }}>
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    alignItems: "center"
-                                }}>
+								sx={{
+									display: 'flex',
+									alignItems: 'center'
+								}}
+							>
 								<Tooltip title={<FormattedMessage defaultMessage="Back to control selection" />}>
 									<IconButton onClick={() => setSelectedView(0)}>
 										<ArrowBackRoundedIcon />
@@ -172,7 +173,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 					</Box>
 				)}
 			</DialogBody>
-            <DialogFooter>
+			<DialogFooter>
 				<SecondaryButton onClick={onSecondaryAction}>
 					{selectedView === 0 ? (
 						<FormattedMessage defaultMessage="Cancel" />
@@ -188,8 +189,8 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 					)}
 				</PrimaryButton>
 			</DialogFooter>
-        </>
-    );
+		</>
+	);
 }
 
 export function PickFieldDialog({

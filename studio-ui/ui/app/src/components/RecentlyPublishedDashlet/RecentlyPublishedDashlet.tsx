@@ -145,7 +145,7 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 	// endregion
 
 	return (
-        <DashletCard
+		<DashletCard
 			{...props}
 			borderLeftColor={borderLeftColor}
 			title={<FormattedMessage id="recentlyPublishedDashlet.widgetTitle" defaultMessage="Recently Published" />}
@@ -178,7 +178,7 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 				}
 			}}
 		>
-            {/*
+			{/*
       TODO: Stats bar not possible to implement under current API
       <Stack direction="row" spacing={2}>
         <Box>
@@ -194,8 +194,8 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
         </Box>
       </Stack>
       */}
-            {loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: true })}
-            {Boolean(publishingPackages?.length) && (
+			{loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: true })}
+			{Boolean(publishingPackages?.length) && (
 				<List sx={{ pb: 0 }}>
 					{publishingPackages.map((pkg, index) => (
 						<ListItemButton
@@ -238,14 +238,17 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 											publishingTarget: pkg.target,
 											render_target(target: ReactNode[]) {
 												return (
-                                                    <Box component="span" sx={{
-                                                        color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
-                                                    }}>
-                                                        {messages[target[0] as string]
+													<Box
+														component="span"
+														sx={{
+															color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
+														}}
+													>
+														{messages[target[0] as string]
 															? formatMessage(messages[target[0] as string]).toLowerCase()
 															: target[0]}
-                                                    </Box>
-                                                );
+													</Box>
+												);
 											},
 											submittedDate: asLocalizedDateTime(
 												pkg.submittedOn,
@@ -269,7 +272,7 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 					))}
 				</List>
 			)}
-            {total === 0 && (
+			{total === 0 && (
 				<DashletEmptyMessage>
 					<FormattedMessage
 						id="recentlyPublishedDashlet.noRecentlyPublishedItems"
@@ -277,14 +280,14 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 					/>
 				</DashletEmptyMessage>
 			)}
-            <PackageDetailsDialog
+			<PackageDetailsDialog
 				open={nnou(packageDetailsDialogId)}
 				onClose={() => setState({ packageDetailsDialogId: null })}
 				packageId={packageDetailsDialogId}
 			/>
-            {contextMenu?.contextMenuElement}
-        </DashletCard>
-    );
+			{contextMenu?.contextMenuElement}
+		</DashletCard>
+	);
 }
 
 export default RecentlyPublishedDashlet;

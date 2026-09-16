@@ -78,8 +78,8 @@ export function BasePathSelector(props: BasePathSelectorProps) {
 	const { basePaths = defaultBasePaths, value = '', onChange, sx } = props;
 	const { formatMessage } = useIntl();
 	return (
-        <FormControl sx={sx}>
-            <RadioGroup value={value} onChange={onChange}>
+		<FormControl sx={sx}>
+			<RadioGroup value={value} onChange={onChange}>
 				{basePaths.map((basePath) => (
 					<FormControlLabel
 						value={basePath.path}
@@ -90,9 +90,13 @@ export function BasePathSelector(props: BasePathSelectorProps) {
 								{basePath.label ??
 									(messages[basePath.id] ? formatMessage(messages[basePath.id]) : capitalize(basePath.id))}
 								:{' '}
-								<Typography variant="body2" component="span" sx={{
-                                    color: "text.secondary"
-                                }}>
+								<Typography
+									variant="body2"
+									component="span"
+									sx={{
+										color: 'text.secondary'
+									}}
+								>
 									{basePath.path}
 								</Typography>
 							</>
@@ -100,8 +104,8 @@ export function BasePathSelector(props: BasePathSelectorProps) {
 					/>
 				))}
 			</RadioGroup>
-        </FormControl>
-    );
+		</FormControl>
+	);
 }
 
 export default BasePathSelector;

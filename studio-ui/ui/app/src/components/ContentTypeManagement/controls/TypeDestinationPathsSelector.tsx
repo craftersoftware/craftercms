@@ -59,8 +59,8 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 	};
 
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
-            {Object.entries(value).map(([key, value]) => (
+		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
+			{Object.entries(value).map(([key, value]) => (
 				<Box key={key} sx={{ display: 'flex', flexDirection: 'column', rowGap: 2, mt: 2 }}>
 					<Typography variant="subtitle2">
 						{key === 'includes' ? (
@@ -82,10 +82,11 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 								onChange={(e) => handleChange(e, key as Destination, index)}
 							/>
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    alignItems: "center"
-                                }}>
+								sx={{
+									display: 'flex',
+									alignItems: 'center'
+								}}
+							>
 								<Tooltip title={<FormattedMessage defaultMessage="Remove Option" />}>
 									<IconButton onClick={() => removePath(key as Destination, index)}>
 										<RemoveCircleOutlineRoundedIcon />
@@ -95,10 +96,11 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 						</Box>
 					))}
 					<Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							justifyContent: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Add Path" />}>
 							<IconButton onClick={() => addPath(key as Destination)}>
 								<AddCircleOutlineRoundedIcon />
@@ -107,8 +109,8 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 					</Box>
 				</Box>
 			))}
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default TypeDestinationPathsSelector;

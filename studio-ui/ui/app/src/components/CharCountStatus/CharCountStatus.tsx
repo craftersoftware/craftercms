@@ -35,14 +35,15 @@ function CharCountStatus(props: CharCountStatusProps) {
 	const { commentLength, commentMaxLength } = props;
 
 	return (
-        <Grid
-            container
-            direction="row"
-            sx={{
-                justifyContent: "space-between",
-                padding: '5px'
-            }}>
-            <Grid>
+		<Grid
+			container
+			direction="row"
+			sx={{
+				justifyContent: 'space-between',
+				padding: '5px'
+			}}
+		>
+			<Grid>
 				<Typography sx={{ fontSize: '14px', color: palette.gray.medium4 }}>
 					<FormattedMessage
 						id="deleteDialog.maxCharacters"
@@ -52,13 +53,13 @@ function CharCountStatus(props: CharCountStatusProps) {
 				</Typography>
 			</Grid>
 
-            <Grid>
+			<Grid>
 				<Typography sx={{ fontSize: '14px', color: palette.gray.medium4 }}>
 					{commentLength}/{commentMaxLength}
 				</Typography>
 			</Grid>
-        </Grid>
-    );
+		</Grid>
+	);
 }
 
 export function CharCountStatusContainer(props: CharCountStatusContainerProps) {

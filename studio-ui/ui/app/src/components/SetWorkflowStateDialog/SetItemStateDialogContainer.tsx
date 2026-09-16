@@ -59,9 +59,9 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 	};
 
 	return (
-        <>
-            <DialogHeader title={title} onCloseButtonClick={onClose} />
-            <DialogBody>
+		<>
+			<DialogHeader title={title} onCloseButtonClick={onClose} />
+			<DialogBody>
 				<FormGroup
 					sx={{
 						[`& > .${formControlLabelClasses.root}`]: {
@@ -123,16 +123,18 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 						label={<FormattedMessage id="setWorkflowStateDialog.clearModified" defaultMessage="Clear modified" />}
 					/>
 					<Box
-                        sx={{
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Bracket width="12px" height="42px" sx={{ marginRight: '10px' }} />
 						<Box
-                            sx={{
-                                display: "flex",
-                                flexDirection: "column"
-                            }}>
+							sx={{
+								display: 'flex',
+								flexDirection: 'column'
+							}}
+						>
 							<FormControlLabel
 								control={
 									<Switch
@@ -171,16 +173,18 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 					</Box>
 					{hasStaging && (
 						<Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center"
-                            }}>
+							sx={{
+								display: 'flex',
+								alignItems: 'center'
+							}}
+						>
 							<Bracket width="12px" height="42px" sx={{ marginRight: '10px' }} />
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    flexDirection: "column"
-                                }}>
+								sx={{
+									display: 'flex',
+									flexDirection: 'column'
+								}}
+							>
 								<FormControlLabel
 									control={
 										<Switch
@@ -223,7 +227,7 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 					)}
 				</FormGroup>
 			</DialogBody>
-            <DialogFooter>
+			<DialogFooter>
 				<SecondaryButton onClick={() => onClose()}>
 					<FormattedMessage id="words.cancel" defaultMessage="Cancel" />
 				</SecondaryButton>
@@ -231,8 +235,8 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 					<FormattedMessage id="words.confirm" defaultMessage="Confirm" />
 				</PrimaryButton>
 			</DialogFooter>
-        </>
-    );
+		</>
+	);
 }
 
 interface BracketProps {

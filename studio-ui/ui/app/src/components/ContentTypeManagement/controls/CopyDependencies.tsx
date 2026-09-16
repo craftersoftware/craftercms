@@ -65,8 +65,8 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 	};
 
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field}>
-            {copyDependencies?.map((dependency, index) => (
+		<FormsEngineField htmlFor={htmlId} field={field}>
+			{copyDependencies?.map((dependency, index) => (
 				<Card key={index} variant="outlined" sx={{ display: 'flex', flexDirection: 'row', my: 1, p: 1.5, gap: 1 }}>
 					<Box sx={{ gap: 2, display: 'flex', flexDirection: 'column', flex: 1 }}>
 						<TextField
@@ -85,10 +85,11 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 						/>
 					</Box>
 					<Box
-                        sx={{
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
 							<IconButton onClick={() => removeDependency(index)}>
 								<RemoveCircleOutlineRoundedIcon />
@@ -97,19 +98,20 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 					</Box>
 				</Card>
 			))}
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "center"
-                }}>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'center'
+				}}
+			>
 				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
 					<IconButton onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>
 				</Tooltip>
 			</Box>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default CopyDependencies;

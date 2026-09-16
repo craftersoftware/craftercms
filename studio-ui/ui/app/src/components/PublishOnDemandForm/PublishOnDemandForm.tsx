@@ -59,8 +59,8 @@ export function PublishOnDemandForm(props: PublishOnDemandFormProps) {
 		setFormData({ [name]: name === 'path' ? `/${value}`.replace(/\/{2,}/g, '/') : value });
 	};
 	return (
-        <form>
-            <Grid container spacing={3}>
+		<form>
+			<Grid container spacing={3}>
 				{mode !== 'everything' && (
 					<Grid size={{ xs: 12, md: 8 }}>
 						<FormControl fullWidth>
@@ -180,8 +180,8 @@ export function PublishOnDemandForm(props: PublishOnDemandFormProps) {
 					</FormControl>
 				</Grid>
 			</Grid>
-        </form>
-    );
+		</form>
+	);
 }
 
 export default PublishOnDemandForm;

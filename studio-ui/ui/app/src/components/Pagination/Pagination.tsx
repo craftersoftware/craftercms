@@ -56,13 +56,13 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 	sx = sx ?? {};
 	const { mode = 'items', showBottomBorder = false } = props;
 	return (theme) =>
-		(({
-            display: 'flex',
-            [`.${inputBaseClasses.root}`]: { ml: 0, mr: 0 },
-            borderBottom: showBottomBorder ? `1px solid ${theme.palette.divider}` : UNDEFINED,
-            ...sx.root,
+		({
+			display: 'flex',
+			[`.${inputBaseClasses.root}`]: { ml: 0, mr: 0 },
+			borderBottom: showBottomBorder ? `1px solid ${theme.palette.divider}` : UNDEFINED,
+			...sx.root,
 
-            [`& .${tablePaginationClasses.toolbar}`]: {
+			[`& .${tablePaginationClasses.toolbar}`]: {
 				width: '100%',
 				minHeight: '40px',
 				padding: `0 ${theme.spacing(1)}`,
@@ -70,11 +70,11 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				...sx.toolbar
 			},
 
-            [`& .${tablePaginationClasses.select}`]: {
+			[`& .${tablePaginationClasses.select}`]: {
 				...sx.select
 			},
 
-            [`& .${tablePaginationClasses.selectLabel}`]: {
+			[`& .${tablePaginationClasses.selectLabel}`]: {
 				position: 'absolute',
 				width: '1px',
 				height: '1px',
@@ -87,26 +87,26 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				...sx.selectLabel
 			},
 
-            [`& .${tablePaginationClasses.selectRoot}`]: {
+			[`& .${tablePaginationClasses.selectRoot}`]: {
 				marginRight: 0,
 				...sx.selectRoot
 			},
 
-            [`& .${tablePaginationClasses.selectIcon}`]: {
+			[`& .${tablePaginationClasses.selectIcon}`]: {
 				...sx.selectIcon
 			},
 
-            [`& .${tablePaginationClasses.actions}`]: {
+			[`& .${tablePaginationClasses.actions}`]: {
 				marginLeft: '0 !important',
 				...sx.actions
 			},
 
-            [`& .${tablePaginationClasses.spacer}`]: {
+			[`& .${tablePaginationClasses.spacer}`]: {
 				display: 'none',
 				...sx.actions
 			},
 
-            [`& .${tablePaginationClasses.displayedRows}`]: {
+			[`& .${tablePaginationClasses.displayedRows}`]: {
 				mt: 0,
 				mr: mode === 'table' ? 1 : 0,
 				mb: 0,
@@ -114,14 +114,14 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				...sx.displayedRows
 			},
 
-            [`& .${tablePaginationClasses.input}`]: {
+			[`& .${tablePaginationClasses.input}`]: {
 				...sx.input
 			},
 
-            [`& .${tablePaginationClasses.menuItem}`]: {
+			[`& .${tablePaginationClasses.menuItem}`]: {
 				...sx.menuItem
 			}
-        }) as SystemStyleObject<Theme>);
+		}) as SystemStyleObject<Theme>;
 }
 
 export function Pagination(props: PaginationProps) {

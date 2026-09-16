@@ -94,7 +94,7 @@ export function SiteTools(props: SiteToolsProps) {
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
 	return (
-        <Paper
+		<Paper
 			className={props.classes?.root}
 			sx={{
 				height: '100vh',
@@ -103,7 +103,7 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
-            <ResizeableDrawer
+			<ResizeableDrawer
 				sxs={{
 					drawerPaper: {
 						position: 'absolute'
@@ -122,11 +122,12 @@ export function SiteTools(props: SiteToolsProps) {
 			>
 				<section>
 					<Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginBottom: "10px"
-                        }}>
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							marginBottom: '10px'
+						}}
+					>
 						{onBackClick && (
 							<Tooltip title={<FormattedMessage id="words.preview" defaultMessage="Preview" />}>
 								<IconButton
@@ -192,17 +193,21 @@ export function SiteTools(props: SiteToolsProps) {
 					)}
 				</Box>
 			</ResizeableDrawer>
-            <Box
-                sx={[{
-                    height: "100%",
-                    width: "100%",
-                    paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
-                }, (theme) => ({
-					transition: theme.transitions.create('padding-left', {
-						easing: theme.transitions.easing.easeOut,
-						duration: theme.transitions.duration.enteringScreen
+			<Box
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
 					})
-				})]}>
+				]}
+			>
 				{activeToolId ? (
 					tool ? (
 						<Suspencified>
@@ -219,11 +224,12 @@ export function SiteTools(props: SiteToolsProps) {
 						</Suspencified>
 					) : (
 						<Box
-                            sx={{
-                                display: "flex",
-                                flexDirection: "column",
-                                height: "100%"
-                            }}>
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
 							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 								<LauncherOpenerButton />
 							</Box>
@@ -242,8 +248,8 @@ export function SiteTools(props: SiteToolsProps) {
 					/>
 				)}
 			</Box>
-        </Paper>
-    );
+		</Paper>
+	);
 }
 
 export default SiteTools;

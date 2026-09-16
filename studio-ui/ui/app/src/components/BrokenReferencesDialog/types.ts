@@ -37,5 +37,4 @@ export interface BrokenReferencesDialogStateProps extends BrokenReferencesDialog
 }
 
 export interface BrokenReferencesDialogContainerProps
-	extends BrokenReferencesDialogBaseProps,
-		Pick<BrokenReferencesDialogProps, 'onContinue' | 'onClose'> {}
+	extends BrokenReferencesDialogBaseProps, Pick<BrokenReferencesDialogProps, 'onContinue' | 'onClose'> {}

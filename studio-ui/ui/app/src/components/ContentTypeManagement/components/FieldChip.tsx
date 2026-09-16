@@ -81,8 +81,8 @@ export function FieldChip(props: FieldChipProps) {
 	const descriptor = descriptors[field.type];
 	const additionalFields = descriptor?.metadata?.additionalFields;
 	return (
-        <>
-            <Root
+		<>
+			<Root
 				disabled={isSelected}
 				sx={[
 					{
@@ -124,10 +124,11 @@ export function FieldChip(props: FieldChipProps) {
 					]}
 				>
 					<Box
-                        sx={{
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						{(field as NewContentTypeField).NEW ? (
 							<Typography component="strong" sx={{ mr: 0.5, fontWeight: 600 }}>
 								<FormattedMessage defaultMessage={`Draft ({type})`} values={{ type: field.type }} />
@@ -152,10 +153,11 @@ export function FieldChip(props: FieldChipProps) {
 				</Box>
 				{isRepeat && (
 					<Box
-                        sx={{
-                            p: 1,
-                            pt: 0
-                        }}>
+						sx={{
+							p: 1,
+							pt: 0
+						}}
+					>
 						{Object.entries(field.fields).map(([fieldId, subField]) => (
 							<FieldChip
 								key={fieldId}
@@ -173,11 +175,11 @@ export function FieldChip(props: FieldChipProps) {
 					</Box>
 				)}
 			</Root>
-            {additionalFields?.map((additionalFieldId) => (
+			{additionalFields?.map((additionalFieldId) => (
 				<AdditionalFieldChip key={additionalFieldId} fieldId={additionalFieldId} parentFieldId={field.id} />
 			))}
-        </>
-    );
+		</>
+	);
 }
 
 export default FieldChip;

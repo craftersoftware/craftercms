@@ -73,19 +73,21 @@ const getStatusColor = (state: PublishingStatus['currentTask']['state']) => {
 const StageItem = ({ stage }: { stage: currentTaskStage }) => {
 	const { name, processed, state, total } = stage;
 	return (
-        <Box>
-            <Grid
-                container
-                sx={{
-                    alignItems: "center",
-                    justifyContent: "space-between"
-                }}>
+		<Box>
+			<Grid
+				container
+				sx={{
+					alignItems: 'center',
+					justifyContent: 'space-between'
+				}}
+			>
 				<Grid
-                    sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1
-                    }}>
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 1
+					}}
+				>
 					{stageStateIcons[stage.state] || null}
 					<Typography variant="subtitle1">{name}</Typography>
 				</Grid>
@@ -99,13 +101,16 @@ const StageItem = ({ stage }: { stage: currentTaskStage }) => {
 					/>
 				</Grid>
 			</Grid>
-            <Typography variant="caption" sx={{
-                color: "text.secondary"
-            }}>
+			<Typography
+				variant="caption"
+				sx={{
+					color: 'text.secondary'
+				}}
+			>
 				<FormattedMessage defaultMessage="{processed}/{total} items processed" values={{ processed, total }} />
 			</Typography>
-        </Box>
-    );
+		</Box>
+	);
 };
 
 export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
@@ -114,8 +119,8 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 	const publishingStatusState = getPublishingStatusState({ enabled, published, currentTask });
 	const [showTaskDetails, setShowTaskDetails] = useState(false);
 	return (
-        <>
-            <ListItem component="div">
+		<>
+			<ListItem component="div">
 				<ListItemAvatar>
 					<PublishingStatusAvatar enabled={enabled} status={isFetching ? null : publishingStatusState} />
 				</ListItemAvatar>
@@ -124,11 +129,12 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 					secondary={
 						currentTask && (
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    alignItems: "baseline",
-                                    gap: 1
-                                }}>
+								sx={{
+									display: 'flex',
+									alignItems: 'baseline',
+									gap: 1
+								}}
+							>
 								<Typography variant="body2">
 									<FormattedMessage
 										defaultMessage="Current publishing task {currentTaskType} - {state}."
@@ -150,7 +156,7 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 					}
 				/>
 			</ListItem>
-            <Paper
+			<Paper
 				elevation={0}
 				sx={{
 					display: currentTask ? 'block' : 'none',
@@ -171,8 +177,8 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 					))}
 				</Stack>
 			</Paper>
-        </>
-    );
+		</>
+	);
 }
 
 export default PublishingStatusDisplay;

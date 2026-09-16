@@ -40,12 +40,13 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 	const { groups, onRowClicked, onPageChange, onRowsPerPageChange } = props;
 
 	return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column"
-            }}>
-            <TableContainer>
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
+			<TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>
 						<GlobalAppGridRow className="hoverDisabled">
@@ -89,7 +90,7 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 					</TableBody>
 				</Table>
 			</TableContainer>
-            <Pagination
+			<Pagination
 				mode="table"
 				count={groups.total}
 				rowsPerPage={groups.limit}
@@ -97,8 +98,8 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 				onPageChange={(e, page: number) => onPageChange(page)}
 				onRowsPerPageChange={onRowsPerPageChange}
 			/>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default GroupsGridUI;

@@ -24,5 +24,4 @@ export interface CreateTokenDialogProps extends CreateTokenBaseProps, EnhancedDi
 }
 
 export interface CreateTokenContainerProps
-	extends CreateTokenBaseProps,
-		Pick<CreateTokenDialogProps, 'onClose' | 'onCreated' | 'isSubmitting'> {}
+	extends CreateTokenBaseProps, Pick<CreateTokenDialogProps, 'onClose' | 'onCreated' | 'isSubmitting'> {}

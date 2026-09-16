@@ -144,8 +144,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 	}, [fetchPublishingTargetsFn]);
 
 	return (
-        <Box component="form" sx={{ width: 'auto', ...sxs?.root }} onSubmit={onSubmit}>
-            <TextField
+		<Box component="form" sx={{ width: 'auto', ...sxs?.root }} onSubmit={onSubmit}>
+			<TextField
 				autoFocus
 				fullWidth
 				sx={{ mb: 1 }}
@@ -158,7 +158,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				}
 				required
 			/>
-            <TextFieldWithMax
+			<TextFieldWithMax
 				id="publishDialogFormSubmissionComment"
 				name="submissionComment"
 				label={<FormattedMessage id="publishForm.submissionComment" defaultMessage="Submission Comment" />}
@@ -169,7 +169,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				disabled={disabled}
 				required={true}
 			/>
-            <Box sx={{ mb: 1.25 }}>
+			<Box sx={{ mb: 1.25 }}>
 				{showRequestApproval && (
 					<FormControlLabel
 						sx={{ display: 'block' }}
@@ -184,10 +184,11 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 						}
 						label={
 							<Box
-                                sx={{
-                                    display: "inline-flex",
-                                    alignItems: "center"
-                                }}>
+								sx={{
+									display: 'inline-flex',
+									alignItems: 'center'
+								}}
+							>
 								<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request approval" />
 								<Tooltip
 									title={
@@ -215,7 +216,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				)}
 			</Box>
-            <FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
+			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
 				<FormLabel component="legend">
 					<FormattedMessage defaultMessage="Scheduling" />
 				</FormLabel>
@@ -295,7 +296,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				</Collapse>
 			</FormControl>
-            <FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
+			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
 				<FormLabel component="legend">
 					<FormattedMessage defaultMessage="Publishing Target" />
 				</FormLabel>
@@ -387,8 +388,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					</Box>
 				)}
 			</FormControl>
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default PublishDialogForm;

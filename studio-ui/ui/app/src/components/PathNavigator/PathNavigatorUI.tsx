@@ -38,12 +38,7 @@ import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
 
 export type PathNavigatorUIClassKey =
-	| 'root'
-	| 'body'
-	| 'searchRoot'
-	| 'breadcrumbsRoot'
-	| 'breadcrumbsSearch'
-	| 'paginationRoot';
+	'root' | 'body' | 'searchRoot' | 'breadcrumbsRoot' | 'breadcrumbsSearch' | 'paginationRoot';
 
 // export type PathNavigatorUIStyles = Partial<Record<PathNavigatorUIClassKey, CSSProperties>>;
 

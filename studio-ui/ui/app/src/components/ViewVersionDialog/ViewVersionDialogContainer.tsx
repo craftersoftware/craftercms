@@ -121,8 +121,8 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 	};
 
 	return (
-        <DialogBody sx={{ overflow: 'auto', minHeight: '50vh', p: 0 }}>
-            <VersionDialogContext.Provider value={context}>
+		<DialogBody sx={{ overflow: 'auto', minHeight: '50vh', p: 0 }}>
+			<VersionDialogContext.Provider value={context}>
 				{!isViewDataReady ? (
 					<LoadingState />
 				) : error ? (
@@ -159,11 +159,12 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 								))}
 							</List>
 							<Box
-                                sx={{
-                                    width: "100%",
-                                    borderTop: 1,
-                                    borderColor: "divider"
-                                }}>
+								sx={{
+									width: '100%',
+									borderTop: 1,
+									borderColor: 'divider'
+								}}
+							>
 								<Button onClick={() => onSetAccordionView(!accordionView)}>
 									{accordionView ? (
 										<FormattedMessage defaultMessage="Single field" />
@@ -211,11 +212,12 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 											onSelectField={onSelectField}
 										/>
 										<Box
-                                            sx={{
-                                                height: "calc(100% - 68px)",
-                                                display: "flex",
-                                                flexDirection: "column"
-                                            }}>
+											sx={{
+												height: 'calc(100% - 68px)',
+												display: 'flex',
+												flexDirection: 'column'
+											}}
+										>
 											<ContentFieldView
 												content={content && getContentInstanceValueFromProp(content, selectedField.id)}
 												field={selectedField}
@@ -232,8 +234,8 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 					</>
 				)}
 			</VersionDialogContext.Provider>
-        </DialogBody>
-    );
+		</DialogBody>
+	);
 }
 
 export default ViewVersionDialogContainer;

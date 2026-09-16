@@ -50,10 +50,12 @@ export function cleanupSiteId(siteId: string): string {
 }
 
 export function cleanupGitBranch(branch: string): string {
-	return (branch
-        .replace(/\s+|[~^:?*[@\\]/g, '')
-        // It cannot have two or more consecutive dots anywhere.
-        .replace(/\.{2,}/g, '.')
-        // It cannot have two or more consecutive slashes anywhere.
-        .replace(/\/{2,}/g, '/'));
+	return (
+		branch
+			.replace(/\s+|[~^:?*[@\\]/g, '')
+			// It cannot have two or more consecutive dots anywhere.
+			.replace(/\.{2,}/g, '.')
+			// It cannot have two or more consecutive slashes anywhere.
+			.replace(/\/{2,}/g, '/')
+	);
 }

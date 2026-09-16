@@ -142,8 +142,8 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 	);
 
 	return (
-        <>
-            <PackageItemsActions
+		<>
+			<PackageItemsActions
 				isTreeView={isTreeView}
 				onSetIsTreeView={onSetIsTreeView}
 				setExpandedPaths={setExpandedPaths}
@@ -152,8 +152,8 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 				includeChildren={includeChildren}
 				setIncludeChildren={setIncludeChildren}
 			/>
-            <Divider />
-            <Box sx={{ p: 1, flexGrow: 1, overflowY: 'auto', maxHeight: '70vh' }}>
+			<Divider />
+			<Box sx={{ p: 1, flexGrow: 1, overflowY: 'auto', maxHeight: '70vh' }}>
 				{!disableTreeView && isTreeView ? (
 					<SimpleTreeView
 						expandedItems={expandedPaths ?? defaultExpandedPaths}
@@ -190,7 +190,7 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 						rowComponent={({ index, style }: RowComponentProps) => {
 							const path = itemsAndDependenciesPaths[index];
 							return (
-                                <Box
+								<Box
 									style={style as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>}
 									sx={{
 										[`.${listItemSecondaryActionClasses.root}`]: { right: (theme) => theme.spacing(1) },
@@ -199,14 +199,15 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 										[`.${listItemClasses.root}:hover .item-menu-button`]: { display: 'flex' }
 									}}
 								>
-                                    <ListItem
+									<ListItem
 										key={path}
 										secondaryAction={
 											<Box
-                                                sx={{
-                                                    display: "flex",
-                                                    alignItems: "center"
-                                                }}>
+												sx={{
+													display: 'flex',
+													alignItems: 'center'
+												}}
+											>
 												<IconButton
 													className="item-menu-button"
 													size="small"
@@ -244,10 +245,11 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 										<ListItemText
 											primary={
 												<Box
-                                                    sx={{
-                                                        display: "flex",
-                                                        gap: 1
-                                                    }}>
+													sx={{
+														display: 'flex',
+														gap: 1
+													}}
+												>
 													<ItemDisplay
 														item={itemMap[path]}
 														showNavigableAsLinks={false}
@@ -262,13 +264,13 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 											secondary={path}
 										/>
 									</ListItem>
-                                </Box>
-                            );
+								</Box>
+							);
 						}}
 					/>
 				)}
 			</Box>
-            <Popover
+			<Popover
 				open={Boolean(contextMenu.anchorPosition)}
 				anchorReference="anchorPosition"
 				anchorPosition={contextMenu.anchorPosition}
@@ -280,8 +282,8 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 					</MenuItem>
 				))}
 			</Popover>
-        </>
-    );
+		</>
+	);
 }
 
 export default PublishPackageItemsView;

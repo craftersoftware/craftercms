@@ -72,13 +72,14 @@ export function CompareFieldPanel(props: CompareFieldPanelProps) {
 	};
 
 	return (
-        <Box
-            sx={{
-                height: "calc(100% - 70px)",
-                display: "flex",
-                flexDirection: "column"
-            }}>
-            {unchanged ? (
+		<Box
+			sx={{
+				height: 'calc(100% - 70px)',
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
+			{unchanged ? (
 				<ContentFieldView
 					content={contentA}
 					field={field}
@@ -101,8 +102,8 @@ export function CompareFieldPanel(props: CompareFieldPanelProps) {
 					)}
 				</>
 			)}
-        </Box>
-    );
+		</Box>
+	);
 }
 
 export default CompareFieldPanel;

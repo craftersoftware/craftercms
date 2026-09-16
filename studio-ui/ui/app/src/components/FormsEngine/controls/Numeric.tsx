@@ -71,8 +71,8 @@ export function Numeric(props: NumberProps) {
 
 	const handleChange: NumberFieldRootProps['onValueChange'] = (newValue) => setValue(newValue);
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
-            <NumberField.Root
+		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
+			<NumberField.Root
 				id={htmlId}
 				value={value}
 				onValueChange={handleChange}
@@ -81,9 +81,15 @@ export function Numeric(props: NumberProps) {
 				min={minValue}
 				max={maxValue}
 			>
-				<NumberField.Group render={<Box sx={{
-                    display: "flex"
-                }} />}>
+				<NumberField.Group
+					render={
+						<Box
+							sx={{
+								display: 'flex'
+							}}
+						/>
+					}
+				>
 					<NumberField.Decrement render={<Button variant="outlined" sx={decrementButtonSx} />}>
 						<MinusRounded />
 					</NumberField.Decrement>
@@ -93,8 +99,8 @@ export function Numeric(props: NumberProps) {
 					</NumberField.Increment>
 				</NumberField.Group>
 			</NumberField.Root>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default Numeric;

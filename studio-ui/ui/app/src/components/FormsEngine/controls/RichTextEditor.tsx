@@ -202,7 +202,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 
 function ControlSkeleton() {
 	return (
-        <Box
+		<Box
 			sx={{
 				borderWidth: 1,
 				borderStyle: 'solid',
@@ -210,26 +210,28 @@ function ControlSkeleton() {
 				borderRadius: 1
 			}}
 		>
-            <Box
-                sx={{
-                    display: "flex",
-                    mx: 2,
-                    my: 1,
-                    gap: 1
-                }}>
+			<Box
+				sx={{
+					display: 'flex',
+					mx: 2,
+					my: 1,
+					gap: 1
+				}}
+			>
 				<Skeleton width={60} />
 				<Skeleton width={60} />
 				<Skeleton width={60} />
 				<Skeleton width={60} />
 				<Skeleton width={60} />
 			</Box>
-            <Box
-                sx={{
-                    display: "flex",
-                    mx: 2,
-                    my: 1,
-                    gap: 1
-                }}>
+			<Box
+				sx={{
+					display: 'flex',
+					mx: 2,
+					my: 1,
+					gap: 1
+				}}
+			>
 				<Skeleton width={24} height={24} variant="circular" />
 				<Skeleton width={24} height={24} variant="circular" sx={{ mr: 2 }} />
 				<Skeleton width={80} height={24} variant="rounded" sx={{ mr: 2 }} />
@@ -237,12 +239,14 @@ function ControlSkeleton() {
 				<Skeleton width={24} height={24} variant="circular" />
 				<Skeleton width={24} height={24} variant="circular" />
 			</Box>
-            <Divider />
-            <Box sx={{
-                height: 350
-            }} />
-        </Box>
-    );
+			<Divider />
+			<Box
+				sx={{
+					height: 350
+				}}
+			/>
+		</Box>
+	);
 }
 
 export default RichTextEditor;

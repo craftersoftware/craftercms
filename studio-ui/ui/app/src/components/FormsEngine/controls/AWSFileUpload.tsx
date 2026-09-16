@@ -74,22 +74,23 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 	};
 
 	return (
-        <FormsEngineField field={field}>
-            {value && (
+		<FormsEngineField field={field}>
+			{value && (
 				<Box
-                    sx={{
-                        display: "flex",
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        mt: 1
-                    }}>
+					sx={{
+						display: 'flex',
+						flexDirection: 'row',
+						justifyContent: 'space-between',
+						mt: 1
+					}}
+				>
 					<Typography variant="body2">{`s3://${value.bucket}/${value.key}`}</Typography>
 					<Typography variant="body2" color="textSecondary">
 						{value.url}
 					</Typography>
 				</Box>
 			)}
-            <FieldBox sx={{ my: 2, px: 1, pt: 1 }}>
+			<FieldBox sx={{ my: 2, px: 1, pt: 1 }}>
 				<form id="asset_upload_form">
 					<input type="hidden" name="siteId" value={siteId} />
 					<input type="hidden" name="profileId" value={profileId} />
@@ -106,8 +107,8 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 					/>
 				</form>
 			</FieldBox>
-            {/* region Preview */}
-            {value && (
+			{/* region Preview */}
+			{value && (
 				<Box sx={{ display: 'flex', justifyContent: 'center' }}>
 					<Card sx={{ width: fileType === 'asset' ? '100%' : 'auto' }}>
 						{fileType === 'image' ? (
@@ -152,9 +153,9 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 					</Card>
 				</Box>
 			)}
-            {/*	endregion */}
-        </FormsEngineField>
-    );
+			{/*	endregion */}
+		</FormsEngineField>
+	);
 }
 
 function getAwsFileType(fileUrl?: string): 'image' | 'video' | 'asset' | 'unknown' {

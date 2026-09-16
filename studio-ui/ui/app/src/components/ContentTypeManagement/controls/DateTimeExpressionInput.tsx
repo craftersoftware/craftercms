@@ -28,8 +28,7 @@ export interface TextProps extends TypeBuilderControl {
 	value: string;
 }
 
-const DATE_TIME_FORMAT_OFFSET =
-	'[now] [+ or -] [number] [days | weeks | years | hours | minutes | d | w | y | h | m]';
+const DATE_TIME_FORMAT_OFFSET = '[now] [+ or -] [number] [days | weeks | years | hours | minutes | d | w | y | h | m]';
 const DATE_TIME_FORMAT_DAY = '[day-of-week | {day-of-week}] or {macro} [optional HH:mm[:ss]]';
 const DATE_TIME_EXAMPLE =
 	"'now', 'now+5days', 'now-30m', '+2d', '-2w', 'monday', '{friday} 09:00', '{now+2days} 09:30:15'";
@@ -48,8 +47,8 @@ export function DateTimeExpressionInput(props: TextProps) {
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => setValue(e.currentTarget.value);
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
-            <OutlinedInput
+		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
+			<OutlinedInput
 				autoFocus={autoFocus}
 				id={htmlId}
 				fullWidth
@@ -61,11 +60,12 @@ export function DateTimeExpressionInput(props: TextProps) {
 					<Tooltip
 						title={
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 1
-                                }}>
+								sx={{
+									display: 'flex',
+									flexDirection: 'column',
+									gap: 1
+								}}
+							>
 								<Box>
 									<FormattedMessage defaultMessage="Date expression to process:" />
 								</Box>
@@ -101,8 +101,8 @@ export function DateTimeExpressionInput(props: TextProps) {
 					</Tooltip>
 				}
 			/>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default DateTimeExpressionInput;

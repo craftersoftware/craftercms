@@ -50,8 +50,7 @@ export interface PublishDialogStateProps extends PublishDialogBaseProps, Enhance
 }
 
 export interface PublishDialogContainerProps
-	extends PublishDialogBaseProps,
-		Pick<PublishDialogProps, 'isSubmitting' | 'onSuccess' | 'onClose'> {}
+	extends PublishDialogBaseProps, Pick<PublishDialogProps, 'isSubmitting' | 'onSuccess' | 'onClose'> {}
 
 export interface InternalDialogState {
 	packageTitle: string;

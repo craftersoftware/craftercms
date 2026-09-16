@@ -36,11 +36,11 @@ export function ContentPicker(props: {
 		onChange?.(event, allowedPaths[(event.target as HTMLInputElement).value]);
 
 	return (
-        <FormControl>
-            <FormLabel id="contentTypeLabel" sx={{ mb: 1 }}>
+		<FormControl>
+			<FormLabel id="contentTypeLabel" sx={{ mb: 1 }}>
 				{label}
 			</FormLabel>
-            <RadioGroup aria-labelledby="contentTypeLabel" name="contentType">
+			<RadioGroup aria-labelledby="contentTypeLabel" name="contentType">
 				{allowedPaths?.map((data, index) => (
 					<FormControlLabel
 						disableTypography
@@ -49,11 +49,12 @@ export function ContentPicker(props: {
 						control={<Radio />}
 						label={
 							<Box
-                                sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    py: 1
-                                }}>
+								sx={{
+									display: 'flex',
+									flexDirection: 'column',
+									py: 1
+								}}
+							>
 								<Typography component="span">{data.title}</Typography>
 								<Typography variant="body2" color="textSecondary" component="span">
 									{data.path}
@@ -64,6 +65,6 @@ export function ContentPicker(props: {
 					/>
 				))}
 			</RadioGroup>
-        </FormControl>
-    );
+		</FormControl>
+	);
 }

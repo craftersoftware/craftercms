@@ -23,19 +23,18 @@ export interface PublishingPackageReviewDialogBaseProps {
 }
 
 export interface PublishingPackageReviewDialogProps
-	extends PublishingPackageReviewDialogBaseProps,
-		EnhancedDialogProps {
+	extends PublishingPackageReviewDialogBaseProps, EnhancedDialogProps {
 	onSuccess?(): void;
 }
 
 export interface PublishingPackageReviewDialogStateProps
-	extends PublishingPackageReviewDialogBaseProps,
-		EnhancedDialogState {
+	extends PublishingPackageReviewDialogBaseProps, EnhancedDialogState {
 	onClose?: StandardAction;
 	onClosed?: StandardAction;
 	onSuccess?: StandardAction;
 }
 
 export interface PublishingPackageReviewDialogContainerProps
-	extends PublishingPackageReviewDialogBaseProps,
+	extends
+		PublishingPackageReviewDialogBaseProps,
 		Pick<PublishingPackageReviewDialogProps, 'isSubmitting' | 'onSuccess' | 'onClose'> {}

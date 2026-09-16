@@ -119,8 +119,8 @@ function GitForm(props: GitFormProps) {
 	}
 
 	return (
-        <>
-            <Grid size={12}>
+		<>
+			<Grid size={12}>
 				<FormControlLabel
 					control={
 						<Switch
@@ -133,18 +133,19 @@ function GitForm(props: GitFormProps) {
 					label={<FormattedMessage defaultMessage="Single Branch" />}
 				/>
 				<Typography
-                    variant="caption"
-                    component="small"
-                    sx={{
-                        color: "text.secondary",
-                        display: 'block',
-                        mb: 2,
-                        ml: 2
-                    }}>
+					variant="caption"
+					component="small"
+					sx={{
+						color: 'text.secondary',
+						display: 'block',
+						mb: 2,
+						ml: 2
+					}}
+				>
 					<FormattedMessage defaultMessage="If checked, only the branch specified above will be cloned. Otherwise, all branches in the repository will be cloned." />
 				</Typography>
 			</Grid>
-            <Grid size={12} data-field-id="repoUrl">
+			<Grid size={12} data-field-id="repoUrl">
 				<TextField
 					id="repoUrl"
 					name="repoUrl"
@@ -166,7 +167,7 @@ function GitForm(props: GitFormProps) {
 					)}
 				/>
 			</Grid>
-            <Grid size={12} data-field-id="repoRemoteName">
+			<Grid size={12} data-field-id="repoRemoteName">
 				<TextField
 					id="repoRemoteName"
 					name="repoRemoteName"
@@ -182,7 +183,7 @@ function GitForm(props: GitFormProps) {
 					helperText={formatMessage(cloneMessages.clone_remoteName_label)}
 				/>
 			</Grid>
-            <Grid size={12}>
+			<Grid size={12}>
 				<Box
 					sx={{
 						width: '100%',
@@ -199,7 +200,7 @@ function GitForm(props: GitFormProps) {
 					/>
 				</Box>
 			</Grid>
-            <Grid size={12} sx={{ mb: 2 }}>
+			<Grid size={12} sx={{ mb: 2 }}>
 				<FormControlLabel
 					control={
 						<Switch
@@ -226,8 +227,8 @@ function GitForm(props: GitFormProps) {
 					{formatMessage(messages.createAsOrphanHelpText)}
 				</Typography>
 			</Grid>
-        </>
-    );
+		</>
+	);
 }
 
 export default GitForm;

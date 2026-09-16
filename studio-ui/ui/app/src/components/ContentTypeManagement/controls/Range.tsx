@@ -70,13 +70,14 @@ export function Range(props: RangeProps) {
 		setIsRange((prev) => !prev);
 	};
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field}>
-            <Box sx={{ display: 'flex', mt: 1, gap: 2 }}>
+		<FormsEngineField htmlFor={htmlId} field={field}>
+			<Box sx={{ display: 'flex', mt: 1, gap: 2 }}>
 				<Box
-                    sx={{
-                        display: "flex",
-                        alignItems: "center"
-                    }}>
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<Tooltip title={<FormattedMessage defaultMessage="Switch mode" />}>
 						<IconButton onClick={switchRange}>
 							<CompareArrowsOutlinedIcon />
@@ -120,8 +121,8 @@ export function Range(props: RangeProps) {
 					/>
 				)}
 			</Box>
-        </FormsEngineField>
-    );
+		</FormsEngineField>
+	);
 }
 
 export default Range;

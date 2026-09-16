@@ -863,7 +863,7 @@ export function generateDefaultCreationComment(
 	pageUrl: string,
 	formatMessage: IntlShape['formatMessage'],
 	currentMessage?: string,
-	lastGeneratedMessage?: string,
+	lastGeneratedMessage?: string
 ): string | undefined {
 	const newMessage = pageUrl
 		? formatMessage({ defaultMessage: 'Created {pageUrl}' }, { pageUrl })
@@ -872,7 +872,7 @@ export function generateDefaultCreationComment(
 	if (!currentMessage || !lastGeneratedMessage) {
 		return newMessage;
 	}
-		
+
 	if (
 		// Nothing to change
 		currentMessage === newMessage ||

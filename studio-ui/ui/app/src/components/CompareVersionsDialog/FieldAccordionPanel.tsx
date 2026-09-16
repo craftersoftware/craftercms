@@ -42,7 +42,7 @@ export function FieldAccordionPanel(props: CompareFieldPanelAccordionProps) {
 	}, [selected]);
 
 	return (
-        <Accordion
+		<Accordion
 			ref={fieldRef}
 			expanded={expanded}
 			onChange={() => setExpanded(!expanded)}
@@ -58,14 +58,18 @@ export function FieldAccordionPanel(props: CompareFieldPanelAccordionProps) {
 				}
 			}}
 		>
-            <AccordionSummary
+			<AccordionSummary
 				expandIcon={<ExpandMoreIcon />}
 				sx={{ [`.${accordionSummaryClasses.content}`]: { justifyContent: 'space-between', alignItems: 'center' } }}
 			>
 				{summary ? (
-					<Box sx={{
-                        width: "100%"
-                    }}>{summary}</Box>
+					<Box
+						sx={{
+							width: '100%'
+						}}
+					>
+						{summary}
+					</Box>
 				) : (
 					<Typography>
 						<Box component="span" sx={{ fontWeight: 600 }}>
@@ -75,7 +79,7 @@ export function FieldAccordionPanel(props: CompareFieldPanelAccordionProps) {
 					</Typography>
 				)}
 			</AccordionSummary>
-            <AccordionDetails sx={{ py: 2 }}>{details}</AccordionDetails>
-        </Accordion>
-    );
+			<AccordionDetails sx={{ py: 2 }}>{details}</AccordionDetails>
+		</Accordion>
+	);
 }

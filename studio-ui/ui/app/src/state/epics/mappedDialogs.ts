@@ -277,7 +277,7 @@ const showDialogsEpics: CrafterCMSEpic[] = [
 			map(([{ type }]) => {
 				return popDialog({ id: generateDialogId(type) });
 			})
-		),
+		)
 	// endregion
 ] as CrafterCMSEpic[];
 

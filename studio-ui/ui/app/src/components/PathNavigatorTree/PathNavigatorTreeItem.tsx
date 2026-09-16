@@ -59,11 +59,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 }
 
 export type PathNavigatorTreeBreadcrumbsClassKey =
-	| 'activeItem'
-	| 'searchRoot'
-	| 'searchInput'
-	| 'searchCleanButton'
-	| 'searchCloseButton';
+	'activeItem' | 'searchRoot' | 'searchInput' | 'searchCleanButton' | 'searchCloseButton';
 
 const translations = defineMessages({
 	filter: {
