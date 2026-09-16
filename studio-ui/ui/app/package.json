@@ -55,8 +55,8 @@
 	},
 	"dependencies": {
 		"@atlaskit/pragmatic-drag-and-drop": "^3.1.0",
-		"@atlaskit/pragmatic-drag-and-drop-flourish": "^3.2.0",
-		"@atlaskit/pragmatic-drag-and-drop-hitbox": "^2.2.1",
+		"@atlaskit/pragmatic-drag-and-drop-flourish": "^3.2.1",
+		"@atlaskit/pragmatic-drag-and-drop-hitbox": "^2.2.2",
 		"@base-ui-components/react": "^1.0.0-rc.0",
 		"@craftercms/uppy": "workspace:^",
 		"@emotion/css": "^11.13.5",

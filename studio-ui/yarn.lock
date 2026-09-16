@@ -102,7 +102,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atlaskit/pragmatic-drag-and-drop-flourish@npm:^3.2.0":
+"@atlaskit/pragmatic-drag-and-drop-flourish@npm:^3.2.1":
   version: 3.2.1
   resolution: "@atlaskit/pragmatic-drag-and-drop-flourish@npm:3.2.1"
   dependencies:
@@ -113,7 +113,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atlaskit/pragmatic-drag-and-drop-hitbox@npm:^2.2.1":
+"@atlaskit/pragmatic-drag-and-drop-hitbox@npm:^2.2.2":
   version: 2.2.2
   resolution: "@atlaskit/pragmatic-drag-and-drop-hitbox@npm:2.2.2"
   dependencies:
@@ -1886,8 +1886,8 @@ __metadata:
   resolution: "@craftercms/studio-ui@workspace:ui/app"
   dependencies:
     "@atlaskit/pragmatic-drag-and-drop": "npm:^3.1.0"
-    "@atlaskit/pragmatic-drag-and-drop-flourish": "npm:^3.2.0"
-    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^2.2.1"
+    "@atlaskit/pragmatic-drag-and-drop-flourish": "npm:^3.2.1"
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^2.2.2"
     "@base-ui-components/react": "npm:^1.0.0-rc.0"
     "@craftercms/uppy": "workspace:^"
     "@emotion/css": "npm:^11.13.5"
