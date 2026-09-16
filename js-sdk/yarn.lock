@@ -44,17 +44,17 @@ __metadata:
     "@craftercms/utils": "npm:0.0.0-PLACEHOLDER"
     "@rollup/plugin-commonjs": "npm:^25.0.7"
     "@rollup/plugin-node-resolve": "npm:^15.2.3"
-    "@types/mocha": "npm:^10.0.7"
+    "@types/mocha": "npm:^10.0.10"
     chai: "npm:^5.1.1"
     mocha: "npm:^10.7.3"
     nock: "npm:^13.3.3"
     node-fetch: "npm:2"
     rollup: "npm:^2.79.1"
     rollup-plugin-sourcemaps: "npm:^0.6.3"
-    rxjs: "npm:^7.8.1"
+    rxjs: "npm:^7.8.2"
     terser: "npm:^5.30.1"
     ts-node: "npm:^10.9.2"
-    whatwg-fetch: "npm:^3.6.19"
+    whatwg-fetch: "npm:^3.6.20"
     xhr-mock: "npm:^2.5.1"
   languageName: unknown
   linkType: soft
@@ -100,7 +100,7 @@ __metadata:
     "@reduxjs/toolkit": "npm:^2.2.2"
     "@rollup/plugin-commonjs": "npm:^25.0.7"
     "@rollup/plugin-node-resolve": "npm:^15.2.3"
-    "@types/mocha": "npm:^10.0.7"
+    "@types/mocha": "npm:^10.0.10"
     chai: "npm:^5.1.1"
     mocha: "npm:^10.7.3"
     nock: "npm:^13.3.3"
@@ -109,7 +109,7 @@ __metadata:
     redux-observable: "npm:^3.0.0-rc.2"
     rollup: "npm:^2.79.1"
     rollup-plugin-sourcemaps: "npm:^0.6.3"
-    rxjs: "npm:^7.8.1"
+    rxjs: "npm:^7.8.2"
     terser: "npm:^5.30.1"
     ts-node: "npm:^10.9.2"
     tslib: "npm:^2.6.2"
@@ -136,13 +136,13 @@ __metadata:
     "@craftercms/utils": "npm:0.0.0-PLACEHOLDER"
     "@rollup/plugin-commonjs": "npm:^25.0.7"
     "@rollup/plugin-node-resolve": "npm:^15.2.3"
-    "@types/mocha": "npm:^10.0.7"
+    "@types/mocha": "npm:^10.0.10"
     chai: "npm:^5.1.1"
     mocha: "npm:^10.7.3"
     nock: "npm:^13.3.3"
     rollup: "npm:^2.79.1"
     rollup-plugin-sourcemaps: "npm:^0.6.3"
-    rxjs: "npm:^7.8.1"
+    rxjs: "npm:^7.8.2"
     terser: "npm:^5.30.1"
     ts-node: "npm:^10.9.2"
     uuid: "npm:^10.0.0"
@@ -427,10 +427,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/mocha@npm:^10.0.7":
-  version: 10.0.7
-  resolution: "@types/mocha@npm:10.0.7"
-  checksum: 48a2df4dd02b6e66a11129dca6a23cf0cc3995faf8525286eb851043685bd8b7444780f4bb29a1c42df7559ed63294e5308bfce3a6b862ad2e0359cb21c21329
+"@types/mocha@npm:^10.0.10":
+  version: 10.0.10
+  resolution: "@types/mocha@npm:10.0.10"
+  checksum: d2b8c48138cde6923493e42b38e839695eb42edd04629abe480a8f34c0e3f50dd82a55832c2e8d2b6e6f9e4deb492d7d733e600fbbdd5a0ceccbcfc6844ff9d5
   languageName: node
   linkType: hard
 
@@ -3227,12 +3227,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rxjs@npm:^7.8.1":
-  version: 7.8.1
-  resolution: "rxjs@npm:7.8.1"
+"rxjs@npm:^7.8.2":
+  version: 7.8.2
+  resolution: "rxjs@npm:7.8.2"
   dependencies:
     tslib: "npm:^2.1.0"
-  checksum: 3c49c1ecd66170b175c9cacf5cef67f8914dcbc7cd0162855538d365c83fea631167cacb644b3ce533b2ea0e9a4d0b12175186985f89d75abe73dbd8f7f06f68
+  checksum: 1fcd33d2066ada98ba8f21fcbbcaee9f0b271de1d38dc7f4e256bfbc6ffcdde68c8bfb69093de7eeb46f24b1fb820620bf0223706cff26b4ab99a7ff7b2e2c45
   languageName: node
   linkType: hard
 
@@ -3912,7 +3912,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"whatwg-fetch@npm:^3.6.19":
+"whatwg-fetch@npm:^3.6.20":
   version: 3.6.20
   resolution: "whatwg-fetch@npm:3.6.20"
   checksum: fa972dd14091321d38f36a4d062298df58c2248393ef9e8b154493c347c62e2756e25be29c16277396046d6eaa4b11bd174f34e6403fff6aaca9fb30fa1ff46d

@@ -29,13 +29,13 @@
     "@craftercms/classes": "0.0.0-PLACEHOLDER",
     "@craftercms/models": "0.0.0-PLACEHOLDER",
     "@craftercms/utils": "0.0.0-PLACEHOLDER",
-    "rxjs": "^7.8.1",
+    "rxjs": "^7.8.2",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "@types/mocha": "^10.0.7",
+    "@types/mocha": "^10.0.10",
     "chai": "^5.1.1",
     "mocha": "^10.7.3",
     "nock": "^13.3.3",
