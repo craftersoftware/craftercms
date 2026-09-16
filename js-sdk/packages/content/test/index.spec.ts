@@ -28,7 +28,7 @@ import { crafterConf } from '@craftercms/classes';
 import 'url-search-params-polyfill';
 import { expect } from 'chai';
 import { item, descriptor, children, tree, navTree, navBreadcrumb, renderUrl, storeUrl } from './mock-responses';
-import * as nock from 'nock';
+import nock from 'nock';
 
 // https://github.com/nock/nock/issues/2397
 import fetch, { Headers, Request, Response } from 'node-fetch';

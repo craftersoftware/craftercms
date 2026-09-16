@@ -37,12 +37,11 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@types/mocha": "^10.0.10",
     "chai": "^6.2.2",
-    "mocha": "^12.0.1",
+    "mocha": "^11.7.5",
     "nock": "^14.0.17",
     "rollup": "^4.63.3",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.51.2",
-    "ts-node": "^10.9.2",
     "xhr-mock": "^2.5.1",
     "xhr2": "^0.2.1"
   }

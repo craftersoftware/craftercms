@@ -52,7 +52,7 @@ import {
 
 import { item, descriptor, children, navItem, navBreadcrumb, tree } from './mock-responses';
 
-import * as nock from 'nock';
+import nock from 'nock';
 import { of } from 'rxjs';
 
 // https://github.com/nock/nock/issues/2397
