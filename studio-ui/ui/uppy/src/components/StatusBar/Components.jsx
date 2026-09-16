@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { prettierBytes } from '@transloadit/prettier-bytes';
-import { prettyETA } from '@uppy/utils';
+import { prettyETA } from '@uppy/core/utils';
 import classNames from 'classnames';
 
 import statusBarStates from './StatusBarStates.js';

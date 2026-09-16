@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { isDragDropSupported } from '@uppy/utils';
+import { isDragDropSupported } from '@uppy/core/utils';
 import classNames from 'classnames';
 import AddFiles from './AddFiles';
 import AddFilesPanel from './AddFilesPanel';
