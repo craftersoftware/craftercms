@@ -1,46 +1,39 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "rootDir": ".",
-    "target": "es2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "strictNullChecks": false,
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "noImplicitAny": false,
-    "noErrorTruncation": true,
-    "noEmit": false,
-    "declaration": true,
-    "declarationMap": false,
-    "sourceMap": false,
-    "paths": {
-      "react": ["./node_modules/react"],
-      "@craftercms/studio-ui": ["./ui/app/src"],
-      "@craftercms/studio-ui/*": ["./ui/app/src/*"],
-      "@craftercms/studio-guest": ["./ui/guest/src"],
-      "@craftercms/studio-guest/*": ["./ui/guest/src/*"],
-      "@mui/material": ["./node_modules/@mui/material"],
-      "@mui/material/*": ["./node_modules/@mui/material/*"],
-      "@mui/styled-engine": ["./node_modules/@mui/styled-engine"],
-      "@mui/styled-engine/*": ["./node_modules/@mui/styled-engine/*"]
-    }
-  },
-  "exclude": [
-    "**/dist",
-    "**/build",
-    "**/build_tsc"
-  ]
+	"compilerOptions": {
+		"rootDir": ".",
+		"target": "es2022",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"strictNullChecks": false,
+		"allowJs": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"jsx": "react-jsx",
+		"noImplicitAny": false,
+		"noErrorTruncation": true,
+		"noEmit": false,
+		"declaration": true,
+		"declarationMap": false,
+		"sourceMap": false,
+		"paths": {
+			"react": ["./node_modules/react"],
+			"@craftercms/studio-ui": ["./ui/app/src"],
+			"@craftercms/studio-ui/*": ["./ui/app/src/*"],
+			"@craftercms/studio-guest": ["./ui/guest/src"],
+			"@craftercms/studio-guest/*": ["./ui/guest/src/*"],
+			"@mui/material": ["./node_modules/@mui/material"],
+			"@mui/material/*": ["./node_modules/@mui/material/*"],
+			"@mui/system": ["./node_modules/@mui/system"],
+			"@mui/system/*": ["./node_modules/@mui/system/*"],
+			"@mui/styled-engine": ["./node_modules/@mui/styled-engine"],
+			"@mui/styled-engine/*": ["./node_modules/@mui/styled-engine/*"]
+		}
+	},
+	"exclude": ["**/dist", "**/build", "**/build_tsc"]
 }
