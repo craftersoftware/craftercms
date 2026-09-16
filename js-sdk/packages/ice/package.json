@@ -34,8 +34,8 @@
     "enzyme": "^3.11.0",
     "jsdom": "^30.0.1",
     "mocha": "^12.0.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "rollup": "^4.63.3",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.51.2"

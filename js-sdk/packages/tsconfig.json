@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "declaration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "strictNullChecks": false,
     "outDir": "../dist/all/@craftercms",
     "noImplicitAny": false,
@@ -21,7 +20,7 @@
     "lib": ["dom", "es2019"],
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
-    "target": "es5"
+    "target": "es2015"
   },
   "exclude": [
     "./angular",
