@@ -350,17 +350,17 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 			/>
 
 			<Box
-				display="flex"
-				flexDirection="column"
-				flexGrow={1}
-				paddingRight={openFiltersDrawer ? `${drawerWidth}px` : 0}
 				sx={(theme) => ({
 					transition: theme.transitions.create('padding-right', {
 						easing: theme.transitions.easing.easeOut,
 						duration: theme.transitions.duration.enteringScreen
-					})
+					}),
+					flexDirection: 'column',
+					display: 'flex',
+					flexGrow: 1,
+					paddingRight: openFiltersDrawer ? `${drawerWidth}px` : 0,
+					position: 'relative'
 				})}
-				position="relative"
 			>
 				{(hasSelectedItems || isSelectedItemsOnAllPages) && (
 					<ItemActionsSnackbar

@@ -176,7 +176,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 				dispatch,
 				children: (
 					<Box>
-						<Typography marginBottom={1}>
+						<Typography sx={{
+                            marginBottom: 1
+                        }}>
 							<FormattedMessage defaultMessage="An error occurred trying to save the form" />
 						</Typography>
 						<Typography variant="body2" color="textSecondary">

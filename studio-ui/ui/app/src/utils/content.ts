@@ -922,15 +922,15 @@ export function getComputedPublishingTarget(item: ContentItem): PublishingTarget
 
 export function applyFolderNameRules(name: string, options?: { allowBraces: boolean }): string {
 	return (
-		// Replace accented vowels with their non-accented counterpart
-		replaceAccentedVowels(name)
+        // Replace accented vowels with their non-accented counterpart
+        (replaceAccentedVowels(name)
 			// replace spaces with dashes
 			.replace(/\s+/g, '-')
 			// replace multiple consecutive dashes with a single dash
 			.replace(/-+/g, '-')
 			// remove any character that is not a letter, number, dash or underscore, and allow braces if specified
-			.replace(options?.allowBraces ? /[^a-zA-Z0-9-_{}]/g : /[^a-zA-Z0-9-_]/g, '')
-	);
+			.replace(options?.allowBraces ? /[^a-zA-Z0-9-_{}]/g : /[^a-zA-Z0-9-_]/g, ''))
+    );
 }
 
 export function applyAssetNameRules(name: string, options?: { allowBraces: boolean }): string {

@@ -436,7 +436,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 
 	// endregion
 	return (
-		<DashletCard
+        <DashletCard
 			{...props}
 			borderLeftColor={borderLeftColor}
 			title={<FormattedMessage id="words.activity" defaultMessage="Activity" />}
@@ -556,7 +556,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 			}
 			cardContentProps={{ ref: listRef }}
 		>
-			{error && (
+            {error && (
 				<ApiResponseErrorState
 					error={error.response?.response}
 					validationErrors={error.response?.validationErrors?.map((error) => {
@@ -572,7 +572,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 					})}
 				/>
 			)}
-			{loadingFeed && (
+            {loadingFeed && (
 				<Timeline position="right">
 					<CustomTimelineItem>
 						<SizedTimelineSeparator>
@@ -615,7 +615,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 					</CustomTimelineItem>
 				</Timeline>
 			)}
-			{Boolean(feed?.length) && (
+            {Boolean(feed?.length) && (
 				<Timeline position="right" sx={{ flex: 1 }}>
 					<CustomTimelineItem>
 						<SizedTimelineSeparator>
@@ -714,12 +714,12 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 					)}
 				</Timeline>
 			)}
-			{total === 0 && (
+            {total === 0 && (
 				<DashletEmptyMessage>
 					<FormattedMessage id="activityDashlet.noEntriesFound" defaultMessage="No activity was found." />
 				</DashletEmptyMessage>
 			)}
-			<RangePickerModal
+            <RangePickerModal
 				open={openRangePicker}
 				onClose={() => setState({ openRangePicker: false })}
 				onAccept={(dateFrom, dateTo) =>
@@ -733,15 +733,15 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 						: UNDEFINED
 				}
 			/>
-			<PackageDetailsDialog
+            <PackageDetailsDialog
 				open={openPackageDetailsDialog}
 				onClose={() => setState({ openPackageDetailsDialog: false })}
 				onClosed={() => setState({ selectedPackageId: null })}
 				packageId={selectedPackageId}
 			/>
-			{packageContextMenu?.contextMenuElement}
-		</DashletCard>
-	);
+            {packageContextMenu?.contextMenuElement}
+        </DashletCard>
+    );
 }
 
 export default ActivityDashlet;

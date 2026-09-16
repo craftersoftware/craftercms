@@ -337,7 +337,7 @@ export function AuditGridUI(props: AuditGridUIProps) {
 	);
 
 	return (
-		<Box display="flex">
+		<Box sx={{ display: 'flex' }}>
 			<DataGrid
 				sortingOrder={['desc', 'asc']}
 				sortModel={sortModel}
@@ -377,7 +377,7 @@ export function AuditGridUI(props: AuditGridUIProps) {
 				slots={{
 					columnMenu: onFilterSelected,
 					noRowsOverlay: () => (
-						<Box height="100%" minHeight="400px">
+						<Box sx={{ height: '100%', minHeight: '400px' }}>
 							<EmptyState
 								sxs={{
 									root: {

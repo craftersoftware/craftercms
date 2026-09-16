@@ -118,8 +118,10 @@ export function VersionList(props: VersionListProps) {
 					>
 						<ListItemText
 							sx={{ margin: 0 }}
-							primaryTypographyProps={{ sx: { display: 'flex', alignItems: 'center' } }}
-							secondaryTypographyProps={{ sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }}
+							slotProps={{
+								primary: { sx: { display: 'flex', alignItems: 'center' } },
+								secondary: { sx: { whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' } }
+							}}
 							primary={
 								<>
 									<AsDayMonthDateTime date={version.modifiedDate} locale={locale} />

@@ -147,7 +147,7 @@ export function AuditGridSkeleton(props: AuditGridSkeletonProps) {
 	);
 
 	return (
-		<Box display="flex">
+		<Box sx={{ display: 'flex' }}>
 			<DataGrid
 				autoHeight
 				disableColumnFilter

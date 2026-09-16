@@ -483,7 +483,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	return (
 		<>
-			<Box display="flex">
+			<Box sx={{ display: 'flex' }}>
 				{hasEditAction && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />} key="edit">
 						<UltraStyledIconButton size="small" onClick={onEdit}>
@@ -581,7 +581,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledTooltip>
 				)}
 			</Box>
-			<Box display="flex">
+			<Box sx={{ display: 'flex' }}>
 				<Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 				{showItemMenuButton && (
 					<UltraStyledTooltip

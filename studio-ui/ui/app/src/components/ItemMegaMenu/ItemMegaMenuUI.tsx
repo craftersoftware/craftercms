@@ -108,7 +108,7 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 	const { formatMessage } = useIntl();
 
 	return (
-		<Popover
+        <Popover
 			open={open}
 			onClose={onClose}
 			anchorEl={anchorEl}
@@ -153,7 +153,7 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 				}
 			}}
 		>
-			<Box
+            <Box
 				component="section"
 				className={['menu-section', classes?.itemInfo].join(' ')}
 				sx={{
@@ -229,7 +229,7 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					</Box>
 				)}
 			</Box>
-			{isLoading ? (
+            {isLoading ? (
 				<Box className={['actions-container', classes?.actionsContainer].join(' ')}>
 					{new Array(2).fill(null).map((value, i) => (
 						<MenuList
@@ -288,7 +288,7 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					</div>
 				</Box>
 			)}
-			<Box
+            <Box
 				component="section"
 				className={['menu-section', classes?.itemEdited].join(' ')}
 				sx={{
@@ -301,7 +301,9 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					<Skeleton animation="wave" width="100%" />
 				) : (
 					<>
-						<Typography variant="body2" color="text.secondary" title={item.path} noWrap>
+						<Typography variant="body2" title={item.path} noWrap sx={{
+                            color: "text.secondary"
+                        }}>
 							{item.path}
 						</Typography>
 						<Typography variant="body2">
@@ -339,9 +341,9 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					</>
 				)}
 			</Box>
-			<Unmount onClosed={onClosed} />
-		</Popover>
-	);
+            <Unmount onClosed={onClosed} />
+        </Popover>
+    );
 }
 
 function Unmount(props: { onClosed?(): void }) {

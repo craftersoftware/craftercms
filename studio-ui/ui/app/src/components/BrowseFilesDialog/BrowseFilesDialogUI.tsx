@@ -145,260 +145,258 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 						overflow: 'auto'
 					}}
 				>
-						<Paper
-							sx={{
-								paddingLeft: (theme) => theme.spacing(1),
-								marginBottom: (theme) => theme.spacing(3),
-								borderRadius: 4
-							}}
-						>
-							<Toolbar disableGutters variant="dense">
-								<Box sx={{ flexGrow: 1, display: 'flex' }}>
-									{multiSelect && (
-										<>
-											<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
-												<Checkbox checked={allSelected} indeterminate={someSelected} onChange={onSelectAll} />
-											</Tooltip>
-											<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
-										</>
-									)}
-									<Tooltip title={<FormattedMessage id="word.refresh" defaultMessage="Refresh" />}>
+					<Paper
+						sx={{
+							paddingLeft: (theme) => theme.spacing(1),
+							marginBottom: (theme) => theme.spacing(3),
+							borderRadius: 4
+						}}
+					>
+						<Toolbar disableGutters variant="dense">
+							<Box sx={{ flexGrow: 1, display: 'flex' }}>
+								{multiSelect && (
+									<>
+										<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
+											<Checkbox checked={allSelected} indeterminate={someSelected} onChange={onSelectAll} />
+										</Tooltip>
+										<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
+									</>
+								)}
+								<Tooltip title={<FormattedMessage id="word.refresh" defaultMessage="Refresh" />}>
+									<IconButton
+										onClick={onRefresh}
+										aria-label={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}
+									>
+										<RefreshIcon />
+									</IconButton>
+								</Tooltip>
+								{allowUpload && (
+									<Tooltip title={<FormattedMessage id="word.upload" defaultMessage="Upload" />}>
 										<IconButton
-											onClick={onRefresh}
-											aria-label={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}
+											onClick={onUpload}
+											sx={{ mr: 1 }}
+											aria-label={formatMessage({ id: 'word.upload', defaultMessage: 'Upload' })}
 										>
-											<RefreshIcon />
+											<UploadFileIcon />
 										</IconButton>
 									</Tooltip>
-									{allowUpload && (
-										<Tooltip title={<FormattedMessage id="word.upload" defaultMessage="Upload" />}>
-											<IconButton
-												onClick={onUpload}
-												sx={{ mr: 1 }}
-												aria-label={formatMessage({ id: 'word.upload', defaultMessage: 'Upload' })}
-											>
-												<UploadFileIcon />
-											</IconButton>
-										</Tooltip>
-									)}
-									<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
-									<SearchBar
-										keyword={keyword}
-										onChange={handleSearchKeyword}
-										showDecoratorIcon
-										showActionButton={Boolean(keyword)}
-										sxs={{
-											root: {
-												maxWidth: '200px',
-												background: 'none !important',
-												border: 'none !important',
-												borderRadius: 0,
-												boxShadow: 'none'
-											},
-											inputInput: { padding: '8px 5px' }
-										}}
-									/>
-									<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
-									<Button
-										id="sort-button"
-										aria-haspopup="true"
-										aria-controls={sortMenuOpen ? 'sort-menu' : undefined}
-										aria-expanded={sortMenuOpen ? 'true' : undefined}
-										onClick={() => setSortMenuOpen(!sortMenuOpen)}
-										ref={buttonRef}
-										sx={{ ml: 1, mr: 1 }}
-										startIcon={<FilterListIcon />}
-									>
-										<FormattedMessage id="words.sorting" defaultMessage="Sorting" />
-									</Button>
-									<Menu
-										id="sort-menu"
-										anchorEl={buttonRef.current}
-										open={sortMenuOpen}
-										onClose={() => setSortMenuOpen(false)}
-										MenuListProps={{
+								)}
+								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
+								<SearchBar
+									keyword={keyword}
+									onChange={handleSearchKeyword}
+									showDecoratorIcon
+									showActionButton={Boolean(keyword)}
+									sxs={{
+										root: {
+											maxWidth: '200px',
+											background: 'none !important',
+											border: 'none !important',
+											borderRadius: 0,
+											boxShadow: 'none'
+										},
+										inputInput: { padding: '8px 5px' }
+									}}
+								/>
+								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
+								<Button
+									id="sort-button"
+									aria-haspopup="true"
+									aria-controls={sortMenuOpen ? 'sort-menu' : undefined}
+									aria-expanded={sortMenuOpen ? 'true' : undefined}
+									onClick={() => setSortMenuOpen(!sortMenuOpen)}
+									ref={buttonRef}
+									sx={{ ml: 1, mr: 1 }}
+									startIcon={<FilterListIcon />}
+								>
+									<FormattedMessage id="words.sorting" defaultMessage="Sorting" />
+								</Button>
+								<Menu
+									id="sort-menu"
+									anchorEl={buttonRef.current}
+									open={sortMenuOpen}
+									onClose={() => setSortMenuOpen(false)}
+									slotProps={{
+										list: {
 											'aria-labelledby': 'sort-button'
-										}}
-									>
+										}
+									}}
+								>
+									<MenuItem>
+										<FormControl fullWidth>
+											<InputLabel>
+												<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />
+											</InputLabel>
+											<Select
+												fullWidth
+												value={searchParameters.sortBy}
+												onChange={({ target }) => {
+													setSearchParameters({
+														sortBy: target.value
+													});
+												}}
+												size="small"
+												sx={{ minWidth: '180px' }}
+												label={<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />}
+											>
+												<MenuItem value={SORT_AUTO}>
+													<FormattedMessage defaultMessage="Auto" />
+												</MenuItem>
+												<MenuItem value={'_score'}>
+													<FormattedMessage id="words.relevance" defaultMessage="Relevance" />
+												</MenuItem>
+												<MenuItem value={'internalName'}>
+													<FormattedMessage id="words.name" defaultMessage="Name" />
+												</MenuItem>
+												{sortKeys.map((name, i) => {
+													const camelizedName = camelize(name);
+													return (
+														<MenuItem value={name} key={i}>
+															{camelizedName in filtersMessages ? formatMessage(filtersMessages[camelizedName]) : name}
+														</MenuItem>
+													);
+												})}
+											</Select>
+										</FormControl>
+									</MenuItem>
+									{searchParameters.sortBy && SORT_AUTO !== searchParameters.sortBy && (
 										<MenuItem>
 											<FormControl fullWidth>
 												<InputLabel>
-													<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />
+													<FormattedMessage id="words.order" defaultMessage="Order" />
 												</InputLabel>
 												<Select
 													fullWidth
-													value={searchParameters.sortBy}
+													value={searchParameters.sortOrder}
 													onChange={({ target }) => {
 														setSearchParameters({
-															sortBy: target.value
+															sortOrder: target.value
 														});
 													}}
 													size="small"
 													sx={{ minWidth: '180px' }}
-													label={<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />}
+													label={<FormattedMessage id="words.order" defaultMessage="Order" />}
 												>
-													<MenuItem value={SORT_AUTO}>
-														<FormattedMessage defaultMessage="Auto" />
+													<MenuItem value={'asc'}>
+														{searchParameters.sortBy === '_score' ? (
+															<FormattedMessage
+																id="browseFilesDialog.lessRelevantFirst"
+																defaultMessage="Less relevant first"
+															/>
+														) : (
+															<FormattedMessage id="words.ascending" defaultMessage="Ascending" />
+														)}
 													</MenuItem>
-													<MenuItem value={'_score'}>
-														<FormattedMessage id="words.relevance" defaultMessage="Relevance" />
+													<MenuItem value={'desc'}>
+														{searchParameters.sortBy === '_score' ? (
+															<FormattedMessage
+																id="browseFilesDialog.mostRelevantFirst"
+																defaultMessage="Most relevant first"
+															/>
+														) : (
+															<FormattedMessage id="words.descending" defaultMessage="Descending" />
+														)}
 													</MenuItem>
-													<MenuItem value={'internalName'}>
-														<FormattedMessage id="words.name" defaultMessage="Name" />
-													</MenuItem>
-													{sortKeys.map((name, i) => {
-														const camelizedName = camelize(name);
-														return (
-															<MenuItem value={name} key={i}>
-																{camelizedName in filtersMessages
-																	? formatMessage(filtersMessages[camelizedName])
-																	: name}
-															</MenuItem>
-														);
-													})}
 												</Select>
 											</FormControl>
 										</MenuItem>
-										{searchParameters.sortBy && SORT_AUTO !== searchParameters.sortBy && (
-											<MenuItem>
-												<FormControl fullWidth>
-													<InputLabel>
-														<FormattedMessage id="words.order" defaultMessage="Order" />
-													</InputLabel>
-													<Select
-														fullWidth
-														value={searchParameters.sortOrder}
-														onChange={({ target }) => {
-															setSearchParameters({
-																sortOrder: target.value
-															});
-														}}
-														size="small"
-														sx={{ minWidth: '180px' }}
-														label={<FormattedMessage id="words.order" defaultMessage="Order" />}
-													>
-														<MenuItem value={'asc'}>
-															{searchParameters.sortBy === '_score' ? (
-																<FormattedMessage
-																	id="browseFilesDialog.lessRelevantFirst"
-																	defaultMessage="Less relevant first"
-																/>
-															) : (
-																<FormattedMessage id="words.ascending" defaultMessage="Ascending" />
-															)}
-														</MenuItem>
-														<MenuItem value={'desc'}>
-															{searchParameters.sortBy === '_score' ? (
-																<FormattedMessage
-																	id="browseFilesDialog.mostRelevantFirst"
-																	defaultMessage="Most relevant first"
-																/>
-															) : (
-																<FormattedMessage id="words.descending" defaultMessage="Descending" />
-															)}
-														</MenuItem>
-													</Select>
-												</FormControl>
-											</MenuItem>
+									)}
+								</Menu>
+								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
+							</Box>
+							<Box sx={{ display: 'flex', flexGrow: 0 }}>
+								<Tooltip title={<FormattedMessage defaultMessage="Switch view mode" />}>
+									<IconButton
+										onClick={onToggleViewMode}
+										sx={{ mr: 1 }}
+										aria-label={formatMessage({ defaultMessage: 'Switch view mode' })}
+									>
+										{viewMode === 'card' ? (
+											<ListViewIcon />
+										) : viewMode === 'compact' ? (
+											<ReorderRoundedIcon />
+										) : (
+											<GridViewIcon />
 										)}
-									</Menu>
-									<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
-								</Box>
-								<Box sx={{ display: 'flex', flexGrow: 0 }}>
-									<Tooltip title={<FormattedMessage defaultMessage="Switch view mode" />}>
-										<IconButton
-											onClick={onToggleViewMode}
-											sx={{ mr: 1 }}
-											aria-label={formatMessage({ defaultMessage: 'Switch view mode' })}
-										>
-											{viewMode === 'card' ? (
-												<ListViewIcon />
-											) : viewMode === 'compact' ? (
-												<ReorderRoundedIcon />
-											) : (
-												<GridViewIcon />
-											)}
-										</IconButton>
-									</Tooltip>
-									<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
-									{items && (
-										<Pagination
+									</IconButton>
+								</Tooltip>
+								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
+								{items && (
+									<Pagination
+										sxs={{
+											toolbar: { pl: 0 },
+											root: {
+												[`.${inputBaseClasses.root}`]: {
+													marginRight: (theme) => theme.spacing(1),
+													backgroundColor: (theme) =>
+														theme.palette.background[theme.palette.mode === 'dark' ? 'default' : 'paper']
+												}
+											}
+										}}
+										count={total}
+										rowsPerPage={limit}
+										page={Math.ceil(offset / limit)}
+										onPageChange={(e, page: number) => onChangePage(page)}
+										onRowsPerPageChange={onChangeRowsPerPage}
+									/>
+								)}
+							</Box>
+						</Toolbar>
+					</Paper>
+					<Box
+						sx={[
+							{
+								display: 'grid',
+								gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
+								gridGap: '16px',
+								padding: 'initial'
+							},
+							viewMode === 'row' && { display: 'flex !important', flexFlow: 'wrap' }
+						]}
+					>
+						{items
+							? items.map((item: SearchItem) => {
+									const isPreselected = preselectedLookup[item.path];
+									const onSelect = disableChangePreselected && isPreselected ? () => null : onCheckboxChecked;
+
+									return (
+										<MediaCard
+											viewMode={viewMode}
 											sxs={{
-												toolbar: { pl: 0 },
 												root: {
-													[`.${inputBaseClasses.root}`]: {
-														marginRight: (theme) => theme.spacing(1),
-														backgroundColor: (theme) =>
-															theme.palette.background[theme.palette.mode === 'dark' ? 'default' : 'paper']
-													}
+													cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer',
+													boxShadow: (theme) =>
+														item.path === selectedCard?.path ? `0px 0px 4px 4px ${theme.palette.primary.main}` : 'none'
 												}
 											}}
-											count={total}
-											rowsPerPage={limit}
-											page={Math.ceil(offset / limit)}
-											onPageChange={(e, page: number) => onChangePage(page)}
-											onRowsPerPageChange={onChangeRowsPerPage}
+											key={item.path}
+											item={item}
+											disableSelection={disableChangePreselected && isPreselected}
+											selected={multiSelect ? [...selectedArray] : []}
+											onSelect={multiSelect ? onSelect : null}
+											onPreview={onPreviewImage ? () => onPreviewImage(item) : null}
+											previewAppBaseUri={guestBase}
+											onClick={() => !(disableChangePreselected && isPreselected) && onCardSelected(item)}
+											showPath={true}
 										/>
-									)}
-								</Box>
-							</Toolbar>
-						</Paper>
-						<Box
-							sx={[
-								{
-									display: 'grid',
-									gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
-									gridGap: '16px',
-									padding: 'initial'
-								},
-								viewMode === 'row' && { display: 'flex !important', flexFlow: 'wrap' }
-							]}
-						>
-							{items
-								? items.map((item: SearchItem) => {
-										const isPreselected = preselectedLookup[item.path];
-										const onSelect = disableChangePreselected && isPreselected ? () => null : onCheckboxChecked;
-
-										return (
-											<MediaCard
-												viewMode={viewMode}
-												sxs={{
-													root: {
-														cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer',
-														boxShadow: (theme) =>
-															item.path === selectedCard?.path
-																? `0px 0px 4px 4px ${theme.palette.primary.main}`
-																: 'none'
-													}
-												}}
-												key={item.path}
-												item={item}
-												disableSelection={disableChangePreselected && isPreselected}
-												selected={multiSelect ? [...selectedArray] : []}
-												onSelect={multiSelect ? onSelect : null}
-												onPreview={onPreviewImage ? () => onPreviewImage(item) : null}
-												previewAppBaseUri={guestBase}
-												onClick={() => !(disableChangePreselected && isPreselected) && onCardSelected(item)}
-												showPath={true}
-											/>
-										);
-									})
-								: new Array(numOfLoaderItems).fill(null).map((x, i) => <MediaSkeletonCard key={i} />)}
-						</Box>
-						{items &&
-							items.length === 0 &&
-							(isCurrentPathLeaf ? (
-								<EmptyState
-									sxs={{ root: { flexGrow: 1 } }}
-									title={<FormattedMessage defaultMessage="This item has no children." />}
-								/>
-							) : (
-								<EmptyState
-									sxs={{ root: { flexGrow: 1 } }}
-									title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
-								/>
-							))}
+									);
+								})
+							: new Array(numOfLoaderItems).fill(null).map((x, i) => <MediaSkeletonCard key={i} />)}
 					</Box>
+					{items &&
+						items.length === 0 &&
+						(isCurrentPathLeaf ? (
+							<EmptyState
+								sxs={{ root: { flexGrow: 1 } }}
+								title={<FormattedMessage defaultMessage="This item has no children." />}
+							/>
+						) : (
+							<EmptyState
+								sxs={{ root: { flexGrow: 1 } }}
+								title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No items found." />}
+							/>
+						))}
+				</Box>
 			</DialogBody>
 			<DialogFooter>
 				<SecondaryButton onClick={onCloseButtonClick}>

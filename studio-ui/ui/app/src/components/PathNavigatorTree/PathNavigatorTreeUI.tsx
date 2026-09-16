@@ -31,18 +31,17 @@ import { PartialSxRecord } from '../../models';
 
 export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header' | 'activeItem';
 
-export interface PathNavigatorTreeUIProps
-	extends Pick<
-		PathNavigatorTreeItemProps,
-		| 'showNavigableAsLinks'
-		| 'showPublishingTarget'
-		| 'showWorkflowState'
-		| 'showItemMenu'
-		| 'keywordByPath'
-		| 'totalByPath'
-		| 'childrenByParentPath'
-		| 'errorByPath'
-	> {
+export interface PathNavigatorTreeUIProps extends Pick<
+	PathNavigatorTreeItemProps,
+	| 'showNavigableAsLinks'
+	| 'showPublishingTarget'
+	| 'showWorkflowState'
+	| 'showItemMenu'
+	| 'keywordByPath'
+	| 'totalByPath'
+	| 'childrenByParentPath'
+	| 'errorByPath'
+> {
 	title: ReactNode;
 	icon?: SystemIconDescriptor;
 	container?: Partial<StateStylingProps>;
@@ -98,7 +97,11 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			square
 			disableGutters
 			elevation={0}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{
+				transition: {
+					unmountOnExit: true
+				}
+			}}
 			expanded={!isCollapsed}
 			onChange={() => onChangeCollapsed(!isCollapsed)}
 			className={props.classes?.root}

@@ -70,8 +70,8 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
-			{deleteDependencies?.map((dependency, index) => (
+        <FormsEngineField htmlFor={htmlId} field={field}>
+            {deleteDependencies?.map((dependency, index) => (
 				<Card key={index} variant="outlined" sx={{ display: 'flex', flexDirection: 'row', my: 1, p: 1.5, gap: 1 }}>
 					<Box sx={{ gap: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
 						<TextField
@@ -91,7 +91,11 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 							label={<FormattedMessage defaultMessage="Remove empty folder" />}
 						/>
 					</Box>
-					<Box display="flex" alignItems="center">
+					<Box
+                        sx={{
+                            display: "flex",
+                            alignItems: "center"
+                        }}>
 						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
 							<IconButton
 								aria-label={formatMessage({ defaultMessage: 'Remove Reference' })}
@@ -103,15 +107,19 @@ export function DeleteDependencies(props: DeleteDependenciesProps) {
 					</Box>
 				</Card>
 			))}
-			<Box display="flex" justifyContent="center">
+            <Box
+                sx={{
+                    display: "flex",
+                    justifyContent: "center"
+                }}>
 				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
 					<IconButton aria-label={formatMessage({ defaultMessage: 'Add Reference' })} onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>
 				</Tooltip>
 			</Box>
-		</FormsEngineField>
-	);
+        </FormsEngineField>
+    );
 }
 
 export default DeleteDependencies;

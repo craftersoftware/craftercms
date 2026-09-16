@@ -91,8 +91,8 @@ export function Time(props: TimeProps) {
 	const clearValue = () => setValue(null);
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
-			<DateTimeTimezonePicker
+        <FormsEngineField htmlFor={htmlId} field={field}>
+            <DateTimeTimezonePicker
 				id={htmlId}
 				value={dateValue}
 				disabled={readonly}
@@ -107,7 +107,12 @@ export function Time(props: TimeProps) {
 					timezoneAutocomplete: { flex: 1 }
 				}}
 			/>
-			<Box display="flex" gap={2} justifyContent="flex-end">
+            <Box
+                sx={{
+                    display: "flex",
+                    gap: 2,
+                    justifyContent: "flex-end"
+                }}>
 				{showSetNow && (
 					<SecondaryButton onClick={setNow} disabled={readonly}>
 						<FormattedMessage defaultMessage="Set now" />
@@ -119,8 +124,8 @@ export function Time(props: TimeProps) {
 					</SecondaryButton>
 				)}
 			</Box>
-		</FormsEngineField>
-	);
+        </FormsEngineField>
+    );
 }
 
 /**

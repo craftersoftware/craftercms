@@ -52,40 +52,43 @@ interface DevContentOpsDashletState {
 function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProps } }) {
 	const { stats, sx } = props;
 	return (
-		<>
-			{stats && (
+        <>
+            {stats && (
 				<Stack direction="row" spacing={2} sx={sx?.root}>
 					<Box>
 						<Typography
-							component="span"
-							children={stats.numberOfPublishes}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
-						/>{' '}
+                            component="span"
+                            children={stats.numberOfPublishes}
+                            sx={{
+                                lineHeight: 1,
+                                fontWeight: (theme) => theme.typography.fontWeightMedium
+                            }} />{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Publishes" />} />
 					</Box>
 					<Box>
 						<Typography
-							component="span"
-							children={stats.numberOfNewAndPublishedItems}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
-						/>{' '}
+                            component="span"
+                            children={stats.numberOfNewAndPublishedItems}
+                            sx={{
+                                lineHeight: 1,
+                                fontWeight: (theme) => theme.typography.fontWeightMedium
+                            }} />{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Created & Published" />} />
 					</Box>
 					<Box>
 						<Typography
-							component="span"
-							children={stats.numberOfEditedAndPublishedItems}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
-						/>{' '}
+                            component="span"
+                            children={stats.numberOfEditedAndPublishedItems}
+                            sx={{
+                                lineHeight: 1,
+                                fontWeight: (theme) => theme.typography.fontWeightMedium
+                            }} />{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Edited & Published" />} />
 					</Box>
 				</Stack>
 			)}
-		</>
-	);
+        </>
+    );
 }
 
 export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
@@ -134,13 +137,18 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 	// endregion
 
 	return (
-		<DashletCard
+        <DashletCard
 			{...props}
 			sxs={{ content: { pt: 2, pb: (theme) => `${theme.spacing(2)} !important` }, ...props.sxs }}
 			borderLeftColor={borderLeftColor}
 		>
-			<>
-				<Box display="flex" justifyContent="space-between" alignItems="center">
+            <>
+				<Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
 					<Typography variant="h6">
 						<FormattedMessage id="devContentOpsDashlet.widgetTitle" defaultMessage="DevContentOps" />
 					</Typography>
@@ -180,9 +188,9 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 				</Box>
 				<DevContentOpsStats stats={stats} sx={{ root: { mt: 1, display: { lg: 'none' } } }} />
 			</>
-			{loading && <Skeleton />}
-		</DashletCard>
-	);
+            {loading && <Skeleton />}
+        </DashletCard>
+    );
 }
 
 export default DevContentOpsDashlet;

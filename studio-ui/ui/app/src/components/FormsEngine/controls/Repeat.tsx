@@ -152,8 +152,14 @@ export function Repeat(props: RepeatProps) {
 									<ListItemText
 										primary={getRepeatItemTitle(item)}
 										secondary={getRepeatItemSummary(item)}
-										primaryTypographyProps={{ noWrap: true }}
-										secondaryTypographyProps={{ noWrap: true }}
+										slotProps={{
+											primary: {
+												noWrap: true
+											},
+											secondary: {
+												noWrap: true
+											}
+										}}
 									/>
 									{!readonly && (
 										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>

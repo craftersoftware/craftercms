@@ -66,8 +66,8 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 		}
 	}, [loggers]);
 	return (
-		<section>
-			<TableContainer>
+        <section>
+            <TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>
 						<GlobalAppGridRow className="hoverDisabled">
@@ -164,7 +164,9 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 						{!displayAll && (
 							<GlobalAppGridRow className="hoverDisabled">
 								<GlobalAppGridCell colSpan={2}>
-									<Box display="flex">
+									<Box sx={{
+                                        display: "flex"
+                                    }}>
 										<Button onClick={onShowAllClick} startIcon={<WarningRounded />} variant="outlined" color="warning">
 											<FormattedMessage
 												id="loggingLevels.displayAllEntriesButtonLabel"
@@ -186,8 +188,8 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 					</TableBody>
 				</Table>
 			</TableContainer>
-		</section>
-	);
+        </section>
+    );
 }
 
 export default LogLevelGrid;

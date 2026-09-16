@@ -60,8 +60,8 @@ export function ContextMenu(props: ContextMenuProps) {
 		...menuProps
 	} = props;
 	return (
-		<Menu {...menuProps} classes={propClasses}>
-			{isLoading ? (
+        <Menu {...menuProps} classes={propClasses}>
+            {isLoading ? (
 				<Box
 					className={propClasses?.loadingRoot}
 					sx={{
@@ -87,7 +87,9 @@ export function ContextMenu(props: ContextMenuProps) {
 					}}
 				>
 					<ErrorOutlineOutlinedIcon fontSize="small" />
-					<Typography variant="caption" display="block">
+					<Typography variant="caption" sx={{
+                        display: "block"
+                    }}>
 						{emptyState?.message || (
 							<FormattedMessage
 								id="contextMenu.emptyOptionsMessage"
@@ -113,8 +115,8 @@ export function ContextMenu(props: ContextMenuProps) {
 					))
 				)
 			)}
-		</Menu>
-	);
+        </Menu>
+    );
 }
 
 export default ContextMenu;

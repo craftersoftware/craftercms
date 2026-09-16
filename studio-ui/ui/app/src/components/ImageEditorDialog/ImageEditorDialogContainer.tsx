@@ -194,11 +194,18 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 	// endregion
 
 	return (
-		<>
-			<DialogBody>
+        <>
+            <DialogBody>
 				<Grid container spacing={2}>
 					{writeContent && (
-						<Grid size={{ xs: 12, md: 6 }} rowSpacing={2} container alignItems="start" justifyContent="space-between">
+						<Grid
+                            size={{ xs: 12, md: 6 }}
+                            rowSpacing={2}
+                            container
+                            sx={{
+                                alignItems: "start",
+                                justifyContent: "space-between"
+                            }}>
 							<FormControl fullWidth>
 								<TextField
 									label={<FormattedMessage defaultMessage="File name" />}
@@ -246,8 +253,14 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 							</FormControl>
 						</Grid>
 					)}
-					<Grid size={{ xs: 12, md: 6 }} container alignItems="start">
-						<Box display="flex" gap={2}>
+					<Grid size={{ xs: 12, md: 6 }} container sx={{
+                        alignItems: "start"
+                    }}>
+						<Box
+                            sx={{
+                                display: "flex",
+                                gap: 2
+                            }}>
 							<FormControl>
 								<TextField
 									label={<FormattedMessage defaultMessage="Width" />}
@@ -276,7 +289,9 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 						</Box>
 					</Grid>
 					<Grid size={{ xs: 12 }}>
-						<Box maxHeight={maxHeight}>
+						<Box sx={{
+                            maxHeight: maxHeight
+                        }}>
 							<Cropper
 								ref={cropperRef}
 								src={path}
@@ -326,7 +341,7 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 					</Grid>
 				</Grid>
 			</DialogBody>
-			<DialogFooter>
+            <DialogFooter>
 				<SecondaryButton onClick={(e) => onClose?.(e, null)}>
 					<FormattedMessage defaultMessage="Cancel" />
 				</SecondaryButton>
@@ -352,8 +367,8 @@ export function ImageEditorDialogContainer(props: ImageEditorDialogProps) {
 					</PrimaryButton>
 				)}
 			</DialogFooter>
-		</>
-	);
+        </>
+    );
 }
 
 export default ImageEditorDialogContainer;

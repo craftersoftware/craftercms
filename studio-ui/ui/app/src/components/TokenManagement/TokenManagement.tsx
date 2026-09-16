@@ -18,7 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { darken, lighten, styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/DeleteOutline';
+import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { AsDayMonthDateTime } from '../VersionList';
 import { deleteToken, fetchTokens as fetchTokensService, updateToken } from '../../services/tokens';
 import { useDispatch } from 'react-redux';

@@ -39,8 +39,8 @@ export function LogConsoleGridUI(props: LogConsoleGridUIProps) {
 	const localeBranch = useSelection((state) => state.uiConfig.locale);
 	const { formatMessage } = useIntl();
 	return (
-		<TableContainer>
-			<Table>
+        <TableContainer>
+            <Table>
 				<TableHead>
 					<GlobalAppGridRow className="hoverDisabled">
 						<GlobalAppGridCell align="left" className="width10">
@@ -110,8 +110,8 @@ export function LogConsoleGridUI(props: LogConsoleGridUIProps) {
 					))}
 				</TableBody>
 			</Table>
-		</TableContainer>
-	);
+        </TableContainer>
+    );
 }
 
 export default LogConsoleGridUI;

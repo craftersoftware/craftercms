@@ -234,7 +234,7 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 	};
 
 	return (
-		<DashletCard
+        <DashletCard
 			{...props}
 			borderLeftColor={borderLeftColor}
 			title={<FormattedMessage id="scheduledDashlet.widgetTitle" defaultMessage="Scheduled for Publish" />}
@@ -299,8 +299,8 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 				}
 			}}
 		>
-			{loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: false, showCheckbox: true })}
-			{Boolean(publishingPackages?.length) && (
+            {loading && loadingSkeleton && getItemSkeleton({ numOfItems: 3, showAvatar: false, showCheckbox: true })}
+            {Boolean(publishingPackages?.length) && (
 				<List sx={{ pb: 0 }}>
 					{publishingPackages.map((pkg, index) => (
 						<ListItemButton key={index} onClick={(e) => onSelectItem(e, pkg as PublishPackage)} sx={{ pt: 0, pb: 0 }}>
@@ -343,12 +343,14 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 											publishingTarget: pkg.target,
 											render_target(target: ReactNode[]) {
 												return (
-													<Box component="span" color={target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR}>
-														{messages[target[0] as string]
+                                                    <Box component="span" sx={{
+                                                        color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
+                                                    }}>
+                                                        {messages[target[0] as string]
 															? formatMessage(messages[target[0] as string]).toLowerCase()
 															: target[0]}
-													</Box>
-												);
+                                                    </Box>
+                                                );
 											},
 											submittedDate: asLocalizedDateTime(
 												pkg.schedule,
@@ -371,18 +373,18 @@ export function ScheduledDashlet(props: ScheduledDashletProps) {
 					))}
 				</List>
 			)}
-			{total === 0 && (
+            {total === 0 && (
 				<DashletEmptyMessage>
 					<FormattedMessage defaultMessage="There are no items scheduled for publish" />
 				</DashletEmptyMessage>
 			)}
-			<PackageDetailsDialog
+            <PackageDetailsDialog
 				open={nnou(packageDetailsDialogId)}
 				onClose={() => setState({ packageDetailsDialogId: null })}
 				packageId={packageDetailsDialogId}
 			/>
-		</DashletCard>
-	);
+        </DashletCard>
+    );
 }
 
 export default ScheduledDashlet;

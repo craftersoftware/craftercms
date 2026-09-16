@@ -20,7 +20,7 @@ import IconButton from '@mui/material/IconButton';
 import AddRounded from '@mui/icons-material/AddRounded';
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
-import HelpOutline from '@mui/icons-material/HelpOutline';
+import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
@@ -115,6 +115,7 @@ import {
 import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAction } from '../dataSources/types';
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
+import { MenuList } from '@mui/material';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -852,7 +853,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							children={
 								menuOptions.length || customActionItems ? (
 									<>
-										{menuOptions}
+										<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{menuOptions}</MenuList>
 										{customActionItems}
 									</>
 								) : (
@@ -1013,10 +1014,22 @@ function CreateDataSourcePicker(props: {
 	}
 
 	return (
-		<Grid container spacing={2} display="flex" flexDirection="column">
+		<Grid
+			container
+			spacing={2}
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			<Grid>
 				<FormControl sx={{ mb: 1, flexShrink: 0 }} fullWidth>
-					<Box alignItems="center" display="flex">
+					<Box
+						sx={{
+							alignItems: 'center',
+							display: 'flex'
+						}}
+					>
 						<FormLabel id="creationStrategyLabel">
 							<FormattedMessage defaultMessage="Creation Strategy" />
 						</FormLabel>
@@ -1060,7 +1073,17 @@ function CreateDataSourcePicker(props: {
 									value={path}
 									control={<Radio />}
 									onChange={handlePathChange}
-									label={<Typography noWrap maxWidth="100%" component="div" title={path} children={path} />}
+									label={
+										<Typography
+											noWrap
+											component="div"
+											title={path}
+											children={path}
+											sx={{
+												maxWidth: '100%'
+											}}
+										/>
+									}
 									disableTypography
 								/>
 							))}
@@ -1093,7 +1116,11 @@ function CreateDataSourcePicker(props: {
 				</Grid>
 			)}
 
-			<Grid width="100%">
+			<Grid
+				sx={{
+					width: '100%'
+				}}
+			>
 				<FormControl fullWidth>
 					<FormLabel id="contentTypeLabel" sx={{ minHeight: 28, display: 'flex', alignItems: 'center' }}>
 						<FormattedMessage defaultMessage="Content Type" />
@@ -1146,7 +1173,12 @@ function DataSourcePicker(props: { allowedPaths: AllowedPathsData[]; onChange(e,
 						value={index}
 						control={<Radio />}
 						label={
-							<Box display="flex" flexDirection="column">
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column'
+								}}
+							>
 								<Typography component="span" children={data.title} />
 								<Typography variant="body2" color="textSecondary" component="span" children={data.path} />
 							</Box>

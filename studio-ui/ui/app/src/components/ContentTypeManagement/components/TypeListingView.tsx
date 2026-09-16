@@ -59,15 +59,22 @@ export const TypeListingView = forwardRef<HTMLDivElement, TypeListingViewProps>(
 		</Button>
 	);
 	return (
-		<Box ref={ref} sx={sx} style={style} height="100%" display="flex" flexDirection="column">
-			{renderAppBar && (
+        <Box
+            ref={ref}
+            style={style}
+            sx={[{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column"
+            }, ...(Array.isArray(sx) ? sx : [sx])]}>
+            {renderAppBar && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="componentsMessages.contentTypes" defaultMessage="Content Types" />}
 					showAppsButton={showOpenLauncherButton}
 					leftContent={createNewButton}
 				/>
 			)}
-			<SelectTypeView
+            <SelectTypeView
 				contentTypesList={contentTypesList}
 				slotProps={{
 					box: { sx: { p: 2, overflow: 'auto' } },
@@ -81,7 +88,7 @@ export const TypeListingView = forwardRef<HTMLDivElement, TypeListingViewProps>(
 					}
 				}}
 			/>
-			<CreateTypeDialog
+            <CreateTypeDialog
 				open={openCreateDialogState.open}
 				onClose={openCreateDialogState.onClose}
 				onClosed={openCreateDialogState.onResetState}
@@ -90,8 +97,8 @@ export const TypeListingView = forwardRef<HTMLDivElement, TypeListingViewProps>(
 				updateSubmittingOrHasPendingChanges={openCreateDialogState.onSubmittingAndOrPendingChange}
 				onWithPendingChangesCloseRequest={createDialogPendingChangesCloseRequest}
 			/>
-		</Box>
-	);
+        </Box>
+    );
 });
 
 export default TypeListingView;

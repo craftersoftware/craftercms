@@ -161,7 +161,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 
 	return (
 		<>
-			<Box display="flex" justifyContent="end" marginBottom="10px">
+			<Box sx={{ display: 'flex', justifyContent: 'end', marginBottom: '10px' }}>
 				<IconButton onClick={onClose}>
 					<ClearRoundedIcon fontSize="small" />
 				</IconButton>
@@ -220,7 +220,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 				</LocalizationProvider>
 			)}
 			{['siteId', 'user', 'origin'].includes(filterId) && (
-				<Box display="flex" alignItems="center">
+				<Box sx={{ display: 'flex', alignItems: 'center' }}>
 					<TextField
 						fullWidth
 						select
@@ -247,7 +247,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 				</Box>
 			)}
 			{filterId === 'operations' && (
-				<Box display="flex" alignItems="center">
+				<Box sx={{ display: 'flex', alignItems: 'center' }}>
 					<TextField
 						fullWidth
 						select

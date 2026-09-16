@@ -197,11 +197,13 @@ function InPageInstancesUI(props: InPageInstancesUIProps) {
 						<ListItemText
 							primary={instance.craftercms.label}
 							secondary={instance.craftercms.contentTypeId}
-							primaryTypographyProps={{
-								sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }
-							}}
-							secondaryTypographyProps={{
-								sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }
+							slotProps={{
+								primary: {
+									sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }
+								},
+								secondary: {
+									sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }
+								}
 							}}
 						/>
 					</ListItemButton>

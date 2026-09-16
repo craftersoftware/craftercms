@@ -129,14 +129,16 @@ export const EncryptTool = (props: EncryptToolProps) => {
 	}, [hasText, fnRefs]);
 
 	return (
-		<Paper elevation={0}>
-			{!embedded && (
+        <Paper elevation={0}>
+            {!embedded && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="encryptTool.pageTitle" defaultMessage="Encryption Tool" />}
 					showAppsButton={showAppsButton}
 				/>
 			)}
-			<Box p="20px">
+            <Box sx={{
+                p: "20px"
+            }}>
 				<form onSubmit={encrypt}>
 					<TextField
 						sx={{ mb: 2 }}
@@ -250,8 +252,8 @@ export const EncryptTool = (props: EncryptToolProps) => {
 					</Snackbar>
 				</form>
 			</Box>
-		</Paper>
-	);
+        </Paper>
+    );
 };
 
 export default EncryptTool;

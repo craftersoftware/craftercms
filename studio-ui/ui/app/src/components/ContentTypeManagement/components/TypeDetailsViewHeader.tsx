@@ -57,17 +57,29 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 		onActionClick?.(e, e.currentTarget.getAttribute('data-action-target') as TypeDetailsHeaderActionTarget);
 	};
 	return (
-		<Box display="flex" gap={1}>
-			<TypeCardMedia typeId={type.id} thumbnailFileName={type.thumbnailFileName} sx={{ width: 200, height: 200 }} />
-			<Box>
+        <Box
+            sx={{
+                display: "flex",
+                gap: 1
+            }}>
+            <TypeCardMedia typeId={type.id} thumbnailFileName={type.thumbnailFileName} sx={{ width: 200, height: 200 }} />
+            <Box>
 				<Typography variant="body2" color="textSecondary">
 					{type.id}
 				</Typography>
-				<Typography variant="h6" component="h2" display="flex" alignItems="center">
+				<Typography
+                    variant="h6"
+                    component="h2"
+                    sx={{
+                        display: "flex",
+                        alignItems: "center"
+                    }}>
 					<ItemTypeIcon item={{ mimeType: '', systemType: type.type }} sx={{ color: 'info.main', mr: 0.5 }} />{' '}
 					{type.name}
 				</Typography>
-				<Typography variant="body2" color="textSecondary" mb={0.5}>
+				<Typography variant="body2" color="textSecondary" sx={{
+                    mb: 0.5
+                }}>
 					{type.description || <FormattedMessage defaultMessage="(no description)" />}
 				</Typography>
 				{/* TODO: Add last updated information - There's a pending conversation to include this in the form-definition */}
@@ -100,8 +112,8 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 					</Button>
 				)}
 			</Box>
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default TypeDetailsViewHeader;

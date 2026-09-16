@@ -170,10 +170,15 @@ function TreeItemLabelContent({
 	const isRequired = isFieldRequired(field);
 	const hasValidator = hasFieldValidator(field.type);
 	return (
-		<Box display="flex" justifyContent="space-between" alignItems="center">
-			<span>{field.name}</span>
+        <Box
+            sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+            }}>
+            <span>{field.name}</span>
 
-			{validityData.state === 'loading' ? (
+            {validityData.state === 'loading' ? (
 				<Skeleton variant="circular" width={15} height={15} />
 			) : (
 				<FieldStateIndicator
@@ -183,8 +188,8 @@ function TreeItemLabelContent({
 					isEmpty={isEmptyValue(field, value)}
 				/>
 			)}
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default TableOfContents;

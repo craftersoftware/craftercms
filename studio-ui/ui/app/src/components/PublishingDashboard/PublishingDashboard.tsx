@@ -48,27 +48,27 @@ export function PublishingDashboard(props: PublishingDashboardProps) {
 		palette: { mode }
 	} = useTheme();
 	return (
-		<Box component="section" sx={{ bgcolor: `grey.${mode === 'light' ? 100 : 800}`, height: '100%', pb: 3 }}>
-			{!embedded && (
+        <Box component="section" sx={{ bgcolor: `grey.${mode === 'light' ? 100 : 800}`, height: '100%', pb: 3 }}>
+            {!embedded && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="publishingDashboard.title" defaultMessage="Publishing Dashboard" />}
 					showAppsButton={showAppsButton}
 				/>
 			)}
-			<Grid
-				gap={2}
-				container
-				sx={{
-					padding: spacing(2),
-					pb: 4,
-					...(embedded
+            <Grid
+                container
+                sx={{
+                    gap: 2,
+                    padding: spacing(2),
+                    pb: 4,
+
+                    ...(embedded
 						? {}
 						: {
 								height: 'calc(100% - 65px)', // full viewport height - toolbar height
 								overflowY: 'auto'
 							})
-				}}
-			>
+                }}>
 				<Grid size={12}>
 					<PublishingStatusWidget siteId={site} />
 				</Grid>
@@ -87,8 +87,8 @@ export function PublishingDashboard(props: PublishingDashboardProps) {
 					</Grid>
 				)}
 			</Grid>
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default PublishingDashboard;

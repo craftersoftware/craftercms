@@ -49,6 +49,7 @@ import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceAct
 import type { DataSourceAssetSelection, DataSourceSelection } from '../dataSources/types';
 import { showSystemNotification } from '../../../state/actions/system';
 import { EmptyState } from '../../EmptyState';
+import MenuList from '@mui/material/MenuList';
 
 export interface ImagePickerProps extends ControlProps {
 	value: string | null;
@@ -186,10 +187,23 @@ export function ImagePicker(props: ImagePickerProps) {
 						<CardMedia component="img" sx={{ width: '40%' }} image={mediaUrl} alt="" />
 						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 							<CardContent sx={{ flex: '1 0 auto' }}>
-								<Typography component="div" variant="body1" marginBottom={1}>
+								<Typography
+									component="div"
+									variant="body1"
+									sx={{
+										marginBottom: 1
+									}}
+								>
 									{value}
 								</Typography>
-								<Typography variant="body2" component="div" color="textSecondary" marginBottom={1}>
+								<Typography
+									variant="body2"
+									component="div"
+									color="textSecondary"
+									sx={{
+										marginBottom: 1
+									}}
+								>
 									{isFetchingMetadata ? (
 										<>
 											<Skeleton variant="text" />
@@ -219,10 +233,22 @@ export function ImagePicker(props: ImagePickerProps) {
 								</Typography>
 								{Object.values(restrictions).some((restriction) => restriction) && (
 									<>
-										<Typography variant="caption" fontWeight="bold">
+										<Typography
+											variant="caption"
+											sx={{
+												fontWeight: 'bold'
+											}}
+										>
 											<FormattedMessage defaultMessage="Image Requirements:" />
 										</Typography>
-										<Typography variant="caption" component="div" color="textSecondary" marginBottom={1}>
+										<Typography
+											variant="caption"
+											component="div"
+											color="textSecondary"
+											sx={{
+												marginBottom: 1
+											}}
+										>
 											<FormattedMessage defaultMessage="Width: " />
 											{imageRestrictionMessages.width}
 											<br />
@@ -303,7 +329,7 @@ export function ImagePicker(props: ImagePickerProps) {
 							}
 						}}
 					>
-						{actionMenuItems}
+						<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{actionMenuItems}</MenuList>
 					</Box>
 				)}
 			</FormsEngineField>

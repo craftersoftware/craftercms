@@ -155,7 +155,7 @@ function CreateSiteDialog(props: CreateSiteDialogProps) {
 			fullWidth
 			maxWidth="lg"
 			sx={{
-				[`& .${dialogClasses.paperScrollPaper}`]: {
+				[`& .${dialogClasses.scrollPaper}`]: {
 					height: 'calc(100% - 100px)',
 					maxHeight: '1200px'
 				}

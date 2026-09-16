@@ -199,15 +199,20 @@ function LegacyTypeManagement(props: ContentTypeManagementProps) {
 	}, [dispatch, onSubmittingAndOrPendingChange, embedded, onClose, onMinimize]);
 
 	return (
-		<Box height="calc(100% - 38px)" display="flex" flexDirection="column">
-			{!embedded && (
+        <Box
+            sx={{
+                height: "calc(100% - 38px)",
+                display: "flex",
+                flexDirection: "column"
+            }}>
+            {!embedded && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="componentsMessages.contentTypes" defaultMessage="Content Types" />}
 					showAppsButton={showAppsButton}
 				/>
 			)}
-			{loading && <LoadingState sxs={{ root: { flexGrow: 1 } }} />}
-			<LegacyIFrame
+            {loading && <LoadingState sxs={{ root: { flexGrow: 1 } }} />}
+            <LegacyIFrame
 				path={`/legacy-site-config?mode=embedded${mountMode ? `&mountMode=${mountMode}` : ''}#tool${ProjectToolsRoutes.ContentTypes}`}
 				iframeProps={{
 					style: {
@@ -218,8 +223,8 @@ function LegacyTypeManagement(props: ContentTypeManagementProps) {
 					}
 				}}
 			/>
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default ContentTypeManagement;

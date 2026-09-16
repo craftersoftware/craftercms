@@ -861,7 +861,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 					store.get(effectRefs.current.fileNameAtom),
 					formatMessage,
 					store.get(versionCommentAtom).trim(),
-					lastCreationCommentRef.current,
+					lastCreationCommentRef.current
 				);
 				if (newMessage) {
 					lastCreationCommentRef.current = newMessage;
@@ -1112,7 +1112,15 @@ function FormOrchestrator(props: FormsEngineProps) {
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
 				<Box id="header" sx={{ minHeight: 50 }}>
-					<Box component={Container} display="flex" alignItems="center" justifyContent="space-between" pt={2}>
+					<Box
+						component={Container}
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'space-between',
+							pt: 2
+						}}
+					>
 						<Typography variant="body2" color="textSecondary">
 							<span title={siteId}>{activeSite.name}</span> / <span title={contentType.id}>{contentType.name}</span>
 						</Typography>
@@ -1330,7 +1338,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 							position: 'absolute'
 						}
 					}}
-					PaperProps={{ 'data-area-id': 'stackedFormDrawerPaper' }}
+					slotProps={{
+						paper: {
+							// @ts-expect-error Setting a html prop
+							'data-area-id': 'stackedFormDrawerPaper'
+						}
+					}}
 				>
 					{hasStackedForms && (
 						<FormBootstrap

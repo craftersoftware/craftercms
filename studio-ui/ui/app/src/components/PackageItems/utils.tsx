@@ -55,15 +55,24 @@ export function renderTreeNode(props: {
 	const isDependency = Boolean(dependencyTypeMap?.[node.path]);
 	const isSoft = dependencyTypeMap?.[node.path] === 'soft';
 	return (
-		<TreeItem
+        <TreeItem
 			key={node.path}
 			itemId={node.path}
 			data-is-item={isItem}
 			label={
 				isItem ? (
-					<Box display="flex" justifyContent="space-between" alignItems="center">
+					<Box
+                        sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                        }}>
 						<div>
-							<Box display="flex" gap={1}>
+							<Box
+                                sx={{
+                                    display: "flex",
+                                    gap: 1
+                                }}>
 								<ItemDisplay
 									item={itemMap[node.path]}
 									showNavigableAsLinks={false}
@@ -77,13 +86,17 @@ export function renderTreeNode(props: {
 							<Typography
 								component="div"
 								variant="body2"
-								color="text.secondary"
 								children={node.path}
 								title={node.path}
 								noWrap
+								sx={{
+                                    color: "text.secondary"
+                                }}
 							/>
 						</div>
-						<Box display="flex">
+						<Box sx={{
+                            display: "flex"
+                        }}>
 							<IconButton
 								className="tree-item-more-section"
 								onClick={(e) => {
@@ -119,7 +132,11 @@ export function renderTreeNode(props: {
 						</Box>
 					</Box>
 				) : (
-					<Box display="flex" alignItems="center">
+					<Box
+                        sx={{
+                            display: "flex",
+                            alignItems: "center"
+                        }}>
 						<FolderOpenRoundedIcon sx={{ fontSize: '1.1rem', mr: '5px' }} />
 						<span title={node.path}>{node.label}</span>
 					</Box>
@@ -142,5 +159,5 @@ export function renderTreeNode(props: {
 						)
 			}
 		/>
-	);
+    );
 }

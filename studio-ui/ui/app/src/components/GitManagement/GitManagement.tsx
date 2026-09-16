@@ -206,8 +206,8 @@ export function GitManagement(props: GitManagementProps) {
 	);
 
 	return (
-		<Paper elevation={0}>
-			<GlobalAppToolbar
+        <Paper elevation={0}>
+            <GlobalAppToolbar
 				title={!embedded && <FormattedMessage id="words.git" defaultMessage="Git" />}
 				leftContent={
 					<Button
@@ -235,7 +235,7 @@ export function GitManagement(props: GitManagementProps) {
 				showHamburgerMenuButton={!embedded}
 				showAppsButton={showAppsButton}
 			/>
-			<Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
 				<Tabs value={activeTab} onChange={onTabChange}>
 					<Tab
 						label={<FormattedMessage id="remoteRepositories.title" defaultMessage="Remote Repositories" />}
@@ -258,9 +258,11 @@ export function GitManagement(props: GitManagementProps) {
 					/>
 				</Tabs>
 			</Box>
-			<section>
+            <section>
 				{activeTab === 0 && (
-					<Box padding={2}>
+					<Box sx={{
+                        padding: 2
+                    }}>
 						<Alert severity={loadingStatus ? 'info' : clean ? 'success' : 'warning'}>
 							{formatMessage(translations[loadingStatus ? 'fetchingStatus' : (statusMessageKey ?? 'fetchingStatus')])}
 						</Alert>
@@ -315,8 +317,8 @@ export function GitManagement(props: GitManagementProps) {
 					onFailedPullCancelled={fetchRepoStatusReceiver}
 				/>
 			</section>
-		</Paper>
-	);
+        </Paper>
+    );
 }
 
 export default GitManagement;

@@ -166,7 +166,11 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 			square
 			disableGutters
 			elevation={0}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{
+				transition: {
+					unmountOnExit: true
+				}
+			}}
 			expanded={!state.collapsed}
 			onChange={() => onChangeCollapsed(!state.collapsed)}
 			className={props.classes?.root}
@@ -246,7 +250,13 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 						) : state.error ? (
 							renderErrorState(state.error, { imageUrl: null })
 						) : state.itemsInPath.length === 0 && !Boolean(levelDescriptor) ? (
-							<Box display="flex" justifyContent="center" m={1}>
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'center',
+									m: 1
+								}}
+							>
 								<FormattedMessage id="pathNavigator.noItemsAtLocation" defaultMessage="No items at this location" />
 							</Box>
 						) : (

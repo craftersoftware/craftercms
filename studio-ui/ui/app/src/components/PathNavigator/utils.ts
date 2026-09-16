@@ -35,12 +35,9 @@ export function isImage(item: Pick<ContentItem, 'mimeType'>): boolean {
 }
 
 export function isTextContent(mimeType: string): boolean {
-	return (
-		/^text\//.test(mimeType) ||
-		/^application\/(x-httpd-php|rtf|xhtml\+xml|xml|json|ld\+json|javascript|x-groovy|x-sh|x-yaml|ld+json|x-csh|x-subrip)$/.test(
-			mimeType
-		)
-	);
+	return (/^text\//.test(mimeType) || /^application\/(x-httpd-php|rtf|xhtml\+xml|xml|json|ld\+json|javascript|x-groovy|x-sh|x-yaml|ld+json|x-csh|x-subrip)$/.test(
+        mimeType
+    ));
 }
 
 const blackListMediaTypes = [
@@ -48,10 +45,7 @@ const blackListMediaTypes = [
 ];
 
 export function isMediaContent(mimeType: string) {
-	return (
-		(/^image\//.test(mimeType) || /^video\//.test(mimeType) || /^audio\//.test(mimeType)) &&
-		!blackListMediaTypes.includes(mimeType)
-	);
+	return ((/^image\//.test(mimeType) || /^video\//.test(mimeType) || /^audio\//.test(mimeType)) && !blackListMediaTypes.includes(mimeType));
 }
 
 export function isPreviewable(item: Pick<ContentItem, 'mimeType' | 'systemType'>): boolean {

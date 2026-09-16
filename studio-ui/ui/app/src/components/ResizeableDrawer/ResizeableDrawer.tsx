@@ -66,7 +66,7 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		onResizeStop,
 		className,
 		classes = {},
-		PaperProps,
+		slotProps,
 		anchor = 'left',
 		belowToolbar = false,
 		sxs = {},
@@ -155,11 +155,13 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 				flexShrink: 0,
 				...sxs?.root
 			}}
-			PaperProps={{
-				...PaperProps,
-				style: { width },
-				className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
-				sx: drawerPaperSxProp as SxProps<Theme>
+			slotProps={{
+				paper: {
+					...(slotProps?.paper ?? {}),
+					style: { width },
+					className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
+					sx: drawerPaperSxProp as SxProps<Theme>
+				}
 			}}
 			{...rest}
 		>

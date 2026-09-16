@@ -28,14 +28,20 @@ interface FormBackToTopProps {
 
 export function FormBackToTop({ containerRef, getScrollContainer = (e) => e }: FormBackToTopProps) {
 	return (
-		<Box minHeight={100} justifyContent="center" alignItems="center" display="flex">
-			<Tooltip title={<FormattedMessage defaultMessage="Back to top" />}>
+        <Box
+            sx={{
+                minHeight: 100,
+                justifyContent: "center",
+                alignItems: "center",
+                display: "flex"
+            }}>
+            <Tooltip title={<FormattedMessage defaultMessage="Back to top" />}>
 				<Fab onClick={() => getScrollContainer(containerRef.current).scroll({ top: 0, behavior: 'smooth' })}>
 					<ArrowUpward />
 				</Fab>
 			</Tooltip>
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default FormBackToTop;

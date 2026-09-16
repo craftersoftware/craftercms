@@ -106,8 +106,8 @@ export function DateTime(props: DateTimeProps) {
 	}, [showDate, showTime]);
 
 	return (
-		<>
-			<FormsEngineField htmlFor={htmlId} field={field}>
+        <>
+            <FormsEngineField htmlFor={htmlId} field={field}>
 				<DateTimeTimezonePicker
 					id={htmlId}
 					value={value}
@@ -126,7 +126,12 @@ export function DateTime(props: DateTimeProps) {
 						timezoneAutocomplete: { flex: 1 }
 					}}
 				/>
-				<Box display="flex" gap={2} justifyContent="flex-end">
+				<Box
+                    sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "flex-end"
+                    }}>
 					{showSetNow && (
 						<SecondaryButton onClick={setNow} disabled={readonly}>
 							<FormattedMessage defaultMessage="Set now" />
@@ -139,8 +144,8 @@ export function DateTime(props: DateTimeProps) {
 					)}
 				</Box>
 			</FormsEngineField>
-		</>
-	);
+        </>
+    );
 }
 
 export default DateTime;

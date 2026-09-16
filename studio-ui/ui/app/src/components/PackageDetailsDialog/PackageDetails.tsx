@@ -64,18 +64,20 @@ export function PackageDetails(props: PackageDetailsProps) {
 	}, [packageId, site, setState]);
 
 	return (
-		<>
-			{state.loading && <LoadingState sxs={{ root: { width: 100, minHeight: 420 } }} />}
-			{state.error && <ApiResponseErrorState error={state.error} />}
-			{!Boolean(packageId) && !state.publishPackage && (
-				<Typography color="error.main">
+        <>
+            {state.loading && <LoadingState sxs={{ root: { width: 100, minHeight: 420 } }} />}
+            {state.error && <ApiResponseErrorState error={state.error} />}
+            {!Boolean(packageId) && !state.publishPackage && (
+				<Typography sx={{
+                    color: "error.main"
+                }}>
 					<FormattedMessage
 						id="packageDetailsDialog.missingPackageId"
 						defaultMessage="Unable to fetch package details as package id was not provided to this UI"
 					/>
 				</Typography>
 			)}
-			{!state.loading && state.publishPackage && (
+            {!state.loading && state.publishPackage && (
 				<Grid container spacing={2}>
 					<Grid size={{ xs: 12, sm: 5 }}>
 						<PublishPackageReview publishPackage={state.publishPackage} />
@@ -94,8 +96,8 @@ export function PackageDetails(props: PackageDetailsProps) {
 					</Grid>
 				</Grid>
 			)}
-		</>
-	);
+        </>
+    );
 }
 
 export default PackageDetails;

@@ -167,8 +167,13 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
-			<Box display="flex" flexDirection="row" gap={2}>
+        <FormsEngineField htmlFor={htmlId} field={field}>
+            <Box
+                sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: 2
+                }}>
 				<RadioGroup
 					row
 					value={String(value)}
@@ -202,7 +207,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					</Button>
 				)}
 			</Box>
-			<EnhancedDialog
+            <EnhancedDialog
 				open={orderDialogState.open}
 				onClose={orderDialogState.onClose}
 				maxWidth="sm"
@@ -248,8 +253,8 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					</PrimaryButton>
 				</DialogFooter>
 			</EnhancedDialog>
-		</FormsEngineField>
-	);
+        </FormsEngineField>
+    );
 }
 
 /**

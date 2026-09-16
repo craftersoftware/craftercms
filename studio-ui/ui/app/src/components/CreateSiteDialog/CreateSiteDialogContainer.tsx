@@ -614,8 +614,8 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 	}, [apiState.error, fetchMarketplaceBlueprints, marketplace]);
 
 	return (
-		<>
-			<ConfirmDialog
+        <>
+            <ConfirmDialog
 				open={dialog.inProgress}
 				onOk={onConfirmOk}
 				onCancel={onConfirmCancel}
@@ -623,7 +623,7 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 				title={formatMessage(messages.dialogCloseTitle)}
 				disableEnforceFocus={disableEnforceFocus}
 			/>
-			{apiState.creatingSite || (apiState.error && apiState.global) || site.details.blueprint ? (
+            {apiState.creatingSite || (apiState.error && apiState.global) || site.details.blueprint ? (
 				(apiState.creatingSite && <CreateSiteDialogLoader handleClose={handleClose} />) ||
 				(apiState.errorResponse && (
 					<ApiResponseErrorState
@@ -672,7 +672,12 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 													<Divider sx={{ ml: -3, mr: -3 }} />
 												</Grid>
 												<Grid size={12} sx={{ display: 'flex', alignItems: 'center' }}>
-													<Typography color="text.secondary" variant="overline" sx={{ mr: 2 }}>
+													<Typography
+                                                        variant="overline"
+                                                        sx={{
+                                                            color: "text.secondary",
+                                                            mr: 2
+                                                        }}>
 														{formatMessage(messages.publicMarketplaceBlueprints)}
 													</Typography>
 													<IconButton
@@ -724,7 +729,9 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 														})}
 													>
 														<SignalWifiBadRounded sx={{ color: (theme) => theme.palette.text.secondary }} />
-														<Typography variant="body1" color="text.secondary">
+														<Typography variant="body1" sx={{
+                                                            color: "text.secondary"
+                                                        }}>
 															{formatMessage(messages.marketplaceUnavailable)}
 														</Typography>
 														<Button variant="text" onClick={fetchMarketplaceBlueprints}>
@@ -806,8 +813,8 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 					)}
 				</Box>
 			)}
-		</>
-	);
+        </>
+    );
 }
 
 export default CreateSiteDialogContainer;

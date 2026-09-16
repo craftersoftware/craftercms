@@ -49,14 +49,13 @@ export function TypeList(props: TypeListProps) {
 		return <EmptyState title={<FormattedMessage defaultMessage="No content types available for display." />} />;
 	}
 	return (
-		<Box
-			gap={2}
-			sx={{
-				display: 'grid',
-				gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))'
-			}}
-		>
-			{skeleton
+        <Box
+            sx={{
+                gap: 2,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))'
+            }}>
+            {skeleton
 				? new Array(skeletonItemCount)
 						.fill(null)
 						.map((_, index) => <TypeCard key={index} skeleton type={null} showTypeId={showTypeId} compact={compact} />)
@@ -78,8 +77,8 @@ export function TypeList(props: TypeListProps) {
 							/>
 						);
 					})}
-		</Box>
-	);
+        </Box>
+    );
 }
 
 export default TypeList;

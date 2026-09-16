@@ -39,6 +39,7 @@ import BooleanDiffView from './FieldsTypesDiffViews/BooleanDiffView';
 import { NumberDiffView } from './FieldsTypesDiffViews/NumberDiffView';
 import FileNameDiffView from './FieldsTypesDiffViews/FileNameDiffView';
 import type { BuiltInControlType } from '../FormsEngine/lib/controlMap';
+import { TransitionProps } from '@mui/material/transitions';
 
 export interface CompareVersionsDialogBaseProps {
 	error: ApiResponse;
@@ -64,6 +65,8 @@ export interface CompareVersionsDialogProps extends CompareVersionsDialogBasePro
 	contentTypesBranch?: EntityState<ContentType>;
 	leftActions?: DialogHeaderActionProps[];
 	rightActions?: DialogHeaderActionProps[];
+	TransitionComponent?: React.ElementType;
+	TransitionProps?: TransitionProps;
 }
 
 export interface CompareVersionsDialogStateProps extends CompareVersionsDialogBaseProps, EnhancedDialogState {
@@ -74,7 +77,8 @@ export interface CompareVersionsDialogStateProps extends CompareVersionsDialogBa
 }
 
 export interface CompareVersionsDialogContainerProps
-	extends CompareVersionsDialogBaseProps,
+	extends
+		CompareVersionsDialogBaseProps,
 		Pick<
 			CompareVersionsDialogProps,
 			| 'contentTypesBranch'

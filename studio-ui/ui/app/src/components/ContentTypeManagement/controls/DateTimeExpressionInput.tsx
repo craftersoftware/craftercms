@@ -48,8 +48,8 @@ export function DateTimeExpressionInput(props: TextProps) {
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => setValue(e.currentTarget.value);
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
-			<OutlinedInput
+        <FormsEngineField htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
+            <OutlinedInput
 				autoFocus={autoFocus}
 				id={htmlId}
 				fullWidth
@@ -60,7 +60,12 @@ export function DateTimeExpressionInput(props: TextProps) {
 				endAdornment={
 					<Tooltip
 						title={
-							<Box display="flex" flexDirection="column" gap={1}>
+							<Box
+                                sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 1
+                                }}>
 								<Box>
 									<FormattedMessage defaultMessage="Date expression to process:" />
 								</Box>
@@ -96,8 +101,8 @@ export function DateTimeExpressionInput(props: TextProps) {
 					</Tooltip>
 				}
 			/>
-		</FormsEngineField>
-	);
+        </FormsEngineField>
+    );
 }
 
 export default DateTimeExpressionInput;

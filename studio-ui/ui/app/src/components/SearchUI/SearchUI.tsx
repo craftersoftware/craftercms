@@ -291,13 +291,17 @@ export function SearchUI(props: SearchUIProps) {
 						count={searchResults?.total ?? 0}
 						rowsPerPage={searchParameters.limit}
 						page={Math.ceil(searchParameters.offset / searchParameters.limit)}
-						backIconButtonProps={{
-							'aria-label': formatMessage(translations.previousPage),
-							title: formatMessage(translations.previousPage)
-						}}
-						nextIconButtonProps={{
-							'aria-label': formatMessage(translations.nextPage),
-							title: formatMessage(translations.nextPage)
+						slotProps={{
+							actions: {
+								previousButton: {
+									'aria-label': formatMessage(translations.previousPage),
+									title: formatMessage(translations.previousPage)
+								},
+								nextButton: {
+									'aria-label': formatMessage(translations.nextPage),
+									title: formatMessage(translations.nextPage)
+								}
+							}
 						}}
 						onPageChange={handleChangePage}
 						onRowsPerPageChange={handleChangeRowsPerPage}
@@ -310,9 +314,13 @@ export function SearchUI(props: SearchUIProps) {
 						<Grid
 							container
 							spacing={3}
-							minHeight="100%"
-							alignContent={isFetching || searchResults === null ? 'center' : 'start'}
-							sx={[searchResults?.items.length === 0 && { height: '100%', justifyContent: 'center' }]}
+							sx={[
+								{
+									minHeight: '100%',
+									alignContent: isFetching || searchResults === null ? 'center' : 'start'
+								},
+								searchResults?.items.length === 0 && { height: '100%', justifyContent: 'center' }
+							]}
 						>
 							{isFetching || searchResults === null ? (
 								<LoadingState />
