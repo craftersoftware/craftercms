@@ -14,7 +14,7 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { BehaviorSubject, Subscription, OperatorFunction } from 'rxjs';
+import { BehaviorSubject, Subscription, OperatorFunction, Observable } from 'rxjs';
 import { ObserverOrNext, extendDeepExistingProps, isPlainObject, log } from '@craftercms/utils';
 import { CrafterConfig } from '@craftercms/models';
 
@@ -60,7 +60,8 @@ class ConfigManager {
 		observerOrNext: ObserverOrNext<R>,
 		...operators: OperatorFunction<T, R>[]
 	): Subscription {
-		return this.config$.pipe.apply(this.config$, operators).subscribe(observerOrNext);
+		const pipe = this.config$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
+		return pipe(...operators).subscribe(observerOrNext);
 	}
 
 	entry(propPath: string): any;
@@ -82,7 +83,8 @@ class ConfigManager {
 						)
 					: config;
 			} catch (e) {
-				log(`Error retrieving crafter config prop '${propPath}': ${e.message || e}`, log.WARN);
+				const message = e instanceof Error ? e.message : e;
+				log(`Error retrieving crafter config prop '${propPath}': ${message}`, log.WARN);
 				return null;
 			}
 		})();

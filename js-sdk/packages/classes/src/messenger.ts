@@ -28,21 +28,21 @@ export abstract class Messenger {
 
 	constructor() {
 		let multiCaster = new Subject<Message>(),
-			messages = fromEvent(window, 'message').pipe(
+			messages = fromEvent<MessageEvent>(window, 'message').pipe(
 				tap(
-					(event: MessageEvent) =>
+					(event) =>
 						!this.originAllowed(event.origin) &&
 						console.log('Messenger: Message received from a disallowed origin.', event)
 				),
 				filter(
-					(event: MessageEvent) =>
+					(event) =>
 						this.originAllowed(event.origin) &&
 						typeof event.data === 'object' &&
 						'topic' in event.data &&
 						'data' in event.data &&
 						'scope' in event.data
 				),
-				map((event: MessageEvent) => ({
+				map((event) => ({
 					topic: event.data.topic,
 					data: event.data.data,
 					scope: event.data.scope || MessageScope.Broadcast
@@ -64,23 +64,24 @@ export abstract class Messenger {
 		observerOrNext: ObserverOrNext<R>,
 		...operators: OperatorFunction<T, R>[]
 	): Subscription {
-		return this.messages$.pipe.apply(this.messages$, operators).subscribe(observerOrNext);
+		const pipe = this.messages$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
+		return pipe(...operators).subscribe(observerOrNext);
 	}
 
-	subscribeTo<T, R>(
+	subscribeTo(
 		topic: MessageTopic,
 		subscriber: (value: Message) => void,
 		scope?: MessageScope,
-		...operations
+		...operations: OperatorFunction<Message, Message>[]
 	): Subscription {
-		let ops = [];
-		// operations = operations || [];
+		const ops: OperatorFunction<Message, Message>[] = [];
 		if (!notNullOrUndefined(scope)) {
 			ops.push(filter((message: Message) => message.scope === scope && message.topic === topic));
 		} else {
 			ops.push(filter((message: Message) => message.topic === topic));
 		}
-		return this.messages$.pipe.apply(this.messages$, ops.concat(operations)).subscribe(subscriber);
+		const pipe = this.messages$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<Message>;
+		return pipe(...ops, ...operations).subscribe(subscriber);
 	}
 
 	addTarget(target: any): void {
