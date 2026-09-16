@@ -16,7 +16,7 @@
 
 import type { ControlProps } from '../types';
 import FormsEngineField from '../components/FormsEngineField';
-import React, { type ChangeEvent, useEffect, useId, useState } from 'react';
+import React, { type ChangeEvent, useEffect, useId } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import ChangeCircleOutlinedIcon from '@mui/icons-material/ChangeCircleOutlined';
 import Button from '@mui/material/Button';
@@ -35,7 +35,7 @@ import Typography from '@mui/material/Typography';
 import useSpreadState from '../../../hooks/useSpreadState';
 import { ApiResponse } from '../../../models';
 import { SortableList, type TItem } from '../components/SortableList';
-import { useItemContext, useStableFormContext } from '../lib/formsEngineContext';
+import { useItemContext, useItemMetaContext, useStableFormContext } from '../lib/formsEngineContext';
 import { DialogFooter } from '../../DialogFooter';
 import SecondaryButton from '../../SecondaryButton';
 import PrimaryButton from '../../PrimaryButton';
@@ -48,10 +48,11 @@ import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Radio from '@mui/material/Radio';
 import Alert from '@mui/material/Alert';
-import { isFieldReadOnly } from '../lib/formUtils';
+import { composePathForType, isFieldReadOnly } from '../lib/formUtils';
 import { getParentPath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
-import { PrimitiveAtom, useStore } from 'jotai';
+import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
+import { XmlKeys } from '../lib/formConsts';
 
 export interface PageNavOrderProps extends ControlProps {
 	value: boolean;
@@ -61,7 +62,6 @@ const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 
 export function PageNavOrder(props: PageNavOrderProps) {
 	const { value, setValue, field, autoFocus, readonly: formReadonly } = props;
-	const [initialValue] = useState<boolean>(value);
 	const htmlId = useId();
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
@@ -77,21 +77,31 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		changedOrder: false
 	});
 	const contextItem = useItemContext();
-	const currentPath = contextItem?.path;
+	const { pathInSite, contentType } = useItemMetaContext();
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const formContext = useStableFormContext();
 	const jotaiStore = useStore();
+	const fileName = useAtomValue(formContext.atoms.fileName as PrimitiveAtom<string>);
+	const internalName = useAtomValue(formContext.atoms.valueByFieldId[XmlKeys.internalName] as PrimitiveAtom<string>);
+	// Create mode has no ContentItem yet — compose the eventual path from the create folder + file name.
+	const currentPath =
+		contextItem?.path ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
+	const pageLabel = contextItem?.label || internalName || fileName || currentPath || '';
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
 		| PrimitiveAtom<number | string | null | undefined>
 		| undefined;
+	if (!orderDefaultAtom) {
+		throw new Error(
+			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
+		);
+	}
 	const effectRefs = useUpdateRefs({
-		initialValue,
-		contextItem,
+		pageLabel,
 		orderDefaultAtom,
 		jotaiStore
 	});
-	const readonly: boolean = isFieldReadOnly(field, formReadonly);
+	const readonly: boolean = isFieldReadOnly(field, formReadonly) || nou(currentPath);
 
 	useEffect(() => {
 		if (currentPath) {
@@ -100,12 +110,12 @@ export function PageNavOrder(props: PageNavOrderProps) {
 			const subscription = getNavItemsOrder(siteId, parentPath).subscribe({
 				next: (order) => {
 					const newOrder = createSortableItemList(order);
-					// If the initialValue is false, then it means that we'll be adding this page to the navigation (since it won't
-					// be in the order response).
-					if (!effectRefs.current.initialValue) {
+					// Add this page when it isn't already in the nav order response (e.g. placeInNav was off, or
+					// create mode where the page is not on the server yet).
+					if (!newOrder.some((item) => item.key === currentPath)) {
 						newOrder.push({
 							key: currentPath,
-							value: effectRefs.current.contextItem?.label || currentPath
+							value: effectRefs.current.pageLabel || currentPath
 						});
 					}
 					setPagesOrderState({ fetching: false, order: newOrder });
@@ -167,13 +177,18 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	};
 
 	return (
-        <FormsEngineField htmlFor={htmlId} field={field}>
-            <Box
-                sx={{
-                    display: "flex",
-                    flexDirection: "row",
-                    gap: 2
-                }}>
+		<FormsEngineField htmlFor={htmlId} field={field}>
+			{nou(currentPath) && (
+				<Alert severity="warning" variant="outlined" sx={{ my: 1 }}>
+					<FormattedMessage defaultMessage="This element doesn't have an identifier yet. You can't edit the navigation order until it has an identifier." />
+				</Alert>
+			)}
+			<Box
+				sx={{
+					display: "flex",
+					flexDirection: "row",
+					gap: 2
+				}}>
 				<RadioGroup
 					row
 					value={String(value)}
@@ -218,14 +233,10 @@ export function PageNavOrder(props: PageNavOrderProps) {
 						<FormattedMessage
 							defaultMessage={'Drag and Drop "{page}" to the desired location in the navigation structure.'}
 							values={{
-								page: contextItem?.label ?? ''
+								page: pageLabel
 							}}
 						/>
 					</Typography>
-					{/* TODO: Remove this alert when the 'content/reorder-items' new v2 API is implemented. */}
-					<Alert severity="warning" sx={{ mt: 2 }}>
-						Development draft. Waiting for 'content/reorder-items' new v2 API to be implemented.
-					</Alert>
 					<Paper elevation={0} sx={{ mt: 2 }}>
 						<SortableList
 							items={pagesOrderState.order ?? []}

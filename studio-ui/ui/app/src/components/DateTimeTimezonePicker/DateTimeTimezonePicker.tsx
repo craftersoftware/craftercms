@@ -31,6 +31,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import {
 	createAtLeastHalfHourInFutureDate,
 	createTransposedToTimezoneDate,
+	getUserTimeZone,
 	getZDateOffset
 } from '../../utils/datetime';
 import Box from '@mui/material/Box';
@@ -82,6 +83,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 	const [selectedTimezone, setSelectedTimezone] = useState<string | null>(
 		timezoneValue ? timezoneValue : (resolvedLocaleData.timeZone ?? null)
 	);
+	const defaultTimezone = getUserTimeZone();
 	// The control timezone lags behind selectedTimezone. It is only updated when there's a different
 	// selectedTimezone to the navigator's locale, and the value (date) prop changes.
 	const [controlTimezone, setControlTimezone] = useState<string | null>(resolvedLocaleData.timeZone ?? null);
@@ -191,7 +193,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 						getOptionLabel={(timezone) =>
 							timezone + (selectedDate && Boolean(timezone) ? ` (GMT${getZDateOffset(selectedDate, timezone)})` : '')
 						}
-						value={selectedTimezone}
+						value={Boolean(selectedTimezone) ? selectedTimezone : defaultTimezone}
 						onChange={handleTimezoneChange}
 						popupIcon={<PublicRoundedIcon />}
 						disableClearable={true}
