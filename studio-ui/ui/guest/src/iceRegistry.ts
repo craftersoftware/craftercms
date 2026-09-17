@@ -263,9 +263,10 @@ export function getRecordDropTargets(id: number): ICERecord[] {
 		const originContainer = findContainerRecord(record.modelId, fieldId, index);
 
 		function flattenChildren(modelId: string, accum: string[]) {
-			if (hierarchyMap[modelId].children.length) {
-				accum.push(...hierarchyMap[modelId].children);
-				hierarchyMap[modelId].children.forEach((child) => flattenChildren(child, accum));
+			const children = hierarchyMap[modelId]?.children ?? [];
+			if (children.length) {
+				accum.push(...children);
+				children.forEach((child) => flattenChildren(child, accum));
 			}
 		}
 
