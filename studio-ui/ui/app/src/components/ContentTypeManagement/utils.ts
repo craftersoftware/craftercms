@@ -564,7 +564,10 @@ export const createStableFormContextProps = (
 		originalValues: null,
 		props: null,
 		state: null,
-		affectedPluginControlFields: []
+		affectedPluginControlFields: [],
+		formController: null,
+		formControllerContext: null,
+		formControllerCleanup: null
 	};
 	if (createRootTypeSections) {
 		Object.assign(

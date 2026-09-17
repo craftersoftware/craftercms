@@ -151,6 +151,7 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
+import { attachFormController, runFormControllerCleanup } from './lib/formControllerContext';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -244,7 +245,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				stableGlobalContextRef.current.formsStackData.pop();
+				const stack = stableGlobalContextRef.current.formsStackData;
+				runFormControllerCleanup(stack[stack.length - 1]);
+				stack.pop();
 				setCount(-1);
 			},
 			updateProps(stackIndex, formProps) {
@@ -256,6 +259,16 @@ function GlobalFormsState(props: FormsEngineProps) {
 		};
 		return api;
 	}, [store]);
+	// Root engine unmount: clean up any remaining controllers (including the root entry).
+	useEffect(() => {
+		return () => {
+			const stack = stableGlobalContextRef.current?.formsStackData;
+			if (!stack) return;
+			for (let i = stack.length - 1; i >= 0; i--) {
+				runFormControllerCleanup(stack[i]);
+			}
+		};
+	}, []);
 	return (
 		<ErrorBoundary>
 			<StableGlobalContext.Provider value={stableGlobalContextRef.current}>
@@ -396,7 +409,19 @@ function FormBootstrap(props: FormsEngineProps) {
 				return affected;
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
-			setReady(true);
+			return attachFormController({
+				siteId,
+				store,
+				stackEntry: stableFormContextRef.current,
+				contentTypesById: effectRefs.current.contentTypesById,
+				formProps: effectiveProps
+			}).then(() => {
+				if (disposed) {
+					runFormControllerCleanup(stableFormContextRef.current);
+					return;
+				}
+				setReady(true);
+			});
 		};
 		if (
 			// A repeat group is being opened as a stacked form.
@@ -704,8 +729,10 @@ function FormBootstrap(props: FormsEngineProps) {
 		customControls,
 		dispatch,
 		effectRefs,
+		effectiveProps,
 		fieldsToRender,
 		formsStackData,
+		formatMessage,
 		readonlyProp,
 		repeat,
 		siteId,
@@ -861,7 +888,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 					store.get(effectRefs.current.fileNameAtom),
 					formatMessage,
 					store.get(versionCommentAtom).trim(),
-					lastCreationCommentRef.current,
+					lastCreationCommentRef.current
 				);
 				if (newMessage) {
 					lastCreationCommentRef.current = newMessage;
@@ -1402,7 +1429,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller loading and execution
+//  - Form controller field relevance / onBeforeSave (see formControllerLoader + FormBootstrap initialize)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI
