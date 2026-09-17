@@ -708,7 +708,7 @@ export function findContainerRecord(modelId: string, fieldId: string, index: str
 		recordId = exists({
 			modelId: modelId,
 			fieldId: fieldId ?? null,
-			index: parseInt(removeLastPiece(index as string))
+			index: removeLastPiece(String(index))
 		});
 	}
 	return notNullOrUndefined(recordId) ? getById(recordId) : null;
@@ -764,8 +764,7 @@ export function getAllowedContentTypes(): AllowedContentTypesData {
 
 export function subscribeToAllowedContentTypes(
 	observerOrNext:
-		| Partial<Observer<LookupTable<AllowedContentTypesData>>>
-		| ((value: LookupTable<AllowedContentTypesData>) => void)
+		Partial<Observer<LookupTable<AllowedContentTypesData>>> | ((value: LookupTable<AllowedContentTypesData>) => void)
 ): Subscription {
 	return allowedContentTypes$.subscribe(observerOrNext);
 }
