@@ -690,9 +690,15 @@ export function fetchContentTypePreviewImageUrl(
 }
 
 /**
- * @deprecated Only for Forms Engine v1 (FE1) usage. FE1 gets replaced by FE2 in CrafterCMS v5.
- **/
-export function getFetchLegacyFormControllerUrl(site: string, contentTypeId: string): string {
+ * Authenticated URL for a content type's client-side `form-controller.js`.
+ * Use with `getText` (or equivalent); do not load via bare `<script src>` / `import()`.
+ */
+export function getFormControllerUrl(site: string, contentTypeId: string): string {
 	const qs = toQueryString({ contentTypeId });
 	return `/studio/api/2/configuration/content_types/${site}/form_controller${qs}`;
 }
+
+/**
+ * @deprecated Use {@link getFormControllerUrl}. Kept for Forms Engine v1 (FE1) call sites.
+ */
+export const getFetchLegacyFormControllerUrl = getFormControllerUrl;
