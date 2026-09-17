@@ -254,25 +254,48 @@ export function getRecordDropTargets(id: number): ICERecord[] {
 		}
 		// Get content type of item
 		const models = contentController.getCachedModels();
-		const id = Model.extractCollectionItem(model, fieldId, index);
-		const nestedModel = models[id];
+		const draggedModelId = Model.extractCollectionItem(model, fieldId, index);
+		const nestedModel = models[draggedModelId];
 		const contentType = Model.getContentTypeId(nestedModel);
 		const hierarchyMap = contentController.modelHierarchyMap;
 		const allChildren = [];
+		// Keep the origin zone even when it already contains the item (needed for reorder).
+		const originContainer = findContainerRecord(record.modelId, fieldId, index);
 
-		function flattenChildren(id: string, accum: string[]) {
-			if (hierarchyMap[id].children.length) {
-				accum.push(...hierarchyMap[id].children);
-				hierarchyMap[id].children.forEach((child) => flattenChildren(child, accum));
+		function flattenChildren(modelId: string, accum: string[]) {
+			if (hierarchyMap[modelId].children.length) {
+				accum.push(...hierarchyMap[modelId].children);
+				hierarchyMap[modelId].children.forEach((child) => flattenChildren(child, accum));
 			}
 		}
 
-		flattenChildren(id, allChildren);
+		flattenChildren(draggedModelId, allChildren);
 
 		return getContentTypeDropTargets(contentType, (rec) => {
 			// Exclude if it's the current item or a descendant of it (i.e. can't
 			// move an item deeper inside itself).
-			return rec.modelId === id || allChildren.includes(rec.modelId);
+			if (rec.modelId === draggedModelId || allChildren.includes(rec.modelId)) {
+				return true;
+			}
+			// Origin zone always allowed so the item can be reordered in place.
+			if (originContainer && rec.id === originContainer.id) {
+				return false;
+			}
+			const {
+				field: { validations } = {},
+				model: targetModel,
+				fieldId: targetFieldId,
+				index: targetIndex
+			} = getReferentialEntries(rec);
+			const allowDuplicates = validations?.allowDuplicates?.value ?? false;
+			if (allowDuplicates) {
+				return false;
+			}
+			const targetCollection = nullOrUndefined(targetIndex)
+				? Model.value(targetModel, targetFieldId)
+				: Model.extractCollectionItem(targetModel, targetFieldId, targetIndex);
+			// Exclude zones that already hold this instance when duplicates aren't allowed.
+			return Array.isArray(targetCollection) && targetCollection.includes(draggedModelId);
 		});
 	} else if (field.type === 'repeat') {
 		return getRepeatGroupItemDropTargets(record);
