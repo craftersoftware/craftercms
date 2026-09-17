@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/utils",
-  "version": "0.0.0-PLACEHOLDER",
+  "version": "4.3.0",
   "description": "Crafter CMS utility and helper functions",
   "main": "./bundles/utils.umd.js",
   "module": "./esm5/utils.js",

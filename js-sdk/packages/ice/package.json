@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/ice",
-  "version": "0.0.0-PLACEHOLDER",
+  "version": "4.3.0",
   "description": "Crafter CMS in-context editing library",
   "main": "./bundles/ice.umd.js",
   "module": "./esm5/ice.js",
@@ -42,7 +42,7 @@
     "terser": "^5.51.2"
   },
   "dependencies": {
-    "@craftercms/models": "0.0.0-PLACEHOLDER"
+    "@craftercms/models": "4.3.1"
   },
   "peerDependencies": {
     "react": "^18.0.0"

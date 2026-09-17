@@ -116,27 +116,6 @@ path           | The item’s path in the content store |
   store.dispatch(getItem(itemUrl));
 ```
 
-### getDescriptor
-Creates an action to get the descriptor data of an Item in the content store.
-
-`getDescriptor(path: string)`
-
-| Parameters    |                |
-| ------------- |:--------------:|
-| path           | The item’s path in the content store |
-
-#### Example
-
-- Dispatch action to get the index page descriptor from the site into your store
-
-```typescript
-  import { getDescriptor } from '@craftercms/redux';
-
-  const itemUrl = '/site/website/index.xml';
-
-  store.dispatch(getDescriptor(itemUrl));
-```
-
 ### getChildren
 Creates an action to get the list of Items directly under a folder into your store.
 

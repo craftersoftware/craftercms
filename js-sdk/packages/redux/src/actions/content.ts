@@ -14,19 +14,13 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { Descriptor, Item, NavigationItem } from '@craftercms/models';
+import { CrafterConfig, Item, NavigationItem } from '@craftercms/models';
 import { createAction } from '@reduxjs/toolkit';
 import { internal_getNav, internal_getNavBreadcrumb } from './content_internal';
 
-export const getItem = /*#__PURE__*/ createAction<string>('GET_ITEM');
+export const getItem = /*#__PURE__*/ createAction<{ url: string; config?: CrafterConfig }>('GET_ITEM');
 
 export const getItemComplete = /*#__PURE__*/ createAction<{ url: string; item?: Item }>('GET_ITEM_COMPLETE');
-
-export const getDescriptor = /*#__PURE__*/ createAction<string>('GET_DESCRIPTOR');
-
-export const getDescriptorComplete = /*#__PURE__*/ createAction<{ url: string; descriptor?: Descriptor }>(
-	'GET_DESCRIPTOR_COMPLETE'
-);
 
 export const getChildren = /*#__PURE__*/ createAction<string>('GET_CHILDREN');
 

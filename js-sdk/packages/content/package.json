@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/content",
-  "version": "0.0.0-PLACEHOLDER",
+  "version": "5.0.0",
   "description": "Crafter CMS services for content and navigation retrieval",
   "main": "./bundles/content.umd.js",
   "module": "./esm5/content.js",
@@ -26,9 +26,9 @@
     "test": "mocha"
   },
   "dependencies": {
-    "@craftercms/classes": "0.0.0-PLACEHOLDER",
-    "@craftercms/models": "0.0.0-PLACEHOLDER",
-    "@craftercms/utils": "0.0.0-PLACEHOLDER",
+    "@craftercms/classes": "4.4.1",
+    "@craftercms/models": "4.3.1",
+    "@craftercms/utils": "4.3.0",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {

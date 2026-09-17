@@ -28,6 +28,7 @@ export interface CrafterConfig {
 	contentTypeRegistry?: LookupTable;
 	// TODO: Remove this in favour of fetchConfig.headers? Most make all sdk service use fetch.
 	headers: LookupTable;
+	flatten: boolean;
 }
 
 export interface Endpoints {

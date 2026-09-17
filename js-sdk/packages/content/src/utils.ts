@@ -14,9 +14,9 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { ContentInstance, Descriptor, DescriptorResponse, Item } from '@craftercms/models';
+import type { ContentInstance, CrafterConfig, Descriptor, DescriptorResponse, Item } from '@craftercms/models';
 import { urlTransform } from './UrlTransformationService';
-import { getDescriptor, GetDescriptorConfig } from './ContentStoreService';
+import { getItem } from './ContentStoreService';
 import { map, switchMap } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 
@@ -95,7 +95,7 @@ export function parseDescriptor(
 			'[parseDescriptor] Invalid descriptor supplied. Did you call ' +
 				'parseDescriptor with a `getChildren` API response? The `getChildren` API ' +
 				'response may contain certain items that are not parsable into ContentInstances. ' +
-				'Try a different API (getItem, getDescriptor or getTree) or filter out the metadata ' +
+				'Try a different API (getItem or getTree) or filter out the metadata ' +
 				'items which descriptorDom property has a `page` or `component` property with the content item.'
 		);
 	}
@@ -209,34 +209,36 @@ export function parseFieldValue(propName: string, propValue: any): number | stri
 export function fetchModelByPath(path: string): Observable<ContentInstance>;
 export function fetchModelByPath(
 	path: string,
-	options: Partial<GetDescriptorConfig & ParseDescriptorOptions>
+	options: Partial<CrafterConfig & ParseDescriptorOptions>
 ): Observable<ContentInstance>;
 export function fetchModelByPath(
 	path: string,
-	options?: Partial<GetDescriptorConfig & ParseDescriptorOptions>
+	options?: Partial<CrafterConfig & ParseDescriptorOptions>
 ): Observable<ContentInstance> {
 	let pdo = mixParseDescriptorOptions({ parseFieldValueTypes: true, ...options });
-	return getDescriptor(path, { flatten: true, ...options }).pipe(map((descriptor) => parseDescriptor(descriptor, pdo)));
+	return getItem(path, { flatten: true, ...options }).pipe(
+		map(({ descriptorDom }) => parseDescriptor(descriptorDom, pdo))
+	);
 }
 
 export function fetchModelByUrl(webUrl: string): Observable<ContentInstance>;
 export function fetchModelByUrl(
 	webUrl: string,
-	options: Partial<GetDescriptorConfig & ParseDescriptorOptions>
+	options: Partial<CrafterConfig & ParseDescriptorOptions>
 ): Observable<ContentInstance>;
 export function fetchModelByUrl(
 	webUrl: string,
-	options?: Partial<GetDescriptorConfig & ParseDescriptorOptions>
+	options?: Partial<CrafterConfig & ParseDescriptorOptions>
 ): Observable<ContentInstance> {
 	let pdo = mixParseDescriptorOptions({ parseFieldValueTypes: true, ...options });
 	return urlTransform('renderUrlToStoreUrl', webUrl).pipe(
-		switchMap((path) => getDescriptor(path as string, { flatten: true, ...options })),
-		map((descriptor) => parseDescriptor(descriptor, pdo))
+		switchMap((path) => getItem(path as string, { flatten: true, ...options })),
+		map(({ descriptorDom }) => parseDescriptor(descriptorDom, pdo))
 	);
 }
 
 /**
- * Inspects the data for getItem or getDescriptor responses and returns the inner content object
+ * Inspects the data for getItem responses and returns the inner content object
  */
 export function extractContent(data: Descriptor | Item) {
 	let output = data;

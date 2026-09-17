@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/models",
-  "version": "0.0.0-PLACEHOLDER",
+  "version": "4.3.1",
   "description": "Crafter CMS data model definitions",
   "main": "./bundles/models.umd.js",
   "module": "./esm5/models.js",

@@ -23,8 +23,6 @@ import { ContentStoreService, NavigationService } from '@craftercms/content';
 import {
 	getItem,
 	getItemComplete,
-	getDescriptor,
-	getDescriptorComplete,
 	getChildren,
 	getChildrenComplete,
 	getTree,
@@ -39,39 +37,17 @@ export const getItemEpic = (action$: Observable<AnyAction>) =>
 	action$.pipe(
 		ofType(getItem.type),
 		mergeMap(({ payload }) =>
-			ContentStoreService.getItem(payload).pipe(
+			ContentStoreService.getItem(payload.url, payload.config).pipe(
 				map((item: Item) =>
 					getItemComplete({
 						item,
-						url: payload
+						url: payload.url
 					})
 				),
 				catchError(() =>
 					of(
 						getItemComplete({
-							url: payload
-						})
-					)
-				)
-			)
-		)
-	);
-
-export const getDescriptorEpic = (action$: Observable<AnyAction>) =>
-	action$.pipe(
-		ofType(getDescriptor.type),
-		mergeMap(({ payload }) =>
-			ContentStoreService.getDescriptor(payload).pipe(
-				map((descriptor) =>
-					getDescriptorComplete({
-						descriptor,
-						url: payload
-					})
-				),
-				catchError(() =>
-					of(
-						getDescriptorComplete({
-							url: payload
+							url: payload.url
 						})
 					)
 				)
@@ -167,11 +143,4 @@ export const getNavBreadcrumbEpic = (action$: Observable<AnyAction>) =>
 		)
 	);
 
-export const allContentEpics = [
-	getItemEpic,
-	getDescriptorEpic,
-	getChildrenEpic,
-	getTreeEpic,
-	getNavEpic,
-	getNavBreadcrumbEpic
-];
+export const allContentEpics = [getItemEpic, getChildrenEpic, getTreeEpic, getNavEpic, getNavBreadcrumbEpic];

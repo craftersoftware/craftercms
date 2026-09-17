@@ -87,8 +87,8 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 `parseDescriptor(response: Descriptor | Item | GraphQLResponse | Descriptor[] | Item[] | GraphQLResponse)`
 
 | Parameters    |                |
-| ------------- |:--------------:|
-| response      | The response of a getItem, getDescriptor or GraphQL fetch call |
+| ------------- |:-----------------------------------------------:|
+| response      | The response of a getItem or GraphQL fetch call |
 
 #### Returns
 
@@ -96,7 +96,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 #### Examples
 
-- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem, getDescriptor or GraphQL responses.
+- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem or GraphQL responses.
 
 ```typescript
   import { map } from 'rxjs/operators';
@@ -181,44 +181,6 @@ Get an Item from the content store.
 
   getItem('/site/website/index.xml', { site: 'editorial' }).pipe(
     map(parseDescriptor)
-  ).subscribe((content: ContentInstance) => {
-    console.log(content);
-  });
-```
-
-### Get Descriptor
-Get the descriptor data of an Item in the content store.
-
-`getDescriptor(path: string, config?: CrafterConfig)`
-
-| Parameters    |                |
-| ------------- |:--------------:|
-| path          | The item’s path in the content store |
-| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
-
-#### Returns
-
-[Descriptor](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Descriptor) - from the content store
-
-#### Examples
-
-- Get the index page from the site:
-
-```typescript
-  import { map } from 'rxjs/operators';
-  import { getDescriptor, parseDescriptor } from '@craftercms/content';
-  import { Descriptor, ContentInstance } from '@craftercms/models';
-
-  // Example 1: Supplying config inline, Descriptor response...
-  getDescriptor('/site/website/index.xml', { site: 'editorial' }).subscribe((descriptor: Descriptor) => {
-    console.log(descriptor);
-  });
-
-  // Example 2:
-  // - Omit config (must have configured earlier @see Usage section above)
-  // - Parse the response
-  getDescriptor('/site/website/index.xml').pipe(
-    map(parseDescriptor) // Optional. Use for a cleaner parsed response.
   ).subscribe((content: ContentInstance) => {
     console.log(content);
   });

@@ -16,7 +16,7 @@
 
 import { Observable } from 'rxjs';
 import { crafterConf, SDKService } from '@craftercms/classes';
-import { CrafterConfig, Descriptor, Item } from '@craftercms/models';
+import { CrafterConfig, Item } from '@craftercms/models';
 import { composeUrl } from '@craftercms/utils';
 import { map } from 'rxjs/operators';
 
@@ -29,42 +29,15 @@ export function getItem(path: string, config: Partial<CrafterConfig>): Observabl
 export function getItem(path: string, config?: Partial<CrafterConfig>): Observable<Item> {
 	config = crafterConf.mix(config);
 	const requestURL = composeUrl(config, config.endpoints.GET_ITEM_URL);
-	return SDKService.httpGet(requestURL, { url: path, crafterSite: config.site }, config.headers);
+	return SDKService.httpGet(
+		requestURL,
+		{ url: path, crafterSite: config.site, flatten: Boolean(config?.flatten) },
+		config.headers
+	);
 }
 
 export interface GetDescriptorConfig extends CrafterConfig {
 	flatten: boolean;
-}
-
-/**
- * Returns the descriptor data of an Item in the content store.
- * @param {string} path - The item’s path
- * @param {CrafterConfig & GetDescriptorConfig} config? - The config override options to use
- */
-export function getDescriptor(path: string): Observable<Descriptor>;
-export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor>;
-export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor> {
-	let cfg = crafterConf.mix(config);
-	return SDKService.httpGet<Descriptor>(
-		composeUrl(cfg, cfg.endpoints.GET_DESCRIPTOR),
-		{
-			url: path,
-			crafterSite: cfg.site,
-			flatten: Boolean(config?.flatten)
-		},
-		cfg.headers
-	).pipe(
-		// Manually introduce the path into the response as descriptor endpoint does not return it.
-		map((descriptor: Descriptor) => {
-			let prop = typeof descriptor.page === 'undefined' ? 'component' : 'page';
-			return {
-				[prop]: {
-					...descriptor[prop],
-					localId: path
-				}
-			};
-		})
-	);
 }
 
 /**
@@ -76,7 +49,11 @@ export function getChildren(path: string, config: Partial<CrafterConfig>): Obser
 export function getChildren(path: string, config?: Partial<CrafterConfig>): Observable<Item[]> {
 	config = crafterConf.mix(config);
 	const requestURL = composeUrl(config, config.endpoints.GET_CHILDREN);
-	return SDKService.httpGet(requestURL, { url: path, crafterSite: config.site }, config.headers);
+	return SDKService.httpGet(
+		requestURL,
+		{ url: path, crafterSite: config.site, flatten: Boolean(config?.flatten) },
+		config.headers
+	);
 }
 
 /**
@@ -99,12 +76,15 @@ export function getTree(
 	}
 	config = crafterConf.mix(config);
 	const requestURL = composeUrl(config, config.endpoints.GET_TREE);
-	return SDKService.httpGet(requestURL, { url: path, depth, crafterSite: config.site }, config.headers);
+	return SDKService.httpGet(
+		requestURL,
+		{ url: path, depth, crafterSite: config.site, flatten: Boolean(config?.flatten) },
+		config.headers
+	);
 }
 
 export const ContentStoreService = {
 	getItem,
-	getDescriptor,
 	getChildren,
 	getTree
 };

@@ -15,7 +15,7 @@
  */
 
 import { createAction } from '@reduxjs/toolkit';
-import { Site, StandardAction } from '../../models';
+import { ApiResponse, Site, StandardAction } from '../../models';
 
 export function changeSite(nextSite: string, nextUrl: string = '/'): StandardAction {
 	return {
@@ -31,5 +31,5 @@ changeSite.type = 'CHANGE_SITE';
 
 export const fetchSites = /*#__PURE__*/ createAction('FETCH_SITES');
 export const fetchSitesComplete = /*#__PURE__*/ createAction<Site[]>('FETCH_SITES_COMPLETE');
-export const fetchSitesFailed = /*#__PURE__*/ createAction('FETCH_SITES_FAILED');
+export const fetchSitesFailed = /*#__PURE__*/ createAction<{ error: ApiResponse }>('FETCH_SITES_FAILED');
 export const popSite = /*#__PURE__*/ createAction<{ siteId: string; isActive: boolean }>('POP_SITE');

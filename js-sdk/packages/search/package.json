@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/search",
-  "version": "0.0.0-PLACEHOLDER",
+  "version": "4.3.1",
   "description": "Crafter CMS search service and associated tools",
   "main": "./bundles/search.umd.js",
   "module": "./esm5/search.js",
@@ -26,9 +26,9 @@
     "test": "mocha"
   },
   "dependencies": {
-    "@craftercms/classes": "0.0.0-PLACEHOLDER",
-    "@craftercms/models": "0.0.0-PLACEHOLDER",
-    "@craftercms/utils": "0.0.0-PLACEHOLDER",
+    "@craftercms/classes": "4.4.1",
+    "@craftercms/models": "4.3.1",
+    "@craftercms/utils": "4.3.0",
     "rxjs": "^7.8.2",
     "uuid": "^14.0.2"
   },
