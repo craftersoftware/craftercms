@@ -166,6 +166,7 @@
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.
   * `actions/pathNavigator`:
     * Updated `pathNavigatorFetchPathComplete`, `pathNavigatorFetchParentItemsComplete` and `pathNavigatorFetchPathFailed` action payloads to include a `path` property.
+    * Updated `pathNavigatorConditionallySetPathFailed` action payload to include a `path` property.
     * Updated `pathNavigatorBulkFetchPathComplete` action payload: each entry in `paths` now includes a `path` property.
     * Updated `pathNavigatorBulkFetchPathFailed` action payload: replaced `ids` with `requests` of type `PayloadWithId<{ path: string }>[]`.
 * [models/Publishing]

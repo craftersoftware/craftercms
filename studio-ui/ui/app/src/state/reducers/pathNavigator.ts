@@ -155,20 +155,27 @@ const reducer = createReducer<GlobalState['pathNavigator']>({}, (builder) => {
 		})
 		.addCase(pathNavigatorConditionallySetPathComplete, (state, { payload: { id, path, parent, children } }) => {
 			const chunk = state[id];
+			if (!chunk || isStaleResult(chunk, path)) {
+				return;
+			}
 			chunk.isFetching = false;
 			chunk.error = null;
 			if (parent.childrenCount > 0) {
-				chunk.currentPath = path;
+				chunk.currentPath = parent.path;
 				chunk.offset = 0;
-				chunk.breadcrumb = getIndividualPaths(withoutIndex(path), withoutIndex(state[id].rootPath));
+				chunk.breadcrumb = getIndividualPaths(withoutIndex(parent.path), withoutIndex(state[id].rootPath));
 				chunk.itemsInPath = children.map((item) => item.path);
 				chunk.levelDescriptor = children.levelDescriptor?.path;
 				chunk.total = children.total;
 			}
 		})
-		.addCase(pathNavigatorConditionallySetPathFailed, (state, { payload }) => {
-			state[payload.id].isFetching = false;
-			state[payload.id].error = payload.error;
+		.addCase(pathNavigatorConditionallySetPathFailed, (state, { payload: { id, path, error } }) => {
+			const chunk = state[id];
+			if (!chunk || isStaleResult(chunk, path)) {
+				return;
+			}
+			chunk.isFetching = false;
+			chunk.error = error;
 		})
 		.addCase(pathNavigatorFetchPath, (state, { payload }) => {
 			const chunk = state[payload.id];

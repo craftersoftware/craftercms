@@ -245,8 +245,11 @@ export default [
 						payload: { id, path, keyword }
 					},
 					state
-				]) =>
-					fetchItemWithChildrenByPath(state.sites.active, path, {
+				]) => {
+					// Path when the probe started. Results are validated against this so a later committed
+					// navigation (e.g. fetchPath) can discard stale complete/failed actions.
+					const pathAtStart = state.pathNavigator[id].currentPath;
+					return fetchItemWithChildrenByPath(state.sites.active, path, {
 						excludes: state.pathNavigator[id].excludes,
 						limit: state.pathNavigator[id].limit,
 						sortStrategy: state.pathNavigator[id].sortStrategy,
@@ -254,13 +257,14 @@ export default [
 						...(keyword && { keyword })
 					}).pipe(
 						map(({ item, children }) =>
-							pathNavigatorConditionallySetPathComplete({ id, path, parent: item, children })
+							pathNavigatorConditionallySetPathComplete({ id, path: pathAtStart, parent: item, children })
 						),
 						catchAjaxError(
-							(error) => pathNavigatorConditionallySetPathFailed({ id, error }),
+							(error) => pathNavigatorConditionallySetPathFailed({ id, path: pathAtStart, error }),
 							(error) => pushErrorDialog({ props: { error: error.response ?? error } })
 						)
-					)
+					);
+				}
 			)
 		),
 	// endregion
