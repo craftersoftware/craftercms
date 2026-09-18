@@ -303,7 +303,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const theme = useTheme();
 	const { isFullScreen = false } = useEnhancedDialogContext() ?? {};
 	const username = useActiveUser()?.username;
-	const effectRefs = useUpdateRefs({ contentTypesById, username });
+	// `effectiveProps` is a new object on every render of the parent; keep it out of the prep effect's
+	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
+	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
@@ -414,7 +416,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				store,
 				stackEntry: stableFormContextRef.current,
 				contentTypesById: effectRefs.current.contentTypesById,
-				formProps: effectiveProps
+				formProps: effectRefs.current.effectiveProps
 			}).then(() => {
 				if (disposed) {
 					runFormControllerCleanup(stableFormContextRef.current);
@@ -729,10 +731,8 @@ function FormBootstrap(props: FormsEngineProps) {
 		customControls,
 		dispatch,
 		effectRefs,
-		effectiveProps,
 		fieldsToRender,
 		formsStackData,
-		formatMessage,
 		readonlyProp,
 		repeat,
 		siteId,
