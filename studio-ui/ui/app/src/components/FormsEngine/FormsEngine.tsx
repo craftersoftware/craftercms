@@ -1448,7 +1448,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller onBeforeSave (see formControllerLoader + FormBootstrap initialize / isFieldRelevant)
+//  - Form controller: remaining polish / docs (loader, initialize, isFieldRelevant, onBeforeSave landed)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI

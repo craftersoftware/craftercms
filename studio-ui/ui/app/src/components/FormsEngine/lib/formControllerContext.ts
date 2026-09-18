@@ -231,3 +231,24 @@ export async function attachFormController(args: {
 		stackEntry.relevantFieldIds = null;
 	}
 }
+
+/**
+ * Runs the form controller's `onBeforeSave` hook.
+ * Returns `false` when the controller vetoes save (explicit false or rejected promise).
+ */
+export async function runFormControllerBeforeSave(
+	stackEntry: StableFormContextProps | null | undefined
+): Promise<boolean> {
+	const controller = stackEntry?.formController;
+	const ctx = stackEntry?.formControllerContext;
+	if (!controller?.onBeforeSave || !ctx) {
+		return true;
+	}
+	try {
+		const allowed = await controller.onBeforeSave(ctx);
+		return allowed !== false;
+	} catch (error) {
+		console.error('Form controller onBeforeSave failed. Save was cancelled.', error);
+		return false;
+	}
+}

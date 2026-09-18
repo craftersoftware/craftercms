@@ -65,6 +65,7 @@ import {
 	collectAffectedPluginControlFields,
 	preloadControlPluginsForFields
 } from './controlPluginLoader';
+import { runFormControllerBeforeSave } from './formControllerContext';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -216,6 +217,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 						}));
 			stableFormContext.affectedPluginControlFields = fields;
 			return blockSaveForPluginFailures(fields);
+		}
+
+		// Form controller may veto save after validation / plugin preload, before XML write.
+		if (!(await runFormControllerBeforeSave(stableFormContext))) {
+			setIsSubmitting(false);
+			return;
 		}
 
 		// Repeat handled here. If true, execution ends inside if statement.
