@@ -26,6 +26,7 @@ import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
+import type { FormController, FormControllerContext } from './formControllerTypes';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -121,6 +122,17 @@ export interface StableFormContextProps {
 	state: FormsEngineCachedStackedFormState;
 	/** Fields whose control plugins failed preload (bootstrap or save); save is blocked while non-empty. */
 	affectedPluginControlFields: AffectedPluginControlField[];
+	/** Loaded FE2 form controller for this stack entry, if any. */
+	formController: FormController | null;
+	/** Host context passed to the form controller (also used by relevance / save hooks). */
+	formControllerContext: FormControllerContext | null;
+	/** Cleanup returned by `initialize`; invoked on stack pop / engine unmount. */
+	formControllerCleanup: (() => void) | null;
+	/**
+	 * Field ids that passed `isFieldRelevant` (resolved before first paint).
+	 * `null` means no relevance hook / no filtering from the controller.
+	 */
+	relevantFieldIds: Set<string> | null;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

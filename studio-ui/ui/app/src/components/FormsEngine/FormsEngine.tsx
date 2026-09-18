@@ -151,6 +151,7 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
+import { attachFormController, runFormControllerCleanup } from './lib/formControllerContext';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -244,7 +245,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				stableGlobalContextRef.current.formsStackData.pop();
+				const stack = stableGlobalContextRef.current.formsStackData;
+				runFormControllerCleanup(stack[stack.length - 1]);
+				stack.pop();
 				setCount(-1);
 			},
 			updateProps(stackIndex, formProps) {
@@ -256,6 +259,16 @@ function GlobalFormsState(props: FormsEngineProps) {
 		};
 		return api;
 	}, [store]);
+	// Root engine unmount: clean up any remaining controllers (including the root entry).
+	useEffect(() => {
+		return () => {
+			const stack = stableGlobalContextRef.current?.formsStackData;
+			if (!stack) return;
+			for (let i = stack.length - 1; i >= 0; i--) {
+				runFormControllerCleanup(stack[i]);
+			}
+		};
+	}, []);
 	return (
 		<ErrorBoundary>
 			<StableGlobalContext.Provider value={stableGlobalContextRef.current}>
@@ -290,7 +303,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const theme = useTheme();
 	const { isFullScreen = false } = useEnhancedDialogContext() ?? {};
 	const username = useActiveUser()?.username;
-	const effectRefs = useUpdateRefs({ contentTypesById, username });
+	// `effectiveProps` is a new object on every render of the parent; keep it out of the prep effect's
+	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
+	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
@@ -396,7 +411,19 @@ function FormBootstrap(props: FormsEngineProps) {
 				return affected;
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
-			setReady(true);
+			return attachFormController({
+				siteId,
+				store,
+				stackEntry: stableFormContextRef.current,
+				contentTypesById: effectRefs.current.contentTypesById,
+				formProps: effectRefs.current.effectiveProps
+			}).then(() => {
+				if (disposed) {
+					runFormControllerCleanup(stableFormContextRef.current);
+					return;
+				}
+				setReady(true);
+			});
 		};
 		if (
 			// A repeat group is being opened as a stacked form.
@@ -784,7 +811,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms } = stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, relevantFieldIds } = stableFormContext;
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -801,19 +828,38 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = useMemo(() => {
-		if (!isEmbedded) return contentType.sections;
-		// If the item is embedded, exclude the 'file-name' field from the sections.
-		// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
-		// being rendered in the ToC and the form.
-		return contentType.sections.map((section) => ({
-			...section,
-			fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
-		}));
-	}, [contentType.sections, isEmbedded]);
+		let sections = contentType.sections;
+		if (isEmbedded) {
+			// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
+			// being rendered in the ToC and the form.
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
+			}));
+		}
+		if (relevantFieldIds) {
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => relevantFieldIds.has(fieldId))
+			}));
+		}
+		return sections;
+	}, [contentType.sections, isEmbedded, relevantFieldIds]);
+	const visibleFieldsToRender = useMemo(() => {
+		if (!fieldsToRender) return fieldsToRender;
+		if (!relevantFieldIds) return fieldsToRender;
+		return fieldsToRender.filter((field) => relevantFieldIds.has(field.id));
+	}, [fieldsToRender, relevantFieldIds]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
-	const tableOfContents = <TableOfContents fieldsToRender={fieldsToRender} containerRef={containerRef} />;
+	const tableOfContents = (
+		<TableOfContents
+			fieldsToRender={visibleFieldsToRender}
+			sections={contentTypeSections}
+			containerRef={containerRef}
+		/>
+	);
 	const effectRefs = useUpdateRefs({
-		fieldsToRender,
+		fieldsToRender: visibleFieldsToRender,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
@@ -1203,10 +1249,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 								{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
 							</Alert>
 						)}
-						{fieldsToRender ? (
+						{visibleFieldsToRender ? (
 							// Renders the specified set of fields only
 							<Paper sx={{ p: 2 }}>
-								{fieldsToRender.map((field, index) =>
+								{visibleFieldsToRender.map((field, index) =>
 									renderFieldControl(field, stableFormContext.atoms.valueByFieldId, index === 0, readonly, contentType)
 								)}
 							</Paper>
@@ -1415,7 +1461,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller loading and execution
+//  - Form controller: remaining polish / docs (loader, initialize, isFieldRelevant, onBeforeSave landed)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI
