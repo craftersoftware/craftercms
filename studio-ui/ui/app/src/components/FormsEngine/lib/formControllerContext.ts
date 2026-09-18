@@ -17,6 +17,7 @@
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type LookupTable from '../../../models/LookupTable';
+import type { Subject } from 'rxjs';
 import type { JotaiStore } from '../types';
 import { XmlKeys } from './formConsts';
 import type { FormsEngineAtoms, StableFormContextProps } from './formsEngineContext';
@@ -49,6 +50,8 @@ export interface CreateFormControllerContextArgs {
 	mode: FormControllerMode;
 	readonly: boolean;
 	contentTypesById: LookupTable<ContentType>;
+	/** Internal subject; exposed on the context as a read-only Observable. */
+	fieldUpdates$: Subject<string>;
 }
 
 export function createFormControllerContext({
@@ -59,7 +62,8 @@ export function createFormControllerContext({
 	path,
 	mode,
 	readonly,
-	contentTypesById
+	contentTypesById,
+	fieldUpdates$
 }: CreateFormControllerContextArgs): FormControllerContext {
 	const isCreateMode = mode === 'create';
 	const isEmbedded = mode === 'embedded';
@@ -71,6 +75,7 @@ export function createFormControllerContext({
 		readonly,
 		isCreateMode,
 		isEmbedded,
+		fieldUpdates$: fieldUpdates$.asObservable(),
 		getValues() {
 			return extractAtomValues(store, atoms.valueByFieldId);
 		},
@@ -203,7 +208,8 @@ export async function attachFormController(args: {
 		path: stackEntry.itemMeta.path,
 		mode,
 		readonly,
-		contentTypesById
+		contentTypesById,
+		fieldUpdates$: stackEntry.fieldUpdates$
 	});
 
 	stackEntry.formController = controller;

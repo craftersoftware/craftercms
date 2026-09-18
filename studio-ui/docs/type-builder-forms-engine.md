@@ -540,7 +540,8 @@ Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` 
 | `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)` | Read/write current field atoms                                     |
 | `getField(fieldId)` / `getContentType(id?)`                      | Field/type metadata                                                |
 | `isCreateMode`, `isEmbedded`, `readonly`                         | Mode flags                                                         |
-| Later (optional)                                                 | `subscribe(fieldId, cb)`, snackbar/dispatch helpers                |
+| `fieldUpdates$`                                                  | Observable of field ids that changed; subscribe in `initialize`    |
+| Later (optional)                                                 | Convenience `subscribe(fieldId, cb)`, snackbar/dispatch helpers    |
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
 

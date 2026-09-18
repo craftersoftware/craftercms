@@ -16,6 +16,7 @@
 
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
+import type { Observable } from 'rxjs';
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -40,6 +41,11 @@ export interface FormControllerContext {
 	setValue(fieldId: string, value: unknown): void;
 	getField(fieldId: string): ContentTypeField | undefined;
 	getContentType(id?: string): ContentType | undefined;
+	/**
+	 * Emits the field id whenever a field value changes (after initialization).
+	 * Subscribe in `initialize` and unsubscribe in the returned cleanup.
+	 */
+	fieldUpdates$: Observable<string>;
 }
 
 /**
