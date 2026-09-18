@@ -15,12 +15,13 @@
  */
 
 import type ContentType from '../../../models/ContentType';
+import type { ContentTypeField } from '../../../models/ContentType';
 import type LookupTable from '../../../models/LookupTable';
 import type { JotaiStore } from '../types';
 import { XmlKeys } from './formConsts';
 import type { FormsEngineAtoms, StableFormContextProps } from './formsEngineContext';
 import { loadFormController } from './formControllerLoader';
-import type { FormControllerContext, FormControllerMode } from './formControllerTypes';
+import type { FormController, FormControllerContext, FormControllerMode } from './formControllerTypes';
 import { extractAtomValues } from './formUtils';
 import type { PrimitiveAtom } from 'jotai';
 
@@ -29,6 +30,7 @@ export type FormControllerModeProps = {
 	create?: { embedded?: boolean };
 	update?: { modelId?: string };
 	repeat?: unknown;
+	fieldsToRender?: ContentTypeField[];
 };
 
 export function resolveFormControllerMode(props: FormControllerModeProps): FormControllerMode {
@@ -102,7 +104,7 @@ export function createFormControllerContext({
 	};
 }
 
-/** Invokes and clears a stack entry's form-controller cleanup (idempotent). */
+/** Invokes and clears a stack entry's form-controller cleanup. */
 export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
 	if (!stackEntry?.formControllerCleanup) return;
 	const cleanup = stackEntry.formControllerCleanup;
@@ -114,11 +116,62 @@ export function runFormControllerCleanup(stackEntry: StableFormContextProps | un
 	}
 }
 
+function clearFormControllerState(stackEntry: StableFormContextProps): void {
+	stackEntry.formController = null;
+	stackEntry.formControllerContext = null;
+	stackEntry.formControllerCleanup = null;
+	stackEntry.relevantFieldIds = null;
+}
+
+/**
+ * Awaits `isFieldRelevant` for each field. Returns `null` when there is no hook (no filtering).
+ * On rejection/error for a field, that field stays visible (soft-fail).
+ */
+export async function resolveRelevantFieldIds(
+	fields: ContentTypeField[],
+	controller: FormController | null | undefined,
+	ctx: FormControllerContext | null | undefined
+): Promise<Set<string> | null> {
+	if (!controller?.isFieldRelevant || !ctx) {
+		return null;
+	}
+	const results = await Promise.all(
+		fields.map(async (field) => {
+			try {
+				const relevant = await controller.isFieldRelevant!(field, ctx);
+				return [field.id, relevant !== false] as const;
+			} catch (error) {
+				console.error(
+					`Form controller isFieldRelevant for field "${field.id}" failed. The field will remain visible.`,
+					error
+				);
+				return [field.id, true] as const;
+			}
+		})
+	);
+	return new Set(results.filter(([, relevant]) => relevant).map(([id]) => id));
+}
+
+function collectFieldsForRelevance(
+	contentType: ContentType,
+	formProps: FormControllerModeProps,
+	mode: FormControllerMode
+): ContentTypeField[] {
+	if (formProps.fieldsToRender?.length) {
+		return formProps.fieldsToRender;
+	}
+	let fields = Object.values(contentType.fields);
+	if (mode === 'embedded') {
+		fields = fields.filter((field) => field.id !== XmlKeys.fileName);
+	}
+	return fields;
+}
+
 const commonInitErrorMsg = 'The form will proceed as though no custom type controller exists.';
 
 /**
  * Loads the type's form controller (if gated), builds context, awaits `initialize`,
- * and stores controller + cleanup on the stack entry. Soft-fails on errors.
+ * resolves field relevance, and stores controller + cleanup on the stack entry. Soft-fails on errors.
  */
 export async function attachFormController(args: {
 	siteId: string;
@@ -130,17 +183,13 @@ export async function attachFormController(args: {
 	const { siteId, store, stackEntry, contentTypesById, formProps } = args;
 	const contentType = stackEntry.itemMeta?.contentType;
 	if (!contentType) {
-		stackEntry.formController = null;
-		stackEntry.formControllerContext = null;
-		stackEntry.formControllerCleanup = null;
+		clearFormControllerState(stackEntry);
 		return;
 	}
 
 	const controller = await loadFormController(siteId, contentType.id, contentType.hasJsController);
 	if (!controller) {
-		stackEntry.formController = null;
-		stackEntry.formControllerContext = null;
-		stackEntry.formControllerCleanup = null;
+		clearFormControllerState(stackEntry);
 		return;
 	}
 
@@ -160,14 +209,25 @@ export async function attachFormController(args: {
 	stackEntry.formController = controller;
 	stackEntry.formControllerContext = ctx;
 	stackEntry.formControllerCleanup = null;
+	stackEntry.relevantFieldIds = null;
 
 	try {
 		const cleanup = await controller.initialize?.(ctx);
 		stackEntry.formControllerCleanup = typeof cleanup === 'function' ? cleanup : null;
 	} catch (error) {
 		console.error(`Form controller initialize for "${contentType.id}" failed. ${commonInitErrorMsg}`, error);
-		stackEntry.formController = null;
-		stackEntry.formControllerContext = null;
-		stackEntry.formControllerCleanup = null;
+		clearFormControllerState(stackEntry);
+		return;
+	}
+
+	const fields = collectFieldsForRelevance(contentType, formProps, mode);
+	try {
+		stackEntry.relevantFieldIds = await resolveRelevantFieldIds(fields, controller, ctx);
+	} catch (error) {
+		console.error(
+			`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
+			error
+		);
+		stackEntry.relevantFieldIds = null;
 	}
 }

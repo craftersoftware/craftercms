@@ -811,7 +811,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms } = stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, relevantFieldIds } = stableFormContext;
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -828,19 +828,38 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = useMemo(() => {
-		if (!isEmbedded) return contentType.sections;
-		// If the item is embedded, exclude the 'file-name' field from the sections.
-		// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
-		// being rendered in the ToC and the form.
-		return contentType.sections.map((section) => ({
-			...section,
-			fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
-		}));
-	}, [contentType.sections, isEmbedded]);
+		let sections = contentType.sections;
+		if (isEmbedded) {
+			// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
+			// being rendered in the ToC and the form.
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
+			}));
+		}
+		if (relevantFieldIds) {
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => relevantFieldIds.has(fieldId))
+			}));
+		}
+		return sections;
+	}, [contentType.sections, isEmbedded, relevantFieldIds]);
+	const visibleFieldsToRender = useMemo(() => {
+		if (!fieldsToRender) return fieldsToRender;
+		if (!relevantFieldIds) return fieldsToRender;
+		return fieldsToRender.filter((field) => relevantFieldIds.has(field.id));
+	}, [fieldsToRender, relevantFieldIds]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
-	const tableOfContents = <TableOfContents fieldsToRender={fieldsToRender} containerRef={containerRef} />;
+	const tableOfContents = (
+		<TableOfContents
+			fieldsToRender={visibleFieldsToRender}
+			sections={contentTypeSections}
+			containerRef={containerRef}
+		/>
+	);
 	const effectRefs = useUpdateRefs({
-		fieldsToRender,
+		fieldsToRender: visibleFieldsToRender,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
@@ -1222,10 +1241,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 								{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
 							</Alert>
 						)}
-						{fieldsToRender ? (
+						{visibleFieldsToRender ? (
 							// Renders the specified set of fields only
 							<Paper sx={{ p: 2 }}>
-								{fieldsToRender.map((field, index) =>
+								{visibleFieldsToRender.map((field, index) =>
 									renderFieldControl(field, stableFormContext.atoms.valueByFieldId, index === 0, readonly, contentType)
 								)}
 							</Paper>
@@ -1429,7 +1448,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller field relevance / onBeforeSave (see formControllerLoader + FormBootstrap initialize)
+//  - Form controller onBeforeSave (see formControllerLoader + FormBootstrap initialize / isFieldRelevant)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI

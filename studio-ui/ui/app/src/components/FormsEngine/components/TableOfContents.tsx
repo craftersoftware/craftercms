@@ -16,6 +16,7 @@
 
 import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 'react';
 import { ContentTypeField } from '../../../models';
+import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
 import { getScrollContainer } from '../lib/formUtils';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
@@ -36,14 +37,16 @@ import { XmlKeys } from '../lib/formConsts';
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
 	fieldsToRender: ContentTypeField[];
+	/** When provided (full form), ToC sections follow the same filtered field lists as the form body. */
+	sections?: ContentTypeSection[];
 }
 
-export function TableOfContents({ containerRef, fieldsToRender }: TableOfContentsProps) {
+export function TableOfContents({ containerRef, fieldsToRender, sections }: TableOfContentsProps) {
 	const store = useJotaiStore();
 	const atoms = useContext(StableFormContext).atoms;
 	const contentType = useContext(ItemMetaContext).contentType;
 	const contentTypeFields = contentType.fields;
-	const contentTypeSections = contentType.sections;
+	const contentTypeSections = sections ?? contentType.sections;
 	const setOpenDrawerSidebar = useSetAtom(atoms.tableOfContentsDrawerOpen);
 	const expandedStateAtoms = atoms.expandedStateBySectionId;
 	const expandedSectionIds = useAtomValue(
@@ -83,7 +86,11 @@ export function TableOfContents({ containerRef, fieldsToRender }: TableOfContent
 	};
 	const [searchFieldValue, setSearchFieldValue] = useState('');
 	const [filteredFields, setFilteredFields] = useState<ContentTypeField[]>(null);
-	const contentTypeFieldsArray = fieldsToRender ?? Object.values(contentTypeFields);
+	const contentTypeFieldsArray =
+		fieldsToRender ??
+		contentTypeSections.flatMap((section) =>
+			section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean)
+		);
 	const onKeyword$ = useDebouncedInput((value) => {
 		if (!value?.trim()) {
 			return setFilteredFields(null);

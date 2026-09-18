@@ -128,6 +128,11 @@ export interface StableFormContextProps {
 	formControllerContext: FormControllerContext | null;
 	/** Cleanup returned by `initialize`; invoked on stack pop / engine unmount. */
 	formControllerCleanup: (() => void) | null;
+	/**
+	 * Field ids that passed `isFieldRelevant` (resolved before first paint).
+	 * `null` means no relevance hook / no filtering from the controller.
+	 */
+	relevantFieldIds: Set<string> | null;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(
