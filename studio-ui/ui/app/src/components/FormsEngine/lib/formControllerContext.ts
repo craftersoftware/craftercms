@@ -109,16 +109,22 @@ export function createFormControllerContext({
 	};
 }
 
-/** Invokes and clears a stack entry's form-controller cleanup. */
-export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
-	if (!stackEntry?.formControllerCleanup) return;
-	const cleanup = stackEntry.formControllerCleanup;
-	stackEntry.formControllerCleanup = null;
+/** Invokes a form-controller cleanup, containing any error it throws. */
+function invokeCleanup(cleanup: (() => void) | null | undefined): void {
+	if (!cleanup) return;
 	try {
 		cleanup();
 	} catch (error) {
 		console.error('Form controller cleanup threw.', error);
 	}
+}
+
+/** Invokes and clears a stack entry's form-controller cleanup. */
+export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
+	if (!stackEntry?.formControllerCleanup) return;
+	const cleanup = stackEntry.formControllerCleanup;
+	stackEntry.formControllerCleanup = null;
+	invokeCleanup(cleanup);
 }
 
 function clearFormControllerState(stackEntry: StableFormContextProps): void {
@@ -177,6 +183,10 @@ const commonInitErrorMsg = 'The form will proceed as though no custom type contr
 /**
  * Loads the type's form controller (if gated), builds context, awaits `initialize`,
  * resolves field relevance, and stores controller + cleanup on the stack entry. Soft-fails on errors.
+ *
+ * The cleanup returned by `initialize` belongs to the invocation that obtained it: when `isStale`
+ * reports that this invocation was superseded, that cleanup runs here and the shared stack entry is
+ * left untouched for whoever owns it now.
  */
 export async function attachFormController(args: {
 	siteId: string;
@@ -184,19 +194,21 @@ export async function attachFormController(args: {
 	stackEntry: StableFormContextProps;
 	contentTypesById: LookupTable<ContentType>;
 	formProps: FormControllerModeProps;
+	/** Reports whether this invocation was superseded (prep effect re-run / form unmount). */
+	isStale?: () => boolean;
 }): Promise<void> {
-	const { siteId, store, stackEntry, contentTypesById, formProps } = args;
+	const { siteId, store, stackEntry, contentTypesById, formProps, isStale } = args;
+	const stale = () => Boolean(isStale?.());
+	// A controller already on the entry is being replaced: run its cleanup rather than dropping it, and
+	// stop exposing it, as it is torn down from here on.
+	runFormControllerCleanup(stackEntry);
+	clearFormControllerState(stackEntry);
+
 	const contentType = stackEntry.itemMeta?.contentType;
-	if (!contentType) {
-		clearFormControllerState(stackEntry);
-		return;
-	}
+	if (!contentType) return;
 
 	const controller = await loadFormController(siteId, contentType.id, contentType.hasJsController);
-	if (!controller) {
-		clearFormControllerState(stackEntry);
-		return;
-	}
+	if (stale() || !controller) return;
 
 	const mode = resolveFormControllerMode(formProps);
 	const ctx = createFormControllerContext({
@@ -210,30 +222,37 @@ export async function attachFormController(args: {
 		fieldUpdates$: stackEntry.fieldUpdates$
 	});
 
-	stackEntry.formController = controller;
-	stackEntry.formControllerContext = ctx;
-	stackEntry.formControllerCleanup = null;
-	stackEntry.relevantFieldIds = null;
-
+	let ownCleanup: (() => void) | null = null;
 	try {
 		const cleanup = await controller.initialize?.(ctx);
-		stackEntry.formControllerCleanup = typeof cleanup === 'function' ? cleanup : null;
+		ownCleanup = typeof cleanup === 'function' ? cleanup : null;
 	} catch (error) {
 		console.error(`Form controller initialize for "${contentType.id}" failed. ${commonInitErrorMsg}`, error);
-		clearFormControllerState(stackEntry);
+		return;
+	}
+	if (stale()) {
+		invokeCleanup(ownCleanup);
 		return;
 	}
 
+	// Committed only once `initialize` settled, so the entry never exposes a half-initialized controller.
+	stackEntry.formController = controller;
+	stackEntry.formControllerContext = ctx;
+	stackEntry.formControllerCleanup = ownCleanup;
+
 	const fields = collectFieldsForRelevance(contentType, formProps, mode);
+	let relevantFieldIds: Set<string> | null = null;
 	try {
-		stackEntry.relevantFieldIds = await resolveRelevantFieldIds(fields, controller, ctx);
+		relevantFieldIds = await resolveRelevantFieldIds(fields, controller, ctx);
 	} catch (error) {
 		console.error(
 			`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
 			error
 		);
-		stackEntry.relevantFieldIds = null;
+		relevantFieldIds = null;
 	}
+	if (stale()) return;
+	stackEntry.relevantFieldIds = relevantFieldIds;
 }
 
 /**

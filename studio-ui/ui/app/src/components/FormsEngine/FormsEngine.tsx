@@ -416,12 +416,11 @@ function FormBootstrap(props: FormsEngineProps) {
 				store,
 				stackEntry: stableFormContextRef.current,
 				contentTypesById: effectRefs.current.contentTypesById,
-				formProps: effectRefs.current.effectiveProps
+				formProps: effectRefs.current.effectiveProps,
+				// Attach owns the teardown of its own `initialize` when this prep run is superseded.
+				isStale: () => disposed
 			}).then(() => {
-				if (disposed) {
-					runFormControllerCleanup(stableFormContextRef.current);
-					return;
-				}
+				if (disposed) return;
 				setReady(true);
 			});
 		};
