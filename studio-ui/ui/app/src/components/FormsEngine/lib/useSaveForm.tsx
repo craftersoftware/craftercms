@@ -116,6 +116,11 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
 	return async (draft?: boolean) => {
+		// Get before the first await so a second call cannot re-enter preload or onBeforeSave.
+		if (jotai.get(stableFormContext.atoms.isSubmitting)) {
+			return;
+		}
+		setIsSubmitting(true);
 		const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
 			const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
 			return showAlert({
@@ -220,6 +225,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 						}));
 			stableFormContext.affectedPluginControlFields = fields;
 			blockSaveForPluginFailures(fields);
+			setIsSubmitting(false);
 			return false;
 		};
 		if (!(await preloadPluginsOrBlock(values))) {
@@ -243,7 +249,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 		// Repeat handled here. If true, execution ends inside if statement.
 		if (isRepeatMode) {
-			(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(onSavePromiseHandler);
+			(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
+				onSavePromiseHandler,
+				showSaveError
+			);
 			return;
 		}
 
@@ -254,6 +263,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 		if (isEmbedded) {
 			// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 			if (!isInternalNameValid(values)) {
+				setIsSubmitting(false);
 				return showAlert({
 					dispatch,
 					message: formatMessage(
@@ -275,7 +285,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 
 			// Root embedded: merge the component into the parent document and write the parent.
-			setIsSubmitting(true);
 			const path = itemPath;
 			const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 				const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
@@ -288,19 +297,23 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 				saveOrCancel$.subscribe({
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
-						const isAmended = ajaxResponse.response?.items?.[0]?.amended;
-						const result = (await onSave?.({
-							dom,
-							xml,
-							values,
-							versionComment,
-							path
-						})) as FormSavePromiseResult;
-						const shouldClose = result.close || closeAfterSave;
-						if (!shouldClose && isAmended) {
-							triggerReload();
+						try {
+							const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+							const result = (await onSave?.({
+								dom,
+								xml,
+								values,
+								versionComment,
+								path
+							})) as FormSavePromiseResult;
+							const shouldClose = result.close || closeAfterSave;
+							if (!shouldClose && isAmended) {
+								triggerReload();
+							}
+							onSavePromiseHandler(result);
+						} catch (error) {
+							showSaveError(error as AjaxError | Error);
 						}
-						onSavePromiseHandler(result);
 					},
 					error: showSaveError
 				});
@@ -334,7 +347,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 			return;
 		}
-		setIsSubmitting(true);
 		let path: string;
 		let renamePath: string;
 		const isRename = !isCreateMode && fileName !== initialFileName;
@@ -352,20 +364,24 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 		const saveActionCallbacks = {
 			async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
-				const isAmended = ajaxResponse.response?.items?.[0]?.amended;
-				const dom = fromString(xml);
-				const result = (await onSave?.({ dom, xml, values, versionComment, path })) as FormSavePromiseResult;
-				const shouldClose = result.close || closeAfterSave;
-				if (!shouldClose) {
-					if (isCreateMode) {
-						setSavedCreatePath(path);
-					} else if (isRename) {
-						setRenamedPath(renamePath);
-					} else if (isAmended) {
-						triggerReload();
+				try {
+					const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+					const dom = fromString(xml);
+					const result = (await onSave?.({ dom, xml, values, versionComment, path })) as FormSavePromiseResult;
+					const shouldClose = result.close || closeAfterSave;
+					if (!shouldClose) {
+						if (isCreateMode) {
+							setSavedCreatePath(path);
+						} else if (isRename) {
+							setRenamedPath(renamePath);
+						} else if (isAmended) {
+							triggerReload();
+						}
 					}
+					onSavePromiseHandler(result);
+				} catch (error) {
+					showSaveError(error as AjaxError | Error);
 				}
-				onSavePromiseHandler(result);
 			},
 			error: showSaveError
 		};
@@ -444,49 +460,52 @@ export function useSaveForm(props: UseSaveFormProps) {
 			type: 'CREATE',
 			target: path,
 			contentMetadata: { contentType: contentType.id }
-		}).subscribe(({ allowed, modifiedValue }) => {
-			if (allowed) {
-				if (modifiedValue) {
+		}).subscribe({
+			next({ allowed, modifiedValue }) {
+				if (allowed) {
+					if (modifiedValue) {
+						dispatch(
+							pushConfirmDialog({
+								id: dialogId,
+								props: {
+									body: formatMessage(
+										{
+											defaultMessage:
+												'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
+										},
+										{
+											originalPath: path,
+											path: modifiedValue
+										}
+									),
+									onOk: () => {
+										dispatch(popDialog({ id: dialogId }));
+										checkWorkflow();
+									},
+									onCancel: () => {
+										setIsSubmitting(false);
+										dispatch(popDialog({ id: dialogId }));
+									}
+								}
+							})
+						);
+					} else {
+						checkWorkflow();
+					}
+				} else {
+					setIsSubmitting(false);
 					dispatch(
 						pushConfirmDialog({
 							id: dialogId,
 							props: {
-								body: formatMessage(
-									{
-										defaultMessage:
-											'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
-									},
-									{
-										originalPath: path,
-										path: modifiedValue
-									}
-								),
-								onOk: () => {
-									dispatch(popDialog({ id: dialogId }));
-									checkWorkflow();
-								},
-								onCancel: () => {
-									setIsSubmitting(false);
-									dispatch(popDialog({ id: dialogId }));
-								}
+								body: formatMessage({ defaultMessage: 'This content goes against project policies.' }),
+								onOk: () => dispatch(popDialog({ id: dialogId }))
 							}
 						})
 					);
-				} else {
-					checkWorkflow();
 				}
-			} else {
-				setIsSubmitting(false);
-				dispatch(
-					pushConfirmDialog({
-						id: dialogId,
-						props: {
-							body: formatMessage({ defaultMessage: 'This content goes against project policies.' }),
-							onOk: () => dispatch(popDialog({ id: dialogId }))
-						}
-					})
-				);
-			}
+			},
+			error: showSaveError
 		});
 	};
 }
