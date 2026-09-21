@@ -161,14 +161,14 @@ export function useSaveForm(props: UseSaveFormProps) {
 			// preload below re-attempt the import; `controlPluginCache` drops failed entries so a retry is possible.
 			stableFormContext.affectedPluginControlFields = [];
 			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
-			const validityStates = await Promise.all(
+			let validityStates = await Promise.all(
 				Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
 					jotai.get(validityDataAtom)
 				)
 			);
 			// Put system properties in before creating the XML
-			const isFormInvalid = validityStates.some((state) => !state.isValid);
-			const saveAsDraft = draft || isFormInvalid;
+			let isFormInvalid = validityStates.some((state) => !state.isValid);
+			let saveAsDraft = draft || isFormInvalid;
 
 			const onSavePromiseHandler = ({ close }: FormSavePromiseResult) => {
 				if (saveAsDraft) {
@@ -249,6 +249,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 				if (!(await preloadPluginsOrBlock(values))) {
 					return;
 				}
+				validityStates = await Promise.all(
+					Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
+						jotai.get(validityDataAtom)
+					)
+				);
+				isFormInvalid = validityStates.some((state) => !state.isValid);
+				saveAsDraft = draft || isFormInvalid;
 			}
 
 			// Repeat handled here. If true, execution ends inside if statement.
