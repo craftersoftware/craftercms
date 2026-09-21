@@ -193,7 +193,7 @@ export function SiteManagement() {
 	const cardHeaderBlock = (
 		<CardHeader
 			title={<FormattedMessage defaultMessage="Get Started" />}
-			titleTypographyProps={{ variant: 'h6' }}
+			slotProps={{ title: { variant: 'h6' } }}
 			subheader={
 				hasCreateSitePermission ? (
 					<FormattedMessage defaultMessage="Create your first project." />
