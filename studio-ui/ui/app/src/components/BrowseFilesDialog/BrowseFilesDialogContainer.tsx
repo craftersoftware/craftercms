@@ -100,7 +100,7 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 		// Since lookahead regex is not supported by opensearch, we are excluding the current path from the search using a
 		// negative filter in a query. This scenario only happens with pages, hence the `withIndex` function wrapping the
 		// current path.
-		search(site, {
+		return search(site, {
 			...prepareSearchParams(searchParameters),
 			path: `${currentPath}/[^/]+(/index\\.xml)?`,
 			query: `-localId:"${withIndex(currentPath)}"`
@@ -132,22 +132,24 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
 	}, [site, preselectedPaths, multiSelect, setSelectedLookup]);
 
 	useEffect(() => {
-		let subscription;
+		let pathExistenceSubscription;
+		let searchSubscription;
 		if (!browsePathExists) {
 			setFetchingBrowsePathExists(true);
-			subscription = checkPathExistence(site, browsePath).subscribe((exists) => {
+			pathExistenceSubscription = checkPathExistence(site, browsePath).subscribe((exists) => {
 				if (exists) {
-					fetchItems();
+					searchSubscription = fetchItems();
 					setBrowsePathExists(true);
 				}
 				setFetchingBrowsePathExists(false);
 			});
 		} else {
-			fetchItems();
+			searchSubscription = fetchItems();
 		}
 
 		return () => {
-			subscription?.unsubscribe();
+			pathExistenceSubscription?.unsubscribe();
+			searchSubscription?.unsubscribe();
 		};
 	}, [fetchItems, site, browsePath, browsePathExists]);
 
