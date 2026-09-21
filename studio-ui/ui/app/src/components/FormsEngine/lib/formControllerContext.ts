@@ -48,7 +48,6 @@ export interface CreateFormControllerContextArgs {
 	contentType: ContentType;
 	path: string | null | undefined;
 	mode: FormControllerMode;
-	readonly: boolean;
 	contentTypesById: LookupTable<ContentType>;
 	/** Internal subject; exposed on the context as a read-only Observable. */
 	fieldUpdates$: Subject<string>;
@@ -61,7 +60,6 @@ export function createFormControllerContext({
 	contentType,
 	path,
 	mode,
-	readonly,
 	contentTypesById,
 	fieldUpdates$
 }: CreateFormControllerContextArgs): FormControllerContext {
@@ -72,7 +70,9 @@ export function createFormControllerContext({
 		contentType,
 		path: path ?? undefined,
 		mode,
-		readonly,
+		get readonly() {
+			return store.get(atoms.readonly);
+		},
 		isCreateMode,
 		isEmbedded,
 		fieldUpdates$: fieldUpdates$.asObservable(),
@@ -199,7 +199,6 @@ export async function attachFormController(args: {
 	}
 
 	const mode = resolveFormControllerMode(formProps);
-	const readonly = store.get(stackEntry.atoms.readonly);
 	const ctx = createFormControllerContext({
 		siteId,
 		store,
@@ -207,7 +206,6 @@ export async function attachFormController(args: {
 		contentType,
 		path: stackEntry.itemMeta.path,
 		mode,
-		readonly,
 		contentTypesById,
 		fieldUpdates$: stackEntry.fieldUpdates$
 	});
