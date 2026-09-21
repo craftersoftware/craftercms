@@ -422,6 +422,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 			case 'jsController':
 				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'javascript');
+				if (!type.hasJsController) {
+					setType({ ...type, hasJsController: true });
+					onUpdateHasPendingChanges(true);
+				}
 				break;
 			case 'groovyController':
 				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'groovy');

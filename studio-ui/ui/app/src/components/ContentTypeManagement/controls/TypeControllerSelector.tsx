@@ -22,10 +22,10 @@ import { FormattedMessage } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
-import { editTypeController, editTypeTemplate, TypeBuilderControl } from '../utils';
+import { editTypeController, TypeBuilderControl } from '../utils';
 import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
-import { ensureSingleSlash } from '../../../utils/string';
 
 export interface TypeControllerSelectorProps extends TypeBuilderControl {
 	value: string;
@@ -46,7 +46,8 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const type: 'javascript' | 'groovy' = getPropertyValue(field.properties, 'type', 'javascript') as
 		| 'javascript'
 		| 'groovy';
-	const fileName = type === 'javascript' ? 'form-controller.js' : 'controller.groovy';
+	const isJavascript = type === 'javascript';
+	const fileName = isJavascript ? 'form-controller.js' : 'controller.groovy';
 
 	const onEditController = () => {
 		editTypeController(basePath, contentTypeId, dispatch, type);
@@ -62,7 +63,7 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 				disabled
 				endAdornment={
 					<Tooltip title={<FormattedMessage defaultMessage="Edit Controller" />}>
-						<IconButton onClick={() => onEditController()}>
+						<IconButton onClick={onEditController}>
 							<EditRoundedIcon />
 						</IconButton>
 					</Tooltip>
