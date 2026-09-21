@@ -23,9 +23,11 @@ import { useDispatch } from 'react-redux';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
-import { editTypeController, TypeBuilderControl } from '../utils';
+import { editTypeController, editTypeTemplate, TypeBuilderControl } from '../utils';
+import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
+import { ensureSingleSlash } from '../../../utils/string';
 
-export interface TypeJsControllerSelectorProps extends TypeBuilderControl {
+export interface TypeControllerSelectorProps extends TypeBuilderControl {
 	value: string;
 }
 
@@ -33,7 +35,7 @@ export interface TypeJsControllerSelectorProps extends TypeBuilderControl {
  * Allows the selection and edition of a controller for a content type.
  * The controller file is created if it doesn't exist.
  */
-export function TypeJsControllerSelector(props: TypeJsControllerSelectorProps) {
+export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const { field, autoFocus } = props;
 	const htmlId = useId();
 	const dispatch = useDispatch();
@@ -41,10 +43,13 @@ export function TypeJsControllerSelector(props: TypeJsControllerSelectorProps) {
 	const stableFormContext = useStableFormContext();
 	// stableFormContext.originalValues is of type `ContentType`, and `id` is the current contentTypeId.
 	const contentTypeId: string = stableFormContext.originalValues.id as string;
-	const fileName = 'controller.groovy';
+	const type: 'javascript' | 'groovy' = getPropertyValue(field.properties, 'type', 'javascript') as
+		| 'javascript'
+		| 'groovy';
+	const fileName = type === 'javascript' ? 'form-controller.js' : 'controller.groovy';
 
 	const onEditController = () => {
-		editTypeController(basePath, contentTypeId, dispatch, 'groovy');
+		editTypeController(basePath, contentTypeId, dispatch, type);
 	};
 
 	return (
@@ -67,4 +72,4 @@ export function TypeJsControllerSelector(props: TypeJsControllerSelectorProps) {
 	);
 }
 
-export default TypeJsControllerSelector;
+export default TypeControllerSelector;

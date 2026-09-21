@@ -73,7 +73,7 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	'type-image-selector': undefined,
 	'read-only-value': undefined,
 	range: (field, value) => prepareObject(field, value as object),
-	'type-js-controller-selector': undefined,
+	'type-controller-selector': undefined,
 	'key-value-map': (field, value) => prepareObjectArray(field, value as object[]),
 	'type-destination-paths-selector': (field, value) => prepareObject(field, value as object),
 	'path-with-macro-creator': undefined,
