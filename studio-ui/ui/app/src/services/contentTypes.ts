@@ -33,7 +33,7 @@ import { LookupTable } from '../models/LookupTable';
 import { camelize, capitalize, ensureSingleSlash, isBlank, toColor } from '../utils/string';
 import { Observable, of } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
-import { map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
 import { fetchContentItems } from './content';
 import { ContentItem } from '../models/Item';
@@ -684,7 +684,10 @@ export function fetchContentTypePreviewImageUrl(
 			`/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId: 'HEAD' })}`,
 			void 0,
 			'blob'
-		).pipe(map((ajax) => URL.createObjectURL(ajax.response as Blob)));
+		).pipe(
+			map((ajax) => URL.createObjectURL(ajax.response as Blob)),
+			catchError(() => of(DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL))
+		);
 	}
 	return of(DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL);
 }
