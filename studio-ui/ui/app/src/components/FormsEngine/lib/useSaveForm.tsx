@@ -132,7 +132,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 		// Bootstrap may have recorded preload failures for this form instance. Clear them and let the
 		// preload below re-attempt the import; `controlPluginCache` drops failed entries so a retry is possible.
 		stableFormContext.affectedPluginControlFields = [];
-		const values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
+		let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 		const validityStates = await Promise.all(
 			Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) => jotai.get(validityDataAtom))
 		);
@@ -194,17 +194,20 @@ export function useSaveForm(props: UseSaveFormProps) {
 		// repeat stacked forms as well as create/edit/embedded.
 		// Repeat mode: only the repeat item's fields (fieldsToRender). Root/embedded: full content type.
 		const fieldsForPluginPreload = isRepeatMode ? fieldsToRender : contentType.fields;
-		const pluginPreloadFailures = await preloadControlPluginsForFields(
-			siteId,
-			fieldsForPluginPreload,
-			values,
-			contentTypesById
-		);
-		if (pluginPreloadFailures.length) {
+		const preloadPluginsOrBlock = async (currentValues: LookupTable<unknown>) => {
+			const pluginPreloadFailures = await preloadControlPluginsForFields(
+				siteId,
+				fieldsForPluginPreload,
+				currentValues,
+				contentTypesById
+			);
+			if (!pluginPreloadFailures.length) {
+				return true;
+			}
 			const affected = collectAffectedPluginControlFields(
 				fieldsForPluginPreload,
 				pluginPreloadFailures,
-				values,
+				currentValues,
 				contentTypesById
 			);
 			const fields =
@@ -216,13 +219,26 @@ export function useSaveForm(props: UseSaveFormProps) {
 							fieldName: failure.plugin.name
 						}));
 			stableFormContext.affectedPluginControlFields = fields;
-			return blockSaveForPluginFailures(fields);
+			blockSaveForPluginFailures(fields);
+			return false;
+		};
+		if (!(await preloadPluginsOrBlock(values))) {
+			return;
 		}
 
 		// Form controller may veto save after validation / plugin preload, before XML write.
+		const hadBeforeSaveHook = Boolean(stableFormContext.formController?.onBeforeSave);
 		if (!(await runFormControllerBeforeSave(stableFormContext))) {
 			setIsSubmitting(false);
 			return;
+		}
+
+		// onBeforeSave may have mutated atoms via setValue (incl. new embeds); refresh before serialize/onSave.
+		if (hadBeforeSaveHook) {
+			values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
+			if (!(await preloadPluginsOrBlock(values))) {
+				return;
+			}
 		}
 
 		// Repeat handled here. If true, execution ends inside if statement.
