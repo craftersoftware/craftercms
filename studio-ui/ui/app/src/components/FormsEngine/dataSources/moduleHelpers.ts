@@ -290,8 +290,8 @@ export function createBrowseAction(options: {
 				mimeTypes,
 				multiSelect: multiSelect ? (ctx.remainingCapacity ?? 2) > 1 : false,
 				initialParameters: {
-					sortBy: options.meta?.sortBy,
-					sortOrder: options.meta?.sortOrder
+					...(options.meta?.sortBy != null && { sortBy: options.meta.sortBy }),
+					...(options.meta?.sortOrder != null && { sortOrder: options.meta.sortOrder })
 				}
 			});
 			if (!items.length) return null;
