@@ -838,10 +838,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 			}));
 		}
 		if (relevantFieldIds) {
-			sections = sections.map((section) => ({
-				...section,
-				fields: section.fields.filter((fieldId) => relevantFieldIds.has(fieldId))
-			}));
+			sections = sections
+				.map((section) => ({
+					...section,
+					fields: section.fields.filter((fieldId) => relevantFieldIds.has(fieldId))
+				}))
+				// Remove sections that contain no relevant fields.
+				.filter((section) => section.fields.length > 0);
 		}
 		return sections;
 	}, [contentType.sections, isEmbedded, relevantFieldIds]);
