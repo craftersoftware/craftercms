@@ -272,6 +272,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// stateRef.current.activeFormContext = null;
 		setVirtualContentType(null);
 		setSelectedFieldIdPath(null);
+		setValidatingForm(false);
 		setOpen(false);
 		return true;
 	};
@@ -766,15 +767,20 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
 			if (!effectRefs.current.open) return;
 			const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
+			// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
+			const formContext = stateRef.current.activeFormContext;
 			onUpdateHasPendingChanges(true);
 			stateRef.current.formFieldsChanged = true;
 			const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
 			// Check validation atoms of the form to see if there are any unfulfilled validations.
 			setValidatingForm(true);
-			const hasErrors = await validityAtomsHaveErrors(
-				jotai,
-				stateRef.current?.activeFormContext?.atoms?.validationByFieldId
-			);
+			const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+			// `activeFormContext` is intentionally kept after close, so also re-check `open`.
+			if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
+				// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
+				if (!effectRefs.current.open) setValidatingForm(false);
+				return;
+			}
 			setActiveFormHasErrors(hasErrors);
 			nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
 			if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
@@ -784,9 +790,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 			// Live-sync draft thumbnailFileName while the type properties form is open,
 			// so TypeCardMedia can reload by filename without waiting for form commit / save.
-			const { selectedField, selectedSection, selectedDataSource, activeFormContext } = stateRef.current;
-			if (!selectedField && !selectedSection && !selectedDataSource && activeFormContext) {
-				const thumbnailAtom = activeFormContext.atoms.valueByFieldId.thumbnailFileName;
+			const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
+			if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
+				const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
 				if (thumbnailAtom) {
 					const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
 					setType((current) =>
