@@ -24,6 +24,7 @@ import DialogBody from '../DialogBody/DialogBody';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import DialogFooter from '../DialogFooter/DialogFooter';
@@ -179,7 +180,16 @@ export function CreateFileDialogContainer(props: CreateFileContainerProps) {
 
 	const extensionField = (
 		<FormControl variant="outlined" sx={{ minWidth: 110, flexShrink: 0 }} disabled={isSubmitting}>
-			<Select id="createFileDialogExtension" value={extension} onChange={onExtensionChange}>
+			<InputLabel id="createFileDialogExtensionLabel">
+				<FormattedMessage id="createFileDialog.extension" defaultMessage="Extension" />
+			</InputLabel>
+			<Select
+				id="createFileDialogExtension"
+				labelId="createFileDialogExtensionLabel"
+				label={<FormattedMessage id="createFileDialog.extension" defaultMessage="Extension" />}
+				value={extension}
+				onChange={onExtensionChange}
+			>
 				{TEMPLATE_EXTENSIONS.map((templateExtension) => (
 					<MenuItem key={templateExtension} value={templateExtension}>
 						{`.${templateExtension}`}
