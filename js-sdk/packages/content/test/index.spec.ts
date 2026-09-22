@@ -322,9 +322,9 @@ describe('Object Utils', () => {
 
 	describe('preParseSearchResults util', () => {
 		it('should pre-parse the search results correctly', () => {
-			const preParsedSearchResult = preParseSearchResults(unparsedSearchHit);
+			const preParsedSearchResult = preParseSearchResults(unparsedSearchHit)._source;
 			expect(preParsedSearchResult).to.not.be.null;
-			expect(preParsedSearchResult).to.deep.equal = parsedSearchHit;
+			expect(preParsedSearchResult).to.deep.equal(parsedSearchHit);
 		});
 	});
 });
