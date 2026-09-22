@@ -29,7 +29,7 @@ import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
 
-export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header' | 'activeItem';
+export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
 
 export interface PathNavigatorTreeUIProps extends Pick<
 	PathNavigatorTreeItemProps,
@@ -58,7 +58,7 @@ export interface PathNavigatorTreeUIProps extends Pick<
 	isCollapsed: boolean;
 	expandedNodes: string[];
 	classes?: Partial<Record<PathNavigatorTreeUIClassKey, string>>;
-	sxs?: PartialSxRecord<PathNavigatorTreeUIClassKey>;
+	sxs?: PartialSxRecord<PathNavigatorTreeUIClassKey | 'activeItem'>;
 	active?: PathNavigatorTreeItemProps['active'];
 }
 

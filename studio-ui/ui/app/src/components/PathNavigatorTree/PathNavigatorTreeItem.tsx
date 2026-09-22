@@ -46,7 +46,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 	itemsByPath: LookupTable<ContentItem>;
 	active?: Record<string, boolean>;
 	classes?: Partial<Record<PathNavigatorTreeBreadcrumbsClassKey, string>>;
-	sxs?: PartialSxRecord<PathNavigatorTreeBreadcrumbsClassKey>;
+	sxs?: PartialSxRecord<PathNavigatorTreeBreadcrumbsClassKey | 'activeItem'>;
 	showNavigableAsLinks?: boolean;
 	showPublishingTarget?: boolean;
 	showWorkflowState?: boolean;
@@ -59,7 +59,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 }
 
 export type PathNavigatorTreeBreadcrumbsClassKey =
-	'activeItem' | 'searchRoot' | 'searchInput' | 'searchCleanButton' | 'searchCloseButton';
+	'searchRoot' | 'searchInput' | 'searchCleanButton' | 'searchCloseButton';
 
 const translations = defineMessages({
 	filter: {
