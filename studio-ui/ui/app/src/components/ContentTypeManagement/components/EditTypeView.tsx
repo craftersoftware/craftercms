@@ -146,6 +146,11 @@ interface EditAppContextProps {
 	 * Used to avoid committing changes where not necessary.
 	 **/
 	formFieldsChanged: boolean;
+	/**
+	 * Incremented for every debounced validation run. Awaiting runs capture it beforehand so that
+	 * results from overlapping validations of the same form can be discarded when they resolve out of order.
+	 **/
+	validationSeq: number;
 }
 
 export interface ContentTypeManagementConfig {
@@ -771,6 +776,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
 			// Check validation atoms of the form to see if there are any unfulfilled validations.
 			setValidatingForm(true);
+			const validationSeq = ++stateRef.current.validationSeq;
 			const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
 			// `activeFormContext` is intentionally kept after close, so also re-check `open`.
 			if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
@@ -778,6 +784,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				if (!effectRefs.current.open) setValidatingForm(false);
 				return;
 			}
+			// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
+			if (validationSeq !== stateRef.current.validationSeq) return;
 			setActiveFormHasErrors(hasErrors);
 			nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
 			if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
@@ -920,7 +928,8 @@ function createContextObject(): EditAppContextProps {
 		selectedField: null,
 		selectedSection: null,
 		selectedDataSource: null,
-		formFieldsChanged: false
+		formFieldsChanged: false,
+		validationSeq: 0
 	};
 }
 
