@@ -29,17 +29,32 @@ export type FormControllerMode = 'create' | 'edit' | 'embedded' | 'repeat';
  * use `isFieldRelevant` instead.
  */
 export interface FormControllerContext {
+	/** Active site id for site-scoped reads/writes from the controller. */
 	siteId: string;
+	/** Content type definition for the form this controller is attached to. */
 	contentType: ContentType;
+	/** Item path when editing an existing item; `undefined` in create (and some stacked) modes. */
 	path: string | undefined;
+	/** How the form was opened: create, edit, embedded, or repeat. */
 	mode: FormControllerMode;
+	/** Live read of the form's readonly atom; true when the form is view-only. */
 	readonly: boolean;
+	/** True when the form was opened in create mode (`mode === 'create'`). */
 	isCreateMode: boolean;
+	/** True when the form is an embedded/child form (`mode === 'embedded'`). */
 	isEmbedded: boolean;
+	/** Returns a snapshot of all current field values keyed by field id. */
 	getValues(): Record<string, unknown>;
+	/** Returns the current value for a single field id (including file-name when applicable). */
 	getValue(fieldId: string): unknown;
+	/** Sets a field value on the form's value atom (including file-name when applicable). */
 	setValue(fieldId: string, value: unknown): void;
+	/** Looks up a field definition on the current content type by id. */
 	getField(fieldId: string): ContentTypeField | undefined;
+	/**
+	 * Returns a loaded content type by id, or the current form's type when `id` is omitted.
+	 * Used for embeds and related types.
+	 */
 	getContentType(id?: string): ContentType | undefined;
 	/**
 	 * Emits the field id whenever a field value changes (after initialization).

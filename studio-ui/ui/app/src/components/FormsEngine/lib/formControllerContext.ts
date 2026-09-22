@@ -26,7 +26,9 @@ import type { FormController, FormControllerContext, FormControllerMode } from '
 import { extractAtomValues } from './formUtils';
 import type { PrimitiveAtom } from 'jotai';
 
-/** Minimal props shape used to resolve controller mode (avoids importing FormsEngine.tsx). */
+/**
+ * Minimal form-open props used to resolve {@link FormControllerMode} without importing FormsEngine.tsx.
+ */
 export type FormControllerModeProps = {
 	create?: { embedded?: boolean };
 	update?: { modelId?: string };
@@ -34,6 +36,12 @@ export type FormControllerModeProps = {
 	fieldsToRender?: ContentTypeField[];
 };
 
+/**
+ * Derives the controller mode from how the form was opened.
+ *
+ * @param props - Create / update / repeat / fieldsToRender flags from the form props
+ * @returns `'repeat'` | `'embedded'` | `'create'` | `'edit'`
+ */
 export function resolveFormControllerMode(props: FormControllerModeProps): FormControllerMode {
 	if (props.repeat) return 'repeat';
 	if (props.create?.embedded || props.update?.modelId) return 'embedded';
@@ -41,18 +49,40 @@ export function resolveFormControllerMode(props: FormControllerModeProps): FormC
 	return 'edit';
 }
 
+/** Arguments for building the narrow host API passed to type-local form controllers. */
 export interface CreateFormControllerContextArgs {
+	/** Active site id used for site-scoped reads/writes from the controller. */
 	siteId: string;
+	/** Jotai store that owns this form stack entry's field/value atoms. */
 	store: JotaiStore;
+	/** Form atoms (values, readonly, fileName, etc.) that getValue/setValue/readonly read from. */
 	atoms: FormsEngineAtoms;
+	/** Content type definition for the form this controller is attached to. */
 	contentType: ContentType;
+	/** Item path when editing an existing item; null/undefined in create (and some stacked) modes. */
 	path: string | null | undefined;
+	/** How the form was opened: create, edit, embedded, or repeat. */
 	mode: FormControllerMode;
+	/** Lookup of all loaded content types; used by getContentType(id) for embeds/related types. */
 	contentTypesById: LookupTable<ContentType>;
-	/** Internal subject; exposed on the context as a read-only Observable. */
+	/**
+	 * Internal subject that emits field ids when values change.
+	 * Exposed on the context as a read-only Observable (`fieldUpdateStream`).
+	 */
 	fieldUpdates$: Subject<string>;
 }
 
+/**
+ * Builds the narrow {@link FormControllerContext} host API for a type-local form controller.
+ *
+ * Controllers receive this object (not the Jotai store or React tree). Field I/O goes through
+ * `getValue` / `setValue` / `getValues`; change notifications through `fieldUpdateStream`;
+ * metadata through `getField` / `getContentType`. `readonly` is read live from the form's
+ * readonly atom.
+ *
+ * @param args - Store, atoms, content type, and field-update subject for this form stack entry
+ * @returns Context object passed to `initialize`, `isFieldRelevant`, and `onBeforeSave`
+ */
 export function createFormControllerContext({
 	siteId,
 	store,
@@ -109,7 +139,11 @@ export function createFormControllerContext({
 	};
 }
 
-/** Invokes a form-controller cleanup, containing any error it throws. */
+/**
+ * Invokes a form-controller cleanup callback, logging (and swallowing) any throw.
+ *
+ * @param cleanup - Function returned from `initialize`, if any
+ */
 function invokeCleanup(cleanup: (() => void) | null | undefined): void {
 	if (!cleanup) return;
 	try {
@@ -119,7 +153,12 @@ function invokeCleanup(cleanup: (() => void) | null | undefined): void {
 	}
 }
 
-/** Invokes and clears a stack entry's form-controller cleanup. */
+/**
+ * Runs and clears the cleanup stored on a form stack entry (idempotent).
+ * Used on stack pop / engine unmount so `initialize` listeners are torn down once.
+ *
+ * @param stackEntry - Form stack entry that may hold `formControllerCleanup`
+ */
 export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
 	if (!stackEntry?.formControllerCleanup) return;
 	const cleanup = stackEntry.formControllerCleanup;
@@ -127,6 +166,11 @@ export function runFormControllerCleanup(stackEntry: StableFormContextProps | un
 	invokeCleanup(cleanup);
 }
 
+/**
+ * Resets controller-related fields on a stack entry (controller, context, cleanup, relevance).
+ *
+ * @param stackEntry - Form stack entry to clear
+ */
 function clearFormControllerState(stackEntry: StableFormContextProps): void {
 	stackEntry.formController = null;
 	stackEntry.formControllerContext = null;
@@ -135,8 +179,15 @@ function clearFormControllerState(stackEntry: StableFormContextProps): void {
 }
 
 /**
- * Awaits `isFieldRelevant` for each field. Returns `null` when there is no hook (no filtering).
- * On rejection/error for a field, that field stays visible (soft-fail).
+ * Awaits `isFieldRelevant` for each field and returns the set of ids that should stay visible.
+ *
+ * Returns `null` when there is no relevance hook (caller should not filter). On rejection/error for
+ * a single field, that field stays visible (soft-fail).
+ *
+ * @param fields - Candidate fields (full type or `fieldsToRender` subset)
+ * @param controller - Loaded form controller, if any
+ * @param ctx - Host context for the controller hooks
+ * @returns Relevant field ids, or `null` if no filtering applies
  */
 export async function resolveRelevantFieldIds(
 	fields: ContentTypeField[],
@@ -163,6 +214,17 @@ export async function resolveRelevantFieldIds(
 	return new Set(results.filter(([, relevant]) => relevant).map(([id]) => id));
 }
 
+/**
+ * Chooses which fields to run relevance against for this form open.
+ *
+ * Uses `fieldsToRender` when present (repeat / partial forms); otherwise all type fields,
+ * excluding `file-name` for embedded modes.
+ *
+ * @param contentType - Type whose fields may be filtered
+ * @param formProps - Open props (may include `fieldsToRender`)
+ * @param mode - Resolved controller mode
+ * @returns Field list passed to {@link resolveRelevantFieldIds}
+ */
 function collectFieldsForRelevance(
 	contentType: ContentType,
 	formProps: FormControllerModeProps,
@@ -181,12 +243,20 @@ function collectFieldsForRelevance(
 const commonInitErrorMsg = 'The form will proceed as though no custom type controller exists.';
 
 /**
- * Loads the type's form controller (if gated), builds context, awaits `initialize`,
- * resolves field relevance, and stores controller + cleanup on the stack entry. Soft-fails on errors.
+ * Loads the type's form controller (if gated by `hasJsController`), builds context, awaits
+ * `initialize`, resolves field relevance, and stores controller + cleanup on the stack entry.
  *
- * The cleanup returned by `initialize` belongs to the invocation that obtained it: when `isStale`
- * reports that this invocation was superseded, that cleanup runs here and the shared stack entry is
- * left untouched for whoever owns it now.
+ * Soft-fails on load / initialize / relevance errors (form continues without a controller or with
+ * all fields visible). The cleanup returned by `initialize` belongs to the invocation that obtained
+ * it: when `isStale` reports that this invocation was superseded, that cleanup runs here and the
+ * shared stack entry is left untouched for whoever owns it now.
+ *
+ * @param args.siteId - Active site id
+ * @param args.store - Jotai store for this forms root
+ * @param args.stackEntry - Stack entry to attach controller state onto
+ * @param args.contentTypesById - Content-types lookup for context helpers
+ * @param args.formProps - Open props used for mode + relevance field list
+ * @param args.isStale - Optional; when true, discard results (prep re-run / unmount)
  */
 export async function attachFormController(args: {
 	siteId: string;
@@ -256,8 +326,10 @@ export async function attachFormController(args: {
 }
 
 /**
- * Runs the form controller's `onBeforeSave` hook.
- * Returns `false` when the controller vetoes save (explicit false or rejected promise).
+ * Runs the form controller's `onBeforeSave` hook for a stack entry.
+ *
+ * @param stackEntry - Form stack entry that may hold a loaded controller + context
+ * @returns `true` to continue save; `false` when the controller vetoes (explicit false or thrown/rejected)
  */
 export async function runFormControllerBeforeSave(
 	stackEntry: StableFormContextProps | null | undefined

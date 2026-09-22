@@ -26,10 +26,25 @@ const commonErrorMsg = 'The form will proceed as though no custom type controlle
 /** Session cache of in-flight / completed loads, keyed by `siteId::contentTypeId`. */
 const formControllerCache = new Map<string, Promise<FormController | null>>();
 
+/**
+ * Builds the session-cache key for a site + content type pair.
+ *
+ * @param siteId - Active site id
+ * @param contentTypeId - Content type id whose `form-controller.js` is being loaded
+ * @returns Cache key in the form `siteId::contentTypeId`
+ */
 function cacheKey(siteId: string, contentTypeId: string): string {
 	return `${siteId}::${contentTypeId}`;
 }
 
+/**
+ * Picks and validates a {@link FormController} from an ESM module export.
+ * Accepts `default` or named `formController`; requires `apiVersion` to match
+ * the supported API version (defaults to that version when omitted).
+ *
+ * @param module - Namespace object from dynamic `import()` of the controller source
+ * @returns The controller object, or `null` if missing / wrong shape / unsupported version
+ */
 function resolveControllerExport(module: Record<string, unknown>): FormController | null {
 	const candidate = (module.default ?? module.formController) as FormController | undefined;
 	if (!candidate || typeof candidate !== 'object') {
@@ -44,8 +59,15 @@ function resolveControllerExport(module: Record<string, unknown>): FormControlle
 
 /**
  * Fetches and ESM-imports a content-type-local `form-controller.js`.
- * Soft-fails (logs + returns `null`) on network, parse, or contract errors.
- * Pass `hasJsController: false` to skip the network call.
+ *
+ * Soft-fails (logs + returns `null`) on network, parse, or contract errors so the form
+ * can continue without a custom controller. Successful and in-flight loads are cached for
+ * the session; failed loads are removed from the cache so a later retry can try again.
+ *
+ * @param siteId - Active site id
+ * @param contentTypeId - Content type id that owns the controller file
+ * @param hasJsController - When `false`, skips the network call and resolves to `null`
+ * @returns Promise of the loaded controller, or `null` when skipped / soft-failed
  */
 export function loadFormController(
 	siteId: string,
@@ -106,7 +128,14 @@ export function loadFormController(
 	return loading;
 }
 
-/** Returns the cached controller promise if present (including in-flight loads). */
+/**
+ * Returns the cached controller promise for a site + content type, if any.
+ * Includes in-flight loads; does not start a new fetch.
+ *
+ * @param siteId - Active site id
+ * @param contentTypeId - Content type id whose cache entry to look up
+ * @returns The cached promise, or `undefined` when nothing has been loaded yet
+ */
 export function getCachedFormController(
 	siteId: string,
 	contentTypeId: string
@@ -116,7 +145,10 @@ export function getCachedFormController(
 
 /**
  * Clears the session form-controller cache.
- * Pass site + content type to clear one entry; omit both to clear all.
+ * Pass both `siteId` and `contentTypeId` to remove one entry; omit both to clear all.
+ *
+ * @param siteId - Optional site id of the entry to clear
+ * @param contentTypeId - Optional content type id of the entry to clear (required with `siteId`)
  */
 export function clearFormControllerCache(siteId?: string, contentTypeId?: string): void {
 	if (siteId != null && contentTypeId != null) {
@@ -129,6 +161,10 @@ export function clearFormControllerCache(siteId?: string, contentTypeId?: string
 /**
  * Public runtime surface for form-controller load/cache helpers (tests & debugging).
  * Authors do not need this; FE2 loads controllers during form bootstrap.
+ *
+ * - `load` → {@link loadFormController}
+ * - `getCached` → {@link getCachedFormController}
+ * - `clearCache` → {@link clearFormControllerCache}
  */
 export const formsEngineFormControllersHost = {
 	load: loadFormController,
