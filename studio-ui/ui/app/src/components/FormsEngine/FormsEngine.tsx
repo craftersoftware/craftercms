@@ -387,13 +387,15 @@ function FormBootstrap(props: FormsEngineProps) {
 					effectRefs.current.contentTypesById
 				);
 				// If import failed but no field mapped (defensive), still surface something so save stays blocked.
-				if (pluginPreloadFailures.length && !affected.length) {
-					return pluginPreloadFailures.map((failure) => ({
-						fieldId: failure.plugin.name,
-						fieldName: failure.plugin.name
-					}));
-				}
-				return affected;
+				const fields =
+					pluginPreloadFailures.length && !affected.length
+						? pluginPreloadFailures.map((failure) => ({
+								fieldId: failure.plugin.name,
+								fieldName: failure.plugin.name
+							}))
+						: affected;
+				// Tag as bootstrap so save will not clear them for an in-place import retry.
+				return fields.map((field) => ({ ...field, fromBootstrap: true }));
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
 			setReady(true);

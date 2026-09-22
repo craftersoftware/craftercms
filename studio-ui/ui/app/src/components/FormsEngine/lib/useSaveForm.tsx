@@ -115,8 +115,21 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
 	return async (draft?: boolean) => {
+		const fieldListMessage = (fields: AffectedPluginControlField[]) =>
+			fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
+		const blockSaveForBootstrapPluginFailures = (fields: AffectedPluginControlField[]) => {
+			return showAlert({
+				dispatch,
+				message: formatMessage(
+					{
+						defaultMessage:
+							'Cannot save: one or more control plugins failed to load when the form opened ({fields}). Reload the form and try again. If the problem continues, contact your administrator.'
+					},
+					{ fields: fieldListMessage(fields) }
+				)
+			});
+		};
 		const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
-			const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
 			return showAlert({
 				dispatch,
 				message: formatMessage(
@@ -124,12 +137,20 @@ export function useSaveForm(props: UseSaveFormProps) {
 						defaultMessage:
 							'Cannot save: one or more control plugins failed to load ({fields}). If the problem continues, contact your administrator.'
 					},
-					{ fields: fieldList }
+					{ fields: fieldListMessage(fields) }
 				)
 			});
 		};
-		// Bootstrap may have recorded preload failures for this form instance. Clear them and let the
-		// preload below re-attempt the import; `controlPluginCache` drops failed entries so a retry is possible.
+		// Bootstrap failures mean values may have been parsed without the plugin valueRetriever.
+		// Do not clear them for an in-place import retry — a successful load would still let
+		// valueSerializer see raw shapes. Require a form reload so bootstrap re-parses correctly.
+		const bootstrapAffectedFields = stableFormContext.affectedPluginControlFields.filter(
+			(field) => field.fromBootstrap
+		);
+		if (bootstrapAffectedFields.length) {
+			return blockSaveForBootstrapPluginFailures(bootstrapAffectedFields);
+		}
+		// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
 		stableFormContext.affectedPluginControlFields = [];
 		const values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 		const validityStates = await Promise.all(
@@ -193,8 +214,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 		const contentTypesById = store.getState().contentTypes.byId;
 		// Re-walk current values (incl. embeds added after open) so serializers exist before XML build.
-		// Runs before the repeat early-return so a failed bootstrap preload can retry on save in
-		// repeat stacked forms as well as create/edit/embedded.
+		// Runs before the repeat early-return so save-time preload covers create/edit/embedded/repeat.
+		// Bootstrap failures are handled above and are not retried here.
 		// Repeat mode: only the repeat item's fields (fieldsToRender). Root/embedded: full content type.
 		const fieldsForPluginPreload = isRepeatMode ? fieldsToRender : contentType.fields;
 		const pluginPreloadFailures = await preloadControlPluginsForFields(
