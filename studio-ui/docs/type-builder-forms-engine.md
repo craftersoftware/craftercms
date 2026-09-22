@@ -540,7 +540,7 @@ Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` 
 | `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)` | Read/write current field atoms                                     |
 | `getField(fieldId)` / `getContentType(id?)`                      | Field/type metadata                                                |
 | `isCreateMode`, `isEmbedded`, `readonly`                         | Mode flags                                                         |
-| `fieldUpdates$`                                                  | Observable of field ids that changed; subscribe in `initialize`    |
+| `fieldUpdateStream`                                              | Observable of field ids that changed; subscribe in `initialize`    |
 | Later (optional)                                                 | Convenience `subscribe(fieldId, cb)`, snackbar/dispatch helpers    |
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
@@ -561,7 +561,7 @@ Repeat-group / embedded child forms: load the **child type’s** controller when
 1. **Client-side Controller** UI must edit/create `form-controller.js`, not `controller.groovy`.
 2. Keep Groovy (`controller.groovy`) as a separate type property/action (server-side).
 3. Toggling `hasJsController` on should ensure the JS file exists (reuse `editTypeController(..., 'javascript')`).
-4. Optionally offer a stub FE2 controller template when creating the file.
+4. Optionally offer a stub FE2 controller template when creating the file. **Done** — `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`) and via `createFile` when the filename matches.
 
 #### Non-goals (initial)
 

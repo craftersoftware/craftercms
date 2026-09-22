@@ -75,7 +75,7 @@ export function createFormControllerContext({
 		},
 		isCreateMode,
 		isEmbedded,
-		fieldUpdates$: fieldUpdates$.asObservable(),
+		fieldUpdateStream: fieldUpdates$.asObservable(),
 		getValues() {
 			return extractAtomValues(store, atoms.valueByFieldId);
 		},

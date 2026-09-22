@@ -58,6 +58,7 @@ import TextFieldWithMax from '../TextFieldWithMax';
 import { Typography } from '@mui/material';
 import useSpreadState from '../../hooks/useSpreadState';
 import { getFileNameFromPath } from '../../utils/path';
+import { FORM_CONTROLLER_FILE_NAME, FORM_CONTROLLER_JS_STUB } from '../FormsEngine/lib/formControllerStub';
 import { fetchContentItem } from '../../state/actions/content';
 
 export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps) {
@@ -275,7 +276,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 	useEffect(() => {
 		if (content === null) {
 			if (isNew) {
-				setContent('');
+				setContent(fileName === FORM_CONTROLLER_FILE_NAME ? FORM_CONTROLLER_JS_STUB : '');
 				setAffectedPackages([]);
 				setLoading(false);
 				return;

@@ -45,7 +45,7 @@ export interface FormControllerContext {
 	 * Emits the field id whenever a field value changes (after initialization).
 	 * Subscribe in `initialize` and unsubscribe in the returned cleanup.
 	 */
-	fieldUpdates$: Observable<string>;
+	fieldUpdateStream: Observable<string>;
 }
 
 /**
