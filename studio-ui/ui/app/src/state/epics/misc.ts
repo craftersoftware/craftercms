@@ -89,56 +89,53 @@ const epics = [
 				}
 				const fileName = editContentTypeTemplate.type === type ? getFileNameFromPath(path) : payload.fileName;
 				const destinationPath = editContentTypeTemplate.type === type ? getParentPath(path) : payload.path;
+				// Only editing templates should associate. Groovy controllers are not on the content type definition.
+				const shouldAssociateTemplate = type !== editController.type;
+				const onSaveSuccess = payload.onSaveSuccess;
+				const openCodeEditor = (dialogId: string, isNew = false) =>
+					pushDialog({
+						id: dialogId,
+						component: createComponentId('CodeEditorDialog'),
+						allowFullScreen: true,
+						allowMinimize: true,
+						props: {
+							site: state.sites.active,
+							path,
+							mode,
+							contentType,
+							isNew,
+							associateTemplateOnSave: isNew && shouldAssociateTemplate,
+							onSuccess: onSaveSuccess,
+							onClose: () => store.dispatch(popCodeEditorDialog({ id: dialogId }))
+						}
+					});
 				return merge(
 					of(blockUI({ message: getIntl().formatMessage(translations.verifyingAffectedWorkflows) })),
 					fetchContentItem(state.sites.active, path).pipe(
-						map((item) => {
+						map(() => {
 							const dialogId = nanoid();
-							return batchActions([
-								pushDialog({
-									id: dialogId,
-									component: createComponentId('CodeEditorDialog'),
-									allowFullScreen: true,
-									allowMinimize: true,
-									props: {
-										site: state.sites.active,
-										path,
-										mode,
-										contentType,
-										onClose: () => store.dispatch(popCodeEditorDialog({ id: dialogId }))
-									}
-								}),
-								unblockUI()
-							]);
+							return batchActions([openCodeEditor(dialogId), unblockUI()]);
 						}),
 						catchError(({ response }) => {
 							if (response.response.code === 7000) {
 								const dialogId = nanoid();
-								return of(
-									createFileAction({
-										path: destinationPath,
-										fileName,
-										onCreated: batchActions(
-											[
-												// Only editing templates should associate. Groovy controllers are not on the content type definition.
-												type !== editController.type &&
-													associateTemplate({ contentTypeId: contentType, displayTemplate: path }),
-												pushDialog({
-													id: dialogId,
-													component: createComponentId('CodeEditorDialog'),
-													props: {
-														site: state.sites.active,
-														path,
-														mode,
-														contentType,
-														onClose: () => store.dispatch(popCodeEditorDialog({ id: dialogId }))
-													}
-												}),
-												unblockUI()
-											].filter(Boolean)
-										)
-									})
-								);
+								if (payload.createBeforeOpen) {
+									return of(
+										createFileAction({
+											path: destinationPath,
+											fileName,
+											onCreated: batchActions(
+												[
+													shouldAssociateTemplate &&
+														associateTemplate({ contentTypeId: contentType, displayTemplate: path }),
+													openCodeEditor(dialogId),
+													unblockUI()
+												].filter(Boolean)
+											)
+										})
+									);
+								}
+								return of(batchActions([openCodeEditor(dialogId, true), unblockUI()]));
 							} else {
 								return of(batchActions([pushErrorDialog({ props: { error: response.response } }), unblockUI()]));
 							}

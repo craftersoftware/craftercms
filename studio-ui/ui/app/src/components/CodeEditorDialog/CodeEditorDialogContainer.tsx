@@ -39,7 +39,7 @@ import { useActiveUser } from '../../hooks/useActiveUser';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useReferences } from '../../hooks/useReferences';
 import { getHostToGuestBus } from '../../utils/subjects';
-import { reloadRequest } from '../../state/actions/preview';
+import { associateTemplate, reloadRequest } from '../../state/actions/preview';
 import { CodeEditorDialogContainerProps, getContentModelSnippets } from './utils';
 import { MultiChoiceSaveButton } from '../MultiChoiceSaveButton';
 import useUpToDateRefs from '../../hooks/useUpdateRefs';
@@ -57,19 +57,35 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import TextFieldWithMax from '../TextFieldWithMax';
 import { Typography } from '@mui/material';
 import useSpreadState from '../../hooks/useSpreadState';
+import { getFileNameFromPath } from '../../utils/path';
+import { fetchContentItem } from '../../state/actions/content';
 
 export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps) {
-	const { path, onMinimize, onClose, mode, readonly, contentType, onFullScreen, onSuccess } = props;
+	const {
+		path,
+		onMinimize,
+		onClose,
+		mode,
+		readonly,
+		contentType,
+		isNew: isNewProp,
+		associateTemplateOnSave,
+		onFullScreen,
+		onSuccess
+	} = props;
 	const { open, isSubmitting } = useEnhancedDialogContext();
 	const item = useContentItem(path);
 	const site = useActiveSiteId();
 	const user = useActiveUser();
 	const [loading, setLoading] = useState(false);
 	const [content, setContent] = useState(null);
+	const [isNew, setIsNew] = useState(Boolean(isNewProp));
 	const itemLoaded = Boolean(item); // isLocked and isLockedForMe only hold accurate value if item was already loaded.
 	const isLocked = isLockedState(item?.state);
-	const isLockedForMe = isItemLockedForMe(item, user.username);
-	const shouldPerformLock = open && itemLoaded && !readonly && !isLockedForMe && !isLocked;
+	// Do not treat a missing/unloaded item as locked-for-me (isItemLockedForMe returns true when item is null),
+	// or the editor stays read-only until/unless the item appears in the store — e.g. right after creating a new file.
+	const isLockedForMe = !isNew && itemLoaded && isItemLockedForMe(item, user.username);
+	const shouldPerformLock = open && itemLoaded && !readonly && !isLockedForMe && !isLocked && !isNew;
 	const editorRef = useRef<any>(undefined);
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
@@ -97,6 +113,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 		saveType: null
 	});
 	const isConfig = path.startsWith('/config');
+	const fileName = getFileNameFromPath(path);
 
 	const onEditorChanges = () => {
 		clearTimeout(onChangeTimeoutRef.current);
@@ -110,12 +127,14 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 			updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 			const value = editorRef.current.getValue();
 			const module = isConfig ? (path.split('/')[2] as 'studio') : null;
-			const service$ = isConfig
-				? writeConfiguration(site, path.replace(`/config/${module}`, ''), module, value)
-				: writeContent(site, path, value, {
-						unlock: false,
-						...(saveWithCommentState.saveWithComment && { comment: saveWithCommentState.comment })
-					});
+			// New files under /config are created via writeContent (same as createFile); subsequent saves use writeConfiguration.
+			const service$ =
+				isConfig && !isNew
+					? writeConfiguration(site, path.replace(`/config/${module}`, ''), module, value)
+					: writeContent(site, path, value, {
+							unlock: false,
+							...(saveWithCommentState.saveWithComment && { comment: saveWithCommentState.comment })
+						});
 			// If item is in packages in active workflow, before saving we need to cancel the packages.
 			const preWriteAction$ = affectedPackages?.length
 				? cancelPackages(site, {
@@ -126,6 +145,14 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 
 			preWriteAction$.subscribe({
 				next() {
+					if (isNew) {
+						if (associateTemplateOnSave && contentType) {
+							dispatch(associateTemplate({ contentTypeId: contentType, displayTemplate: path }));
+						}
+						setIsNew(false);
+						// Load the newly created item so lock state / title resolve correctly for continued editing.
+						dispatch(fetchContentItem({ path }));
+					}
 					updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
 					dispatch(showSystemNotification({ message: formatMessage(translations.saved) }));
 					setTimeout(callback);
@@ -225,7 +252,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 
 	// add content model variables
 	useEffect(() => {
-		if (contentTypes && item) {
+		if (contentTypes && (item || (isNew && contentType))) {
 			const _contentType = contentType
 				? contentType
 				: Object.values(contentTypes).find((contentType) => contentType.displayTemplate === item.path)?.id;
@@ -243,10 +270,16 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 				}
 			}
 		}
-	}, [contentTypes, contentType, mode, item, freemarkerCodeSnippets, groovyCodeSnippets]);
+	}, [contentTypes, contentType, mode, item, isNew, freemarkerCodeSnippets, groovyCodeSnippets]);
 
 	useEffect(() => {
 		if (content === null) {
+			if (isNew) {
+				setContent('');
+				setAffectedPackages([]);
+				setLoading(false);
+				return;
+			}
 			setLoading(true);
 			updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 			const subscription = forkJoin([fetchContentXML(site, path), fetchAffectedPackages(site, path)]).subscribe(
@@ -261,7 +294,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 				subscription.unsubscribe();
 			};
 		}
-	}, [content, dispatch, path, site, updateSubmittingOrHasPendingChanges]);
+	}, [content, dispatch, path, site, isNew, updateSubmittingOrHasPendingChanges]);
 
 	useEffect(() => {
 		if (shouldPerformLock) {
@@ -272,7 +305,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 	return (
 		<>
 			<DialogHeader
-				title={item ? item.label : <Skeleton width="120px" />}
+				title={item ? item.label : isNew ? fileName : <Skeleton width="120px" />}
 				subtitle={
 					affectedPackages?.length ? (
 						<Alert

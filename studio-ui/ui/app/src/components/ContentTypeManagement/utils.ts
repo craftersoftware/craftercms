@@ -840,17 +840,19 @@ export function editTypeController(
 	basePath: string,
 	contentTypeId: string,
 	dispatch: Dispatch,
-	type: 'groovy' | 'javascript'
+	type: 'groovy' | 'javascript',
+	onSaveSuccess?: () => void
 ) {
 	const fileName = type === 'groovy' ? 'controller.groovy' : 'form-controller.js';
-	// editController creates the config file if it doesn't exist.
+	// If the file is missing, CodeEditor opens empty and creates it on Save (unless createBeforeOpen is set).
 	dispatch(
 		editController({
 			path: `${basePath}${contentTypeId}/`,
 			fileName,
 			mode: type,
 			contentType: contentTypeId,
-			openOnSuccess: true
+			openOnSuccess: true,
+			onSaveSuccess
 		})
 	);
 }

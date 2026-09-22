@@ -22,7 +22,6 @@ import { FormattedMessage } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
-import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { editTypeController, TypeBuilderControl } from '../utils';
 import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
@@ -33,10 +32,10 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
 
 /**
  * Allows the selection and edition of a controller for a content type.
- * The controller file is created if it doesn't exist.
+ * If the controller file does not exist, the editor opens empty and creates/associates it on Save.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
-	const { field, autoFocus } = props;
+	const { field, autoFocus, setValue } = props;
 	const htmlId = useId();
 	const dispatch = useDispatch();
 	const basePath = '/config/studio/content-types';
@@ -50,7 +49,9 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const fileName = isJavascript ? 'form-controller.js' : 'controller.groovy';
 
 	const onEditController = () => {
-		editTypeController(basePath, contentTypeId, dispatch, type);
+		editTypeController(basePath, contentTypeId, dispatch, type, () => {
+			setValue(true);
+		});
 	};
 
 	return (

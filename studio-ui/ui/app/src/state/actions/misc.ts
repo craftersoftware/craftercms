@@ -35,9 +35,11 @@ export const changeContentType = /*#__PURE__*/ createAction<{
 	newContentTypeId: string;
 }>('CHANGE_CONTENT_TYPE');
 
-export const editContentTypeTemplate = /*#__PURE__*/ createAction<{ contentTypeId: string }>(
-	'EDIT_CONTENT_TYPE_TEMPLATE'
-);
+export const editContentTypeTemplate = /*#__PURE__*/ createAction<{
+	contentTypeId: string;
+	createBeforeOpen?: boolean;
+	onSaveSuccess?: () => void;
+}>('EDIT_CONTENT_TYPE_TEMPLATE');
 
 export interface EditFilePayload {
 	path: string;
@@ -47,6 +49,10 @@ export interface EditFilePayload {
 	// The `openOnSuccess` really belongs to CreateFileDialog onCreated (success)
 	// payload; it's added here to integrate with it
 	openOnSuccess?: boolean;
+	/** When true and the file is missing, create (and associate templates) before opening the editor. Default: defer until Save. */
+	createBeforeOpen?: boolean;
+	/** Called after a successful CodeEditor save (e.g. Type Builder association). */
+	onSaveSuccess?: () => void;
 }
 
 export const editTemplate = /*#__PURE__*/ createAction<EditFilePayload>('EDIT_TEMPLATE');
