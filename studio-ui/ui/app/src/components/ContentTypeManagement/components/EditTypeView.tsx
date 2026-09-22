@@ -730,15 +730,22 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const handleReorderSectionFields = (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
 		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the reorder runs on up-to-date type state,
+		// and clear the dirty flag so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		commitOpenFormChanges();
+		stateRef.current.formFieldsChanged = false;
+
+		let nextType: ContentType;
 		setType((currentType) => {
-			const nextType = reorderSectionFields(currentType, fields, sectionId);
-			// Refresh the section form when that section is already open in the drawer.
-			if (fieldFormViewProps?.section?.id === sectionId) {
-				const nextSection = getSectionFromType(nextType, sectionId);
-				handleSectionSelected(nextSection, nextType);
-			}
+			nextType = reorderSectionFields(currentType, fields, sectionId);
 			return nextType;
 		});
+
+		// Refresh the section form when that section is already open in the drawer.
+		if (fieldFormViewProps?.section?.id === sectionId) {
+			const nextSection = getSectionFromType(nextType, sectionId);
+			handleSectionSelected(nextSection, nextType);
+		}
 	};
 
 	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
