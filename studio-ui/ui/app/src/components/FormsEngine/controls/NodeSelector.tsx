@@ -29,7 +29,7 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
 import useContentTypes from '../../../hooks/useContentTypes';
@@ -905,6 +905,7 @@ function CreateDataSourcePicker(props: {
 	onChange(e, choice: CreateDataSourcePickerData): void;
 }) {
 	const { siteId, allowedCreatePaths, contentTypesLookup, createActions, onChange } = props;
+	const { formatMessage } = useIntl();
 	const [allowedTypes, setAllowedTypes] = useState<string[] | undefined>(() =>
 		allowedCreatePaths.length ? undefined : Object.keys(props.allowedCreateTypes)
 	);
@@ -1033,16 +1034,21 @@ function CreateDataSourcePicker(props: {
 						<FormLabel id="creationStrategyLabel">
 							<FormattedMessage defaultMessage="Creation Strategy" />
 						</FormLabel>
-						<IconButton
-							size="small"
-							sx={{ ml: 1 }}
-							color="primary"
-							component="a"
-							href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-modeling.html#shared-components-vs-embedded-components"
-							target="_blank"
-						>
-							<HelpOutline fontSize="inherit" />
-						</IconButton>
+						<Tooltip title={<FormattedMessage defaultMessage="Learn more about shared vs embedded components" />}>
+							<IconButton
+								size="small"
+								sx={{ ml: 1 }}
+								color="primary"
+								component="a"
+								href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-modeling.html#shared-components-vs-embedded-components"
+								target="_blank"
+								aria-label={formatMessage({
+									defaultMessage: 'Learn more about shared vs embedded components'
+								})}
+							>
+								<HelpOutline fontSize="inherit" />
+							</IconButton>
+						</Tooltip>
 					</Box>
 					<RadioGroup aria-labelledby="creationStrategyLabel" name="creationStrategy" value={value.strategy} row>
 						<FormControlLabel
