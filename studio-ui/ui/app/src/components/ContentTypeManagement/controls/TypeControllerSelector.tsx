@@ -18,16 +18,23 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
-import { editTypeController, TypeBuilderControl } from '../utils';
+import { CONTENT_TYPES_BASE_PATH, editTypeController, TypeBuilderControl } from '../utils';
 import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
+import useActiveSiteId from '../../../hooks/useActiveSiteId';
+import { checkPathExistence, deleteItems } from '../../../services/content';
+import { ensureSingleSlash } from '../../../utils/string';
+import { nanoid } from 'nanoid';
+import { popDialog } from '../../../state/actions/dialogStack';
+import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
 
 export interface TypeControllerSelectorProps extends TypeBuilderControl {
-	value: string;
+	value: boolean;
 }
 
 /**
@@ -35,10 +42,11 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
  * If the controller file does not exist, the editor opens empty and creates/associates it on Save.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
-	const { field, autoFocus, setValue } = props;
+	const { field, value, autoFocus, setValue } = props;
 	const htmlId = useId();
 	const dispatch = useDispatch();
-	const basePath = '/config/studio/content-types';
+	const siteId = useActiveSiteId();
+	const { formatMessage } = useIntl();
 	const stableFormContext = useStableFormContext();
 	// stableFormContext.originalValues is of type `ContentType`, and `id` is the current contentTypeId.
 	const contentTypeId: string = stableFormContext.originalValues.id as string;
@@ -47,11 +55,52 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 		| 'groovy';
 	const isJavascript = type === 'javascript';
 	const fileName = isJavascript ? 'form-controller.js' : 'controller.groovy';
+	const controllerPath = ensureSingleSlash(`${CONTENT_TYPES_BASE_PATH}${contentTypeId}/${fileName}`);
 
 	const onEditController = () => {
-		editTypeController(basePath, contentTypeId, dispatch, type, () => {
+		editTypeController(CONTENT_TYPES_BASE_PATH, contentTypeId, dispatch, type, () => {
 			setValue(true);
 		});
+	};
+
+	const performDelete = () => {
+		checkPathExistence(siteId, controllerPath).subscribe({
+			next: (exists) => {
+				if (!exists) {
+					setValue(false);
+					return;
+				}
+				const title = formatMessage({ defaultMessage: 'Delete Controller' });
+				const comment = formatMessage({ defaultMessage: 'Deleting controller {fileName}' }, { fileName });
+				deleteItems(siteId, [controllerPath], title, comment).subscribe({
+					next: () => setValue(false),
+					error: ({ response }) => {
+						dispatch(pushErrorDialog({ props: { error: response?.response } }));
+					}
+				});
+			},
+			error: ({ response }) => {
+				dispatch(pushErrorDialog({ props: { error: response?.response } }));
+			}
+		});
+	};
+
+	const onDeleteController = () => {
+		const dialogId = nanoid();
+		dispatch(
+			pushConfirmDialog({
+				id: dialogId,
+				props: {
+					title: formatMessage({ defaultMessage: 'Delete Controller' }),
+					body: formatMessage({ defaultMessage: 'Delete "{fileName}"? This action cannot be undone.' }, { fileName }),
+					onCancel: () => dispatch(popDialog({ id: dialogId })),
+					onOk: () => {
+						dispatch(popDialog({ id: dialogId }));
+						performDelete();
+					}
+				}
+			})
+		);
 	};
 
 	return (
@@ -60,14 +109,23 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 				autoFocus={autoFocus}
 				id={htmlId}
 				fullWidth
-				value={fileName}
+				value={value ? fileName : ''}
 				disabled
 				endAdornment={
-					<Tooltip title={<FormattedMessage defaultMessage="Edit Controller" />}>
-						<IconButton onClick={onEditController}>
-							<EditRoundedIcon />
-						</IconButton>
-					</Tooltip>
+					<>
+						{value && (
+							<Tooltip title={<FormattedMessage defaultMessage="Delete Controller" />}>
+								<IconButton onClick={onDeleteController}>
+									<DeleteOutlineRoundedIcon />
+								</IconButton>
+							</Tooltip>
+						)}
+						<Tooltip title={<FormattedMessage defaultMessage="Edit Controller" />}>
+							<IconButton onClick={onEditController}>
+								<EditRoundedIcon />
+							</IconButton>
+						</Tooltip>
+					</>
 				}
 			/>
 		</FormsEngineField>
