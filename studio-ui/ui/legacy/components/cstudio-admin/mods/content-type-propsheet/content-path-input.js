@@ -89,7 +89,8 @@
         updateFn(null, { fieldName: this.fieldName, value });
       };
 
-      ReactDOM.render(
+      const root = craftercms.libs.ReactDOMClient.createRoot(element);
+      root.render(
         <Selector
           initialValue={initialValue}
           rootPath={properties.rootPath}
