@@ -43,11 +43,24 @@ export interface FormControllerContext {
 	isCreateMode: boolean;
 	/** True when the form is an embedded/child form (`mode === 'embedded'`). */
 	isEmbedded: boolean;
-	/** Returns a snapshot of all current field values keyed by field id. */
+	/**
+	 * Returns a snapshot of all current field values keyed by top-level field id.
+	 * Repeat groups appear as arrays of item objects (not flattened paths).
+	 */
 	getValues(): Record<string, unknown>;
-	/** Returns the current value for a single field id (including file-name when applicable). */
+	/**
+	 * Returns the current value for a field id.
+	 * Prefer a top-level atom id when present. Otherwise supports dotted paths into
+	 * nested values (e.g. `myRepeat.0.title_s` → item 0's `title_s` inside the repeat).
+	 * Numeric path segments are array indices. On a stacked repeat form (`mode === 'repeat'`),
+	 * use the inner field id directly. `fieldUpdateStream` still emits the root field id.
+	 */
 	getValue(fieldId: string): unknown;
-	/** Sets a field value on the form's value atom (including file-name when applicable). */
+	/**
+	 * Sets a field value.
+	 * Same key rules as {@link getValue}: top-level atom id, or a dotted path into a
+	 * nested value (immutable update of the root atom). Missing paths warn and no-op.
+	 */
 	setValue(fieldId: string, value: unknown): void;
 	/** Looks up a field definition on the current content type by id. */
 	getField(fieldId: string): ContentTypeField | undefined;

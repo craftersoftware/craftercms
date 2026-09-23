@@ -25,6 +25,7 @@ import { loadFormController } from './formControllerLoader';
 import type { FormController, FormControllerContext, FormControllerMode } from './formControllerTypes';
 import { extractAtomValues } from './formUtils';
 import type { PrimitiveAtom } from 'jotai';
+import { retrieveProperty, setProperty } from '../../../utils/object';
 
 /**
  * Minimal form-open props used to resolve {@link FormControllerMode} without importing FormsEngine.tsx.
@@ -76,9 +77,9 @@ export interface CreateFormControllerContextArgs {
  * Builds the narrow {@link FormControllerContext} host API for a type-local form controller.
  *
  * Controllers receive this object (not the Jotai store or React tree). Field I/O goes through
- * `getValue` / `setValue` / `getValues`; change notifications through `fieldUpdateStream`;
- * metadata through `getField` / `getContentType`. `readonly` is read live from the form's
- * readonly atom.
+ * `getValue` / `setValue` / `getValues` (top-level ids, or dotted paths into repeat items);
+ * change notifications through `fieldUpdateStream`; metadata through `getField` /
+ * `getContentType`. `readonly` is read live from the form's readonly atom.
  *
  * @param args - Store, atoms, content type, and field-update subject for this form stack entry
  * @returns Context object passed to `initialize`, `isFieldRelevant`, and `onBeforeSave`
@@ -110,24 +111,79 @@ export function createFormControllerContext({
 			return extractAtomValues(store, atoms.valueByFieldId);
 		},
 		getValue(fieldId) {
+			// File-name lives on a dedicated atom, not in valueByFieldId.
 			if (fieldId === XmlKeys.fileName && atoms.fileName) {
 				return store.get(atoms.fileName);
 			}
 			const valueAtom = atoms.valueByFieldId[fieldId];
-			return valueAtom ? store.get(valueAtom) : undefined;
+			// Top-level field id — read that atom directly (includes whole repeat arrays).
+			if (valueAtom) {
+				return store.get(valueAtom);
+			}
+			// No flat atom: try a dotted path into a nested value (e.g. myRepeat.0.title_s).
+			const parsed = parseFieldValuePath(fieldId);
+			// Not a dotted path (or empty segments) — nothing to resolve.
+			if (!parsed) {
+				return undefined;
+			}
+			const rootAtom = atoms.valueByFieldId[parsed.rootId];
+			// Root segment does not match a field atom on this form.
+			if (!rootAtom) {
+				return undefined;
+			}
+			const root = store.get(rootAtom);
+			// Root value must be an object/array to walk into.
+			if (root == null || typeof root !== 'object') {
+				return undefined;
+			}
+			try {
+				return retrieveProperty(root as object, parsed.nestedPath);
+			} catch {
+				// Null intermediate in the path throws inside retrieveProperty.
+				return undefined;
+			}
 		},
 		setValue(fieldId, value) {
+			// File-name lives on a dedicated atom, not in valueByFieldId.
 			if (fieldId === XmlKeys.fileName && atoms.fileName) {
 				// `fileName` is typed as Atom on FormsEngineAtoms but is always a writable PrimitiveAtom at runtime.
 				store.set(atoms.fileName as PrimitiveAtom<string>, value as string);
 				return;
 			}
 			const valueAtom = atoms.valueByFieldId[fieldId];
-			if (!valueAtom) {
+			// Top-level field id — write that atom directly (includes whole repeat arrays).
+			if (valueAtom) {
+				store.set(valueAtom, value);
+				return;
+			}
+			// No flat atom: try a dotted path into a nested value (e.g. myRepeat.0.title_s).
+			const parsed = parseFieldValuePath(fieldId);
+			// Not a dotted path — unknown field id.
+			if (!parsed) {
 				console.warn(`Form controller setValue: field "${fieldId}" has no value atom.`);
 				return;
 			}
-			store.set(valueAtom, value);
+			const rootAtom = atoms.valueByFieldId[parsed.rootId];
+			// Root segment does not match a field atom on this form.
+			if (!rootAtom) {
+				console.warn(`Form controller setValue: field "${parsed.rootId}" has no value atom.`);
+				return;
+			}
+			const root = store.get(rootAtom);
+			// Root value must be an object/array to walk into.
+			if (root == null || typeof root !== 'object') {
+				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+				return;
+			}
+			// Clone so Jotai sees a new root reference after the nested mutate.
+			const next = structuredClone(root) as object;
+			// Fail closed: missing parents or out-of-range repeat indexes (do not auto-create).
+			if (!canSetNestedProperty(next, parsed.nestedPath)) {
+				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+				return;
+			}
+			setProperty(next, parsed.nestedPath, value);
+			store.set(rootAtom, next);
 		},
 		getField(fieldId) {
 			return contentType.fields[fieldId];
@@ -137,6 +193,51 @@ export function createFormControllerContext({
 			return contentTypesById[id];
 		}
 	};
+}
+
+/**
+ * Splits a dotted field path into a root atom id and nested path string for
+ * {@link retrieveProperty} / {@link setProperty} (e.g. `myRepeat.0.title_s` → root `myRepeat`, nested `0.title_s`).
+ *
+ * @param fieldId - Flat field id or dotted path
+ * @returns Parsed root + nested path, or `null` when there are no dots / empty segments
+ */
+function parseFieldValuePath(fieldId: string): { rootId: string; nestedPath: string } | null {
+	if (!fieldId.includes('.')) {
+		return null;
+	}
+	const segments = fieldId.split('.');
+	if (segments.length < 2 || segments.some((segment) => segment === '')) {
+		return null;
+	}
+	const [rootId, ...rest] = segments;
+	return { rootId, nestedPath: rest.join('.') };
+}
+
+/**
+ * Whether {@link setProperty} can write `nestedPath` without creating missing parents
+ * (fail-closed for out-of-range repeat indexes / broken intermediates).
+ */
+function canSetNestedProperty(root: object, nestedPath: string): boolean {
+	const segments = nestedPath.split('.');
+	const last = segments[segments.length - 1];
+	const parentPath = segments.slice(0, -1).join('.');
+	let parent: unknown = root;
+	if (parentPath) {
+		try {
+			parent = retrieveProperty(root, parentPath);
+		} catch {
+			return false;
+		}
+	}
+	if (parent == null || typeof parent !== 'object') {
+		return false;
+	}
+	if (Array.isArray(parent) && /^\d+$/.test(last)) {
+		const index = Number(last);
+		return Number.isInteger(index) && index >= 0 && index < parent.length;
+	}
+	return true;
 }
 
 /**

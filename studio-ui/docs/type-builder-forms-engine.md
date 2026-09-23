@@ -537,11 +537,13 @@ Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` 
 | Surface                                                          | Purpose                                                            |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `siteId`, `contentType`, `path`, `mode`                          | Identity (`create` \| `edit` \| `embedded` \| `repeat`) + readonly |
-| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)` | Read/write current field atoms                                     |
-| `getField(fieldId)` / `getContentType(id?)`                      | Field/type metadata                                                |
-| `isCreateMode`, `isEmbedded`, `readonly`                         | Mode flags                                                         |
-| `fieldUpdateStream`                                              | Observable of field ids that changed; subscribe in `initialize`    |
-| Later (optional)                                                 | Convenience `subscribe(fieldId, cb)`, snackbar/dispatch helpers    |
+| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)` | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`) |
+| `getField(fieldId)` / `getContentType(id?)`                      | Field/type metadata                                                                   |
+| `isCreateMode`, `isEmbedded`, `readonly`                         | Mode flags                                                                            |
+| `fieldUpdateStream`                                              | Observable of field ids that changed; subscribe in `initialize`                       |
+| Later (optional)                                                 | Convenience `subscribe(fieldId, cb)`, snackbar/dispatch helpers                       |
+
+`getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `fieldUpdateStream` emits that root id. On a stacked repeat form (`mode: 'repeat'`), use the inner field id directly.
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
 

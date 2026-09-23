@@ -29,8 +29,9 @@ export const FORM_CONTROLLER_JS_STUB = `/**
  *
  * Context (ctx) highlights:
  *   - getValue(fieldId) / getValues() / setValue(fieldId, value)
+ *   - Nested repeat fields via dotted paths: getValue('myRepeat.0.title_s')
  *   - getField(fieldId) / getContentType(id?)
- *   - fieldUpdateStream — Observable<string> of field ids that changed
+ *   - fieldUpdateStream — Observable<string> of field ids that changed (root id for nested sets)
  *   - siteId, contentType, path, mode ('create' | 'edit' | 'embedded' | 'repeat')
  *
  * Prefer declarative field visibility via isFieldRelevant (do not toggle DOM).
