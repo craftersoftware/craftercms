@@ -568,6 +568,7 @@ export const createStableFormContextProps = (
 		formController: null,
 		formControllerContext: null,
 		formControllerCleanup: null,
+		formControllerFileMissing: false,
 		relevantFieldIds: null
 	};
 	if (createRootTypeSections) {

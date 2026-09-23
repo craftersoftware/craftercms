@@ -129,6 +129,11 @@ export interface StableFormContextProps {
 	/** Cleanup returned by `initialize`; invoked on stack pop / engine unmount. */
 	formControllerCleanup: (() => void) | null;
 	/**
+	 * True when `hasJsController` is set but `form-controller.js` was not found (HTTP 404).
+	 * Used to show a non-blocking warning in the form body.
+	 */
+	formControllerFileMissing: boolean;
+	/**
 	 * Field ids that passed `isFieldRelevant` (resolved before first paint).
 	 * `null` means no relevance hook / no filtering from the controller.
 	 */

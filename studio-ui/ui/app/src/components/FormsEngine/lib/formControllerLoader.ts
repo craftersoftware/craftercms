@@ -15,6 +15,7 @@
  */
 
 import { firstValueFrom } from 'rxjs';
+import { AjaxError } from 'rxjs/ajax';
 import { getText } from '../../../utils/ajax';
 import { getFormControllerUrl } from '../../../services/contentTypes';
 import type { FormController } from './formControllerTypes';
@@ -23,8 +24,15 @@ const SUPPORTED_API_VERSION = 1;
 
 const commonErrorMsg = 'The form will proceed as though no custom type controller exists.';
 
+/** Outcome of attempting to load a content-type-local form controller. */
+export type LoadFormControllerResult =
+	| { status: 'skipped'; controller: null }
+	| { status: 'loaded'; controller: FormController }
+	| { status: 'missing'; controller: null }
+	| { status: 'failed'; controller: null };
+
 /** Session cache of in-flight / completed loads, keyed by `siteId::contentTypeId`. */
-const formControllerCache = new Map<string, Promise<FormController | null>>();
+const formControllerCache = new Map<string, Promise<LoadFormControllerResult>>();
 
 /**
  * Builds the session-cache key for a site + content type pair.
@@ -60,22 +68,22 @@ function resolveControllerExport(module: Record<string, unknown>): FormControlle
 /**
  * Fetches and ESM-imports a content-type-local `form-controller.js`.
  *
- * Soft-fails (logs + returns `null`) on network, parse, or contract errors so the form
- * can continue without a custom controller. Successful and in-flight loads are cached for
- * the session; failed loads are removed from the cache so a later retry can try again.
+ * Soft-fails on network, parse, or contract errors so the form can continue without a custom
+ * controller. Successful and in-flight loads are cached for the session; failed / missing loads
+ * are removed from the cache so a later retry can try again.
  *
  * @param siteId - Active site id
  * @param contentTypeId - Content type id that owns the controller file
- * @param hasJsController - When `false`, skips the network call and resolves to `null`
- * @returns Promise of the loaded controller, or `null` when skipped / soft-failed
+ * @param hasJsController - When `false`, skips the network call (`status: 'skipped'`)
+ * @returns Promise of a {@link LoadFormControllerResult}
  */
 export function loadFormController(
 	siteId: string,
 	contentTypeId: string,
 	hasJsController = true
-): Promise<FormController | null> {
+): Promise<LoadFormControllerResult> {
 	if (!hasJsController) {
-		return Promise.resolve(null);
+		return Promise.resolve({ status: 'skipped', controller: null });
 	}
 
 	const key = cacheKey(siteId, contentTypeId);
@@ -84,7 +92,7 @@ export function loadFormController(
 		return cached;
 	}
 
-	const loading = (async (): Promise<FormController | null> => {
+	const loading = (async (): Promise<LoadFormControllerResult> => {
 		let blobUrl: string | undefined;
 		try {
 			const ajax = await firstValueFrom(getText(getFormControllerUrl(siteId, contentTypeId)));
@@ -107,16 +115,27 @@ export function loadFormController(
 					);
 				}
 				formControllerCache.delete(key);
-				return null;
+				return { status: 'failed', controller: null };
 			}
-			return controller;
+			return { status: 'loaded', controller };
 		} catch (error) {
+			formControllerCache.delete(key);
+			const isMissing =
+				(error && typeof error === 'object' && 'name' in error && (error as { name: string }).name === 'AjaxError'
+					? (error as AjaxError).status
+					: undefined) === 404;
+			if (isMissing) {
+				console.error(
+					`The form controller for "${contentTypeId}" was not found (form-controller.js missing). ${commonErrorMsg}`,
+					error
+				);
+				return { status: 'missing', controller: null };
+			}
 			console.error(
 				`Error trying to load the form controller for "${contentTypeId}". Check that form-controller.js exists next to the content type definition and exports a valid FE2 FormController. ${commonErrorMsg}`,
 				error
 			);
-			formControllerCache.delete(key);
-			return null;
+			return { status: 'failed', controller: null };
 		} finally {
 			if (blobUrl) {
 				URL.revokeObjectURL(blobUrl);
@@ -129,7 +148,7 @@ export function loadFormController(
 }
 
 /**
- * Returns the cached controller promise for a site + content type, if any.
+ * Returns the cached controller load result promise for a site + content type, if any.
  * Includes in-flight loads; does not start a new fetch.
  *
  * @param siteId - Active site id
@@ -139,7 +158,7 @@ export function loadFormController(
 export function getCachedFormController(
 	siteId: string,
 	contentTypeId: string
-): Promise<FormController | null> | undefined {
+): Promise<LoadFormControllerResult> | undefined {
 	return formControllerCache.get(cacheKey(siteId, contentTypeId));
 }
 

@@ -276,6 +276,7 @@ function clearFormControllerState(stackEntry: StableFormContextProps): void {
 	stackEntry.formController = null;
 	stackEntry.formControllerContext = null;
 	stackEntry.formControllerCleanup = null;
+	stackEntry.formControllerFileMissing = false;
 	stackEntry.relevantFieldIds = null;
 }
 
@@ -378,9 +379,11 @@ export async function attachFormController(args: {
 	const contentType = stackEntry.itemMeta?.contentType;
 	if (!contentType) return;
 
-	const controller = await loadFormController(siteId, contentType.id, contentType.hasJsController);
-	if (stale() || !controller) return;
+	const loadResult = await loadFormController(siteId, contentType.id, contentType.hasJsController);
+	stackEntry.formControllerFileMissing = loadResult.status === 'missing';
+	if (stale() || loadResult.status !== 'loaded') return;
 
+	const controller = loadResult.controller;
 	const mode = resolveFormControllerMode(formProps);
 	const ctx = createFormControllerContext({
 		siteId,
