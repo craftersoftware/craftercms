@@ -32,6 +32,7 @@ import { ensureSingleSlash } from '../../../utils/string';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
+import { clearFormControllerCache } from '../../FormsEngine/lib/formControllerLoader';
 
 export interface TypeControllerSelectorProps extends TypeBuilderControl {
 	value: boolean;
@@ -59,6 +60,8 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 
 	const onEditController = () => {
 		editTypeController(CONTENT_TYPES_BASE_PATH, contentTypeId, dispatch, type, () => {
+			// Drop the cached module so the next form open imports the saved source.
+			if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
 			setValue(true);
 		});
 	};
@@ -67,13 +70,17 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 		checkPathExistence(siteId, controllerPath).subscribe({
 			next: (exists) => {
 				if (!exists) {
+					if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
 					setValue(false);
 					return;
 				}
 				const title = formatMessage({ defaultMessage: 'Delete Controller' });
 				const comment = formatMessage({ defaultMessage: 'Deleting controller {fileName}' }, { fileName });
 				deleteItems(siteId, [controllerPath], title, comment).subscribe({
-					next: () => setValue(false),
+					next: () => {
+						if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
+						setValue(false);
+					},
 					error: ({ response }) => {
 						dispatch(pushErrorDialog({ props: { error: response?.response } }));
 					}
