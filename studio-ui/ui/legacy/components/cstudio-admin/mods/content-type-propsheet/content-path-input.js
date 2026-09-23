@@ -97,8 +97,7 @@
           updateFn={onChange}
           defaultValue={defaultValue}
           validations={properties.validations}
-        />,
-        element
+        />
       );
 
       this.value = value;
