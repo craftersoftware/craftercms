@@ -370,6 +370,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		formControllerContext: null,
 		formControllerCleanup: null,
 		formControllerFileMissing: false,
+		formControllerLoadFailed: false,
 		relevantFieldIds: null,
 		...mixin
 	};

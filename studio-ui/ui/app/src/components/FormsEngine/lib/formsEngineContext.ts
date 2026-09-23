@@ -134,6 +134,12 @@ export interface StableFormContextProps {
 	 */
 	formControllerFileMissing: boolean;
 	/**
+	 * True when `hasJsController` is set but the controller failed to load
+	 * (syntax error, invalid export, unsupported apiVersion, etc.).
+	 * Used to show a non-blocking warning in the form body.
+	 */
+	formControllerLoadFailed: boolean;
+	/**
 	 * Field ids that passed `isFieldRelevant` (resolved before first paint).
 	 * `null` means no relevance hook / no filtering from the controller.
 	 */

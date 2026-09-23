@@ -810,7 +810,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms, relevantFieldIds, formControllerFileMissing } = stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, relevantFieldIds, formControllerFileMissing, formControllerLoadFailed } =
+		stableFormContext;
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -1249,6 +1250,14 @@ function FormOrchestrator(props: FormsEngineProps) {
 									<FormattedMessage defaultMessage="Form controller missing" />
 								</AlertTitle>
 								<FormattedMessage defaultMessage="This content type has a client-side form controller enabled, but form-controller.js was not found. The form will open without a custom controller." />
+							</Alert>
+						)}
+						{formControllerLoadFailed && (
+							<Alert severity="warning" variant="outlined">
+								<AlertTitle>
+									<FormattedMessage defaultMessage="Form controller failed to load" />
+								</AlertTitle>
+								<FormattedMessage defaultMessage="This content type has a client-side form controller, but it could not be loaded. Check form-controller.js for syntax or export errors. The form will open without a custom controller." />
 							</Alert>
 						)}
 						{visibleFieldsToRender ? (

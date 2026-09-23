@@ -277,6 +277,7 @@ function clearFormControllerState(stackEntry: StableFormContextProps): void {
 	stackEntry.formControllerContext = null;
 	stackEntry.formControllerCleanup = null;
 	stackEntry.formControllerFileMissing = false;
+	stackEntry.formControllerLoadFailed = false;
 	stackEntry.relevantFieldIds = null;
 }
 
@@ -381,6 +382,7 @@ export async function attachFormController(args: {
 
 	const loadResult = await loadFormController(siteId, contentType.id, contentType.hasJsController);
 	stackEntry.formControllerFileMissing = loadResult.status === 'missing';
+	stackEntry.formControllerLoadFailed = loadResult.status === 'failed';
 	if (stale() || loadResult.status !== 'loaded') return;
 
 	const controller = loadResult.controller;
