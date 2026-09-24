@@ -151,6 +151,7 @@ function Body(props: BodyProps) {
 
 	const theme = useTheme();
 	const [projects, setProjects] = React.useState<string[]>([]);
+	const allProjectsSelected = projects.includes('*');
 
 	const valid = projects.length > 0;
 
@@ -158,10 +159,16 @@ function Body(props: BodyProps) {
 		const {
 			target: { value }
 		} = event;
-		setProjects(
-			// On autofill we get a stringified value.
-			typeof value === 'string' ? value.split(',') : value
-		);
+		const selectedProjects = typeof value === 'string' ? value.split(',') : value;
+		if (selectedProjects.includes('*')) {
+			if (projects.length === 1 && projects[0] === '*' && selectedProjects.length > 1) {
+				setProjects(selectedProjects.filter((project) => project !== '*'));
+				return;
+			}
+			setProjects(['*']);
+			return;
+		}
+		setProjects(selectedProjects);
 	};
 
 	const handleChipDeleteButton = (e: SyntheticEvent, projectId: string) => {
@@ -357,17 +364,31 @@ function Body(props: BodyProps) {
 						MenuProps={MenuProps}
 						renderValue={(selected) => (
 							<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }} ref={chipsContainerRef}>
-								{selected.map((value) => (
+								{allProjectsSelected ? (
 									<Chip
-										key={value}
-										label={siteLookup[value].name}
-										onDelete={(e) => handleChipDeleteButton(e, value)}
+										key="*"
+										label={<FormattedMessage defaultMessage="All Projects" />}
+										onDelete={(e) => handleChipDeleteButton(e, '*')}
 										onClick={handleChipClick}
 									/>
-								))}
+								) : (
+									selected
+										.filter((value) => value !== '*')
+										.map((value) => (
+											<Chip
+												key={value}
+												label={siteLookup[value]?.name ?? <FormattedMessage defaultMessage="All Projects" />}
+												onDelete={(e) => handleChipDeleteButton(e, value)}
+												onClick={handleChipClick}
+											/>
+										))
+								)}
 							</Box>
 						)}
 					>
+						<MenuItem value="*" style={getStyles('all', projects, theme)}>
+							<FormattedMessage defaultMessage="All Projects" />
+						</MenuItem>
 						{sites.map(({ id, name }) => (
 							<MenuItem key={id} value={id} style={getStyles(name, projects, theme)}>
 								{name}
