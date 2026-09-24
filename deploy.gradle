@@ -238,6 +238,7 @@ gradle.projectsEvaluated {
 			group = 'deployment'
 			description = "Deploys ${moduleName} artifact(s) to the selected environment(s) (-Penv=authoring|delivery)"
 			dependsOn rootProject.tasks.named('buildBaseEnvs')
+			mustRunAfter project.tasks.named('build')
 			doLast {
 				rootProject.getEnvironments().each { environment ->
 					println "Deploying ${moduleName} to ${environment}"
