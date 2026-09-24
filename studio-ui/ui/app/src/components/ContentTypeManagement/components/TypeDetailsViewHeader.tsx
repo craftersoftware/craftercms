@@ -27,16 +27,22 @@ import { FormattedMessage } from 'react-intl';
 import React from 'react';
 import { nanoid } from 'nanoid';
 import { createComponentId } from '../../../utils/system';
+import { ContentItem } from '../../../models/Item';
+import { nnou, prettyPrintPerson } from '../../../utils/object';
+import useLocale from '../../../hooks/useLocale';
+import { asLocalizedDate } from '../../../utils/datetime';
 
 export type TypeDetailsHeaderActionTarget = 'properties' | 'template' | 'jsController' | 'groovyController' | 'deleted';
 
 export interface TypeDetailsViewHeaderProps {
 	type: PossibleContentTypeDraft;
+	contentItem?: ContentItem;
 	onActionClick(event: Parameters<ButtonProps['onClick']>[0], target: TypeDetailsHeaderActionTarget): void;
 }
 
-export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHeaderProps) {
+export function TypeDetailsViewHeader({ type, contentItem, onActionClick }: TypeDetailsViewHeaderProps) {
 	const dispatch = useDispatch();
+	const locale = useLocale();
 	const handleDeleteType: ButtonProps['onClick'] = (e) => {
 		const id = nanoid();
 		dispatch(
@@ -56,6 +62,10 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 	const handleActionClick = (e) => {
 		onActionClick?.(e, e.currentTarget.getAttribute('data-action-target') as TypeDetailsHeaderActionTarget);
 	};
+	const formattedModifier = contentItem?.modifier ? prettyPrintPerson(contentItem.modifier) : null;
+	const formattedModifiedDate = nnou(contentItem?.dateModified)
+		? asLocalizedDate(contentItem.dateModified, locale.localeCode, locale.dateTimeFormatOptions)
+		: null;
 	return (
 		<Box
 			sx={{
@@ -88,18 +98,22 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 				>
 					{type.description || <FormattedMessage defaultMessage="(no description)" />}
 				</Typography>
-				{/* TODO: Add last updated information - There's a pending conversation to include this in the form-definition */}
-				{/* <Typography variant="body2" color="textSecondary" mb={0.5}>
-					<FormattedMessage
-						defaultMessage="Last updated on <b>{date}</b> by <b>{user}</b>"
-						values={{
-							// TODO: Where does this come from? Add to XML?
-							date: 'today',
-							user: 'John',
-							b: (text) => <strong key={text[0] as string}>{text[0]}</strong>
-						}}
-					/>
-				</Typography> */}
+				{formattedModifier && formattedModifiedDate && (
+					<Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+						<FormattedMessage
+							defaultMessage="Last updated on <b>{date}</b> by <modifier>modifier</modifier>"
+							values={{
+								date: formattedModifiedDate,
+								modifier: () => (
+									<strong key="0" title={formattedModifier.tooltip}>
+										{formattedModifier.display}
+									</strong>
+								),
+								b: (chunks) => <strong key={chunks[0] as string}>{chunks[0]}</strong>
+							}}
+						/>
+					</Typography>
+				)}
 				<Button onClick={handleActionClick} data-action-target="properties">
 					<FormattedMessage defaultMessage="Properties" />
 				</Button>

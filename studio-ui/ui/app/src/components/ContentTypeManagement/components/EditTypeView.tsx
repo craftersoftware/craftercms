@@ -107,6 +107,7 @@ import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
 import { sectionDescriptor, typeBasicDetailsDescriptor } from '../descriptors/controls/commonDescriptors';
+import { ContentItem } from '../../../models/Item';
 
 export interface EditTypeAppProps {
 	/**
@@ -196,6 +197,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const [activeFormHasErrors, setActiveFormHasErrors] = useState<boolean>(false);
 	const [validatingForm, setValidatingForm] = useState<boolean>(false);
+	const [contentItem, setContentItem] = useState<ContentItem>(null);
 	const configDescriptors = useMemo(() => {
 		const controlDescriptors = Object.values(config?.controls ?? {}).map(({ descriptor }) => descriptor);
 		const dataSourceDescriptors = Object.values(config?.dataSources ?? {}).map(({ descriptor }) => descriptor);
@@ -475,6 +477,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						if ((typeToSave as PossibleContentTypeDraft).NEW) {
 							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
 						}
+						fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${typeToSave.id}/form-definition.xml`).subscribe(
+							setContentItem
+						);
 						dispatch(
 							batchActions([
 								fetchContentTypes(),
@@ -800,6 +805,17 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	}, [type.NEW, effectRefs]);
 
 	useEffect(() => {
+		if (type.NEW) {
+			setContentItem(null);
+			return;
+		}
+		const sub = fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${type.id}/form-definition.xml`).subscribe(
+			setContentItem
+		);
+		return () => sub.unsubscribe();
+	}, [site, type.id, type.NEW]);
+
+	useEffect(() => {
 		const sub = fetchSiteUiConfig(site, activeEnvironment).subscribe({
 			next: (config) => {
 				const configDOM = fromString(config);
@@ -856,6 +872,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				mainContent={
 					<TypeDetailsView
 						type={type}
+						contentItem={contentItem}
 						onInsertSection={handleInsertSection}
 						onOpenInsertFieldDialog={onOpenInsertFieldDialog}
 						onOpenInsertDataSourceDialog={onOpenInsertDataSourceDialog}
