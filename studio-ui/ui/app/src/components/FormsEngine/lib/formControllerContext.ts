@@ -381,9 +381,10 @@ export async function attachFormController(args: {
 	if (!contentType) return;
 
 	const loadResult = await loadFormController(siteId, contentType.id, contentType.hasJsController);
+	if (stale()) return;
 	stackEntry.formControllerFileMissing = loadResult.status === 'missing';
 	stackEntry.formControllerLoadFailed = loadResult.status === 'failed';
-	if (stale() || loadResult.status !== 'loaded') return;
+	if (loadResult.status !== 'loaded') return;
 
 	const controller = loadResult.controller;
 	const mode = resolveFormControllerMode(formProps);
