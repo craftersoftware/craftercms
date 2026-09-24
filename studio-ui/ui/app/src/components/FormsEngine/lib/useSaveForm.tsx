@@ -238,7 +238,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 			// Form controller may veto save after validation / plugin preload, before XML write.
 			const hadBeforeSaveHook = Boolean(stableFormContext.formController?.onBeforeSave);
-			if (!(await runFormControllerBeforeSave(stableFormContext))) {
+			if (!(await runFormControllerBeforeSave(stableFormContext, dispatch, formatMessage))) {
 				setIsSubmitting(false);
 				return;
 			}

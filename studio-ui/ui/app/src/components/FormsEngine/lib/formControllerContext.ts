@@ -288,27 +288,34 @@ function clearFormControllerState(stackEntry: StableFormContextProps): void {
  * Awaits `isFieldRelevant` for each field and returns the set of ids that should stay visible.
  *
  * Returns `null` when there is no relevance hook (caller should not filter). On rejection/error for
- * a single field, that field stays visible (soft-fail).
+ * a single field, that field stays visible (soft-fail). Per-field failures are logged; a single
+ * snack summarizes how many failed (avoids one snack per field).
  *
  * @param fields - Candidate fields (full type or `fieldsToRender` subset)
  * @param controller - Loaded form controller, if any
  * @param ctx - Host context for the controller hooks
+ * @param dispatch - Redux dispatch for the summary snack
+ * @param formatMessage - react-intl formatter for snack copy
  * @returns Relevant field ids, or `null` if no filtering applies
  */
 export async function resolveRelevantFieldIds(
 	fields: ContentTypeField[],
 	controller: FormController | null | undefined,
-	ctx: FormControllerContext | null | undefined
+	ctx: FormControllerContext | null | undefined,
+	dispatch: ReduxDispatch,
+	formatMessage: IntlShape['formatMessage']
 ): Promise<Set<string> | null> {
 	if (!controller?.isFieldRelevant || !ctx) {
 		return null;
 	}
+	let failedCount = 0;
 	const results = await Promise.all(
 		fields.map(async (field) => {
 			try {
 				const relevant = await controller.isFieldRelevant!(field, ctx);
 				return [field.id, relevant !== false] as const;
 			} catch (error) {
+				failedCount += 1;
 				console.error(
 					`Form controller isFieldRelevant for field "${field.id}" failed. The field will remain visible.`,
 					error
@@ -317,6 +324,20 @@ export async function resolveRelevantFieldIds(
 			}
 		})
 	);
+	if (failedCount > 0) {
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(
+					{
+						defaultMessage:
+							'{count, plural, one {Form controller isFieldRelevant failed for # field. That field will remain visible.} other {Form controller isFieldRelevant failed for # fields. Those fields will remain visible.}}'
+					},
+					{ count: failedCount }
+				),
+				options: { variant: 'error' }
+			})
+		);
+	}
 	return new Set(results.filter(([, relevant]) => relevant).map(([id]) => id));
 }
 
@@ -439,11 +460,23 @@ export async function attachFormController(args: {
 	const fields = collectFieldsForRelevance(contentType, formProps, mode);
 	let relevantFieldIds: Set<string> | null = null;
 	try {
-		relevantFieldIds = await resolveRelevantFieldIds(fields, controller, ctx);
+		relevantFieldIds = await resolveRelevantFieldIds(fields, controller, ctx, dispatch, formatMessage);
 	} catch (error) {
 		console.error(
 			`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
 			error
+		);
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(
+					{
+						defaultMessage:
+							'Form controller field relevance for "{contentTypeId}" failed. All fields will remain visible.'
+					},
+					{ contentTypeId: contentType.id }
+				),
+				options: { variant: 'error' }
+			})
 		);
 		relevantFieldIds = null;
 	}
@@ -455,10 +488,14 @@ export async function attachFormController(args: {
  * Runs the form controller's `onBeforeSave` hook for a stack entry.
  *
  * @param stackEntry - Form stack entry that may hold a loaded controller + context
+ * @param dispatch - Redux dispatch for user-facing notifications
+ * @param formatMessage - react-intl formatter for snack copy
  * @returns `true` to continue save; `false` when the controller vetoes (explicit false or thrown/rejected)
  */
 export async function runFormControllerBeforeSave(
-	stackEntry: StableFormContextProps | null | undefined
+	stackEntry: StableFormContextProps | null | undefined,
+	dispatch: ReduxDispatch,
+	formatMessage: IntlShape['formatMessage']
 ): Promise<boolean> {
 	const controller = stackEntry?.formController;
 	const ctx = stackEntry?.formControllerContext;
@@ -470,6 +507,14 @@ export async function runFormControllerBeforeSave(
 		return allowed !== false;
 	} catch (error) {
 		console.error('Form controller onBeforeSave failed. Save was cancelled.', error);
+		dispatch(
+			showSystemNotification({
+				message: formatMessage({
+					defaultMessage: 'Form controller onBeforeSave failed. Save was cancelled.'
+				}),
+				options: { variant: 'error' }
+			})
+		);
 		return false;
 	}
 }
