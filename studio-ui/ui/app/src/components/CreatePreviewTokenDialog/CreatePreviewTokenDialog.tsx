@@ -159,14 +159,16 @@ function Body(props: BodyProps) {
 		const {
 			target: { value }
 		} = event;
-		if (value.includes?.('*')) {
+		const selectedProjects = typeof value === 'string' ? value.split(',') : value;
+		if (selectedProjects.includes('*')) {
+			if (projects.length === 1 && projects[0] === '*' && selectedProjects.length > 1) {
+				setProjects(selectedProjects.filter((project) => project !== '*'));
+				return;
+			}
 			setProjects(['*']);
 			return;
 		}
-		setProjects(
-			// On autofill we get a stringified value.
-			typeof value === 'string' ? value.split(',') : value
-		);
+		setProjects(selectedProjects);
 	};
 
 	const handleChipDeleteButton = (e: SyntheticEvent, projectId: string) => {
