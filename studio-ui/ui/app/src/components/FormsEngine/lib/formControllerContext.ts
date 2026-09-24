@@ -18,6 +18,8 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type LookupTable from '../../../models/LookupTable';
 import type { Subject } from 'rxjs';
+import type { Dispatch as ReduxDispatch } from 'redux';
+import type { IntlShape } from 'react-intl';
 import type { JotaiStore } from '../types';
 import { XmlKeys } from './formConsts';
 import type { FormsEngineAtoms, StableFormContextProps } from './formsEngineContext';
@@ -26,6 +28,7 @@ import type { FormController, FormControllerContext, FormControllerMode } from '
 import { extractAtomValues } from './formUtils';
 import type { PrimitiveAtom } from 'jotai';
 import { retrieveProperty, setProperty } from '../../../utils/object';
+import { showSystemNotification } from '../../../state/actions/system';
 
 /**
  * Minimal form-open props used to resolve {@link FormControllerMode} without importing FormsEngine.tsx.
@@ -359,6 +362,8 @@ const commonInitErrorMsg = 'The form will proceed as though no custom type contr
  * @param args.stackEntry - Stack entry to attach controller state onto
  * @param args.contentTypesById - Content-types lookup for context helpers
  * @param args.formProps - Open props used for mode + relevance field list
+ * @param args.dispatch - Redux dispatch for user-facing notifications
+ * @param args.formatMessage - react-intl formatter for snack copy
  * @param args.isStale - Optional; when true, discard results (prep re-run / unmount)
  */
 export async function attachFormController(args: {
@@ -367,10 +372,12 @@ export async function attachFormController(args: {
 	stackEntry: StableFormContextProps;
 	contentTypesById: LookupTable<ContentType>;
 	formProps: FormControllerModeProps;
+	dispatch: ReduxDispatch;
+	formatMessage: IntlShape['formatMessage'];
 	/** Reports whether this invocation was superseded (prep effect re-run / form unmount). */
 	isStale?: () => boolean;
 }): Promise<void> {
-	const { siteId, store, stackEntry, contentTypesById, formProps, isStale } = args;
+	const { siteId, store, stackEntry, contentTypesById, formProps, dispatch, formatMessage, isStale } = args;
 	const stale = () => Boolean(isStale?.());
 	// A controller already on the entry is being replaced: run its cleanup rather than dropping it, and
 	// stop exposing it, as it is torn down from here on.
@@ -405,6 +412,18 @@ export async function attachFormController(args: {
 		ownCleanup = typeof cleanup === 'function' ? cleanup : null;
 	} catch (error) {
 		console.error(`Form controller initialize for "${contentType.id}" failed. ${commonInitErrorMsg}`, error);
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(
+					{
+						defaultMessage:
+							'Form controller initialize for "{contentTypeId}" failed. The form will proceed as though no custom type controller exists.'
+					},
+					{ contentTypeId: contentType.id }
+				),
+				options: { variant: 'error' }
+			})
+		);
 		return;
 	}
 	if (stale()) {

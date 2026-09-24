@@ -417,6 +417,8 @@ function FormBootstrap(props: FormsEngineProps) {
 				stackEntry: stableFormContextRef.current,
 				contentTypesById: effectRefs.current.contentTypesById,
 				formProps: effectRefs.current.effectiveProps,
+				dispatch,
+				formatMessage,
 				// Attach owns the teardown of its own `initialize` when this prep run is superseded.
 				isStale: () => disposed
 			}).then(() => {
@@ -731,6 +733,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		dispatch,
 		effectRefs,
 		fieldsToRender,
+		formatMessage,
 		formsStackData,
 		readonlyProp,
 		repeat,
