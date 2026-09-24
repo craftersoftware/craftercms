@@ -477,9 +477,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						if ((typeToSave as PossibleContentTypeDraft).NEW) {
 							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
 						}
-						fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${typeToSave.id}/form-definition.xml`).subscribe(
-							setContentItem
-						);
+						fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${typeToSave.id}/form-definition.xml`).subscribe({
+							next: setContentItem,
+							error: () => setContentItem(null)
+						});
 						dispatch(
 							batchActions([
 								fetchContentTypes(),
@@ -809,9 +810,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			setContentItem(null);
 			return;
 		}
-		const sub = fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${type.id}/form-definition.xml`).subscribe(
-			setContentItem
-		);
+		const sub = fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${type.id}/form-definition.xml`).subscribe({
+			next: setContentItem,
+			error: () => setContentItem(null)
+		});
 		return () => sub.unsubscribe();
 	}, [site, type.id, type.NEW]);
 
