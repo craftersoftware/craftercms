@@ -198,6 +198,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const [activeFormHasErrors, setActiveFormHasErrors] = useState<boolean>(false);
 	const [validatingForm, setValidatingForm] = useState<boolean>(false);
 	const [contentItem, setContentItem] = useState<ContentItem>(null);
+	// Bumped after save of an existing type so the effect re-fetches (and cancels any in-flight request).
+	const [contentItemReloadToken, setContentItemReloadToken] = useState(0);
 	const configDescriptors = useMemo(() => {
 		const controlDescriptors = Object.values(config?.controls ?? {}).map(({ descriptor }) => descriptor);
 		const dataSourceDescriptors = Object.values(config?.dataSources ?? {}).map(({ descriptor }) => descriptor);
@@ -474,13 +476,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						onUpdateHasPendingChanges(false);
 						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
 						// If the type being saved is new, update the type state to remove the NEW property.
+						// Clearing NEW triggers the contentItem effect to fetch once. For existing types, bump
+						// the reload token so the same effect re-fetches (and cancels any in-flight request).
 						if ((typeToSave as PossibleContentTypeDraft).NEW) {
 							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
+						} else {
+							setContentItemReloadToken((token) => token + 1);
 						}
-						fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${typeToSave.id}/form-definition.xml`).subscribe({
-							next: setContentItem,
-							error: () => setContentItem(null)
-						});
 						dispatch(
 							batchActions([
 								fetchContentTypes(),
@@ -815,7 +817,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			error: () => setContentItem(null)
 		});
 		return () => sub.unsubscribe();
-	}, [site, type.id, type.NEW]);
+	}, [site, type.id, type.NEW, contentItemReloadToken]);
 
 	useEffect(() => {
 		const sub = fetchSiteUiConfig(site, activeEnvironment).subscribe({
