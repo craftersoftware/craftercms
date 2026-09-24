@@ -43,9 +43,11 @@ import SectionInsertionDialog, { SectionInsertionProps } from './SectionInsertio
 import { defaultDataSourcesSection } from '../descriptors/controls/commonDescriptors';
 import MoveDownIcon from '@mui/icons-material/MoveDown';
 import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
+import { ContentItem } from '../../../models/Item';
 
 export interface TypeDetailsViewProps {
 	type: PossibleContentTypeDraft;
+	contentItem?: ContentItem;
 	fieldPathsWithErrors: LookupTable<boolean>;
 	selectedFieldIdPath: string;
 	onFieldSelected(fieldPath: string, field: ContentTypeField, sectionId: string): void;
@@ -62,6 +64,7 @@ export interface TypeDetailsViewProps {
 export function TypeDetailsView(props: TypeDetailsViewProps) {
 	const {
 		type,
+		contentItem,
 		selectedFieldIdPath,
 		onFieldSelected,
 		fieldPathsWithErrors,
@@ -139,7 +142,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		<ErrorBoundary>
 			<Provider store={store}>
 				<StableFormContext.Provider value={stableFormContextRef.current}>
-					<TypeDetailsViewHeader type={type} onActionClick={onEditTypeAction} />
+					<TypeDetailsViewHeader type={type} contentItem={contentItem} onActionClick={onEditTypeAction} />
 
 					<Box
 						sx={{

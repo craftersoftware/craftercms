@@ -107,6 +107,7 @@ import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
 import { sectionDescriptor, typeBasicDetailsDescriptor } from '../descriptors/controls/commonDescriptors';
+import { ContentItem } from '../../../models/Item';
 
 export interface EditTypeAppProps {
 	/**
@@ -196,6 +197,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const [activeFormHasErrors, setActiveFormHasErrors] = useState<boolean>(false);
 	const [validatingForm, setValidatingForm] = useState<boolean>(false);
+	const [contentItem, setContentItem] = useState<ContentItem>(null);
+	// Bumped after save of an existing type so the effect re-fetches (and cancels any in-flight request).
+	const [contentItemReloadToken, setContentItemReloadToken] = useState(0);
 	const configDescriptors = useMemo(() => {
 		const controlDescriptors = Object.values(config?.controls ?? {}).map(({ descriptor }) => descriptor);
 		const dataSourceDescriptors = Object.values(config?.dataSources ?? {}).map(({ descriptor }) => descriptor);
@@ -472,8 +476,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						onUpdateHasPendingChanges(false);
 						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
 						// If the type being saved is new, update the type state to remove the NEW property.
+						// Clearing NEW triggers the contentItem effect to fetch once. For existing types, bump
+						// the reload token so the same effect re-fetches (and cancels any in-flight request).
 						if ((typeToSave as PossibleContentTypeDraft).NEW) {
 							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
+						} else {
+							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
 							batchActions([
@@ -800,6 +808,18 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	}, [type.NEW, effectRefs]);
 
 	useEffect(() => {
+		if (type.NEW) {
+			setContentItem(null);
+			return;
+		}
+		const sub = fetchContentItem(site, `${CONTENT_TYPES_BASE_PATH}${type.id}/form-definition.xml`).subscribe({
+			next: setContentItem,
+			error: () => setContentItem(null)
+		});
+		return () => sub.unsubscribe();
+	}, [site, type.id, type.NEW, contentItemReloadToken]);
+
+	useEffect(() => {
 		const sub = fetchSiteUiConfig(site, activeEnvironment).subscribe({
 			next: (config) => {
 				const configDOM = fromString(config);
@@ -856,6 +876,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				mainContent={
 					<TypeDetailsView
 						type={type}
+						contentItem={contentItem}
 						onInsertSection={handleInsertSection}
 						onOpenInsertFieldDialog={onOpenInsertFieldDialog}
 						onOpenInsertDataSourceDialog={onOpenInsertDataSourceDialog}
