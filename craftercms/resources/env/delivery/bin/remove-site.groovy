@@ -86,7 +86,7 @@ def deleteDeployerTarget(siteName) {
     MediaType mediaType = MediaType.parse('application/json')
     RequestBody body = RequestBody.create('', mediaType)
     Request request = new Request.Builder()
-            .url("${getDeployerUrl()}/api/1/target/delete/default/${siteName}")
+            .url("${getDeployerUrl()}/api/1/target/delete/default/${siteName}?token=${getDeployerManagementToken()}")
             .post(body)
             .addHeader('Content-Type', 'application/json')
             .build()

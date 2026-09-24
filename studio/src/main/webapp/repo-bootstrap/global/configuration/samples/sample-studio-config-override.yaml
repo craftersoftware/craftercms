@@ -88,10 +88,6 @@
 ##########################################################
 # Indicates if serverless delivery is enabled
 # studio.serverless.delivery.enabled: true
-# The URL for the serverless delivery deployer create URL
-# studio.serverless.delivery.deployer.target.createUrl: ${studio.preview.createTargetUrl}
-# The URL for the serverless delivery deployer delete URL
-# studio.serverless.delivery.deployer.target.deleteUrl: ${studio.preview.deleteTargetUrl}
 # The template name for serverless deployer targets (supported: aws-s3, aws-cloudformed-s3)
 # studio.serverless.delivery.deployer.target.template: aws-cloudformed-s3
 # Replace existing target configuration if one exists?

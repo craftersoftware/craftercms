@@ -266,6 +266,9 @@ studio.configuration.management.authorizationToken: defaultManagementToken
 # Preview engine management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}
+# Deployer agent management authorization token.
+# Please update this per installation and provide this token to the status monitors.
+studio.configuration.management.deployerAuthorizationToken: ${env:DEPLOYER_MANAGEMENT_TOKEN}
 # Protected URLs with preview engine management authorization token.
 # Comma separated list of preview engine urls
 studio.configuration.management.previewProtectedUrls: >-
@@ -525,13 +528,13 @@ studio.contentTypes.filter.documents.includePattern: ^/document/.*
 ##                    Preview Deployer                    ##
 ############################################################
 # Default preview deployer URL (can be overridden per site)
-studio.preview.defaultPreviewDeployerUrl: http://localhost:9191/api/1/target/deploy/{siteEnv}/{siteName}
+studio.preview.defaultPreviewDeployerUrl: http://localhost:9191/api/1/target/deploy/{siteEnv}/{siteName}?token=${studio.configuration.management.deployerAuthorizationToken}
 # Default preview create target URL (can be overridden per site)
-studio.preview.createTargetUrl: http://localhost:9191/api/1/target/create_if_not_exists
+studio.preview.createTargetUrl: http://localhost:9191/api/1/target/create_if_not_exists?token=${studio.configuration.management.deployerAuthorizationToken}
 # Default preview create target URL (can be overridden per site)
-studio.preview.deleteTargetUrl: http://localhost:9191/api/1/target/delete-if-exists/{siteEnv}/{siteName}
+studio.preview.deleteTargetUrl: http://localhost:9191/api/1/target/delete-if-exists/{siteEnv}/{siteName}?token=${studio.configuration.management.deployerAuthorizationToken}
 # Preview duplicate target URL
-studio.preview.duplicateTargetUrl: http://localhost:9191/api/1/target/duplicate/{siteEnv}/{siteName}
+studio.preview.duplicateTargetUrl: http://localhost:9191/api/1/target/duplicate/{siteEnv}/{siteName}?token=${studio.configuration.management.deployerAuthorizationToken}
 # URL to the preview repository (aka Sandbox) where authors save work-in-progress
 studio.preview.repoUrl: ${env:CRAFTER_DATA_DIR}/repos/sites/{siteName}/sandbox
 # Name of template to use with the deployer for preview

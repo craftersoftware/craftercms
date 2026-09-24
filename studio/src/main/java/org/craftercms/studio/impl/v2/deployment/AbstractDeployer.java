@@ -37,7 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITEENV_VARIABLE;
-import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITENAME_VARIABLE;
+import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITENAME_VARIABLE;	
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.PREVIEW_DUPLICATE_TARGET_URL;
 
 /**
@@ -55,6 +55,8 @@ public abstract class AbstractDeployer implements Deployer {
     protected static final String SOURCE_TEMPLATE_PARAM = "source";
     protected static final String REPO_URL_TEMPLATE_PARAM = "repo_url";
     protected static final String LOCAL_REPO_PATH_TEMPLATE_PARAM = "local_repo_path";
+    protected static final String DEPLOYER_AUTHORIZATION_TOKEN_TEMPLATE_PARAM = "token";
+
 
     private final static Logger logger = LoggerFactory.getLogger(AbstractDeployer.class);
 

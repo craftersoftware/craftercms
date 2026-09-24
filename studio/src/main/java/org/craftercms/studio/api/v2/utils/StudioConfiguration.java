@@ -153,6 +153,8 @@ public interface StudioConfiguration {
     String CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN = "studio.configuration.management.authorizationToken";
     String CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN =
             "studio.configuration.management.previewAuthorizationToken";
+	String CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN =
+			"studio.configuration.management.deployerAuthorizationToken";
     String CONFIGURATION_MANAGEMENT_PREVIEW_PROTECTED_URLS =
             "studio.configuration.management.previewProtectedUrls";
     String CONFIGURATION_PUBLISHING_BLACKLIST_REGEX = "studio.configuration.publishing.blacklist.regex";

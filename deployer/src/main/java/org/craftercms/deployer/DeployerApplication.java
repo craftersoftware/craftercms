@@ -18,11 +18,14 @@ package org.craftercms.deployer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.github.jknack.handlebars.EscapingStrategy;
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.io.CompositeTemplateLoader;
 import com.github.jknack.handlebars.springmvc.SpringTemplateLoader;
 import groovy.grape.Grape;
+
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.Strings;
 import org.craftercms.commons.config.ConfigurationResolver;
 import org.craftercms.commons.config.ConfigurationResolverImpl;
 import org.craftercms.commons.config.EncryptionAwareConfigurationReader;
@@ -42,6 +45,7 @@ import org.craftercms.deployer.utils.core.TargetAwarePublishingTargetResolver;
 import org.craftercms.deployer.utils.handlebars.ListHelper;
 import org.craftercms.deployer.utils.handlebars.MissingValueHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -57,9 +61,14 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.validation.Validator;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -69,6 +78,7 @@ import java.util.concurrent.ExecutorService;
 
 import static java.lang.String.format;
 import static org.craftercms.deployer.DeployerApplication.CORE_APP_CONTEXT_LOCATION;
+import static org.craftercms.deployer.DeployerApplication.VALIDATION_CONTEXT_LOCATION;
 
 /**
  * Launcher class and Spring configuration entry point.
@@ -77,11 +87,12 @@ import static org.craftercms.deployer.DeployerApplication.CORE_APP_CONTEXT_LOCAT
  */
 @SpringBootApplication
 @EnableScheduling
-@ImportResource(CORE_APP_CONTEXT_LOCATION)
+@ImportResource({ CORE_APP_CONTEXT_LOCATION, VALIDATION_CONTEXT_LOCATION })
 @SuppressWarnings("unused")
 public class DeployerApplication implements WebMvcConfigurer {
 
 	public static final String CORE_APP_CONTEXT_LOCATION = "classpath:crafter/core/core-context.xml";
+	public static final String VALIDATION_CONTEXT_LOCATION = "classpath:crafter/commons/validation/validation-context.xml";
 
 	@Value("${deployer.main.taskScheduler.poolSize}")
 	private int taskSchedulerPoolSize;
@@ -124,6 +135,10 @@ public class DeployerApplication implements WebMvcConfigurer {
 
 	@Autowired
 	private TargetService targetService;
+
+	@Autowired
+	@Qualifier("commonValidator")
+	private LocalValidatorFactoryBean commonValidator;
 
 	public static void main(String[] args) {
 		SpringApplication.run(DeployerApplication.class, args);
@@ -183,6 +198,18 @@ public class DeployerApplication implements WebMvcConfigurer {
 
 		handlebars.registerHelper(ListHelper.NAME, ListHelper.INSTANCE);
 		handlebars.registerHelperMissing(MissingValueHelper.INSTANCE);
+
+		handlebars.with((EscapingStrategy) value -> {
+			if (value == null) {
+				return null;
+			}
+			DumperOptions options = new DumperOptions();
+			options.setDefaultFlowStyle(DumperOptions.FlowStyle.FLOW);
+			options.setDefaultScalarStyle(DumperOptions.ScalarStyle.DOUBLE_QUOTED);
+			options.setSplitLines(false);
+			String dumped = new Yaml(options).dump(value.toString());
+			return Strings.CI.removeEnd(dumped, "\n");
+		});
 
 		return handlebars;
 	}
@@ -276,5 +303,29 @@ public class DeployerApplication implements WebMvcConfigurer {
 	@EventListener(value = ContextRefreshedEvent.class, condition = "event.applicationContext.parent == null")
 	public void configureGrapesDownload() {
 		Grape.setEnableAutoDownload(grapesDownloadEnabled);
+	}
+
+	/**
+	 * Makes MVC use the shared validator, so constraint messages are resolved
+	 * against the
+	 * {@code crafter/commons/validation/errors} bundle instead of the Bean
+	 * Validation defaults.
+	 */
+	@Override
+	public Validator getValidator() {
+		return commonValidator;
+	}
+
+	/**
+	 * Enables validation of in-line annotated method params,
+	 * e.g.:
+	 * {@code getTarget(@EsapiValidatedParam(type = SITE_ID) @PathVariable String siteName)}
+	 */
+	@Bean("methodValidationPostProcessor")
+	public static MethodValidationPostProcessor methodValidationPostProcessor(
+			@Qualifier("commonValidator") LocalValidatorFactoryBean commonValidator) {
+		MethodValidationPostProcessor processor = new MethodValidationPostProcessor();
+		processor.setValidator(commonValidator);
+		return processor;
 	}
 }

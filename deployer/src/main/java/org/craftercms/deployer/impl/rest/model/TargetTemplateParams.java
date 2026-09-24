@@ -21,6 +21,7 @@ import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
 import org.craftercms.commons.validation.annotations.param.ValidUsername;
 import org.craftercms.commons.validation.annotations.param.ValidateNoTagsParam;
 import org.craftercms.commons.validation.annotations.param.ValidateSecurePathParam;
+import org.craftercms.commons.validation.annotations.param.ValidateStringParam;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -41,6 +42,7 @@ public class TargetTemplateParams {
     @ValidateSecurePathParam
     private String templateName = "remote";
     @ValidateNoTagsParam
+    @ValidateStringParam(blacklistedPatterns = "\\n|\\r", matchFullInput = false)
     private String repoUrl;
     @ValidateNoTagsParam
     @ValidateSecurePathParam

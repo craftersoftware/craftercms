@@ -24,6 +24,7 @@ import groovy.json.JsonBuilder
 import java.nio.file.Path
 import okhttp3.*
 import static utils.EnvironmentUtils.getDeployerUrl
+import static utils.EnvironmentUtils.getDeployerManagementToken
 import upgrade.exceptions.UpgradeException
 
 class ReindexAllTargetsHook implements PostUpgradeHook {
@@ -32,7 +33,7 @@ class ReindexAllTargetsHook implements PostUpgradeHook {
         OkHttpClient client = new OkHttpClient()
 
         Request request = new Request.Builder()
-                .url("${getDeployerUrl()}/api/1/target/get-all")
+                .url("${getDeployerUrl()}/api/1/target/get-all?token=${getDeployerManagementToken()}")
                 .get()
                 .addHeader('Content-Type', 'application/json')
                 .build()
@@ -58,7 +59,7 @@ class ReindexAllTargetsHook implements PostUpgradeHook {
         MediaType mediaType = MediaType.parse('application/json')
         RequestBody body = RequestBody.create(new JsonBuilder(deployAllParams).toString(), mediaType)
         Request request = new Request.Builder()
-                .url("${getDeployerUrl()}/api/1/target/deploy-all")
+                .url("${getDeployerUrl()}/api/1/target/deploy-all?token=${getDeployerManagementToken()}")
                 .post(body)
                 .addHeader('Content-Type', 'application/json')
                 .build()

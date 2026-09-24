@@ -33,6 +33,14 @@ paths:
               Module: Deployer <br>
               Target creation is based on templates. The deployer comes with two out of the box: remote and local. The remote template creates targets that pull changes from a remote Git repository, making it ideal to create targets for delivery environments. The local template instead generates targets that use a local Git repo and the last processed commit to infer the changes, without executing a pull, so it’s used mostly to create targets for authoring environments. <br><br> If a target already exists and <b><i>replace</i></b> is true, then the new target will replace the existing one. If <b><i>replace</i></b> is false and the target exists, a 409 is returned.
       operationId: createTarget
+      parameters:
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       requestBody:
         description: Create target request body
         required: true
@@ -87,6 +95,8 @@ paths:
           $ref: '#/components/responses/Created'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '409':
           $ref: '#/components/responses/Conflict'
         '500':
@@ -117,6 +127,13 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -130,6 +147,10 @@ paths:
                 id: editorial-dev
                 load_date: 2023-01-26T10:00:01.234-05:00
                 status: INIT_COMPLETED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -143,6 +164,14 @@ paths:
       summary: Get all Crafter Deployer targets.
       description: "Module: Deployer"
       operationId: getAllTargets
+      parameters:
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -163,6 +192,10 @@ paths:
                   siteName: third
                   status: INIT_COMPLETED
                   id: third-preview
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -191,9 +224,20 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '204':
           description: NO CONTENT
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -224,9 +268,20 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '204':
           description: NO CONTENT
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -257,6 +312,13 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       requestBody:
         content:
           application/json:
@@ -283,6 +345,10 @@ paths:
                   message:
                     type: string
                     example: OK
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -298,6 +364,14 @@ paths:
       summary: Deploy all Crafter Deployer targets.
       description: "Module: Deployer"
       operationId: deployAllTargets
+      parameters:
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       requestBody:
         content:
           application/json:
@@ -313,6 +387,10 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -343,6 +421,13 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -397,6 +482,10 @@ paths:
                     "processorExecutions": []
                   },
                 ]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -427,6 +516,13 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -500,6 +596,10 @@ paths:
                     }
                   ]
                 }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -530,6 +630,13 @@ paths:
             type: string
           example:
             site_name: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -584,6 +691,10 @@ paths:
                     "processorExecutions": []
                   },
                 ]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -620,7 +731,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -664,7 +775,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '202':
           $ref: '#/components/responses/Accepted'
@@ -699,6 +810,13 @@ paths:
           schema:
             type: string
           example: editorial
+        - name: token
+          in: query
+          description: The authorization token
+          required: true
+          schema:
+            type: string
+          example: aValidTokenValue
       requestBody:
         description: Duplicate target's request body
         required: true
@@ -735,7 +853,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -779,7 +897,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -841,7 +959,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '200':
           description: OK
@@ -882,7 +1000,7 @@ paths:
           required: true
           schema:
             type: string
-          example: defaultManagementToken
+          example: aValidTokenValue
       responses:
         '200':
           description: OK

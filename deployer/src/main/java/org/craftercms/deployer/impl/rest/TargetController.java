@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,6 +16,7 @@
 package org.craftercms.deployer.impl.rest;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.craftercms.commons.config.ConfigurationException;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.rest.RestServiceUtils;
@@ -115,19 +116,28 @@ public class TargetController {
     /**
      * Creates a Deployer {@link Target}.
      *
-     * @param params the body of the request with the template parameters that will be used to create the target.
-     *               The body must contain at least a {@code env} and {@code site_name} parameter. Other required
+     * @param params the body of the request with the template parameters that will
+     *               be used to create the target.
+     *               The body must contain at least a {@code env} and
+     *               {@code site_name} parameter. Other required
      *               parameters depend on the template used.
+     * @param token the management token
      * @return the response entity 201 CREATED status
-     * @throws DeployerException if an error occurred during target creation
+     * @throws DeployerException               if an error occurred during target
+     *                                         creation
+     * @throws InvalidManagementTokenException
      */
     @RequestMapping(value = CREATE_TARGET_URL, method = RequestMethod.POST)
-    public ResponseEntity<Result> createTarget(@Valid @RequestBody CreateTargetRequest params) throws DeployerException {
+    public ResponseEntity<Result> createTarget(@Valid @RequestBody CreateTargetRequest params,
+            @RequestParam String token) throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         return createTarget(params, false);
     }
 
     @RequestMapping(value = CREATE_TARGET_IF_NOT_EXISTS_URL, method = RequestMethod.POST)
-    public ResponseEntity<Result> createTargetIfNotExists(@Valid @RequestBody CreateTargetRequest params) throws DeployerException {
+    public ResponseEntity<Result> createTargetIfNotExists(@Valid @RequestBody CreateTargetRequest params,
+    @RequestParam String token) throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         return createTarget(params, true);
     }
 
@@ -136,13 +146,16 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the response entity with the target's properties and 200 OK status
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = GET_TARGET_URL, method = RequestMethod.GET)
     public ResponseEntity<Target> getTarget(@NotBlank @ValidateNoTagsParam @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-                                            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName)
-            throws DeployerException {
+                                            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+                                            @RequestParam String token)
+            throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         Target target = targetService.getTarget(env, siteName);
 
         return new ResponseEntity<>(target,
@@ -153,11 +166,13 @@ public class TargetController {
     /**
      * Returns all current {@link Target}s
      *
+     * @param token the management token
      * @return the response entity with all the properties of the targets and 200 OK status
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = GET_ALL_TARGETS_URL, method = RequestMethod.GET)
-    public ResponseEntity<List<Target>> getAllTargets() throws DeployerException {
+    public ResponseEntity<List<Target>> getAllTargets(@RequestParam String token) throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         List<Target> targets = targetService.getAllTargets();
 
         return new ResponseEntity<>(targets,
@@ -170,13 +185,16 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the response entity with a 204 NO CONTENT status
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = DELETE_TARGET_URL, method = RequestMethod.POST)
     public ResponseEntity<Void> deleteTarget(@NotBlank @ValidateNoTagsParam @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-                                             @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName)
-            throws DeployerException {
+                                             @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+                                             @RequestParam String token)
+                                             throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         targetService.deleteTarget(env, siteName);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -187,13 +205,16 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the response entity with a 204 NO CONTENT status
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = DELETE_IF_EXIST_TARGET_URL, method = RequestMethod.POST)
     public ResponseEntity<Void> deleteTargetIfExists(@NotBlank @ValidateNoTagsParam @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-                                                     @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName)
-            throws DeployerException {
+                                                     @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+                                                     @RequestParam String token)
+            throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
 
         try {
             targetService.deleteTarget(env, siteName);
@@ -212,6 +233,7 @@ public class TargetController {
      * @param params   any additional parameters that can be used by the
      *                 {@link org.craftercms.deployer.api.DeploymentProcessor}s, for
      *                 example {@code reprocess_all_files}
+     * @param token the management token
      * @return the response entity with a 200 OK status
      * @throws DeployerException if an error occurred
      */
@@ -221,8 +243,10 @@ public class TargetController {
                                                @NotBlank @EsapiValidatedParam(type = SITE_ID)
                                                @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
                                                @RequestBody(required = false)
-                                               Map<@ValidateStringParam(whitelistedPatterns = DEPLOY_TARGET_VALID_PARAMS) String, Object> params)
-            throws DeployerException {
+                                               Map<@ValidateStringParam(whitelistedPatterns = DEPLOY_TARGET_VALID_PARAMS) String, Object> params,
+                                               @RequestParam String token)
+            throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         if (params == null) {
             params = new HashMap<>();
         }
@@ -240,13 +264,16 @@ public class TargetController {
      * @param params any additional parameters that can be used by the
      *               {@link org.craftercms.deployer.api.DeploymentProcessor}s, for
      *               example {@code reprocess_all_files}
+     * @param token the management token
      * @return the response entity with a 200 OK status
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = DEPLOY_ALL_TARGETS_URL, method = RequestMethod.POST)
-    public ResponseEntity<Result> deployAllTargets(@RequestBody(required = false)
-                                                   Map<@ValidateStringParam(whitelistedPatterns = DEPLOY_ALL_TARGETS_VALID_PARAMS) String, Object> params)
-            throws DeployerException {
+    public ResponseEntity<Result> deployAllTargets(
+            @RequestBody(required = false) Map<@ValidateStringParam(whitelistedPatterns = DEPLOY_ALL_TARGETS_VALID_PARAMS) String, Object> params,
+            @RequestParam String token)
+            throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         if (params == null) {
             params = new HashMap<>();
         }
@@ -263,6 +290,7 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the pending deployments for the target
      * @throws DeployerException if an error occurred
      */
@@ -270,7 +298,9 @@ public class TargetController {
     public ResponseEntity<Collection<Deployment>> getPendingDeployments(
             @NotBlank @ValidateNoTagsParam
             @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName) throws DeployerException {
+            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+            @RequestParam String token) throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         Target target = targetService.getTarget(env, siteName);
         Collection<Deployment> deployments = target.getPendingDeployments();
 
@@ -284,14 +314,17 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the pending and current deployments for the target
      * @throws DeployerException if an error occurred
      */
     @RequestMapping(value = GET_CURRENT_DEPLOYMENT_URL, method = RequestMethod.GET)
     public ResponseEntity<Deployment> getCurrentDeployment(@NotBlank @ValidateNoTagsParam
                                                            @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-                                                           @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName)
-            throws DeployerException {
+                                                           @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+                                                           @RequestParam String token)
+            throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         Target target = targetService.getTarget(env, siteName);
         Deployment deployment = target.getCurrentDeployment();
 
@@ -305,6 +338,7 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the pending and current deployments for the target
      * @throws DeployerException if an error occurred
      */
@@ -312,7 +346,9 @@ public class TargetController {
     public ResponseEntity<Collection<Deployment>> getAllDeployments(
             @NotBlank @ValidateNoTagsParam
             @ValidateSecurePathParam @PathVariable(ENV_PATH_VAR_NAME) String env,
-            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName) throws DeployerException {
+            @NotBlank @EsapiValidatedParam(type = SITE_ID) @PathVariable(SITE_NAME_PATH_VAR_NAME) String siteName,
+            @RequestParam String token) throws DeployerException, InvalidManagementTokenException {
+        validateToken(token);
         Target target = targetService.getTarget(env, siteName);
         Collection<Deployment> deployments = target.getAllDeployments();
 
@@ -326,6 +362,7 @@ public class TargetController {
      *
      * @param env      the target's environment
      * @param siteName the target's site name
+     * @param token the management token
      * @return the response entity with a 200 OK status
      * @throws DeployerException if an error occurred
      */
@@ -345,6 +382,7 @@ public class TargetController {
      * Creates a parameters map from a {@link CreateTargetRequest} object
      *
      * @param createRequest the request
+     * @param token the management token
      * @return a map containing the necessary properties to invoke the create target
      */
     private Map<String, Object> getTemplateParams(TargetTemplateParams createRequest) {
@@ -400,9 +438,12 @@ public class TargetController {
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(DUPLICATE_TARGET_URL)
     public ResponseEntity<Result> duplicateTarget(@NotEmpty @ValidSiteId @PathVariable(ENV_PATH_VAR_NAME) String env,
-                                @ValidSiteId @PathVariable(SITE_NAME_PATH_VAR_NAME) String sourceSiteName,
-                                @Valid @RequestBody DuplicateTargetRequest duplicateTargetRequest)
-            throws TargetServiceException, TargetAlreadyExistsException, TargetNotFoundException {
+            @ValidSiteId @PathVariable(SITE_NAME_PATH_VAR_NAME) String sourceSiteName,
+            @Valid @RequestBody DuplicateTargetRequest duplicateTargetRequest,
+            @RequestParam String token)
+            throws TargetServiceException, TargetAlreadyExistsException, TargetNotFoundException,
+            InvalidManagementTokenException {
+        validateToken(token);
 
         final TargetTemplateParams params = duplicateTargetRequest.getTargetTemplateParams();
         targetService.duplicateTarget(env, sourceSiteName, duplicateTargetRequest.getSiteName(),
@@ -412,7 +453,7 @@ public class TargetController {
     }
 
     protected void validateToken(String token) throws InvalidManagementTokenException {
-        if (StringUtils.isEmpty(token) || !StringUtils.equals(token, managementToken)) {
+        if (StringUtils.isEmpty(token) || !Strings.CS.equals(token, managementToken)) {
             throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
         }
     }

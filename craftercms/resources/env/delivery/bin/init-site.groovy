@@ -139,7 +139,7 @@ def createDeployerTarget(siteName, repoPath, targetParams) {
     MediaType mediaType = MediaType.parse('application/json')
     RequestBody body = RequestBody.create(new JsonBuilder(targetParams).toString(), mediaType)
     Request request = new Request.Builder()
-            .url("${getDeployerUrl()}/api/1/target/create")
+            .url("${getDeployerUrl()}/api/1/target/create?token=${getDeployerManagementToken()}")
             .post(body)
             .addHeader('Content-Type', 'application/json')
             .build()

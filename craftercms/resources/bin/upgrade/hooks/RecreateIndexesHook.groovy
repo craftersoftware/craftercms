@@ -29,7 +29,7 @@ import java.nio.file.Path
 import okhttp3.*
 
 import static utils.EnvironmentUtils.getDeployerUrl
-import static utils.EnvironmentUtils.getEnv
+import static utils.EnvironmentUtils.getDeployerManagementToken
 
 class RecreateIndexesHook implements PostUpgradeHook {
 
@@ -57,7 +57,7 @@ class RecreateIndexesHook implements PostUpgradeHook {
     protected def getAllTargets() {
         OkHttpClient client = new OkHttpClient()
         Request request = new Request.Builder()
-                .url("${getDeployerUrl()}/api/1/target/get-all")
+                .url("${getDeployerUrl()}/api/1/target/get-all?token=${getDeployerManagementToken()}")
                 .get()
                 .addHeader('Content-Type', 'application/json')
                 .build()
@@ -79,7 +79,7 @@ class RecreateIndexesHook implements PostUpgradeHook {
         HttpUrl.Builder urlBuilder = HttpUrl
                 .parse("${getDeployerUrl()}/api/1/target/recreate/${environment}/${siteName}")
                 .newBuilder()
-        urlBuilder.addQueryParameter('token', getEnv('DEPLOYER_MANAGEMENT_TOKEN'))
+        urlBuilder.addQueryParameter('token', getDeployerManagementToken())
 
         Request request = new Request.Builder()
                 .url(urlBuilder.build())

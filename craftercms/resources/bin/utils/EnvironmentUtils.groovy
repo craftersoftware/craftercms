@@ -52,6 +52,10 @@ class EnvironmentUtils {
         return url
     }
 
+	static String getDeployerManagementToken() {
+		return getEnv('DEPLOYER_MANAGEMENT_TOKEN')
+	}
+
     /**
      * Returns the environment name (either authoring or delivery).
      */
