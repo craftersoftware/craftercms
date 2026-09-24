@@ -16,7 +16,7 @@
 
 apply from: "commons.gradle"
 
-ext.runAuthoringEnvironment = { command, profileRequired, socialRequired ->
+ext.runAuthoringEnvironment = { command ->
 	if (file("${authoringEnvDir}/bin/crafter.sh").exists()) {
 		// Run authoring tasks
 		execCommand(command, "${authoringEnvDir}/bin")
@@ -25,7 +25,7 @@ ext.runAuthoringEnvironment = { command, profileRequired, socialRequired ->
 	}
 }
 
-ext.runDeliveryEnvironment = { command, profileRequired, socialRequired ->
+ext.runDeliveryEnvironment = { command ->
 	if (file("${deliveryEnvDir}/bin/crafter.sh").exists()) {
 		// Run delivery tasks
 		execCommand(command, "${deliveryEnvDir}/bin")
@@ -34,14 +34,14 @@ ext.runDeliveryEnvironment = { command, profileRequired, socialRequired ->
 	}
 }
 
-ext.runEnvironment = { environment, command, profileRequired, socialRequired ->
+ext.runEnvironment = { environment, command ->
 	def cmd = ["${crafterCmd}"] + command
 
 	// Run tasks per environment
 	if (environment == "authoring") {
-		runAuthoringEnvironment(cmd, profileRequired, socialRequired)
+		runAuthoringEnvironment(cmd)
 	} else if (environment == "delivery") {
-		runDeliveryEnvironment(cmd, profileRequired, socialRequired)
+		runDeliveryEnvironment(cmd)
 	} else {
 		logger.error("Unknown environment \"" + environment + "\"")
 		throw new GradleException("Unknown environment \"" + environment + "\"")

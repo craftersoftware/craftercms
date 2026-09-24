@@ -15,19 +15,25 @@
  */
 package org.craftercms.engine.util.spring.security.targeting;
 
+import java.util.Collection;
+import java.util.Map;
+
 import org.craftercms.engine.util.spring.security.profile.ProfileUser;
-import org.craftercms.security.authentication.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
- * Extension of {@link ProfileUser} used for Studio targeting
+ * {@link ProfileUser} used for Studio targeting.
  *
  * @author joseross
  * @since 3.1.9
  */
 public class TargetingUser extends ProfileUser {
 
-    public TargetingUser(Authentication auth) {
-        super(auth);
+    public TargetingUser(final String username,
+                         final Collection<? extends GrantedAuthority> authorities,
+                         final Map<String, Object> attributes) {
+        super(username, "N/A", authorities);
+        setAttributes(attributes);
     }
 
 }

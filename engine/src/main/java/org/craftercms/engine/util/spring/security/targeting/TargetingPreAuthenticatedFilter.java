@@ -19,10 +19,9 @@ package org.craftercms.engine.util.spring.security.targeting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.commons.lang.StringUtils;
-import org.bson.types.ObjectId;
 import org.craftercms.engine.controller.rest.preview.ProfileRestController;
 import org.craftercms.engine.util.spring.security.ConfigAwarePreAuthenticationFilter;
-import org.craftercms.profile.api.Profile;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.*;
 
@@ -58,14 +57,6 @@ public class TargetingPreAuthenticatedFilter extends ConfigAwarePreAuthenticatio
                     logger.debug("Non-anonymous persona set: " + attributes);
                 }
 
-                Profile profile = new Profile();
-                profile.setId(new ObjectId((String) attributes.get("id")));
-                profile.setUsername("preview");
-                profile.setEnabled(true);
-                profile.setCreatedOn(new Date());
-                profile.setLastModified(new Date());
-                profile.setTenant("preview");
-
                 Object rolesAttr = attributes.get("roles");
                 String[] roles = null;
                 if (rolesAttr instanceof String[]) {
@@ -75,18 +66,19 @@ public class TargetingPreAuthenticatedFilter extends ConfigAwarePreAuthenticatio
                 } else if (rolesAttr instanceof String) {
                     roles = ((String) rolesAttr).split(",");
                 }
-                if (roles != null) {
-                    profile.getRoles().addAll(Arrays.stream(roles).filter(StringUtils::isNotBlank).toList());
-                }
+                Collection<SimpleGrantedAuthority> authorities = roles == null
+                    ? List.of()
+                    : Arrays.stream(roles)
+                        .filter(StringUtils::isNotBlank)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
 
                 Map<String, Object> customAttributes = new HashMap<>(attributes);
                 customAttributes.remove("id");
                 customAttributes.remove("username");
                 customAttributes.remove("roles");
 
-                profile.setAttributes(customAttributes);
-
-                return new TargetingUser(new TargetingAuthentication(profile));
+                return new TargetingUser("preview", authorities, customAttributes);
             }
         }
         if (logger.isDebugEnabled()) {

@@ -43,7 +43,6 @@ dependencies {
 
 	implementation project(':core')
 	implementation project(':commons:entitlements')
-	implementation project(':commons:mongo')
 	implementation project(':search:opensearch')
 	implementation project(':search:commons')
 	implementation project(':script-security-plugin')

@@ -49,8 +49,6 @@
         <!-- 3rdparty Loggers -->
         <Logger name="org.springframework" level="warn"/>
 
-        <Logger name="org.mongodb.driver" level="warn"/>
-
         <Logger name="org.tuckey" level="info"/>
 
         <!-- Root Logger -->

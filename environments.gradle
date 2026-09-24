@@ -104,24 +104,6 @@ ext.commonItemsToCopy = [
 		}
 	],
 	[
-		name   : "mongodb",
-		from   : "${downloadDir}/mongodb-${mongodbBinary}-${mongodbArch == 'arm64' ? 'aarch64' : mongodbArch}-${mongodbVersion}/",
-		into   : "/bin/mongodb/",
-		exclude: ""
-	],
-	[
-		name   : "mongosh",
-		from   : "${downloadDir}/mongosh-${mongoshVersion}-${currentPlatform}-${mongoshArch}/bin/",
-		into   : "/bin/mongodb/bin/",
-		exclude: ""
-	],
-	[
-		name   : "mongodb-database-tools",
-		from   : "${downloadDir}/mongodb-database-tools-${mongoToolsArch}-${mongoToolsVersion}/bin/",
-		into   : "/bin/mongodb/bin/",
-		exclude: ""
-	],
-	[
 		name   : "license",
 		from   : "${cmsDir}/resources/LICENSE",
 		into   : "/",
@@ -522,7 +504,6 @@ ext.commonConfUpdatePatterns = [
 					'spring-security-ldap-*.jar,\\\n' +
 					'spring-security-messaging-*.jar,\\\n' +
 					'spring-security-web-*.jar,\\\n' +
-					'spring-social-*.jar,\\\n' +
 					'spring-tx-*.jar,\\\n' +
 					'spring-web-*.jar,\\\n' +
 					'spring-webmvc-*.jar,\\\n' +
@@ -691,7 +672,6 @@ def authoringTokens = [
 	DEPLOYER_DEBUG_PORT : String.valueOf(authoringDeployerDebugPort),
 	DEPLOYMENT_DIR      : String.valueOf(authoringDeploymentDir),
 	MARIADB_PORT        : String.valueOf(authoringMariaDbPort),
-	MONGODB_PORT        : String.valueOf(authoringMongoDbPort),
 	ENV                 : "authoring",
 	VERSION             : project.version,
 	GIT_BUILD_ID        : gitRevisionId,
@@ -710,7 +690,6 @@ def deliveryTokens = [
 	DEPLOYER_PORT       : String.valueOf(deliveryDeployerPort),
 	DEPLOYER_DEBUG_PORT : String.valueOf(deliveryDeployerDebugPort),
 	DEPLOYMENT_DIR      : String.valueOf(deliveryDeploymentDir),
-	MONGODB_PORT        : String.valueOf(deliveryMongoDbPort),
 	ENV                 : "delivery",
 	VERSION             : project.version,
 	GIT_BUILD_ID        : gitRevisionId,
@@ -729,24 +708,15 @@ ext.getEnvironments = { ->
 	return result;
 }
 
-ext.prepareBaseEnvironment = { envFolder, overwriteChangedFiles, downloadGrapes, includeMongodb ->
+ext.prepareBaseEnvironment = { envFolder, overwriteChangedFiles, downloadGrapes ->
 	// Copy files into env
 	commonItemsToCopy.each { item ->
 		def name = item.name
 		def from = item.from
 		def into = item.into
 		def exclude = item.exclude
-		def performSync = true
-
-		// Skip Profile if it's not required nor is Social required (since Social depends on Profile)
-		def mongoSync = ["mongodb", "mongosh", "mongodb-database-tools"].contains(name)
-		if (mongoSync && !includeMongodb) {
-			performSync = false
-		}
-
-		if (performSync) {
-			syncFolder("${projectDir}", from, envFolder + into, exclude, overwriteChangedFiles, !mongoSync)
-		}
+		syncFolder("${projectDir}", from, envFolder + into, exclude, overwriteChangedFiles, true)
+		
 		if (item.postCopy) {
 			println "Executing postCopy for ${name}"
 			item.postCopy(envFolder)
@@ -790,9 +760,9 @@ ext.prepareBaseEnvironment = { envFolder, overwriteChangedFiles, downloadGrapes,
 	}
 }
 
-ext.prepareAuthoringEnvironment = { overwriteChangedFiles, downloadGrapes, includeMongodb ->
+ext.prepareAuthoringEnvironment = { overwriteChangedFiles, downloadGrapes ->
 	// Prepare the base
-	prepareBaseEnvironment("${authoringEnvDir}", overwriteChangedFiles, downloadGrapes, includeMongodb)
+	prepareBaseEnvironment("${authoringEnvDir}", overwriteChangedFiles, downloadGrapes)
 
 	// Copy files into env
 	authoringItemsToCopy.each { item ->
@@ -864,9 +834,9 @@ ext.prepareAuthoringEnvironment = { overwriteChangedFiles, downloadGrapes, inclu
 	}
 }
 
-ext.prepareDeliveryEnvironment = { overwriteChangedFiles, downloadGrapes, includeMongodb ->
+ext.prepareDeliveryEnvironment = { overwriteChangedFiles, downloadGrapes ->
 	// Prepare the base
-	prepareBaseEnvironment("${deliveryEnvDir}", overwriteChangedFiles, downloadGrapes, includeMongodb)
+	prepareBaseEnvironment("${deliveryEnvDir}", overwriteChangedFiles, downloadGrapes)
 
 	// Copy files into env
 	deliveryItemsToCopy.each { item ->
@@ -934,14 +904,14 @@ ext.prepareDeliveryEnvironment = { overwriteChangedFiles, downloadGrapes, includ
 	}
 }
 
-ext.prepareEnvironment = { environment, refreshEnv, overwriteChangedFiles, downloadGrapes, includeMongodb ->
+ext.prepareEnvironment = { environment, refreshEnv, overwriteChangedFiles, downloadGrapes ->
 	if (environment == "authoring") {
 		if (!file("${authoringEnvDir}").exists() || refreshEnv) {
-			prepareAuthoringEnvironment(overwriteChangedFiles, downloadGrapes, includeMongodb)
+			prepareAuthoringEnvironment(overwriteChangedFiles, downloadGrapes)
 		}
 	} else if (environment == "delivery") {
 		if (!file("${deliveryEnvDir}").exists() || refreshEnv) {
-			prepareDeliveryEnvironment(overwriteChangedFiles, downloadGrapes, includeMongodb)
+			prepareDeliveryEnvironment(overwriteChangedFiles, downloadGrapes)
 		}
 	} else {
 		logger.error("Unknown environment \"" + environment + "\"")

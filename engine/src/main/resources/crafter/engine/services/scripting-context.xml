@@ -62,15 +62,6 @@
         <entry key="modePreview" value="#{T(java.lang.Boolean).valueOf(${crafter.engine.preview})}"/>
         <entry key="crafterEnv" value="${crafter.engine.environment}"/>
 
-        <!-- For backwards compatibility only, should not be used anymore -->
-        <entry key="tenantsResolver" value-ref="crafter.tenantsResolver"/>
-        <entry key="profileService" value-ref="crafter.profileServiceRestClient"/>
-        <entry key="tenantService" value-ref="crafter.tenantServiceRestClient"/>
-        <entry key="authenticationService" value-ref="crafter.authenticationServiceRestClient"/>
-        <entry key="crafter.authenticationManager" value-ref="crafter.profileAuthenticationManager"/>
-        <entry key="connectionFactoryLocator" value-ref="crafter.connectionFactoryLocator"/>
-        <entry key="providerLoginSupport" value-ref="crafter.providerLoginSupport"/>
-
         <entry key="elasticsearch" value-ref="crafter.searchService"/>
         <entry key="elasticsearchClient" value-ref="crafter.searchClient"/>
     </util:map>

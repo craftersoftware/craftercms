@@ -76,13 +76,6 @@
         <redirectToTargetedUrl /> (Sets whether the request should be redirected when the targeted URL is different from the current URL)
     </targeting>
 
-    (Profile Properties)
-    <profile>
-        <api>
-            <accessTokenId /> (The access token to use for the Crafter Profile REST calls.  This should always be specified on multi-tenant configurations)
-        </api>
-    </profile>
-
     (Security Properties)
     <security>
         <login>
@@ -221,13 +214,6 @@
         <mergeFolders>true</mergeFolders>
         <redirectToTargetedUrl>false</redirectToTargetedUrl>
     </targeting>
-
-    <!-- Profile properties -->
-    <profile>
-        <api>
-            <accessTokenId>${enc:q3l5YNoKH38RldAkg6EAGjxlI7+K7Cl4iEmMJNlemNOjcuhaaQNPLwAB824QcJKCbEeLfsg+QSfHCYNcNP/yMw==}</accessTokenId>
-        </api>
-    </profile>
 
     <!-- Security properties -->
     <security>

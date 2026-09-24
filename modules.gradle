@@ -15,17 +15,14 @@
  */
 
 ext.allModules = ["groovy-sandbox", "script-security-plugin", "commons",
-		  "core", "search", "profile", "engine", "deployer", "studio-ui",
-		  "studio", "social", "cli", "js-sdk"]
+		  "core", "search", "engine", "deployer", "studio-ui",
+		  "studio", "cli", "js-sdk"]
 ext.buildModules = ["groovy-sandbox", "script-security-plugin", "commons",
-		    "core", "search", "profile", "engine", "deployer", "studio-ui", "studio",
-		    "social", "cli"]
+		    "core", "search", "engine", "deployer", "studio-ui", "studio", "cli"]
 ext.deployModules = ["groovy-sandbox", "script-security-plugin", "commons",
-		     "core", "search", "profile", "profile-admin", "engine", "deployer", "studio-ui", "studio",
-		     "social", "social-admin", "cli"]
+		     "core", "search", "engine", "deployer", "studio-ui", "studio", "cli"]
 ext.deployToMavenModules = ["groovy-sandbox", "script-security-plugin", "commons",
-			    "core", "search", "profile", "engine", "deployer", "studio",
-			    "social", "cli"]
+			    "core", "search", "engine", "deployer", "studio", "cli"]
 
 // Modules named on the command line (e.g. engine:build, :studio:deploy).
 ext.getExplicitlyRequestedModules = { ->

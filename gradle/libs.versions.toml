@@ -77,8 +77,6 @@ unit-api = "2.2"
 jdom2 = "2.0.6.1"
 hamcrest = "3.0"
 spring-security = "7.1.1"
-spring-social-web = "1.1.6.RELEASE"
-spring-social-facebook = "2.0.3.RELEASE"
 cglib = "3.3.0"
 urlrewritefilter = "5.1.3"
 graphql-java = "26.1"
@@ -134,7 +132,6 @@ aws-sdk-elastictranscoder = "2.40.14"
 node = "22.18.0"
 yarn = "1.22.22"
 rome-utils = "2.1.0"
-embed-mongo = "4.33.0"
 netty = "4.2.17.Final"
 okio = "3.17.0"
 html5diff = "1.4.5"
@@ -208,8 +205,6 @@ bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bo
 bcprov-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 bcmail-jdk18on = { module = "org.bouncycastle:bcmail-jdk18on", version.ref = "bouncycastle" }
 eddsa = { module = "net.i2p.crypto:eddsa", version.ref = "eddsa" }
-mongo-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongo" }
-mongo-driver-legacy = { module = "org.mongodb:mongodb-driver-legacy", version.ref = "mongo" }
 jongo = { module = "org.jongo:jongo", version.ref = "jongo" }
 semver4j = { module = "com.vdurmont:semver4j", version.ref = "semver4j" }
 joda-time = { module = "joda-time:joda-time", version.ref = "joda-time" }
@@ -232,8 +227,6 @@ spring-security-core = { module = "org.springframework.security:spring-security-
 spring-security-config = { module = "org.springframework.security:spring-security-config", version.ref = "spring-security" }
 spring-security-web = { module = "org.springframework.security:spring-security-web", version.ref = "spring-security" }
 spring-security-access = { module = "org.springframework.security:spring-security-access", version.ref = "spring-security" }
-spring-social-web = { module = "org.springframework.social:spring-social-web", version.ref = "spring-social-web" }
-spring-social-facebook = { module = "org.springframework.social:spring-social-facebook", version.ref = "spring-social-facebook" }
 cglib = { module = "cglib:cglib", version.ref = "cglib" }
 urlrewritefilter = { module = "org.tuckey:urlrewritefilter", version.ref = "urlrewritefilter" }
 graphql-java = { module = "com.graphql-java:graphql-java", version.ref = "graphql-java" }

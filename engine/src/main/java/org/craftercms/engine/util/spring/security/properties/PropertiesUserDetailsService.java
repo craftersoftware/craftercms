@@ -14,18 +14,26 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.craftercms.engine.util.spring.security.profile;
+package org.craftercms.engine.util.spring.security.properties;
 
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
+import java.util.Properties;
+
+import org.craftercms.engine.util.spring.security.profile.ProfileUser;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 /**
- * Token-based remember-me support for properties-backed Engine users.
+ * Loads Engine users from Spring Security's standard user properties format.
  */
-public class ProfileRememberMeServices extends TokenBasedRememberMeServices {
+public class PropertiesUserDetailsService extends InMemoryUserDetailsManager {
 
-	public ProfileRememberMeServices(final String key, final UserDetailsService userDetailsService) {
-		super(key, userDetailsService);
+	public PropertiesUserDetailsService(final Properties users) {
+		super(users);
+	}
+
+	@Override
+	public UserDetails loadUserByUsername(final String username) {
+		return new ProfileUser(super.loadUserByUsername(username));
 	}
 
 }

@@ -64,24 +64,16 @@ task download() {
 	doFirst {
 		def performDownload = true
 		getDownloads().each { download ->
-			performDownload = true
-			def mongoDownload = ["mongodb", "mongosh", "mongodb-database-tools"].contains(download['name'])
-			if (mongoDownload && (!(socialRequired || profileRequired))) {
-				performDownload = false // Skip mongodb download
-			}
-
-			if (performDownload) {
-				downloadArtifact(
-					download['name'],
-					download['url'],
-					download['destinationFile'],
-					download['checksumAlgorithm'],
-					overwriteArtifact,
-					download['verifyArtifact'] == false ? false : true /* verify artifact */,
-					download['expand'].toBoolean(),
-					download['expandFolder']
-				)
-			}
+			downloadArtifact(
+				download['name'],
+				download['url'],
+				download['destinationFile'],
+				download['checksumAlgorithm'],
+				overwriteArtifact,
+				download['verifyArtifact'] == false ? false : true /* verify artifact */,
+				download['expand'].toBoolean(),
+				download['expandFolder']
+			)
 		}
 	}
 }
@@ -101,7 +93,7 @@ task buildBaseEnvs() {
 		getEnvironments().each { environment ->
 			println "Deploying the foundation of $environment"
 
-			prepareEnvironment(environment, refreshEnv, overwriteChangedFiles, downloadGrapes, (socialRequired || profileRequired))
+			prepareEnvironment(environment, refreshEnv, overwriteChangedFiles, downloadGrapes)
 		}
 	}
 }
@@ -144,9 +136,7 @@ task start() {
 			def command = [startCommand]
 			if (!startSearch)
 				command += ["skipSearch"]
-			if (startMongoDB)
-				command += ["forceMongo"]
-			runEnvironment(environment, command, profileRequired, socialRequired)
+			runEnvironment(environment, command)
 		}
 	}
 }
@@ -160,9 +150,7 @@ task stop() {
 			def command = [stopCommand]
 			if (!startSearch)
 				command += ["skipSearch"]
-			if (startMongoDB)
-				command += ["forceMongo"]
-			runEnvironment(environment, command, profileRequired, socialRequired)
+			runEnvironment(environment, command)
 		}
 	}
 }
@@ -174,9 +162,7 @@ task status() {
 			def command = [statusCommand]
 			if (!startSearch)
 				command += ["skipSearch"]
-			if (startMongoDB)
-				command += ["forceMongo"]
-			runEnvironment(environment, command, profileRequired, socialRequired)
+			runEnvironment(environment, command)
 		}
 	}
 }

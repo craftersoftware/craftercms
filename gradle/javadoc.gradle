@@ -29,9 +29,7 @@ ext.aggregateJavadocSets = [
 	'core',
 	'deployer',
 	'engine',
-	'profile',
 	'search',
-	'social',
 	'studio'
 ] as Set
 
@@ -43,7 +41,7 @@ def javadocSetOf = { Project p ->
 
 tasks.register('aggregateJavadoc') {
 	group = 'documentation'
-	description = 'Generates Javadoc sites for commons, core, deployer, engine, profile, search, social, and studio'
+	description = 'Generates Javadoc sites for commons, core, deployer, engine, search, and studio'
 }
 
 gradle.projectsEvaluated {

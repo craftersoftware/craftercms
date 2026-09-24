@@ -75,7 +75,7 @@
 
     <util:list id="crafter.logoutHandlers">
         <ref bean="crafter.profileLogoutHandler"/>
-        <ref bean="crafter.profileRememberMeServices"/>
+        <ref bean="crafter.rememberMeServices"/>
         <ref bean="crafter.logoutHandler"/>
     </util:list>
 
@@ -91,6 +91,17 @@
     </bean>
 
     <!-- User Details -->
+    <bean id="crafter.usersProperties"
+          class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="location" value="${crafter.security.users.location}"/>
+        <property name="ignoreResourceNotFound" value="false"/>
+    </bean>
+
+    <bean id="crafter.userDetailsService"
+          class="org.craftercms.engine.util.spring.security.properties.PropertiesUserDetailsService">
+        <constructor-arg name="users" ref="crafter.usersProperties"/>
+    </bean>
+
     <bean id="crafter.preAuthenticatedUserDetailsService"
           class="org.craftercms.engine.util.spring.security.DefaultPreAuthenticatedUserDetailsService"/>
 
@@ -107,6 +118,16 @@
 
     <bean id="crafter.authenticationManager" class="org.springframework.security.authentication.ProviderManager">
         <constructor-arg index="0" ref="crafter.authenticationProviders"/>
+    </bean>
+
+    <bean id="crafter.passwordEncoder"
+          class="org.springframework.security.crypto.factory.PasswordEncoderFactories"
+          factory-method="createDelegatingPasswordEncoder"/>
+
+    <bean id="crafter.profileAuthenticationProvider"
+          class="org.craftercms.engine.util.spring.security.properties.PropertiesAuthenticationProvider">
+        <constructor-arg name="userDetailsService" ref="crafter.userDetailsService"/>
+        <constructor-arg name="passwordEncoder" ref="crafter.passwordEncoder"/>
     </bean>
 
     <bean id="crafter.rememberMeAuthenticationProvider"
@@ -150,31 +171,14 @@
 
     <!-- Remember Me -->
 
-    <bean id="crafter.profileRememberMeServices"
+    <bean id="crafter.rememberMeServices"
           class="org.craftercms.engine.util.spring.security.profile.ProfileRememberMeServices">
         <constructor-arg name="key" value="${crafter.security.rememberme.key}"/>
-        <constructor-arg name="userDetailsService" ref="crafter.profileUserDetailsService"/>
-        <constructor-arg name="authenticationService" ref="crafter.authenticationServiceRestClient"/>
+        <constructor-arg name="userDetailsService" ref="crafter.userDetailsService"/>
     </bean>
-
-    <!-- Profile Integration   -->
 
     <bean id="crafter.profileLogoutHandler"
-          class="org.craftercms.engine.util.spring.security.profile.ProfileLogoutHandler">
-        <constructor-arg name="profileAuthenticationManager" ref="crafter.profileAuthenticationManager"/>
-    </bean>
-
-    <bean id="crafter.profileAuthenticationProvider"
-          class="org.craftercms.engine.util.spring.security.profile.ProfileAuthenticationProvider">
-        <constructor-arg name="tenantsResolver" ref="crafter.tenantsResolver"/>
-        <constructor-arg name="authenticationManager" ref="crafter.profileAuthenticationManager"/>
-    </bean>
-
-    <bean id="crafter.profileUserDetailsService"
-          class="org.craftercms.engine.util.spring.security.profile.ProfileUserDetailsService">
-        <constructor-arg name="tenantsResolver" ref="crafter.tenantsResolver"/>
-        <constructor-arg name="profileService" ref="crafter.profileServiceRestClient"/>
-    </bean>
+          class="org.craftercms.engine.util.spring.security.properties.PropertiesLogoutHandler"/>
 
     <!-- Security Filters -->
 
@@ -196,13 +200,13 @@
         <property name="authenticationSuccessHandler" ref="crafter.loginSuccessHandler"/>
         <property name="authenticationFailureHandler" ref="crafter.loginFailureHandler"/>
         <property name="sessionAuthenticationStrategy" ref="crafter.sessionAuthenticationStrategy"/>
-        <property name="rememberMeServices" ref="crafter.profileRememberMeServices"/>
+        <property name="rememberMeServices" ref="crafter.rememberMeServices"/>
     </bean>
 
     <bean id="crafter.rememberMeFilter"
           class="org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter">
         <constructor-arg index="0" ref="crafter.authenticationManager" />
-        <constructor-arg index="1" ref="crafter.profileRememberMeServices"/>
+        <constructor-arg index="1" ref="crafter.rememberMeServices"/>
     </bean>
 
     <bean id="crafter.requestCacheFilter"

@@ -1486,7 +1486,6 @@ new org.craftercms.sites.editorial.TaxonomyHelper java.lang.Object
 method org.craftercms.sites.editorial.TaxonomyHelper getValues java.lang.String
 field org.craftercms.sites.editorial.TaxonomyHelper TAXONOMY_PATH
 field org.craftercms.sites.editorial.TaxonomyHelper siteItemService
-method org.craftercms.profile.api.Profile getAttributes
 method org.springframework.security.core.Authentication getPrincipal
 method org.craftercms.engine.util.spring.security.CustomUser getAttributes
 

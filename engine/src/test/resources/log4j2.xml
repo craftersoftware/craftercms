@@ -37,8 +37,6 @@
 
         <Logger name="org.springframework.web" level="info"/>
 
-        <Logger name="org.mongodb.driver" level="warn"/>
-
         <Logger name="org.tuckey" level="info"/>
 
         <!-- Root Logger -->

@@ -19,7 +19,6 @@ import jakarta.servlet.http.HttpSession;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
-import org.bson.types.ObjectId;
 import org.craftercms.commons.validation.ValidationResult;
 import org.craftercms.core.controller.rest.CrafterRestController;
 import org.craftercms.core.controller.rest.RestControllerBase;
@@ -37,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
@@ -45,7 +45,7 @@ import static org.craftercms.commons.validation.annotations.param.EsapiValidatio
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
- * REST controller for integration with Crafter Profile.
+ * REST controller for managing preview targeting persona attributes.
  *
  * @author Russ Danner
  * @author Alfonso Vásquez
@@ -107,7 +107,7 @@ public class ProfileRestController {
         }
 
         // change the id so the authentication object is updated
-        profile.put("id", new ObjectId().toHexString());
+        profile.put("id", UUID.randomUUID().toString());
         session.setAttribute(PROFILE_SESSION_ATTRIBUTE, profile);
         return ResponseEntity.ok(profile);
     }

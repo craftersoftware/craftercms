@@ -119,8 +119,6 @@
 
     <import resource="classpath:crafter/engine/mode/preview/security-context.xml"/>
 
-    <bean id="crafter.tenantsResolver" class="org.craftercms.engine.util.tenant.SiteNameTenantResolver"/>
-
     <!-- ////////////////////////////////// -->
     <!--								 	-->
     <!--		FreeMarker Config			-->

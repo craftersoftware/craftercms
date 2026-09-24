@@ -17,7 +17,6 @@ package org.craftercms.engine.security;
 
 import org.craftercms.engine.model.SiteItem;
 import org.craftercms.engine.util.SecurityUtils;
-import org.craftercms.security.annotations.RunIfSecurityEnabled;
 import java.util.List;
 
 /**
@@ -28,9 +27,12 @@ import java.util.List;
  */
 public class CrafterPageAccessManager {
 
+    protected boolean securityEnabled;
+
     protected String authorizedRolesXPathQuery;
 
-    public CrafterPageAccessManager(String authorizedRolesXPathQuery) {
+    public CrafterPageAccessManager(boolean securityEnabled, String authorizedRolesXPathQuery) {
+        this.securityEnabled = securityEnabled;
         this.authorizedRolesXPathQuery = authorizedRolesXPathQuery;
     }
 
@@ -44,8 +46,10 @@ public class CrafterPageAccessManager {
      *     <li>If the page has any other the roles, the user needs to have any of those roles.</li>
      * </ol>
      */
-    @RunIfSecurityEnabled
     public void checkAccess(SiteItem page) {
+        if (!securityEnabled) {
+            return;
+        }
         String pageUrl = page.getStoreUrl();
 
         List<String> authorizedRoles = getAuthorizedRolesForPage(page);

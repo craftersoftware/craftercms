@@ -14,26 +14,6 @@ ext.commonDeployArtifacts = [
 		copyFile: true
 	],
 	[
-		module: 'profile',
-		from  : "${projectDir}/profile/server/build/libs/crafter-profile.war",
-		into  : "/bin/apache-tomcat/webapps/"
-	],
-	[
-		module: 'profile-admin',
-		from  : "${projectDir}/profile/admin-console/build/libs/crafter-profile-admin.war",
-		into  : "/bin/apache-tomcat/webapps/"
-	],
-	[
-		module: 'social',
-		from  : "${projectDir}/social/server/build/libs/crafter-social.war",
-		into  : "/bin/apache-tomcat/webapps/"
-	],
-	[
-		module: 'social-admin',
-		from  : "${projectDir}/social/admin/build/libs/crafter-social-admin.war",
-		into  : "/bin/apache-tomcat/webapps/"
-	],
-	[
 		module: 'cli',
 		from  : "${projectDir}/cli/build/cli",
 		into  : "/bin/"
@@ -71,7 +51,7 @@ ext.authoringDeployPermissions = [
 ext.deliveryDeployPermissions = [
 ]
 
-ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profileRequired, socialRequired ->
+ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles ->
 	def syncedModules = [] as Set
 
 	// Deploy Crafter binaries into env
@@ -81,18 +61,6 @@ ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profile
 		def into = item.into
 		def exclude = ""
 		def performSync = true
-
-		// Skip Profile if it's not required nor is Social required (since Social depends on Profile)
-		if ((name == "profile" || name == "profile-admin")
-			&& (!profileRequired && !socialRequired)) {
-			performSync = false
-		}
-
-		// Skip Social if not required
-		if ((name == "social" || name == "social-admin")
-			&& !socialRequired) {
-			performSync = false
-		}
 
 		if (modules.find { it == name } == null) {
 			performSync = false
@@ -129,8 +97,8 @@ ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profile
 	}
 }
 
-ext.deployAuthoringEnvironment = { modules, overwriteChangedFiles, profileRequired, socialRequired ->
-	deployBaseEnvironment("${authoringEnvDir}", modules, overwriteChangedFiles, profileRequired, socialRequired)
+ext.deployAuthoringEnvironment = { modules, overwriteChangedFiles ->
+	deployBaseEnvironment("${authoringEnvDir}", modules, overwriteChangedFiles)
 
 	// Deploy Crafter binaries into env
 	authoringDeployArtifacts.each { item ->
@@ -165,8 +133,8 @@ ext.deployAuthoringEnvironment = { modules, overwriteChangedFiles, profileRequir
 	}
 }
 
-ext.deployDeliveryEnvironment = { modules, overwriteChangedFiles, profileRequired, socialRequired ->
-	deployBaseEnvironment("${deliveryEnvDir}", modules, overwriteChangedFiles, profileRequired, socialRequired)
+ext.deployDeliveryEnvironment = { modules, overwriteChangedFiles ->
+	deployBaseEnvironment("${deliveryEnvDir}", modules, overwriteChangedFiles)
 
 	// Deploy Crafter binaries into env
 	deliveryDeployArtifacts.each { item ->
@@ -201,11 +169,11 @@ ext.deployDeliveryEnvironment = { modules, overwriteChangedFiles, profileRequire
 	}
 }
 
-ext.deployEnvironment = { environment, modules, overwriteChangedFiles, profileRequired, socialRequired ->
+ext.deployEnvironment = { environment, modules, overwriteChangedFiles ->
 	if (environment == "authoring") {
-		deployAuthoringEnvironment(modules, overwriteChangedFiles, profileRequired, socialRequired)
+		deployAuthoringEnvironment(modules, overwriteChangedFiles)
 	} else if (environment == "delivery") {
-		deployDeliveryEnvironment(modules, overwriteChangedFiles, profileRequired, socialRequired)
+		deployDeliveryEnvironment(modules, overwriteChangedFiles)
 	} else {
 		logger.error("Unknown environment \"" + environment + "\"")
 		throw new GradleException("Unknown environment \"" + environment + "\"")
@@ -216,18 +184,11 @@ ext.deployEnvironment = { environment, modules, overwriteChangedFiles, profileRe
 ext.deployModuleProjects = [
 	'deployer'                : 'deployer',
 	'engine'                  : 'engine',
-	'profile:server'          : 'profile',
-	'profile:admin-console'   : 'profile-admin',
-	'social:server'           : 'social',
-	'social:admin'            : 'social-admin',
 	'cli'                     : 'cli',
 	'studio'                  : 'studio'
 ]
 
 gradle.projectsEvaluated {
-	def profileRequired = getExplicitlyRequestedModules().contains('profile') || rootProject.profileRequired
-	def socialRequired = getExplicitlyRequestedModules().contains('social') || rootProject.socialRequired
-
 	deployModuleProjects.each { projectPath, moduleName ->
 		def proj = rootProject.findProject(":${projectPath}")
 		if (proj == null) {
@@ -245,9 +206,7 @@ gradle.projectsEvaluated {
 					rootProject.deployEnvironment(
 						environment,
 						[moduleName],
-						rootProject.overwriteChangedFiles,
-						profileRequired,
-						socialRequired
+						rootProject.overwriteChangedFiles
 					)
 				}
 			}

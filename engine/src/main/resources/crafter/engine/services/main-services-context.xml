@@ -27,7 +27,6 @@
        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
 
     <import resource="classpath:crafter/core/core-context.xml"/>
-    <import resource="classpath:crafter/engine/services/profile-context.xml"/>
     <!-- Spring Security context, optional to avoid conflicts in Studio -->
     <import resource="classpath*:crafter/engine/services/security-context.xml"/>
     <import resource="classpath:crafter/engine/services/scripting-context.xml"/>
@@ -47,7 +46,6 @@
         <property name="locations">
             <list>
                 <value>classpath:crafter/core/core.properties</value>
-                <value>classpath:crafter/security/security.properties</value>
                 <value>classpath:crafter/engine/server-config.properties</value>
             </list>
         </property>
@@ -378,6 +376,7 @@
     </bean>
 
     <bean id="crafter.pageAccessManager" class="org.craftercms.engine.security.CrafterPageAccessManager">
+        <constructor-arg name="securityEnabled" value="${crafter.security.enabled}"/>
         <constructor-arg name="authorizedRolesXPathQuery"
                   value="${crafter.security.authorization.page.authorizedRoles.xpathQuery}"/>
     </bean>
@@ -817,37 +816,11 @@
         <entry key="pluginService" value-ref="crafter.pluginService"/>
         <entry key="applicationContext" value-ref="crafter.applicationContextAccessor"/>
 
-        <!-- For backwards compatibility only, should not be used anymore -->
-        <entry key="tenantsResolver" value-ref="crafter.tenantsResolver"/>
     </util:map>
 
     <bean id="crafter.freeMarkerConfigFactory"
           class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
         <property name="targetBeanName" value="crafter.freeMarkerConfig"/>
-    </bean>
-
-    <!-- ////////////////////////////////// -->
-    <!--								 	-->
-    <!--		  Social Services			-->
-    <!--									-->
-    <!-- ////////////////////////////////// -->
-    <bean id="crafter.connectionFactoryLocator"
-          class="org.craftercms.engine.util.spring.social.ConfigAwareConnectionFactoryLocator">
-        <constructor-arg name="defaultLocator" ref="crafter.defaultConnectionFactoryLocator"/>
-        <constructor-arg name="cacheTemplate" ref="crafter.cacheTemplate"/>
-    </bean>
-
-    <bean id="crafter.defaultConnectionFactoryLocator"
-          class="org.springframework.social.connect.support.ConnectionFactoryRegistry">
-        <!-- Override to specify default connection factories -->
-    </bean>
-
-    <bean id="crafter.providerLoginSupport"
-          class="org.craftercms.engine.util.spring.security.profile.SecurityContextAwareProviderLoginSupport">
-        <constructor-arg name="connectionFactoryLocator" ref="crafter.connectionFactoryLocator"/>
-        <constructor-arg name="profileService" ref="crafter.profileServiceRestClient"/>
-        <constructor-arg name="authenticationManager" ref="crafter.profileAuthenticationManager"/>
-        <constructor-arg name="textEncryptor" ref="crafter.textEncryptor"/>
     </bean>
 
     <!-- ////////////////////////////////// -->

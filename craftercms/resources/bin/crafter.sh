@@ -467,36 +467,6 @@ function doBackup() {
     fi
   fi
 
-  # MongoDB Dump
-  if [ -d "$MONGODB_DATA_DIR" ]; then
-    # Start MongoDB if necessary
-    MONGODB_STARTED=false
-    if [ -z $(getPidByPort "$MONGODB_PORT") ]; then
-      startMongoDB
-      sleep 15
-      MONGODB_STARTED=true
-    fi
-
-    banner "Backing up MongoDB"
-
-    "$MONGODB_HOME"/bin/mongodump --port $MONGODB_PORT --out "$tempFolder/mongodb"
-    abortOnError
-
-    CURRENT_DIR=$(pwd)
-
-    cd "$tempFolder/mongodb"
-    runCmd "tar cvf \"$tempFolder/mongodb.tar\" ."
-    abortOnError
-
-    cd "$CURRENT_DIR"
-    rm -r "$tempFolder/mongodb"
-
-    if [ "$MONGODB_STARTED" = true ]; then
-      # Stop MongoDB
-      stopMongoDB
-    fi
-  fi
-
   # ZIP git repos
   if [ -d "$CRAFTER_DATA_DIR/repos" ]; then
     banner "Backing up git repos"
@@ -569,7 +539,6 @@ function doRestore() {
   fi
 
   banner "Clearing all existing data"
-  rmDirContents "$MONGODB_DATA_DIR"
   rmDirContents "$CRAFTER_DATA_DIR/repos"
   rmDirContents "$SEARCH_INDEXES_DIR"
   rmDirContents "$DEPLOYER_DATA_DIR"
@@ -589,29 +558,6 @@ function doRestore() {
     abortOnError
 
     packageExt="zip"
-  fi
-
-  # MongoDB Dump
-  if [ -f "$tempFolder/mongodb.$packageExt" ]; then
-    mkdir -p "$tempFolder/mongodb"
-
-    startMongoDB
-    sleep 15
-
-    banner "Restoring MongoDB"
-
-    if [ "$packageExt" == "tar" ]; then
-      runCmd "tar xvf \"$tempFolder/mongodb.tar\" -C \"$tempFolder/mongodb\""
-      abortOnError
-    else
-      runCmd "unzip \"$tempFolder/mongodb.zip\" \"$tempFolder/mongodb\""
-      abortOnError
-    fi
-
-    runCmd "$CRAFTER_BIN_DIR/mongodb/bin/mongorestore --port $MONGODB_PORT \"$tempFolder/mongodb\""
-    abortOnError
-
-    stopMongoDB
   fi
 
   # UNZIP git repos
@@ -786,19 +732,14 @@ function checkIfDBUpgradeIsNeeded() {
 # Help for those who need it
 function help() {
   cecho "$(basename $BASH_SOURCE)\n\n" "strong"
-  cecho "    start [withMongoDB] [skipSearch] [skipMongoDB] [tailTomcat], Starts Tomcat, Deployer and OpenSearch.
-             If withMongoDB is specified MongoDB will be started,
+  cecho "    start [skipSearch] [tailTomcat], Starts Tomcat, Deployer and OpenSearch.
              if skipSearch is specified OpenSearch will not be started,
-             if skipMongoDB is specified MongoDB will not be started even if
-             the Crafter Profile WAR file is present,
              if tailTomcat is specified, Tomcat will be tailed and Crafter will shutdown when
              this script terminates.\n" "info"
-  cecho "    stop, Stops Tomcat, Deployer, OpenSearch (if started), MongoDB (if started)\n" "info"
-  cecho "    debug [withMongoDB] [skipSearch] [skipMongoDB], Starts Tomcat, Deployer and
-             OpenSearch in debug mode. If withMongoDB is specified MongoDB will be started,
-             if skipSearch is specified OpenSearch will not be started, if skipMongoDB is specified MongoDB
-             will not be started even if the Crafter Profile war is present\n" "info"
-  cecho "    restart, Restarts Tomcat, Deployer, OpenSearch (if started), MongoDB (if started)\n" "info"
+  cecho "    stop, Stops Tomcat, Deployer, OpenSearch (if started)\n" "info"
+  cecho "    debug [skipSearch], Starts Tomcat, Deployer and
+             OpenSearch in debug mode. If skipSearch is specified OpenSearch will not be started\n" "info"
+  cecho "    restart, Restarts Tomcat, Deployer, OpenSearch (if started)\n" "info"
   cecho "    start_deployer, Starts Deployer\n" "info"
   cecho "    stop_deployer, Stops Deployer\n" "info"
   cecho "    debug_deployer, Starts Deployer in debug mode\n" "info"
@@ -812,18 +753,12 @@ function help() {
   cecho "    debug_tomcat, Starts Tomcat in debug mode\n" "info"
   cecho "    restart_tomcat, Restarts Tomcat\n" "info"
   cecho "    restart_debug_tomcat, Restarts Tomcat in debug mode\n" "info"
-  cecho "    start_mongodb, Starts Mongo DB\n" "info"
-  cecho "    stop_mongodb, Stops Mongo DB\n" "info"
-  cecho "    restart_mongodb, Restarts MongoDB\n" "info"
   cecho "    status, Status of all CrafterCms subsystems\n" "info"
   cecho "    status_engine, Status of Crafter Engine\n" "info"
   cecho "    status_studio, Status of Crafter Studio\n" "info"
-  cecho "    status_profile, Status of Crafter Profile\n" "info"
-  cecho "    status_social, Status of Crafter Social\n" "info"
   cecho "    status_deployer, Status of Deployer\n" "info"
   cecho "    status_search, Status of OpenSearch\n" "info"
   cecho "    status_mariadb, Status of MariaDB\n" "info"
-  cecho "    status_mongodb, Status of MonoDb\n" "info"
   cecho "    backup <name>, Perform a backup of all data\n" "info"
   cecho "    restore <file>, Perform a restore of all data\n" "info"
   cecho "    upgradedb, Perform database upgrade (mariadb-upgrade)\n" "info"
@@ -1020,41 +955,6 @@ function stopTomcat() {
 	stopModule "Tomcat" "$TOMCAT_HTTP_PORT" "$CATALINA_PID" "\$0/apache-tomcat/bin/shutdown.sh 50 -force" "$CRAFTER_BIN_DIR"
 }
 
-function startMongoDB() {
-  module="MongoDB"
-  executable="\$0/bin/mongod --dbpath=\$1/mongodb --directoryperdb --fork --logpath=\$2/mongod.log --port \$3"
-  port=$MONGODB_PORT
-  foldersToCreate=("$MONGODB_DATA_DIR" "$MONGODB_LOGS_DIR")
-  pidFile="$MONGODB_PID"
-  operation="Start"
-
-  prepareModule "$module" "$foldersToCreate" "$operation"
-  # Check if module is not already running, then run it
-  checkIfModuleIsRunning "$module" "$port" "$pidFile"
-  isModuleRunning=$?
-  if [ $isModuleRunning = 0 ]; then
-    runTask -c "$executable" $MONGODB_HOME $CRAFTER_DATA_DIR $MONGODB_LOGS_DIR $MONGODB_PORT
-  fi
-}
-
-function isMongoNeeded() {
-  for o in "$@"; do
-    if [ $o = "skipMongo" ] || [ $o = "skipMongoDB" ]; then
-      return 1
-    fi
-  done
-  for o in "$@"; do
-    if [ $o = "withMongo" ] || [ $o = "withMongoDB" ]; then
-      return 0
-    fi
-  done
-  test -s "$CATALINA_HOME/webapps/crafter-profile.war" || test -d "$CATALINA_HOME/webapps/crafter-profile"
-}
-
-function stopMongoDB() {
-	stopModule "MongoDB" "$MONGODB_PORT" "$MONGODB_PID" "\$0/bin/mongod --shutdown --dbpath=\$1/mongodb --logpath=\$2/mongod.log --port \$3" "$MONGODB_HOME $CRAFTER_DATA_DIR $MONGODB_LOGS_DIR $MONGODB_PORT"
-}
-
 function skipSearch() {
   for o in "$@"; do
     if [ $o = "skipSearch" ]; then
@@ -1095,20 +995,8 @@ function studioStatus(){
   getStatus "Crafter Studio" "$TOMCAT_HTTP_PORT" "$CATALINA_PID"
 }
 
-function profileStatus(){
-  getStatus "Crafter Profile" "$TOMCAT_HTTP_PORT" "$CATALINA_PID"
-}
-
-function socialStatus(){
-  getStatus "Crafter Social" "$TOMCAT_HTTP_PORT" "$CATALINA_PID"
-}
-
 function mariadbStatus() {
   getStatus "Studio Database" "$MARIADB_PORT" "$MARIADB_PID"
-}
-
-function mongoDbStatus() {
-  getStatus "MongoDB" "$MONGODB_PORT" "$MONGODB_PID"
 }
 
 # Display instructions for tailing logs
@@ -1124,9 +1012,6 @@ function start() {
   if ! skipSearch "$@"; then
     startSearch
   fi
-  if isMongoNeeded "$@"; then
-    startMongoDB
-  fi
 
   startTomcat
   printTailInfo
@@ -1141,9 +1026,6 @@ function debug() {
   debugDeployer
   if ! skipSearch "$@"; then
     debugSearch
-  fi
-  if isMongoNeeded "$@"; then
-    startMongoDB
   fi
   debugTomcat
   printTailInfo
@@ -1176,9 +1058,6 @@ isServiceRunning() {
 
 function stop() {
   stopTomcat
-  if isServiceRunning $MONGODB_PORT; then
-     stopMongoDB
-  fi
   stopDeployer
   if isServiceRunning $SEARCH_PORT; then
     stopSearch
@@ -1188,9 +1067,6 @@ function stop() {
 function ctrl_c() {
   cecho "Term signal detected, stopping services...\n" "strong"
   stopTomcat
-  if isServiceRunning $MONGODB_PORT; then
-     stopMongoDB
-  fi
   stopDeployer
   if isServiceRunning $SEARCH_PORT; then
     stopSearch
@@ -1205,15 +1081,6 @@ function status() {
   if [ -f "$CRAFTER_BIN_DIR/apache-tomcat/webapps/studio.war" ]; then
     studioStatus
     mariadbStatus
-  fi
-  if [ -f "$CRAFTER_BIN_DIR/apache-tomcat/webapps/crafter-profile.war" ]; then
-    if isMongoNeeded "$@"; then
-      mongoDbStatus
-    fi
-    profileStatus
-    if [ -f "$CRAFTER_BIN_DIR/apache-tomcat/webapps/crafter-social.war" ]; then
-      socialStatus
-    fi
   fi
 }
 
@@ -1296,19 +1163,6 @@ function executeAction() {
       stopTomcat
       debugTomcat
     ;;
-    start_mongodb)
-      splash
-      startMongoDB
-    ;;
-    stop_mongodb)
-      splash
-      stopMongoDB
-    ;;
-    restart_mongodb)
-      splash
-      stopMongoDB
-      startMongoDB
-    ;;
     status)
       status
     ;;
@@ -1330,20 +1184,11 @@ function executeAction() {
     status_studio)
       studioStatus
     ;;
-    status_profile)
-      profileStatus
-    ;;
-    status_social)
-      socialStatus
-    ;;
     status_deployer)
       deployerStatus
     ;;
     status_search)
       searchStatus
-    ;;
-    status_mongodb)
-      mongoDbStatus
     ;;
     status_mariadb)
       mariadbStatus

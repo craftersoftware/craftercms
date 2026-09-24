@@ -10,7 +10,7 @@
     -->
     <@crafter.img $field="logo_s,logo_text_t" src=(contentModel.logo_s!"") alt=(contentModel.logo_text_t!"") border=0 />
     <#if profile??>
-      <#assign name = profile.attributes.name!"stranger" />
+      <#assign name = profile.attributes.name!profile.username!"stranger" />
     <#else>
       <#assign name = "stranger" />
     </#if>

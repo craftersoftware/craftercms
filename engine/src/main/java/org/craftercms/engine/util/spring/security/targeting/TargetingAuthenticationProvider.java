@@ -15,7 +15,6 @@
  */
 package org.craftercms.engine.util.spring.security.targeting;
 
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
@@ -33,7 +32,7 @@ public class TargetingAuthenticationProvider extends PreAuthenticatedAuthenticat
         if (authentication.getPrincipal() instanceof TargetingUser) {
             return super.authenticate(authentication);
         } else {
-            throw new AuthenticationServiceException("Unsupported principal");
+            return null;
         }
     }
 

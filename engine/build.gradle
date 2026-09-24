@@ -31,10 +31,6 @@ dependencies {
 	compileOnly libs.jakarta.servlet.api
 
 	implementation project(':core')
-	implementation project(':profile:security-provider')
-	implementation project(':profile:client')
-	implementation project(':profile:api')
-	implementation project(':commons:mongo')
 	implementation project(':commons:entitlements')
 	implementation project(':commons:validation')
 	implementation project(':search:opensearch')
@@ -64,11 +60,8 @@ dependencies {
 	implementation libs.jakarta.validation.api
 	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
 	implementation libs.quartz
-	implementation libs.mongo.bson
 	implementation platform("org.apache.groovy:groovy-bom:${libs.versions.groovy.get()}")
 	implementation libs.groovy
-	implementation libs.spring.social.web
-	implementation libs.spring.social.facebook
 
 	implementation libs.angus.mail
 	implementation libs.httpclient5

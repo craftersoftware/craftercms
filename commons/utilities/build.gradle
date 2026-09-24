@@ -39,6 +39,7 @@ dependencies {
 	implementation libs.slf4j.api
 	implementation libs.jcl.over.slf4j
 	implementation libs.aws.s3.transfer.manager
+	implementation libs.mongo.bson
 
 	compileOnly libs.bcpg.jdk18on
 	compileOnly libs.commons.configuration2
@@ -53,7 +54,6 @@ dependencies {
 	compileOnly libs.jackson.databind
 	compileOnly libs.jackson.core
 	compileOnly libs.jackson.dataformat.cbor
-	compileOnly libs.mongo.bson
 	compileOnly libs.guava
 	compileOnly libs.aspectjrt
 	compileOnly libs.aspectjweaver
