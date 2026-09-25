@@ -147,11 +147,15 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 	};
 
 	const onSelectAllDependencies = (checked: boolean) => {
+		if (!checked) {
+			setSelectedDependenciesMap({});
+			return;
+		}
 		if (!dependencyData) return;
-		const next = { ...selectedDependenciesMap };
+		const next: LookupTable<boolean> = {};
 		dependencyData.items.forEach((item) => {
 			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
-				next[item.path] = checked;
+				next[item.path] = true;
 			}
 		});
 		setSelectedDependenciesMap(next);
@@ -218,6 +222,7 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 						depMap[path] = 'soft';
 					});
 					setState({ fetchingItems: false });
+					setSelectedDependenciesMap({});
 					setDependencyData({
 						typeByPath: depMap,
 						paths: Object.keys(depMap),
@@ -228,11 +233,20 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 				},
 				error() {
 					setState({ fetchingItems: false });
+					setSelectedDependenciesMap({});
 					setDependencyData(null);
 				}
 			});
 		}
-	}, [pkg.id, setState, siteId, state.publishingTarget, setDependencyData, mainItems?.length]);
+	}, [
+		pkg.id,
+		setState,
+		siteId,
+		state.publishingTarget,
+		setDependencyData,
+		setSelectedDependenciesMap,
+		mainItems?.length
+	]);
 
 	return (
 		<>

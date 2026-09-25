@@ -272,6 +272,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 							setChildrenItems([]);
 						}
 					}
+					setSelectedDependenciesMap({});
 					setDependencyData({
 						typeByPath: depMap,
 						paths: Object.keys(depMap),
@@ -282,6 +283,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 				error() {
 					setState({ fetchingItems: false });
 					setIsFetchingItems(false);
+					setSelectedDependenciesMap({});
 					setDependencyData(null);
 					setPackageDependenciesFetchFailed(true);
 				}
@@ -383,11 +385,15 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	};
 
 	const onSelectAllDependencies = (checked: boolean) => {
+		if (!checked) {
+			setSelectedDependenciesMap({});
+			return;
+		}
 		if (!dependencyData) return;
-		const next = { ...selectedDependenciesMap };
+		const next: LookupTable<boolean> = {};
 		dependencyData.items.forEach((item) => {
 			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
-				next[item.path] = checked;
+				next[item.path] = true;
 			}
 		});
 		setSelectedDependenciesMap(next);
