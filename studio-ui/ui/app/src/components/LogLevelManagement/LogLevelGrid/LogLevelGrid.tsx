@@ -164,7 +164,11 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 						{!displayAll && (
 							<GlobalAppGridRow className="hoverDisabled">
 								<GlobalAppGridCell colSpan={2}>
-									<Box display="flex">
+									<Box
+										sx={{
+											display: 'flex'
+										}}
+									>
 										<Button onClick={onShowAllClick} startIcon={<WarningRounded />} variant="outlined" color="warning">
 											<FormattedMessage
 												id="loggingLevels.displayAllEntriesButtonLabel"

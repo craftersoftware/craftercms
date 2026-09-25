@@ -158,7 +158,13 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 									</ListItemButton>
 								))}
 							</List>
-							<Box width="100%" borderTop={1} borderColor="divider">
+							<Box
+								sx={{
+									width: '100%',
+									borderTop: 1,
+									borderColor: 'divider'
+								}}
+							>
 								<Button onClick={() => onSetAccordionView(!accordionView)}>
 									{accordionView ? (
 										<FormattedMessage defaultMessage="Single field" />
@@ -205,7 +211,13 @@ export function ViewVersionDialogContainer(props: ViewVersionDialogContainerProp
 											isDiff={false}
 											onSelectField={onSelectField}
 										/>
-										<Box height="calc(100% - 68px)" display="flex" flexDirection="column">
+										<Box
+											sx={{
+												height: 'calc(100% - 68px)',
+												display: 'flex',
+												flexDirection: 'column'
+											}}
+										>
 											<ContentFieldView
 												content={content && getContentInstanceValueFromProp(content, selectedField.id)}
 												field={selectedField}

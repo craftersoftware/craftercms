@@ -123,6 +123,13 @@ export interface ControlPluginPreloadFailure {
 export interface AffectedPluginControlField {
 	fieldId: string;
 	fieldName: string;
+	/**
+	 * True when the failure was recorded at form bootstrap (values may have been parsed
+	 * without the plugin `valueRetriever`). Persist until the form reloads; do not clear
+	 * for an in-place save retry — a later successful import can still hand raw values to
+	 * `valueSerializer` and write incorrect XML.
+	 */
+	fromBootstrap?: boolean;
 }
 
 /**
@@ -137,8 +144,9 @@ export interface AffectedPluginControlField {
  * `createParsedValueForField` / `buildContentXml` walks `item.component`.
  *
  * Resolves with the list of failed imports (empty on full success). Bootstrap callers
- * record failures on `StableFormContext.affectedPluginControlFields`; save callers
- * should block when any failure maps to a field (avoids unconverted XML shapes).
+ * record failures on `StableFormContext.affectedPluginControlFields` with
+ * `fromBootstrap: true` (persist until reload). Save callers should block on failure
+ * (avoids unconverted XML shapes) but must not clear bootstrap-tagged entries for retry.
  */
 export function preloadControlPluginsForFields(
 	siteId: string,

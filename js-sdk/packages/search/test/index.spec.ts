@@ -20,7 +20,7 @@ import 'url-search-params-polyfill';
 import { Query } from '../src/query';
 import { noResultsResponse, searchResponse } from './mock-responses';
 import * as xhr2 from 'xhr2';
-import * as nock from 'nock';
+import nock from 'nock';
 import { expect } from 'chai';
 
 // @ts-ignore - Setting global XMLHttpRequest for testing (not available on node)

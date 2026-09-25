@@ -1,6 +1,6 @@
 import { h } from 'preact';
 // @ts-ignore untyped
-import { VirtualList } from '@uppy/utils';
+import { VirtualList } from '@uppy/core/utils';
 import { useMemo } from 'preact/hooks';
 import FileItem from './FileItem/index.js';
 

@@ -177,7 +177,13 @@ function TreeItemLabelContent({
 	const isRequired = isFieldRequired(field);
 	const hasValidator = hasFieldValidator(field.type);
 	return (
-		<Box display="flex" justifyContent="space-between" alignItems="center">
+		<Box
+			sx={{
+				display: 'flex',
+				justifyContent: 'space-between',
+				alignItems: 'center'
+			}}
+		>
 			<span>{field.name}</span>
 
 			{validityData.state === 'loading' ? (

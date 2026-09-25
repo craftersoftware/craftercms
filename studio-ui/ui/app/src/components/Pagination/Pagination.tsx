@@ -24,7 +24,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { PartialSxRecord } from '../../models/CustomRecord';
 import { Theme } from '@mui/material';
 import { inputBaseClasses } from '@mui/material/InputBase';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { UNDEFINED } from '../../utils/constants';
 
 export type PaginationClassKey = TablePaginationClassKey;
@@ -61,6 +61,7 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 			[`.${inputBaseClasses.root}`]: { ml: 0, mr: 0 },
 			borderBottom: showBottomBorder ? `1px solid ${theme.palette.divider}` : UNDEFINED,
 			...sx.root,
+
 			[`& .${tablePaginationClasses.toolbar}`]: {
 				width: '100%',
 				minHeight: '40px',
@@ -68,9 +69,11 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				justifyContent: mode === 'table' ? 'right' : 'space-between',
 				...sx.toolbar
 			},
+
 			[`& .${tablePaginationClasses.select}`]: {
 				...sx.select
 			},
+
 			[`& .${tablePaginationClasses.selectLabel}`]: {
 				position: 'absolute',
 				width: '1px',
@@ -83,21 +86,26 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				border: '0',
 				...sx.selectLabel
 			},
+
 			[`& .${tablePaginationClasses.selectRoot}`]: {
 				marginRight: 0,
 				...sx.selectRoot
 			},
+
 			[`& .${tablePaginationClasses.selectIcon}`]: {
 				...sx.selectIcon
 			},
+
 			[`& .${tablePaginationClasses.actions}`]: {
 				marginLeft: '0 !important',
 				...sx.actions
 			},
+
 			[`& .${tablePaginationClasses.spacer}`]: {
 				display: 'none',
 				...sx.actions
 			},
+
 			[`& .${tablePaginationClasses.displayedRows}`]: {
 				mt: 0,
 				mr: mode === 'table' ? 1 : 0,
@@ -105,9 +113,11 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 				ml: mode === 'table' ? 1 : 0,
 				...sx.displayedRows
 			},
+
 			[`& .${tablePaginationClasses.input}`]: {
 				...sx.input
 			},
+
 			[`& .${tablePaginationClasses.menuItem}`]: {
 				...sx.menuItem
 			}

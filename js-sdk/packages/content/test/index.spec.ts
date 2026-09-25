@@ -28,7 +28,7 @@ import { crafterConf } from '@craftercms/classes';
 import 'url-search-params-polyfill';
 import { expect } from 'chai';
 import { item, descriptor, children, tree, navTree, navBreadcrumb, renderUrl, storeUrl } from './mock-responses';
-import * as nock from 'nock';
+import nock from 'nock';
 
 // https://github.com/nock/nock/issues/2397
 import fetch, { Headers, Request, Response } from 'node-fetch';
@@ -322,9 +322,9 @@ describe('Object Utils', () => {
 
 	describe('preParseSearchResults util', () => {
 		it('should pre-parse the search results correctly', () => {
-			const preParsedSearchResult = preParseSearchResults(unparsedSearchHit);
+			const preParsedSearchResult = preParseSearchResults(unparsedSearchHit)._source;
 			expect(preParsedSearchResult).to.not.be.null;
-			expect(preParsedSearchResult).to.deep.equal = parsedSearchHit;
+			expect(preParsedSearchResult).to.deep.equal(parsedSearchHit);
 		});
 	});
 });

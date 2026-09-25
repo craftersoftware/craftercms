@@ -24,19 +24,18 @@ export interface PublishingPackageResubmitDialogBaseProps {
 }
 
 export interface PublishingPackageResubmitDialogProps
-	extends PublishingPackageResubmitDialogBaseProps,
-		EnhancedDialogProps {
+	extends PublishingPackageResubmitDialogBaseProps, EnhancedDialogProps {
 	onSuccess?(): void;
 }
 
 export interface PublishingPackageResubmitDialogStateProps
-	extends PublishingPackageResubmitDialogBaseProps,
-		EnhancedDialogState {
+	extends PublishingPackageResubmitDialogBaseProps, EnhancedDialogState {
 	onClose?: StandardAction;
 	onClosed?: StandardAction;
 	onSuccess?: StandardAction;
 }
 
 export interface PublishingPackageResubmitDialogContainerProps
-	extends PublishingPackageResubmitDialogBaseProps,
+	extends
+		PublishingPackageResubmitDialogBaseProps,
 		Pick<PublishingPackageResubmitDialogProps, 'isSubmitting' | 'onSuccess' | 'onClose'> {}

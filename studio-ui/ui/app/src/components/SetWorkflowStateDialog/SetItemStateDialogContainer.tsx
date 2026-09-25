@@ -122,9 +122,19 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 						}
 						label={<FormattedMessage id="setWorkflowStateDialog.clearModified" defaultMessage="Clear modified" />}
 					/>
-					<Box display="flex" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Bracket width="12px" height="42px" sx={{ marginRight: '10px' }} />
-						<Box display="flex" flexDirection="column">
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column'
+							}}
+						>
 							<FormControlLabel
 								control={
 									<Switch
@@ -162,9 +172,19 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
 						</Box>
 					</Box>
 					{hasStaging && (
-						<Box display="flex" alignItems="center">
+						<Box
+							sx={{
+								display: 'flex',
+								alignItems: 'center'
+							}}
+						>
 							<Bracket width="12px" height="42px" sx={{ marginRight: '10px' }} />
-							<Box display="flex" flexDirection="column">
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column'
+								}}
+							>
 								<FormControlLabel
 									control={
 										<Switch

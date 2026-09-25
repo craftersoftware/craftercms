@@ -45,7 +45,12 @@ export interface UsersGridUIProps {
 export function UsersGridUI(props: UsersGridUIProps) {
 	const { users, onRowClicked, onPageChange, onRowsPerPageChange, showDisabled, onShowDisabledChange } = props;
 	return (
-		<Box display="flex" flexDirection="column">
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			<TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>

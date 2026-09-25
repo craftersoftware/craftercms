@@ -59,7 +59,18 @@ export const TypeListingView = forwardRef<HTMLDivElement, TypeListingViewProps>(
 		</Button>
 	);
 	return (
-		<Box ref={ref} sx={sx} style={style} height="100%" display="flex" flexDirection="column">
+		<Box
+			ref={ref}
+			style={style}
+			sx={[
+				{
+					height: '100%',
+					display: 'flex',
+					flexDirection: 'column'
+				},
+				...(Array.isArray(sx) ? sx : [sx])
+			]}
+		>
 			{renderAppBar && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="componentsMessages.contentTypes" defaultMessage="Content Types" />}

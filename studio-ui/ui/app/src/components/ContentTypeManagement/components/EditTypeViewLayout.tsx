@@ -62,7 +62,12 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 			ref={ref}
 			toolbarContent={
 				<>
-					<Box display="flex" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Done" />}>
 							<IconButton data-action-id={actionsMap.exit} onClick={handleMenuItemClick} sx={{ mr: 1 }}>
 								<ArrowBackRounded />
@@ -76,7 +81,12 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							)}
 						</Typography>
 					</Box>
-					<Box display="flex" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Button
 							variant="contained"
 							sx={{ mr: 1 }}

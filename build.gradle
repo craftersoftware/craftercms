@@ -34,6 +34,7 @@ apply from: "deploy.gradle"
 apply from: "run.gradle"
 apply from: "docker.gradle"
 apply from: "release.gradle"
+apply from: "gradle/javadoc.gradle"
 
 task splash() {
 	description = 'Displays splash screen'
@@ -192,5 +193,15 @@ task bundle() {
 }
 
 gradle.buildFinished {
-	project.buildDir.deleteDir()
+	// The root build dir only holds throwaway output, except for the aggregated javadoc sites
+	def rootBuildDir = project.layout.buildDirectory.get().asFile
+	def keep = aggregateJavadocDirName.tokenize('/').first()
+	rootBuildDir.listFiles()?.each { file ->
+		if (file.name != keep) {
+			file.directory ? file.deleteDir() : file.delete()
+		}
+	}
+	if (rootBuildDir.list()?.length == 0) {
+		rootBuildDir.deleteDir()
+	}
 }

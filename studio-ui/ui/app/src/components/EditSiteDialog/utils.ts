@@ -39,5 +39,6 @@ export interface EditSiteDialogStateProps extends EditSiteDialogBaseProps, Enhan
 }
 
 export interface EditSiteDialogContainerProps
-	extends EditSiteDialogBaseProps,
+	extends
+		EditSiteDialogBaseProps,
 		Pick<EditSiteDialogProps, 'isSubmitting' | 'onSaveSuccess' | 'onSiteImageChange' | 'onClose'> {}

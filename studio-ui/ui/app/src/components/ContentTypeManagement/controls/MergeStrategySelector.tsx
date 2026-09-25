@@ -49,7 +49,7 @@ export function MergeStrategySelector(props: MergeStrategySelectorProps) {
 						<TextField
 							{...params}
 							slotProps={{
-								htmlInput: { ...params.inputProps, maxLength, id: htmlId }
+								htmlInput: { ...params.slotProps?.htmlInput, maxLength, id: htmlId }
 							}}
 						/>
 					);

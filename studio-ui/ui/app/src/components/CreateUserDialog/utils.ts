@@ -25,5 +25,4 @@ export interface CreateUserDialogProps extends CreateUserDialogBase, EnhancedDia
 }
 
 export interface CreateUserDialogContainerProps
-	extends CreateUserDialogBase,
-		Pick<CreateUserDialogProps, 'onClose' | 'isSubmitting' | 'onCreateSuccess'> {}
+	extends CreateUserDialogBase, Pick<CreateUserDialogProps, 'onClose' | 'isSubmitting' | 'onCreateSuccess'> {}

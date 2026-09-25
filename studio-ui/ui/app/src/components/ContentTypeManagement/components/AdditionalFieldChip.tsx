@@ -31,7 +31,13 @@ export function AdditionalFieldChip(props: { parentFieldId: string; fieldId: str
 	const additionalFieldId = processAdditionalFieldMacro(parentFieldId, fieldId);
 
 	return (
-		<Box display="flex" alignItems="center" sx={{ mb: 1 }}>
+		<Box
+			sx={{
+				display: 'flex',
+				alignItems: 'center',
+				mb: 1
+			}}
+		>
 			<SubdirectoryArrowRightRoundedIcon sx={{ ml: 3 }} />
 			<Box
 				sx={[

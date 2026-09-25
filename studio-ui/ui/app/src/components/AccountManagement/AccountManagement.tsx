@@ -223,7 +223,7 @@ export function AccountManagement(props: AccountManagementProps) {
 				}}
 			>
 				<Paper className="mt20">
-					<Box display="flex" alignItems="center">
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
 						<Avatar sx={{ marginRight: '30px', width: '90px', height: '90px' }}>
 							{user.firstName.charAt(0)}
 							{user.lastName?.charAt(0) ?? ''}
@@ -240,7 +240,7 @@ export function AccountManagement(props: AccountManagementProps) {
 					<Typography variant="h5">
 						<FormattedMessage id="accountManagement.changeLanguage" defaultMessage="Change Language" />
 					</Typography>
-					<Box marginTop="16px">
+					<Box sx={{ marginTop: '16px' }}>
 						{languages ? (
 							<TextField
 								fullWidth
@@ -270,7 +270,7 @@ export function AccountManagement(props: AccountManagementProps) {
 							defaultMessage="Once your password has been successfully updated, you'll be required to login again."
 						/>
 					</FormHelperText>
-					<Box display="flex" flexDirection="column">
+					<Box sx={{ flexDirection: 'column' }}>
 						<PasswordTextField
 							margin="normal"
 							label={<FormattedMessage id="accountManagement.currentPassword" defaultMessage="Current Password" />}
@@ -338,13 +338,13 @@ export function AccountManagement(props: AccountManagementProps) {
 					</Box>
 				</Paper>
 				<Paper>
-					<Typography variant="h5" mb={3}>
+					<Typography variant="h5" sx={{ mb: 3 }}>
 						<FormattedMessage defaultMessage="Stored Preferences" />
 					</Typography>
-					<Typography mb={3} variant="body2">
+					<Typography variant="body2" sx={{ mb: 3 }}>
 						<FormattedMessage defaultMessage="Clear your user preferences and reset to defaults per project or for all projects." />
 					</Typography>
-					<Box display="flex" justifyContent="space-between" mb={3}>
+					<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
 						<FormControl sx={{ minWidth: 200 }}>
 							<InputLabel>
 								<FormattedMessage defaultMessage="Project" />
@@ -394,9 +394,9 @@ export function AccountManagement(props: AccountManagementProps) {
 					<Typography variant="h5">
 						<FormattedMessage defaultMessage="Accessibility" />
 					</Typography>
-					<Box display="flex" flexDirection="column">
+					<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 						<FormControl sx={{ mt: 2, mb: 1 }}>
-							<Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+							<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
 								<InputLabel htmlFor="snackDuration" shrink sx={{ position: 'static', transform: 'none', mb: 0 }}>
 									<FormattedMessage defaultMessage="On-screen notification display time (in seconds)" />
 								</InputLabel>
@@ -423,7 +423,7 @@ export function AccountManagement(props: AccountManagementProps) {
 								step={1}
 								format={{ maximumFractionDigits: 0 }}
 							>
-								<NumberField.Group render={<Box display="flex" />}>
+								<NumberField.Group render={<Box sx={{ display: 'flex' }} />}>
 									<NumberField.Decrement render={<Button variant="outlined" sx={decrementButtonSx} />}>
 										<MinusRounded />
 									</NumberField.Decrement>

@@ -81,7 +81,12 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 								}}
 								onChange={(e) => handleChange(e, key as Destination, index)}
 							/>
-							<Box display="flex" alignItems="center">
+							<Box
+								sx={{
+									display: 'flex',
+									alignItems: 'center'
+								}}
+							>
 								<Tooltip title={<FormattedMessage defaultMessage="Remove Option" />}>
 									<IconButton onClick={() => removePath(key as Destination, index)}>
 										<RemoveCircleOutlineRoundedIcon />
@@ -90,7 +95,12 @@ export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelector
 							</Box>
 						</Box>
 					))}
-					<Box display="flex" justifyContent="center">
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Add Path" />}>
 							<IconButton onClick={() => addPath(key as Destination)}>
 								<AddCircleOutlineRoundedIcon />

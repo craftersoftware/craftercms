@@ -466,13 +466,17 @@ function PublishingQueue(props: PublishingQueueProps) {
 					<FormattedMessage defaultMessage="{from}-{to} of {count}" values={{ from, to, count }} />
 				)}
 				page={page}
-				backIconButtonProps={{
-					'aria-label': formatMessage(messages.previous),
-					title: formatMessage(messages.previous)
-				}}
-				nextIconButtonProps={{
-					'aria-label': formatMessage(messages.next),
-					title: formatMessage(messages.next)
+				slotProps={{
+					actions: {
+						previousButton: {
+							'aria-label': formatMessage(messages.previous),
+							title: formatMessage(messages.previous)
+						},
+						nextButton: {
+							'aria-label': formatMessage(messages.next),
+							title: formatMessage(messages.next)
+						}
+					}
 				}}
 				onPageChange={handleChangePage}
 				onRowsPerPageChange={handleChangeRowsPerPage}

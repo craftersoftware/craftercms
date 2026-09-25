@@ -72,7 +72,13 @@ export function CompareFieldPanel(props: CompareFieldPanelProps) {
 	};
 
 	return (
-		<Box height="calc(100% - 70px)" display="flex" flexDirection="column">
+		<Box
+			sx={{
+				height: 'calc(100% - 70px)',
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			{unchanged ? (
 				<ContentFieldView
 					content={contentA}

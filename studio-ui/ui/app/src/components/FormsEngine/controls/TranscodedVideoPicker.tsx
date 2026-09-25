@@ -152,7 +152,13 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 					}
 				/>
 			) : (
-				<Box display="flex" gap={1} flexWrap="wrap">
+				<Box
+					sx={{
+						display: 'flex',
+						gap: 1,
+						flexWrap: 'wrap'
+					}}
+				>
 					{actionMenuItems}
 				</Box>
 			)}

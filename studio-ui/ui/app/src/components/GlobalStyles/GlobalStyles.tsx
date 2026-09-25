@@ -34,6 +34,7 @@ export function GlobalStyles(props: GlobalStylesProps) {
 		() =>
 			({
 				body: { background: theme.palette.background.paper },
+
 				'.minimized-bar-portal-root': {
 					right: '0',
 					bottom: '20px',

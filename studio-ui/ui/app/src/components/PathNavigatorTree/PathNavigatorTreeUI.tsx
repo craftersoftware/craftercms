@@ -29,20 +29,19 @@ import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
 
-export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header' | 'activeItem';
+export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
 
-export interface PathNavigatorTreeUIProps
-	extends Pick<
-		PathNavigatorTreeItemProps,
-		| 'showNavigableAsLinks'
-		| 'showPublishingTarget'
-		| 'showWorkflowState'
-		| 'showItemMenu'
-		| 'keywordByPath'
-		| 'totalByPath'
-		| 'childrenByParentPath'
-		| 'errorByPath'
-	> {
+export interface PathNavigatorTreeUIProps extends Pick<
+	PathNavigatorTreeItemProps,
+	| 'showNavigableAsLinks'
+	| 'showPublishingTarget'
+	| 'showWorkflowState'
+	| 'showItemMenu'
+	| 'keywordByPath'
+	| 'totalByPath'
+	| 'childrenByParentPath'
+	| 'errorByPath'
+> {
 	title: ReactNode;
 	icon?: SystemIconDescriptor;
 	container?: Partial<StateStylingProps>;
@@ -59,7 +58,7 @@ export interface PathNavigatorTreeUIProps
 	isCollapsed: boolean;
 	expandedNodes: string[];
 	classes?: Partial<Record<PathNavigatorTreeUIClassKey, string>>;
-	sxs?: PartialSxRecord<PathNavigatorTreeUIClassKey>;
+	sxs?: PartialSxRecord<PathNavigatorTreeUIClassKey | 'activeItem'>;
 	active?: PathNavigatorTreeItemProps['active'];
 }
 
@@ -98,7 +97,11 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			square
 			disableGutters
 			elevation={0}
-			TransitionProps={{ unmountOnExit: true }}
+			slotProps={{
+				transition: {
+					unmountOnExit: true
+				}
+			}}
 			expanded={!isCollapsed}
 			onChange={() => onChangeCollapsed(!isCollapsed)}
 			className={props.classes?.root}

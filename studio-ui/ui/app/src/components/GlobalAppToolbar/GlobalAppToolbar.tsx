@@ -26,12 +26,7 @@ import Box from '@mui/material/Box';
 import { typographyClasses } from '@mui/material';
 
 export type GlobalAppToolbarClassKey =
-	| ViewToolbarClassKey
-	| 'headings'
-	| 'subtitle'
-	| 'leftContent'
-	| 'rightContent'
-	| 'ellipsis';
+	ViewToolbarClassKey | 'headings' | 'subtitle' | 'leftContent' | 'rightContent' | 'ellipsis';
 
 export interface GlobalAppToolbarProps {
 	elevation?: number;

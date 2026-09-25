@@ -40,7 +40,12 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 	const { groups, onRowClicked, onPageChange, onRowsPerPageChange } = props;
 
 	return (
-		<Box display="flex" flexDirection="column">
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			<TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>

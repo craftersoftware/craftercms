@@ -48,7 +48,13 @@ export function ContentPicker(props: {
 						value={index}
 						control={<Radio />}
 						label={
-							<Box display="flex" flexDirection="column" py={1}>
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column',
+									py: 1
+								}}
+							>
 								<Typography component="span">{data.title}</Typography>
 								<Typography variant="body2" color="textSecondary" component="span">
 									{data.path}

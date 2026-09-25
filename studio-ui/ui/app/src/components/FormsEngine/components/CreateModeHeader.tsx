@@ -34,7 +34,14 @@ export function CreateModeHeader({ path, collapse = false }: { path: string; col
 	const itemType = contentType.type;
 	return (
 		<Container sx={{ py: 1 }}>
-			<Typography variant="h6" component="h2" display="flex" alignItems="center">
+			<Typography
+				variant="h6"
+				component="h2"
+				sx={{
+					display: 'flex',
+					alignItems: 'center'
+				}}
+			>
 				<ItemTypeIcon item={{ systemType: itemType, mimeType: 'application/xml' }} sx={{ color: 'info.main', mr: 1 }} />
 				<FormattedMessage
 					defaultMessage='Create new "{name}" {type}'

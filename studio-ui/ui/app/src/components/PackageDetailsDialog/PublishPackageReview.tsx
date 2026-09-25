@@ -79,7 +79,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 								<FormattedMessage defaultMessage="Submitter" />
 							</Typography>
-							<Stack direction="row" spacing={1} alignItems="center">
+							<Stack
+								direction="row"
+								spacing={1}
+								sx={{
+									alignItems: 'center'
+								}}
+							>
 								<PersonAvatar person={publishPackage.submitter} />
 								<Typography variant="body1" sx={{ ml: 1 }}>
 									{getPersonFullName(publishPackage.submitter)}
@@ -90,7 +96,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 								<FormattedMessage defaultMessage="Publishing Target" />
 							</Typography>
-							<Stack direction="row" spacing={1} alignItems="center">
+							<Stack
+								direction="row"
+								spacing={1}
+								sx={{
+									alignItems: 'center'
+								}}
+							>
 								<ItemPublishingTargetIcon item={statusItems[publishPackage.target] as ContentItem} />
 								{publishPackage.target === 'live' ? (
 									<FormattedMessage defaultMessage="Live" />
@@ -125,7 +137,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 			{/* region Review details */}
 			{Boolean(publishPackage.reviewer) && (
 				<Box sx={{ mt: 2 }}>
-					<Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+					<Typography
+						variant="subtitle1"
+						sx={{
+							fontWeight: 'bold',
+							mb: 1
+						}}
+					>
 						<FormattedMessage defaultMessage="Review details" />
 					</Typography>
 					<Paper sx={{ p: 1.5 }}>

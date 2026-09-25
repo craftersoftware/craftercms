@@ -29,6 +29,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import { DeleteOutlined, DownloadOutlined, EditOutlined } from '@mui/icons-material';
 import { svgIconClasses } from '@mui/material';
+import MenuList from '@mui/material/MenuList';
 import { resolveMediaUrl } from '../../../utils/string';
 import useVideoInfo from '../../../hooks/useVideoInfo';
 import Skeleton from '@mui/material/Skeleton';
@@ -100,10 +101,23 @@ export function VideoPicker(props: VideoPickerProps) {
 						<CardMedia component="video" sx={{ width: '40%' }} image={mediaUrl} />
 						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 							<CardContent sx={{ flex: '1 0 auto' }}>
-								<Typography component="div" variant="body1" marginBottom={1}>
+								<Typography
+									component="div"
+									variant="body1"
+									sx={{
+										marginBottom: 1
+									}}
+								>
 									{value}
 								</Typography>
-								<Typography variant="body2" component="div" color="textSecondary" marginBottom={1}>
+								<Typography
+									variant="body2"
+									component="div"
+									color="textSecondary"
+									sx={{
+										marginBottom: 1
+									}}
+								>
 									{isFetchingMetadata ? (
 										<>
 											<Skeleton variant="text" />
@@ -187,8 +201,7 @@ export function VideoPicker(props: VideoPickerProps) {
 						}
 					/>
 				) : (
-					// TODO: same as in NodeSelector and ImagePicker - Refactor this when datasources implementation is ready.
-					<Box
+					<MenuList
 						children={menuOptions}
 						sx={{
 							p: 1,

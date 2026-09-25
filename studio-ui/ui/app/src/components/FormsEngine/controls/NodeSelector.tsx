@@ -20,7 +20,7 @@ import IconButton from '@mui/material/IconButton';
 import AddRounded from '@mui/icons-material/AddRounded';
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
-import HelpOutline from '@mui/icons-material/HelpOutline';
+import HelpOutline from '@mui/icons-material/HelpOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
@@ -29,7 +29,7 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
 import useContentTypes from '../../../hooks/useContentTypes';
@@ -115,6 +115,7 @@ import {
 import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAction } from '../dataSources/types';
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
+import { MenuList } from '@mui/material';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -852,7 +853,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							children={
 								menuOptions.length || customActionItems ? (
 									<>
-										{menuOptions}
+										<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{menuOptions}</MenuList>
 										{customActionItems}
 									</>
 								) : (
@@ -904,6 +905,7 @@ function CreateDataSourcePicker(props: {
 	onChange(e, choice: CreateDataSourcePickerData): void;
 }) {
 	const { siteId, allowedCreatePaths, contentTypesLookup, createActions, onChange } = props;
+	const { formatMessage } = useIntl();
 	const [allowedTypes, setAllowedTypes] = useState<string[] | undefined>(() =>
 		allowedCreatePaths.length ? undefined : Object.keys(props.allowedCreateTypes)
 	);
@@ -1013,23 +1015,40 @@ function CreateDataSourcePicker(props: {
 	}
 
 	return (
-		<Grid container spacing={2} display="flex" flexDirection="column">
+		<Grid
+			container
+			spacing={2}
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			<Grid>
 				<FormControl sx={{ mb: 1, flexShrink: 0 }} fullWidth>
-					<Box alignItems="center" display="flex">
+					<Box
+						sx={{
+							alignItems: 'center',
+							display: 'flex'
+						}}
+					>
 						<FormLabel id="creationStrategyLabel">
 							<FormattedMessage defaultMessage="Creation Strategy" />
 						</FormLabel>
-						<IconButton
-							size="small"
-							sx={{ ml: 1 }}
-							color="primary"
-							component="a"
-							href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-modeling.html#shared-components-vs-embedded-components"
-							target="_blank"
-						>
-							<HelpOutline fontSize="inherit" />
-						</IconButton>
+						<Tooltip title={<FormattedMessage defaultMessage="Learn more about shared vs embedded components" />}>
+							<IconButton
+								size="small"
+								sx={{ ml: 1 }}
+								color="primary"
+								component="a"
+								href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-modeling.html#shared-components-vs-embedded-components"
+								target="_blank"
+								aria-label={formatMessage({
+									defaultMessage: 'Learn more about shared vs embedded components'
+								})}
+							>
+								<HelpOutline fontSize="inherit" />
+							</IconButton>
+						</Tooltip>
 					</Box>
 					<RadioGroup aria-labelledby="creationStrategyLabel" name="creationStrategy" value={value.strategy} row>
 						<FormControlLabel
@@ -1060,7 +1079,17 @@ function CreateDataSourcePicker(props: {
 									value={path}
 									control={<Radio />}
 									onChange={handlePathChange}
-									label={<Typography noWrap maxWidth="100%" component="div" title={path} children={path} />}
+									label={
+										<Typography
+											noWrap
+											component="div"
+											title={path}
+											children={path}
+											sx={{
+												maxWidth: '100%'
+											}}
+										/>
+									}
 									disableTypography
 								/>
 							))}
@@ -1093,7 +1122,11 @@ function CreateDataSourcePicker(props: {
 				</Grid>
 			)}
 
-			<Grid width="100%">
+			<Grid
+				sx={{
+					width: '100%'
+				}}
+			>
 				<FormControl fullWidth>
 					<FormLabel id="contentTypeLabel" sx={{ minHeight: 28, display: 'flex', alignItems: 'center' }}>
 						<FormattedMessage defaultMessage="Content Type" />
@@ -1146,7 +1179,12 @@ function DataSourcePicker(props: { allowedPaths: AllowedPathsData[]; onChange(e,
 						value={index}
 						control={<Radio />}
 						label={
-							<Box display="flex" flexDirection="column">
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column'
+								}}
+							>
 								<Typography component="span" children={data.title} />
 								<Typography variant="body2" color="textSecondary" component="span" children={data.path} />
 							</Box>

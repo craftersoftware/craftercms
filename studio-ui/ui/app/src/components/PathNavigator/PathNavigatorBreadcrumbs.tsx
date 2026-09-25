@@ -29,11 +29,7 @@ import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
 
 export type PathNavigatorBreadcrumbsClassKey =
-	| 'root'
-	| 'searchRoot'
-	| 'searchInput'
-	| 'searchCleanButton'
-	| 'searchCloseButton';
+	'root' | 'searchRoot' | 'searchInput' | 'searchCleanButton' | 'searchCloseButton';
 
 export interface BreadcrumbsProps {
 	breadcrumb: ContentItem[];

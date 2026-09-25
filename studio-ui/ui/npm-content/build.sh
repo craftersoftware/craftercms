@@ -27,7 +27,7 @@ echo "Ace build complete"
 # js-yaml build
 rm -rf "$libsDirectory/js-yaml"
 mkdir "$libsDirectory/js-yaml"
-rsync -ar --delete ../../node_modules/js-yaml/dist/js-yaml.min.js "$libsDirectory/js-yaml/js-yaml.min.js"
+rsync -ar --delete ../../node_modules/js-yaml/dist/browser/js-yaml.umd.min.js "$libsDirectory/js-yaml/js-yaml.min.js"
 echo "Copied js-yaml assets"
 
 # bootstrap build

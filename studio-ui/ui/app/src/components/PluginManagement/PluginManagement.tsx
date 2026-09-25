@@ -58,7 +58,7 @@ import ListSubheader from '@mui/material/ListSubheader';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import TableBody from '@mui/material/TableBody';
-import DeleteIcon from '@mui/icons-material/DeleteOutline';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import UninstallPluginDialog from '../DeletePluginDialog';
 import { PluginConfigDialog } from '../PluginConfigDialog';
 import { fetchMyPermissions } from '../../services/users';

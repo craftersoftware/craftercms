@@ -81,7 +81,15 @@ export function Numeric(props: NumberProps) {
 				min={minValue}
 				max={maxValue}
 			>
-				<NumberField.Group render={<Box display="flex" />}>
+				<NumberField.Group
+					render={
+						<Box
+							sx={{
+								display: 'flex'
+							}}
+						/>
+					}
+				>
 					<NumberField.Decrement render={<Button variant="outlined" sx={decrementButtonSx} />}>
 						<MinusRounded />
 					</NumberField.Decrement>

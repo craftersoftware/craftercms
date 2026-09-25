@@ -84,7 +84,6 @@ import {
 } from '../actions';
 import { ModelHierarchyMap } from '@craftercms/studio-ui/utils/content';
 import { contentEvent, lockContentEvent } from '@craftercms/studio-ui/state/actions/system';
-import { NotFunction, ReducerWithInitialState } from '@reduxjs/toolkit/src/createReducer';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { getParentModelId } from '../../utils/ice';
 import { getCachedModels, getCachedContentItems, modelHierarchyMap } from '../../contentController';
@@ -92,6 +91,11 @@ import { isEditActionAvailable } from '../../utils/util';
 import type { BuiltInControlType } from '@craftercms/studio-ui/components/FormsEngine/lib/controlMap';
 import { type ContentTypeFieldValidations } from '@craftercms/studio-ui/src/models/ContentType';
 import { value, extractCollectionItem } from '@craftercms/studio-ui/utils/model';
+
+type NotFunction<T> = T extends Function ? never : T;
+type ReducerWithInitialState<S extends NotFunction<any>> = Reducer<S> & {
+	getInitialState: () => S;
+};
 
 type CaseReducer<S = GuestState, A extends GuestStandardAction = GuestStandardAction> = Reducer<S, A>;
 

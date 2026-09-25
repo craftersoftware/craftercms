@@ -64,7 +64,12 @@ function Body(props: FieldInformationDialogBodyProps) {
 		<Box sx={{ p: 2, gap: 2, display: 'flex', flexDirection: 'column' }}>
 			<Card>
 				<CardContent>
-					<Typography variant="subtitle1" fontWeight="bold">
+					<Typography
+						variant="subtitle1"
+						sx={{
+							fontWeight: 'bold'
+						}}
+					>
 						<FormattedMessage defaultMessage="Basic Properties" />
 					</Typography>
 
@@ -74,7 +79,11 @@ function Body(props: FieldInformationDialogBodyProps) {
 						return (
 							<Grid container spacing={2} key={descriptor.id} sx={{ mt: 0.5 }}>
 								<Grid size={{ xs: 4 }}>
-									<Typography color="text.secondary">
+									<Typography
+										sx={{
+											color: 'text.secondary'
+										}}
+									>
 										{getPossibleTranslation(descriptor.name, formatMessage)}
 									</Typography>
 								</Grid>
@@ -94,7 +103,12 @@ function Body(props: FieldInformationDialogBodyProps) {
 			{descriptor.sections?.map((section, index) => (
 				<Card key={`${section.title}_${index}`}>
 					<CardContent>
-						<Typography variant="subtitle1" fontWeight="bold">
+						<Typography
+							variant="subtitle1"
+							sx={{
+								fontWeight: 'bold'
+							}}
+						>
 							{getPossibleTranslation(section.title, formatMessage)}
 						</Typography>
 						{section.fields?.map((fieldName) => {
@@ -109,7 +123,11 @@ function Body(props: FieldInformationDialogBodyProps) {
 							return (
 								<Grid container spacing={2} key={fieldName} sx={{ mt: 0.5 }}>
 									<Grid size={{ xs: 4 }}>
-										<Typography color="text.secondary">
+										<Typography
+											sx={{
+												color: 'text.secondary'
+											}}
+										>
 											{getPossibleTranslation(descriptor.fields?.[fieldName]?.name ?? fieldName, formatMessage)}
 										</Typography>
 									</Grid>

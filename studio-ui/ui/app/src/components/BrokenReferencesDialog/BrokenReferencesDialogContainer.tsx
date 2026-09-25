@@ -118,12 +118,14 @@ export function BrokenReferencesDialogContainer(props: BrokenReferencesDialogCon
 										<ListItemText
 											primary={reference.label}
 											secondary={reference.path}
-											primaryTypographyProps={{
-												title: reference.path,
-												sx: {
-													overflow: 'hidden',
-													whiteSpace: 'nowrap',
-													textOverflow: 'ellipsis'
+											slotProps={{
+												primary: {
+													title: reference.path,
+													sx: {
+														overflow: 'hidden',
+														whiteSpace: 'nowrap',
+														textOverflow: 'ellipsis'
+													}
 												}
 											}}
 										/>

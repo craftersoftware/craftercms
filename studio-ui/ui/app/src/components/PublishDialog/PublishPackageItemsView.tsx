@@ -202,7 +202,12 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 									<ListItem
 										key={path}
 										secondaryAction={
-											<Box display="flex" alignItems="center">
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center'
+												}}
+											>
 												<IconButton
 													className="item-menu-button"
 													size="small"
@@ -239,7 +244,12 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 									>
 										<ListItemText
 											primary={
-												<Box display="flex" gap={1}>
+												<Box
+													sx={{
+														display: 'flex',
+														gap: 1
+													}}
+												>
 													<ItemDisplay
 														item={itemMap[path]}
 														showNavigableAsLinks={false}

@@ -64,7 +64,13 @@ export function PublisherStatusDashlet(props: PublisherStatusDashletProps) {
 			{publishingStatus && (
 				<>
 					<FormattedMessage defaultMessage="Publisher Status" />{' '}
-					<Typography component="div" children={getPublishingStatusMessage(publishingStatus, formatMessage)} mt={2} />
+					<Typography
+						component="div"
+						children={getPublishingStatusMessage(publishingStatus, formatMessage)}
+						sx={{
+							mt: 2
+						}}
+					/>
 				</>
 			)}
 		</DashletCard>

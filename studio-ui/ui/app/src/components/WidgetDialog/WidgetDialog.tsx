@@ -27,8 +27,10 @@ export function WidgetDialog(props: WidgetDialogProps) {
 		<EnhancedDialog
 			title={title}
 			maxWidth="xl"
-			PaperProps={{
-				sx: fullHeight && { minHeight: '90vh' }
+			slotProps={{
+				paper: {
+					sx: fullHeight && { minHeight: '90vh' }
+				}
 			}}
 			isSubmitting={isSubmitting}
 			updateSubmittingOrHasPendingChanges={onSubmittingAndOrPendingChange}

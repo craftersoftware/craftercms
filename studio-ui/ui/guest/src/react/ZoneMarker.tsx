@@ -31,7 +31,7 @@ import { getCachedContentTypes } from '../contentController';
 import { getAvatarWithIconColors } from '@craftercms/studio-ui/utils/contentType';
 import UltraStyledTypography from './UltraStyledTypography';
 import UltraStyledTooltip from './UltraStyledTooltip';
-import { SystemCssProperties } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemCssProperties } from '@mui/system/styleFunctionSx';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { type ItemStateMap } from '@craftercms/studio-ui/src/models/Item';
 import { defineMessages } from 'react-intl';

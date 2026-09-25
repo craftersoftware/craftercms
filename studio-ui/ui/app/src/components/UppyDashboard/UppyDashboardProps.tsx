@@ -16,10 +16,10 @@
 
 import { Uppy, type DashboardOptions } from 'uppy';
 import React from 'react';
-import type { UppyFile, Meta, Body } from '@uppy/utils/lib/UppyFile';
+import type { UppyFile, Meta, Body } from '@uppy/core';
 
 export interface UppyDashboardProps {
-	uppy: Uppy<{ site: string }>;
+	uppy: Uppy<Meta, Body>;
 	site: string;
 	path: string;
 	title: string;

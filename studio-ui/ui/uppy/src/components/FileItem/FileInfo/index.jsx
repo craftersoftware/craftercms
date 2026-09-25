@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { prettierBytes } from '@transloadit/prettier-bytes';
-import { truncateString } from '@uppy/utils';
+import { truncateString } from '@uppy/core/utils';
 import MetaErrorMessage from '../MetaErrorMessage.js';
 
 const renderFileName = (props) => {

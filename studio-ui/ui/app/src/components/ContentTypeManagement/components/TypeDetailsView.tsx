@@ -141,7 +141,13 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 				<StableFormContext.Provider value={stableFormContextRef.current}>
 					<TypeDetailsViewHeader type={type} onActionClick={onEditTypeAction} />
 
-					<Box display="flex" justifyContent="space-between" mt={(theme) => `${theme.spacing(1)} !important`}>
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							mt: (theme) => `${theme.spacing(1)} !important`
+						}}
+					>
 						<Button onClick={() => onAddSection()}>
 							<FormattedMessage defaultMessage="Add Section" />
 						</Button>

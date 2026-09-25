@@ -17,19 +17,7 @@
 import { defineMessage, MessageDescriptor } from 'react-intl';
 
 export type SuffixesType =
-	| '_s'
-	| '_t'
-	| '_i'
-	| '_l'
-	| '_b'
-	| '_f'
-	| '_d'
-	| '_dt'
-	| '_to'
-	| '_html'
-	| '_o'
-	| '_en'
-	| '_txt';
+	'_s' | '_t' | '_i' | '_l' | '_b' | '_f' | '_d' | '_dt' | '_to' | '_html' | '_o' | '_en' | '_txt';
 
 export const suffixesMap: Record<SuffixesType, MessageDescriptor> = {
 	_s: defineMessage({ defaultMessage: 'For string.' }),

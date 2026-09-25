@@ -36,5 +36,4 @@ export interface NewContentDialogStateProps extends NewContentDialogBaseProps, E
 }
 
 export interface NewContentDialogContainerProps
-	extends NewContentDialogBaseProps,
-		Pick<NewContentDialogProps, 'onContentTypeSelected'> {}
+	extends NewContentDialogBaseProps, Pick<NewContentDialogProps, 'onContentTypeSelected'> {}

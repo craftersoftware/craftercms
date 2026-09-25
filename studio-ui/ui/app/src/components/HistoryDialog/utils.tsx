@@ -44,8 +44,7 @@ export interface HistoryDialogStateProps extends HistoryDialogBaseProps, Enhance
 }
 
 export interface HistoryDialogContainerProps
-	extends HistoryDialogBaseProps,
-		Pick<HistoryDialogProps, 'versionsBranch'> {}
+	extends HistoryDialogBaseProps, Pick<HistoryDialogProps, 'versionsBranch'> {}
 
 export interface PaginationProps {
 	count: number;

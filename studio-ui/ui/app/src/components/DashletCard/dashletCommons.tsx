@@ -119,7 +119,12 @@ export const getItemSkeleton = ({
 				<ListItemText
 					primary={<Skeleton variant="text" />}
 					secondary={
-						<Typography color="text.secondary" variant="body2">
+						<Typography
+							variant="body2"
+							sx={{
+								color: 'text.secondary'
+							}}
+						>
 							<Skeleton variant="text" />
 						</Typography>
 					}
@@ -132,9 +137,22 @@ export const getItemSkeleton = ({
 export type DashletEmptyMessageProps = PropsWithChildren<{ sx?: BoxProps['sx'] }>;
 
 export const DashletEmptyMessage = ({ children, sx }: DashletEmptyMessageProps) => (
-	<Box display="flex" flexDirection="column" alignItems="center" sx={{ mt: 2, ...sx }}>
+	<Box
+		sx={{
+			display: 'flex',
+			flexDirection: 'column',
+			alignItems: 'center',
+			mt: 2,
+			...sx
+		}}
+	>
 		<CheckRounded sx={{ color: 'success.main', mb: 1 }} />
-		<Typography color="text.secondary" variant="body2">
+		<Typography
+			variant="body2"
+			sx={{
+				color: 'text.secondary'
+			}}
+		>
 			{children}
 		</Typography>
 	</Box>
@@ -357,7 +375,12 @@ export function SubmittedPackageDetail({ pkg }: { pkg: PublishPackage }) {
 				publishingTarget: pkg.target,
 				render_target(target: ReactNode[]) {
 					return (
-						<Box component="span" color={target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR}>
+						<Box
+							component="span"
+							sx={{
+								color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
+							}}
+						>
 							{submittedPackageDetailMessages[target[0] as string]
 								? formatMessage(submittedPackageDetailMessages[target[0] as string]).toLowerCase()
 								: target[0]}

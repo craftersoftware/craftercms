@@ -35,7 +35,14 @@ function CharCountStatus(props: CharCountStatusProps) {
 	const { commentLength, commentMaxLength } = props;
 
 	return (
-		<Grid container direction="row" justifyContent="space-between" sx={{ padding: '5px' }}>
+		<Grid
+			container
+			direction="row"
+			sx={{
+				justifyContent: 'space-between',
+				padding: '5px'
+			}}
+		>
 			<Grid>
 				<Typography sx={{ fontSize: '14px', color: palette.gray.medium4 }}>
 					<FormattedMessage

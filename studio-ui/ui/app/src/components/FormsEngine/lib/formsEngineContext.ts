@@ -120,7 +120,11 @@ export interface StableFormContextProps {
 	originalValues: LookupTable<unknown>;
 	props: FormsEngineProps;
 	state: FormsEngineCachedStackedFormState;
-	/** Fields whose control plugins failed preload (bootstrap or save); save is blocked while non-empty. */
+	/**
+	 * Fields whose control plugins failed preload. Bootstrap entries (`fromBootstrap`) persist
+	 * until the form reloads and always block save. Save-time entries are cleared/retried on
+	 * each save attempt.
+	 */
 	affectedPluginControlFields: AffectedPluginControlField[];
 	/** Loaded FE2 form controller for this stack entry, if any. */
 	formController: FormController | null;

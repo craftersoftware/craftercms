@@ -87,7 +87,12 @@ export function ContextMenu(props: ContextMenuProps) {
 					}}
 				>
 					<ErrorOutlineOutlinedIcon fontSize="small" />
-					<Typography variant="caption" display="block">
+					<Typography
+						variant="caption"
+						sx={{
+							display: 'block'
+						}}
+					>
 						{emptyState?.message || (
 							<FormattedMessage
 								id="contextMenu.emptyOptionsMessage"

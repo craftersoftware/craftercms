@@ -46,7 +46,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 	itemsByPath: LookupTable<ContentItem>;
 	active?: Record<string, boolean>;
 	classes?: Partial<Record<PathNavigatorTreeBreadcrumbsClassKey, string>>;
-	sxs?: PartialSxRecord<PathNavigatorTreeBreadcrumbsClassKey>;
+	sxs?: PartialSxRecord<PathNavigatorTreeBreadcrumbsClassKey | 'activeItem'>;
 	showNavigableAsLinks?: boolean;
 	showPublishingTarget?: boolean;
 	showWorkflowState?: boolean;
@@ -59,11 +59,7 @@ export interface PathNavigatorTreeItemProps extends Pick<
 }
 
 export type PathNavigatorTreeBreadcrumbsClassKey =
-	| 'activeItem'
-	| 'searchRoot'
-	| 'searchInput'
-	| 'searchCleanButton'
-	| 'searchCloseButton';
+	'searchRoot' | 'searchInput' | 'searchCleanButton' | 'searchCloseButton';
 
 const translations = defineMessages({
 	filter: {
@@ -221,7 +217,12 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}
 					}}
 				>
-					<Typography variant="caption" color="error.main">
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'error.main'
+						}}
+					>
 						<FormattedMessage
 							defaultMessage="Error: {message}"
 							values={{ message: errorByPath[path]?.response?.message ?? errorByPath[path].message }}
@@ -464,7 +465,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						color: (theme) => theme.palette.text.secondary
 					}
 				},
-				[`& .${treeItemClasses.focused}`]: {
+				[`& .${treeItemClasses.content}[data-focused]`]: {
 					background: 'none !important'
 				}
 			}}

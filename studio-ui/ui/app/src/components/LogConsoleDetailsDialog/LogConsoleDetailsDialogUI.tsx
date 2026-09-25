@@ -37,19 +37,43 @@ export function LogConsoleDetailsDialogUI(props: LogConsoleDetailsDialogProps) {
 				onCloseButtonClick={onClose}
 			/>
 			<DialogBody>
-				<Box display="flex" p="10px 0" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.level" defaultMessage="Level" />
 					</Typography>
-					<Box display="flex" width="100%" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.level}</Typography>
 					</Box>
 				</Box>
-				<Box display="flex" p="10px 0" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.timestamp" defaultMessage="Timestamp" />
 					</Typography>
-					<Box display="flex" width="100%" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>
 							{new Intl.DateTimeFormat(localeBranch.localeCode, localeBranch.dateTimeFormatOptions).format(
 								new Date(logEvent.timestamp)
@@ -57,27 +81,63 @@ export function LogConsoleDetailsDialogUI(props: LogConsoleDetailsDialogProps) {
 						</Typography>
 					</Box>
 				</Box>
-				<Box display="flex" p="10px 0" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.thread" defaultMessage="Thread" />
 					</Typography>
-					<Box display="flex" width="100%" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.thread}</Typography>
 					</Box>
 				</Box>
-				<Box display="flex" p="10px 0" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.project" defaultMessage="Project" />
 					</Typography>
-					<Box display="flex" width="100%" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.site}</Typography>
 					</Box>
 				</Box>
-				<Box display="flex" p="10px 0" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						p: '10px 0',
+						alignItems: 'center'
+					}}
+				>
 					<Typography color="textSecondary" sx={{ flexBasis: '150px' }}>
 						<FormattedMessage id="words.message" defaultMessage="Message" />
 					</Typography>
-					<Box display="flex" width="100%" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
 						<Typography>{logEvent.message}</Typography>
 					</Box>
 				</Box>

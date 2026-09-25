@@ -90,7 +90,13 @@ export function BasePathSelector(props: BasePathSelectorProps) {
 								{basePath.label ??
 									(messages[basePath.id] ? formatMessage(messages[basePath.id]) : capitalize(basePath.id))}
 								:{' '}
-								<Typography color="text.secondary" variant="body2" component="span">
+								<Typography
+									variant="body2"
+									component="span"
+									sx={{
+										color: 'text.secondary'
+									}}
+								>
 									{basePath.path}
 								</Typography>
 							</>

@@ -22,12 +22,31 @@ import React from 'react';
 export function ControlSkeleton({ label }: { label: string }) {
 	return (
 		<>
-			<Box display="flex" justifyContent="space-between" alignItems="center" height={30}>
-				<Box display="flex" alignItems="center" className="space-x">
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					height: 30
+				}}
+			>
+				<Box
+					className="space-x"
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					{label ? <FormLabel component="div">{label}</FormLabel> : <Skeleton variant="text" width={100} />}
 					<Skeleton variant="circular" />
 				</Box>
-				<Box display="flex" alignItems="center" className="space-x">
+				<Box
+					className="space-x"
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<Skeleton variant="text" width={30} />
 					<Skeleton variant="circular" width={15} height={15} />
 					<Skeleton variant="circular" width={15} height={15} />

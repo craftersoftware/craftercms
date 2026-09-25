@@ -402,13 +402,15 @@ function FormBootstrap(props: FormsEngineProps) {
 					effectRefs.current.contentTypesById
 				);
 				// If import failed but no field mapped (defensive), still surface something so save stays blocked.
-				if (pluginPreloadFailures.length && !affected.length) {
-					return pluginPreloadFailures.map((failure) => ({
-						fieldId: failure.plugin.name,
-						fieldName: failure.plugin.name
-					}));
-				}
-				return affected;
+				const fields =
+					pluginPreloadFailures.length && !affected.length
+						? pluginPreloadFailures.map((failure) => ({
+								fieldId: failure.plugin.name,
+								fieldName: failure.plugin.name
+							}))
+						: affected;
+				// Tag as bootstrap so save will not clear them for an in-place import retry.
+				return fields.map((field) => ({ ...field, fromBootstrap: true }));
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
 			return attachFormController({
@@ -1164,7 +1166,15 @@ function FormOrchestrator(props: FormsEngineProps) {
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
 				<Box id="header" sx={{ minHeight: 50 }}>
-					<Box component={Container} display="flex" alignItems="center" justifyContent="space-between" pt={2}>
+					<Box
+						component={Container}
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'space-between',
+							pt: 2
+						}}
+					>
 						<Typography variant="body2" color="textSecondary">
 							<span title={siteId}>{activeSite.name}</span> / <span title={contentType.id}>{contentType.name}</span>
 						</Typography>
@@ -1398,7 +1408,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 							position: 'absolute'
 						}
 					}}
-					PaperProps={{ 'data-area-id': 'stackedFormDrawerPaper' }}
+					slotProps={{
+						paper: {
+							// @ts-expect-error Setting a html prop
+							'data-area-id': 'stackedFormDrawerPaper'
+						}
+					}}
 				>
 					{hasStackedForms && (
 						<FormBootstrap

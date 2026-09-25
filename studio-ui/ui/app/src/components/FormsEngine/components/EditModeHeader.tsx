@@ -78,7 +78,13 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 		<>
 			<Container className="space-y" sx={{ py: 1 }}>
 				{/* Item display */}
-				<Box display="flex" alignItems="center" className="space-x">
+				<Box
+					className="space-x"
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					{isLargeContainer && collapse && <CollapseToCButton />}
 					<ItemTypeIcon item={typeIconItem} sx={{ color: 'info.main' }} />
 					<Typography>{itemLabel}</Typography>
@@ -105,18 +111,34 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 					)}
 				</Box>
 				<Collapse in={!collapse}>
-					<Box display="flex" alignItems="end" justifyContent="space-between">
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'end',
+							justifyContent: 'space-between'
+						}}
+					>
 						<Box className="space-y" sx={{ flexBasis: '50%' }}>
 							{/* Item metadata */}
 							<div>
 								<Typography
 									variant="body2"
 									color="textSecondary"
-									display="flex"
-									alignItems="center"
-									sx={{ flexWrap: 'wrap', em: { fontWeight: 600 } }}
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										flexWrap: 'wrap',
+										em: { fontWeight: 600 }
+									}}
 								>
-									<Box component="span" display="flex" alignItems="center" marginRight={1}>
+									<Box
+										component="span"
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											marginRight: 1
+										}}
+									>
 										<CalendarTodayRounded sx={{ mr: 0.25 }} fontSize="inherit" />
 										<span>
 											<FormattedMessage
@@ -132,7 +154,13 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 											/>
 										</span>
 									</Box>
-									<Box component="span" display="flex" alignItems="center">
+									<Box
+										component="span"
+										sx={{
+											display: 'flex',
+											alignItems: 'center'
+										}}
+									>
 										<EditOutlined sx={{ mr: 0.25 }} fontSize="inherit" />
 										<span>
 											<FormattedMessage
@@ -152,15 +180,30 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 								<Typography
 									variant="body2"
 									color="textSecondary"
-									display="flex"
-									alignItems="center"
-									sx={{ flexWrap: 'wrap' }}
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										flexWrap: 'wrap'
+									}}
 								>
-									<Box component="span" display="flex" alignItems="center" marginRight={1}>
+									<Box
+										component="span"
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											marginRight: 1
+										}}
+									>
 										<ItemPublishingTargetIcon fontSize="inherit" sxs={{ root: { marginRight: 0.25 } }} item={item} />{' '}
 										{getItemPublishingTargetText(item.stateMap, formatMessage)}
 									</Box>
-									<Box component="span" display="flex" alignItems="center">
+									<Box
+										component="span"
+										sx={{
+											display: 'flex',
+											alignItems: 'center'
+										}}
+									>
 										<ItemStateIcon fontSize="inherit" sxs={{ root: { mr: 0.25 } }} item={item} />{' '}
 										{getItemStateText(item.stateMap, formatMessage, {
 											user: item.lockOwner?.username,
@@ -170,14 +213,25 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 								</Typography>
 							</div>
 						</Box>
-						<Box className="space-y" display="flex" flexDirection="column" alignItems="end" sx={{ maxWidth: '50%' }}>
+						<Box
+							className="space-y"
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'end',
+								maxWidth: '50%'
+							}}
+						>
 							<Typography
 								component="span"
 								variant="body2"
 								color="textSecondary"
-								display="flex"
-								alignItems="center"
-								sx={{ overflow: 'hidden', maxWidth: '100%' }}
+								sx={{
+									display: 'flex',
+									alignItems: 'center',
+									overflow: 'hidden',
+									maxWidth: '100%'
+								}}
 							>
 								<Box
 									component="span"
@@ -197,9 +251,12 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 								component="span"
 								variant="body2"
 								color="textSecondary"
-								display="flex"
-								alignItems="center"
-								sx={{ overflow: 'hidden', maxWidth: '100%' }}
+								sx={{
+									display: 'flex',
+									alignItems: 'center',
+									overflow: 'hidden',
+									maxWidth: '100%'
+								}}
 							>
 								<Box
 									component="span"

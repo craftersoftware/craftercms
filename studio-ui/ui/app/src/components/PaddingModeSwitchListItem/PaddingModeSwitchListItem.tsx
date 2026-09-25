@@ -55,7 +55,11 @@ export function PaddingModeSwitchListItem(props: PaddingModeSwitchProps) {
 					edge="end"
 					checked={editModePadding}
 					onChange={onEditModePaddingChange}
-					inputProps={{ 'aria-labelledby': 'paddingModeSwitchLabel' }}
+					slotProps={{
+						input: {
+							'aria-labelledby': 'paddingModeSwitchLabel'
+						}
+					}}
 				/>
 			</ListItem>
 			{showHelperText && (

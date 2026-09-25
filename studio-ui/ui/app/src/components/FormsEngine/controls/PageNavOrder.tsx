@@ -89,8 +89,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		contextItem?.path ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
 	const pageLabel = contextItem?.label || internalName || fileName || currentPath || '';
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
-		| PrimitiveAtom<number | string | null | undefined>
-		| undefined;
+		PrimitiveAtom<number | string | null | undefined> | undefined;
 	if (!orderDefaultAtom) {
 		throw new Error(
 			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
@@ -183,7 +182,13 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					<FormattedMessage defaultMessage="This element doesn't have an identifier yet. You can't edit the navigation order until it has an identifier." />
 				</Alert>
 			)}
-			<Box display="flex" flexDirection="row" gap={2}>
+			<Box
+				sx={{
+					display: 'flex',
+					flexDirection: 'row',
+					gap: 2
+				}}
+			>
 				<RadioGroup
 					row
 					value={String(value)}

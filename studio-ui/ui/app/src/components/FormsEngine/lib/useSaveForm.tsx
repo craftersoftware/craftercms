@@ -132,7 +132,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 				dispatch,
 				children: (
 					<Box>
-						<Typography marginBottom={1}>
+						<Typography
+							sx={{ marginBottom: 1 }}
+						>
 							<FormattedMessage defaultMessage="An error occurred trying to save the form" />
 						</Typography>
 						<Typography variant="body2" color="textSecondary">
@@ -144,6 +146,20 @@ export function useSaveForm(props: UseSaveFormProps) {
 		};
 
 		try {
+			const fieldListMessage = (fields: AffectedPluginControlField[]) =>
+				fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
+			const blockSaveForBootstrapPluginFailures = (fields: AffectedPluginControlField[]) => {
+				return showAlert({
+					dispatch,
+					message: formatMessage(
+						{
+							defaultMessage:
+								'Cannot save: one or more control plugins failed to load when the form opened ({fields}). Reload the form and try again. If the problem continues, contact your administrator.'
+						},
+						{ fields: fieldListMessage(fields) }
+					)
+				});
+			};
 			const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
 				const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
 				return showAlert({
@@ -157,8 +173,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 					)
 				});
 			};
-			// Bootstrap may have recorded preload failures for this form instance. Clear them and let the
-			// preload below re-attempt the import; `controlPluginCache` drops failed entries so a retry is possible.
+			// Bootstrap failures mean values may have been parsed without the plugin valueRetriever.
+			// Do not clear them for an in-place import retry — a successful load would still let
+			// valueSerializer see raw shapes. Require a form reload so bootstrap re-parses correctly.
+			const bootstrapAffectedFields = stableFormContext.affectedPluginControlFields.filter(
+				(field) => field.fromBootstrap
+			);
+			if (bootstrapAffectedFields.length) {
+				return blockSaveForBootstrapPluginFailures(bootstrapAffectedFields);
+			}
+			// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
 			stableFormContext.affectedPluginControlFields = [];
 			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 			let validityStates = await Promise.all(

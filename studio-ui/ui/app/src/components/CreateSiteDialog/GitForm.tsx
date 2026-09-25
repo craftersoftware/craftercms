@@ -134,9 +134,9 @@ function GitForm(props: GitFormProps) {
 				/>
 				<Typography
 					variant="caption"
-					color="text.secondary"
 					component="small"
 					sx={{
+						color: 'text.secondary',
 						display: 'block',
 						mb: 2,
 						ml: 2

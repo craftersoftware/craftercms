@@ -23,7 +23,6 @@ import { nou } from '../utils/object';
 import * as babel from '../env/babel';
 import * as rxjs from 'rxjs';
 import { Observable, Subject } from 'rxjs';
-import { IntlShape } from 'react-intl/src/types';
 import * as messages from './i18n-legacy';
 import { translateElements } from './i18n-legacy';
 import * as mui from '@mui/material';
@@ -43,7 +42,7 @@ import { StandardAction } from '../models/StandardAction';
 import { createCustomDocumentEventListener } from '../utils/dom';
 import { components as studioUIComponents, services, utils } from './studioUI';
 import logoIcon from '../assets/crafter-icon.svg';
-import { MessageDescriptor } from 'react-intl';
+import { IntlShape, MessageDescriptor } from 'react-intl';
 
 const ErrorState = studioUIComponents.ErrorState;
 

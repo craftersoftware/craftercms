@@ -136,7 +136,11 @@ export const EncryptTool = (props: EncryptToolProps) => {
 					showAppsButton={showAppsButton}
 				/>
 			)}
-			<Box p="20px">
+			<Box
+				sx={{
+					p: '20px'
+				}}
+			>
 				<form onSubmit={encrypt}>
 					<TextField
 						sx={{ mb: 2 }}

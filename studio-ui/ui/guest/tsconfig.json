@@ -1,22 +1,22 @@
 {
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
-		"baseUrl": "./src",
 		"rootDir": "./src",
 		"outDir": "./build_tsc",
 		"module": "esnext",
 		"target": "ES2022",
 		"importHelpers": true,
 		"composite": true,
-		"downlevelIteration": true,
 		"paths": {
-			"react": ["../../../node_modules/react"],
-			"@craftercms/studio-ui": ["../../app/src"],
-			"@craftercms/studio-ui/*": ["../../app/src/*"],
-			"@mui/material": ["../../../node_modules/@mui/material"],
-			"@mui/material/*": ["../../../node_modules/@mui/material/*"],
-			"@mui/styled-engine": ["../../../node_modules/@mui/styled-engine"],
-			"@mui/styled-engine/*": ["../../../node_modules/@mui/styled-engine/*"]
+			"react": ["../../node_modules/react"],
+			"@craftercms/studio-ui": ["../app/src"],
+			"@craftercms/studio-ui/*": ["../app/src/*"],
+			"@mui/material": ["../../node_modules/@mui/material"],
+			"@mui/material/*": ["../../node_modules/@mui/material/*"],
+			"@mui/system": ["../../node_modules/@mui/system"],
+			"@mui/system/*": ["../../node_modules/@mui/system/*"],
+			"@mui/styled-engine": ["../../node_modules/@mui/styled-engine"],
+			"@mui/styled-engine/*": ["../../node_modules/@mui/styled-engine/*"]
 		}
 	},
 	"references": [

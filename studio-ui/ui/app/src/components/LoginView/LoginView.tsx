@@ -616,12 +616,14 @@ export function LoginViewContainer(props: LoginViewProps) {
 					},
 					opacity: isFetching ? 0.2 : 1
 				})}
-				PaperProps={{
-					sx: {
-						minWidth: 300,
-						overflow: 'visible',
-						backgroundColor: (theme) =>
-							theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, .8)' : 'rgba(255, 255, 255, .8)'
+				slotProps={{
+					paper: {
+						sx: {
+							minWidth: 300,
+							overflow: 'visible',
+							backgroundColor: (theme) =>
+								theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, .8)' : 'rgba(255, 255, 255, .8)'
+						}
 					}
 				}}
 				aria-labelledby="loginDialog"

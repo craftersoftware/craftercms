@@ -21,7 +21,7 @@ import { useEnhancedDialogContext } from '../EnhancedDialog/useEnhancedDialogCon
 import MutableRef from '../../models/MutableRef';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
 
 // @see https://github.com/ajaxorg/ace/wiki/Configuring-Ace

@@ -199,7 +199,13 @@ function LegacyTypeManagement(props: ContentTypeManagementProps) {
 	}, [dispatch, onSubmittingAndOrPendingChange, embedded, onClose, onMinimize]);
 
 	return (
-		<Box height="calc(100% - 38px)" display="flex" flexDirection="column">
+		<Box
+			sx={{
+				height: 'calc(100% - 38px)',
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			{!embedded && (
 				<GlobalAppToolbar
 					title={<FormattedMessage id="componentsMessages.contentTypes" defaultMessage="Content Types" />}
