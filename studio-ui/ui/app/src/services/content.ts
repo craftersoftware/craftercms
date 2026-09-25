@@ -1446,9 +1446,9 @@ export function createFolder(site: string, path: string, name: string): Observab
 	});
 }
 
-export function createFile(site: string, path: string, fileName: string): Observable<unknown> {
+export function createFile(site: string, path: string, fileName: string, content: string = ''): Observable<unknown> {
 	const fullPath = ensureSingleSlash(`${path}/${fileName}`);
-	return writeContent(site, fullPath, '', { unlock: true });
+	return writeContent(site, fullPath, content, { unlock: true });
 }
 
 export function renameFolder(site: string, path: string, name: string) {

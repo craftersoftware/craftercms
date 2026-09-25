@@ -214,27 +214,19 @@ const dialogEpics: CrafterCMSEpic[] = [
 			)
 		),
 	// endregion
-	// region popDialog
+	// region popCodeEditorDialog
 	(action$, state$) =>
 		action$.pipe(
 			ofType(popCodeEditorDialog.type),
 			withLatestFrom(state$),
-			filter(([{ payload }, state]) => {
+			map(([{ payload }, state]) => {
 				const dialogId = payload.id;
-				// Check if the dialog has a path set in its state.
-				if (!(state.dialogStack.byId[dialogId]?.props as CodeEditorDialogStateProps)?.path) return false;
-
+				const path = (state.dialogStack.byId[dialogId]?.props as CodeEditorDialogStateProps)?.path;
+				const item = path ? state.content.itemsByPath[path] : undefined;
 				const username = state.user.username;
-				const item =
-					state.content.itemsByPath[(state.dialogStack.byId[dialogId]?.props as CodeEditorDialogStateProps)?.path];
-				return item.stateMap.locked && item.lockOwner.username === username;
-			}),
-			map(([{ payload }, state]) =>
-				batchActions([
-					unlockItem({ path: (state.dialogStack.byId[payload.id].props as CodeEditorDialogStateProps).path }),
-					popDialog({ id: payload.id })
-				])
-			)
+				const shouldUnlock = Boolean(item?.stateMap?.locked && item.lockOwner?.username === username);
+				return batchActions([shouldUnlock && unlockItem({ path }), popDialog({ id: dialogId })].filter(Boolean));
+			})
 		)
 	// endregion
 ] as CrafterCMSEpic[];

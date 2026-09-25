@@ -26,6 +26,7 @@ import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
+import type { FormController, FormControllerContext } from './formControllerTypes';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -125,6 +126,28 @@ export interface StableFormContextProps {
 	 * each save attempt.
 	 */
 	affectedPluginControlFields: AffectedPluginControlField[];
+	/** Loaded FE2 form controller for this stack entry, if any. */
+	formController: FormController | null;
+	/** Host context passed to the form controller (also used by relevance / save hooks). */
+	formControllerContext: FormControllerContext | null;
+	/** Cleanup returned by `initialize`; invoked on stack pop / engine unmount. */
+	formControllerCleanup: (() => void) | null;
+	/**
+	 * True when `hasJsController` is set but `form-controller.js` was not found (HTTP 404).
+	 * Used to show a non-blocking warning in the form body.
+	 */
+	formControllerFileMissing: boolean;
+	/**
+	 * True when `hasJsController` is set but the controller failed to load
+	 * (syntax error, invalid export, unsupported apiVersion, etc.).
+	 * Used to show a non-blocking warning in the form body.
+	 */
+	formControllerLoadFailed: boolean;
+	/**
+	 * Field ids that passed `isFieldRelevant` (resolved before first paint).
+	 * `null` means no relevance hook / no filtering from the controller.
+	 */
+	relevantFieldIds: Set<string> | null;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

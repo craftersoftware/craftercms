@@ -30,6 +30,7 @@ import { PluginDescriptor } from '../models/PluginDescriptor';
 import { components, icons, services, utils } from './studioUI';
 import { Observable } from 'rxjs';
 import { formsEngineControlsHost, formsEngineDataSourcesHost } from '../components/FormsEngine/dataSources/host';
+import { formsEngineFormControllersHost } from '../components/FormsEngine/lib/formControllerLoader';
 
 // TODO:
 //  To avoid pre-loading all services and utils and ending up with a large app
@@ -78,6 +79,7 @@ export interface CrafterCMSGlobal {
 	formsEngine: {
 		dataSources: typeof formsEngineDataSourcesHost;
 		controls: typeof formsEngineControlsHost;
+		formControllers: typeof formsEngineFormControllersHost;
 	};
 	getStore(): CrafterCMSStore;
 	define: {
@@ -159,7 +161,8 @@ export const craftercms: CrafterCMSGlobal = {
 	services,
 	formsEngine: {
 		dataSources: formsEngineDataSourcesHost,
-		controls: formsEngineControlsHost
+		controls: formsEngineControlsHost,
+		formControllers: formsEngineFormControllersHost
 	},
 	utils,
 	store$: getStore

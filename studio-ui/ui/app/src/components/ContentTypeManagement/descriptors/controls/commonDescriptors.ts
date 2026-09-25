@@ -160,7 +160,7 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 		createVirtualSection({
 			id: 'rendering',
 			title: defineMessage({ defaultMessage: 'Rendering' }),
-			fields: ['hasJsController', 'displayTemplate', 'isHeadless']
+			fields: ['hasJsController', 'hasGroovyController', 'displayTemplate', 'isHeadless']
 		}),
 		// This section and paths field won't be available until 'config.xml' is removed from the content type.
 		createVirtualSection({
@@ -244,12 +244,27 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 		},
 		hasJsController: {
 			id: 'hasJsController',
-			type: 'type-js-controller-selector',
-			name: defineMessage({ defaultMessage: 'Client-side Controller' }),
+			type: 'type-controller-selector',
+			name: defineMessage({ defaultMessage: 'Form Controller' }),
 			description: '',
 			helpText: '',
 			defaultValue: undefined,
-			validations: immutableEmptyObject
+			validations: immutableEmptyObject,
+			properties: {
+				type: { name: 'type', value: 'javascript', type: 'string' }
+			}
+		},
+		hasGroovyController: {
+			id: 'hasGroovyController',
+			type: 'type-controller-selector',
+			name: defineMessage({ defaultMessage: 'Groovy Controller' }),
+			description: '',
+			helpText: '',
+			defaultValue: undefined,
+			validations: immutableEmptyObject,
+			properties: {
+				type: { name: 'type', value: 'groovy', type: 'string' }
+			}
 		},
 		thumbnailFileName: {
 			id: 'thumbnailFileName',
