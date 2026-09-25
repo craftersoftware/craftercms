@@ -203,10 +203,8 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 
 	useEffect(() => {
 		if (pkg.id) {
-			if (!mainItems.length) {
-				setState({ fetchingItems: true });
-			}
-			recalculatePackage(siteId, pkg.id, state.publishingTarget).subscribe({
+			setState({ fetchingItems: true });
+			const sub = recalculatePackage(siteId, pkg.id, state.publishingTarget).subscribe({
 				next(calculatedPackage) {
 					const itemsList = [
 						...calculatedPackage.items,
@@ -237,16 +235,9 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 					setDependencyData(null);
 				}
 			});
+			return () => sub.unsubscribe();
 		}
-	}, [
-		pkg.id,
-		setState,
-		siteId,
-		state.publishingTarget,
-		setDependencyData,
-		setSelectedDependenciesMap,
-		mainItems?.length
-	]);
+	}, [pkg.id, setState, siteId, state.publishingTarget, setDependencyData, setSelectedDependenciesMap]);
 
 	return (
 		<>
