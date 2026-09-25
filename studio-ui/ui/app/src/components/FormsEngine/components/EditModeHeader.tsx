@@ -266,13 +266,7 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 									{objectId}
 								</Box>
 								<Tooltip title={<FormattedMessage defaultMessage="Copy ID to clipboard" />}>
-									<IconButton
-										size="small"
-										sx={{ padding: '1px', ml: 1 }}
-										onClick={() =>
-											copyToClipboard(getFieldAtomValue(atoms.valueByFieldId[XmlKeys.modelId], store) as string)
-										}
-									>
+									<IconButton size="small" sx={{ padding: '1px', ml: 1 }} onClick={() => copyToClipboard(objectId)}>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>
