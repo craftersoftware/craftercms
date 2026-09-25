@@ -26,7 +26,7 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import Checkbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
 import ItemDisplay from '../ItemDisplay';
-import React, { type DetailedHTMLProps, type HTMLAttributes, useCallback, useState } from 'react';
+import React, { type DetailedHTMLProps, type HTMLAttributes, useCallback, useMemo, useState } from 'react';
 import { DependencyChip, DependencyDataState } from './PublishDialogContainer';
 import { AllItemActions, ContentItem, LightItem } from '../../models';
 import { PathTreeNode } from './buildPathTrees';
@@ -56,6 +56,7 @@ export interface PublishItemsProps {
 	selectedDependenciesMap?: Record<string, boolean>;
 	trees: PathTreeNode[];
 	onCheckboxChange?: (event: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => void;
+	onSelectAllDependencies?: (checked: boolean) => void;
 	includeChildren?: boolean;
 	setIncludeChildren?: (value: boolean) => void;
 }
@@ -72,6 +73,7 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 		selectedDependenciesMap = {},
 		trees,
 		onCheckboxChange,
+		onSelectAllDependencies,
 		includeChildren,
 		setIncludeChildren
 	} = props;
@@ -91,6 +93,16 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 	const totalItems = itemsAndDependenciesPaths.length;
 	const disableTreeView = totalItems > maxTreeItems;
 	const itemsByPath = useItemsByPath();
+	const selectableSoftDependencyPaths = useMemo(
+		() =>
+			Object.keys(dependencyTypeMap).filter(
+				(path) => dependencyTypeMap[path] === 'soft' && itemMap[path]?.canRequestPublish
+			),
+		[dependencyTypeMap, itemMap]
+	);
+	const selectAllDependenciesChecked =
+		selectableSoftDependencyPaths.length > 0 &&
+		selectableSoftDependencyPaths.every((path) => selectedDependenciesMap[path]);
 
 	const onContextMenuClose = () => {
 		setContextMenu({
@@ -151,6 +163,8 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 				maxTreeItems={maxTreeItems}
 				includeChildren={includeChildren}
 				setIncludeChildren={setIncludeChildren}
+				selectAllDependenciesChecked={selectAllDependenciesChecked}
+				onSelectAllDependencies={selectableSoftDependencyPaths.length > 0 ? onSelectAllDependencies : undefined}
 			/>
 			<Divider />
 			<Box sx={{ p: 1, flexGrow: 1, overflowY: 'auto', maxHeight: '70vh' }}>
