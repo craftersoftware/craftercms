@@ -180,6 +180,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				(field) => field.fromBootstrap
 			);
 			if (bootstrapAffectedFields.length) {
+				setIsSubmitting(false);
 				return blockSaveForBootstrapPluginFailures(bootstrapAffectedFields);
 			}
 			// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
