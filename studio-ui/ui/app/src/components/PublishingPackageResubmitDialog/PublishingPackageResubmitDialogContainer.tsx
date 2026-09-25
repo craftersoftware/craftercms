@@ -146,6 +146,17 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
 	};
 
+	const onSelectAllDependencies = (checked: boolean) => {
+		if (!dependencyData) return;
+		const next = { ...selectedDependenciesMap };
+		dependencyData.items.forEach((item) => {
+			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
+				next[item.path] = checked;
+			}
+		});
+		setSelectedDependenciesMap(next);
+	};
+
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 
 	const onApplyDependenciesChanges = () => {
@@ -269,6 +280,7 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 									selectedDependenciesMap={selectedDependenciesMap}
 									trees={trees}
 									onCheckboxChange={onDependencyCheckboxChange}
+									onSelectAllDependencies={onSelectAllDependencies}
 								/>
 								{Boolean(selectedDependenciesPaths.length) && (
 									<Fade in={Boolean(selectedDependenciesPaths?.length)}>

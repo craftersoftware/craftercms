@@ -382,6 +382,17 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
 	};
 
+	const onSelectAllDependencies = (checked: boolean) => {
+		if (!dependencyData) return;
+		const next = { ...selectedDependenciesMap };
+		dependencyData.items.forEach((item) => {
+			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
+				next[item.path] = checked;
+			}
+		});
+		setSelectedDependenciesMap(next);
+	};
+
 	const onApplyDependenciesChanges = () => {
 		setPreviousItems(mainItems);
 		// Update the list of mainItems for the dependencies to be re-calculated. Also clear the current set of selected
@@ -462,6 +473,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 											selectedDependenciesMap={selectedDependenciesMap}
 											trees={trees}
 											onCheckboxChange={onDependencyCheckboxChange}
+											onSelectAllDependencies={onSelectAllDependencies}
 											includeChildren={includeChildren}
 											setIncludeChildren={setIncludeChildren}
 										/>
