@@ -60,7 +60,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 	const currentFlag = (locale: string) => <LanguageRounded />;
 	const hasActions = Boolean(onLanguageMenu || onMenuButtonClick);
 	return (
-		<Box sx={{ display: 'flex', alignItems: 'center' }}>
+		<Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
 			<AccordionSummary
 				className={className}
 				classes={{
@@ -95,7 +95,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 				</Box>
 			</AccordionSummary>
 			{hasActions && (
-				<Box sx={{ display: 'flex', flexShrink: 0, pr: 2 }}>
+				<Box component="span" sx={{ display: 'flex', flexShrink: 0, pr: 2 }}>
 					{onLanguageMenu && (
 						<IconButton
 							aria-label="language select"
