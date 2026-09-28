@@ -23,7 +23,8 @@ import type {
 	DataSourceAssetSelection,
 	DataSourceCapability,
 	DataSourceItemSelection,
-	DataSourceListItem
+	DataSourceListItem,
+	DataSourceVariantsSelection
 } from './types';
 import { expandPathOrRaw, toSearchPath } from './pathUtils';
 
@@ -247,6 +248,33 @@ export function mapUploadResultToItems(result: unknown): DataSourceItemSelection
 }
 
 /**
+ * Maps an Uppy MediaConvert upload result to a variants selection.
+ * API shape: `ResultOne<MediaConvertResult>` → `{ item: { jobId, jobArn, urls } }`,
+ * exposed by Uppy as `successful[].response.body`.
+ */
+export function mapUploadResultToVariants(result: unknown): DataSourceVariantsSelection | null {
+	if (!result || typeof result !== 'object') return null;
+	const successful = (result as { successful?: unknown[] }).successful;
+	if (!Array.isArray(successful) || successful.length === 0) return null;
+
+	const urls: string[] = [];
+	for (const file of successful) {
+		if (!file || typeof file !== 'object') continue;
+		const body = (file as { response?: { body?: unknown } }).response?.body;
+		if (!body || typeof body !== 'object') continue;
+		// Prefer ResultOne wrapper (`item.urls`); fall back to a bare MediaConvertResult.
+		const record = body as { item?: unknown; urls?: unknown };
+		const item = record.item && typeof record.item === 'object' ? (record.item as { urls?: unknown }) : record;
+		if (!Array.isArray(item.urls)) continue;
+		for (const url of item.urls) {
+			if (typeof url === 'string' && url) urls.push(url);
+		}
+	}
+	if (!urls.length) return null;
+	return { kind: 'variants', items: urls.map((url) => ({ url })) };
+}
+
+/**
  * Hard-fail stub for S3/WebDAV ops not yet on `DataSourceServices`.
  * Keeps remote modules loadable without fake success.
  */
@@ -432,7 +460,7 @@ export function createExternalUploadAction(options: {
 	outputProfileId?: string;
 	profileType?: 'aws' | 'webdav';
 	fileTypes?: string[];
-	selection: 'item' | 'asset';
+	selection: 'item' | 'asset' | 'variants';
 	meta?: DataSourceActionMeta;
 	transcode?: boolean;
 }): DataSourceAction {
@@ -477,6 +505,9 @@ export function createExternalUploadAction(options: {
 				transcode
 			});
 			if (!result) return null;
+			if (selection === 'variants') {
+				return mapUploadResultToVariants(result);
+			}
 			const mapped = selection === 'asset' ? mapUploadResultToAssets(result) : mapUploadResultToItems(result);
 			return mapped.length ? mapped : null;
 		}

@@ -19,9 +19,8 @@ import { createInstanceFromRecord, defineDataSourceModule } from '../defineModul
 import { createExternalUploadAction, propString, VIDEO_MIME_TYPES } from '../moduleHelpers';
 
 /**
- * Transcoded-video interface: upload+transcode via S3 profiles.
- * When wired, run() should return `{ kind: 'variants', items: [{ url }, ...] }`.
- * Platform services do not yet wrap uploadS3Asset(transcode:true); run() throws clearly.
+ * Transcoded-video interface: upload+transcode via S3 MediaConvert profiles.
+ * Returns `{ kind: 'variants', items: [{ url }, ...] }` from the MediaConvert `urls` list.
  */
 export const videoS3TranscodingDataSourceModule: DataSourceModule = defineDataSourceModule({
 	apiVersion: DATA_SOURCE_API_VERSION,
@@ -43,10 +42,10 @@ export const videoS3TranscodingDataSourceModule: DataSourceModule = defineDataSo
 						outputProfileId,
 						profileType: 'aws',
 						fileTypes: VIDEO_MIME_TYPES,
-						selection: 'asset',
+						selection: 'variants',
 						transcode: true
 					})
-				]
+				];
 			}
 		});
 	}
