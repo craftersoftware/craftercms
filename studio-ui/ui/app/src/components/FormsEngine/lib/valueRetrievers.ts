@@ -19,6 +19,7 @@ import ContentType, { ContentTypeField } from '../../../models/ContentType';
 import type { BuiltInControlType } from './controlMap';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
+import { getPluginControlValueRetriever } from '../controls/registry';
 import { systemFieldsNotInType, XmlKeys } from './formConsts';
 import { deserialize, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
@@ -27,8 +28,9 @@ import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { Matcher } from 'path-expression-matcher';
 import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
+import type { ValueRetriever } from './controlValueTypes';
 
-export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
+export type { ValueRetriever } from './controlValueTypes';
 
 export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControlType, ValueRetriever | null> = {
 	'auto-filename': textFieldExtractor,
@@ -47,9 +49,6 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	string: textFieldExtractor,
 	'internal-name': textFieldExtractor,
 	label: textFieldExtractor,
-	'link-input': textFieldExtractor,
-	'link-textarea': textFieldExtractor,
-	'linked-dropdown': textFieldExtractor,
 	'locale-selector': textFieldExtractor,
 	repeat: arrayFieldExtractor,
 	'node-selector': arrayFieldExtractor,
@@ -186,12 +185,16 @@ export function createParsedValueForField<T = unknown>(
 }
 
 export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: unknown): T {
-	const retriever: ValueRetriever<T> | undefined = valueRetrieverLookup[field.type];
+	// Prefer the built-in map when the type is known there (including explicit `null` = no conversion).
+	// Only consult plugin contributions for types absent from the built-in map.
+	const retriever: ValueRetriever<T> | null | undefined = Object.hasOwn(valueRetrieverLookup, field.type)
+		? (valueRetrieverLookup[field.type] as ValueRetriever<T> | null)
+		: (getPluginControlValueRetriever(field.type) as ValueRetriever<T> | undefined);
 	const defaultValue = field.defaultValue as string;
 	// Value considering the defaultValue
 	const fieldValue = value ?? (nnou(defaultValue) && defaultValue !== '' ? defaultValue : undefined);
+	// Built-in `null` and omitted plugin `valueRetriever` both mean identity (pass-through).
 	if (!retriever) {
-		console.warn(`No value retriever for field ${field.id} of type ${field.type}`);
 		return fieldValue as T;
 	}
 	return retriever(fieldValue, field);

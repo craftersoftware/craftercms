@@ -33,7 +33,9 @@ export function CheckboxGroupView(props: CheckboxGroupViewProps) {
 
 	return (
 		<Box sx={{ textAlign: 'center' }}>
-			{content?.map((item) => <Typography key={item.key}>{`${item.value_smv} (${item.key})`}</Typography>)}
+			{content?.map((item) => (
+				<Typography key={item.key}>{`${item.value_smv} (${item.key})`}</Typography>
+			))}
 		</Box>
 	);
 }

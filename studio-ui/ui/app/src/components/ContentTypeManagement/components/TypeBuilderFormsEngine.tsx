@@ -133,13 +133,39 @@ function FieldFormViewBody(props: FieldFormViewProps) {
 	}, [virtualType]);
 
 	return (
-		<Box height="var(--container-height)" display="flex" flexDirection="column">
-			<Box display="flex" justifyContent="space-between" alignItems="center" py={2} px={3}>
-				<Box display="flex" flexDirection="column" position="sticky" top="0">
+		<Box
+			sx={{
+				height: 'var(--container-height)',
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					py: 2,
+					px: 3
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: 'column',
+						position: 'sticky',
+						top: '0'
+					}}
+				>
 					<Typography variant="h6">{pickPanelTitleByMode(props)}</Typography>
 					{createElement(FieldBreadcrumbs, props)}
 				</Box>
-				<Box display="flex" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					{createElement(FieldActions, props)}
 					{createElement(SectionActions, props)}
 					{createElement(DataSourceActions, props)}

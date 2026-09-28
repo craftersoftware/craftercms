@@ -248,8 +248,9 @@ function SortableItem({ item, selected, sortable = true }: { item: TItem; select
 				ref={ref}
 				data-item-id={item.key}
 				sx={[
-					{ position: 'relative', borderRadius: 1, cursor: 'grab' },
-					state.type === 'is-dragging' && { opacity: 0.4 }
+					{ position: 'relative', borderRadius: 1, cursor: sortable ? 'grab' : 'default' },
+					state.type === 'is-dragging' && { opacity: 0.4 },
+					!sortable && { background: 'none !important' }
 				]}
 				selected={selected}
 			>

@@ -29,7 +29,7 @@ import ContentType from '../../../models/ContentType';
 import FormsEngineField from '../components/FormsEngineField';
 import { FormsEngineAtoms, ItemContext, ItemMetaContext, StableGlobalContext } from './formsEngineContext';
 import { getFileNameFromPath } from '../../../utils/path';
-import { ensureSingleSlash } from '../../../utils/string';
+import { isExternalMediaUrl, resolveMediaUrl } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
 import type { BrowseExternalAssetDialogProps } from '../../BrowseS3Dialog';
@@ -210,7 +210,7 @@ export function renderFieldControl(
  * */
 export function downloadMedia(base: string, url: string) {
 	const link = document.createElement('a');
-	link.href = ensureSingleSlash(`${base}${url}`);
+	link.href = resolveMediaUrl(base, url);
 	link.download = getFileNameFromPath(url); // Extracts the file name from the URL
 	document.body.appendChild(link);
 	link.click();
@@ -408,7 +408,7 @@ export const showExternalAssetUploadDialog = ({
 }: {
 	dispatch: ReduxDispatch;
 	path: string;
-	profileId?: string;
+	profileId: string;
 	inputProfileId?: string;
 	outputProfileId?: string;
 	profileType?: ExternalAssetUploadDialogProps['profileType'];
@@ -459,6 +459,8 @@ export const showImageCropDialog = ({
 	onCrop: (blob: Blob, newPath?: string) => void;
 }): void => {
 	const dialogId = nanoid();
+	// Remote/absolute URLs load as `src` in the editor; writing cropped content back requires a site path.
+	const canWriteContent = writeContent !== false && !isExternalMediaUrl(path);
 	dispatch(
 		pushDialog({
 			id: dialogId,
@@ -468,7 +470,7 @@ export const showImageCropDialog = ({
 				mimeType,
 				subtitle: restrictions ? <ImageRestrictionSubtitle restrictions={restrictions} /> : undefined,
 				restrictions,
-				writeContent,
+				writeContent: canWriteContent,
 				onCrop: (blob: Blob, newPath: string) => {
 					dispatch(popDialog({ id: dialogId }));
 					onCrop?.(blob, newPath);

@@ -193,10 +193,10 @@ export function toAssetSelection(item: unknown): DataSourceAssetSelection {
 		}
 		const name = meta.name ?? (typeof candidate.name === 'string' ? candidate.name : '');
 		const path = meta.path ?? '';
-		if (!path && !name) {
+		if (!path) {
 			throw new Error('Unable to map data-source result to an asset selection: missing path.');
 		}
-		const relativeUrl = path && name ? `${path.replace(/\/$/, '')}/${name}` : path || name;
+		const relativeUrl = path; // `path` includes the full path to the file, including the filename
 		return {
 			kind: 'asset',
 			relativeUrl,
@@ -282,12 +282,64 @@ export function createBrowseAction(options: {
 			...options.meta
 		},
 		async run(ctx) {
+			const multiSelect = Array.isArray(ctx.value); // Values of fields that allow multiSelect are arrays. When no values are set, the value is an empty string or an empty array.
 			const expanded = expandPathOrRaw(ctx, path);
 			const items = await ctx.services.browseFiles({
 				path: expanded,
 				contentTypes,
 				mimeTypes,
-				multiSelect: (ctx.remainingCapacity ?? 2) !== 1
+				multiSelect: multiSelect ? (ctx.remainingCapacity ?? 2) > 1 : false,
+				initialParameters: {
+					...(options.meta?.sortBy != null && { sortBy: options.meta.sortBy }),
+					...(options.meta?.sortOrder != null && { sortOrder: options.meta.sortOrder })
+				}
+			});
+			if (!items.length) return null;
+			return selection === 'asset' ? toAssetSelections(items) : toItemSelections(items);
+		}
+	};
+}
+
+/**
+ * Factory for browsing S3/WebDAV
+ * (opens BrowseExternalAssetDialog).
+ */
+export function createExternalBrowseAction(options: {
+	id?: string;
+	label?: string;
+	path: string;
+	profileId: string;
+	profileType?: 'aws' | 'webdav';
+	/** API filter passed to list endpoints (e.g. `image`, `video`). */
+	type?: string;
+	mimeTypes?: string[];
+	selection: 'item' | 'asset';
+	meta?: DataSourceActionMeta;
+}): DataSourceAction {
+	const { path, profileId, profileType = 'aws', type, mimeTypes, selection } = options;
+	return {
+		id: options.id ?? 'browse',
+		kind: 'browse',
+		label: options.label ?? 'Browse',
+		meta: {
+			path,
+			mimeTypes,
+			profileId,
+			profileType,
+			type,
+			...options.meta
+		},
+		async run(ctx) {
+			if (!profileId) {
+				throw new Error('External browse requires a profileId on the data source.');
+			}
+			const expanded = expandPathOrRaw(ctx, path);
+			const items = await ctx.services.browseExternalAssets({
+				path: expanded,
+				profileId,
+				profileType,
+				type,
+				multiSelect: Array.isArray(ctx.value) && (ctx.remainingCapacity ?? 2) > 1
 			});
 			if (!items.length) return null;
 			return selection === 'asset' ? toAssetSelections(items) : toItemSelections(items);
@@ -367,7 +419,10 @@ export function createSearchAction(options: {
 		},
 		async run(ctx) {
 			const expanded = toSearchPath(expandPathOrRaw(ctx, path));
-			const initialParameters: Record<string, unknown> = {};
+			const initialParameters: Record<string, unknown> = {
+				sortBy: options.meta?.sortBy,
+				sortOrder: options.meta?.sortOrder
+			};
 			if (mimeTypes?.length) {
 				initialParameters.filters = { 'mime-type': mimeTypes };
 			}
@@ -428,7 +483,7 @@ export function createExternalUploadAction(options: {
 	meta?: DataSourceActionMeta;
 	transcode?: boolean;
 }): DataSourceAction {
-	const { path, profileId, inputProfileId, outputProfileId, profileType = 'aws', fileTypes, selection, transcode = false } = options;
+	const { path, profileId, inputProfileId, outputProfileId, profileType = 'aws', fileTypes, selection } = options;
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',

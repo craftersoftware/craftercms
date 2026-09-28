@@ -20,7 +20,6 @@ import React, { ReactNode, useMemo, useState } from 'react';
 import { Activities, Activity } from '../../models/Activity';
 import GlobalState from '../../models/GlobalState';
 import { asLocalizedDateTime } from '../../utils/datetime';
-// @ts-expect-error - TS2307: Cannot find module moment/min/moment-with-locales or its corresponding type declarations.
 import moment from 'moment/min/moment-with-locales';
 import { messages } from '../ItemTypeIcon/translations';
 import SystemType from '../../models/SystemType';

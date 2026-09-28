@@ -54,8 +54,10 @@ ext.deliveryDeployArtifacts = [
 
 ext.commonDeployPermissions = [
 	[
+		// Only applied when the cli module is part of the deployment, otherwise the file is not there yet
+		module     : 'cli',
 		items      : [
-			"/crafter-cli"
+			"/cli/bin/crafter-cli"
 		],
 		permissions: [
 			"+x"
@@ -70,6 +72,8 @@ ext.deliveryDeployPermissions = [
 ]
 
 ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profileRequired, socialRequired ->
+	def syncedModules = [] as Set
+
 	// Deploy Crafter binaries into env
 	commonDeployArtifacts.each { item ->
 		def name = item.module
@@ -100,16 +104,15 @@ ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profile
 			} else {
 				syncFolder("${projectDir}", from, envFolder + into, exclude, overwriteChangedFiles, true)
 			}
+			syncedModules << name
 		}
 	}
 
-	// Create CLI Symlink
-	// TODO: This is a bit messy, clean it up
-	def command = ["ln", "-sf", "cli/bin/crafter-cli", "bin/crafter-cli"]
-	execCommand(command, envFolder)
-
 	commonDeployPermissions.each { group ->
-		command = ["chmod"]
+		if (group['module'] != null && !syncedModules.contains(group['module'])) {
+			return
+		}
+		def command = ["chmod"]
 		group['permissions'].each { permission ->
 			command << permission
 		}
@@ -117,6 +120,12 @@ ext.deployBaseEnvironment = { envFolder, modules, overwriteChangedFiles, profile
 			command << "bin" + item
 		}
 		execCommand(command, envFolder)
+	}
+
+	// Create the CLI symlink only after its target has been synced, module deploy tasks run in
+	// parallel against the same env folder and would otherwise leave a dangling link behind
+	if (syncedModules.contains('cli')) {
+		execCommand(["ln", "-sf", "cli/bin/crafter-cli", "bin/crafter-cli"], envFolder)
 	}
 }
 
@@ -228,7 +237,8 @@ gradle.projectsEvaluated {
 		proj.tasks.register('deploy') {
 			group = 'deployment'
 			description = "Deploys ${moduleName} artifact(s) to the selected environment(s) (-Penv=authoring|delivery)"
-			dependsOn rootProject.tasks.named('buildBaseEnvs'), proj.tasks.named('build')
+			dependsOn rootProject.tasks.named('buildBaseEnvs')
+			mustRunAfter project.tasks.named('build')
 			doLast {
 				rootProject.getEnvironments().each { environment ->
 					println "Deploying ${moduleName} to ${environment}"

@@ -24,7 +24,7 @@ import { SelectField } from './PickFieldDialog';
 import { DialogFooter } from '../../DialogFooter';
 import SecondaryButton from '../../SecondaryButton';
 import PrimaryButton from '../../PrimaryButton';
-import { systemFieldsIds } from './PickControlDialog';
+import { systemFieldsIds } from '../../../utils/constants';
 
 export interface SwapFieldDialogProps extends EnhancedDialogProps {
 	currentFieldType: string;

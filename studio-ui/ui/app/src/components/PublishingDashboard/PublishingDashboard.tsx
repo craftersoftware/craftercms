@@ -56,11 +56,12 @@ export function PublishingDashboard(props: PublishingDashboardProps) {
 				/>
 			)}
 			<Grid
-				gap={2}
 				container
 				sx={{
+					gap: 2,
 					padding: spacing(2),
 					pb: 4,
+
 					...(embedded
 						? {}
 						: {

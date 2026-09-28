@@ -110,7 +110,9 @@ export function ViewVersionDialog(props: ViewVersionDialogProps) {
 				]
 			}}
 			maxWidth="xl"
-			TransitionComponent={Slide}
+			slots={{
+				transition: Slide
+			}}
 			sx={{
 				[`.${dialogClasses.paper}`]: {
 					height: largeHeightScreen ? 'calc(100% - 200px)' : 'calc(100% - 60px)',

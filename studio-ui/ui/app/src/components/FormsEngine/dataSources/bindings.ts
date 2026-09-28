@@ -35,7 +35,6 @@ export const controlDataSourceBindings: Partial<Record<BuiltInControlType, reado
 	'transcoded-video-picker': [{ propertyName: 'videoManager', interfaces: ['transcoded-video'], selection: 'single' }],
 	dropdown: [{ propertyName: 'datasource', interfaces: ['item', 'options'], selection: 'single' }],
 	'checkbox-group': [{ propertyName: 'datasource', interfaces: ['item', 'options'], selection: 'multi' }],
-	'linked-dropdown': [{ propertyName: 'datasource', interfaces: ['item', 'options'], selection: 'single' }],
 	rte: [
 		{ propertyName: 'imageManager', interfaces: ['image'], selection: 'single' },
 		{ propertyName: 'videoManager', interfaces: ['video', 'transcoded-video'], selection: 'single' },

@@ -14,22 +14,14 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import {
-  itemsReducer,
-  navigationReducer,
-  breadcrumbsReducer,
-  descriptorsReducer,
-  childrenReducer,
-  treeReducer
-} from './content';
-import { searchReducer } from './search'
+import { itemsReducer, navigationReducer, breadcrumbsReducer, childrenReducer, treeReducer } from './content';
+import { searchReducer } from './search';
 
 export const allReducers = {
-  items: itemsReducer,
-  descriptors: descriptorsReducer,
-  children: childrenReducer,
-  trees: treeReducer,
-  navigation: navigationReducer,
-  breadcrumbs: breadcrumbsReducer,
-  search: searchReducer
+	items: itemsReducer,
+	children: childrenReducer,
+	trees: treeReducer,
+	navigation: navigationReducer,
+	breadcrumbs: breadcrumbsReducer,
+	search: searchReducer
 };

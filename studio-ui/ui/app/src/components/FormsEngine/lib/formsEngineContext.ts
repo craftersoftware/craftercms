@@ -25,8 +25,10 @@ import { FieldValidityState } from './validators';
 import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
+import type { AffectedPluginControlField } from './controlPluginLoader';
 
 export type FormsEngineSourceMap = LookupTable<string>;
+export type { AffectedPluginControlField };
 
 export interface FormsEngineDialogContextProps {
 	disableEnforceFocus?: boolean;
@@ -117,6 +119,12 @@ export interface StableFormContextProps {
 	originalValues: LookupTable<unknown>;
 	props: FormsEngineProps;
 	state: FormsEngineCachedStackedFormState;
+	/**
+	 * Fields whose control plugins failed preload. Bootstrap entries (`fromBootstrap`) persist
+	 * until the form reloads and always block save. Save-time entries are cleared/retried on
+	 * each save attempt.
+	 */
+	affectedPluginControlFields: AffectedPluginControlField[];
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

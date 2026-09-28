@@ -138,7 +138,14 @@ export function PublishCommitDialog(props: PublishCommitDialogProps) {
 			{publishSuccessful ? (
 				<>
 					<DialogBody>
-						<Box display="flex" flexDirection="column" alignItems="center" margin={2}>
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								margin: 2
+							}}
+						>
 							<CheckCircleOutlineRoundedIcon sx={{ mb: 1, color: 'success.main', width: 50, height: 50 }} />
 							<Typography>
 								<FormattedMessage

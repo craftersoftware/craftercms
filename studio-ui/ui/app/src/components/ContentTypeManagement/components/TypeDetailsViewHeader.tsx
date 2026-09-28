@@ -57,20 +57,39 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 		onActionClick?.(e, e.currentTarget.getAttribute('data-action-target') as TypeDetailsHeaderActionTarget);
 	};
 	return (
-		<Box display="flex" gap={1}>
-			<TypeCardMedia typeId={type.id} sx={{ width: 200, height: 200 }} />
+		<Box
+			sx={{
+				display: 'flex',
+				gap: 1
+			}}
+		>
+			<TypeCardMedia typeId={type.id} thumbnailFileName={type.thumbnailFileName} sx={{ width: 200, height: 200 }} />
 			<Box>
 				<Typography variant="body2" color="textSecondary">
 					{type.id}
 				</Typography>
-				<Typography variant="h6" component="h2" display="flex" alignItems="center">
+				<Typography
+					variant="h6"
+					component="h2"
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<ItemTypeIcon item={{ mimeType: '', systemType: type.type }} sx={{ color: 'info.main', mr: 0.5 }} />{' '}
 					{type.name}
 				</Typography>
-				<Typography variant="body2" color="textSecondary" mb={0.5}>
+				<Typography
+					variant="body2"
+					color="textSecondary"
+					sx={{
+						mb: 0.5
+					}}
+				>
 					{type.description || <FormattedMessage defaultMessage="(no description)" />}
 				</Typography>
-				<Typography variant="body2" color="textSecondary" mb={0.5}>
+				{/* TODO: Add last updated information - There's a pending conversation to include this in the form-definition */}
+				{/* <Typography variant="body2" color="textSecondary" mb={0.5}>
 					<FormattedMessage
 						defaultMessage="Last updated on <b>{date}</b> by <b>{user}</b>"
 						values={{
@@ -80,7 +99,7 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 							b: (text) => <strong key={text[0] as string}>{text[0]}</strong>
 						}}
 					/>
-				</Typography>
+				</Typography> */}
 				<Button onClick={handleActionClick} data-action-target="properties">
 					<FormattedMessage defaultMessage="Properties" />
 				</Button>

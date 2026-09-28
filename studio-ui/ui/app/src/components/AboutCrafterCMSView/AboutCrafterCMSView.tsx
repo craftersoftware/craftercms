@@ -31,9 +31,9 @@ export function AboutCrafterCMSView() {
 
 	return (
 		<Paper elevation={0}>
-			<Box display="flex" flexDirection="column" height="calc(100vh - 215px)">
+			<Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 215px)' }}>
 				<GlobalAppToolbar title={<FormattedMessage id="global.about" defaultMessage="About" />} />
-				<Box display="flex" alignItems="center" justifyContent="center" flexGrow={[1]}>
+				<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
 					<Paper
 						sx={{
 							display: 'flex',

@@ -41,6 +41,8 @@ import LookupTable from '../../../models/LookupTable';
 import { atom } from 'jotai';
 import SectionInsertionDialog, { SectionInsertionProps } from './SectionInsertionDialog';
 import { defaultDataSourcesSection } from '../descriptors/controls/commonDescriptors';
+import MoveDownIcon from '@mui/icons-material/MoveDown';
+import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 
 export interface TypeDetailsViewProps {
 	type: PossibleContentTypeDraft;
@@ -53,6 +55,7 @@ export interface TypeDetailsViewProps {
 	onInsertSection: SectionInsertionProps['onInsertSection'];
 	onOpenInsertFieldDialog(sectionId: string, fieldPath?: string): void;
 	onOpenInsertDataSourceDialog(): void;
+	onReorderSectionFields?(fields: ReorderFieldsDialogProps['fields'], sectionId: string): void;
 	performCurrentFormErrorCheckAndWarning?(): boolean;
 }
 
@@ -67,6 +70,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		onEditTypeAction,
 		onOpenInsertFieldDialog,
 		onOpenInsertDataSourceDialog,
+		onReorderSectionFields,
 		performCurrentFormErrorCheckAndWarning
 	} = props;
 
@@ -76,6 +80,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		stableFormContextRef.current = createStableFormContextProps({ type }, true);
 
 	const [openSectionInserter, setOpenSectionInserter] = useState<boolean>(false);
+	const [reorderSectionId, setReorderSectionId] = useState<string>(null);
 
 	const onAddSection = () => {
 		if (!performCurrentFormErrorCheckAndWarning()) return false;
@@ -117,13 +122,32 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		onDataSourceSelected?.(type.dataSources.find((dataSource) => dataSource.id === field.id));
 	};
 
+	const reorderSection = type.sections.find((section) => section.id === reorderSectionId);
+	const reorderFields =
+		reorderSection?.fields.map((fieldId) => ({
+			key: fieldId,
+			value: type.fields[fieldId]?.name ?? fieldId
+		})) ?? [];
+
+	const handleReorderFields = (fields: ReorderFieldsDialogProps['fields']) => {
+		const sectionId = reorderSectionId;
+		setReorderSectionId(null);
+		onReorderSectionFields?.(fields, sectionId);
+	};
+
 	return (
 		<ErrorBoundary>
 			<Provider store={store}>
 				<StableFormContext.Provider value={stableFormContextRef.current}>
 					<TypeDetailsViewHeader type={type} onActionClick={onEditTypeAction} />
 
-					<Box display="flex" justifyContent="space-between" mt={(theme) => `${theme.spacing(1)} !important`}>
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							mt: (theme) => `${theme.spacing(1)} !important`
+						}}
+					>
 						<Button onClick={() => onAddSection()}>
 							<FormattedMessage defaultMessage="Add Section" />
 						</Button>
@@ -168,9 +192,18 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 								/>
 							)}
 						>
-							<Button sx={{ position: 'absolute', top: 15, right: 10 }} onClick={() => onSectionSelected?.(section)}>
-								<FormattedMessage defaultMessage="Edit" />
-							</Button>
+							<Box sx={{ position: 'absolute', top: 15, right: 10 }}>
+								{section.fields?.length > 0 && (
+									<Tooltip title={<FormattedMessage defaultMessage="Reorder fields" />}>
+										<IconButton onClick={() => setReorderSectionId(section.id)}>
+											<MoveDownIcon />
+										</IconButton>
+									</Tooltip>
+								)}
+								<Button onClick={() => onSectionSelected?.(section)}>
+									<FormattedMessage defaultMessage="Edit" />
+								</Button>
+							</Box>
 						</SectionAccordion>
 					))}
 
@@ -205,6 +238,12 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 						open={openSectionInserter}
 						onClose={() => setOpenSectionInserter(false)}
 						onInsertSection={handleInsertSection}
+					/>
+					<ReorderFieldsDialog
+						fields={reorderFields}
+						open={Boolean(reorderSectionId)}
+						onClose={() => setReorderSectionId(null)}
+						onReorderFields={handleReorderFields}
 					/>
 				</StableFormContext.Provider>
 			</Provider>

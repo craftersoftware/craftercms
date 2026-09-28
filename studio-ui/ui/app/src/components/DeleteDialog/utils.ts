@@ -24,8 +24,7 @@ export interface DeleteDialogStateProps extends DeleteDialogBaseProps, EnhancedD
 }
 
 export interface DeleteDialogContainerProps
-	extends DeleteDialogBaseProps,
-		Pick<DeleteDialogProps, 'isSubmitting' | 'onClose' | 'onSuccess'> {}
+	extends DeleteDialogBaseProps, Pick<DeleteDialogProps, 'isSubmitting' | 'onClose' | 'onSuccess'> {}
 
 export interface DeleteDialogContentUIProps {
 	items: ContentItem[];

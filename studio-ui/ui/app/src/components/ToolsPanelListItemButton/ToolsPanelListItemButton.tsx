@@ -64,8 +64,10 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 			<ListItemText
 				primary={usePossibleTranslation(title)}
 				secondary={subtitle}
-				primaryTypographyProps={{ noWrap: true }}
-				secondaryTypographyProps={{ noWrap: true }}
+				slotProps={{
+					primary: { noWrap: true },
+					secondary: { noWrap: true }
+				}}
 			/>
 			{!onSecondaryActionClick && <ChevronRounded />}
 		</ListItemButton>

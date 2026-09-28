@@ -27,6 +27,7 @@ import Group from '../../models/Group';
 import GlobalAppGridRow from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
+import { EmptyState } from '../EmptyState';
 
 export interface GroupsGridUIProps {
 	groups: PagedArray<Group>;
@@ -39,7 +40,12 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 	const { groups, onRowClicked, onPageChange, onRowsPerPageChange } = props;
 
 	return (
-		<Box display="flex" flexDirection="column">
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column'
+			}}
+		>
 			<TableContainer>
 				<Table sx={{ tableLayout: 'fixed' }}>
 					<TableHead>
@@ -57,20 +63,30 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 						</GlobalAppGridRow>
 					</TableHead>
 					<TableBody>
-						{groups.map((group, i) => (
-							<GlobalAppGridRow key={group.id} onClick={() => onRowClicked(group)}>
-								<GlobalAppGridCell align="left" className="width25">
-									<Typography variant="body2" noWrap title={group.name}>
-										{group.name}
-									</Typography>
-								</GlobalAppGridCell>
-								<GlobalAppGridCell align="left">
-									<Typography variant="body2" sx={{ wordWrap: 'break-word' }}>
-										{group.desc}
-									</Typography>
+						{groups?.length ? (
+							groups.map((group, i) => (
+								<GlobalAppGridRow key={group.id} onClick={() => onRowClicked(group)}>
+									<GlobalAppGridCell align="left" className="width25">
+										<Typography variant="body2" noWrap title={group.name}>
+											{group.name}
+										</Typography>
+									</GlobalAppGridCell>
+									<GlobalAppGridCell align="left">
+										<Typography variant="body2" sx={{ wordWrap: 'break-word' }}>
+											{group.desc}
+										</Typography>
+									</GlobalAppGridCell>
+								</GlobalAppGridRow>
+							))
+						) : (
+							<GlobalAppGridRow className="hoverDisabled">
+								<GlobalAppGridCell colSpan={2} align="center">
+									<EmptyState
+										title={<FormattedMessage id="groupsGrid.emptyStateMessage" defaultMessage="No Groups Found" />}
+									/>
 								</GlobalAppGridCell>
 							</GlobalAppGridRow>
-						))}
+						)}
 					</TableBody>
 				</Table>
 			</TableContainer>

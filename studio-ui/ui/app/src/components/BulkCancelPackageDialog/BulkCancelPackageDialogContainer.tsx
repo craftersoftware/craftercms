@@ -40,7 +40,8 @@ import Tooltip from '@mui/material/Tooltip';
 import { pushDialog } from '../../state/actions/dialogStack';
 
 export interface BulkCancelPackageDialogContainerProps
-	extends BulkCancelPackageDialogBaseProps,
+	extends
+		BulkCancelPackageDialogBaseProps,
 		Pick<BulkCancelPackageDialogProps, 'onSuccess' | 'onClose' | 'isSubmitting'> {}
 
 export function BulkCancelPackageDialogContainer(props: BulkCancelPackageDialogContainerProps) {
@@ -92,7 +93,12 @@ export function BulkCancelPackageDialogContainer(props: BulkCancelPackageDialogC
 								<ListItemText
 									primary={`${pkg.id} - ${pkg.title}`}
 									secondary={pkg.submitterComment}
-									secondaryTypographyProps={{ noWrap: true, title: pkg.title }}
+									slotProps={{
+										secondary: {
+											noWrap: true,
+											title: pkg.title
+										}
+									}}
 								/>
 								<Tooltip title={<FormattedMessage defaultMessage="View package details" />}>
 									<IconButton>

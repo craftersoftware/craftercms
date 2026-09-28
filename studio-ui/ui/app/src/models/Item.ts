@@ -69,12 +69,7 @@ export type VirtualItemActions = 'preview' | 'copyWithChildren' | 'viewPackages'
 
 // region export type AssessRemovalItemActions =
 export type AssessRemovalItemActions =
-	| 'editCode'
-	| 'viewCode'
-	| 'viewMedia'
-	| 'duplicateAsset'
-	| 'createTemplate'
-	| 'createController';
+	'editCode' | 'viewCode' | 'viewMedia' | 'duplicateAsset' | 'createTemplate' | 'createController';
 // endregion
 
 export type AllItemActions = ItemActions | VirtualItemActions | AssessRemovalItemActions;
@@ -125,6 +120,8 @@ export interface LightItem {
 	label: string;
 	systemType: SystemType;
 	mimeType: string;
+	canApprove?: boolean;
+	canRequestPublish?: boolean;
 }
 
 export interface ContentItem extends LightItem {

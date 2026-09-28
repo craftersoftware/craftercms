@@ -18,7 +18,10 @@ import React, { type ReactNode } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import { FormattedMessage } from 'react-intl';
 import Asterisk from '../../../icons/Asterisk';
-import type { SvgIconComponent } from '@mui/icons-material/esm';
+import SvgIcon from '@mui/material/SvgIcon';
+
+type SvgIconComponent = typeof SvgIcon;
+
 import CheckRounded from '@mui/icons-material/CheckRounded';
 
 export type FieldStateIndicatorProps = {

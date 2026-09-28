@@ -21,6 +21,7 @@ import { Theme } from '@mui/material';
 import type Monaco from '../../models/Monaco';
 import { MonacoDiffEditorOptions } from './types';
 import { useMonacoLifecycle } from './useMonacoLifecycle';
+import clsx from 'clsx';
 
 export interface MonacoDiffEditorProps {
 	height?: string | number;
@@ -73,7 +74,7 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 	return (
 		<Box
 			ref={containerRef}
-			className={className}
+			className={clsx(className, 'monaco-workbench')}
 			sx={{
 				height,
 				width: '100%',

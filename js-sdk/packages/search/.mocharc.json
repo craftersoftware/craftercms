@@ -1,5 +1,5 @@
 {
-  "loader": "ts-node/esm",
   "spec": ["test/*.spec.ts"],
-  "require": ["assert", "mocha", "ts-node/register"]
+  "require": ["assert", "mocha"],
+  "node-option": ["import=tsx"]
 }

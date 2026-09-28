@@ -313,7 +313,7 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 									<ItemDisplay
 										item={item}
 										titleDisplayProp="path"
-										showPublishingTarget={false}
+										showPublishingTarget={true}
 										onClick={(e) =>
 											isPage(item.systemType) || item.availableActionsMap.view ? onItemClick(e, item) : null
 										}
@@ -321,7 +321,12 @@ export function UnpublishedDashlet(props: UnpublishedDashletProps) {
 									/>
 								}
 								secondary={
-									<Typography color="text.secondary" variant="body2">
+									<Typography
+										variant="body2"
+										sx={{
+											color: 'text.secondary'
+										}}
+									>
 										<FormattedMessage
 											id="unpublishedDashlet.entrySecondaryText"
 											defaultMessage="Edited by {name} on {date}"

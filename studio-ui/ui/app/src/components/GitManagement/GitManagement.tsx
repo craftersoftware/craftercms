@@ -260,7 +260,11 @@ export function GitManagement(props: GitManagementProps) {
 			</Box>
 			<section>
 				{activeTab === 0 && (
-					<Box padding={2}>
+					<Box
+						sx={{
+							padding: 2
+						}}
+					>
 						<Alert severity={loadingStatus ? 'info' : clean ? 'success' : 'warning'}>
 							{formatMessage(translations[loadingStatus ? 'fetchingStatus' : (statusMessageKey ?? 'fetchingStatus')])}
 						</Alert>

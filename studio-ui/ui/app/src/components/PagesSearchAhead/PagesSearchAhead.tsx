@@ -89,7 +89,7 @@ export function PagesSearchAhead(props: PagesSearchAheadProps) {
 		getOptionLabel: (item: SearchItem | string) => {
 			return typeof item === 'string' ? item : item.path;
 		},
-		isOptionEqualToValue: (option, value) => option.path === value.path
+		isOptionEqualToValue: (option, value) => option.path === (value as SearchItem).path
 	});
 
 	useEffect(() => {

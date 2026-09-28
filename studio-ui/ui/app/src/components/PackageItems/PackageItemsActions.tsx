@@ -52,8 +52,21 @@ export function PackageItemsActions(props: PackageItemsActionsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	return (
-		<Box display="flex" justifyContent="space-between" alignItems="center" mr={1} ml={1}>
-			<Box display="flex" py={0.5}>
+		<Box
+			sx={{
+				display: 'flex',
+				justifyContent: 'space-between',
+				alignItems: 'center',
+				mr: 1,
+				ml: 1
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					py: 0.5
+				}}
+			>
 				<Tooltip
 					title={
 						disableTreeView ? (

@@ -18,9 +18,9 @@ import { Item } from './item';
 import { GraphQLResponse } from './GraphQLResponse';
 
 export interface Descriptor {
-  page?: any;
-  component?: any;
-  [prop: string]: any;
+	page?: any;
+	component?: any;
+	[prop: string]: any;
 }
 
 export type DescriptorResponse = Descriptor | Item | GraphQLResponse;

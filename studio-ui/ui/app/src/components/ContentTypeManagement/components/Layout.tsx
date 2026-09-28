@@ -25,7 +25,8 @@ import Main from './MainSection';
 import Drawer, { DrawerProps } from '@mui/material/Drawer';
 import { paperClasses } from '@mui/material/Paper';
 import Dialog, { DialogProps } from '@mui/material/Dialog';
-import { useTheme } from '@mui/material/styles';
+import { SxProps, useTheme } from '@mui/material/styles';
+import { Theme } from '@emotion/react';
 
 export interface LayoutProps {
 	open: boolean;
@@ -68,13 +69,17 @@ export const Layout = forwardRef<HTMLDivElement, LayoutProps>((props, ref) => {
 	return (
 		<Box
 			ref={containerRef}
-			height="100%"
-			display="flex"
-			flexDirection="column"
-			overflow="hidden"
-			bgcolor="background.default"
 			style={style}
-			sx={sx}
+			sx={[
+				{
+					height: '100%',
+					display: 'flex',
+					flexDirection: 'column',
+					overflow: 'hidden',
+					bgcolor: 'background.default'
+				},
+				...(Array.isArray(sx) ? sx : [sx])
+			]}
 		>
 			<ViewToolbar
 				ref={toolbarRef}
@@ -87,7 +92,13 @@ export const Layout = forwardRef<HTMLDivElement, LayoutProps>((props, ref) => {
 			>
 				{toolbarContent}
 			</ViewToolbar>
-			<Box position="relative" flexGrow={1} sx={getMarginSxProps()}>
+			<Box
+				sx={{
+					position: 'relative',
+					flexGrow: 1,
+					...getMarginSxProps()
+				}}
+			>
 				<Main
 					open={useDrawer && open}
 					drawerWidth={drawerWidth}

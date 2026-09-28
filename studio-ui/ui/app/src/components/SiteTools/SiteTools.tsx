@@ -121,7 +121,13 @@ export function SiteTools(props: SiteToolsProps) {
 				onWidthChange={onWidthChange}
 			>
 				<section>
-					<Box display="flex" justifyContent="space-between" marginBottom="10px">
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							marginBottom: '10px'
+						}}
+					>
 						{onBackClick && (
 							<Tooltip title={<FormattedMessage id="words.preview" defaultMessage="Preview" />}>
 								<IconButton
@@ -188,15 +194,19 @@ export function SiteTools(props: SiteToolsProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
-				sx={(theme) => ({
-					transition: theme.transitions.create('padding-left', {
-						easing: theme.transitions.easing.easeOut,
-						duration: theme.transitions.duration.enteringScreen
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
 					})
-				})}
-				height="100%"
-				width="100%"
-				paddingLeft={openSidebar ? `${sidebarWidth}px` : 0}
+				]}
 			>
 				{activeToolId ? (
 					tool ? (
@@ -213,7 +223,13 @@ export function SiteTools(props: SiteToolsProps) {
 							/>
 						</Suspencified>
 					) : (
-						<Box display="flex" flexDirection="column" height="100%">
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
 							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 								<LauncherOpenerButton />
 							</Box>

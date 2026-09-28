@@ -115,7 +115,7 @@ export interface DataSourceUploadRequest {
  */
 export interface DataSourceUploadExternalRequest {
 	path: string;
-	profileId?: string;
+	profileId: string;
 	inputProfileId?: string;
 	outputProfileId?: string;
 	profileType?: 'aws' | 'webdav';

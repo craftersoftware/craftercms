@@ -19,9 +19,9 @@ import Drawer from '@mui/material/Drawer';
 import React, { useCallback, useRef, useState } from 'react';
 import palette from '../../styles/palette';
 import { PartialSxRecord } from '../../models';
-import { DrawerClasses } from '@mui/material/Drawer/drawerClasses';
+import { DrawerClasses } from '@mui/material/Drawer';
 import { SxProps } from '@mui/system';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Box from '@mui/material/Box';
 
 export type ResizeableDrawerClassKey =
@@ -66,7 +66,7 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		onResizeStop,
 		className,
 		classes = {},
-		PaperProps,
+		slotProps,
 		anchor = 'left',
 		belowToolbar = false,
 		sxs = {},
@@ -155,11 +155,13 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 				flexShrink: 0,
 				...sxs?.root
 			}}
-			PaperProps={{
-				...PaperProps,
-				style: { width },
-				className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
-				sx: drawerPaperSxProp as SxProps<Theme>
+			slotProps={{
+				paper: {
+					...(slotProps?.paper ?? {}),
+					style: { width },
+					className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
+					sx: drawerPaperSxProp as SxProps<Theme>
+				}
 			}}
 			{...rest}
 		>

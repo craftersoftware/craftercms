@@ -34,5 +34,4 @@ export interface PublishingStatusDialogStateProps extends PublishingStatusBasePr
 }
 
 export interface PublishingStatusDialogContainerProps
-	extends PublishingStatusBaseProps,
-		Pick<PublishingStatusDialogProps, 'onClose' | 'onRefresh' | 'onStartStop'> {}
+	extends PublishingStatusBaseProps, Pick<PublishingStatusDialogProps, 'onClose' | 'onRefresh' | 'onStartStop'> {}

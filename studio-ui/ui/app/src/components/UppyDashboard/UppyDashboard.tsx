@@ -27,7 +27,7 @@ import { useDispatch } from 'react-redux';
 import { alpha } from '@mui/material';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import type { UppyFile, Meta, Body } from '@uppy/utils/lib/UppyFile';
+import type { Body, Meta, UppyFile } from '@uppy/core';
 import { ensureSingleSlash } from '../../utils/string';
 import { UppyDashboardProps } from './UppyDashboardProps';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -258,7 +258,7 @@ export function UppyDashboard(props: UppyDashboardProps) {
 					})
 				);
 			}
-		} as DashboardOptions<Meta, Body>);
+		} as unknown as DashboardOptions<Meta, Body>);
 
 		const onUploadSuccess = (file: UppyFile<Meta, Body>) => {
 			onItemsUploaded$.next(file.id);

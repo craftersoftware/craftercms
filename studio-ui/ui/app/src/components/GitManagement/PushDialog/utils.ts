@@ -28,7 +28,8 @@ export interface PushDialogProps extends PushDialogBaseProps, EnhancedDialogProp
 }
 
 export interface PushDialogContainerProps
-	extends PushDialogBaseProps,
+	extends
+		PushDialogBaseProps,
 		Pick<PushDialogProps, 'onClose' | 'onPushSuccess' | 'onPushError' | 'onSubmittingChange'> {
 	isSubmitting: boolean;
 }

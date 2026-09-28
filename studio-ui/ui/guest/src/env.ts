@@ -14,24 +14,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// `ace` and `node` only contribute global types (AceAjax, process), so nothing imports them.
+// TypeScript 7 doesn't auto-include `@types` packages hoisted to the workspace root, so reference them explicitly.
+/// <reference types="ace" />
+/// <reference types="node" />
+
 import React from 'react';
 import { TinyMCE } from 'tinymce';
 
 declare global {
-  interface Window {
-    tinymce: TinyMCE;
-    ace: AceAjax.Ace;
-  }
-  type CrafterCMSCustomElementProps = React.DetailedHTMLProps<
-    Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> & { class?: string },
-    HTMLDivElement
-  >;
-  namespace JSX {
-    interface IntrinsicElements {
-      'craftercms-zone-marker': CrafterCMSCustomElementProps;
-      'craftercms-asset-uploader-mask-container': CrafterCMSCustomElementProps;
-      'craftercms-asset-uploader-mask': CrafterCMSCustomElementProps;
-      'craftercms-field-instance-switcher': CrafterCMSCustomElementProps;
-    }
-  }
+	interface Window {
+		tinymce: TinyMCE;
+		ace: AceAjax.Ace;
+	}
+	type CrafterCMSCustomElementProps = React.DetailedHTMLProps<
+		Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> & { class?: string },
+		HTMLDivElement
+	>;
+	namespace JSX {
+		interface IntrinsicElements {
+			'craftercms-zone-marker': CrafterCMSCustomElementProps;
+			'craftercms-asset-uploader-mask-container': CrafterCMSCustomElementProps;
+			'craftercms-asset-uploader-mask': CrafterCMSCustomElementProps;
+			'craftercms-field-instance-switcher': CrafterCMSCustomElementProps;
+		}
+	}
 }

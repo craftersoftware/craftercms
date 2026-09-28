@@ -168,14 +168,15 @@ export function PreviewDropTargetsPanel() {
 					<>
 						<Box
 							sx={{
+								display: 'flex',
+								alignItems: 'center',
 								width: '100%',
 								padding: '15px 15px 0',
+
 								'& > div': {
 									width: '100%'
 								}
 							}}
-							display="flex"
-							alignItems="center"
 						>
 							<FormControl>
 								<InputLabel>{formatMessage(translations.selectedContentType)}</InputLabel>
@@ -266,7 +267,7 @@ function ContentTypeItem(props: ContentTypeItemContentProps) {
 					}}
 				/>
 			</ListItemIcon>
-			<ListItemText primaryTypographyProps={{ noWrap: true }} title={contentType.name}>
+			<ListItemText slotProps={{ primary: { noWrap: true } }} title={contentType.name}>
 				{contentType.name}
 			</ListItemText>
 		</>

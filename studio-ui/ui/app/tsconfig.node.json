@@ -1,10 +1,10 @@
 {
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
-		"baseUrl": "src",
 		"rootDir": "src",
 		"outDir": "./build_tsc/node",
 		"module": "CommonJS",
+		"moduleResolution": "bundler",
 		"target": "es6",
 		"removeComments": true,
 		"sourceMap": false,

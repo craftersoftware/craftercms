@@ -82,9 +82,9 @@ export function EditGroupDialogContainer(props: EditGroupDialogContainerProps) {
 	// is dirty. For submit, it will be true even though form is not dirty (to avoid submitting a clean form).
 	const submitOk = Boolean(
 		group.name.trim() &&
-			!validateGroupNameMinLength(group.name) &&
-			!isInvalidGroupName(group.name) &&
-			(!isEdit || group.desc !== (props.group?.desc ?? ''))
+		!validateGroupNameMinLength(group.name) &&
+		!isInvalidGroupName(group.name) &&
+		(!isEdit || group.desc !== (props.group?.desc ?? ''))
 	);
 	const [users, setUsers] = useState<User[]>();
 	const [usersHaveNextPage, setUsersHaveNextPage] = useState(false);

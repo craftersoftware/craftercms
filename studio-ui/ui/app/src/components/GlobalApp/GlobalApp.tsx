@@ -104,7 +104,13 @@ export function GlobalApp(props: GlobalAppProps) {
 function RouteNotFound() {
 	const { pathname } = useLocation();
 	return (
-		<Box display="flex" flexDirection="column" height="100%">
+		<Box
+			sx={{
+				display: 'flex',
+				flexDirection: 'column',
+				height: '100%'
+			}}
+		>
 			<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 				<LauncherOpenerButton />
 			</Box>
@@ -215,21 +221,30 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
-				sx={(theme) => ({
-					transition: theme.transitions.create('padding-left', {
-						easing: theme.transitions.easing.easeOut,
-						duration: theme.transitions.duration.enteringScreen
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${width}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
 					})
-				})}
-				height="100%"
-				width="100%"
-				paddingLeft={openSidebar ? `${width}px` : 0}
+				]}
 			>
 				<Suspense
 					fallback={
 						<>
 							<GlobalAppToolbar title={<Skeleton width="140px" />} />
-							<Box display="flex" sx={{ height: '100%' }}>
+							<Box
+								sx={{
+									display: 'flex',
+									height: '100%'
+								}}
+							>
 								<LoadingState />
 							</Box>
 						</>

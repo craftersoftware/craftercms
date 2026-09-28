@@ -38,5 +38,4 @@ export interface AlertDialogProps extends AlertDialogBaseProps, Omit<DialogProps
 }
 
 export interface AlertDialogContainerProps
-	extends AlertDialogBaseProps,
-		Pick<AlertDialogProps, 'onClosed' | 'children'> {}
+	extends AlertDialogBaseProps, Pick<AlertDialogProps, 'onClosed' | 'children'> {}

@@ -147,7 +147,11 @@ export function RenameItemView(props: RenameItemViewProps) {
 								<Checkbox
 									checked={confirmBrokenReferences}
 									onChange={() => setConfirmBrokenReferences(!confirmBrokenReferences)}
-									inputProps={{ 'aria-label': 'controlled' }}
+									slotProps={{
+										input: {
+											'aria-label': 'controlled'
+										}
+									}}
 								/>
 							}
 							label={

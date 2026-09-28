@@ -261,7 +261,16 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 							}}
 						>
 							{contentType && (
-								<Box pt={1} pb={1} pr={2} pl={2} borderBottom={1} borderColor="divider">
+								<Box
+									sx={{
+										pt: 1,
+										pb: 1,
+										pr: 2,
+										pl: 2,
+										borderBottom: 1,
+										borderColor: 'divider'
+									}}
+								>
 									<Typography variant="body2" color="textSecondary">
 										{contentType.id}
 									</Typography>
@@ -313,7 +322,13 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 										</Badge>
 									))}
 							</List>
-							<Box width="100%" borderTop={1} borderColor="divider">
+							<Box
+								sx={{
+									width: '100%',
+									borderTop: 1,
+									borderColor: 'divider'
+								}}
+							>
 								<Button onClick={() => onToggleShowOnlyChanges()}>
 									{showOnlyChanges ? (
 										<FormattedMessage defaultMessage="Entire version" />
@@ -387,7 +402,12 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 											/>
 										))
 								) : selectedField ? (
-									<Box p={2} height="100%">
+									<Box
+										sx={{
+											p: 2,
+											height: '100%'
+										}}
+									>
 										<FieldVersionToolbar
 											field={selectedField}
 											contentTypeFields={filteredContentTypeFields}

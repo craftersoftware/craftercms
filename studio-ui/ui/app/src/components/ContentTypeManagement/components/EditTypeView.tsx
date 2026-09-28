@@ -146,6 +146,11 @@ interface EditAppContextProps {
 	 * Used to avoid committing changes where not necessary.
 	 **/
 	formFieldsChanged: boolean;
+	/**
+	 * Incremented for every debounced validation run. Awaiting runs capture it beforehand so that
+	 * results from overlapping validations of the same form can be discarded when they resolve out of order.
+	 **/
+	validationSeq: number;
 }
 
 export interface ContentTypeManagementConfig {
@@ -272,6 +277,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// stateRef.current.activeFormContext = null;
 		setVirtualContentType(null);
 		setSelectedFieldIdPath(null);
+		setValidatingForm(false);
 		setOpen(false);
 		return true;
 	};
@@ -393,6 +399,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const effectRefs = useUpdateRefs({
 		jotai,
+		open,
 		selectedFieldIdPath,
 		fieldPathsWithErrors,
 		activeFormHasErrors,
@@ -488,7 +495,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						showAlert({
 							children: (
 								<Box>
-									<Typography marginBottom={1}>
+									<Typography
+										sx={{
+											marginBottom: 1
+										}}
+									>
 										<FormattedMessage defaultMessage="Error saving content type" />
 									</Typography>
 									<Typography variant="body2" color="textSecondary">
@@ -724,12 +735,20 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleReorderSectionFields = (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
-		setType((currentType) => {
-			const nextType = reorderSectionFields(currentType, fields, sectionId);
+		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the reorder runs on up-to-date type state,
+		// and clear the dirty flag so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		stateRef.current.formFieldsChanged = false;
+
+		const nextType = reorderSectionFields(baseType, fields, sectionId);
+		setType(nextType);
+
+		// Refresh the section form when that section is already open in the drawer.
+		if (fieldFormViewProps?.section?.id === sectionId) {
 			const nextSection = getSectionFromType(nextType, sectionId);
 			handleSectionSelected(nextSection, nextType);
-			return nextType;
-		});
+		}
 	};
 
 	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
@@ -747,22 +766,45 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	// `fieldUpdates$` subscription
 	useEffect(() => {
 		const sub = stateRef.current.fieldUpdates$.pipe(debounceTime(500)).subscribe(async () => {
-			const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges } = effectRefs.current;
+			// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
+			if (!effectRefs.current.open) return;
+			const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
+			// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
+			const formContext = stateRef.current.activeFormContext;
 			onUpdateHasPendingChanges(true);
 			stateRef.current.formFieldsChanged = true;
 			const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
 			// Check validation atoms of the form to see if there are any unfulfilled validations.
 			setValidatingForm(true);
-			const hasErrors = await validityAtomsHaveErrors(
-				effectRefs.current.jotai,
-				stateRef.current?.activeFormContext?.atoms?.validationByFieldId
-			);
+			const validationSeq = ++stateRef.current.validationSeq;
+			const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+			// `activeFormContext` is intentionally kept after close, so also re-check `open`.
+			if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
+				// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
+				if (!effectRefs.current.open) setValidatingForm(false);
+				return;
+			}
+			// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
+			if (validationSeq !== stateRef.current.validationSeq) return;
 			setActiveFormHasErrors(hasErrors);
 			nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
 			if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
 
 			setFieldPathsWithErrors(nextFieldPathsWithErrors);
 			setValidatingForm(false);
+
+			// Live-sync draft thumbnailFileName while the type properties form is open,
+			// so TypeCardMedia can reload by filename without waiting for form commit / save.
+			const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
+			if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
+				const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
+				if (thumbnailAtom) {
+					const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
+					setType((current) =>
+						current.thumbnailFileName === thumbnailFileName ? current : { ...current, thumbnailFileName }
+					);
+				}
+			}
 		});
 		return () => {
 			sub.unsubscribe();
@@ -839,6 +881,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						onFieldSelected={handleFieldSelected}
 						onDataSourceSelected={handleDataSourceSelected}
 						onSectionSelected={handleSectionSelected}
+						onReorderSectionFields={handleReorderSectionFields}
 						fieldPathsWithErrors={fieldPathsWithErrors}
 						selectedFieldIdPath={selectedFieldIdPath}
 						performCurrentFormErrorCheckAndWarning={performCurrentFormErrorCheckAndWarning}
@@ -885,7 +928,8 @@ function createContextObject(): EditAppContextProps {
 		selectedField: null,
 		selectedSection: null,
 		selectedDataSource: null,
-		formFieldsChanged: false
+		formFieldsChanged: false,
+		validationSeq: 0
 	};
 }
 
@@ -1269,7 +1313,11 @@ function parseConfigPlugins(
 				descriptor: {
 					...plugin.descriptor,
 					fields: createLookupTable(fields),
-					sections: asArray(plugin.descriptor?.sections) ?? []
+					sections:
+						asArray(plugin.descriptor?.sections).map((section) => ({
+							...section,
+							fields: asArray(section.fields) ?? []
+						})) ?? []
 				}
 			};
 		} else {

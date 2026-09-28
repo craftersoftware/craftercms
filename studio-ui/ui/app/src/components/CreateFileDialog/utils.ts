@@ -35,3 +35,9 @@ export interface CreateFileStateProps extends CreateFileBaseProps, EnhancedDialo
 }
 
 export interface CreateFileContainerProps extends CreateFileBaseProps, Pick<CreateFileProps, 'onCreated' | 'onClose'> {}
+
+export const TEMPLATE_EXTENSIONS = ['ftl', 'ftlh', 'ftlx'] as const;
+
+export type TemplateExtension = (typeof TEMPLATE_EXTENSIONS)[number];
+
+export const DEFAULT_TEMPLATE_EXTENSION: TemplateExtension = 'ftlh';

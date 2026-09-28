@@ -26,6 +26,8 @@ export interface LegacyFormDialogBaseProps {
 	site?: string;
 	isHidden?: boolean;
 	modelId?: string;
+	/** When true, opens the form for an embedded component under `path` identified by `modelId`. */
+	isEmbedded?: boolean;
 	readonly?: boolean;
 	changeTemplate?: string;
 	contentTypeId?: string;
@@ -67,7 +69,8 @@ export interface LegacyFormDialogStateProps extends LegacyFormDialogBaseProps {
 }
 
 export interface LegacyFormDialogContainerProps
-	extends LegacyFormDialogBaseProps,
+	extends
+		LegacyFormDialogBaseProps,
 		Pick<LegacyFormDialogProps, 'onMinimize' | 'onClose' | 'onClosed' | 'onSaveSuccess'> {
 	setIframeLoaded(loaded: boolean): void;
 }

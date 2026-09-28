@@ -77,17 +77,21 @@ export function LogInForm(props: LogInFormProps) {
 					...sxs?.username
 				}}
 				label={<FormattedMessage id="loginView.usernameTextFieldLabel" defaultMessage="Username" />}
-				InputLabelProps={{
-					sx: {
-						'&.MuiInputLabel-shrink, &[class*="MuiInputLabel-shrink"]': {
-							padding: '0 8px',
-							borderRadius: 10,
-							background: (theme) => theme.palette.background.paper,
-							transform: 'translate(9px, -6px) scale(.75)'
+				slotProps={{
+					inputLabel: {
+						sx: {
+							'&.MuiInputLabel-shrink, &[class*="MuiInputLabel-shrink"]': {
+								padding: '0 8px',
+								borderRadius: 10,
+								background: (theme) => theme.palette.background.paper,
+								transform: 'translate(9px, -6px) scale(.75)'
+							}
 						}
+					},
+					htmlInput: {
+						maxLength: USER_USERNAME_MAX_LENGTH
 					}
 				}}
-				inputProps={{ maxLength: USER_USERNAME_MAX_LENGTH }}
 			/>
 			<PasswordTextField
 				id="loginFormPasswordField"
@@ -104,17 +108,21 @@ export function LogInForm(props: LogInFormProps) {
 					}
 				}}
 				label={<FormattedMessage id="authMonitor.passwordTextFieldLabel" defaultMessage="Password" />}
-				InputLabelProps={{
-					sx: {
-						'&.MuiInputLabel-shrink, &[class*="MuiInputLabel-shrink"]': {
-							padding: '0 8px',
-							borderRadius: 10,
-							background: (theme) => theme.palette.background.paper,
-							transform: 'translate(9px, -6px) scale(.75)'
+				slotProps={{
+					inputLabel: {
+						sx: {
+							'&.MuiInputLabel-shrink, &[class*="MuiInputLabel-shrink"]': {
+								padding: '0 8px',
+								borderRadius: 10,
+								background: (theme) => theme.palette.background.paper,
+								transform: 'translate(9px, -6px) scale(.75)'
+							}
 						}
+					},
+					htmlInput: {
+						maxLength: USER_PASSWORD_MAX_LENGTH
 					}
 				}}
-				inputProps={{ maxLength: USER_PASSWORD_MAX_LENGTH }}
 			/>
 			{xsrfParamName && <input type="hidden" name={xsrfParamName} value={xsrfToken} />}
 			<Button

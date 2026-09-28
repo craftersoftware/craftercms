@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { createReducer } from '@reduxjs/toolkit';
+import { CaseReducer, createReducer } from '@reduxjs/toolkit';
 import { PathNavigatorTreeStateProps } from '../../components/PathNavigatorTree';
 import LookupTable from '../../models/LookupTable';
 import {
@@ -43,7 +43,6 @@ import { fetchContentItemComplete } from '../actions/content';
 import { getIndividualPaths, getParentPath, withIndex, withoutIndex } from '../../utils/path';
 import { deleteContentEvent, deleteContentEvents, moveContentEvent } from '../actions/system';
 import { createPresenceTable } from '../../utils/array';
-import { CaseReducer } from '@reduxjs/toolkit/src/createReducer';
 import GlobalState from '../../models/GlobalState';
 
 export function contentAndDeleteEventForEachApplicableTree(

@@ -95,13 +95,15 @@ function LauncherSiteCard(props: LauncherSiteCardProps) {
 			>
 				<ListItemText
 					primary={title}
-					primaryTypographyProps={{
-						className: props.classes?.siteName,
-						sx: {
-							fontWeight: 600,
-							...sxs?.siteName
-						},
-						noWrap: true
+					slotProps={{
+						primary: {
+							className: props.classes?.siteName,
+							sx: {
+								fontWeight: 600,
+								...sxs?.siteName
+							},
+							noWrap: true
+						}
 					}}
 					sx={isSiteReady ? undefined : { paddingRight: '35px' }}
 				/>

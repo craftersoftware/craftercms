@@ -152,12 +152,14 @@ export function getTinyMceInitOptions(
 		external_plugins: external,
 		code_editor_inline: false,
 		skin: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oxide-dark' : 'oxide',
-		// skin_url: '/studio/static-assets/libs/tinymce',
 		content_css: (tinymceOptions?.content_css as string | string[])?.length
 			? tinymceOptions.content_css
-			: window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'default',
+			: // inline editors use the host page's own styles, so no need to load the default styles.
+				tinymceOptions.inline
+				? []
+				: window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'default',
 		media_live_embeds: true,
 		file_picker_types: 'image media',
 		craftercms_paste_cleanup: tinymceOptions.craftercms_paste_cleanup ?? true, // If doesn't exist or if true => true

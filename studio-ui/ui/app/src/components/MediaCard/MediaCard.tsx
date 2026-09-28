@@ -14,11 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
 import Card from '@mui/material/Card';
 import CardHeader, { cardHeaderClasses, CardHeaderProps } from '@mui/material/CardHeader';
 import CardMedia, { cardMediaClasses } from '@mui/material/CardMedia';
-import CardActionArea, { CardActionAreaProps } from '@mui/material/CardActionArea';
+import CardActionArea from '@mui/material/CardActionArea';
 import { MediaItem } from '../../models/Search';
 import FormGroup from '@mui/material/FormGroup';
 import Checkbox from '@mui/material/Checkbox';
@@ -27,7 +26,7 @@ import palette from '../../styles/palette';
 import SystemIcon from '../SystemIcon';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models/CustomRecord';
-import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx';
 import { consolidateSx } from '../../utils/system';
 import { useIntl } from 'react-intl';
 
@@ -90,21 +89,61 @@ function MediaCard(props: MediaCardProps) {
 	};
 	let icon = { id: iconMap[type] ?? '@mui/icons-material/InsertDriveFileOutlined' };
 	const systemIcon = <SystemIcon icon={icon} svgIconProps={{ className: 'media-icon' }} />;
-	const CardActionAreaOrFragment = onPreview ? CardActionArea : React.Fragment;
-	const cardActionAreaOrFragmentProps: CardActionAreaProps = onPreview
-		? {
-				className: props.classes?.cardActionArea,
-				sx: sxs?.cardActionArea,
-				disableRipple: Boolean(onDragStart || onDragEnd),
-				onClick(e) {
-					e.preventDefault();
-					e.stopPropagation();
-					onPreview(e);
-				},
-				'aria-label': name
-			}
-		: {};
 	const { formatMessage } = useIntl();
+	const media =
+		type === 'Image' ? (
+			<CardMedia
+				className={props.classes?.media}
+				image={`${previewAppBaseUri}${path}`}
+				title={name}
+				sx={{ height: 0, paddingTop: '56.25%', ...sxs?.media }}
+			/>
+		) : (
+			<Box
+				className={props.classes?.mediaIcon}
+				sx={[
+					{
+						paddingTop: '56.25%',
+						position: 'relative',
+						overflow: 'hidden',
+						'& .media-icon': {
+							position: 'absolute',
+							top: '50%',
+							left: '50%',
+							transform: 'translate(-50%, -50%)',
+							color: palette.gray.medium4,
+							fontSize: '50px'
+						},
+						'&.list': {
+							height: '80px',
+							width: '80px',
+							paddingTop: '0',
+							order: -1
+						}
+					},
+					viewMode === 'row' && { paddingTop: '0 !important', height: '80px', width: '80px' },
+					sxs?.mediaIcon as CSSSelectorObjectOrCssVariables
+				]}
+			>
+				{type === 'Video' ? (
+					<Box
+						component="video"
+						sx={{
+							position: 'absolute',
+							top: '50%',
+							left: '50%',
+							transform: 'translate(-50%, -50%)',
+							width: '100%'
+						}}
+					>
+						<source src={path} type="video/mp4" />
+						{systemIcon}
+					</Box>
+				) : (
+					systemIcon
+				)}
+			</Box>
+		);
 
 	return (
 		<Card
@@ -146,82 +185,57 @@ function MediaCard(props: MediaCardProps) {
 				title={name}
 				subheader={showPath ? item.path : null}
 				action={action}
-				titleTypographyProps={{
-					variant: 'subtitle2',
-					component: 'h2',
-					sx: {
-						...cardTitleStyles
+				slotProps={{
+					content: {
+						sx: {
+							flexGrow: 1,
+							minWidth: 0
+						}
 					},
-					title: item.name
-				}}
-				subheaderTypographyProps={{
-					variant: 'subtitle2',
-					component: 'div',
-					sx: {
-						...cardSubtitleStyles,
-						WebkitLineClamp: 1
+					title: {
+						variant: 'subtitle2',
+						component: 'h2',
+						sx: {
+							whiteSpace: 'nowrap',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+							width: '100%',
+							...cardTitleStyles
+						},
+						title: item.name
 					},
-					color: 'textSecondary',
-					title: item.path
+					subheader: {
+						variant: 'subtitle2',
+						component: 'div',
+						sx: {
+							...cardSubtitleStyles,
+							'&&': {
+								display: '-webkit-box'
+							},
+							WebkitLineClamp: 2
+						},
+						title: item.path
+					}
 				}}
 			/>
-			{viewMode !== 'compact' && (
-				<CardActionAreaOrFragment {...cardActionAreaOrFragmentProps}>
-					{type === 'Image' ? (
-						<CardMedia
-							className={props.classes?.media}
-							image={`${previewAppBaseUri}${path}`}
-							title={name}
-							sx={{ height: 0, paddingTop: '56.25%', ...sxs?.media }}
-						/>
-					) : (
-						<Box
-							className={props.classes?.mediaIcon}
-							sx={[
-								{
-									paddingTop: '56.25%',
-									position: 'relative',
-									overflow: 'hidden',
-									'& .media-icon': {
-										position: 'absolute',
-										top: '50%',
-										left: '50%',
-										transform: 'translate(-50%, -50%)',
-										color: palette.gray.medium4,
-										fontSize: '50px'
-									},
-									'&.list': {
-										height: '80px',
-										width: '80px',
-										paddingTop: '0',
-										order: -1
-									}
-								},
-								viewMode === 'row' && { paddingTop: '0 !important', height: '80px', width: '80px' },
-								sxs?.mediaIcon as CSSSelectorObjectOrCssVariables
-							]}
-						>
-							{type === 'Video' ? (
-								<Box
-									component="video"
-									sx={{
-										position: 'absolute',
-										top: '50%',
-										left: '50%',
-										transform: 'translate(-50%, -50%)',
-										width: '100%'
-									}}
-								>
-									<source src={path} type="video/mp4" />
-									{systemIcon}
-								</Box>
-							) : (
-								systemIcon
-							)}
-						</Box>
-					)}
-				</CardActionAreaOrFragment>
-			)}
+			{viewMode !== 'compact' &&
+				(onPreview ? (
+					<CardActionArea
+						className={props.classes?.cardActionArea}
+						sx={sxs?.cardActionArea}
+						disableRipple={Boolean(onDragStart || onDragEnd)}
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							onPreview(e);
+						}}
+						aria-label={name}
+					>
+						{media}
+					</CardActionArea>
+				) : (
+					media
+				))}
 		</Card>
 	);
 }

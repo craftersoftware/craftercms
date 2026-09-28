@@ -105,7 +105,12 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 				) : (
 					<Box>
 						<Box sx={{ display: 'flex', mb: 1 }}>
-							<Box display="flex" alignItems="center">
+							<Box
+								sx={{
+									display: 'flex',
+									alignItems: 'center'
+								}}
+							>
 								<Tooltip title={<FormattedMessage defaultMessage="Back to control selection" />}>
 									<IconButton onClick={() => setSelectedView(0)}>
 										<ArrowBackRoundedIcon />

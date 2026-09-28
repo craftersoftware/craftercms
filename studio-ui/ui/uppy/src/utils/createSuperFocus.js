@@ -1,5 +1,5 @@
 // @ts-ignore untyped
-import { FOCUSABLE_ELEMENTS } from '@uppy/utils';
+import { FOCUSABLE_ELEMENTS } from '@uppy/core/utils';
 import debounce from 'lodash/debounce';
 import getActiveOverlayEl from './getActiveOverlayEl';
 

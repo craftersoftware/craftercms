@@ -155,6 +155,12 @@ export function setStoredLanguage(language: string, username?: string): void {
 	}
 }
 
+declare global {
+	interface DocumentEventMap {
+		setlocale: CustomEvent<string>;
+	}
+}
+
 export function dispatchLanguageChange(language: string): void {
 	if (typeof document === 'undefined') {
 		return;
@@ -164,10 +170,9 @@ export function dispatchLanguageChange(language: string): void {
 }
 
 if (typeof document !== 'undefined') {
-	// @ts-ignore
 	document.addEventListener(
 		'setlocale',
-		async (e: CustomEvent<string>) => {
+		async (e) => {
 			if (e.detail && e.detail !== intl.locale) {
 				intl = await createIntlInstance(e.detail);
 				document.documentElement.setAttribute('lang', e.detail);

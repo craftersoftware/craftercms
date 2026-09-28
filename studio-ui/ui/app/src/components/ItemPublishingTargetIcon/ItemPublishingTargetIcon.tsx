@@ -26,10 +26,7 @@ import { LIVE_COLOUR, STAGING_COLOUR } from './styles';
 import { useIntl } from 'react-intl';
 
 export type ItemPublishingTargetIconClassKey =
-	| 'root'
-	| 'publishingTargetLive'
-	| 'publishingTargetStaged'
-	| 'publishingIcon';
+	'root' | 'publishingTargetLive' | 'publishingTargetStaged' | 'publishingIcon';
 export interface ItemPublishingTargetIconProps {
 	item: Pick<ContentItem, 'stateMap'>;
 	classes?: Partial<Record<ItemPublishingTargetIconClassKey, string>>;

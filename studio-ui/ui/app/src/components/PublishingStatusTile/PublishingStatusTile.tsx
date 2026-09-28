@@ -23,7 +23,7 @@ import PublishingStatusAvatar from '../PublishingStatusAvatar/PublishingStatusAv
 import { getPublishingStatusState, getPublishingStatusText } from '../PublishingStatusDisplay';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
 
 export type PublishingStatusTileClassKey = 'root' | 'avatar' | 'text';

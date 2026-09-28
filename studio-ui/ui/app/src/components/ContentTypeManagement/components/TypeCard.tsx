@@ -79,7 +79,12 @@ export function TypeCard(props: TypeCardProps) {
 					content: { sx: { overflow: 'hidden' } }
 				}}
 			/>
-			<TypeCardMedia skeleton={skeleton} typeId={type?.id} sx={styleOverrides?.cardMedia} />
+			<TypeCardMedia
+				skeleton={skeleton}
+				typeId={type?.id}
+				thumbnailFileName={type?.thumbnailFileName}
+				sx={styleOverrides?.cardMedia}
+			/>
 		</>
 	);
 	return (

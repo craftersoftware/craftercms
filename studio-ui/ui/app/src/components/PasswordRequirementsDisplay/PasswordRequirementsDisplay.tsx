@@ -25,11 +25,7 @@ import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
 
 type PasswordRequirementsDisplayClassKey =
-	| 'listOfConditions'
-	| 'conditionItem'
-	| 'conditionItemIcon'
-	| 'conditionItemNotMet'
-	| 'conditionItemMet';
+	'listOfConditions' | 'conditionItem' | 'conditionItemIcon' | 'conditionItemNotMet' | 'conditionItemMet';
 
 export interface PasswordRequirementsDisplayProps {
 	value: string;

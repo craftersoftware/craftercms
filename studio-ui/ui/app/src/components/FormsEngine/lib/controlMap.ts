@@ -33,9 +33,6 @@ export type BuiltInControlType =
 	| 'input'
 	| 'internal-name'
 	| 'label'
-	| 'link-input' // TODO: Not in BPs, seems not to be in use
-	| 'link-textarea' // TODO: Not in BPs, seems not to be in use
-	| 'linked-dropdown' // TODO: Not in BPs, seems not to be in use
 	| 'locale-selector'
 	| 'node-selector'
 	| 'numeric-input'
@@ -67,9 +64,6 @@ export const controlMap: Record<BuiltInControlType, ElementType> = {
 	input: lazy(() => import('../controls/Text')),
 	'internal-name': null,
 	label: lazy(() => import('../controls/Label')),
-	'link-input': null,
-	'link-textarea': null,
-	'linked-dropdown': lazy(() => import('../controls/Dropdown')),
 	'locale-selector': lazy(() => import('../controls/LocaleSelector')),
 	'node-selector': lazy(() => import('../controls/NodeSelector')),
 	'numeric-input': lazy(() => import('../controls/Numeric')),

@@ -14,13 +14,13 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { Descriptor } from "./descriptor";
+import { Descriptor } from './descriptor';
 
 export interface Item {
-  name: string;
-  url: string;
-  descriptorUrl: string;
-  descriptorDom: Descriptor;
-  folder: boolean;
-  [prop: string]: any;
+	name: string;
+	url: string;
+	descriptorUrl: string;
+	descriptorDom: Descriptor;
+	folder: boolean;
+	[prop: string]: any;
 }

@@ -107,7 +107,13 @@ export function Time(props: TimeProps) {
 					timezoneAutocomplete: { flex: 1 }
 				}}
 			/>
-			<Box display="flex" gap={2} justifyContent="flex-end">
+			<Box
+				sx={{
+					display: 'flex',
+					gap: 2,
+					justifyContent: 'flex-end'
+				}}
+			>
 				{showSetNow && (
 					<SecondaryButton onClick={setNow} disabled={readonly}>
 						<FormattedMessage defaultMessage="Set now" />

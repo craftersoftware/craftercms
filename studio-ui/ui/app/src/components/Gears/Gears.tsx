@@ -47,12 +47,11 @@ export function Gears(props: GearsProps) {
 		<>
 			<Box
 				component="svg"
-				width={width}
 				fill={fill}
 				viewBox="0 0 264 202"
 				xmlns="http://www.w3.org/2000/svg"
-				sx={sxs?.root}
 				className={className}
+				sx={[{ width: width }, ...(Array.isArray(sxs?.root) ? sxs.root : [sxs?.root])]}
 			>
 				{addElevation && (
 					<>
@@ -141,11 +140,11 @@ export function Gear(props: GearProps) {
 	return (
 		<Box
 			component="svg"
-			width={120}
 			viewBox="0 0 120 120"
 			fill={fill}
 			xmlns="http://www.w3.org/2000/svg"
 			sx={{
+				width: 120,
 				animation: `${rotation} 6s infinite linear`,
 				transformOrigin: '50% 50%'
 			}}

@@ -59,8 +59,10 @@ function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProp
 						<Typography
 							component="span"
 							children={stats.numberOfPublishes}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
+							sx={{
+								lineHeight: 1,
+								fontWeight: (theme) => theme.typography.fontWeightMedium
+							}}
 						/>{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Publishes" />} />
 					</Box>
@@ -68,8 +70,10 @@ function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProp
 						<Typography
 							component="span"
 							children={stats.numberOfNewAndPublishedItems}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
+							sx={{
+								lineHeight: 1,
+								fontWeight: (theme) => theme.typography.fontWeightMedium
+							}}
 						/>{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Created & Published" />} />
 					</Box>
@@ -77,8 +81,10 @@ function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProp
 						<Typography
 							component="span"
 							children={stats.numberOfEditedAndPublishedItems}
-							lineHeight={1}
-							sx={{ fontWeight: (theme) => theme.typography.fontWeightMedium }}
+							sx={{
+								lineHeight: 1,
+								fontWeight: (theme) => theme.typography.fontWeightMedium
+							}}
 						/>{' '}
 						<Typography component="span" children={<FormattedMessage defaultMessage="Edited & Published" />} />
 					</Box>
@@ -140,7 +146,13 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 			borderLeftColor={borderLeftColor}
 		>
 			<>
-				<Box display="flex" justifyContent="space-between" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'center'
+					}}
+				>
 					<Typography variant="h6">
 						<FormattedMessage id="devContentOpsDashlet.widgetTitle" defaultMessage="DevContentOps" />
 					</Typography>

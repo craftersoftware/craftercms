@@ -22,24 +22,28 @@ import { ofType } from 'redux-observable';
 import { crafterConf } from '@craftercms/classes';
 import { SearchService } from '@craftercms/search';
 import { search, searchComplete } from '../actions/search';
-import { SearchResult } from "@craftercms/models";
+import { SearchResult } from '@craftercms/models';
 
-export const searchEpic =
-  (action$: Observable<AnyAction>) => action$.pipe(
-    ofType(search.type),
-    mergeMap(({ payload }) =>
-      SearchService.search(payload, crafterConf.getConfig())
-        .pipe(
-          map((response: SearchResult) => searchComplete({
-            response,
-            queryId: payload.uuid
-          })),
-          catchError(() => of(searchComplete({
-            queryId: payload.uuid
-          })))
-        ))
-  );
+export const searchEpic = (action$: Observable<AnyAction>) =>
+	action$.pipe(
+		ofType(search.type),
+		mergeMap(({ payload }) =>
+			SearchService.search(payload, crafterConf.getConfig()).pipe(
+				map((response: SearchResult) =>
+					searchComplete({
+						response,
+						queryId: payload.uuid
+					})
+				),
+				catchError(() =>
+					of(
+						searchComplete({
+							queryId: payload.uuid
+						})
+					)
+				)
+			)
+		)
+	);
 
-export const allSearchEpics = [
-  searchEpic
-];
+export const allSearchEpics = [searchEpic];

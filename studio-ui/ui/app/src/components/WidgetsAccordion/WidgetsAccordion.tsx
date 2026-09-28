@@ -91,7 +91,12 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 				<Typography sx={sxs?.typography}>{title}</Typography>
 			</AccordionSummary>
 			<AccordionDetails sx={{ padding: 0, ...sxs?.accordionDetails }}>
-				<WidgetsGrid container spacing={0} direction="column" widgets={props.widgets} sx={sxs?.widgetsGrid} />
+				<WidgetsGrid
+					container
+					spacing={0}
+					widgets={props.widgets}
+					sx={{ flexDirection: 'column', ...sxs?.widgetsGrid }}
+				/>
 			</AccordionDetails>
 		</Accordion>
 	);

@@ -87,8 +87,8 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 `parseDescriptor(response: Descriptor | Item | GraphQLResponse | Descriptor[] | Item[] | GraphQLResponse)`
 
 | Parameters    |                |
-| ------------- |:--------------:|
-| response      | The response of a getItem, getDescriptor or GraphQL fetch call |
+| ------------- |:-----------------------------------------------:|
+| response      | The response of a getItem or GraphQL fetch call |
 
 #### Returns
 
@@ -96,7 +96,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 #### Examples
 
-- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem, getDescriptor or GraphQL responses.
+- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem or GraphQL responses.
 
 ```typescript
   import { map } from 'rxjs/operators';
@@ -186,44 +186,6 @@ Get an Item from the content store.
   });
 ```
 
-### Get Descriptor
-Get the descriptor data of an Item in the content store.
-
-`getDescriptor(path: string, config?: CrafterConfig)`
-
-| Parameters    |                |
-| ------------- |:--------------:|
-| path          | The item’s path in the content store |
-| config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
-
-#### Returns
-
-[Descriptor](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#Descriptor) - from the content store
-
-#### Examples
-
-- Get the index page from the site:
-
-```typescript
-  import { map } from 'rxjs/operators';
-  import { getDescriptor, parseDescriptor } from '@craftercms/content';
-  import { Descriptor, ContentInstance } from '@craftercms/models';
-
-  // Example 1: Supplying config inline, Descriptor response...
-  getDescriptor('/site/website/index.xml', { site: 'editorial' }).subscribe((descriptor: Descriptor) => {
-    console.log(descriptor);
-  });
-
-  // Example 2:
-  // - Omit config (must have configured earlier @see Usage section above)
-  // - Parse the response
-  getDescriptor('/site/website/index.xml').pipe(
-    map(parseDescriptor) // Optional. Use for a cleaner parsed response.
-  ).subscribe((content: ContentInstance) => {
-    console.log(content);
-  });
-```
-
 ### Get Children
 Get the list of Items directly under a folder in the content store.
 
@@ -259,12 +221,20 @@ Get the list of Items directly under a folder in the content store.
 ### Get Tree
 Get the complete Item hierarchy under the specified folder in the content store.
 
-`getTree(path: string, depth?: number, config?: Partial<CrafterConfig>)`
+```typescript
+getTree(path: string): Observable<Item>;
+getTree(path: string, depth: number): Observable<Item>;
+getTree(path: string, depth: number, config: Partial<CrafterConfig>): Observable<Item>;
+getTree(path: string, config: Partial<CrafterConfig>): Observable<Item>;
+getTree(path: string, depth: number | Partial<CrafterConfig> = 1, config?: Partial<CrafterConfig>): Observable<Item>;
+```
+
+When the second argument is a configuration object, depth defaults to `1`.
 
 | Parameters    |                |
 | ------------- |:--------------:|
 | path          | The folder’s path |
-| depth         | Amount of levels to include. Optional. Default is `1` |
+| depth         | Amount of levels to include. Optional. When omitted or when config is passed as the second argument, default is `1` |
 | config        | Crafter configuration. Optional. Default value in [here](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/README.md#CrafterConfig). |
 
 #### Returns
@@ -278,15 +248,23 @@ Get the complete Item hierarchy under the specified folder in the content store.
 ```typescript
   import { getTree } from '@craftercms/content';
 
-  // This call will get 3 levels of the tree under the specified folder
+  // Example 1: Services pre-configured, default depth (1)
+  getTree('/site/website').subscribe((tree) => {
+    console.log(tree);
+  });
 
-  // Example 1: Config supplied inline
+  // Example 2: Services pre-configured (see "Usage" section above), depth only
+  getTree('/site/website', 3).subscribe((tree) => {
+    console.log(tree);
+  });
+
+  // Example 3: Depth and config supplied inline
   getTree('/site/website', 3, { site: 'editorial' }).subscribe((tree) => {
     console.log(tree);
   });
 
-  // Example 2: Services pre-configured (see "Usage" section above), config param omitted.
-  getTree('/site/website', 3).subscribe((tree) => {
+  // Example 4: Config as second argument (depth defaults to 1)
+  getTree('/site/website', { site: 'editorial' }).subscribe((tree) => {
     console.log(tree);
   });
 ```

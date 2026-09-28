@@ -21,9 +21,9 @@ import controlDescriptors from '../descriptors/controls';
 import { nou } from '../../../utils/object';
 import { ContentType, ContentTypeField } from '../../../models';
 import PickFieldDialog from './PickFieldDialog';
-import { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import { DescriptorContentType } from '../utils';
 import { ContentTypeManagementConfig } from './EditTypeView';
+import { systemFieldsIds } from '../../../utils/constants';
 
 export interface PickControlDialogProps extends EnhancedDialogProps {
 	sectionId: string;
@@ -36,18 +36,6 @@ export interface PickControlDialogProps extends EnhancedDialogProps {
 }
 
 const types = Object.values(controlDescriptors).sort((a, b) => (a?.name > b?.name ? 1 : -1));
-
-// TODO: finalize handling of systemFields
-export const systemFieldsIds: BuiltInControlType[] = [
-	'file-name',
-	'auto-filename',
-	'internal-name',
-	'disabled',
-	'page-nav-order',
-	'locale-selector',
-	'expired-date',
-	'forcehttps'
-];
 
 export function PickControlDialog(props: PickControlDialogProps) {
 	const {

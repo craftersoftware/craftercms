@@ -34,7 +34,7 @@ import ItemPublishingTargetIcon from '../ItemPublishingTargetIcon/ItemPublishing
 import useUnmount from '../../hooks/useUnmount';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
 
 export type ItemMegaMenuUIClassKey =
@@ -301,7 +301,14 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					<Skeleton animation="wave" width="100%" />
 				) : (
 					<>
-						<Typography variant="body2" color="text.secondary" title={item.path} noWrap>
+						<Typography
+							variant="body2"
+							title={item.path}
+							noWrap
+							sx={{
+								color: 'text.secondary'
+							}}
+						>
 							{item.path}
 						</Typography>
 						<Typography variant="body2">

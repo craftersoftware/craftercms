@@ -33,7 +33,7 @@ def configureMavenPublishing = {
 
 	def gprUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
 	def gprKey = System.getenv('GITHUB_TOKEN') ?: System.getenv('GPR_TOKEN') ?: findProperty('gpr.key')
-	def gprOwner = findProperty('gpr.owner') ?: 'craftercms'
+	def gprOwner = findProperty('gpr.owner') ?: 'craftersoftware'
 	def gprRepo = findProperty('gpr.repo') ?: 'craftercms'
 
 	publishing {

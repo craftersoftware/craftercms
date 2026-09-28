@@ -34,8 +34,7 @@ import { pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 
 export interface CancelPackageDialogContainerProps
-	extends CancelPackageDialogBaseProps,
-		Pick<CancelPackageDialogProps, 'onSuccess' | 'onClose' | 'isSubmitting'> {}
+	extends CancelPackageDialogBaseProps, Pick<CancelPackageDialogProps, 'onSuccess' | 'onClose' | 'isSubmitting'> {}
 
 export function CancelPackageDialogContainer(props: CancelPackageDialogContainerProps) {
 	const { packageId, onSuccess, onClose, isSubmitting } = props;

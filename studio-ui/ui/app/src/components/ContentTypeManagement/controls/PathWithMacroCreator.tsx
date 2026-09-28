@@ -185,7 +185,10 @@ export function PathWithMacroCreator(props: PathWithMacroCreatorProps) {
 					<List>
 						{Object.values(macroCreatorLookupTable).map((macro) => (
 							<ListItem key={macro.macro}>
-								<ListItemText sx={{ flexGrow: 'unset', width: '100px' }} slotProps={{ primary: { fontWeight: 600 } }}>
+								<ListItemText
+									sx={{ flexGrow: 'unset', width: '100px' }}
+									slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+								>
 									{macro.macro}
 								</ListItemText>
 								<ListItemText sx={{ flexGrow: 1 }}>{formatMessage(macro.description)}</ListItemText>

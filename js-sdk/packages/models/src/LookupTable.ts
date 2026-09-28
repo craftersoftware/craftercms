@@ -15,7 +15,7 @@
  */
 
 export interface LookupTable<T = any> {
-  [id: string]: T;
+	[id: string]: T;
 }
 
 export default LookupTable;

@@ -87,7 +87,12 @@ export function KeyValueMap(props: KeyValueMapProps) {
 						}}
 						onChange={(e) => handleChange(e, 'value', index)}
 					/>
-					<Box display="flex" alignItems="center">
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
 						<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
 							<IconButton onClick={() => addOption(index)}>
 								<AddCircleOutlineRoundedIcon />
@@ -102,7 +107,12 @@ export function KeyValueMap(props: KeyValueMapProps) {
 				</Box>
 			))}
 			{options.length === 0 && (
-				<Box display="flex" justifyContent="center">
+				<Box
+					sx={{
+						display: 'flex',
+						justifyContent: 'center'
+					}}
+				>
 					<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
 						<IconButton onClick={() => addOption(0)}>
 							<AddCircleOutlineRoundedIcon />

@@ -16,8 +16,8 @@
 
 import { h } from 'preact';
 import { Dashboard as UppyDashboard, ThumbnailGenerator } from 'uppy';
-import { findAllDOMElements } from '@uppy/utils';
-import { defaultPickerIcon } from '@uppy/provider-views';
+import { findAllDOMElements } from '@uppy/core/utils';
+import { defaultPickerIcon } from '@uppy/core/provider-views';
 import locale from './locale';
 import DashboardUI from '../components/Dashboard';
 

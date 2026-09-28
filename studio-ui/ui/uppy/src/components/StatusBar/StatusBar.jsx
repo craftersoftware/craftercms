@@ -1,4 +1,4 @@
-import { emaFilter } from '@uppy/utils';
+import { emaFilter } from '@uppy/core/utils';
 import { Component, h } from 'preact';
 import statusBarStates from './StatusBarStates.js';
 import StatusBarUI from './StatusBarUI.js';

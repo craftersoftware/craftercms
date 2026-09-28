@@ -25,7 +25,7 @@ export function BrowseFilesDialogContainerSkeleton(props: BrowseFilesDialogConta
 	return (
 		<>
 			<DialogBody sx={{ minHeight: '60vh', padding: 0 }}>
-				<Box display="flex">
+				<Box sx={{ display: 'flex' }}>
 					<Box
 						component="section"
 						sx={{

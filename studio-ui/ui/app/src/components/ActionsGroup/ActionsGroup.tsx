@@ -27,8 +27,10 @@ import Box from '@mui/material/Box';
 
 export type ActionsGroupPropsClassKey = 'root' | 'action' | 'more';
 
-export interface ActionsGroupProps
-	extends StandardProps<React.HTMLAttributes<HTMLDivElement>, ActionsGroupPropsClassKey> {
+export interface ActionsGroupProps extends StandardProps<
+	React.HTMLAttributes<HTMLDivElement>,
+	ActionsGroupPropsClassKey
+> {
 	max?: number;
 	spacing?: 'small' | 'medium' | number;
 	onActionClicked(id: string, event: React.MouseEvent<Element, MouseEvent>): void;

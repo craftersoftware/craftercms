@@ -154,8 +154,12 @@ export function CompareVersionsDialog(props: CompareVersionsDialogProps) {
 				}
 			}}
 			maxWidth="xl"
-			TransitionComponent={TransitionComponent}
-			TransitionProps={TransitionProps}
+			slots={{
+				transition: TransitionComponent
+			}}
+			slotProps={{
+				transition: TransitionProps
+			}}
 			sx={{
 				[`.${dialogClasses.paper}`]: {
 					height: largeHeightScreen ? 'calc(100% - 200px)' : 'calc(100% - 60px)',
@@ -197,7 +201,13 @@ export function CompareVersionsDialog(props: CompareVersionsDialogProps) {
 				>
 					{/* region Compare */}
 					{state.compareSlideOutState.open && (
-						<Box display="flex" flexDirection="column" height="100%">
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
 							<DialogHeader
 								title={state.compareSlideOutState.title}
 								subtitle={state.compareSlideOutState.subtitle}

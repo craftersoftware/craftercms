@@ -142,8 +142,19 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			required={isRequired}
 			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
 		>
-			<Box display="flex" justifyContent="space-between" alignItems="center">
-				<Box display="flex" alignItems="center">
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center'
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<FormLabel
 						htmlFor={htmlFor}
 						id={labelId}
@@ -160,7 +171,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						</IconButton>
 					)}
 				</Box>
-				<Box display="flex" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					{lengthBlock}
 					{action}
 					{menu && (

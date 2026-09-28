@@ -76,7 +76,14 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 	return (
 		<FormsEngineField field={field}>
 			{value && (
-				<Box display="flex" flexDirection="row" justifyContent="space-between" mt={1}>
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: 'row',
+						justifyContent: 'space-between',
+						mt: 1
+					}}
+				>
 					<Typography variant="body2">{`s3://${value.bucket}/${value.key}`}</Typography>
 					<Typography variant="body2" color="textSecondary">
 						{value.url}

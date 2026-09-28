@@ -72,7 +72,12 @@ export function Range(props: RangeProps) {
 	return (
 		<FormsEngineField htmlFor={htmlId} field={field}>
 			<Box sx={{ display: 'flex', mt: 1, gap: 2 }}>
-				<Box display="flex" alignItems="center">
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center'
+					}}
+				>
 					<Tooltip title={<FormattedMessage defaultMessage="Switch mode" />}>
 						<IconButton onClick={switchRange}>
 							<CompareArrowsOutlinedIcon />

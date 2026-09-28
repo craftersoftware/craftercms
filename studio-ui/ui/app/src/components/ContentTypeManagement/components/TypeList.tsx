@@ -50,8 +50,8 @@ export function TypeList(props: TypeListProps) {
 	}
 	return (
 		<Box
-			gap={2}
 			sx={{
+				gap: 2,
 				display: 'grid',
 				gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))'
 			}}

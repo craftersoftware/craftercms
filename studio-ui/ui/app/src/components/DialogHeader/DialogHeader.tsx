@@ -56,14 +56,7 @@ const translations = defineMessages({
 });
 
 export type DialogHeaderClassKey =
-	| 'root'
-	| 'titleWrapper'
-	| 'title'
-	| 'subtitle'
-	| 'subtitleWrapper'
-	| 'leftActions'
-	| 'rightActions'
-	| 'backIcon';
+	'root' | 'titleWrapper' | 'title' | 'subtitle' | 'subtitleWrapper' | 'leftActions' | 'rightActions' | 'backIcon';
 
 export type DialogHeaderProps<
 	PrimaryTypographyComponent extends ElementType = 'h2',

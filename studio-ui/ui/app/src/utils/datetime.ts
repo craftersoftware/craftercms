@@ -119,7 +119,7 @@ export function isValidDate(date: Date): boolean {
  * Returns the Z offset (e.g. +01:00) of a timezone name, considering daylight savings of the date.
  **/
 export function getZDateOffset(date: Date | Moment, timezone: string): string {
-	return moment(date).clone().tz(timezone).format('Z');
+	return timezone ? moment(date).clone().tz(timezone).format('Z') : '';
 }
 
 /**

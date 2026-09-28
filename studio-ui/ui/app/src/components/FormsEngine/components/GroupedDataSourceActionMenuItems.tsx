@@ -25,6 +25,7 @@ import type {
 	DataSourceSelection,
 	ResolvedDataSourceAction
 } from '../dataSources/types';
+import { MenuList } from '@mui/material';
 
 /**
  * Props for {@link GroupedDataSourceActionMenuItems}.

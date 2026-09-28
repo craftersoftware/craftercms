@@ -563,7 +563,8 @@ export const createStableFormContextProps = (
 		itemMeta: createFieldItemMetaContext(type), // TODO: Property may be removed from this context altogether
 		originalValues: null,
 		props: null,
-		state: null
+		state: null,
+		affectedPluginControlFields: []
 	};
 	if (createRootTypeSections) {
 		Object.assign(

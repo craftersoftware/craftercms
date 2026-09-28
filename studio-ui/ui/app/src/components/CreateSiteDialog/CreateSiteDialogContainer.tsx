@@ -672,7 +672,13 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 													<Divider sx={{ ml: -3, mr: -3 }} />
 												</Grid>
 												<Grid size={12} sx={{ display: 'flex', alignItems: 'center' }}>
-													<Typography color="text.secondary" variant="overline" sx={{ mr: 2 }}>
+													<Typography
+														variant="overline"
+														sx={{
+															color: 'text.secondary',
+															mr: 2
+														}}
+													>
 														{formatMessage(messages.publicMarketplaceBlueprints)}
 													</Typography>
 													<IconButton
@@ -724,7 +730,12 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 														})}
 													>
 														<SignalWifiBadRounded sx={{ color: (theme) => theme.palette.text.secondary }} />
-														<Typography variant="body1" color="text.secondary">
+														<Typography
+															variant="body1"
+															sx={{
+																color: 'text.secondary'
+															}}
+														>
 															{formatMessage(messages.marketplaceUnavailable)}
 														</Typography>
 														<Button variant="text" onClick={fetchMarketplaceBlueprints}>

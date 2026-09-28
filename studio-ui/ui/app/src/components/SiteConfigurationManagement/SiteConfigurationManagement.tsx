@@ -730,9 +730,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 													whiteSpace: 'nowrap'
 												}
 											}}
-											primaryTypographyProps={{ title: getTranslation(file.title, translations, formatMessage) }}
-											secondaryTypographyProps={{
-												title: getTranslation(file.description, translations, formatMessage)
+											slotProps={{
+												primary: {
+													title: getTranslation(file.title, translations, formatMessage)
+												},
+												secondary: {
+													title: getTranslation(file.description, translations, formatMessage)
+												}
 											}}
 											primary={getTranslation(file.title, translations, formatMessage)}
 											secondary={getTranslation(file.description, translations, formatMessage)}
@@ -758,10 +762,12 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			</ResizeableDrawer>
 			{selectedConfigFile ? (
 				<Box
-					display="flex"
-					flexGrow={1}
-					flexDirection={loadingXml ? 'row' : 'column'}
-					paddingLeft={openDrawer ? `${width}px` : 0}
+					sx={{
+						display: 'flex',
+						flexGrow: 1,
+						flexDirection: loadingXml ? 'row' : 'column',
+						paddingLeft: openDrawer ? `${width}px` : 0
+					}}
 				>
 					{configError ? (
 						<ApiResponseErrorState error={configError} sxs={{ root: { height: 'calc(100% - 65px)' } }} />
@@ -803,7 +809,12 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 									</>
 								}
 							/>
-							<Box display="flex" flexGrow={1}>
+							<Box
+								sx={{
+									display: 'flex',
+									flexGrow: 1
+								}}
+							>
 								<AceEditor
 									ref={editorRef}
 									sxs={{
@@ -897,11 +908,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				</Box>
 			) : (
 				<Box
-					display="flex"
-					alignItems="center"
-					flexGrow={1}
-					justifyContent="center"
-					paddingLeft={openDrawer && `${width}px`}
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						flexGrow: 1,
+						justifyContent: 'center',
+						paddingLeft: openDrawer && `${width}px`
+					}}
 				>
 					<EmptyState
 						title={

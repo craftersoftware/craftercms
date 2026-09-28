@@ -24,7 +24,7 @@ import { getGlobalHeaders } from '../../utils/ajax';
 import { validateActionPolicy } from '../../services/sites';
 import { checkPathExistence } from '../../services/content';
 import ConfirmDialog from '../ConfirmDialog/ConfirmDialog';
-import type { Body, Meta, UppyFile } from '@uppy/utils/lib/UppyFile';
+import type { Body, Meta, UppyFile } from '@uppy/core';
 import { useDispatch } from 'react-redux';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -99,7 +99,7 @@ export interface SingleFileUploadProps {
 	path: string;
 	customFileName?: string;
 	fileTypes?: string[];
-	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy, callback: () => void) => void;
+	onFileAdded?: (file: UppyFile<Meta, Body>, uppy: Uppy<Meta, Body>, callback: () => void) => void;
 	method?: 'PUT' | 'POST';
 	showFileDetails?: boolean;
 	showProgressBar?: boolean;
@@ -146,7 +146,7 @@ export function SingleFileUpload(props: SingleFileUploadProps) {
 
 	const uppy = useMemo(
 		() =>
-			new Uppy({
+			new Uppy<Meta, Body>({
 				autoProceed: false,
 				...(fileTypes ? { restrictions: { allowedFileTypes: fileTypes } } : {}),
 				...(customFileName

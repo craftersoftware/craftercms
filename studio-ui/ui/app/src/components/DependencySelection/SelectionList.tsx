@@ -108,11 +108,13 @@ export function SelectionList(props: SelectionListProps) {
 							) : null}
 						</>
 					}
-					primaryTypographyProps={{
-						sx: {
-							display: 'flex !important',
-							alignItems: 'center',
-							whiteSpace: 'break-spaces'
+					slotProps={{
+						primary: {
+							sx: {
+								display: 'flex !important',
+								alignItems: 'center',
+								whiteSpace: 'break-spaces'
+							}
 						}
 					}}
 				/>
@@ -131,7 +133,11 @@ export function SelectionList(props: SelectionListProps) {
 											checked={!!selectedItems[item.path]}
 											tabIndex={-1}
 											disableRipple
-											inputProps={{ 'aria-labelledby': item.path }}
+											slotProps={{
+												input: {
+													'aria-labelledby': item.path
+												}
+											}}
 											disabled={disabled || disabledPaths[item.path]}
 										/>
 									</ListItemIcon>
@@ -145,7 +151,12 @@ export function SelectionList(props: SelectionListProps) {
 										{item.label}
 									</Typography>
 									{(item.stateMap.submitted || item.stateMap.scheduled) && (
-										<Box display="flex" alignItems="center">
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center'
+											}}
+										>
 											<ItemStateIcon
 												displayTooltip={false}
 												sxs={{
@@ -259,7 +270,11 @@ export function SelectionList(props: SelectionListProps) {
 												checked={Boolean(selectedItems[path])}
 												tabIndex={-1}
 												disableRipple
-												inputProps={{ 'aria-labelledby': path }}
+												slotProps={{
+													input: {
+														'aria-labelledby': path
+													}
+												}}
 												disabled={disabled || disabledPaths[path]}
 											/>
 										</ListItemIcon>
@@ -267,9 +282,11 @@ export function SelectionList(props: SelectionListProps) {
 									<ListItemText
 										id={labelId}
 										primary={path}
-										primaryTypographyProps={{
-											title: path,
-											sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }
+										slotProps={{
+											primary: {
+												title: path,
+												sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }
+											}
 										}}
 									/>
 									{onEditClick && isEditableAsset(path) && (

@@ -89,7 +89,11 @@ export function RangePickerModal(props: RangePickerModalProps) {
 								slotProps={{
 									textField: {
 										onClick: openFromPicker,
-										inputProps: { onChange: (e) => e.preventDefault() }
+										slotProps: {
+											input: {
+												onChange: (e) => e.preventDefault()
+											}
+										}
 									}
 								}}
 								value={moment(pickerDateFrom)}
@@ -109,7 +113,11 @@ export function RangePickerModal(props: RangePickerModalProps) {
 								slotProps={{
 									textField: {
 										onClick: openToPicker,
-										inputProps: { onChange: (e) => e.preventDefault() }
+										slotProps: {
+											input: {
+												onChange: (e) => e.preventDefault()
+											}
+										}
 									}
 								}}
 								value={moment(pickerDateTo)}

@@ -63,7 +63,13 @@ export function FieldAccordionPanel(props: CompareFieldPanelAccordionProps) {
 				sx={{ [`.${accordionSummaryClasses.content}`]: { justifyContent: 'space-between', alignItems: 'center' } }}
 			>
 				{summary ? (
-					<Box width="100%">{summary}</Box>
+					<Box
+						sx={{
+							width: '100%'
+						}}
+					>
+						{summary}
+					</Box>
 				) : (
 					<Typography>
 						<Box component="span" sx={{ fontWeight: 600 }}>

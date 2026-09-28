@@ -30,7 +30,8 @@ export interface PullFromRemoteDialogProps extends PullFromRemoteBaseProps, Enha
 }
 
 export interface PullFromRemoteDialogContainerProps
-	extends PullFromRemoteBaseProps,
+	extends
+		PullFromRemoteBaseProps,
 		Pick<PullFromRemoteDialogProps, 'onClose' | 'onPullSuccess' | 'onPullError' | 'isSubmitting'> {
 	disabled?: boolean;
 	onPullStart?(): void;

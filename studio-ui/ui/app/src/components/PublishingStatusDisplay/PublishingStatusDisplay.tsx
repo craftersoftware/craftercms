@@ -74,8 +74,20 @@ const StageItem = ({ stage }: { stage: currentTaskStage }) => {
 	const { name, processed, state, total } = stage;
 	return (
 		<Box>
-			<Grid container alignItems="center" justifyContent="space-between">
-				<Grid display="flex" alignItems="center" gap={1}>
+			<Grid
+				container
+				sx={{
+					alignItems: 'center',
+					justifyContent: 'space-between'
+				}}
+			>
+				<Grid
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 1
+					}}
+				>
 					{stageStateIcons[stage.state] || null}
 					<Typography variant="subtitle1">{name}</Typography>
 				</Grid>
@@ -89,7 +101,12 @@ const StageItem = ({ stage }: { stage: currentTaskStage }) => {
 					/>
 				</Grid>
 			</Grid>
-			<Typography variant="caption" color="text.secondary">
+			<Typography
+				variant="caption"
+				sx={{
+					color: 'text.secondary'
+				}}
+			>
 				<FormattedMessage defaultMessage="{processed}/{total} items processed" values={{ processed, total }} />
 			</Typography>
 		</Box>
@@ -111,7 +128,13 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 					primary={isFetching ? <Skeleton /> : getPublishingStatusMessage(props, formatMessage)}
 					secondary={
 						currentTask && (
-							<Box display="flex" alignItems="baseline" gap={1}>
+							<Box
+								sx={{
+									display: 'flex',
+									alignItems: 'baseline',
+									gap: 1
+								}}
+							>
 								<Typography variant="body2">
 									<FormattedMessage
 										defaultMessage="Current publishing task {currentTaskType} - {state}."

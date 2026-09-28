@@ -164,6 +164,11 @@
     * Removed `workflowEvent`. Replaced by `workflowEventSubmit`, `workflowEventDirectPublish`, `workflowEventApprove`, `workflowEventReject`, `workflowEventCancel`.
   * `actions/preview`:
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.
+  * `actions/pathNavigator`:
+    * Updated `pathNavigatorFetchPathComplete`, `pathNavigatorFetchParentItemsComplete` and `pathNavigatorFetchPathFailed` action payloads to include a `path` property.
+    * Updated `pathNavigatorConditionallySetPathFailed` action payload to include a `path` property.
+    * Updated `pathNavigatorBulkFetchPathComplete` action payload: each entry in `paths` now includes a `path` property.
+    * Updated `pathNavigatorBulkFetchPathFailed` action payload: replaced `ids` with `requests` of type `PayloadWithId<{ path: string }>[]`.
 * [models/Publishing]
   * `Package`: Updated id to be of type `number`.
   * `CurrentFilters`: Removed `environment`, `path`, `state` and `page` properties. Added `target`, `states`, `approvalStates`, `submitter`, `reviewer`, `isScheduled`, `sort` and `offset` properties.

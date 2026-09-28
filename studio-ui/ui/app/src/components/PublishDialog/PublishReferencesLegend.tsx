@@ -23,11 +23,11 @@ import { DraftChip } from '../DraftChip';
 
 export function PublishReferencesLegend() {
 	return (
-		<Box my={2}>
+		<Box sx={{ my: 2 }}>
 			<Typography variant="body2" sx={{ mb: 1 }}>
 				<FormattedMessage defaultMessage="LEGEND" />
 			</Typography>
-			<Box display="flex" sx={{ display: 'flex', mb: 1, gap: 1 }}>
+			<Box sx={{ display: 'flex', mb: 1, gap: 1 }}>
 				<DependencyChip type="hard" />
 				<Typography variant="body2" color="textSecondary">
 					<FormattedMessage defaultMessage="References of mandatory submission" />

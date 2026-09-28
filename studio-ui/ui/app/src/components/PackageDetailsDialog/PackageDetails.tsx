@@ -68,7 +68,11 @@ export function PackageDetails(props: PackageDetailsProps) {
 			{state.loading && <LoadingState sxs={{ root: { width: 100, minHeight: 420 } }} />}
 			{state.error && <ApiResponseErrorState error={state.error} />}
 			{!Boolean(packageId) && !state.publishPackage && (
-				<Typography color="error.main">
+				<Typography
+					sx={{
+						color: 'error.main'
+					}}
+				>
 					<FormattedMessage
 						id="packageDetailsDialog.missingPackageId"
 						defaultMessage="Unable to fetch package details as package id was not provided to this UI"

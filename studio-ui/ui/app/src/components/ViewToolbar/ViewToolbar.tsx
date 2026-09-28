@@ -19,7 +19,7 @@ import Toolbar, { ToolbarProps } from '@mui/material/Toolbar';
 import React, { forwardRef, PropsWithChildren, Ref } from 'react';
 import { PartialSxRecord } from '../../models';
 import { Theme } from '@mui/material';
-import { SystemStyleObject } from '@mui/system/styleFunctionSx/styleFunctionSx';
+import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { consolidateSx } from '../../utils/system';
 
 export type ViewToolbarClassKey = 'appBar' | 'toolbar';

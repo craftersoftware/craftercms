@@ -163,17 +163,17 @@ export function CreateUserDialogContainer(props: CreateUserDialogContainerProps)
 		setSubmitOk(
 			Boolean(
 				newUser.firstName.trim() &&
-					!refs.current.validateFieldMinLength('firstName', newUser.firstName) &&
-					newUser.lastName.trim() &&
-					!refs.current.validateFieldMinLength('lastName', newUser.lastName) &&
-					!isInvalidEmail(newUser.email) &&
-					newUser.username.trim() &&
-					!refs.current.validateFieldMinLength('username', newUser.username) &&
-					!isInvalidUsername(newUser.username) &&
-					newUser.password &&
-					validPassword &&
-					passwordConfirm &&
-					newUser.password === passwordConfirm
+				!refs.current.validateFieldMinLength('firstName', newUser.firstName) &&
+				newUser.lastName.trim() &&
+				!refs.current.validateFieldMinLength('lastName', newUser.lastName) &&
+				!isInvalidEmail(newUser.email) &&
+				newUser.username.trim() &&
+				!refs.current.validateFieldMinLength('username', newUser.username) &&
+				!isInvalidUsername(newUser.username) &&
+				newUser.password &&
+				validPassword &&
+				passwordConfirm &&
+				newUser.password === passwordConfirm
 			)
 		);
 		updateSubmittingOrHasPendingChanges({

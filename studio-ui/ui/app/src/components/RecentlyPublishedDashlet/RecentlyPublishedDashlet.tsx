@@ -238,7 +238,12 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 											publishingTarget: pkg.target,
 											render_target(target: ReactNode[]) {
 												return (
-													<Box component="span" color={target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR}>
+													<Box
+														component="span"
+														sx={{
+															color: target[0] === 'live' ? LIVE_COLOUR : STAGING_COLOUR
+														}}
+													>
 														{messages[target[0] as string]
 															? formatMessage(messages[target[0] as string]).toLowerCase()
 															: target[0]}

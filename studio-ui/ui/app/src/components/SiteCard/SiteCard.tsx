@@ -152,10 +152,12 @@ export function SiteCard(props: SiteCardProps) {
 						e.stopPropagation();
 						onSiteClick(site);
 					}}
-					titleTypographyProps={{
-						variant: 'subtitle2',
-						component: 'h2',
-						className: 'cardTitle'
+					slotProps={{
+						title: {
+							variant: 'subtitle2',
+							component: 'h2',
+							className: 'cardTitle'
+						}
 					}}
 				/>
 				{!compact && (

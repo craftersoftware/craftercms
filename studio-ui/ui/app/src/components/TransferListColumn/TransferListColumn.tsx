@@ -140,7 +140,14 @@ export function TransferListColumn(props: TransferListColumnProps) {
 								let content;
 								if (!isItemLoaded(index)) {
 									content = (
-										<Box key={0} display="flex" justifyContent="center" m={1}>
+										<Box
+											key={0}
+											sx={{
+												display: 'flex',
+												justifyContent: 'center',
+												m: 1
+											}}
+										>
 											<CircularProgress size={16} />
 										</Box>
 									);
@@ -169,7 +176,9 @@ export function TransferListColumn(props: TransferListColumnProps) {
 											<ListItemText
 												primary={item.title}
 												secondary={item.subtitle}
-												primaryTypographyProps={{ noWrap: true, title: item.title }}
+												slotProps={{
+													primary: { noWrap: true, title: item.title }
+												}}
 											/>
 										</ListItemButton>
 									);

@@ -81,6 +81,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const dispatch = useDispatch();
 	const [contentItems, setContentItems] = useState<ContentItem[]>();
 	const [isFetchingItems, setIsFetchingItems] = useState(false);
+	const [packageDependenciesFetchFailed, setPackageDependenciesFetchFailed] = useState(false);
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: '',
 		requestApproval: false,
@@ -137,6 +138,17 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const areSomeItemsDraft = useMemo(() => {
 		return itemsDataSummary.itemPaths.some((path) => itemsByPath[path]?.savedAsDraft);
 	}, [itemsDataSummary.itemPaths, itemsByPath]);
+
+	const hardDependenciesWithoutPublishPermission = useMemo(() => {
+		if (packageDependenciesFetchFailed || !dependencyData) {
+			return false;
+		}
+		return dependencyData.items.some(
+			(item) => !item.canRequestPublish && dependencyData.typeByPath[item.path] === 'hard'
+		);
+	}, [dependencyData, packageDependenciesFetchFailed]);
+	const dependencyValidationIncomplete =
+		packageDependenciesFetchFailed || (!dependencyData && Boolean(state.publishingTarget));
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
@@ -202,6 +214,8 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const submitDisabled =
 		// Detailed items haven't loaded
 		isFetchingItems ||
+		// While fetching dependencies
+		state.fetchingItems ||
 		!contentItems ||
 		// While submitting
 		isSubmitting ||
@@ -220,7 +234,11 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		// The scheduled date is in the past
 		state.scheduledDateTime < new Date() ||
 		// All items to publish are empty folders.
-		arePublishingItemsFolders;
+		arePublishingItemsFolders ||
+		// When dependency validation did not complete successfully
+		dependencyValidationIncomplete ||
+		// When there are hard dependencies without publish permission
+		hardDependenciesWithoutPublishPermission;
 
 	useEffect(() => {
 		setState({ fetchingItems: true });
@@ -244,6 +262,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 						depMap[path] = 'soft';
 					});
 					setState({ fetchingItems: false });
+					setPackageDependenciesFetchFailed(false);
 					if (includeChildren && dependenciesByType.items) {
 						if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
 							setChildrenItems(dependenciesByType.items);
@@ -262,7 +281,9 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 				},
 				error() {
 					setState({ fetchingItems: false });
+					setIsFetchingItems(false);
 					setDependencyData(null);
+					setPackageDependenciesFetchFailed(true);
 				}
 			});
 			return () => sub.unsubscribe();
@@ -296,6 +317,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	const handleSubmit = (e?: SyntheticEvent) => {
 		e?.preventDefault();
+		if (submitDisabled) return;
 
 		const { publishingTarget, scheduling: schedule } = state;
 		const { itemPaths, itemMap } = itemsDataSummary;
@@ -494,6 +516,20 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 													sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}
 												>
 													<FormattedMessage defaultMessage="Last applied changes can be reverted" />
+												</Alert>
+											</Fade>
+										)}
+										{packageDependenciesFetchFailed && (
+											<Fade in={packageDependenciesFetchFailed}>
+												<Alert severity="error" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+													<FormattedMessage defaultMessage="Dependency validation could not complete. Please try again before submitting." />
+												</Alert>
+											</Fade>
+										)}
+										{hardDependenciesWithoutPublishPermission && (
+											<Fade in={hardDependenciesWithoutPublishPermission}>
+												<Alert severity="error" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+													<FormattedMessage defaultMessage="Package cannot be submitted because there are required references without publish permission" />
 												</Alert>
 											</Fade>
 										)}

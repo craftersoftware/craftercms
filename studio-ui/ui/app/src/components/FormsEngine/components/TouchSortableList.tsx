@@ -44,7 +44,13 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 					<ListItemText
 						disableTypography
 						primary={
-							<Box display="flex" alignItems="center" sx={{ placeContent: 'space-between' }}>
+							<Box
+								sx={{
+									display: 'flex',
+									alignItems: 'center',
+									placeContent: 'space-between'
+								}}
+							>
 								<Typography>{item.value}</Typography>
 								<Box sx={{ display: 'flex' }}>
 									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', false, index)}>

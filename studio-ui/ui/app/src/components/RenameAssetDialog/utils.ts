@@ -39,11 +39,10 @@ export interface RenameAssetStateProps extends RenameAssetBaseProps, EnhancedDia
 	onRenamed?: StandardAction;
 }
 
-export interface RenameAssetContainerProps
-	extends Pick<
-		RenameAssetDialogProps,
-		'item' | 'allowBraces' | 'onRenamed' | 'onClose' | 'type' | 'fetchingDependantItems' | 'error'
-	> {
+export interface RenameAssetContainerProps extends Pick<
+	RenameAssetDialogProps,
+	'item' | 'allowBraces' | 'onRenamed' | 'onClose' | 'type' | 'fetchingDependantItems' | 'error'
+> {
 	fetchingDependantItems: boolean;
 	dependantItems: ContentItem[];
 	fetchDependant(): void;

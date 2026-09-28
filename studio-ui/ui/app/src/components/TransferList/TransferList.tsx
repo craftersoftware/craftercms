@@ -54,7 +54,11 @@ export function TransferList(props: TransferListProps) {
 	const { formatMessage } = useIntl();
 
 	return (
-		<Box display="flex">
+		<Box
+			sx={{
+				display: 'flex'
+			}}
+		>
 			<TransferListColumn
 				title={source.title}
 				items={source.items}

@@ -146,6 +146,7 @@ export interface GlobalState {
 		active: string;
 		isFetching: boolean;
 		byId: LookupTable<Site>;
+		error: ApiResponse;
 	};
 	content: {
 		quickCreate: {

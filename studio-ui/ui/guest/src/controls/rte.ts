@@ -29,6 +29,7 @@ import { editComponentInline, exitComponentInlineEdit } from '../store/actions';
 import { emptyFieldClass } from '../constants';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { Editor as EditorReact } from '@tinymce/tinymce-react';
+import type { ComponentProps } from 'react';
 import { getTinyMceInitOptions } from '@craftercms/studio-ui/components/FormsEngine/lib/rteUtils';
 import { getCurrentIntl } from '../utils/i18n';
 import { RteSetup } from '../models/Rte';
@@ -145,7 +146,9 @@ export function initTinyMCE(
 			post(cancelRteDataSourcePicker({ id }));
 		}
 	}
-	const openHostDataSourcePicker: EditorReact['props']['init']['file_picker_callback'] = (cb, value, meta) => {
+	const openHostDataSourcePicker: NonNullable<
+		NonNullable<ComponentProps<typeof EditorReact>['init']>['file_picker_callback']
+	> = (cb, value, meta) => {
 		const id = uuid();
 		// Replacing an in-flight request: let the host know the prior one will no longer be consumed.
 		cancelHostDataSourcePicker();
@@ -184,7 +187,7 @@ export function initTinyMCE(
 				id: setupId,
 				tinymceOptions: {
 					// Tinymce typings for tinymce-react are wrong (not in sync with tinymce ones).
-					...((rteSetup?.tinymceOptions as unknown as EditorReact['props']['init']) ?? {}),
+					...((rteSetup?.tinymceOptions as unknown as ComponentProps<typeof EditorReact>['init']) ?? {}),
 					target: rteEl as any,
 					deprecation_warnings: false,
 					paste_as_text: !isRTE,
@@ -475,7 +478,6 @@ export function initTinyMCE(
 	);
 
 	const maxLength = validations?.maxLength ? parseInt(validations.maxLength.value) : null;
-	// @ts-expect-error - Typings state the prop is wrong for the React integration, but the prop is correct.
 	window.tinymce.init(rteConfig);
 
 	return dispatch$.pipe(startWith({ type: editComponentInline.type }));

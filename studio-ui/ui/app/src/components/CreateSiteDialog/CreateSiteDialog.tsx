@@ -154,10 +154,12 @@ function CreateSiteDialog(props: CreateSiteDialogProps) {
 			aria-labelledby="create-site-dialog"
 			fullWidth
 			maxWidth="lg"
-			sx={{
-				[`& .${dialogClasses.paperScrollPaper}`]: {
-					height: 'calc(100% - 100px)',
-					maxHeight: '1200px'
+			slotProps={{
+				paper: {
+					sx: {
+						height: 'calc(100% - 100px)',
+						maxHeight: '1200px'
+					}
 				}
 			}}
 			disableEnforceFocus={disableEnforceFocus}

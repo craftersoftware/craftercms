@@ -34,6 +34,13 @@ plugins.withType(JavaPlugin).configureEach {
 
 	tasks.withType(Javadoc).configureEach {
 		options.addStringOption('Xdoclint:syntax', '-quiet')
+		def year = java.time.Year.now().value
+		options.bottom = "Copyright &copy; ${year} <a href='${craftercmsUrl}'>${craftercmsDocsCopyrightName}</a>. All rights reserved."
+		options.author = true
+		options.version = true
+		title = "${project.crafterManifestTitle} ${craftercmsVersion} API"
+		options.windowTitle = title
+		options.docTitle = title
 	}
 
 	tasks.withType(Test).configureEach {

@@ -232,7 +232,13 @@ export function GlobalConfigManagement() {
 						readOnly={enable}
 						onInit={onAceInit}
 					/>
-					<Box p="10px" display="flex" justifyContent="space-between">
+					<Box
+						sx={{
+							p: '10px',
+							display: 'flex',
+							justifyContent: 'space-between'
+						}}
+					>
 						<SecondaryButton onClick={() => setViewSample(true)}>
 							<FormattedMessage id="globalConfig.viewSample" defaultMessage="View Sample" />
 						</SecondaryButton>
