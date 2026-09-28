@@ -348,53 +348,6 @@ export function createExternalBrowseAction(options: {
 }
 
 /**
- * Factory for browsing S3/WebDAV
- * (opens BrowseExternalAssetDialog).
- */
-export function createExternalBrowseAction(options: {
-	id?: string;
-	label?: string;
-	path: string;
-	profileId: string;
-	profileType?: 'aws' | 'webdav';
-	/** API filter passed to list endpoints (e.g. `image`, `video`). */
-	type?: string;
-	mimeTypes?: string[];
-	selection: 'item' | 'asset';
-	meta?: DataSourceActionMeta;
-}): DataSourceAction {
-	const { path, profileId, profileType = 'aws', type, mimeTypes, selection } = options;
-	return {
-		id: options.id ?? 'browse',
-		kind: 'browse',
-		label: options.label ?? 'Browse',
-		meta: {
-			path,
-			mimeTypes,
-			profileId,
-			profileType,
-			type,
-			...options.meta
-		},
-		async run(ctx) {
-			if (!profileId) {
-				throw new Error('External browse requires a profileId on the data source.');
-			}
-			const expanded = expandPathOrRaw(ctx, path);
-			const items = await ctx.services.browseExternalAssets({
-				path: expanded,
-				profileId,
-				profileType,
-				type,
-				multiSelect: (ctx.remainingCapacity ?? 2) !== 1
-			});
-			if (!items.length) return null;
-			return selection === 'asset' ? toAssetSelections(items) : toItemSelections(items);
-		}
-	};
-}
-
-/**
  * Factory for a standard search action (path expanded + recursive `/.+` suffix via {@link toSearchPath}).
  */
 export function createSearchAction(options: {
@@ -483,7 +436,16 @@ export function createExternalUploadAction(options: {
 	meta?: DataSourceActionMeta;
 	transcode?: boolean;
 }): DataSourceAction {
-	const { path, profileId, inputProfileId, outputProfileId, profileType = 'aws', fileTypes, selection } = options;
+	const {
+		path,
+		profileId,
+		inputProfileId,
+		outputProfileId,
+		profileType = 'aws',
+		fileTypes,
+		selection,
+		transcode = false
+	} = options;
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',
@@ -500,7 +462,9 @@ export function createExternalUploadAction(options: {
 		},
 		async run(ctx) {
 			if (!profileId && (!inputProfileId || !outputProfileId)) {
-				throw new Error('External upload requires a profileId or inputProfileId and outputProfileId on the data source.');
+				throw new Error(
+					'External upload requires a profileId or inputProfileId and outputProfileId on the data source.'
+				);
 			}
 			const expanded = expandPathOrRaw(ctx, path);
 			const result = await ctx.services.uploadExternalAssets({

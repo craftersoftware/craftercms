@@ -38,6 +38,7 @@ import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceAct
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '../../EmptyState';
+import MenuList from '@mui/material/MenuList';
 
 export interface TranscodedVideoPickerProps extends ControlProps {
 	value: { url: string }[];
@@ -152,7 +153,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 					}
 				/>
 			) : (
-				<Box
+				<MenuList
 					sx={{
 						display: 'flex',
 						gap: 1,
@@ -160,7 +161,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 					}}
 				>
 					{actionMenuItems}
-				</Box>
+				</MenuList>
 			)}
 			<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
 				{actionMenuItems}
