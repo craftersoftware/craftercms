@@ -91,6 +91,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 			<Box>
 				{onLanguageMenu && (
 					<IconButton
+						component="span"
 						aria-label="language select"
 						onClick={(e) => {
 							e.stopPropagation();
@@ -103,6 +104,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 				)}
 				{onMenuButtonClick && (
 					<IconButton
+						component="span"
 						aria-label="options"
 						onClick={(e) => {
 							e.stopPropagation();
