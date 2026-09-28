@@ -49,6 +49,13 @@ export function GlobalStyles(props: GlobalStylesProps) {
 					'& > *': {
 						pointerEvents: 'all'
 					}
+				},
+
+				// TinyMCE dialogs render into a body-level `.tox-tinymce-aux` sink, but the fullscreen
+				// editor lives inside the MUI modal's stacking context (z-index: modal). Tiny's skin drops
+				// the sink to 1201 in fullscreen, leaving its dialogs behind the editor.
+				'.tox.tox-tinymce-aux, .tox-fullscreen .tox.tox-tinymce-aux, .tox-fullscreen ~ .tox.tox-tinymce-aux': {
+					zIndex: `${theme.zIndex.modal + 1} !important`
 				}
 			}) as Interpolation<Theme>,
 		[theme.palette.background.paper, theme.zIndex.modal]
