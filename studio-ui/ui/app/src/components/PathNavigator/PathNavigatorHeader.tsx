@@ -58,65 +58,71 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 		sxs
 	} = props;
 	const currentFlag = (locale: string) => <LanguageRounded />;
+	const hasActions = Boolean(onLanguageMenu || onMenuButtonClick);
 	return (
-		<AccordionSummary
-			className={className}
-			classes={{
-				root: props.classes?.root,
-				content: props.classes?.content
-			}}
-			sx={{
-				...(sx as SystemStyleObject<Theme>),
-				...sxs?.root,
-				[`& .${accordionSummaryClasses.content}`]: {
-					alignItems: 'center',
-					placeContent: 'center space-between',
-					'&, &.Mui-expanded': {
-						margin: 0
-					},
-					...sxs?.content
-				}
-			}}
-		>
-			<Box sx={{ display: 'flex', alignItems: 'center' }}>
-				{icon && (
-					<SystemIcon
-						icon={icon}
-						sx={{ color: (theme) => theme.palette.action.active, marginRight: '10px' }}
-						style={icon[collapsed ? 'collapsedStyle' : 'expandedStyle']}
-					/>
-				)}
-				<Typography variant="body1" component="h6" sx={{ flexGrow: 1 }} children={title} />
-			</Box>
-			<Box>
-				{onLanguageMenu && (
-					<IconButton
-						component="span"
-						aria-label="language select"
-						onClick={(e) => {
-							e.stopPropagation();
-							onLanguageMenu(e.currentTarget);
-						}}
-						size="small"
-					>
-						{currentFlag(locale)}
-					</IconButton>
-				)}
-				{onMenuButtonClick && (
-					<IconButton
-						component="span"
-						aria-label="options"
-						onClick={(e) => {
-							e.stopPropagation();
-							onMenuButtonClick(e.currentTarget);
-						}}
-						size="small"
-					>
-						{menuButtonIcon}
-					</IconButton>
-				)}
-			</Box>
-		</AccordionSummary>
+		<Box sx={{ display: 'flex', alignItems: 'center' }}>
+			<AccordionSummary
+				className={className}
+				classes={{
+					root: props.classes?.root,
+					content: props.classes?.content
+				}}
+				sx={{
+					flex: 1,
+					minWidth: 0,
+					...(hasActions && { pr: 0 }),
+					...(sx as SystemStyleObject<Theme>),
+					...sxs?.root,
+					[`& .${accordionSummaryClasses.content}`]: {
+						alignItems: 'center',
+						placeContent: 'center space-between',
+						'&, &.Mui-expanded': {
+							margin: 0
+						},
+						...sxs?.content
+					}
+				}}
+			>
+				<Box sx={{ display: 'flex', alignItems: 'center' }}>
+					{icon && (
+						<SystemIcon
+							icon={icon}
+							sx={{ color: (theme) => theme.palette.action.active, marginRight: '10px' }}
+							style={icon[collapsed ? 'collapsedStyle' : 'expandedStyle']}
+						/>
+					)}
+					<Typography variant="body1" component="h6" sx={{ flexGrow: 1 }} children={title} />
+				</Box>
+			</AccordionSummary>
+			{hasActions && (
+				<Box sx={{ display: 'flex', flexShrink: 0, pr: 2 }}>
+					{onLanguageMenu && (
+						<IconButton
+							aria-label="language select"
+							onClick={(e) => {
+								e.stopPropagation();
+								onLanguageMenu(e.currentTarget);
+							}}
+							size="small"
+						>
+							{currentFlag(locale)}
+						</IconButton>
+					)}
+					{onMenuButtonClick && (
+						<IconButton
+							aria-label="options"
+							onClick={(e) => {
+								e.stopPropagation();
+								onMenuButtonClick(e.currentTarget);
+							}}
+							size="small"
+						>
+							{menuButtonIcon}
+						</IconButton>
+					)}
+				</Box>
+			)}
+		</Box>
 	);
 }
 
