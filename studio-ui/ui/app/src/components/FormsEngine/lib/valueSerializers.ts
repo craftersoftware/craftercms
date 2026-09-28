@@ -62,7 +62,7 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	rte: prepareRTE,
 	textarea: (field, value) => prepareString(field, value as string),
 	time: undefined,
-	'transcoded-video-picker': (field, value) => prepareArray(field, value),
+	'transcoded-video-picker': (field, value) => (value ? prepareArray(field, value) : undefined),
 	uuid: undefined,
 	'video-picker': undefined,
 	colorPicker: undefined,
@@ -187,6 +187,7 @@ function prepareRepeat(
 }
 
 function prepareArray<T = unknown>(field: ContentTypeField, value: T): { item: T } {
+	console.log('value', value);
 	return {
 		// TODO: Unsure if all array-likes could/should have the item list attribute. It makes sense, though.
 		//  '@:item-list': true,
