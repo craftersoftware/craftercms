@@ -207,7 +207,11 @@
 					dialogCloseIcon.querySelector('.tox-icon').innerHTML = icons.resize;
 				}
 			}
-			dialog.classList.add('fullscreen');
+			// Fullscreen only when TinyMCE is fullscreen, or when expanding from inline code view.
+			// FE2 uses dialog mode (`code_editor_inline: false`) and should keep TinyMCE's large dialog.
+			if (fullscreenMode || inlineMode) {
+				dialog.classList.add('fullscreen');
+			}
 			dialog.classList.add('acecode');
 			const aceEditor = ace.edit('mce-ace-editor-block');
 			aceModes.fullscreen = aceEditor;
