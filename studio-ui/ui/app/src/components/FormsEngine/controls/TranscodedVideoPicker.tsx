@@ -177,10 +177,10 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 					<MenuList
 						sx={{
 							display: 'flex',
-							flexWrap: 'wrap',
+							flexDirection: 'column',
 							gap: 1,
 							width: '100%',
-							justifyContent: 'center'
+							alignItems: 'center'
 						}}
 					>
 						{actionMenuItems}
