@@ -408,7 +408,7 @@ export const showExternalAssetUploadDialog = ({
 }: {
 	dispatch: ReduxDispatch;
 	path: string;
-	profileId: string;
+	profileId?: string;
 	inputProfileId?: string;
 	outputProfileId?: string;
 	profileType?: ExternalAssetUploadDialogProps['profileType'];
