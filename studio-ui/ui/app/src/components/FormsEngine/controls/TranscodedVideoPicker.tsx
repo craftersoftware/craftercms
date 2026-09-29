@@ -159,13 +159,8 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 				<Box
 					sx={{
 						p: 1,
-						gap: 1,
 						py: 0.5,
-						display: 'flex',
-						flexDirection: 'row',
-						flexWrap: 'wrap',
 						color: 'primary.main',
-						justifyContent: 'center',
 						[`.${svgIconClasses.root}`]: {
 							color: 'primary.main'
 						},
@@ -179,7 +174,17 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 						}
 					}}
 				>
-					<MenuList sx={{ display: 'flex' }}>{actionMenuItems}</MenuList>
+					<MenuList
+						sx={{
+							display: 'flex',
+							flexWrap: 'wrap',
+							gap: 1,
+							width: '100%',
+							justifyContent: 'center'
+						}}
+					>
+						{actionMenuItems}
+					</MenuList>
 				</Box>
 			)}
 			<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
