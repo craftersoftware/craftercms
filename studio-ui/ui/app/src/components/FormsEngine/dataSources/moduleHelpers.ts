@@ -489,10 +489,8 @@ export function createExternalUploadAction(options: {
 			...options.meta
 		},
 		async run(ctx) {
-			if (!profileId && (!inputProfileId || !outputProfileId)) {
-				throw new Error(
-					'External upload requires a profileId or inputProfileId and outputProfileId on the data source.'
-				);
+			if (transcode ? profileType !== 'aws' || !inputProfileId || !outputProfileId : !profileId) {
+				throw new Error('External upload requires profile IDs for the selected upload mode.');
 			}
 			const expanded = expandPathOrRaw(ctx, path);
 			const result = await ctx.services.uploadExternalAssets({
