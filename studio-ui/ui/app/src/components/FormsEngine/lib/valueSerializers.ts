@@ -187,7 +187,6 @@ function prepareRepeat(
 }
 
 function prepareArray<T = unknown>(field: ContentTypeField, value: T): { item: T } {
-	console.log('value', value);
 	return {
 		// TODO: Unsure if all array-likes could/should have the item list attribute. It makes sense, though.
 		//  '@:item-list': true,
