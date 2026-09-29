@@ -39,6 +39,9 @@ import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '../../EmptyState';
 import MenuList from '@mui/material/MenuList';
+import { menuItemClasses } from '@mui/material/MenuItem';
+import { svgIconClasses } from '@mui/material/SvgIcon';
+import { listItemIconClasses } from '@mui/material/ListItemIcon';
 
 export interface TranscodedVideoPickerProps extends ControlProps {
 	value: { url: string }[];
@@ -153,15 +156,31 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 					}
 				/>
 			) : (
-				<MenuList
+				<Box
 					sx={{
-						display: 'flex',
+						p: 1,
 						gap: 1,
-						flexWrap: 'wrap'
+						py: 0.5,
+						display: 'flex',
+						flexDirection: 'row',
+						flexWrap: 'wrap',
+						color: 'primary.main',
+						justifyContent: 'center',
+						[`.${svgIconClasses.root}`]: {
+							color: 'primary.main'
+						},
+						[`.${menuItemClasses.root}`]: {
+							flexDirection: 'column',
+							justifyContent: 'center',
+							borderRadius: 1
+						},
+						[`.${listItemIconClasses.root}`]: {
+							justifyContent: 'center'
+						}
 					}}
 				>
-					{actionMenuItems}
-				</MenuList>
+					<MenuList sx={{ display: 'flex' }}>{actionMenuItems}</MenuList>
+				</Box>
 			)}
 			<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
 				{actionMenuItems}
