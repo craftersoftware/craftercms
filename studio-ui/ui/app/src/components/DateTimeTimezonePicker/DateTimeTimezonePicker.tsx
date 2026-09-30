@@ -86,7 +86,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 	const defaultTimezone = getUserTimeZone();
 	// The control timezone lags behind selectedTimezone. It is only updated when there's a different
 	// selectedTimezone to the navigator's locale, and the value (date) prop changes.
-	const [controlTimezone, setControlTimezone] = useState<string | null>(resolvedLocaleData.timeZone ?? null);
+	const [controlTimezone, setControlTimezone] = useState<string | null>(selectedTimezone);
 	const mountedRef = useRef(false);
 	const effectRefs = useUpdateRefs({
 		dateProp,
@@ -147,7 +147,7 @@ export function DateTimeTimezonePicker(props: DateTimeTimezonePickerProps) {
 		} else {
 			// First render; set the initial date.
 			mountedRef.current = true;
-			setSelectedDate(dateProp ? moment(dateProp) : null);
+			setSelectedDate(moment(dateProp).tz(effectRefs.current.selectedTimezone));
 		}
 	}, [disablePast, dateProp, effectRefs]);
 	useEffect(() => {
