@@ -37,7 +37,7 @@
     "mocha": "^11.7.5",
     "nock": "^14.0.17",
     "node-fetch": "3.3.2",
-    "rollup": "^4.63.3",
+    "rollup": "^4.63.5",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.51.2",
     "url-search-params-polyfill": "^8.2.5",

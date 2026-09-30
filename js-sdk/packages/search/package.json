@@ -39,7 +39,7 @@
     "chai": "^6.2.2",
     "mocha": "^11.7.5",
     "nock": "^14.0.17",
-    "rollup": "^4.63.3",
+    "rollup": "^4.63.5",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.51.2",
     "xhr-mock": "^2.5.1",
