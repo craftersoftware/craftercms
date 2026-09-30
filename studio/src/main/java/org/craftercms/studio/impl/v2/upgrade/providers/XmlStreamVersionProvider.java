@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -41,11 +41,23 @@ public class XmlStreamVersionProvider extends XmlFileVersionProvider {
         this.versionElementName = versionElementName;
     }
 
-    @Override
-    protected String getVersionFromFile(String site, String filePath) throws Exception {
-        XMLInputFactory factory = XMLInputFactory.newInstance();
+	/**
+	 * Creates and configures an XML input factory with XXE protections.
+	 *
+	 * @return configured XMLInputFactory instance
+	 */
+	protected XMLInputFactory createXmlInputFactory() {
+		XMLInputFactory factory = XMLInputFactory.newInstance();
+		factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+		factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+		return factory;
+	}
 
-        XMLEventReader reader = null;
+	@Override
+	protected String getVersionFromFile(String site, String filePath) throws Exception {
+		XMLInputFactory factory = createXmlInputFactory();
+
+		XMLEventReader reader = null;
         try (InputStream is = contentRepository.getContent(site, filePath)) {
             reader = factory.createXMLEventReader(is);
             while (reader.hasNext()) {
