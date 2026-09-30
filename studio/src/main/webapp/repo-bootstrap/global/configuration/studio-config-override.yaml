@@ -55,6 +55,12 @@
 # The default value is 3
 studio.security.passwordRequirements.minimumComplexity: 3
 
+############################################################
+##                    Authoring Server                    ##
+############################################################
+# Authoring server URL used for generating external links (e.g. password recovery emails).
+# Must be set to the public Studio URL in production.
+# studio.authoring.serverUrl: ${env:STUDIO_URL}
 
 ################################################################
 ##                             CORS                           ##

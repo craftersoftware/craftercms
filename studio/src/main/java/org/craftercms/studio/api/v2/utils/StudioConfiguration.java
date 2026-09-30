@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -225,6 +225,9 @@ public interface StudioConfiguration {
     String AUTHORING_REPLACE = "studio.authoring.replace";
     String AUTHORING_DISABLE_DEPLOY_CRON = "studio.authoring.disableDeployCron";
     String AUTHORING_TEMPLATE_NAME = "studio.authoring.templateName";
+
+	/** Authoring Server URL used for generating external links (e.g. password recovery emails) */
+	String AUTHORING_SERVER_URL = "studio.authoring.serverUrl";
 
     /** Deployer HTTP requests **/
     String DEPLOYER_RESPONSE_TIMEOUT = "studio.deployer.request.timeoutSeconds";
