@@ -558,6 +558,13 @@ studio.authoring.disableDeployCron: true
 studio.authoring.templateName: authoring
 
 ############################################################
+##                    Authoring Server                    ##
+############################################################
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Must be the externally reachable URL in production.
+studio.authoring.serverUrl: http://localhost:8080/studio
+
+############################################################
 ##                   Publishing Manager                   ##
 ############################################################
 # Defines file name for index files (page containers). Default value is index.xml

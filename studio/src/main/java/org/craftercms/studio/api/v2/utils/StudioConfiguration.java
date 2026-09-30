@@ -254,6 +254,7 @@ public interface StudioConfiguration {
 	String AUTHORING_REPLACE = "studio.authoring.replace";
 	String AUTHORING_DISABLE_DEPLOY_CRON = "studio.authoring.disableDeployCron";
 	String AUTHORING_TEMPLATE_NAME = "studio.authoring.templateName";
+	String AUTHORING_SERVER_URL = "studio.authoring.serverUrl";
 
 	/**
 	 * Deployer HTTP requests
