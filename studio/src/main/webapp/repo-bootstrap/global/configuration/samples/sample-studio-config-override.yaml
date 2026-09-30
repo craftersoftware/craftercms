@@ -58,8 +58,9 @@
 ############################################################
 ##                    Authoring Server                    ##
 ############################################################
-# Authoring server URL used for generating external links (e.g. password recovery emails).
-# Must be set to the public Studio URL in production.
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Keep this as the externally reachable URL; do not reuse an internal service-to-service Studio URL here.
+# If STUDIO_URL is internal-only, override this property directly with the public URL instead.
 # studio.authoring.serverUrl: ${env:STUDIO_URL}
 
 ################################################################

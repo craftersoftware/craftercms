@@ -553,8 +553,8 @@ studio.authoring.templateName: authoring
 ############################################################
 ##                    Authoring Server                    ##
 ############################################################
-# Authoring server URL used for generating external links (e.g. password recovery emails).
-# Must be set to the public Studio URL in production.
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Must be the externally reachable URL in production.
 studio.authoring.serverUrl: http://localhost:8080/studio
 
 ############################################################

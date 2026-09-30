@@ -24,7 +24,9 @@ studio.configuration.site.defaultPreviewUrl: ^https?://localhost:8080/?
 studio.configuration.site.defaultAuthoringUrl: ^https?://localhost:8080/studio/?
 # Default GraphQL server URL
 studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
-# Authoring server URL used for generating external links (e.g. password recovery emails)
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Keep this as the externally reachable URL; do not reuse an internal service-to-service Studio URL here.
+# If STUDIO_URL is internal-only, override this property directly with the public URL instead.
 studio.authoring.serverUrl: ${env:STUDIO_URL}
 # Studio management authorization token.
 studio.configuration.management.authorizationToken: ${env:STUDIO_MANAGEMENT_TOKEN}
