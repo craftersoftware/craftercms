@@ -45,8 +45,10 @@ import {
 	getFieldFromType,
 	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
+	getDataSourceSiblingIds,
 	getSiblingFieldIds,
 	isComposedPath,
+	typeForNextArtefactForm,
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
 	prepareSerializeToXmlTypeObject,
@@ -270,10 +272,15 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 		return true;
 	};
-	/** Closes the active form and cleans up state. */
-	const closeAndCleanup = () => {
+	/**
+	 * Closes the active form and cleans up state.
+	 * Returns the post-commit ContentType on success (or the current type when nothing was committed),
+	 * so callers that immediately open another form can use up-to-date sibling IDs without waiting
+	 * for the setType re-render. Returns false when the form has unresolved errors.
+	 */
+	const closeAndCleanup = (): ContentType | false => {
 		if (!performCurrentFormErrorCheckAndWarning()) return false;
-		commitOpenFormChanges();
+		const postCloseType = commitOpenFormChanges() ?? type;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
 		stateRef.current.selectedDataSource = null;
@@ -284,7 +291,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		setSelectedFieldIdPath(null);
 		setValidatingForm(false);
 		setOpen(false);
-		return true;
+		return postCloseType;
 	};
 	/** Performs the common steps that must occur when an artefact is selected for editing. */
 	const handleArtefactSelected = (
@@ -324,7 +331,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		sectionId: string,
 		overrideType?: ContentType
 	) => {
-		if (!closeAndCleanup()) return;
+		const postCloseType = closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 
 		const controlDescriptor =
 			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor;
@@ -333,10 +342,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
-			{ ...controlDescriptor, dataSources: type.dataSources },
+			{ ...controlDescriptor, dataSources: typeForForm.dataSources },
 			formatMessage
 		);
-		const typeForSiblings = overrideType ?? type;
 		handleArtefactSelected(
 			virtualType,
 			createVirtualTypeFormContext(
@@ -347,7 +355,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
-					siblingIds: getSiblingFieldIds(typeForSiblings, fieldIdPath),
+					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath),
 					currentId: field.id
 				}
 			),
@@ -356,27 +364,31 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				fieldIdPath,
 				controlDescriptor: applyTranslations(controlDescriptor, formatMessage),
 				sectionId,
-				...(overrideType && { type: overrideType })
+				type: typeForForm
 			}
 		);
 		setSelectedFieldIdPath(fieldIdPath);
 		stateRef.current.selectedField = field;
 	};
 	const handleSectionSelected = (section: ContentTypeSection, overrideType?: ContentType) => {
-		if (!closeAndCleanup()) return;
-		const sectionIndex = type.sections.findIndex((s) => s.id === section.id);
+		const postCloseType = closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
+		const sectionIndex = typeForForm.sections.findIndex((s) => s.id === section.id);
 		const virtualType = createVirtualTypeForSection(sectionDescriptor, formatMessage);
 		handleArtefactSelected(
 			virtualType,
 			createVirtualTypeFormContext(virtualType, section as unknown as LookupTable<unknown>, contentTypesLookup, {
 				fieldUpdates$: stateRef.current.fieldUpdates$
 			}),
-			{ section, isMainSection: sectionIndex === 0, ...(overrideType && { type: overrideType }) }
+			{ section, isMainSection: sectionIndex === 0, type: typeForForm }
 		);
 		stateRef.current.selectedSection = section;
 	};
 	const handleDataSourceSelected: TypeDetailsViewProps['onDataSourceSelected'] = (dataSource) => {
-		if (!closeAndCleanup()) return;
+		const postCloseType = closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = postCloseType;
 
 		const dataSourceDescriptor =
 			dataSourceDescriptors[dataSource.type] ?? config.dataSources?.[dataSource.type]?.descriptor;
@@ -394,25 +406,27 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
-					siblingIds: (type.dataSources ?? []).map((ds) => ds.id),
+					siblingIds: getDataSourceSiblingIds(typeForForm),
 					currentId: dataSource.id
 				}
 			),
-			{ dataSource }
+			{ dataSource, type: typeForForm }
 		);
 		const dataSourceId = dataSource.id ? dataSource.id : NEW_DATASOURCE_ID;
 		setSelectedFieldIdPath(dataSourceId);
 		stateRef.current.selectedDataSource = dataSource;
 	};
 	const handleEditTypeProperties = (overrideType?: ContentType) => {
-		if (!closeAndCleanup()) return;
+		const postCloseType = closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 		const virtualType = createEmptyTypeStructure(applyTranslations(typeBasicDetailsDescriptor, formatMessage));
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createTypeFormValuesObject(type), contentTypesLookup, {
+			createVirtualTypeFormContext(virtualType, createTypeFormValuesObject(typeForForm), contentTypesLookup, {
 				fieldUpdates$: stateRef.current.fieldUpdates$
 			}),
-			{ ...(overrideType && { type: overrideType }) }
+			{ type: typeForForm }
 		);
 	};
 

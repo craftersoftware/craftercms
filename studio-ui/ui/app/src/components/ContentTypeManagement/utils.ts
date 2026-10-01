@@ -512,16 +512,6 @@ export function createVirtualTypeFormContext(
 	return context;
 }
 
-/** Returns the field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings). */
-export function getSiblingFieldIds(type: ContentType, fieldIdPath: string): string[] {
-	if (isComposedPath(fieldIdPath)) {
-		const parentPath = fieldIdPath.split('.').slice(0, -1).join('.');
-		const parent = getFieldFromType(type, parentPath);
-		return Object.keys(parent?.fields ?? {});
-	}
-	return Object.keys(type.fields ?? {});
-}
-
 export function createFieldFormContextApi(): FormsEngineFormApiContextProps {
 	const api: FormsEngineFormApiContextProps = {
 		rollback() {},
@@ -883,6 +873,33 @@ export function getFieldFromType(type: ContentType, fieldIdPath: string): Conten
 	} else {
 		return type.fields[fieldIdPath];
 	}
+}
+
+/** Returns the field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings). */
+export function getSiblingFieldIds(type: ContentType, fieldIdPath: string): string[] {
+	if (isComposedPath(fieldIdPath)) {
+		const parentPath = fieldIdPath.split('.').slice(0, -1).join('.');
+		const parent = getFieldFromType(type, parentPath);
+		return Object.keys(parent?.fields ?? {});
+	}
+	return Object.keys(type.fields ?? {});
+}
+
+/**
+ * Type used when opening the next artefact form after closing the previous one.
+ * Prefer `overrideType` (move/reorder already computed the next type); otherwise use the
+ * post-commit type from closeAndCleanup — not the pre-commit React state closure alone.
+ */
+export function typeForNextArtefactForm(
+	overrideType: ContentType | undefined,
+	postCloseType: ContentType
+): ContentType {
+	return overrideType ?? postCloseType;
+}
+
+/** Data source IDs used as siblingIds for duplicate variable-name validation. */
+export function getDataSourceSiblingIds(type: ContentType): string[] {
+	return (type.dataSources ?? []).map((ds) => ds.id);
 }
 
 export function getSectionFromType(type: ContentType, sectionId: string): ContentTypeSection | undefined {
