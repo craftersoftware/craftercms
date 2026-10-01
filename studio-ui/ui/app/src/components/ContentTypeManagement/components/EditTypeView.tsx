@@ -45,6 +45,7 @@ import {
 	getFieldFromType,
 	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
+	getSiblingFieldIds,
 	isComposedPath,
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
@@ -335,11 +336,21 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			{ ...controlDescriptor, dataSources: type.dataSources },
 			formatMessage
 		);
+		const typeForSiblings = overrideType ?? type;
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createTypeFieldValuesObject(field), contentTypesLookup, {
-				fieldUpdates$: stateRef.current.fieldUpdates$
-			}),
+			createVirtualTypeFormContext(
+				virtualType,
+				createTypeFieldValuesObject(field),
+				contentTypesLookup,
+				{
+					fieldUpdates$: stateRef.current.fieldUpdates$
+				},
+				{
+					siblingIds: getSiblingFieldIds(typeForSiblings, fieldIdPath),
+					currentId: field.id
+				}
+			),
 			{
 				field,
 				fieldIdPath,
@@ -375,9 +386,18 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const virtualType = createVirtualTypeForDataSource(dataSourceDescriptor, formatMessage);
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createDataSourceValuesObject(dataSource), contentTypesLookup, {
-				fieldUpdates$: stateRef.current.fieldUpdates$
-			}),
+			createVirtualTypeFormContext(
+				virtualType,
+				createDataSourceValuesObject(dataSource),
+				contentTypesLookup,
+				{
+					fieldUpdates$: stateRef.current.fieldUpdates$
+				},
+				{
+					siblingIds: (type.dataSources ?? []).map((ds) => ds.id),
+					currentId: dataSource.id
+				}
+			),
 			{ dataSource }
 		);
 		const dataSourceId = dataSource.id ? dataSource.id : NEW_DATASOURCE_ID;

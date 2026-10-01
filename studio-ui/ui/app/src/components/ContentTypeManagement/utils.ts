@@ -34,7 +34,7 @@ import {
 	StableFormContextProps,
 	StableGlobalContextProps
 } from '../FormsEngine/lib/formsEngineContext';
-import { buildSectionExpandedStateAtoms, setFieldAtoms } from '../FormsEngine/lib/formUtils';
+import { buildSectionExpandedStateAtoms, setFieldAtoms, type ValidatorsData } from '../FormsEngine/lib/formUtils';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
@@ -493,7 +493,8 @@ export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,
 	contentTypesLookup: LookupTable<ContentType>,
-	mixin?: Partial<StableFormContextProps>
+	mixin?: Partial<StableFormContextProps>,
+	validatorsData?: ValidatorsData
 ): StableFormContextProps {
 	const context = createStableFormContextProps({ type });
 	const contextRef: RefObject<StableFormContextProps> = { current: context };
@@ -506,9 +507,19 @@ export function createVirtualTypeFormContext(
 	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
-		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id]);
+		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);
 	});
 	return context;
+}
+
+/** Returns the field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings). */
+export function getSiblingFieldIds(type: ContentType, fieldIdPath: string): string[] {
+	if (isComposedPath(fieldIdPath)) {
+		const parentPath = fieldIdPath.split('.').slice(0, -1).join('.');
+		const parent = getFieldFromType(type, parentPath);
+		return Object.keys(parent?.fields ?? {});
+	}
+	return Object.keys(type.fields ?? {});
 }
 
 export function createFieldFormContextApi(): FormsEngineFormApiContextProps {

@@ -233,7 +233,12 @@ export const displayFormBeingSavedSnack = (dispatch: ReduxDispatch, formatMessag
 export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme: Theme) =>
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
-export type ValidatorsData = { siteId: string; contentTypesById: LookupTable<ContentType> };
+export type ValidatorsData = {
+	siteId?: string;
+	contentTypesById?: LookupTable<ContentType>;
+	siblingIds?: string[];
+	currentId?: string;
+};
 
 /**
  * Creates the value and validity atoms for a give field.
@@ -285,6 +290,8 @@ export function createFieldAtoms(
 		return validateFieldValue(field, value, {
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
+			siblingIds: validatorsData?.siblingIds,
+			currentId: validatorsData?.currentId,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : ''
 		});

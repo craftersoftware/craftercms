@@ -40,6 +40,10 @@ export interface ValidatorMetaData {
 	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
+	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
+	siblingIds?: string[];
+	/** Original id of the field/data source being edited; excluded from duplicate checks. */
+	currentId?: string;
 }
 export type ValidatorFunctionDef = (
 	field: ContentTypeField,
@@ -83,7 +87,8 @@ export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorContro
 	'input-link': (field, currentValue, messages) => inputLinkValidator(field, currentValue as string, messages),
 	'input-phone': (field, currentValue, messages) => inputPhoneValidator(field, currentValue as string, messages),
 	'path-with-macro-creator': (field, currentValue, messages) =>
-		pathWithMacroValidator(field, currentValue as string, messages)
+		pathWithMacroValidator(field, currentValue as string, messages),
+	variable: (field, currentValue, messages, meta) => variableValidator(field, currentValue as string, messages, meta)
 };
 
 // TODO: Fix FormatXMLElementFn generics
@@ -624,6 +629,23 @@ const pathWithMacroValidator = (
 		return false;
 	}
 
+	return true;
+};
+
+const variableValidator = (
+	field: ContentTypeField,
+	currentValue: string,
+	messages: FieldValidityMessage[],
+	meta: ValidatorMetaData
+): boolean => {
+	if (!currentValue?.trim() || !meta.siblingIds?.length) {
+		return true;
+	}
+	const isDuplicate = meta.siblingIds.some((id) => id === currentValue && id !== meta.currentId);
+	if (isDuplicate) {
+		messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
+		return false;
+	}
 	return true;
 };
 
