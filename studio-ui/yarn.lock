@@ -2052,7 +2052,7 @@ __metadata:
     graphql-ws: "npm:^6.3.0"
     highlight.js: "npm:^11.12.0"
     jabber: "npm:^1.5.3"
-    jotai: "npm:^2.20.3"
+    jotai: "npm:^3.0.1"
     jotai-effect: "npm:^2.4.1"
     js-cookie: "npm:^3.0.8"
     marked: "npm:^18.0.14"
@@ -10619,24 +10619,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jotai@npm:^2.20.3":
-  version: 2.20.3
-  resolution: "jotai@npm:2.20.3"
+"jotai@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "jotai@npm:3.0.1"
   peerDependencies:
-    "@babel/core": ">=7.0.0"
-    "@babel/template": ">=7.0.0"
-    "@types/react": ">=17.0.0"
-    react: ">=17.0.0"
+    "@types/react": ">=18.0.0"
+    react: ">=18.0.0"
   peerDependenciesMeta:
-    "@babel/core":
-      optional: true
-    "@babel/template":
-      optional: true
     "@types/react":
       optional: true
     react:
       optional: true
-  checksum: 10/d885c85f22f5b24d7c3f5d76cb7073622823b85bd73e19308d939f0dff1f2328f800b1b4952aa458bff30d5b0319bd95effa822a57071f479095b874a44ce8ce
+  checksum: 10/4293280a9f9533a0e11efab6a6d5ba21350e71c902549a33415949df6dc2bbe673cd3585589e167192d65369ba8e5bc0a5be7872e1d5f48c83edfdfbbb4d349f
   languageName: node
   linkType: hard
 

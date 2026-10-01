@@ -17,7 +17,7 @@
 import React, { useContext } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { ItemContext, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
-import { useAtomValue, useStore as useJotaiStore } from 'jotai/index';
+import { useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import useLocale from '../../../hooks/useLocale';
 import { getFieldAtomValue } from '../lib/formUtils';
 import { ContentItem } from '../../../models';
@@ -39,7 +39,6 @@ import { copyToClipboard } from '../../../utils/system';
 import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
 import MenuOpenIcon from '@mui/icons-material/MenuOpenRounded';
 import { XmlKeys } from '../lib/formConsts';
-import { useAtom } from 'jotai';
 import Collapse from '@mui/material/Collapse';
 import { DraftChip } from '../../DraftChip';
 
