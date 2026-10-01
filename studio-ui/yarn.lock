@@ -73,22 +73,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atlaskit/motion@npm:^8.6.0":
-  version: 8.7.0
-  resolution: "@atlaskit/motion@npm:8.7.0"
+"@atlaskit/motion@npm:^9.0.0":
+  version: 9.1.0
+  resolution: "@atlaskit/motion@npm:9.1.0"
   dependencies:
     "@atlaskit/browser-apis": "npm:^1.2.0"
     "@atlaskit/css": "npm:^1.1.0"
     "@atlaskit/ds-lib": "npm:^8.0.0"
     "@atlaskit/platform-feature-flags": "npm:^2.2.0"
     "@atlaskit/react-compiler-gating": "npm:^0.2.0"
-    "@atlaskit/tokens": "npm:^17.0.0"
+    "@atlaskit/tokens": "npm:^20.1.0"
     "@babel/runtime": "npm:^7.0.0"
     "@compiled/react": "npm:^1.0.2"
     bind-event-listener: "npm:^3.0.0"
   peerDependencies:
     react: ^18.2.0 || ^19.0.0
-  checksum: 10/c573f06235a0005c628afc3a41a9de3acd3d75a023732373ba6d53fc554f02fcc3a1dd15b5ec45abe80ee0e5d5a9d7c4b754cf792dbccfc154e4e1d691281a95
+  checksum: 10/73a1e2a234f931b3eb39ab16f7e5f799b2d5ee0dfc7ae4ece088c8f712c94fb1ff2f094c4b24b0b075aeb4c3c3768c010ccc19292f34ecd48c48a465e35868e2
   languageName: node
   linkType: hard
 
@@ -102,35 +102,35 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atlaskit/pragmatic-drag-and-drop-flourish@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "@atlaskit/pragmatic-drag-and-drop-flourish@npm:3.2.1"
+"@atlaskit/pragmatic-drag-and-drop-flourish@npm:^3.2.4":
+  version: 3.2.4
+  resolution: "@atlaskit/pragmatic-drag-and-drop-flourish@npm:3.2.4"
   dependencies:
-    "@atlaskit/motion": "npm:^8.6.0"
-    "@atlaskit/tokens": "npm:^17.0.0"
+    "@atlaskit/motion": "npm:^9.0.0"
+    "@atlaskit/tokens": "npm:^20.0.0"
     "@babel/runtime": "npm:^7.0.0"
-  checksum: 10/b396bf07568abb1a41b625d4fba7ff9606d26c59a313d1583a9100a0d3b95f7e9aad9f13352e5eb73f39fc53e9fab5b6c0469d144918e7928c6b84071dbd58c0
+  checksum: 10/6d6d0f307f8b17b4813a693516986cf76cf0a4c5cc1948ff0bd9f7d2c21e4b0e346c1ab96ec7c2fa2b2f7c3bba2c7f2531c74999b412b80b483512b12db57f0d
   languageName: node
   linkType: hard
 
-"@atlaskit/pragmatic-drag-and-drop-hitbox@npm:^2.2.2":
-  version: 2.2.2
-  resolution: "@atlaskit/pragmatic-drag-and-drop-hitbox@npm:2.2.2"
+"@atlaskit/pragmatic-drag-and-drop-hitbox@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@atlaskit/pragmatic-drag-and-drop-hitbox@npm:3.0.0"
   dependencies:
-    "@atlaskit/pragmatic-drag-and-drop": "npm:^3.1.0"
+    "@atlaskit/pragmatic-drag-and-drop": "npm:^4.0.0"
     "@babel/runtime": "npm:^7.0.0"
-  checksum: 10/9ca12ffd2ac952277df4d323120921e834a16237657d9ae6ea4ae286c45e69b6ea1e9a86362af432eefffee935c122e452a60fd7ef74f4deb90379fcbf51f873
+  checksum: 10/edaf45db07affa88e382331794b1168bb2a4c375809374665b3d05d33e422d6a27a421d4be15f4ad950be9f2f1578a743f73b85f86c3d5ab96af1e4960902272
   languageName: node
   linkType: hard
 
-"@atlaskit/pragmatic-drag-and-drop@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "@atlaskit/pragmatic-drag-and-drop@npm:3.1.0"
+"@atlaskit/pragmatic-drag-and-drop@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "@atlaskit/pragmatic-drag-and-drop@npm:4.0.0"
   dependencies:
     "@babel/runtime": "npm:^7.0.0"
     bind-event-listener: "npm:^3.0.0"
     raf-schd: "npm:^4.0.3"
-  checksum: 10/f083fc44498e252815813c7853f8a7818bb732bc1e5d7ff0a9c8dcbf327bf1fda10e181b1da1b8d77c8dfaaaaeecf6eed4b90be887d9218526720e1544db10a1
+  checksum: 10/d0ebf6988034bc245acb1838723766404ce02cb8ab36e098f49c534a2b9632268f482147884fbff7e56aa54a537b9c5e64acf2feb1a6e5bc1be7f02155557b5e
   languageName: node
   linkType: hard
 
@@ -158,6 +158,23 @@ __metadata:
   peerDependencies:
     react: ^18.2.0 || ^19.0.0
   checksum: 10/513f8dc14f06ae0313495f4cda081f3b77cda9c55755681d0dd18768542f04ab06b4e9b45d6823d3b64ee5371218b0dfc85916b1f90381508c3e890d16e274fe
+  languageName: node
+  linkType: hard
+
+"@atlaskit/tokens@npm:^20.0.0, @atlaskit/tokens@npm:^20.1.0":
+  version: 20.1.0
+  resolution: "@atlaskit/tokens@npm:20.1.0"
+  dependencies:
+    "@atlaskit/ds-lib": "npm:^8.0.0"
+    "@atlaskit/platform-feature-flags": "npm:^2.2.0"
+    "@atlaskit/react-compiler-gating": "npm:^0.2.0"
+    "@babel/runtime": "npm:^7.0.0"
+    "@babel/traverse": "npm:^7.23.2"
+    "@babel/types": "npm:^7.20.0"
+    bind-event-listener: "npm:^3.0.0"
+  peerDependencies:
+    react: ^18.2.0 || ^19.0.0
+  checksum: 10/ea047d29ae2fb634cfb158aea8ae4121f524f407bde799eb1f02ac52c1062b6a1cde146580f00d626970e3ca02511eb1e9d5eaa5a1e23cd8c8753b5c0d4beaae
   languageName: node
   linkType: hard
 
@@ -1979,9 +1996,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@craftercms/studio-ui@workspace:ui/app"
   dependencies:
-    "@atlaskit/pragmatic-drag-and-drop": "npm:^3.1.0"
-    "@atlaskit/pragmatic-drag-and-drop-flourish": "npm:^3.2.1"
-    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^2.2.2"
+    "@atlaskit/pragmatic-drag-and-drop": "npm:^4.0.0"
+    "@atlaskit/pragmatic-drag-and-drop-flourish": "npm:^3.2.4"
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^3.0.0"
     "@base-ui-components/react": "npm:^1.0.0-rc.0"
     "@craftercms/uppy": "workspace:^"
     "@emotion/css": "npm:^11.13.5"
@@ -2088,7 +2105,7 @@ __metadata:
     "@rollup/plugin-commonjs": "npm:^29.0.3"
     "@rollup/plugin-node-resolve": "npm:^16.0.3"
     "@rollup/plugin-replace": "npm:^6.0.3"
-    "@types/node": "npm:^25.9.7"
+    "@types/node": "npm:^26.6.3"
     "@types/rimraf": "npm:^4.0.5"
     build-if-changed: "npm:^1.5.5"
     eslint: "npm:^10.11.0"
@@ -2123,7 +2140,7 @@ __metadata:
     build-if-changed: "npm:^1.5.5"
     classnames: "npm:^2.5.1"
     eslint: "npm:^10.11.0"
-    preact: "npm:^10.29.8"
+    preact: "npm:^11.0.0"
   peerDependencies:
     uppy: ^5.2.3
   languageName: unknown
@@ -5463,12 +5480,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^25.9.7":
-  version: 25.9.7
-  resolution: "@types/node@npm:25.9.7"
+"@types/node@npm:^26.6.3":
+  version: 26.6.3
+  resolution: "@types/node@npm:26.6.3"
   dependencies:
-    undici-types: "npm:>=7.24.0 <7.24.7"
-  checksum: 10/13116cb71f251b156f527b5e742e1fc3cc4687da9fe1e09f76cbb3a4f144091daec0191442fa35c7ec70696ec9fd5bbb9bbfc27fe0c5321f0c368728d8958482
+    undici-types: "npm:~8.9.0"
+  checksum: 10/278d5241522520fbadd46b41065d7587bbb214adb3c6f8a2a9a28754d374c578d090f7387866d09c79be1e9bbf5adc7eeea453032a52f77e70b06077f85c5c14
   languageName: node
   linkType: hard
 
@@ -14994,13 +15011,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:>=7.24.0 <7.24.7":
-  version: 7.24.6
-  resolution: "undici-types@npm:7.24.6"
-  checksum: 10/defc9538b952e3c15b8526596c591f7c1f0c7605ad27a2b7feddbea7ef2e3003f3eda2cdb051a3cb1a2185e3893100fd9cb925c799db99d48131ea63b5233d10
-  languageName: node
-  linkType: hard
-
 "undici-types@npm:~6.21.0":
   version: 6.21.0
   resolution: "undici-types@npm:6.21.0"
@@ -15012,6 +15022,13 @@ __metadata:
   version: 7.18.2
   resolution: "undici-types@npm:7.18.2"
   checksum: 10/e61a5918f624d68420c3ca9d301e9f15b61cba6e97be39fe2ce266dd6151e4afe424d679372638826cb506be33952774e0424141200111a9857e464216c009af
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~8.9.0":
+  version: 8.9.0
+  resolution: "undici-types@npm:8.9.0"
+  checksum: 10/8785591929de2b71d281c684e915c4a8c41becc225adbf42a3e89148f8b384724a21533494c30a1cbb85b4cbccd088d020788ff4f2d605013eb2863cd47a1639
   languageName: node
   linkType: hard
 
