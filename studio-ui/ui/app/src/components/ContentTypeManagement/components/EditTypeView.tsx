@@ -74,7 +74,7 @@ import {
 } from '../../FormsEngine/lib/formsEngineContext';
 import useContentTypes from '../../../hooks/useContentTypes';
 import { createStore as createJotai, Provider } from 'jotai';
-import { debounceTime, forkJoin, map, Observable, Subject } from 'rxjs';
+import { debounceTime, forkJoin, map, Observable, Subject, tap } from 'rxjs';
 import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
@@ -209,6 +209,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const [contentItem, setContentItem] = useState<ContentItem>(null);
 	// Bumped after save of an existing type so the effect re-fetches (and cancels any in-flight request).
 	const [contentItemReloadToken, setContentItemReloadToken] = useState(0);
+	const openRef = useRef(open);
+	openRef.current = open;
 	const configDescriptors = useMemo(() => {
 		const controlDescriptors = Object.values(config?.controls ?? {}).map(({ descriptor }) => descriptor);
 		const dataSourceDescriptors = Object.values(config?.dataSources ?? {}).map(({ descriptor }) => descriptor);
@@ -265,9 +267,18 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		setType(updatedType);
 		return updatedType;
 	};
-	/** Returns true if no form is opened or if the active form it's all valid and can be committed and closed. Returns false otherwise. */
-	const performCurrentFormErrorCheckAndWarning = () => {
-		if (open && activeFormHasErrors) {
+	/**
+	 * Returns true if no form is opened or if the active form is valid and can be committed/closed.
+	 * Eagerly re-checks validation atoms so callers are not gated on the debounced activeFormHasErrors flag.
+	 */
+	const performCurrentFormErrorCheckAndWarning = async () => {
+		if (!openRef.current) return true;
+		const formContext = stateRef.current.activeFormContext;
+		const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+		// Form may have closed or been replaced while awaiting atom resolution.
+		if (!openRef.current || stateRef.current.activeFormContext !== formContext) return true;
+		setActiveFormHasErrors(hasErrors);
+		if (hasErrors) {
 			showAlert(formatMessage({ defaultMessage: 'Please resolve any issues prior to closing the form' }));
 			return false;
 		}
@@ -279,8 +290,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	 * so callers that immediately open another form can use up-to-date sibling IDs without waiting
 	 * for the setType re-render. Returns false when the form has unresolved errors.
 	 */
-	const closeAndCleanup = (): ContentType | false => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const closeAndCleanup = async (): Promise<ContentType | false> => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		const postCloseType = commitOpenFormChanges() ?? type;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
@@ -305,8 +316,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			virtualType,
 			stableFormContext,
 			formApiContext: stateRef.current.formContextApi,
-			onClose: () => {
-				const formValid = effectRefs.current.closeAndCleanup();
+			onClose: async () => {
+				const formValid = await effectRefs.current.closeAndCleanup();
 				if (!formValid) return;
 				setDrawerOpenTransitionEnded(false);
 			},
@@ -326,13 +337,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		setOpen(true);
 	};
 
-	const handleFieldSelected = (
+	const handleFieldSelected = async (
 		fieldIdPath: string,
 		field: ContentTypeField,
 		sectionId: string,
 		overrideType?: ContentType
 	) => {
-		const postCloseType = closeAndCleanup();
+		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 
@@ -372,8 +383,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		setSelectedFieldIdPath(fieldIdPath);
 		stateRef.current.selectedField = field;
 	};
-	const handleSectionSelected = (section: ContentTypeSection, overrideType?: ContentType) => {
-		const postCloseType = closeAndCleanup();
+	const handleSectionSelected = async (section: ContentTypeSection, overrideType?: ContentType) => {
+		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 		const sectionIndex = typeForForm.sections.findIndex((s) => s.id === section.id);
@@ -387,8 +398,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		);
 		stateRef.current.selectedSection = section;
 	};
-	const handleDataSourceSelected: TypeDetailsViewProps['onDataSourceSelected'] = (dataSource) => {
-		const postCloseType = closeAndCleanup();
+	const handleDataSourceSelected: TypeDetailsViewProps['onDataSourceSelected'] = async (dataSource) => {
+		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = postCloseType;
 
@@ -418,8 +429,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		setSelectedFieldIdPath(dataSourceId);
 		stateRef.current.selectedDataSource = dataSource;
 	};
-	const handleEditTypeProperties = (overrideType?: ContentType) => {
-		const postCloseType = closeAndCleanup();
+	const handleEditTypeProperties = async (overrideType?: ContentType) => {
+		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 		const virtualType = createEmptyTypeStructure(applyTranslations(typeBasicDetailsDescriptor, formatMessage));
@@ -483,10 +494,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				break;
 		}
 	};
-	const handleToolbarActionClick: EditAppLayoutProps['onActionClick'] = (e, action) => {
+	const handleToolbarActionClick: EditAppLayoutProps['onActionClick'] = async (e, action) => {
 		switch (action) {
 			case 'exit':
-				if (!performCurrentFormErrorCheckAndWarning()) break;
+				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				if (hasPendingChanges) {
 					const id = nanoid();
 					dispatch(
@@ -509,7 +520,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				}
 				break;
 			case 'save': {
-				if (!performCurrentFormErrorCheckAndWarning()) break;
+				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
 				dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 				const typeToSave = latestUpdate ?? type;
@@ -616,13 +627,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	// region insert
-	const onOpenInsertFieldDialog = (sectionId: string, fieldPath?: string) => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const onOpenInsertFieldDialog = async (sectionId: string, fieldPath?: string) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		setInsertFieldData({ sectionId, fieldPath });
 	};
 
-	const onOpenInsertDataSourceDialog = () => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const onOpenInsertDataSourceDialog = async () => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		setOpenDataSourceInserter(true);
 	};
 
@@ -809,47 +820,55 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	// `fieldUpdates$` subscription
 	useEffect(() => {
-		const sub = stateRef.current.fieldUpdates$.pipe(debounceTime(500)).subscribe(async () => {
-			// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
-			if (!effectRefs.current.open) return;
-			const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
-			// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
-			const formContext = stateRef.current.activeFormContext;
-			onUpdateHasPendingChanges(true);
-			stateRef.current.formFieldsChanged = true;
-			const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
-			// Check validation atoms of the form to see if there are any unfulfilled validations.
-			setValidatingForm(true);
-			const validationSeq = ++stateRef.current.validationSeq;
-			const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
-			// `activeFormContext` is intentionally kept after close, so also re-check `open`.
-			if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
-				// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
-				if (!effectRefs.current.open) setValidatingForm(false);
-				return;
-			}
-			// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
-			if (validationSeq !== stateRef.current.validationSeq) return;
-			setActiveFormHasErrors(hasErrors);
-			nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
-			if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
-
-			setFieldPathsWithErrors(nextFieldPathsWithErrors);
-			setValidatingForm(false);
-
-			// Live-sync draft thumbnailFileName while the type properties form is open,
-			// so TypeCardMedia can reload by filename without waiting for form commit / save.
-			const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
-			if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
-				const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
-				if (thumbnailAtom) {
-					const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
-					setType((current) =>
-						current.thumbnailFileName === thumbnailFileName ? current : { ...current, thumbnailFileName }
-					);
+		const sub = stateRef.current.fieldUpdates$
+			.pipe(
+				// Mark validating immediately so Save stays disabled during the debounce window.
+				tap(() => setValidatingForm(true)),
+				debounceTime(500)
+			)
+			.subscribe(async () => {
+				// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
+				if (!effectRefs.current.open) {
+					setValidatingForm(false);
+					return;
 				}
-			}
-		});
+				const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
+				// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
+				const formContext = stateRef.current.activeFormContext;
+				onUpdateHasPendingChanges(true);
+				stateRef.current.formFieldsChanged = true;
+				const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
+				// Check validation atoms of the form to see if there are any unfulfilled validations.
+				const validationSeq = ++stateRef.current.validationSeq;
+				const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+				// `activeFormContext` is intentionally kept after close, so also re-check `open`.
+				if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
+					// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
+					if (!effectRefs.current.open) setValidatingForm(false);
+					return;
+				}
+				// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
+				if (validationSeq !== stateRef.current.validationSeq) return;
+				setActiveFormHasErrors(hasErrors);
+				nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
+				if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
+
+				setFieldPathsWithErrors(nextFieldPathsWithErrors);
+				setValidatingForm(false);
+
+				// Live-sync draft thumbnailFileName while the type properties form is open,
+				// so TypeCardMedia can reload by filename without waiting for form commit / save.
+				const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
+				if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
+					const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
+					if (thumbnailAtom) {
+						const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
+						setType((current) =>
+							current.thumbnailFileName === thumbnailFileName ? current : { ...current, thumbnailFileName }
+						);
+					}
+				}
+			});
 		return () => {
 			sub.unsubscribe();
 		};
