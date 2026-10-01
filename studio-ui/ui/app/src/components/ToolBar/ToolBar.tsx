@@ -22,7 +22,7 @@ import { useDispatch } from 'react-redux';
 import { defineMessages, useIntl } from 'react-intl';
 import Tooltip from '@mui/material/Tooltip';
 import LogoAndMenuBundleButton from '../LogoAndMenuBundleButton';
-import { renderWidgets } from '../Widget';
+import { renderWidgets } from '../Widget/renderWidgets';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import { useActiveUser } from '../../hooks/useActiveUser';

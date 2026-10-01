@@ -16,7 +16,7 @@
 
 import React from 'react';
 import ToolPanel from '../ToolPanel/ToolPanel';
-import { renderWidgets } from '../Widget';
+import { renderWidgets } from '../Widget/renderWidgets';
 import { WidgetDescriptor } from '../../models';
 import { useDispatch } from 'react-redux';
 import { popIcePanelPage, popToolsPanelPage } from '../../state/actions/preview';
