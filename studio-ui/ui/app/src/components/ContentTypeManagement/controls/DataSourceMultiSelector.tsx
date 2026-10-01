@@ -21,6 +21,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox, { CheckboxProps } from '@mui/material/Checkbox';
 import { TypeBuilderControl } from '../utils';
 import { EmptyState } from '../../EmptyState';
+import contentTypes from '../../../state/epics/contentTypes';
 
 export interface DataSourceMultiSelectorProps extends TypeBuilderControl {
 	value: string[];
@@ -32,9 +33,16 @@ export interface DataSourceMultiSelectorProps extends TypeBuilderControl {
 export function DataSourceMultiSelector(props: DataSourceMultiSelectorProps) {
 	const { field, value: selectedDataSources, setValue, contentType } = props;
 	const type = field.validations?.type?.value ?? '';
+	const isControlNodeSelector = contentType.id === 'node-selector';
+
 	const filteredDataSources = useMemo(() => {
-		return (contentType.dataSources ?? []).filter((ds) => ds.interface === type);
-	}, [contentType?.dataSources, type]);
+		return (contentType.dataSources ?? []).filter((ds) => {
+			const matchesType = ds.interface === type;
+			const isDataSourceTaxonomy = ds.type === 'simpleTaxonomy';
+			// If the control is a node selector and the data source is a taxonomy, we don't want to show it because the node selector is not compatible with the taxonomy data source.
+			return matchesType && !(isControlNodeSelector && isDataSourceTaxonomy);
+		});
+	}, [contentType?.dataSources, type, isControlNodeSelector]);
 
 	const handleChange: CheckboxProps['onChange'] = (e) => {
 		// There may be outdated data sources in the current set value, so we filter to only include those that are still valid
