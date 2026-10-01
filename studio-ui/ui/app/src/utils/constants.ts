@@ -135,6 +135,7 @@ export const PACKAGE_TYPE_INITIAL_PUBLISH = 'INITIAL_PUBLISH';
 
 export const webDAVUploadUri = '/api/2/webdav/upload';
 export const s3UploadUri = '/api/2/aws/s3/upload.json';
+export const videoTranscodeUri = '/api/2/aws/mediaconvert/upload';
 
 export const systemFieldsIds: BuiltInControlType[] = [
 	'file-name',

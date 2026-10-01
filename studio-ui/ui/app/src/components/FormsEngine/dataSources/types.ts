@@ -115,9 +115,13 @@ export interface DataSourceUploadRequest {
  */
 export interface DataSourceUploadExternalRequest {
 	path: string;
-	profileId: string;
+	/** Single-profile S3/WebDAV upload. Omit when using MediaConvert input/output profiles. */
+	profileId?: string;
+	inputProfileId?: string;
+	outputProfileId?: string;
 	profileType?: 'aws' | 'webdav';
 	fileTypes?: string[];
+	transcode?: boolean;
 }
 
 /** Inputs for {@link DataSourceServices.createContent}. */

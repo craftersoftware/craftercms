@@ -62,7 +62,7 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	rte: prepareRTE,
 	textarea: (field, value) => prepareString(field, value as string),
 	time: undefined,
-	'transcoded-video-picker': (field, value) => prepareArray(field, value),
+	'transcoded-video-picker': (field, value) => (value ? prepareArray(field, value) : undefined),
 	uuid: undefined,
 	'video-picker': undefined,
 	colorPicker: undefined,

@@ -110,8 +110,11 @@ export function createDataSourceServices({
 					dispatch,
 					path: request.path,
 					profileId: request.profileId,
+					inputProfileId: request.inputProfileId,
+					outputProfileId: request.outputProfileId,
 					profileType: request.profileType,
 					fileTypes: request.fileTypes,
+					transcode: request.transcode,
 					onClose: () => resolve(null),
 					onUploadComplete: resolve
 				});
