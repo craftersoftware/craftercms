@@ -237,7 +237,10 @@ export type ValidatorsData = {
 	siteId?: string;
 	contentTypesById?: LookupTable<ContentType>;
 	siblingIds?: string[];
-	currentId?: string;
+	/** IDs belonging to the field/data source being edited (for example fieldId + additionalFieldId(s)); excluded from duplicate checks. */
+	currentIds?: string[];
+	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
+	additionalFields?: string[];
 };
 
 /**
@@ -291,7 +294,8 @@ export function createFieldAtoms(
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
 			siblingIds: validatorsData?.siblingIds,
-			currentId: validatorsData?.currentId,
+			currentIds: validatorsData?.currentIds,
+			additionalFields: validatorsData?.additionalFields,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : ''
 		});

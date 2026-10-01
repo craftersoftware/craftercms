@@ -22,14 +22,19 @@ import { defineMessage, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
 import { checkPathExistence } from '../../../services/content';
-import { computePathFromFileName, getBasePath, getPropertyValue } from './formUtils';
+import {
+	computePathFromFileName,
+	getBasePath,
+	getPropertyValue,
+	getValidationValue,
+	processAdditionalFieldMacro
+} from './formUtils';
 import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './controlHelpers';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { RepeatItem } from '../controls/Repeat';
-import { getValidationValue } from './formUtils';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import type { CheckboxGroupProps } from '../controls/CheckboxGroup';
 import { macroCreatorLookupTable } from '../../ContentTypeManagement/controls/PathWithMacroCreator';
@@ -42,8 +47,10 @@ export interface ValidatorMetaData {
 	contentTypesById?: LookupTable<ContentType>;
 	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
 	siblingIds?: string[];
-	/** Original id of the field/data source being edited; excluded from duplicate checks. */
-	currentId?: string;
+	/** IDs belonging to the field/data source being edited; excluded from duplicate checks. */
+	currentIds?: string[];
+	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
+	additionalFields?: string[];
 }
 export type ValidatorFunctionDef = (
 	field: ContentTypeField,
@@ -641,7 +648,12 @@ const variableValidator = (
 	if (!currentValue?.trim() || !meta.siblingIds?.length) {
 		return true;
 	}
-	const isDuplicate = meta.siblingIds.some((id) => id === currentValue && id !== meta.currentId);
+	const ownIds = new Set(meta.currentIds ?? []);
+	const candidateIds = [
+		currentValue,
+		...(meta.additionalFields ?? []).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
+	];
+	const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
 	if (isDuplicate) {
 		messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
 		return false;

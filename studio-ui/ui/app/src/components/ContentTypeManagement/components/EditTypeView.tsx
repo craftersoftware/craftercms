@@ -46,6 +46,7 @@ import {
 	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
 	getDataSourceSiblingIds,
+	getFieldIdSet,
 	getSiblingFieldIds,
 	isComposedPath,
 	typeForNextArtefactForm,
@@ -355,8 +356,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
-					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath),
-					currentId: field.id
+					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath, configDescriptors.controlDescriptors ?? undefined),
+					currentIds: getFieldIdSet(field.id, field.type, configDescriptors.controlDescriptors ?? undefined),
+					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
 				}
 			),
 			{
@@ -407,7 +409,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				},
 				{
 					siblingIds: getDataSourceSiblingIds(typeForForm),
-					currentId: dataSource.id
+					currentIds: [dataSource.id]
 				}
 			),
 			{ dataSource, type: typeForForm }

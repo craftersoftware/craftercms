@@ -34,7 +34,13 @@ import {
 	StableFormContextProps,
 	StableGlobalContextProps
 } from '../FormsEngine/lib/formsEngineContext';
-import { buildSectionExpandedStateAtoms, setFieldAtoms, type ValidatorsData } from '../FormsEngine/lib/formUtils';
+import {
+	buildSectionExpandedStateAtoms,
+	getAdditionalFieldsIdsFromDescriptor,
+	resolveControlDescriptors,
+	setFieldAtoms,
+	type ValidatorsData
+} from '../FormsEngine/lib/formUtils';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
@@ -875,14 +881,41 @@ export function getFieldFromType(type: ContentType, fieldIdPath: string): Conten
 	}
 }
 
-/** Returns the field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings). */
-export function getSiblingFieldIds(type: ContentType, fieldIdPath: string): string[] {
-	if (isComposedPath(fieldIdPath)) {
-		const parentPath = fieldIdPath.split('.').slice(0, -1).join('.');
-		const parent = getFieldFromType(type, parentPath);
-		return Object.keys(parent?.fields ?? {});
+/**
+ * Returns field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings),
+ * including IDs generated from each sibling's `descriptor.metadata.additionalFields`.
+ */
+export function getSiblingFieldIds(
+	type: ContentType,
+	fieldIdPath: string,
+	customControlDescriptors?: LookupTable<DescriptorContentType>
+): string[] {
+	const siblingFields: LookupTable<ContentTypeField> = isComposedPath(fieldIdPath)
+		? (getFieldFromType(type, fieldIdPath.split('.').slice(0, -1).join('.'))?.fields ?? {})
+		: (type.fields ?? {});
+	const descriptors = resolveControlDescriptors(customControlDescriptors);
+	const ids: string[] = [];
+	for (const [key, field] of Object.entries(siblingFields)) {
+		// New drafts are keyed as `{NEW}` while `field.id` is still null; prefer the explicit id when set.
+		ids.push(field.id ?? key);
+		if (!field.id) continue;
+		const descriptor = descriptors[field.type];
+		if (descriptor) {
+			ids.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
+		}
 	}
-	return Object.keys(type.fields ?? {});
+	return ids;
+}
+
+/** Explicit field ID plus any IDs generated from the control descriptor's additionalFields. */
+export function getFieldIdSet(
+	fieldId: string,
+	fieldType: string,
+	customControlDescriptors?: LookupTable<DescriptorContentType>
+): string[] {
+	if (!fieldId) return [];
+	const descriptor = resolveControlDescriptors(customControlDescriptors)[fieldType];
+	return descriptor ? [fieldId, ...getAdditionalFieldsIdsFromDescriptor(fieldId, descriptor)] : [fieldId];
 }
 
 /**
