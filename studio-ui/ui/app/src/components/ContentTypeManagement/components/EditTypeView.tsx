@@ -276,7 +276,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const formContext = stateRef.current.activeFormContext;
 		const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
 		// Form may have closed or been replaced while awaiting atom resolution.
-		if (!openRef.current || stateRef.current.activeFormContext !== formContext) return true;
+		if (!openRef.current || stateRef.current.activeFormContext !== formContext) return false;
 		setActiveFormHasErrors(hasErrors);
 		if (hasErrors) {
 			showAlert(formatMessage({ defaultMessage: 'Please resolve any issues prior to closing the form' }));
