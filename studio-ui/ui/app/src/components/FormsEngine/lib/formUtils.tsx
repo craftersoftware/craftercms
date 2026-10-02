@@ -604,9 +604,6 @@ export type SystemPropsObject = Pick<
 	| XmlKeys.dateModified
 	| XmlKeys.dateModifiedDt
 	| XmlKeys.savedAsDraft
-	| XmlKeys.disabled
-	| XmlKeys.placeInNav
-	| XmlKeys.navLabel
 >;
 
 /**
@@ -630,10 +627,6 @@ export function createObjectWithSystemProps(
 		[XmlKeys.dateModified]: mixin?.[XmlKeys.dateModified] ?? dateIsoString,
 		[XmlKeys.dateModifiedDt]: mixin?.[XmlKeys.dateModifiedDt] ?? dateIsoString,
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false',
-		// TODO: These are part of the type
-		[XmlKeys.disabled]: mixin?.[XmlKeys.disabled] ?? false,
-		[XmlKeys.placeInNav]: mixin?.[XmlKeys.placeInNav] ?? false,
-		[XmlKeys.navLabel]: mixin?.[XmlKeys.navLabel] ?? ''
 	};
 	return contentObject;
 }
