@@ -20,6 +20,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { mergeSlotProps } from '@mui/material/utils';
 import { defineMessages, useIntl } from 'react-intl';
 
 type PasswordTextFieldProps = TextFieldProps & {
@@ -68,15 +69,13 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
       type={showPassword ? 'text' : 'password'}
       slotProps={{
         ...slotProps,
-        htmlInput: {
-          ...slotProps?.htmlInput,
+        htmlInput: mergeSlotProps(slotProps?.htmlInput, {
           ref: inputRef
-        },
+        }),
         input: visibilitySwitch
-          ? {
-            ...slotProps?.input,
-            endAdornment: visibilityAdornment
-            }
+          ? mergeSlotProps(slotProps?.input, {
+              endAdornment: visibilityAdornment
+            })
           : slotProps?.input
       }}
     />
