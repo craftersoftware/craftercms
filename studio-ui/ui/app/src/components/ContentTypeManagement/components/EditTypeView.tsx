@@ -769,19 +769,29 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
+		const field = getFieldFromType(baseType, resolvedFieldIdPath);
+		// Dialog eligibility used the pre-commit field.id. Same-scope moves are already covered by
+		// rename validation; for a new parent scope, re-check the committed id set against destination siblings.
+		const destinationPath = isTargetRepeatGroup ? `${newSectionId}.${committedFieldId}` : committedFieldId;
+		if (destinationPath !== resolvedFieldIdPath) {
+			const descriptors = configDescriptors.controlDescriptors ?? undefined;
+			const siblingIds = getSiblingFieldIds(baseType, destinationPath, descriptors);
+			if (getFieldIdSet(committedFieldId, field.type, descriptors).some((id) => siblingIds.includes(id))) {
+				showAlert(formatMessage({ defaultMessage: 'That variable name is already in use.' }));
+				return;
+			}
+		}
 		if (isTargetRepeatGroup) {
 			// For repeat groups as targets, newSectionId is the path of the selected repeating group
 			const newFieldIdPath = `${newSectionId}.${committedFieldId}`;
 			const fieldIdRoot = newFieldIdPath.split('.')[0];
 			// Section where the field will be added (when moving to a repeat group, newSectionId is the path of the selected repeating group)
 			const targetSectionId = baseType.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
-			const field = getFieldFromType(baseType, resolvedFieldIdPath);
 			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
 			nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
 			setType(nextType);
 			handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
 		} else {
-			const field = getFieldFromType(baseType, resolvedFieldIdPath);
 			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
 			nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
 			setType(nextType);
