@@ -778,6 +778,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			const siblingIds = getSiblingFieldIds(baseType, destinationPath, descriptors);
 			if (getFieldIdSet(committedFieldId, field.type, descriptors).some((id) => siblingIds.includes(id))) {
 				showAlert(formatMessage({ defaultMessage: 'That variable name is already in use.' }));
+				// Rename may already be committed; keep the open form on the resolved id.
+				if (resolvedFieldIdPath !== fieldIdPath) {
+					handleFieldSelected(resolvedFieldIdPath, field, originSectionId, baseType);
+				}
 				return;
 			}
 		}
@@ -1210,14 +1214,18 @@ function deleteField(type: ContentType, fieldIdPath: string, sectionId: string):
 
 		const nextSections = type.sections.concat();
 		const sectionIndex = nextSections.findIndex((section) => section.id === sectionId);
-		const section = nextSections[sectionIndex];
-		const nextSectionFields = nextSections[sectionIndex].fields.concat();
-		const fieldIndex = nextSectionFields.findIndex((fieldId) => fieldId === fieldIdPath);
-		nextSectionFields.splice(fieldIndex, 1);
-		nextSections[sectionIndex] = {
-			...section,
-			fields: nextSectionFields
-		};
+		if (sectionIndex !== -1) {
+			const section = nextSections[sectionIndex];
+			const nextSectionFields = section.fields.concat();
+			const fieldIndex = nextSectionFields.findIndex((fieldId) => fieldId === fieldIdPath);
+			if (fieldIndex !== -1) {
+				nextSectionFields.splice(fieldIndex, 1);
+				nextSections[sectionIndex] = {
+					...section,
+					fields: nextSectionFields
+				};
+			}
+		}
 
 		return { ...type, sections: nextSections, fields: nextFields };
 	}
