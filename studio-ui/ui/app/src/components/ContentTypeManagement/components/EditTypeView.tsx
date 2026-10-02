@@ -719,22 +719,25 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 	// endregion
 
-	const handleSwapFileNameField: FieldFormViewProps['onSwapField'] = (fieldId, sectionId, newField) => {
+	const handleSwapFileNameField: FieldFormViewProps['onSwapField'] = async (fieldId, sectionId, newField) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
-		setType((prevType) => {
-			const nextType = {
-				...prevType,
-				fields: {
-					...prevType.fields,
-					[fieldId]: {
-						...prevType.fields[fieldId],
-						type: newField.id
-					}
+		// Commit open form edits first so the swap runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		const nextType = {
+			...baseType,
+			fields: {
+				...baseType.fields,
+				[fieldId]: {
+					...baseType.fields[fieldId],
+					type: newField.id
 				}
-			};
-			handleFieldSelected(fieldId, nextType.fields[fieldId], sectionId, nextType);
-			return nextType;
-		});
+			}
+		};
+		setType(nextType);
+		handleFieldSelected(fieldId, nextType.fields[fieldId], sectionId, nextType);
 	};
 
 	// region const fieldEditorView = ...
@@ -748,36 +751,37 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		: null;
 	// endregion
 
-	const handleMoveFieldToSection: FieldFormViewProps['onMoveFieldToSection'] = (
+	const handleMoveFieldToSection: FieldFormViewProps['onMoveFieldToSection'] = async (
 		fieldIdPath,
 		originSectionId,
 		newSectionId,
 		fieldIndex,
 		isTargetRepeatGroup
 	) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the move runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
 		if (isTargetRepeatGroup) {
 			const fieldId = getIdFromIdPath(fieldIdPath);
 			// For repeat groups as targets, newSectionId is the path of the selected repeating group
 			const newFieldIdPath = `${newSectionId}.${fieldId}`;
 			const fieldIdRoot = newFieldIdPath.split('.')[0];
 			// Section where the field will be added (when moving to a repeat group, newSectionId is the path of the selected repeating group)
-			const targetSectionId = type.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
-			setType((prevType) => {
-				const field = getFieldFromType(prevType, fieldIdPath);
-				let nextType = deleteField(prevType, fieldIdPath, originSectionId);
-				nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
-				handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
-				return nextType;
-			});
+			const targetSectionId = baseType.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
+			const field = getFieldFromType(baseType, fieldIdPath);
+			let nextType = deleteField(baseType, fieldIdPath, originSectionId);
+			nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
+			setType(nextType);
+			handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
 		} else {
-			setType((prevType) => {
-				const field = getFieldFromType(prevType, fieldIdPath);
-				let nextType = deleteField(prevType, fieldIdPath, originSectionId);
-				nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
-				handleFieldSelected(fieldIdPath, field, newSectionId, nextType);
-				return nextType;
-			});
+			const field = getFieldFromType(baseType, fieldIdPath);
+			let nextType = deleteField(baseType, fieldIdPath, originSectionId);
+			nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
+			setType(nextType);
+			handleFieldSelected(fieldIdPath, field, newSectionId, nextType);
 		}
 	};
 
@@ -800,17 +804,21 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	// endregion
 
 	// region reorder
-	const handleReorderRepGroupFields: FieldFormViewProps['onReorderRepGroupFields'] = (
+	const handleReorderRepGroupFields: FieldFormViewProps['onReorderRepGroupFields'] = async (
 		fields,
 		fieldIdPath,
 		sectionId
 	) => {
-		setType((currentType) => {
-			const nextType = reorderRepGroupFields(currentType, fields, fieldIdPath);
-			const field = getFieldFromType(nextType, fieldIdPath);
-			handleFieldSelected(fieldIdPath, field, sectionId, nextType);
-			return nextType;
-		});
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
+		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the reorder runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		const nextType = reorderRepGroupFields(baseType, fields, fieldIdPath);
+		setType(nextType);
+		const field = getFieldFromType(nextType, fieldIdPath);
+		handleFieldSelected(fieldIdPath, field, sectionId, nextType);
 	};
 
 	const handleReorderSectionFields = async (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
