@@ -73,9 +73,10 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
           ref: inputRef
         }),
         input: visibilitySwitch
-          ? mergeSlotProps(slotProps?.input, {
-              endAdornment: visibilityAdornment
-            })
+          ? mergeSlotProps(
+              { endAdornment: visibilityAdornment },
+              slotProps?.input
+            )
           : slotProps?.input
       }}
     />
