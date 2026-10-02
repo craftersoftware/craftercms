@@ -284,10 +284,22 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const performCurrentFormErrorCheckAndWarning = async () => {
 		if (!openRef.current) return true;
 		const formContext = stateRef.current.activeFormContext;
+		// Capture before await so a field switch cannot clear/update the wrong path.
+		const fieldPath = selectedFieldIdPath;
 		const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
 		// Form may have closed or been replaced while awaiting atom resolution.
 		if (!openRef.current || stateRef.current.activeFormContext !== formContext) return false;
 		setActiveFormHasErrors(hasErrors);
+		// Clear eagerly on success so a debounced run discarded after switch cannot leave a stale error
+		// that keeps disableSave true. Leave entries for other paths untouched.
+		if (!hasErrors) {
+			setFieldPathsWithErrors((prev) => {
+				if (!prev[fieldPath]) return prev;
+				const next = { ...prev };
+				delete next[fieldPath];
+				return next;
+			});
+		}
 		if (hasErrors) {
 			showAlert(formatMessage({ defaultMessage: 'Please resolve any issues prior to closing the form' }));
 			return false;
@@ -854,8 +866,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				// must not flag the replacement form as changed.
 				if (!effectRefs.current.open) return;
 				const { fieldPathsWithErrors, selectedFieldIdPath, jotai } = effectRefs.current;
-				// Capture the form present when this debounced run starts so results are discarded if it closes or is replaced.
+				// Capture the form and field path present when this debounced run starts so results
+				// are discarded if either is replaced before validation resolves.
 				const formContext = stateRef.current.activeFormContext;
+				const originatingFieldPath = selectedFieldIdPath;
 				const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
 				const validationSeq = ++stateRef.current.validationSeq;
 				const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
@@ -863,9 +877,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) return;
 				// A newer run for this same form started while awaiting; it owns the error state.
 				if (validationSeq !== stateRef.current.validationSeq) return;
+				// Selection moved while this form context was somehow retained; do not apply to the new path.
+				if (effectRefs.current.selectedFieldIdPath !== originatingFieldPath) return;
 				setActiveFormHasErrors(hasErrors);
-				nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
-				if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
+				nextFieldPathsWithErrors[originatingFieldPath] = hasErrors;
+				if (!nextFieldPathsWithErrors[originatingFieldPath]) delete nextFieldPathsWithErrors[originatingFieldPath];
 
 				setFieldPathsWithErrors(nextFieldPathsWithErrors);
 
