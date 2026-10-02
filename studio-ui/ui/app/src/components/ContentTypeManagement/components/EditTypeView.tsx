@@ -146,8 +146,9 @@ interface EditAppContextProps {
 	selectedSection: ContentTypeSection;
 	selectedDataSource: DataSource;
 	/**
-	 * Keeps track of whether anything was changed when any form (type, field, section, data source) was opened.
-	 * Resets when the form closes or changes to a different artefact (type, field, etc.)
+	 * Keeps track of whether anything was changed on the active form (type, field, section, data source).
+	 * Updated synchronously from that form's `changedFieldIds` when `fieldUpdates$` emits.
+	 * Resets when the form closes, is replaced, or its edits are committed.
 	 * Used to avoid committing changes where not necessary.
 	 **/
 	formFieldsChanged: boolean;
@@ -205,7 +206,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const [openDataSourceInserter, setOpenDataSourceInserter] = useState<boolean>(false);
 
 	const [activeFormHasErrors, setActiveFormHasErrors] = useState<boolean>(false);
-	const [validatingForm, setValidatingForm] = useState<boolean>(false);
 	const [contentItem, setContentItem] = useState<ContentItem>(null);
 	// Bumped after save of an existing type so the effect re-fetches (and cancels any in-flight request).
 	const [contentItemReloadToken, setContentItemReloadToken] = useState(0);
@@ -235,12 +235,20 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		};
 	}, [config]);
 
+	/** True when the open form has unsaved edits (derived from that form's synchronous changedFieldIds). */
+	const activeFormHasChanges = () => {
+		const formContext = stateRef.current.activeFormContext;
+		return (formContext?.changedFieldIds?.size ?? 0) > 0;
+	};
 	/** Saves and commits the state changes. Returns undefined if no changes occurred. */
 	const commitOpenFormChanges = () => {
 		// No form open, nothing to commit. Or, a form was opened but no changes were made.
-		if (!open || !stateRef.current.formFieldsChanged) return;
+		// Derive dirty from the active form's changedFieldIds so commit is not gated on the
+		// background-validation debounce that mirrors formFieldsChanged.
+		if (!open || !activeFormHasChanges()) return;
+		const formContext = stateRef.current.activeFormContext;
 		let updatedType: ContentType;
-		const values = extractAtomValues(jotai, stateRef.current.activeFormContext.atoms.valueByFieldId);
+		const values = extractAtomValues(jotai, formContext.atoms.valueByFieldId);
 		if (stateRef.current.selectedField) {
 			updatedType = updateTypeFromFieldUpdate(
 				type,
@@ -264,6 +272,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			// There's no selected field, section or data source, so assume the type itself is being edited.
 			updatedType = updateTypeProps(type, values as TypePropsToEdit);
 		}
+		formContext.changedFieldIds.clear();
+		stateRef.current.formFieldsChanged = false;
 		setType(updatedType);
 		return updatedType;
 	};
@@ -301,7 +311,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// stateRef.current.activeFormContext = null;
 		setVirtualContentType(null);
 		setSelectedFieldIdPath(null);
-		setValidatingForm(false);
 		setOpen(false);
 		return postCloseType;
 	};
@@ -333,6 +342,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		});
 		// Note: things set here should be cleaned up in closeAndCleanup
 		stateRef.current.activeFormContext = stableFormContext;
+		// New form starts clean; do not inherit dirty from a prior form's emissions.
+		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(virtualType);
 		setOpen(true);
 	};
@@ -619,6 +630,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const resetSelection = () => {
 		setSelectedFieldIdPath(null);
 		stateRef.current.selectedField = null;
+		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(null);
 		setFieldFormViewProps(null);
 		setHasPendingChanges(false);
@@ -793,10 +805,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Validate before committing so invalid forms leave type and dirty state unchanged.
 		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
-		// Commit open form edits first so the reorder runs on up-to-date type state,
-		// and clear the dirty flag so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		// Commit open form edits first so the reorder runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
-		stateRef.current.formFieldsChanged = false;
 
 		const nextType = reorderSectionFields(baseType, fields, sectionId);
 		setType(nextType);
@@ -820,43 +832,42 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 	// endregion
 
-	// `fieldUpdates$` subscription
+	// `fieldUpdates$`: sync dirty via tap; debounce only background validation (no dirty side effects).
 	useEffect(() => {
 		const sub = stateRef.current.fieldUpdates$
 			.pipe(
-				// Mark validating immediately so Save stays disabled during the debounce window.
-				tap(() => setValidatingForm(true)),
+				// Track dirty synchronously from the active form's changedFieldIds so commit/save are not
+				// gated on the validation debounce. Ignore emissions when no form is open (e.g. after close).
+				tap(() => {
+					if (!effectRefs.current.open) return;
+					const formContext = stateRef.current.activeFormContext;
+					const isDirty = (formContext?.changedFieldIds?.size ?? 0) > 0;
+					stateRef.current.formFieldsChanged = isDirty;
+					if (isDirty) {
+						effectRefs.current.onUpdateHasPendingChanges(true);
+					}
+				}),
 				debounceTime(500)
 			)
 			.subscribe(async () => {
-				// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
-				if (!effectRefs.current.open) {
-					setValidatingForm(false);
-					return;
-				}
-				const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
-				// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
+				// Validation only — must not mark dirty; a queued emission from a previous form
+				// must not flag the replacement form as changed.
+				if (!effectRefs.current.open) return;
+				const { fieldPathsWithErrors, selectedFieldIdPath, jotai } = effectRefs.current;
+				// Capture the form present when this debounced run starts so results are discarded if it closes or is replaced.
 				const formContext = stateRef.current.activeFormContext;
-				onUpdateHasPendingChanges(true);
-				stateRef.current.formFieldsChanged = true;
 				const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
-				// Check validation atoms of the form to see if there are any unfulfilled validations.
 				const validationSeq = ++stateRef.current.validationSeq;
 				const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
 				// `activeFormContext` is intentionally kept after close, so also re-check `open`.
-				if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
-					// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
-					if (!effectRefs.current.open) setValidatingForm(false);
-					return;
-				}
-				// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
+				if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) return;
+				// A newer run for this same form started while awaiting; it owns the error state.
 				if (validationSeq !== stateRef.current.validationSeq) return;
 				setActiveFormHasErrors(hasErrors);
 				nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
 				if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
 
 				setFieldPathsWithErrors(nextFieldPathsWithErrors);
-				setValidatingForm(false);
 
 				// Live-sync draft thumbnailFileName while the type properties form is open,
 				// so TypeCardMedia can reload by filename without waiting for form commit / save.
@@ -919,8 +930,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		return () => sub.unsubscribe();
 	}, [site, activeEnvironment, setConfig, dispatch]);
 
-	const disableSave =
-		(!type.NEW && !hasPendingChanges) || Object.keys(fieldPathsWithErrors).length !== 0 || validatingForm;
+	const disableSave = (!type.NEW && !hasPendingChanges) || Object.keys(fieldPathsWithErrors).length !== 0;
 	return (
 		<Provider store={jotai}>
 			<EditTypeViewLayout
