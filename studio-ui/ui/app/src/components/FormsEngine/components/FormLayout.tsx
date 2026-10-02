@@ -32,11 +32,10 @@ import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
-import { useAtomValue, useStore as useJotaiStore } from 'jotai/index';
+import { createStore, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { UIBlocker } from '../../UIBlocker';
 import { getScrollContainer } from '../lib/formUtils';
 import { stackFormCountAtom } from '../lib/formConsts';
-import { createStore } from 'jotai';
 import { getMarginSxProps } from '../../../utils/ui';
 import { useResizeObserver } from '../../../hooks/useResizeObserver';
 

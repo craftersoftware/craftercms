@@ -25,7 +25,7 @@ import SystemIcon, { SystemIconDescriptor } from '../SystemIcon';
 import EmptyState from '../EmptyState/EmptyState';
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import { getPossibleTranslation } from '../../utils/i18n';
-import Widget from '../Widget';
+import Widget from '../Widget/Widget';
 import { PartialSxRecord, WidgetDescriptor } from '../../models';
 import IconButton from '@mui/material/IconButton';
 import KeyboardArrowLeftRoundedIcon from '@mui/icons-material/KeyboardArrowLeftRounded';

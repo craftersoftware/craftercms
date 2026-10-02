@@ -17,7 +17,7 @@
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import LauncherGlobalNav from '../LauncherGlobalNav';
+import LauncherGlobalNav from '../LauncherGlobalNav/LauncherGlobalNav';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import {
 	createHashRouter,
