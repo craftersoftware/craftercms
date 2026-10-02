@@ -726,18 +726,20 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
+		// Field id may have changed during commit (rename); use the committed id for lookup/mutation.
+		const committedFieldId = stateRef.current.selectedField?.id ?? fieldId;
 		const nextType = {
 			...baseType,
 			fields: {
 				...baseType.fields,
-				[fieldId]: {
-					...baseType.fields[fieldId],
+				[committedFieldId]: {
+					...baseType.fields[committedFieldId],
 					type: newField.id
 				}
 			}
 		};
 		setType(nextType);
-		handleFieldSelected(fieldId, nextType.fields[fieldId], sectionId, nextType);
+		handleFieldSelected(committedFieldId, nextType.fields[committedFieldId], sectionId, nextType);
 	};
 
 	// region const fieldEditorView = ...
@@ -764,24 +766,26 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
+		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
+		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
+		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
 		if (isTargetRepeatGroup) {
-			const fieldId = getIdFromIdPath(fieldIdPath);
 			// For repeat groups as targets, newSectionId is the path of the selected repeating group
-			const newFieldIdPath = `${newSectionId}.${fieldId}`;
+			const newFieldIdPath = `${newSectionId}.${committedFieldId}`;
 			const fieldIdRoot = newFieldIdPath.split('.')[0];
 			// Section where the field will be added (when moving to a repeat group, newSectionId is the path of the selected repeating group)
 			const targetSectionId = baseType.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
-			const field = getFieldFromType(baseType, fieldIdPath);
-			let nextType = deleteField(baseType, fieldIdPath, originSectionId);
+			const field = getFieldFromType(baseType, resolvedFieldIdPath);
+			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
 			nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
 			setType(nextType);
 			handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
 		} else {
-			const field = getFieldFromType(baseType, fieldIdPath);
-			let nextType = deleteField(baseType, fieldIdPath, originSectionId);
+			const field = getFieldFromType(baseType, resolvedFieldIdPath);
+			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
 			nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
 			setType(nextType);
-			handleFieldSelected(fieldIdPath, field, newSectionId, nextType);
+			handleFieldSelected(field.id, field, newSectionId, nextType);
 		}
 	};
 
@@ -815,10 +819,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
-		const nextType = reorderRepGroupFields(baseType, fields, fieldIdPath);
+		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
+		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
+		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
+		const nextType = reorderRepGroupFields(baseType, fields, resolvedFieldIdPath);
 		setType(nextType);
-		const field = getFieldFromType(nextType, fieldIdPath);
-		handleFieldSelected(fieldIdPath, field, sectionId, nextType);
+		const field = getFieldFromType(nextType, resolvedFieldIdPath);
+		handleFieldSelected(resolvedFieldIdPath, field, sectionId, nextType);
 	};
 
 	const handleReorderSectionFields = async (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
@@ -1048,6 +1055,13 @@ function createContextObject(): EditAppContextProps {
 function getIdFromIdPath(idPath: string): string {
 	const pieces = idPath.split('.');
 	return pieces.pop();
+}
+
+/** Replaces only the final segment of a (possibly composed) field id path. */
+function replaceIdPathLeaf(idPath: string, newId: string): string {
+	const pieces = idPath.split('.');
+	pieces[pieces.length - 1] = newId;
+	return pieces.join('.');
 }
 
 function insertSection(type: ContentType, section: ContentTypeSection, position: number = 0): ContentType {
