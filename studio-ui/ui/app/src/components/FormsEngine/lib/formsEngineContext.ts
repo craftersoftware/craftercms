@@ -26,6 +26,7 @@ import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
+import type { FormControllerState } from '../formControllers/types';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -125,6 +126,11 @@ export interface StableFormContextProps {
 	 * each save attempt.
 	 */
 	affectedPluginControlFields: AffectedPluginControlField[];
+	/**
+	 * Form-controller attachment for this stack entry (`null` when none).
+	 * Repeat entries may hold only a deny-list (`irrelevantFieldIds`) and no controller.
+	 */
+	formControllerState: FormControllerState | null;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

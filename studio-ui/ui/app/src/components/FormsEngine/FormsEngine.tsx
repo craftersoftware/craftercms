@@ -97,6 +97,7 @@ import {
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
+	getValidationAtomsExcludingIrrelevant,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
@@ -151,6 +152,11 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
+import {
+	attachFormController,
+	findAncestorFormControllerEntry,
+	runFormControllerCleanup
+} from './formControllers/runtime';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -244,7 +250,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				stableGlobalContextRef.current.formsStackData.pop();
+				const stack = stableGlobalContextRef.current.formsStackData;
+				runFormControllerCleanup(stack[stack.length - 1]);
+				stack.pop();
 				setCount(-1);
 			},
 			updateProps(stackIndex, formProps) {
@@ -256,6 +264,16 @@ function GlobalFormsState(props: FormsEngineProps) {
 		};
 		return api;
 	}, [store]);
+	// Root engine unmount: clean up any remaining controllers (including the root entry).
+	useEffect(() => {
+		return () => {
+			const stack = stableGlobalContextRef.current?.formsStackData;
+			if (!stack) return;
+			for (let i = stack.length - 1; i >= 0; i--) {
+				runFormControllerCleanup(stack[i]);
+			}
+		};
+	}, []);
 	return (
 		<ErrorBoundary>
 			<StableGlobalContext.Provider value={stableGlobalContextRef.current}>
@@ -290,7 +308,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const theme = useTheme();
 	const { isFullScreen = false } = useEnhancedDialogContext() ?? {};
 	const username = useActiveUser()?.username;
-	const effectRefs = useUpdateRefs({ contentTypesById, username });
+	// `effectiveProps` is a new object on every render of the parent; keep it out of the prep effect's
+	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
+	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
@@ -398,7 +418,20 @@ function FormBootstrap(props: FormsEngineProps) {
 				return fields.map((field) => ({ ...field, fromBootstrap: true }));
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
-			setReady(true);
+			return attachFormController({
+				siteId,
+				store,
+				stackEntry: stableFormContextRef.current,
+				parentStackEntry: findAncestorFormControllerEntry(formsStackData, stackIndex),
+				formProps: effectRefs.current.effectiveProps,
+				dispatch,
+				formatMessage,
+				// Attach owns the teardown of its own `initialize` when this prep run is superseded.
+				isStale: () => disposed
+			}).then(() => {
+				if (disposed) return;
+				setReady(true);
+			});
 		};
 		if (
 			// A repeat group is being opened as a stacked form.
@@ -707,6 +740,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		dispatch,
 		effectRefs,
 		fieldsToRender,
+		formatMessage,
 		formsStackData,
 		readonlyProp,
 		repeat,
@@ -786,7 +820,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms } = stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
+	const irrelevantFieldIds = formControllerState?.irrelevantFieldIds ?? null;
+	const formControllerFileMissing = Boolean(formControllerState?.fileMissing);
+	const formControllerLoadFailed = Boolean(formControllerState?.loadFailed);
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -803,19 +840,41 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = useMemo(() => {
-		if (!isEmbedded) return contentType.sections;
-		// If the item is embedded, exclude the 'file-name' field from the sections.
-		// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
-		// being rendered in the ToC and the form.
-		return contentType.sections.map((section) => ({
-			...section,
-			fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
-		}));
-	}, [contentType.sections, isEmbedded]);
+		let sections = contentType.sections;
+		if (isEmbedded) {
+			// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
+			// being rendered in the ToC and the form.
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
+			}));
+		}
+		if (irrelevantFieldIds && !fieldsToRender) {
+			sections = sections
+				.map((section) => ({
+					...section,
+					fields: section.fields.filter((fieldId) => !irrelevantFieldIds.has(fieldId))
+				}))
+				// Remove sections that contain no remaining fields.
+				.filter((section) => section.fields.length > 0);
+		}
+		return sections;
+	}, [contentType.sections, isEmbedded, irrelevantFieldIds, fieldsToRender]);
+	const visibleFieldsToRender = useMemo(() => {
+		if (!fieldsToRender) return fieldsToRender;
+		if (!irrelevantFieldIds?.size) return fieldsToRender;
+		return fieldsToRender.filter((field) => !irrelevantFieldIds.has(field.id));
+	}, [fieldsToRender, irrelevantFieldIds]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
-	const tableOfContents = <TableOfContents fieldsToRender={fieldsToRender} containerRef={containerRef} />;
+	const tableOfContents = (
+		<TableOfContents
+			fieldsToRender={visibleFieldsToRender}
+			sections={contentTypeSections}
+			containerRef={containerRef}
+		/>
+	);
 	const effectRefs = useUpdateRefs({
-		fieldsToRender,
+		fieldsToRender: visibleFieldsToRender,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
@@ -836,9 +895,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 		const checkValidationState = async () => {
 			const validityStates = await Promise.all(
-				Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
-					jotai.get(validityDataAtom)
-				)
+				getValidationAtomsExcludingIrrelevant(
+					stableFormContext.atoms.validationByFieldId,
+					stableFormContext.formControllerState?.irrelevantFieldIds
+				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			setInvalidForm(validityStates.some((state) => !state.isValid));
 		};
@@ -1205,10 +1265,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 								{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
 							</Alert>
 						)}
-						{fieldsToRender ? (
+						{formControllerFileMissing && (
+							<Alert severity="warning" variant="outlined">
+								<AlertTitle>
+									<FormattedMessage defaultMessage="Form controller missing" />
+								</AlertTitle>
+								<FormattedMessage defaultMessage="This content type has a client-side form controller enabled, but form-controller.js was not found. The form will open without a custom controller." />
+							</Alert>
+						)}
+						{formControllerLoadFailed && (
+							<Alert severity="warning" variant="outlined">
+								<AlertTitle>
+									<FormattedMessage defaultMessage="Form controller failed to load" />
+								</AlertTitle>
+								<FormattedMessage defaultMessage="This content type has a client-side form controller, but it could not be loaded. Check form-controller.js for syntax or export errors. The form will open without a custom controller." />
+							</Alert>
+						)}
+						{visibleFieldsToRender ? (
 							// Renders the specified set of fields only
 							<Paper sx={{ p: 2 }}>
-								{fieldsToRender.map((field, index) =>
+								{visibleFieldsToRender.map((field, index) =>
 									renderFieldControl(field, stableFormContext.atoms.valueByFieldId, index === 0, readonly, contentType)
 								)}
 							</Paper>
@@ -1417,7 +1493,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller loading and execution
+//  - Form controller: landed (see formControllers/ + docs/type-builder-forms-engine.md §5.9)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI

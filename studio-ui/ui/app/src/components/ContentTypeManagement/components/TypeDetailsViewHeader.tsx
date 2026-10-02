@@ -32,7 +32,7 @@ import { nnou, prettyPrintPerson } from '../../../utils/object';
 import useLocale from '../../../hooks/useLocale';
 import { asLocalizedDate } from '../../../utils/datetime';
 
-export type TypeDetailsHeaderActionTarget = 'properties' | 'template' | 'jsController' | 'groovyController' | 'deleted';
+export type TypeDetailsHeaderActionTarget = 'properties' | 'template' | 'deleted';
 
 export interface TypeDetailsViewHeaderProps {
 	type: PossibleContentTypeDraft;
@@ -119,12 +119,6 @@ export function TypeDetailsViewHeader({ type, contentItem, onActionClick }: Type
 				</Button>
 				<Button onClick={handleActionClick} data-action-target="template">
 					<FormattedMessage defaultMessage="Template" />
-				</Button>
-				<Button onClick={handleActionClick} data-action-target="jsController">
-					<FormattedMessage defaultMessage="Form Controller" />
-				</Button>
-				<Button onClick={handleActionClick} data-action-target="groovyController">
-					<FormattedMessage defaultMessage="Groovy Controller" />
 				</Button>
 				{!type.NEW && (
 					<Button color="error" onClick={handleDeleteType}>

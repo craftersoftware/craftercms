@@ -40,7 +40,6 @@ import {
 	createVirtualTypeFormContext,
 	createVirtualTypeForSection,
 	DescriptorContentType,
-	editTypeController,
 	editTypeTemplate,
 	getFieldFromType,
 	getPropertiesAndValidationsFromDescriptor,
@@ -52,7 +51,6 @@ import {
 	reverseTypeFieldValuesObject,
 	systemFieldsIdsMap,
 	systemFieldsTypesMap,
-	TYPE_GROOVY_CONTROLLER_BASE_PATH,
 	TYPE_TEMPLATE_BASE_PATH,
 	TypePropsToEdit,
 	typePropsToEdit
@@ -430,12 +428,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				}
 				break;
 			}
-			case 'jsController':
-				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'javascript');
-				break;
-			case 'groovyController':
-				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'groovy');
-				break;
 			case 'deleted':
 				onClose?.();
 				window.top.postMessage(

@@ -24,7 +24,7 @@ export type DescriptorControlType =
 	| 'type-image-selector'
 	| 'read-only-value'
 	| 'range'
-	| 'type-js-controller-selector'
+	| 'type-controller-selector'
 	| 'key-value-map'
 	| 'type-destination-paths-selector'
 	| 'path-with-macro-creator'
@@ -68,7 +68,7 @@ export const controlMap: Record<DescriptorControlType, ElementType> = {
 	'datasource:item:singleSelection': DataSourceSingleSelector,
 	'read-only-value': lazy(() => import('./controls/ReadOnlyValue')),
 	range: lazy(() => import('./controls/Range')),
-	'type-js-controller-selector': lazy(() => import('./controls/TypeJsControllerSelector')),
+	'type-controller-selector': lazy(() => import('./controls/TypeControllerSelector')),
 	'key-value-map': lazy(() => import('./controls/KeyValueMap')),
 	'type-destination-paths-selector': lazy(() => import('./controls/TypeDestinationPathsSelector')),
 	'path-with-macro-creator': lazy(() => import('./controls/PathWithMacroCreator')),

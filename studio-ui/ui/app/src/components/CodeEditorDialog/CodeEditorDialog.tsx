@@ -23,7 +23,19 @@ import EnhancedDialog from '../EnhancedDialog';
 
 export function CodeEditorDialog(props: CodeEditorDialogProps) {
 	const { formatMessage } = useIntl();
-	const { mode = 'text', path, readonly, contentType, onSuccess, onClose, onMinimize, onFullScreen, ...rest } = props;
+	const {
+		mode = 'text',
+		path,
+		readonly,
+		contentType,
+		isNew,
+		associateTemplateOnSave,
+		onSuccess,
+		onClose,
+		onMinimize,
+		onFullScreen,
+		...rest
+	} = props;
 	const title = formatMessage(translations.title);
 	return (
 		<EnhancedDialog
@@ -50,6 +62,10 @@ export function CodeEditorDialog(props: CodeEditorDialogProps) {
 				title={title}
 				onMinimize={onMinimize}
 				readonly={readonly}
+				contentType={contentType}
+				isNew={isNew}
+				associateTemplateOnSave={associateTemplateOnSave}
+				onClose={onClose}
 				onFullScreen={props.isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
 				onSuccess={onSuccess}
 			/>
