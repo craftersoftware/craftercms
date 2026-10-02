@@ -45,7 +45,11 @@ import {
 	getFieldFromType,
 	getPropertiesAndValidationsFromDescriptor,
 	getSectionFromType,
+	getDataSourceSiblingIds,
+	getFieldIdSet,
+	getSiblingFieldIds,
 	isComposedPath,
+	typeForNextArtefactForm,
 	NEW_DATASOURCE_ID,
 	NEW_FIELD_ID,
 	prepareSerializeToXmlTypeObject,
@@ -70,7 +74,7 @@ import {
 } from '../../FormsEngine/lib/formsEngineContext';
 import useContentTypes from '../../../hooks/useContentTypes';
 import { createStore as createJotai, Provider } from 'jotai';
-import { debounceTime, forkJoin, map, Observable, Subject } from 'rxjs';
+import { debounceTime, forkJoin, map, Observable, Subject, tap } from 'rxjs';
 import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
@@ -142,8 +146,9 @@ interface EditAppContextProps {
 	selectedSection: ContentTypeSection;
 	selectedDataSource: DataSource;
 	/**
-	 * Keeps track of whether anything was changed when any form (type, field, section, data source) was opened.
-	 * Resets when the form closes or changes to a different artefact (type, field, etc.)
+	 * Keeps track of whether anything was changed on the active form (type, field, section, data source).
+	 * Updated synchronously from that form's `changedFieldIds` when `fieldUpdates$` emits.
+	 * Resets when the form closes, is replaced, or its edits are committed.
 	 * Used to avoid committing changes where not necessary.
 	 **/
 	formFieldsChanged: boolean;
@@ -201,10 +206,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const [openDataSourceInserter, setOpenDataSourceInserter] = useState<boolean>(false);
 
 	const [activeFormHasErrors, setActiveFormHasErrors] = useState<boolean>(false);
-	const [validatingForm, setValidatingForm] = useState<boolean>(false);
 	const [contentItem, setContentItem] = useState<ContentItem>(null);
 	// Bumped after save of an existing type so the effect re-fetches (and cancels any in-flight request).
 	const [contentItemReloadToken, setContentItemReloadToken] = useState(0);
+	const openRef = useRef(open);
+	openRef.current = open;
 	const configDescriptors = useMemo(() => {
 		const controlDescriptors = Object.values(config?.controls ?? {}).map(({ descriptor }) => descriptor);
 		const dataSourceDescriptors = Object.values(config?.dataSources ?? {}).map(({ descriptor }) => descriptor);
@@ -229,12 +235,20 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		};
 	}, [config]);
 
+	/** True when the open form has unsaved edits (derived from that form's synchronous changedFieldIds). */
+	const activeFormHasChanges = () => {
+		const formContext = stateRef.current.activeFormContext;
+		return (formContext?.changedFieldIds?.size ?? 0) > 0;
+	};
 	/** Saves and commits the state changes. Returns undefined if no changes occurred. */
 	const commitOpenFormChanges = () => {
 		// No form open, nothing to commit. Or, a form was opened but no changes were made.
-		if (!open || !stateRef.current.formFieldsChanged) return;
+		// Derive dirty from the active form's changedFieldIds so commit is not gated on the
+		// background-validation debounce that mirrors formFieldsChanged.
+		if (!open || !activeFormHasChanges()) return;
+		const formContext = stateRef.current.activeFormContext;
 		let updatedType: ContentType;
-		const values = extractAtomValues(jotai, stateRef.current.activeFormContext.atoms.valueByFieldId);
+		const values = extractAtomValues(jotai, formContext.atoms.valueByFieldId);
 		if (stateRef.current.selectedField) {
 			updatedType = updateTypeFromFieldUpdate(
 				type,
@@ -258,21 +272,49 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			// There's no selected field, section or data source, so assume the type itself is being edited.
 			updatedType = updateTypeProps(type, values as TypePropsToEdit);
 		}
+		formContext.changedFieldIds.clear();
+		stateRef.current.formFieldsChanged = false;
 		setType(updatedType);
 		return updatedType;
 	};
-	/** Returns true if no form is opened or if the active form it's all valid and can be committed and closed. Returns false otherwise. */
-	const performCurrentFormErrorCheckAndWarning = () => {
-		if (open && activeFormHasErrors) {
+	/**
+	 * Returns true if no form is opened or if the active form is valid and can be committed/closed.
+	 * Eagerly re-checks validation atoms so callers are not gated on the debounced activeFormHasErrors flag.
+	 */
+	const performCurrentFormErrorCheckAndWarning = async () => {
+		if (!openRef.current) return true;
+		const formContext = stateRef.current.activeFormContext;
+		// Capture before await so a field switch cannot clear/update the wrong path.
+		const fieldPath = selectedFieldIdPath;
+		const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+		// Form may have closed or been replaced while awaiting atom resolution.
+		if (!openRef.current || stateRef.current.activeFormContext !== formContext) return false;
+		setActiveFormHasErrors(hasErrors);
+		// Clear eagerly on success so a debounced run discarded after switch cannot leave a stale error
+		// that keeps disableSave true. Leave entries for other paths untouched.
+		if (!hasErrors) {
+			setFieldPathsWithErrors((prev) => {
+				if (!prev[fieldPath]) return prev;
+				const next = { ...prev };
+				delete next[fieldPath];
+				return next;
+			});
+		}
+		if (hasErrors) {
 			showAlert(formatMessage({ defaultMessage: 'Please resolve any issues prior to closing the form' }));
 			return false;
 		}
 		return true;
 	};
-	/** Closes the active form and cleans up state. */
-	const closeAndCleanup = () => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
-		commitOpenFormChanges();
+	/**
+	 * Closes the active form and cleans up state.
+	 * Returns the post-commit ContentType on success (or the current type when nothing was committed),
+	 * so callers that immediately open another form can use up-to-date sibling IDs without waiting
+	 * for the setType re-render. Returns false when the form has unresolved errors.
+	 */
+	const closeAndCleanup = async (): Promise<ContentType | false> => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
+		const postCloseType = commitOpenFormChanges() ?? type;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
 		stateRef.current.selectedDataSource = null;
@@ -281,9 +323,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// stateRef.current.activeFormContext = null;
 		setVirtualContentType(null);
 		setSelectedFieldIdPath(null);
-		setValidatingForm(false);
 		setOpen(false);
-		return true;
+		return postCloseType;
 	};
 	/** Performs the common steps that must occur when an artefact is selected for editing. */
 	const handleArtefactSelected = (
@@ -296,8 +337,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			virtualType,
 			stableFormContext,
 			formApiContext: stateRef.current.formContextApi,
-			onClose: () => {
-				const formValid = effectRefs.current.closeAndCleanup();
+			onClose: async () => {
+				const formValid = await effectRefs.current.closeAndCleanup();
 				if (!formValid) return;
 				setDrawerOpenTransitionEnded(false);
 			},
@@ -313,17 +354,21 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		});
 		// Note: things set here should be cleaned up in closeAndCleanup
 		stateRef.current.activeFormContext = stableFormContext;
+		// New form starts clean; do not inherit dirty from a prior form's emissions.
+		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(virtualType);
 		setOpen(true);
 	};
 
-	const handleFieldSelected = (
+	const handleFieldSelected = async (
 		fieldIdPath: string,
 		field: ContentTypeField,
 		sectionId: string,
 		overrideType?: ContentType
 	) => {
-		if (!closeAndCleanup()) return;
+		const postCloseType = await closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 
 		const controlDescriptor =
 			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor;
@@ -332,40 +377,54 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
-			{ ...controlDescriptor, dataSources: type.dataSources },
+			{ ...controlDescriptor, dataSources: typeForForm.dataSources },
 			formatMessage
 		);
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createTypeFieldValuesObject(field), contentTypesLookup, {
-				fieldUpdates$: stateRef.current.fieldUpdates$
-			}),
+			createVirtualTypeFormContext(
+				virtualType,
+				createTypeFieldValuesObject(field),
+				contentTypesLookup,
+				{
+					fieldUpdates$: stateRef.current.fieldUpdates$
+				},
+				{
+					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath, configDescriptors.controlDescriptors ?? undefined),
+					currentIds: getFieldIdSet(field.id, field.type, configDescriptors.controlDescriptors ?? undefined),
+					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
+				}
+			),
 			{
 				field,
 				fieldIdPath,
 				controlDescriptor: applyTranslations(controlDescriptor, formatMessage),
 				sectionId,
-				...(overrideType && { type: overrideType })
+				type: typeForForm
 			}
 		);
 		setSelectedFieldIdPath(fieldIdPath);
 		stateRef.current.selectedField = field;
 	};
-	const handleSectionSelected = (section: ContentTypeSection, overrideType?: ContentType) => {
-		if (!closeAndCleanup()) return;
-		const sectionIndex = type.sections.findIndex((s) => s.id === section.id);
+	const handleSectionSelected = async (section: ContentTypeSection, overrideType?: ContentType) => {
+		const postCloseType = await closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
+		const sectionIndex = typeForForm.sections.findIndex((s) => s.id === section.id);
 		const virtualType = createVirtualTypeForSection(sectionDescriptor, formatMessage);
 		handleArtefactSelected(
 			virtualType,
 			createVirtualTypeFormContext(virtualType, section as unknown as LookupTable<unknown>, contentTypesLookup, {
 				fieldUpdates$: stateRef.current.fieldUpdates$
 			}),
-			{ section, isMainSection: sectionIndex === 0, ...(overrideType && { type: overrideType }) }
+			{ section, isMainSection: sectionIndex === 0, type: typeForForm }
 		);
 		stateRef.current.selectedSection = section;
 	};
-	const handleDataSourceSelected: TypeDetailsViewProps['onDataSourceSelected'] = (dataSource) => {
-		if (!closeAndCleanup()) return;
+	const handleDataSourceSelected: TypeDetailsViewProps['onDataSourceSelected'] = async (dataSource) => {
+		const postCloseType = await closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = postCloseType;
 
 		const dataSourceDescriptor =
 			dataSourceDescriptors[dataSource.type] ?? config.dataSources?.[dataSource.type]?.descriptor;
@@ -375,24 +434,35 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const virtualType = createVirtualTypeForDataSource(dataSourceDescriptor, formatMessage);
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createDataSourceValuesObject(dataSource), contentTypesLookup, {
-				fieldUpdates$: stateRef.current.fieldUpdates$
-			}),
-			{ dataSource }
+			createVirtualTypeFormContext(
+				virtualType,
+				createDataSourceValuesObject(dataSource),
+				contentTypesLookup,
+				{
+					fieldUpdates$: stateRef.current.fieldUpdates$
+				},
+				{
+					siblingIds: getDataSourceSiblingIds(typeForForm),
+					currentIds: [dataSource.id]
+				}
+			),
+			{ dataSource, type: typeForForm }
 		);
 		const dataSourceId = dataSource.id ? dataSource.id : NEW_DATASOURCE_ID;
 		setSelectedFieldIdPath(dataSourceId);
 		stateRef.current.selectedDataSource = dataSource;
 	};
-	const handleEditTypeProperties = (overrideType?: ContentType) => {
-		if (!closeAndCleanup()) return;
+	const handleEditTypeProperties = async (overrideType?: ContentType) => {
+		const postCloseType = await closeAndCleanup();
+		if (!postCloseType) return;
+		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
 		const virtualType = createEmptyTypeStructure(applyTranslations(typeBasicDetailsDescriptor, formatMessage));
 		handleArtefactSelected(
 			virtualType,
-			createVirtualTypeFormContext(virtualType, createTypeFormValuesObject(type), contentTypesLookup, {
+			createVirtualTypeFormContext(virtualType, createTypeFormValuesObject(typeForForm), contentTypesLookup, {
 				fieldUpdates$: stateRef.current.fieldUpdates$
 			}),
-			{ ...(overrideType && { type: overrideType }) }
+			{ type: typeForForm }
 		);
 	};
 
@@ -447,10 +517,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				break;
 		}
 	};
-	const handleToolbarActionClick: EditAppLayoutProps['onActionClick'] = (e, action) => {
+	const handleToolbarActionClick: EditAppLayoutProps['onActionClick'] = async (e, action) => {
 		switch (action) {
 			case 'exit':
-				if (!performCurrentFormErrorCheckAndWarning()) break;
+				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				if (hasPendingChanges) {
 					const id = nanoid();
 					dispatch(
@@ -473,7 +543,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				}
 				break;
 			case 'save': {
-				if (!performCurrentFormErrorCheckAndWarning()) break;
+				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
 				dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 				const typeToSave = latestUpdate ?? type;
@@ -572,6 +642,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const resetSelection = () => {
 		setSelectedFieldIdPath(null);
 		stateRef.current.selectedField = null;
+		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(null);
 		setFieldFormViewProps(null);
 		setHasPendingChanges(false);
@@ -580,13 +651,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	// region insert
-	const onOpenInsertFieldDialog = (sectionId: string, fieldPath?: string) => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const onOpenInsertFieldDialog = async (sectionId: string, fieldPath?: string) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		setInsertFieldData({ sectionId, fieldPath });
 	};
 
-	const onOpenInsertDataSourceDialog = () => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const onOpenInsertDataSourceDialog = async () => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		setOpenDataSourceInserter(true);
 	};
 
@@ -648,22 +719,27 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 	// endregion
 
-	const handleSwapFileNameField: FieldFormViewProps['onSwapField'] = (fieldId, sectionId, newField) => {
+	const handleSwapFileNameField: FieldFormViewProps['onSwapField'] = async (fieldId, sectionId, newField) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
-		setType((prevType) => {
-			const nextType = {
-				...prevType,
-				fields: {
-					...prevType.fields,
-					[fieldId]: {
-						...prevType.fields[fieldId],
-						type: newField.id
-					}
+		// Commit open form edits first so the swap runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		// Field id may have changed during commit (rename); use the committed id for lookup/mutation.
+		const committedFieldId = stateRef.current.selectedField?.id ?? fieldId;
+		const nextType = {
+			...baseType,
+			fields: {
+				...baseType.fields,
+				[committedFieldId]: {
+					...baseType.fields[committedFieldId],
+					type: newField.id
 				}
-			};
-			handleFieldSelected(fieldId, nextType.fields[fieldId], sectionId, nextType);
-			return nextType;
-		});
+			}
+		};
+		setType(nextType);
+		handleFieldSelected(committedFieldId, nextType.fields[committedFieldId], sectionId, nextType);
 	};
 
 	// region const fieldEditorView = ...
@@ -677,36 +753,53 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		: null;
 	// endregion
 
-	const handleMoveFieldToSection: FieldFormViewProps['onMoveFieldToSection'] = (
+	const handleMoveFieldToSection: FieldFormViewProps['onMoveFieldToSection'] = async (
 		fieldIdPath,
 		originSectionId,
 		newSectionId,
 		fieldIndex,
 		isTargetRepeatGroup
 	) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the move runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
+		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
+		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
+		const field = getFieldFromType(baseType, resolvedFieldIdPath);
+		// Dialog eligibility used the pre-commit field.id. Same-scope moves are already covered by
+		// rename validation; for a new parent scope, re-check the committed id set against destination siblings.
+		const destinationPath = isTargetRepeatGroup ? `${newSectionId}.${committedFieldId}` : committedFieldId;
+		if (destinationPath !== resolvedFieldIdPath) {
+			const descriptors = configDescriptors.controlDescriptors ?? undefined;
+			const siblingIds = getSiblingFieldIds(baseType, destinationPath, descriptors);
+			if (getFieldIdSet(committedFieldId, field.type, descriptors).some((id) => siblingIds.includes(id))) {
+				showAlert(formatMessage({ defaultMessage: 'That variable name is already in use.' }));
+				// Rename may already be committed; keep the open form on the resolved id.
+				if (resolvedFieldIdPath !== fieldIdPath) {
+					handleFieldSelected(resolvedFieldIdPath, field, originSectionId, baseType);
+				}
+				return;
+			}
+		}
 		if (isTargetRepeatGroup) {
-			const fieldId = getIdFromIdPath(fieldIdPath);
 			// For repeat groups as targets, newSectionId is the path of the selected repeating group
-			const newFieldIdPath = `${newSectionId}.${fieldId}`;
+			const newFieldIdPath = `${newSectionId}.${committedFieldId}`;
 			const fieldIdRoot = newFieldIdPath.split('.')[0];
 			// Section where the field will be added (when moving to a repeat group, newSectionId is the path of the selected repeating group)
-			const targetSectionId = type.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
-			setType((prevType) => {
-				const field = getFieldFromType(prevType, fieldIdPath);
-				let nextType = deleteField(prevType, fieldIdPath, originSectionId);
-				nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
-				handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
-				return nextType;
-			});
+			const targetSectionId = baseType.sections.find((section) => section.fields.includes(fieldIdRoot)).id;
+			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
+			nextType = addField(nextType, field, newFieldIdPath, targetSectionId, fieldIndex);
+			setType(nextType);
+			handleFieldSelected(newFieldIdPath, field, targetSectionId, nextType);
 		} else {
-			setType((prevType) => {
-				const field = getFieldFromType(prevType, fieldIdPath);
-				let nextType = deleteField(prevType, fieldIdPath, originSectionId);
-				nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
-				handleFieldSelected(fieldIdPath, field, newSectionId, nextType);
-				return nextType;
-			});
+			let nextType = deleteField(baseType, resolvedFieldIdPath, originSectionId);
+			nextType = addField(nextType, field, field.id, newSectionId, fieldIndex);
+			setType(nextType);
+			handleFieldSelected(field.id, field, newSectionId, nextType);
 		}
 	};
 
@@ -729,33 +822,51 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	// endregion
 
 	// region reorder
-	const handleReorderRepGroupFields: FieldFormViewProps['onReorderRepGroupFields'] = (
+	const handleReorderRepGroupFields: FieldFormViewProps['onReorderRepGroupFields'] = async (
 		fields,
 		fieldIdPath,
 		sectionId
 	) => {
-		setType((currentType) => {
-			const nextType = reorderRepGroupFields(currentType, fields, fieldIdPath);
-			const field = getFieldFromType(nextType, fieldIdPath);
-			handleFieldSelected(fieldIdPath, field, sectionId, nextType);
-			return nextType;
-		});
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
+		onUpdateHasPendingChanges(true);
+		// Commit open form edits first so the reorder runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		const baseType = commitOpenFormChanges() ?? type;
+		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
+		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
+		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
+		const nextType = reorderRepGroupFields(baseType, fields, resolvedFieldIdPath);
+		setType(nextType);
+		const field = getFieldFromType(nextType, resolvedFieldIdPath);
+		handleFieldSelected(resolvedFieldIdPath, field, sectionId, nextType);
 	};
 
-	const handleReorderSectionFields = (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
+	const handleReorderSectionFields = async (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
+		// Validate before committing so invalid forms leave type and dirty state unchanged.
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
-		// Commit open form edits first so the reorder runs on up-to-date type state,
-		// and clear the dirty flag so a subsequent closeAndCleanup won't re-commit onto a stale type.
+		// Commit open form edits first so the reorder runs on up-to-date type state.
+		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
+		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
-		stateRef.current.formFieldsChanged = false;
-
-		const nextType = reorderSectionFields(baseType, fields, sectionId);
+		// Dialog keys are pre-commit; replace any id missing from type.fields with the
+		// committed selected field id (rename), preserving the requested order.
+		const renamedId = stateRef.current.selectedField?.id;
+		const nextType = reorderSectionFields(
+			baseType,
+			fields.map((f) => (baseType.fields[f.key] ? f : renamedId ? { ...f, key: renamedId } : f)),
+			sectionId
+		);
 		setType(nextType);
 
-		// Refresh the section form when that section is already open in the drawer.
-		if (fieldFormViewProps?.section?.id === sectionId) {
-			const nextSection = getSectionFromType(nextType, sectionId);
-			handleSectionSelected(nextSection, nextType);
+		const openField = stateRef.current.selectedField;
+		if (openField && selectedFieldIdPath) {
+			// Field form still open: reopen with the committed path so it matches type.fields.
+			const path = replaceIdPathLeaf(selectedFieldIdPath, openField.id);
+			handleFieldSelected(path, getFieldFromType(nextType, path), fieldFormViewProps.sectionId, nextType);
+		} else if (fieldFormViewProps?.section?.id === sectionId) {
+			handleSectionSelected(getSectionFromType(nextType, sectionId), nextType);
 		}
 	};
 
@@ -771,49 +882,60 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 	// endregion
 
-	// `fieldUpdates$` subscription
+	// `fieldUpdates$`: sync dirty via tap; debounce only background validation (no dirty side effects).
 	useEffect(() => {
-		const sub = stateRef.current.fieldUpdates$.pipe(debounceTime(500)).subscribe(async () => {
-			// Ignore queued updates after close/rollback so they can't re-dirty or write stale values.
-			if (!effectRefs.current.open) return;
-			const { fieldPathsWithErrors, selectedFieldIdPath, onUpdateHasPendingChanges, jotai } = effectRefs.current;
-			// Capture the form that triggered this update so we can discard results if it closes or is replaced while awaiting.
-			const formContext = stateRef.current.activeFormContext;
-			onUpdateHasPendingChanges(true);
-			stateRef.current.formFieldsChanged = true;
-			const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
-			// Check validation atoms of the form to see if there are any unfulfilled validations.
-			setValidatingForm(true);
-			const validationSeq = ++stateRef.current.validationSeq;
-			const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
-			// `activeFormContext` is intentionally kept after close, so also re-check `open`.
-			if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) {
-				// Close clears validatingForm; leave it alone when a newer form owns in-flight validation.
-				if (!effectRefs.current.open) setValidatingForm(false);
-				return;
-			}
-			// A newer run for this same form started while awaiting; it owns the error state and validatingForm.
-			if (validationSeq !== stateRef.current.validationSeq) return;
-			setActiveFormHasErrors(hasErrors);
-			nextFieldPathsWithErrors[selectedFieldIdPath] = hasErrors;
-			if (!nextFieldPathsWithErrors[selectedFieldIdPath]) delete nextFieldPathsWithErrors[selectedFieldIdPath];
+		const sub = stateRef.current.fieldUpdates$
+			.pipe(
+				// Track dirty synchronously from the active form's changedFieldIds so commit/save are not
+				// gated on the validation debounce. Ignore emissions when no form is open (e.g. after close).
+				tap(() => {
+					if (!effectRefs.current.open) return;
+					const formContext = stateRef.current.activeFormContext;
+					const isDirty = (formContext?.changedFieldIds?.size ?? 0) > 0;
+					stateRef.current.formFieldsChanged = isDirty;
+					if (isDirty) {
+						effectRefs.current.onUpdateHasPendingChanges(true);
+					}
+				}),
+				debounceTime(500)
+			)
+			.subscribe(async () => {
+				// Validation only — must not mark dirty; a queued emission from a previous form
+				// must not flag the replacement form as changed.
+				if (!effectRefs.current.open) return;
+				const { fieldPathsWithErrors, selectedFieldIdPath, jotai } = effectRefs.current;
+				// Capture the form and field path present when this debounced run starts so results
+				// are discarded if either is replaced before validation resolves.
+				const formContext = stateRef.current.activeFormContext;
+				const originatingFieldPath = selectedFieldIdPath;
+				const nextFieldPathsWithErrors = { ...fieldPathsWithErrors };
+				const validationSeq = ++stateRef.current.validationSeq;
+				const hasErrors = await validityAtomsHaveErrors(jotai, formContext?.atoms?.validationByFieldId);
+				// `activeFormContext` is intentionally kept after close, so also re-check `open`.
+				if (!effectRefs.current.open || stateRef.current.activeFormContext !== formContext) return;
+				// A newer run for this same form started while awaiting; it owns the error state.
+				if (validationSeq !== stateRef.current.validationSeq) return;
+				// Selection moved while this form context was somehow retained; do not apply to the new path.
+				if (effectRefs.current.selectedFieldIdPath !== originatingFieldPath) return;
+				setActiveFormHasErrors(hasErrors);
+				nextFieldPathsWithErrors[originatingFieldPath] = hasErrors;
+				if (!nextFieldPathsWithErrors[originatingFieldPath]) delete nextFieldPathsWithErrors[originatingFieldPath];
 
-			setFieldPathsWithErrors(nextFieldPathsWithErrors);
-			setValidatingForm(false);
+				setFieldPathsWithErrors(nextFieldPathsWithErrors);
 
-			// Live-sync draft thumbnailFileName while the type properties form is open,
-			// so TypeCardMedia can reload by filename without waiting for form commit / save.
-			const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
-			if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
-				const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
-				if (thumbnailAtom) {
-					const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
-					setType((current) =>
-						current.thumbnailFileName === thumbnailFileName ? current : { ...current, thumbnailFileName }
-					);
+				// Live-sync draft thumbnailFileName while the type properties form is open,
+				// so TypeCardMedia can reload by filename without waiting for form commit / save.
+				const { selectedField, selectedSection, selectedDataSource } = stateRef.current;
+				if (!selectedField && !selectedSection && !selectedDataSource && formContext) {
+					const thumbnailAtom = formContext.atoms.valueByFieldId.thumbnailFileName;
+					if (thumbnailAtom) {
+						const thumbnailFileName = (jotai.get(thumbnailAtom) as string) || null;
+						setType((current) =>
+							current.thumbnailFileName === thumbnailFileName ? current : { ...current, thumbnailFileName }
+						);
+					}
 				}
-			}
-		});
+			});
 		return () => {
 			sub.unsubscribe();
 		};
@@ -862,8 +984,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		return () => sub.unsubscribe();
 	}, [site, activeEnvironment, setConfig, dispatch]);
 
-	const disableSave =
-		(!type.NEW && !hasPendingChanges) || Object.keys(fieldPathsWithErrors).length !== 0 || validatingForm;
+	const disableSave = (!type.NEW && !hasPendingChanges) || Object.keys(fieldPathsWithErrors).length !== 0;
 	return (
 		<Provider store={jotai}>
 			<EditTypeViewLayout
@@ -957,6 +1078,13 @@ function createContextObject(): EditAppContextProps {
 function getIdFromIdPath(idPath: string): string {
 	const pieces = idPath.split('.');
 	return pieces.pop();
+}
+
+/** Replaces only the final segment of a (possibly composed) field id path. */
+function replaceIdPathLeaf(idPath: string, newId: string): string {
+	const pieces = idPath.split('.');
+	pieces[pieces.length - 1] = newId;
+	return pieces.join('.');
 }
 
 function insertSection(type: ContentType, section: ContentTypeSection, position: number = 0): ContentType {
@@ -1086,14 +1214,18 @@ function deleteField(type: ContentType, fieldIdPath: string, sectionId: string):
 
 		const nextSections = type.sections.concat();
 		const sectionIndex = nextSections.findIndex((section) => section.id === sectionId);
-		const section = nextSections[sectionIndex];
-		const nextSectionFields = nextSections[sectionIndex].fields.concat();
-		const fieldIndex = nextSectionFields.findIndex((fieldId) => fieldId === fieldIdPath);
-		nextSectionFields.splice(fieldIndex, 1);
-		nextSections[sectionIndex] = {
-			...section,
-			fields: nextSectionFields
-		};
+		if (sectionIndex !== -1) {
+			const section = nextSections[sectionIndex];
+			const nextSectionFields = section.fields.concat();
+			const fieldIndex = nextSectionFields.findIndex((fieldId) => fieldId === fieldIdPath);
+			if (fieldIndex !== -1) {
+				nextSectionFields.splice(fieldIndex, 1);
+				nextSections[sectionIndex] = {
+					...section,
+					fields: nextSectionFields
+				};
+			}
+		}
 
 		return { ...type, sections: nextSections, fields: nextFields };
 	}
