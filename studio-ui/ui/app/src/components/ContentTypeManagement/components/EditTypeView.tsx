@@ -789,7 +789,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		});
 	};
 
-	const handleReorderSectionFields = (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
+	const handleReorderSectionFields = async (fields: ReorderFieldsDialogProps['fields'], sectionId: string) => {
+		// Validate before committing so invalid forms leave type and dirty state unchanged.
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		onUpdateHasPendingChanges(true);
 		// Commit open form edits first so the reorder runs on up-to-date type state,
 		// and clear the dirty flag so a subsequent closeAndCleanup won't re-commit onto a stale type.
