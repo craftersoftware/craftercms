@@ -361,6 +361,9 @@ export function CreateUserDialogContainer(props: CreateUserDialogContainerProps)
                       />
                     )
                   }
+                  slotProps={{
+                    htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
+                  }}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                 />
               </Grid>

@@ -47,7 +47,7 @@ import Menu from '@mui/material/Menu';
 import { useMount } from '../../hooks/useMount';
 import { useDebouncedInput } from '../../hooks/useDebouncedInput';
 import { PasswordStrengthDisplayPopper } from '../PasswordStrengthDisplayPopper';
-import { USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
+import { USER_PASSWORD_MAX_LENGTH, USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
 import useTimer from '../../hooks/useTimer';
 import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
@@ -447,7 +447,9 @@ function ResetView(props: SubViewProps) {
           placeholder={formatMessage(translations.resetPasswordFieldPlaceholderLabel)}
           onFocus={(e) => setAnchorEl(e.target)}
           onBlur={() => setAnchorEl(null)}
-          slotProps={{ htmlInput: { autoComplete: 'new-password' } }}
+          slotProps={{
+						htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
+					}}
         />
         <PasswordTextField
           id="resetFormPasswordConfirmField"
@@ -460,6 +462,9 @@ function ResetView(props: SubViewProps) {
           onChange={(e) => setNewPasswordConfirm(e.target.value)}
           className={classes.resetPassword}
           placeholder={formatMessage(translations.resetPasswordConfirmFieldPlaceholderLabel)}
+          slotProps={{
+						htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH, autoComplete: 'new-password' }
+					}}
         />
         {children}
       </DialogContent>

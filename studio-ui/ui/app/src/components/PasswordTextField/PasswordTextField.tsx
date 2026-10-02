@@ -20,6 +20,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { mergeSlotProps } from '@mui/material/utils';
 import { defineMessages, useIntl } from 'react-intl';
 
 type PasswordTextFieldProps = TextFieldProps & {
@@ -35,7 +36,7 @@ const translations = defineMessages({
 });
 
 const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProps>((props, ref) => {
-  const { visibilitySwitch = true, initialVisible = false } = props;
+  const { visibilitySwitch = true, initialVisible = false, slotProps, ...textFieldProps } = props;
   const { formatMessage } = useIntl();
   const [showPassword, setShowPassword] = useState(initialVisible);
   const inputRef = useRef<HTMLInputElement>(undefined);
@@ -48,32 +49,32 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
     }, 0);
   };
 
+  const visibilityAdornment = (
+    <InputAdornment position="end">
+      <IconButton
+        edge="end"
+        aria-label={formatMessage(translations.toggleVisibilityButtonText)}
+        onClick={handleClickShowPassword}
+        size="large"
+      >
+        {showPassword ? <VisibilityOff /> : <Visibility />}
+      </IconButton>
+    </InputAdornment>
+  );
+
   return (
     <TextField
-      {...props}
+      {...textFieldProps}
       ref={ref}
       type={showPassword ? 'text' : 'password'}
       slotProps={{
-        htmlInput: {
+        ...slotProps,
+        htmlInput: mergeSlotProps(slotProps?.htmlInput, {
           ref: inputRef
-        },
+        }),
         input: visibilitySwitch
-          ? {
-              ...props.InputProps,
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    edge="end"
-                    aria-label={formatMessage(translations.toggleVisibilityButtonText)}
-                    onClick={handleClickShowPassword}
-                    size="large"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              )
-            }
-          : props.InputProps
+          ? mergeSlotProps({ endAdornment: visibilityAdornment }, slotProps?.input ?? {})
+          : slotProps?.input
       }}
     />
   );

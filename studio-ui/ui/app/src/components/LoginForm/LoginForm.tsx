@@ -103,7 +103,7 @@ export function LogInForm(props: LogInFormProps) {
         label={<FormattedMessage id="authMonitor.passwordTextFieldLabel" defaultMessage="Password" />}
         slotProps={{
           inputLabel: { className: cls.inputLabel },
-          htmlInput: { maxLength: USER_PASSWORD_MAX_LENGTH }
+          htmlInput: { autoComplete: 'current-password', maxLength: USER_PASSWORD_MAX_LENGTH }
         }}
       />
       {xsrfParamName && <input type="hidden" name={xsrfParamName} value={xsrfToken} />}
