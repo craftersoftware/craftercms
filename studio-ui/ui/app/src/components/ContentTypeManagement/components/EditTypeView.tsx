@@ -836,14 +836,23 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
 		const baseType = commitOpenFormChanges() ?? type;
-
-		const nextType = reorderSectionFields(baseType, fields, sectionId);
+		// Dialog keys are pre-commit; replace any id missing from type.fields with the
+		// committed selected field id (rename), preserving the requested order.
+		const renamedId = stateRef.current.selectedField?.id;
+		const nextType = reorderSectionFields(
+			baseType,
+			fields.map((f) => (baseType.fields[f.key] ? f : renamedId ? { ...f, key: renamedId } : f)),
+			sectionId
+		);
 		setType(nextType);
 
-		// Refresh the section form when that section is already open in the drawer.
-		if (fieldFormViewProps?.section?.id === sectionId) {
-			const nextSection = getSectionFromType(nextType, sectionId);
-			handleSectionSelected(nextSection, nextType);
+		const openField = stateRef.current.selectedField;
+		if (openField && selectedFieldIdPath) {
+			// Field form still open: reopen with the committed path so it matches type.fields.
+			const path = replaceIdPathLeaf(selectedFieldIdPath, openField.id);
+			handleFieldSelected(path, getFieldFromType(nextType, path), fieldFormViewProps.sectionId, nextType);
+		} else if (fieldFormViewProps?.section?.id === sectionId) {
+			handleSectionSelected(getSectionFromType(nextType, sectionId), nextType);
 		}
 	};
 
