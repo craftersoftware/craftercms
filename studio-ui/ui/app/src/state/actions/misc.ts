@@ -59,8 +59,11 @@ export const editTemplate = /*#__PURE__*/ createAction<EditFilePayload>('EDIT_TE
 
 export const editController = /*#__PURE__*/ createAction<EditFilePayload>('EDIT_CONTROLLER');
 
-export const createFile = /*#__PURE__*/ createAction<{ path: string; fileName: string; onCreated: StandardAction }>(
-	'CREATE_FILE'
-);
+export const createFile = /*#__PURE__*/ createAction<{
+	path: string;
+	fileName: string;
+	content?: string;
+	onCreated: StandardAction;
+}>('CREATE_FILE');
 
 // endregion

@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-09-08
+Last updated: 2026-10-02
 
 ---
 
@@ -310,7 +310,6 @@ This path is functional for plugin metadata already present in a form definition
 
 Additional current FE control gaps:
 
-- `hasJsController` is parsed onto the `ContentType` model but not consumed by React FE
 - Item/media controls group resolved actions by manager binding + intent (browse/search/upload/create). Every displayed choice retains its owning action; plugin `MenuItem`/`Dialog` actions use a standalone custom lane.
 
 **System-field catalog vs FE2 render type:** TB palette entries `disabled` and `internal-name` are not meant to be separate FE2 control implementations. On insert, `getNewFieldFromDescriptor` applies `systemFieldsTypesMap` (`disabled` → `checkbox`, `internal-name` → `input`) and locks the field id via `systemFieldsIdsMap` / `readOnlyFieldsIds`. Persisted form-definition `type` is therefore the remapped built-in; FE2 `controlMap` renders `Checkbox` / `Text`. Unused legacy stubs `link-input`, `link-textarea`, and `linked-dropdown` were removed from the built-in maps/descriptors.
@@ -358,15 +357,7 @@ By contrast, control plugin metadata is explicitly moved to `field.properties.pl
 
 #### Form controllers
 
-**Status:** design decided below; **not implemented**. `FormsEngine.tsx` still lists loading/execution as a TODO. `hasJsController` is parsed but unused at FE2 runtime.
-
-There is also a current naming/behavior mismatch in new TB:
-
-- `hasJsController` and its descriptor are labelled “Client-side Controller” and serialize as `<controller>`;
-- `TypeJsControllerSelector` currently opens `controller.groovy`, not `form-controller.js`;
-- `editTypeController` supports both filenames, but the selector calls only the Groovy path.
-
-Treat form-controller support and Groovy controller editing as separate problems. See **§5.9** for the FE2 form-controller design.
+**Status:** implemented. See **§5.9**. FE2 loads type-local `form-controller.js` when `hasJsController` is true; Type Builder edits that file separately from `controller.groovy`.
 
 ### 5.6 Old-world virtues worth preserving
 
@@ -424,13 +415,13 @@ A project plugin may still _ship_ a content type folder that includes `form-cont
 
 #### File & gate
 
-| Piece        | Contract                                                                                                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Flag         | `hasJsController` / serialized `<controller>true\|false</controller>`                                                                                                                   |
-| Path in site | `/config/studio/content-types/{contentTypeId}/form-controller.js`                                                                                                                       |
-| Fetch API    | Existing authenticated endpoint: `/studio/api/2/configuration/content_types/{site}/form_controller?contentTypeId=…` (`getFetchLegacyFormControllerUrl` — un-deprecate / rename for FE2) |
-| When to load | Form bootstrap, only if `hasJsController === true`                                                                                                                                      |
-| On failure   | Log + continue without controller (same soft-fail posture as FE1)                                                                                                                       |
+| Piece        | Contract                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Flag         | `hasJsController` / serialized `<controller>true\|false</controller>`                                                                        |
+| Path in site | `/config/studio/content-types/{contentTypeId}/form-controller.js`                                                                            |
+| Fetch API    | Existing authenticated endpoint: `/studio/api/2/configuration/content_types/{site}/form_controller?contentTypeId=…` (`getFormControllerUrl`) |
+| When to load | Form bootstrap, only if `hasJsController === true`                                                                                           |
+| On failure   | Log + continue without controller (same soft-fail posture as FE1)                                                                            |
 
 Do **not** use a bare `<script src>` against that API (auth token / cookies); FE1 already moved to `getText` + Blob for that reason.
 
@@ -442,25 +433,31 @@ All hooks may be sync or async. Host always `await`s them.
 
 ```ts
 type MaybePromise<T> = T | Promise<T>;
+type FormControllerMode = 'create' | 'edit';
+type FormControllerSaveResult = boolean | { ok: boolean; message?: string };
 
 interface FormController {
 	/** Bump when breaking the host↔controller contract. */
 	apiVersion: 1;
 	/**
-	 * Called once after form context/atoms exist.
+	 * Called once per form that owns a controller (root and embedded children).
+	 * Not called for repeat stacked forms.
 	 * May return a cleanup (or a Promise of cleanup) invoked on form unmount / stack pop.
 	 */
 	initialize?(ctx: FormControllerContext): MaybePromise<void | (() => void)>;
 	/**
 	 * Return false to omit the field (or repeat definition) from the rendered form.
 	 * Default true. Async allowed — host awaits before first field paint for that form.
+	 * Repeat stacked forms call this against the parent form's context.
 	 */
 	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerContext): MaybePromise<boolean>;
 	/**
-	 * Return false / rejected promise to veto save.
+	 * Return false / `{ ok: false }` / rejected promise to veto save.
+	 * `{ ok: false, message }` shows `message` to the author.
 	 * Called in `useSaveForm` after client validation snapshot, before XML write.
+	 * Not invoked for repeat item commits.
 	 */
-	onBeforeSave?(ctx: FormControllerContext): MaybePromise<boolean>;
+	onBeforeSave?(ctx: FormControllerContext): MaybePromise<FormControllerSaveResult>;
 }
 
 // form-controller.js
@@ -504,17 +501,17 @@ That is the authoring artifact TB creates/edits. It is **not** under `static-ass
 GET /studio/api/2/configuration/content_types/{site}/form_controller?contentTypeId={contentTypeId}
 ```
 
-Helper today: `getFetchLegacyFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts` (un-deprecate / rename for FE2). Body is the raw JS source of `form-controller.js`.
+Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts` (`getFetchLegacyFormControllerUrl` is a deprecated alias). Body is the raw JS source of `form-controller.js`.
 
-**In FE2 code (to implement):**
+**In FE2 code:**
 
 | Piece     | Location                                                                                                                            |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Loader    | New `FormsEngine/lib/formControllerLoader.ts` (or similar) — fetch text → Blob ESM `import` → cache                                 |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `host`, `stub`                                                       |
 | Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render |
-| Relevance | Section/field mapping path that builds the visible field list                                                                       |
+| Relevance | `attachFormController` stores an `irrelevantFieldIds` deny-list; FormOrchestrator / ToC / save snapshot exclude those ids           |
 | Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                              |
-| Types     | `FormController` / `FormControllerContext` next to other FE types                                                                   |
+| Types     | `FormController` / `FormControllerContext` in `formControllers/types.ts`                                                            |
 
 **Load sequence:**
 
@@ -534,18 +531,28 @@ Host helpers may live under `window.craftercms.formsEngine.formControllers` (loa
 
 Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` or the full Jotai store:
 
-| Surface                                                          | Purpose                                                            |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `siteId`, `contentType`, `path`, `mode`                          | Identity (`create` \| `edit` \| `embedded` \| `repeat`) + readonly |
-| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)` | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`) |
-| `getField(fieldId)` / `getContentType(id?)`                      | Field/type metadata                                                                   |
-| `isCreateMode`, `isEmbedded`, `readonly`                         | Mode flags                                                                            |
-| `fieldUpdateStream`                                              | Observable of field ids that changed; subscribe in `initialize`                       |
-| Later (optional)                                                 | Convenience `subscribe(fieldId, cb)`, snackbar/dispatch helpers                       |
+| Surface                                                           | Purpose                                                                                                            |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, `readonly` | Identity. `mode` is `'create' \| 'edit'`; `isEmbedded` is a separate axis. `path` and `readonly` are live getters. |
+| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)`  | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`)                                      |
+| `getField(fieldId)`                                               | Field metadata; dotted paths skip numeric (repeat index) segments                                                  |
+| `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Host also drops listeners on teardown.                                   |
+| `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                             |
 
-`getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `fieldUpdateStream` emits that root id. On a stacked repeat form (`mode: 'repeat'`), use the inner field id directly.
+`getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `onFieldChange` emits that root id. `getValues()` uses the same `file-name` atom as `getValue('file-name')`.
+
+Look up other content types via the `craftercms` global (`craftercms.getStore().getState().contentTypes.byId`), not the form context.
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
+
+**Relevance / validation:** only field ids the controller explicitly rejects are hidden. Those fields are excluded from the validity snapshot (so a hidden required field does not force a draft save) but their values still serialize for XML round-trip. Atoms the hook never saw (descriptor additional fields, `folder-name`, …) stay validated. `file-name` cannot be hidden.
+
+**Lifecycle (repeat vs embedded):**
+
+- An **embedded child is its own form**: own controller (gated on its own `hasJsController`), own context, `initialize`, and `onBeforeSave`.
+- A **repeat item is part of the parent form**: no context, no `initialize`, no `onBeforeSave`. The host runs only `isFieldRelevant(subField, parentCtx)` against the parent controller.
+
+Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
 #### Integration points in FE2
 
@@ -556,14 +563,12 @@ Controllers must not import React or reach into DOM for field visibility; releva
 | `await isFieldRelevant`   | When mapping `contentType.sections` → visible fields (same place FE already strips `file-name` for embeds); wait before paint if any check is async |
 | `await onBeforeSave`      | `useSaveForm`, after validity snapshot / draft decision, **before** `buildContentXml` / write; veto restores submitting UI and stops                |
 
-Repeat-group / embedded child forms: load the **child type’s** controller when that type has `hasJsController`, with `mode: 'embedded' | 'repeat'`. Do not run the parent controller’s `isFieldRelevant` on child fields.
+#### TB companion
 
-#### TB companion fixes (required for authors)
-
-1. **Client-side Controller** UI must edit/create `form-controller.js`, not `controller.groovy`.
-2. Keep Groovy (`controller.groovy`) as a separate type property/action (server-side).
-3. Toggling `hasJsController` on should ensure the JS file exists (reuse `editTypeController(..., 'javascript')`).
-4. Optionally offer a stub FE2 controller template when creating the file. **Done** — `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`) and via `createFile` when the filename matches.
+1. **Form Controller** property edits/creates `form-controller.js` and sets `hasJsController` on Save of the editor.
+2. **Groovy Controller** is a separate type property (server-side `controller.groovy`); existence is resolved by path check, not a serialized flag.
+3. Header shortcuts were removed — the properties form is the single UI for both files (edit + delete).
+4. `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`). Sample: `samples/fe2-form-controller.example.mjs`.
 
 #### Non-goals (initial)
 
@@ -611,6 +616,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | Question                          | Start here                                                                                            |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
+| Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
 | Control rendering                 | `lib/controlHelpers.tsx`, `lib/controlMap.ts`, `controls/*`                                           |
 | Legacy plugin URL/module protocol | `cstudio-common/common-api.js` (`getPluginInfo`, `Module`)                                            |
 | Legacy DS runtime                 | `forms-engine.js` (`_loadDatasources`), `cstudio-forms/data-sources/*`                                |
@@ -637,7 +643,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [x] Preserve DS plugin metadata in the model, new-TB insertion, and XML serialization.
 - [x] **Single plugin model for FE data sources** — `PluginDescriptor.dataSources` registered by `registerPlugin`; `loadDataSourceModule` demand-loads via `importPlugin` only.
 - [x] **Single plugin model for FE controls** — `PluginDescriptor.controls` registered by `registerPlugin`; `controlPluginLoader` demand-loads via `importPlugin` + `field.type` lookup. See [`fe2-control-plugin-single-model-implementation.md`](fe2-control-plugin-single-model-implementation.md).
-- [x] **Form-controller design** — type-local FE2 ESM (`FormController` hooks), fetch via form_controller API, not `PluginDescriptor`. See §5.9. Implementation still open (below).
+- [x] **Form-controller design + implementation** — type-local FE2 ESM (`FormController` hooks), fetch via form_controller API, not `PluginDescriptor`. See §5.9. Repeat items are part of the parent form; embedded children are their own form.
 - [x] **Control-plugin ownership** — after `importPlugin()`, ownership is validated against loaded `PluginDescriptor.id` (not the form-definition locator `pluginId`). See `controlPluginLoader.ts`.
 - [x] **Atomic FE plugin registration** — `registerPlugin` preflights all DS + control contributions before any registry commit.
 - [x] **Plugin control valueRetriever / valueSerializer** — optional on `ControlPluginContribution`; registered with the control; FE preloads plugin locators at form bootstrap (parse) and again in `useSaveForm` before `buildContentXml` (covers embeds added after open)
@@ -655,10 +661,8 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [ ] Reconcile new TB's code-default catalog proposal with current `ui.xml` allow-list behavior.
 - [ ] Implement/clarify descriptor merge precedence and plugin-coordinate propagation from `ui.xml` (and make lookup order consistent across insert/edit/save).
 - [ ] Decide whether `EditTypeView` should consume Redux `uiConfig` instead of fetching `/ui.xml` independently.
-- [ ] Implement FE2 form-controller load + lifecycle (`initialize` / `isFieldRelevant` / `onBeforeSave`) per §5.9; separate clearly from `controller.groovy`.
 - [ ] Align project-plugin auto-wiring with TB2 catalog discovery (`site-config-tools.xml` vs `ui.xml`) and define FE1 package migration.
 - [ ] Normalize plugin identity/locator vocabulary and resolve `file` vs `filename` across XML, frontend, docs, and backend.
-- [ ] Fix the `hasJsController` / “Client-side Controller” UI path currently opening `controller.groovy` (and wire FE2 to consume the flag).
 - [ ] **S3 / WebDAV capability stubs** — All remote browse and upload modules work via `browseExternalAssets` / `uploadExternalAssets`. Remaining gap: `video-S3-transcoding` still hard-fails via `unsupportedRemoteError` until dedicated transcoding platform support exists.
 - [ ] **Non-rendering control-map entries** — `disabled`, `internal-name`, `link-input`, `link-textarea` (and any other null map slots) need real FE2 controls or an explicit retire/alias decision.
 - [ ] **FE2 Crafter-specific RTE plugin parity** — audit FE1 TinyMCE/Crafter plugins vs current `rteUtils` externals (`craftercms_paste`, `editform`, …) and implement missing FE2 equivalents.
@@ -673,6 +677,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-02** — FE2 form controllers implemented under `FormsEngine/formControllers/`. Contract: `onFieldChange` (not an Observable), `notify`, `onBeforeSave` may return `{ ok, message }`, `mode` + `isEmbedded` as two axes. Repeat stacked forms reuse the parent controller for `isFieldRelevant` only (no `initialize` / `onBeforeSave`). Relevance is a deny-list (`irrelevantFieldIds`) so extra validation atoms stay in the save snapshot. TB Form/Groovy controller fields are the single edit/delete UI; header shortcuts removed. Sample: `samples/fe2-form-controller.example.mjs`.
 - **2026-09-08** — Repeat stacked-form bootstrap now awaits `preloadControlPluginsForFields` for `fieldsToRender` (+ item values for nested embeds) before `createParsedValuesObject`/`setFieldAtoms`, and passes failures into `initializeState` (parity with create/edit/embedded). Same day earlier: `useSaveForm` awaits preload before `buildContentXml`; bootstrap preload failures map to `affectedPluginControlFields` and block save.
 - **2026-08-12** — `collectControlPluginLocators` / `preloadControlPluginsForFields` now walk node-selector `item.component` values (resolve embedded content types + nested fields, including repeats) so embedded plugin controls register before `createParsedValueForField`. Call sites pass content object + `contentTypesById`.
 - **2026-08-11** — Embedded stacked-form bootstrap now awaits `preloadControlPluginsForFields` for the embedded content type before `prepareEmbeddedItemForm`/`setFieldAtoms` (parity with create/edit preload so plugin validators/retrievers exist).

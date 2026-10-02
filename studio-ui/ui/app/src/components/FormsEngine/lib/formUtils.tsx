@@ -366,12 +366,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
-		formController: null,
-		formControllerContext: null,
-		formControllerCleanup: null,
-		formControllerFileMissing: false,
-		formControllerLoadFailed: false,
-		relevantFieldIds: null,
+		formControllerState: null,
 		...mixin
 	};
 	return data;
@@ -431,6 +426,23 @@ export const extractAtomValues: (store: JotaiStore, valueAtoms: LookupTable<Atom
 		values[fieldId] = store.get(valueAtom);
 		return values;
 	}, {});
+
+/**
+ * Validation atoms for the save / invalid-form snapshot.
+ * Excludes only field ids the form controller explicitly rejected; extra atoms
+ * (descriptor additional fields, `folder-name`, …) stay in the snapshot.
+ */
+export function getValidationAtomsExcludingIrrelevant(
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
+	irrelevantFieldIds: Set<string> | null | undefined
+): Array<Atom<Promise<FieldValidityState>>> {
+	if (!irrelevantFieldIds?.size) {
+		return Object.values(validationByFieldId);
+	}
+	return Object.entries(validationByFieldId)
+		.filter(([fieldId]) => !irrelevantFieldIds.has(fieldId))
+		.map(([, validityAtom]) => validityAtom);
+}
 
 /**
  * Retrieves all the data requirements to show an update form

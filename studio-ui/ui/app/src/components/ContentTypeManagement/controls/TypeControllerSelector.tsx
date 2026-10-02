@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,7 +15,7 @@
  */
 
 import OutlinedInput from '@mui/material/OutlinedInput';
-import React, { useId } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -32,7 +32,7 @@ import { ensureSingleSlash } from '../../../utils/string';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
-import { clearFormControllerCache } from '../../FormsEngine/lib/formControllerLoader';
+import { clearFormControllerCache } from '../../FormsEngine/formControllers/loader';
 
 export interface TypeControllerSelectorProps extends TypeBuilderControl {
 	value: boolean;
@@ -57,12 +57,27 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const isJavascript = type === 'javascript';
 	const fileName = isJavascript ? 'form-controller.js' : 'controller.groovy';
 	const controllerPath = ensureSingleSlash(`${CONTENT_TYPES_BASE_PATH}${contentTypeId}/${fileName}`);
+	const [groovyExists, setGroovyExists] = useState(false);
+
+	useEffect(() => {
+		if (isJavascript) return;
+		const sub = checkPathExistence(siteId, controllerPath).subscribe({
+			next: setGroovyExists,
+			error: () => setGroovyExists(false)
+		});
+		return () => sub.unsubscribe();
+	}, [isJavascript, siteId, controllerPath]);
+
+	const hasFile = isJavascript ? Boolean(value) : groovyExists;
 
 	const onEditController = () => {
 		editTypeController(CONTENT_TYPES_BASE_PATH, contentTypeId, dispatch, type, () => {
-			// Drop the cached module so the next form open imports the saved source.
-			if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
-			setValue(true);
+			if (isJavascript) {
+				clearFormControllerCache(siteId, contentTypeId);
+				setValue(true);
+			} else {
+				setGroovyExists(true);
+			}
 		});
 	};
 
@@ -70,16 +85,24 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 		checkPathExistence(siteId, controllerPath).subscribe({
 			next: (exists) => {
 				if (!exists) {
-					if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
-					setValue(false);
+					if (isJavascript) {
+						clearFormControllerCache(siteId, contentTypeId);
+						setValue(false);
+					} else {
+						setGroovyExists(false);
+					}
 					return;
 				}
 				const title = formatMessage({ defaultMessage: 'Delete Controller' });
 				const comment = formatMessage({ defaultMessage: 'Deleting controller {fileName}' }, { fileName });
 				deleteItems(siteId, [controllerPath], title, comment).subscribe({
 					next: () => {
-						if (isJavascript) clearFormControllerCache(siteId, contentTypeId);
-						setValue(false);
+						if (isJavascript) {
+							clearFormControllerCache(siteId, contentTypeId);
+							setValue(false);
+						} else {
+							setGroovyExists(false);
+						}
 					},
 					error: ({ response }) => {
 						dispatch(pushErrorDialog({ props: { error: response?.response } }));
@@ -116,11 +139,11 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 				autoFocus={autoFocus}
 				id={htmlId}
 				fullWidth
-				value={value ? fileName : ''}
+				value={hasFile ? fileName : ''}
 				disabled
 				endAdornment={
 					<>
-						{value && (
+						{hasFile && (
 							<Tooltip title={<FormattedMessage defaultMessage="Delete Controller" />}>
 								<IconButton onClick={onDeleteController}>
 									<DeleteOutlineRoundedIcon />

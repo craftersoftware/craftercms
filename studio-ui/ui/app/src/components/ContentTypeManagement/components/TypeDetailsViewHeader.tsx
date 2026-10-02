@@ -28,7 +28,7 @@ import React from 'react';
 import { nanoid } from 'nanoid';
 import { createComponentId } from '../../../utils/system';
 
-export type TypeDetailsHeaderActionTarget = 'properties' | 'template' | 'jsController' | 'groovyController' | 'deleted';
+export type TypeDetailsHeaderActionTarget = 'properties' | 'template' | 'deleted';
 
 export interface TypeDetailsViewHeaderProps {
 	type: PossibleContentTypeDraft;
@@ -105,12 +105,6 @@ export function TypeDetailsViewHeader({ type, onActionClick }: TypeDetailsViewHe
 				</Button>
 				<Button onClick={handleActionClick} data-action-target="template">
 					<FormattedMessage defaultMessage="Template" />
-				</Button>
-				<Button onClick={handleActionClick} data-action-target="jsController">
-					<FormattedMessage defaultMessage="Form Controller" />
-				</Button>
-				<Button onClick={handleActionClick} data-action-target="groovyController">
-					<FormattedMessage defaultMessage="Groovy Controller" />
 				</Button>
 				{!type.NEW && (
 					<Button color="error" onClick={handleDeleteType}>

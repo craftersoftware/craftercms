@@ -18,7 +18,7 @@ import { firstValueFrom } from 'rxjs';
 import { AjaxError } from 'rxjs/ajax';
 import { getText } from '../../../utils/ajax';
 import { getFormControllerUrl } from '../../../services/contentTypes';
-import type { FormController } from './formControllerTypes';
+import type { FormController } from './types';
 
 const SUPPORTED_API_VERSION = 1;
 
@@ -26,7 +26,6 @@ const commonErrorMsg = 'The form will proceed as though no custom type controlle
 
 /** Outcome of attempting to load a content-type-local form controller. */
 export type LoadFormControllerResult =
-	| { status: 'skipped'; controller: null }
 	| { status: 'loaded'; controller: FormController }
 	| { status: 'missing'; controller: null }
 	| { status: 'failed'; controller: null };
@@ -72,20 +71,13 @@ function resolveControllerExport(module: Record<string, unknown>): FormControlle
  * controller. Successful and in-flight loads are cached for the session; failed / missing loads
  * are removed from the cache so a later retry can try again.
  *
+ * The caller is responsible for skipping this when `hasJsController` is false.
+ *
  * @param siteId - Active site id
  * @param contentTypeId - Content type id that owns the controller file
- * @param hasJsController - When `false`, skips the network call (`status: 'skipped'`)
  * @returns Promise of a {@link LoadFormControllerResult}
  */
-export function loadFormController(
-	siteId: string,
-	contentTypeId: string,
-	hasJsController = true
-): Promise<LoadFormControllerResult> {
-	if (!hasJsController) {
-		return Promise.resolve({ status: 'skipped', controller: null });
-	}
-
+export function loadFormController(siteId: string, contentTypeId: string): Promise<LoadFormControllerResult> {
 	const key = cacheKey(siteId, contentTypeId);
 	const cached = formControllerCache.get(key);
 	if (cached) {
@@ -164,29 +156,26 @@ export function getCachedFormController(
 
 /**
  * Clears the session form-controller cache.
- * Pass both `siteId` and `contentTypeId` to remove one entry; omit both to clear all.
+ * - `siteId` + `contentTypeId`: one entry
+ * - `siteId` only: every entry for that site
+ * - neither: the entire cache
  *
- * @param siteId - Optional site id of the entry to clear
- * @param contentTypeId - Optional content type id of the entry to clear (required with `siteId`)
+ * @param siteId - Optional site id of the entry/entries to clear
+ * @param contentTypeId - Optional content type id of the entry to clear (requires `siteId`)
  */
 export function clearFormControllerCache(siteId?: string, contentTypeId?: string): void {
 	if (siteId != null && contentTypeId != null) {
 		formControllerCache.delete(cacheKey(siteId, contentTypeId));
 		return;
 	}
+	if (siteId != null) {
+		const prefix = `${siteId}::`;
+		for (const key of formControllerCache.keys()) {
+			if (key.startsWith(prefix)) {
+				formControllerCache.delete(key);
+			}
+		}
+		return;
+	}
 	formControllerCache.clear();
 }
-
-/**
- * Public runtime surface for form-controller load/cache helpers (tests & debugging).
- * Authors do not need this; FE2 loads controllers during form bootstrap.
- *
- * - `load` → {@link loadFormController}
- * - `getCached` → {@link getCachedFormController}
- * - `clearCache` → {@link clearFormControllerCache}
- */
-export const formsEngineFormControllersHost = {
-	load: loadFormController,
-	getCached: getCachedFormController,
-	clearCache: clearFormControllerCache
-};

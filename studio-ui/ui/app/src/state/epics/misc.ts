@@ -27,10 +27,6 @@ import {
 	editTemplate
 } from '../actions/misc';
 import { createFile, fetchContentItem } from '../../services/content';
-import {
-	FORM_CONTROLLER_FILE_NAME,
-	FORM_CONTROLLER_JS_STUB
-} from '../../components/FormsEngine/lib/formControllerStub';
 import { reloadContentItem } from '../actions/content';
 import { blockUI, showEditItemSuccessNotification, unblockUI } from '../actions/system';
 import { CrafterCMSEpic } from '../store';
@@ -155,7 +151,7 @@ const epics = [
 			switchMap(([{ payload }, state]) => {
 				const path = payload.path;
 				const fileName = payload.fileName;
-				const content = fileName === FORM_CONTROLLER_FILE_NAME ? FORM_CONTROLLER_JS_STUB : '';
+				const content = payload.content ?? '';
 				return createFile(state.sites.active, path, fileName, content).pipe(map(() => payload.onCreated));
 			})
 		)

@@ -40,6 +40,7 @@ export * from './Log';
 export * from './Logger';
 export * from './LookupTable';
 export * from './MarketplacePlugin';
+export * from './MaybePromise';
 export * from './MinimizedTab';
 export * from './Monaco';
 export * from './MutableRef';

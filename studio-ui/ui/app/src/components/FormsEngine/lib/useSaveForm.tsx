@@ -33,6 +33,7 @@ import {
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
+	getValidationAtomsExcludingIrrelevant,
 	showAlert
 } from './formUtils';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
@@ -65,7 +66,7 @@ import {
 	collectAffectedPluginControlFields,
 	preloadControlPluginsForFields
 } from './controlPluginLoader';
-import { runFormControllerBeforeSave } from './formControllerContext';
+import { runFormControllerBeforeSave } from '../formControllers/runtime';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -132,9 +133,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				dispatch,
 				children: (
 					<Box>
-						<Typography
-							sx={{ marginBottom: 1 }}
-						>
+						<Typography sx={{ marginBottom: 1 }}>
 							<FormattedMessage defaultMessage="An error occurred trying to save the form" />
 						</Typography>
 						<Typography variant="body2" color="textSecondary">
@@ -187,9 +186,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 			stableFormContext.affectedPluginControlFields = [];
 			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 			let validityStates = await Promise.all(
-				Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
-					jotai.get(validityDataAtom)
-				)
+				getValidationAtomsExcludingIrrelevant(
+					stableFormContext.atoms.validationByFieldId,
+					stableFormContext.formControllerState?.irrelevantFieldIds
+				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			// Put system properties in before creating the XML
 			let isFormInvalid = validityStates.some((state) => !state.isValid);
@@ -262,9 +262,19 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 
 			// Form controller may veto save after validation / plugin preload, before XML write.
-			const hadBeforeSaveHook = Boolean(stableFormContext.formController?.onBeforeSave);
-			if (!(await runFormControllerBeforeSave(stableFormContext, dispatch, formatMessage))) {
+			// Repeat entries store no controller, so this is a no-op for in-memory repeat commits.
+			const hadBeforeSaveHook = Boolean(stableFormContext.formControllerState?.controller?.onBeforeSave);
+			const beforeSave = await runFormControllerBeforeSave(stableFormContext, dispatch, formatMessage);
+			if (!beforeSave.allowed) {
 				setIsSubmitting(false);
+				if (beforeSave.message) {
+					dispatch(
+						showSystemNotification({
+							message: beforeSave.message,
+							options: { variant: 'error' }
+						})
+					);
+				}
 				return;
 			}
 
@@ -275,9 +285,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 					return;
 				}
 				validityStates = await Promise.all(
-					Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
-						jotai.get(validityDataAtom)
-					)
+					getValidationAtomsExcludingIrrelevant(
+						stableFormContext.atoms.validationByFieldId,
+						stableFormContext.formControllerState?.irrelevantFieldIds
+					).map((validityDataAtom) => jotai.get(validityDataAtom))
 				);
 				isFormInvalid = validityStates.some((state) => !state.isValid);
 				saveAsDraft = draft || isFormInvalid;

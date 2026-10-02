@@ -30,48 +30,56 @@ export const FORM_CONTROLLER_JS_STUB = `/**
  * Context (ctx) highlights:
  *   - getValue(fieldId) / getValues() / setValue(fieldId, value)
  *   - Nested repeat fields via dotted paths: getValue('myRepeat.0.title_s')
- *   - getField(fieldId) / getContentType(id?)
- *   - fieldUpdateStream — Observable<string> of field ids that changed (root id for nested sets)
- *   - siteId, contentType, path, mode ('create' | 'edit' | 'embedded' | 'repeat')
+ *   - getField(fieldId) — top-level id or dotted path (numeric indexes skipped)
+ *   - onFieldChange(listener) — listener(fieldId, value); returns unsubscribe
+ *   - notify(message, severity?) — snackbar
+ *   - siteId, contentType, path, mode ('create' | 'edit'), isEmbedded, readonly
  *
  * Prefer declarative field visibility via isFieldRelevant (do not toggle DOM).
- * Unsubscribe any fieldUpdateStream subscription in the cleanup returned from initialize.
+ * Repeat item forms reuse this parent context; they do not call initialize again.
+ * The host unsubscribes onFieldChange listeners on teardown; returning a cleanup
+ * from initialize is still the place for any other resources you open.
  */
 export default {
 	/** Bump only when breaking the host-controller contract. */
 	apiVersion: 1,
 
 	/**
-	 * Called once after form atoms/context exist, before fields paint.
+	 * Called once per form that owns a controller (root and embedded children),
+	 * after form atoms/context exist, before fields paint.
 	 * May return a cleanup function (or a Promise of one) for unmount / stack pop.
 	 */
 	initialize(ctx) {
 		// Example: react to a field change
-		// const sub = ctx.fieldUpdateStream.subscribe((fieldId) => {
+		// const unsubscribe = ctx.onFieldChange((fieldId, value) => {
 		//   if (fieldId === 'title_s') {
-		//     console.log('title is now', ctx.getValue(fieldId));
+		//     console.log('title is now', value);
 		//   }
 		// });
-		// return () => sub.unsubscribe();
+		// return unsubscribe;
 	},
 
 	/**
 	 * Return false to omit a field from the rendered form (and ToC).
 	 * Evaluated once before first paint; async is allowed (host awaits).
+	 * Repeat stacked forms call this against the parent form's context.
 	 */
 	isFieldRelevant(field, ctx) {
 		// Example: hide a field in create mode
-		// if (field.id === 'legacyId_s' && ctx.isCreateMode) return false;
+		// if (field.id === 'legacyId_s' && ctx.mode === 'create') return false;
 		return true;
 	},
 
 	/**
-	 * Return false (or throw / reject) to veto save after client validation,
-	 * before XML write. Async is allowed.
+	 * Return false, { ok: false, message }, or throw/reject to veto save after
+	 * client validation, before XML write. Async is allowed.
+	 * Not called for repeat item commits.
 	 */
 	async onBeforeSave(ctx) {
 		// Example: require a custom rule before save
-		// if (!ctx.getValue('agree_b')) return false;
+		// if (!ctx.getValue('agree_b')) {
+		//   return { ok: false, message: 'You must agree before saving.' };
+		// }
 		return true;
 	}
 };

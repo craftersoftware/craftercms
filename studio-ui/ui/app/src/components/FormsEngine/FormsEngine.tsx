@@ -97,6 +97,7 @@ import {
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
+	getValidationAtomsExcludingIrrelevant,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
@@ -151,7 +152,11 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
-import { attachFormController, runFormControllerCleanup } from './lib/formControllerContext';
+import {
+	attachFormController,
+	findAncestorFormControllerEntry,
+	runFormControllerCleanup
+} from './formControllers/runtime';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -417,7 +422,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				siteId,
 				store,
 				stackEntry: stableFormContextRef.current,
-				contentTypesById: effectRefs.current.contentTypesById,
+				parentStackEntry: findAncestorFormControllerEntry(formsStackData, stackIndex),
 				formProps: effectRefs.current.effectiveProps,
 				dispatch,
 				formatMessage,
@@ -815,8 +820,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms, relevantFieldIds, formControllerFileMissing, formControllerLoadFailed } =
-		stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
+	const irrelevantFieldIds = formControllerState?.irrelevantFieldIds ?? null;
+	const formControllerFileMissing = Boolean(formControllerState?.fileMissing);
+	const formControllerLoadFailed = Boolean(formControllerState?.loadFailed);
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -842,22 +849,22 @@ function FormOrchestrator(props: FormsEngineProps) {
 				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
 			}));
 		}
-		if (relevantFieldIds) {
+		if (irrelevantFieldIds && !fieldsToRender) {
 			sections = sections
 				.map((section) => ({
 					...section,
-					fields: section.fields.filter((fieldId) => relevantFieldIds.has(fieldId))
+					fields: section.fields.filter((fieldId) => !irrelevantFieldIds.has(fieldId))
 				}))
-				// Remove sections that contain no relevant fields.
+				// Remove sections that contain no remaining fields.
 				.filter((section) => section.fields.length > 0);
 		}
 		return sections;
-	}, [contentType.sections, isEmbedded, relevantFieldIds]);
+	}, [contentType.sections, isEmbedded, irrelevantFieldIds, fieldsToRender]);
 	const visibleFieldsToRender = useMemo(() => {
 		if (!fieldsToRender) return fieldsToRender;
-		if (!relevantFieldIds) return fieldsToRender;
-		return fieldsToRender.filter((field) => relevantFieldIds.has(field.id));
-	}, [fieldsToRender, relevantFieldIds]);
+		if (!irrelevantFieldIds?.size) return fieldsToRender;
+		return fieldsToRender.filter((field) => !irrelevantFieldIds.has(field.id));
+	}, [fieldsToRender, irrelevantFieldIds]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
 	const tableOfContents = (
 		<TableOfContents
@@ -888,9 +895,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 		const checkValidationState = async () => {
 			const validityStates = await Promise.all(
-				Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
-					jotai.get(validityDataAtom)
-				)
+				getValidationAtomsExcludingIrrelevant(
+					stableFormContext.atoms.validationByFieldId,
+					stableFormContext.formControllerState?.irrelevantFieldIds
+				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			setInvalidForm(validityStates.some((state) => !state.isValid));
 		};
@@ -1485,7 +1493,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller: remaining polish / docs (loader, initialize, isFieldRelevant, onBeforeSave landed)
+//  - Form controller: landed (see formControllers/ + docs/type-builder-forms-engine.md §5.9)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI

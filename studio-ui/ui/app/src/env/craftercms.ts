@@ -30,7 +30,7 @@ import { PluginDescriptor } from '../models/PluginDescriptor';
 import { components, icons, services, utils } from './studioUI';
 import { Observable } from 'rxjs';
 import { formsEngineControlsHost, formsEngineDataSourcesHost } from '../components/FormsEngine/dataSources/host';
-import { formsEngineFormControllersHost } from '../components/FormsEngine/lib/formControllerLoader';
+import { formsEngineFormControllersHost } from '../components/FormsEngine/formControllers/host';
 
 // TODO:
 //  To avoid pre-loading all services and utils and ending up with a large app

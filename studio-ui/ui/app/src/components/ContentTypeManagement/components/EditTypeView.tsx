@@ -40,7 +40,6 @@ import {
 	createVirtualTypeFormContext,
 	createVirtualTypeForSection,
 	DescriptorContentType,
-	editTypeController,
 	editTypeTemplate,
 	getFieldFromType,
 	getPropertiesAndValidationsFromDescriptor,
@@ -52,7 +51,6 @@ import {
 	reverseTypeFieldValuesObject,
 	systemFieldsIdsMap,
 	systemFieldsTypesMap,
-	TYPE_GROOVY_CONTROLLER_BASE_PATH,
 	TYPE_TEMPLATE_BASE_PATH,
 	TypePropsToEdit,
 	typePropsToEdit
@@ -107,7 +105,6 @@ import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
 import { sectionDescriptor, typeBasicDetailsDescriptor } from '../descriptors/controls/commonDescriptors';
-import { clearFormControllerCache } from '../../FormsEngine/lib/formControllerLoader';
 
 export interface EditTypeAppProps {
 	/**
@@ -427,20 +424,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				}
 				break;
 			}
-			case 'jsController':
-				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'javascript', () => {
-					// Drop the cached module so the next form open imports the saved source.
-					clearFormControllerCache(site, type.id);
-					setType((current) => {
-						if (current.hasJsController) return current;
-						onUpdateHasPendingChanges(true);
-						return { ...current, hasJsController: true };
-					});
-				});
-				break;
-			case 'groovyController':
-				editTypeController(TYPE_GROOVY_CONTROLLER_BASE_PATH, type.id, dispatch, 'groovy');
-				break;
 			case 'deleted':
 				onClose?.();
 				window.top.postMessage(

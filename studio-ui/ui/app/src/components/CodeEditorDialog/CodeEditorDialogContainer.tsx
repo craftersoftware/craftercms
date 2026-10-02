@@ -58,7 +58,7 @@ import TextFieldWithMax from '../TextFieldWithMax';
 import { Typography } from '@mui/material';
 import useSpreadState from '../../hooks/useSpreadState';
 import { getFileNameFromPath } from '../../utils/path';
-import { FORM_CONTROLLER_FILE_NAME, FORM_CONTROLLER_JS_STUB } from '../FormsEngine/lib/formControllerStub';
+import { FORM_CONTROLLER_FILE_NAME, FORM_CONTROLLER_JS_STUB } from '../FormsEngine/formControllers/stub';
 import { fetchContentItem } from '../../state/actions/content';
 
 export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps) {
