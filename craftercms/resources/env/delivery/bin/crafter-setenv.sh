@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+# Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as published by
@@ -106,6 +106,10 @@ export SOCIAL_MANAGEMENT_TOKEN=${SOCIAL_MANAGEMENT_TOKEN:="defaultManagementToke
 # -------------------- Encryption variables --------------------
 export CRAFTER_ENCRYPTION_KEY=${CRAFTER_ENCRYPTION_KEY:="zEtRii1jWUuUUB0W"}
 export CRAFTER_ENCRYPTION_SALT=${CRAFTER_ENCRYPTION_SALT:="DgGN9xhq3GOn6zxg"}
+
+# These variables are used to encrypt and decrypt preview tokens shared by Studio and Engine.
+export CRAFTER_PREVIEW_TOKEN_KEY=${CRAFTER_PREVIEW_TOKEN_KEY:="default_preview_token_key"}
+export CRAFTER_PREVIEW_TOKEN_SALT=${CRAFTER_PREVIEW_TOKEN_SALT:="default_preview_token_salt"}
 
 # -------------------- Configuration variables --------------------
 export CRAFTER_ENVIRONMENT=${CRAFTER_ENVIRONMENT:=default}

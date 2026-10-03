@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -91,10 +91,21 @@ public class SecurityController {
 		return result;
 	}
 
-	@DeleteMapping(value = "/tokens/{tokenId}", produces = APPLICATION_JSON_VALUE)
+	@DeleteMapping("/tokens/{tokenId}")
 	public Result deleteAccessToken(@PathVariable long tokenId) {
 		accessTokenService.deleteAccessToken(tokenId);
 		var result = new Result();
+		result.setResponse(ApiResponse.OK);
+		return result;
+	}
+
+	@PostMapping(value = "/preview/generate_token", consumes = APPLICATION_JSON_VALUE)
+	public ResultOne<String> generatePreviewToken(@Valid @RequestBody GeneratePreviewTokenRequest request)
+			throws ServiceLayerException {
+		String token = accessTokenService.generatePreviewToken(request.getSiteIds(), request.getExpiresAt());
+
+		ResultOne<String> result = new ResultOne<>();
+		result.setEntity(RESULT_KEY_TOKEN, token);
 		result.setResponse(ApiResponse.OK);
 		return result;
 	}

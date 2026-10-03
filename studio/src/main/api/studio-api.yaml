@@ -7003,6 +7003,58 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
+    /api/2/security/preview/generate_token:
+        post:
+            tags:
+                - security
+            summary: Generates an encrypted preview token for the given sites
+            operationId: generatePreviewToken
+            description: |
+                Module: Studio <br>
+                Required Permission: "manage_access_token" globally, or for every requested site
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                siteIds:
+                                    type: array
+                                    items:
+                                        type: string
+                                    description: Sites the token grants preview access to
+                                expiresAt:
+                                    type: string
+                                    format: date-time
+                                    description: Expiration of the preview token
+                            required:
+                                - siteIds
+                                - expiresAt
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    response:
+                                        $ref: '#/components/schemas/ApiResponse'
+                                    token:
+                                        type: string
+                                        description: Encrypted preview token
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
+                '404':
+                    $ref: '#/components/responses/NotFound'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
     /api/2/security/preview/switch:
         post:
             tags:
@@ -7010,8 +7062,8 @@ paths:
             summary: Configures preview to use a different site. Site is expected to be set in `crafterSite` cookie
             operationId: switchPreviewSite
             description: |
-                    Module: Studio <br>
-                    Required permission "LOGGED_IN"
+                Module: Studio <br>
+                Required Permission: "LOGGED_IN"
             responses:
                 '200':
                     description: OK

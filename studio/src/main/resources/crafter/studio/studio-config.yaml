@@ -462,6 +462,13 @@ studio.security.token.previewCookie.domain: null
 # Indicates if the preview cookie should be secure (should be true for production environments behind HTTPS)
 studio.security.token.previewCookie.secure: false
 
+# The key used for encryption of preview tokens
+studio.security.preview.token.key: default_preview_token_key
+# The salt used for encryption of preview tokens
+studio.security.preview.token.salt: default_preview_token_salt
+# Optional prefix added to preview-token ciphertext so it can be distinguished from legacy values.
+studio.security.preview.token.prefix: "CPT-V1#"
+
 # Use base domain instead of subdomain for the crafterSite cookie
 studio.cookie.useBaseDomain: false
 
