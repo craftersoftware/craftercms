@@ -75,6 +75,7 @@ export type ParseDescriptorOptions = Partial<{
 
 export function parseDescriptor(data: DescriptorResponse): ContentInstance;
 export function parseDescriptor(data: DescriptorResponse, options: ParseDescriptorOptions): ContentInstance;
+export function parseDescriptor(data: DescriptorResponse, options?: ParseDescriptorOptions): ContentInstance;
 export function parseDescriptor(
 	data: DescriptorResponse | null,
 	options?: ParseDescriptorOptions
