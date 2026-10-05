@@ -531,13 +531,13 @@ Host helpers may live under `window.craftercms.formsEngine.formControllers` (loa
 
 Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` or the full Jotai store:
 
-| Surface                                                           | Purpose                                                                                                            |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, `readonly` | Identity. `mode` is `'create' \| 'edit'`; `isEmbedded` is a separate axis. `path` and `readonly` are live getters. |
-| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)`  | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`)                                      |
-| `getField(fieldId)`                                               | Field metadata; dotted paths skip numeric (repeat index) segments                                                  |
-| `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Host also drops listeners on teardown.                                   |
-| `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                             |
+| Surface                                                           | Purpose                                                                                                                                                                         |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, `readonly` | Identity. `mode` is `'create' \| 'edit'`; `isEmbedded` is a separate axis. `path` and `readonly` are live getters.                                                              |
+| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)`  | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`)                                                                                                   |
+| `getField(fieldId)`                                               | Field metadata; dotted paths skip numeric (repeat index) segments                                                                                                               |
+| `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Fires on the value write, whether or not the field is rendered or its validation atom is read. Host also drops listeners on teardown. |
+| `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                                                                                          |
 
 `getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `onFieldChange` emits that root id. `getValues()` uses the same `file-name` atom as `getValue('file-name')`. `setValue('file-name', …)` writes both that dedicated atom and the `file-name` value atom. A change made from `onBeforeSave` is honoured by the save path: rename detection and path construction read the filename atom after the hook returns.
 
@@ -690,6 +690,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-05** — `onFieldChange` and dirty-tracking run when a field value is written, not when its validation atom is read. A hidden field now notifies listeners, and editing `file-name` no longer emits a change for every other field. The validation-read side effect is gone.
 - **2026-10-05** — `internal-name` joins `file-name` as a field `isFieldRelevant` cannot hide. The save path requires both, so hiding an empty `internal-name` used to block save with an alert for a field the author could not see.
 - **2026-10-05** — Relevance deny-list is qualified paths. Repeat subfields are resolved once by the owning form; embedded components are resolved against their own controller through a read-only context, memoised per value identity. Recursive validators skip rejected children and still enforce count and size constraints.
 - **2026-10-05** — Controller state is committed before `initialize`, so `onFieldChange` listeners can be torn down while the hook is still pending. A cleanup that arrives after disposal runs once and does not replace newer state. The host still cannot cancel other async work the controller started.

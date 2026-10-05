@@ -72,8 +72,8 @@ export interface FormControllerContext {
 	 */
 	getField(fieldId: string): ContentTypeField | undefined;
 	/**
-	 * Registers a listener called whenever a field value changes. Returns a function
-	 * that removes it. The host also drops listeners registered here on form teardown.
+	 * Registers a listener called whenever a field value is written, including a field that
+	 * is not rendered. Returns a function that removes it. The host also drops listeners registered here on form teardown.
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
 	/** Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return. */

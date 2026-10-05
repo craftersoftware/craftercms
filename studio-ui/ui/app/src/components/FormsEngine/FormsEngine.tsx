@@ -459,7 +459,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockResult: lockResultAtom,
 				readonly: createReadonlyAtom(lockResultAtom),
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: atom('')
+				fileName: createFileNameAtom('', stableFormContextRef)
 			});
 			const seedValues = repeat.values ? { ...repeat.values } : {};
 			preloadControlPluginsForFields(siteId, fieldsToRender, seedValues, contentTypesById).then((failures) => {
@@ -602,7 +602,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockResult: lockResultAtom,
 				readonly: atom(false),
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: atom(''),
+				fileName: createFileNameAtom('', stableFormContextRef),
 				// Default version comment for new content.
 				versionComment: atom(generateDefaultCreationComment('', formatMessage))
 			});
@@ -700,7 +700,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						lockResult: lockResultAtom,
 						readonly: createReadonlyAtom(lockResultAtom),
 						expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
-						fileName: createFileNameAtom(requirements.item.path)
+						fileName: createFileNameAtom(requirements.item.path, stableFormContextRef)
 					});
 					preloadControlPluginsForFields(
 						siteId,
