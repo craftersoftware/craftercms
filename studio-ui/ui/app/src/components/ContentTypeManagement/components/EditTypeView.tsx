@@ -67,7 +67,7 @@ import {
 	StableFormContextProps
 } from '../../FormsEngine/lib/formsEngineContext';
 import useContentTypes from '../../../hooks/useContentTypes';
-import { createStore as createJotai, Provider } from 'jotai';
+import { createStore as createJotai, PrimitiveAtom, Provider } from 'jotai';
 import { debounceTime, forkJoin, map, Observable, Subject } from 'rxjs';
 import EditTypeViewLayout, { EditAppLayoutProps } from './EditTypeViewLayout';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
@@ -97,6 +97,7 @@ import { XmlDiffDialog } from './XmlDiffDialog';
 import type { ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import PickControlDialog from './PickControlDialog';
 import PickDataSourceDialog from './PickDataSourceDialog';
+import { TypeControllerFlagContext, TypeControllerFlagContextProps } from '../typeControllerFlagContext';
 import { fetchContentTypes } from '../../../state/actions/preview';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
@@ -174,6 +175,34 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	if (!stateRef.current) stateRef.current = createContextObject();
 
 	const [type, setType] = useState(() => ({ ...props.type })); // Working copy of the ContentType being edited.
+	// `<controller>` written straight to the saved form-definition this session. Rollback and diff
+	// start from `props.type`, which predates that write, so they apply this on top.
+	const persistedJsControllerRef = useRef<boolean | null>(null);
+	const withPersistedJsController = <T extends ContentType>(baseType: T): T =>
+		persistedJsControllerRef.current === null
+			? baseType
+			: { ...baseType, hasJsController: persistedJsControllerRef.current };
+	const typeControllerFlagContext = useMemo<TypeControllerFlagContextProps>(
+		() => ({
+			onJsControllerPersisted(enabled) {
+				persistedJsControllerRef.current = enabled;
+				setType((current) =>
+					current.hasJsController === enabled ? current : { ...current, hasJsController: enabled }
+				);
+				// If the type properties form was reopened after the write started, its atom was seeded
+				// from the old working copy and would write that back when the form commits.
+				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
+				if (selectedField || selectedSection || selectedDataSource) return;
+				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
+					| PrimitiveAtom<unknown>
+					| undefined;
+				if (flagAtom && jotai.get(flagAtom) !== enabled) {
+					jotai.set(flagAtom, enabled);
+				}
+			}
+		}),
+		[jotai]
+	);
 	const [open, setOpen] = useState(false);
 	const xmlViewerDialogState = useEnhancedDialogState();
 	const [xmlViewerContent, setXmlViewerContent] = useState<string>(undefined);
@@ -510,7 +539,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				break;
 			}
 			case 'diff': {
-				const initialXml = buildXmlFromType(props.type, configDescriptors);
+				const initialXml = buildXmlFromType(withPersistedJsController(props.type), configDescriptors);
 				const currentXml = buildXmlFromType(type, configDescriptors);
 				openDiffXml(initialXml, currentXml);
 				break;
@@ -541,7 +570,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							),
 							onOk: () => {
 								resetSelection();
-								setType(props.type);
+								setType(withPersistedJsController(props.type));
 								dispatch(popDialog({ id }));
 							},
 							onCancel: () => dispatch(popDialog({ id }))
@@ -651,14 +680,16 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	// region const fieldEditorView = ...
-	const fieldEditorView = virtualContentType
-		? createElement(TypeBuilderFormsEngine, {
+	const fieldEditorView = virtualContentType ? (
+		<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
+			{createElement(TypeBuilderFormsEngine, {
 				...fieldFormViewProps,
 				isPanelReady: drawerOpenTransitionEnded,
 				onOpenInsertFieldDialog,
 				performCurrentFormErrorCheckAndWarning
-			})
-		: null;
+			})}
+		</TypeControllerFlagContext.Provider>
+	) : null;
 	// endregion
 
 	const handleMoveFieldToSection: FieldFormViewProps['onMoveFieldToSection'] = (

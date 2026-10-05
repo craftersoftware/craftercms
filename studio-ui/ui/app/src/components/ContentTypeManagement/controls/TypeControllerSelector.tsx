@@ -16,7 +16,7 @@
 
 import OutlinedInput from '@mui/material/OutlinedInput';
 import FormHelperText from '@mui/material/FormHelperText';
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -36,6 +36,7 @@ import { popDialog } from '../../../state/actions/dialogStack';
 import { updateContentTypeJsController } from '../../../state/actions/preview';
 import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
 import { clearFormControllerCache } from '../../FormsEngine/formControllers/loader';
+import { TypeControllerFlagContext } from '../typeControllerFlagContext';
 import { catchError, defer, EMPTY, finalize, type Observable, switchMap, tap, throwError } from 'rxjs';
 
 export interface TypeControllerSelectorProps extends TypeBuilderControl {
@@ -53,6 +54,8 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
  * If the file delete then fails, the controller stays disabled and the field shows that the file
  * is still there so the author can retry. Groovy delete only removes `controller.groovy`.
  * Edit and Delete stay disabled while a flag write, existence check, or delete is in flight.
+ * A landed flag write is also reported through {@link TypeControllerFlagContext}, so the Type
+ * Builder working copy follows it even if this form closed while the code editor was open.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const { field, value, autoFocus, setValue } = props;
@@ -79,6 +82,7 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const setValueRef = useRef(setValue);
 	valueRef.current = value;
 	setValueRef.current = setValue;
+	const typeControllerFlag = useContext(TypeControllerFlagContext);
 	// Synchronous guard. `busy` lags a render, so a double-click would otherwise start two writes.
 	const inFlight = useRef(false);
 	// The editor can finish saving while a delete is in flight. Keep that flag write; do not drop it.
@@ -120,6 +124,8 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 			tap((written) => {
 				// `false` is only a missing form-definition. Write failures take the error path.
 				setValueRef.current(enabled);
+				// This form's atom is discarded if the form closed before the write landed.
+				typeControllerFlag?.onJsControllerPersisted(enabled);
 				if (written) {
 					dispatch(updateContentTypeJsController({ contentTypeId, enabled }));
 				}
