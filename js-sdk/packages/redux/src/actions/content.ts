@@ -30,7 +30,7 @@ export const getDescriptor = /*#__PURE__*/ createAction<string>('GET_DESCRIPTOR'
 /**
  * @deprecated Use getItem instead
  */
-export const getDescriptorComplete = /*#__PURE__*/ createAction<{ url: string; descriptor?: Descriptor }>(
+export const getDescriptorComplete = /*#__PURE__*/ createAction<{ url: string; descriptor?: Descriptor | null }>(
 	'GET_DESCRIPTOR_COMPLETE'
 );
 

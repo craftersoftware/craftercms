@@ -74,7 +74,7 @@ export function descriptorsReducer(
 		entries: {}
 	},
 	action: AnyAction
-): StateContainer<Descriptor> {
+): StateContainer<Descriptor | null> {
 	switch (action.type) {
 		case getDescriptor.type: {
 			return {
