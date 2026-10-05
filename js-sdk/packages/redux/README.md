@@ -101,8 +101,8 @@ Creates an action to get an Item from the content store.
 
 | Parameters    |                |
 | ------------- |:--------------:|
-| 
-path           | The item’s path in the content store |
+| url           | The item’s path in the content store |
+| config        | Crafter configuration. Optional. Default value in [CrafterConfig](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/crafter-config.ts). |
 
 #### Example
 
