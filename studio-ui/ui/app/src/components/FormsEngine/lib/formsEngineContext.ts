@@ -94,6 +94,11 @@ export interface FormsEngineAtoms {
 	closeAfterSave: AtomWithStorage;
 	minimizeAfterSave: AtomWithStorage;
 	fileName?: Atom<string>;
+	/**
+	 * Bumped after form-controller relevance is stored. Validation atoms read it so a
+	 * deny-list that arrives after bootstrap invalidates verdicts computed without it.
+	 */
+	relevanceVersion: PrimitiveAtom<number>;
 }
 
 // Contains information to restore the state of a form when it comes back to being the active form on the stack
@@ -128,7 +133,7 @@ export interface StableFormContextProps {
 	affectedPluginControlFields: AffectedPluginControlField[];
 	/**
 	 * Form-controller attachment for this stack entry (`null` when none).
-	 * Repeat entries may hold only a deny-list (`irrelevantFieldIds`) and no controller.
+	 * Repeat entries may hold only a deny-list (`irrelevantFieldPaths`) and no controller.
 	 */
 	formControllerState: FormControllerState | null;
 }

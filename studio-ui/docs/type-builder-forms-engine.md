@@ -448,7 +448,7 @@ interface FormController {
 	/**
 	 * Return false to omit the field (or repeat definition) from the rendered form.
 	 * Default true. Async allowed — host awaits before first field paint for that form.
-	 * Repeat stacked forms call this against the parent form's context.
+	 * Repeat subfields are judged once with the owning form's context; the repeat item form reuses that result.
 	 */
 	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerContext): MaybePromise<boolean>;
 	/**
@@ -507,9 +507,9 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 | Piece     | Location                                                                                                                            |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `host`, `stub`                                                       |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `host`, `stub`                                          |
 | Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render |
-| Relevance | `attachFormController` stores an `irrelevantFieldIds` deny-list; FormOrchestrator / ToC / save snapshot exclude those ids           |
+| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths       |
 | Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                              |
 | Types     | `FormController` / `FormControllerContext` in `formControllers/types.ts`                                                            |
 
@@ -545,12 +545,23 @@ Look up other content types via the `craftercms` global (`craftercms.getStore().
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
 
-**Relevance / validation:** only field ids the controller explicitly rejects are hidden. Those fields are excluded from the validity snapshot (so a hidden required field does not force a draft save) but their values still serialize for XML round-trip. Atoms the hook never saw (descriptor additional fields, `folder-name`, …) stay validated. `file-name` cannot be hidden.
+**Relevance / validation:** only fields the controller explicitly rejects are hidden. Those fields are excluded from the validity snapshot (so a hidden required field does not force a draft save) but their values still serialize for XML round-trip. Atoms the hook never saw (descriptor additional fields, `folder-name`, …) stay validated. `file-name` cannot be hidden.
+
+#### Relevance and recursive validation
+
+The deny-list stores qualified paths, not bare ids:
+
+- A top-level field is its id (`heroImage_s`).
+- A repeat subfield is `<repeatFieldId>.<subFieldId>` (`features_o.title_s`). The same subfield id can be hidden in one repeat group and shown in another.
+
+The owning form resolves top-level fields and one level of repeat subfields in a single pass, then bumps `relevanceVersion` so validation atoms created during bootstrap recompute. A repeat item form does not call `isFieldRelevant` again; it copies that deny-list. Deeper nesting (a repeat inside a repeat) is not addressed individually.
+
+`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through a read-only context where `setValue` and `onFieldChange` are inert. Results are memoised per component value identity (values update immutably), so `isFieldRelevant` should stay cheap and free of side effects. A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
 
 **Lifecycle (repeat vs embedded):**
 
 - An **embedded child is its own form**: own controller (gated on its own `hasJsController`), own context, `initialize`, and `onBeforeSave`.
-- A **repeat item is part of the parent form**: no context, no `initialize`, no `onBeforeSave`. The host runs only `isFieldRelevant(subField, parentCtx)` against the parent controller. Nested repeats skip other repeat entries and stop at the nearest non-repeat form. If that form has no controller context, the host does not use a further ancestor's controller.
+- A **repeat item is part of the parent form**: no context, no `initialize`, no `onBeforeSave`. Its visible fields come from the owning form's deny-list. Nested repeats skip other repeat entries and stop at the nearest non-repeat form. If that form has no controller context, the host does not use a further ancestor's controller.
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
@@ -679,6 +690,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-05** — Relevance deny-list is qualified paths. Repeat subfields are resolved once by the owning form; embedded components are resolved against their own controller through a read-only context, memoised per value identity. Recursive validators skip rejected children and still enforce count and size constraints.
 - **2026-10-05** — Controller state is committed before `initialize`, so `onFieldChange` listeners can be torn down while the hook is still pending. A cleanup that arrives after disposal runs once and does not replace newer state. The host still cannot cancel other async work the controller started.
 - **2026-10-05** — A failed form-controller load evicts only its own cache entry. A concurrent reload that already replaced that entry is left in place.
 - **2026-10-05** — `onBeforeSave` may rewrite `file-name`. The save path reads the filename atom after the hook (rename detection and path construction), and `setValue('file-name', …)` keeps the dedicated filename atom and the `file-name` value atom in lockstep so `onSave` sees the same name.

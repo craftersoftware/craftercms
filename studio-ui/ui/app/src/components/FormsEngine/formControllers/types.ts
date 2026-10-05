@@ -99,7 +99,8 @@ export interface FormController {
 	/**
 	 * Return false to omit the field (or repeat definition) from the rendered form.
 	 * Default true. Async allowed — host awaits before first field paint for that form.
-	 * Repeat stacked forms call this against the parent form's context.
+	 * Repeat subfields are judged once, with the owning form's context, when that form attaches.
+	 * The repeat item form reuses that result and does not call this again.
 	 */
 	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerContext): MaybePromise<boolean>;
 	/**
@@ -114,7 +115,7 @@ export interface FormController {
 /**
  * Controller-related fields on a form stack entry. `null` when this entry has never
  * attached a controller (or after an explicit clear). Repeat entries may hold only
- * `irrelevantFieldIds` (no controller / context / cleanup).
+ * `irrelevantFieldPaths` (no controller / context / cleanup).
  */
 export interface FormControllerState {
 	controller: FormController | null;
@@ -127,10 +128,13 @@ export interface FormControllerState {
 	/** Set when this state was torn down. A late `initialize` cleanup still runs, but changes no shared state. */
 	disposed: boolean;
 	/**
-	 * Field ids the controller rejected via `isFieldRelevant`.
-	 * `null` means no relevance hook / no filtering from the controller.
+	 * Qualified field paths the controller rejected via `isFieldRelevant`.
+	 * A top-level field is its id (`heroImage_s`). A repeat subfield is
+	 * `<repeatFieldId>.<subFieldId>` (`features_o.title_s`), so the same subfield id
+	 * can be hidden in one repeat group and shown in another.
+	 * `null` means no relevance hook — do not filter.
 	 */
-	irrelevantFieldIds: Set<string> | null;
+	irrelevantFieldPaths: Set<string> | null;
 }
 
 /** Empty controller state used when attaching or when a repeat entry only stores relevance. */
@@ -143,6 +147,6 @@ export function createEmptyFormControllerState(): FormControllerState {
 		fileMissing: false,
 		loadFailed: false,
 		disposed: false,
-		irrelevantFieldIds: null
+		irrelevantFieldPaths: null
 	};
 }

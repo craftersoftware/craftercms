@@ -184,10 +184,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 			// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
 			stableFormContext.affectedPluginControlFields = [];
 			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
+			const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
 			let validityStates = await Promise.all(
 				getValidationAtomsExcludingIrrelevant(
 					stableFormContext.atoms.validationByFieldId,
-					stableFormContext.formControllerState?.irrelevantFieldIds
+					stableFormContext.formControllerState?.irrelevantFieldPaths,
+					repeatFieldId
 				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			// Put system properties in before creating the XML
@@ -286,7 +288,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 				validityStates = await Promise.all(
 					getValidationAtomsExcludingIrrelevant(
 						stableFormContext.atoms.validationByFieldId,
-						stableFormContext.formControllerState?.irrelevantFieldIds
+						stableFormContext.formControllerState?.irrelevantFieldPaths,
+						repeatFieldId
 					).map((validityDataAtom) => jotai.get(validityDataAtom))
 				);
 				isFormInvalid = validityStates.some((state) => !state.isValid);

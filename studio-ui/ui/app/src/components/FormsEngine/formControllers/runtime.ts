@@ -206,7 +206,7 @@ export function getFieldFromContentType(contentType: ContentType, fieldId: strin
 	return current;
 }
 
-function parseFieldValuePath(fieldId: string): { rootId: string; nestedPath: string } | null {
+export function parseFieldValuePath(fieldId: string): { rootId: string; nestedPath: string } | null {
 	if (!fieldId.includes('.')) {
 		return null;
 	}
@@ -276,7 +276,35 @@ export function runFormControllerCleanup(stackEntry: StableFormContextProps | un
 }
 
 /**
- * Awaits `isFieldRelevant` for each field and returns the set of ids the controller rejected.
+ * True when `fieldId` (qualified by `parentPath` for a repeat subfield) is on the controller deny-list.
+ * A flat id match is not used for subfields: `title_s` hidden in one repeat group must not hide `title_s` in another.
+ */
+export function isFieldPathIrrelevant(
+	irrelevantFieldPaths: Set<string> | null | undefined,
+	fieldId: string,
+	parentPath?: string
+): boolean {
+	if (!irrelevantFieldPaths?.size) return false;
+	return irrelevantFieldPaths.has(parentPath ? `${parentPath}.${fieldId}` : fieldId);
+}
+
+/** Top-level fields plus one level of repeat subfields, addressed by qualified path. */
+function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
+	const targets: Array<{ path: string; field: ContentTypeField }> = [];
+	for (const field of fields) {
+		targets.push({ path: field.id, field });
+		if (field.type === 'repeat' && field.fields) {
+			for (const subField of Object.values(field.fields)) {
+				targets.push({ path: `${field.id}.${subField.id}`, field: subField });
+			}
+		}
+	}
+	return targets;
+}
+
+/**
+ * Awaits `isFieldRelevant` for each field (and one level of repeat subfields) and returns the
+ * qualified paths the controller rejected.
  *
  * Returns `null` when there is no relevance hook (caller should not filter). On rejection/error for
  * a single field, that field stays visible (not added to the deny-list).
@@ -293,17 +321,17 @@ export async function resolveIrrelevantFieldIds(
 	}
 	let failedCount = 0;
 	const results = await Promise.all(
-		fields.map(async (field) => {
+		collectRelevanceTargets(fields).map(async ({ path, field }) => {
 			try {
 				const relevant = await controller.isFieldRelevant!(field, ctx);
-				return [field.id, relevant !== false] as const;
+				return [path, relevant !== false] as const;
 			} catch (error) {
 				failedCount += 1;
 				console.error(
-					`Form controller isFieldRelevant for field "${field.id}" failed. The field will remain visible.`,
+					`Form controller isFieldRelevant for field "${path}" failed. The field will remain visible.`,
 					error
 				);
-				return [field.id, true] as const;
+				return [path, true] as const;
 			}
 		})
 	);
@@ -339,8 +367,8 @@ const commonInitErrorMsg = 'The form will proceed as though no custom type contr
  * Loads the type's form controller (if gated by `hasJsController`), builds context, awaits
  * `initialize`, resolves field relevance, and stores controller + cleanup on the stack entry.
  *
- * Repeat stacked forms do **not** own a controller: they run only `isFieldRelevant` against the
- * parent entry's context and store the resulting deny-list.
+ * Repeat stacked forms do **not** own a controller: they copy the owning form's already-resolved
+ * deny-list (including that form's repeat subfields) and do not call `isFieldRelevant` again.
  */
 export async function attachFormController(args: {
 	siteId: string;
@@ -359,36 +387,11 @@ export async function attachFormController(args: {
 
 	if (formProps.repeat) {
 		const state = createEmptyFormControllerState();
-		const parentController = parentStackEntry?.formControllerState?.controller;
-		const parentCtx = parentStackEntry?.formControllerState?.context;
-		if (parentController?.isFieldRelevant && parentCtx && formProps.fieldsToRender?.length) {
-			try {
-				state.irrelevantFieldIds = await resolveIrrelevantFieldIds(
-					collectFieldsForRelevance(parentCtx.contentType, formProps),
-					parentController,
-					parentCtx,
-					dispatch,
-					formatMessage
-				);
-			} catch (error) {
-				console.error(
-					'Form controller field relevance for a repeat item failed. All fields will remain visible.',
-					error
-				);
-				dispatch(
-					showSystemNotification({
-						message: formatMessage({
-							defaultMessage:
-								'Form controller field relevance for this repeat item failed. All fields will remain visible.'
-						}),
-						options: { variant: 'error' }
-					})
-				);
-				state.irrelevantFieldIds = null;
-			}
-		}
+		// Resolved once by the owning form, so a repeat item cannot disagree with its parent.
+		state.irrelevantFieldPaths = parentStackEntry?.formControllerState?.irrelevantFieldPaths ?? null;
 		if (stale()) return;
 		stackEntry.formControllerState = state;
+		store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
 		return;
 	}
 
@@ -465,7 +468,7 @@ export async function attachFormController(args: {
 
 	const fields = collectFieldsForRelevance(contentType, formProps);
 	try {
-		state.irrelevantFieldIds = await resolveIrrelevantFieldIds(fields, controller, ctx, dispatch, formatMessage);
+		state.irrelevantFieldPaths = await resolveIrrelevantFieldIds(fields, controller, ctx, dispatch, formatMessage);
 	} catch (error) {
 		console.error(
 			`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
@@ -483,11 +486,16 @@ export async function attachFormController(args: {
 				options: { variant: 'error' }
 			})
 		);
-		state.irrelevantFieldIds = null;
+		state.irrelevantFieldPaths = null;
 	}
 	if ((stale() || state.disposed) && stackEntry.formControllerState === state) {
 		runFormControllerCleanup(stackEntry);
 		stackEntry.formControllerState = null;
+		return;
+	}
+	// Validation atoms may already have been read during bootstrap, before this deny-list existed.
+	if (stackEntry.formControllerState === state) {
+		store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
 	}
 }
 

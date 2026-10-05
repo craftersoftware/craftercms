@@ -68,6 +68,8 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
+import { isFieldPathIrrelevant } from '../formControllers/runtime';
+import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
 import {
@@ -233,7 +235,15 @@ export const displayFormBeingSavedSnack = (dispatch: ReduxDispatch, formatMessag
 export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme: Theme) =>
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
-export type ValidatorsData = { siteId: string; contentTypesById: LookupTable<ContentType> };
+export type ValidatorsData = {
+	siteId: string;
+	contentTypesById: LookupTable<ContentType>;
+	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
+	resolveEmbeddedRelevance?: (
+		contentType: ContentType,
+		component: Record<string, unknown>
+	) => Promise<Set<string> | null>;
+};
 
 /**
  * Creates the value and validity atoms for a give field.
@@ -250,6 +260,8 @@ export function createFieldAtoms(
 	const valueAtom = atom(initialValue);
 	const validationAtom = atom(async (get) => {
 		// TODO: It would be best for this to be in a different place and be a sort of effect.
+		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
+		get(formContextRef.current.atoms.relevanceVersion);
 		const value = get(valueAtom);
 		if (isInitialization) {
 			isInitialization = false;
@@ -286,7 +298,10 @@ export function createFieldAtoms(
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : ''
+			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : '',
+			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
+			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
+			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance
 		});
 	});
 	return [valueAtom, validationAtom];
@@ -429,18 +444,20 @@ export const extractAtomValues: (store: JotaiStore, valueAtoms: LookupTable<Atom
 
 /**
  * Validation atoms for the save / invalid-form snapshot.
- * Excludes only field ids the form controller explicitly rejected; extra atoms
- * (descriptor additional fields, `folder-name`, …) stay in the snapshot.
+ * The deny-list is qualified (`repeatFieldId.subFieldId`). Only the unqualified entry applies
+ * at this form's level, unless `parentPath` names the repeat group these atoms belong to.
+ * Atoms the controller never rejected (descriptor additional fields, `folder-name`, …) stay.
  */
 export function getValidationAtomsExcludingIrrelevant(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
-	irrelevantFieldIds: Set<string> | null | undefined
+	irrelevantFieldPaths: Set<string> | null | undefined,
+	parentPath?: string
 ): Array<Atom<Promise<FieldValidityState>>> {
-	if (!irrelevantFieldIds?.size) {
+	if (!irrelevantFieldPaths?.size) {
 		return Object.values(validationByFieldId);
 	}
 	return Object.entries(validationByFieldId)
-		.filter(([fieldId]) => !irrelevantFieldIds.has(fieldId))
+		.filter(([fieldId]) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId, parentPath))
 		.map(([, validityAtom]) => validityAtom);
 }
 
@@ -549,7 +566,8 @@ export function createFormsEngineAtoms(
 		minimizeAfterSave: atomWithStorage(getFormsEngineMinimizeAfterSave(username), false, undefined, {
 			getOnInit: true
 		}) as unknown as AtomWithStorage,
-		...mixin
+		...mixin,
+		relevanceVersion: atom(0)
 	};
 	return atoms;
 }
@@ -961,6 +979,7 @@ export function prepareEmbeddedItemForm(props: {
 	siteId: string;
 	contentTypesById?: LookupTable<ContentType>;
 	customControls?: LookupTable<DescriptorContentType>;
+	dispatch: ReduxDispatch;
 }): { atoms: FormsEngineAtoms; values: LookupTable<unknown>; itemMeta: FormsEngineItemMetaContextProps } {
 	const {
 		username,
@@ -974,7 +993,8 @@ export function prepareEmbeddedItemForm(props: {
 		affectedPackages,
 		siteId,
 		contentTypesById,
-		customControls
+		customControls,
+		dispatch
 	} = props;
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
@@ -989,7 +1009,11 @@ export function prepareEmbeddedItemForm(props: {
 	});
 	const values = { ...update.values };
 	delete values[XmlKeys.fileName];
-	const validatorsData = { siteId, contentTypesById };
+	const validatorsData: ValidatorsData = {
+		siteId,
+		contentTypesById,
+		resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+	};
 
 	const descriptors = resolveControlDescriptors(customControls);
 	const additionalFieldsIds: string[] = [];

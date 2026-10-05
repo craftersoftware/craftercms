@@ -155,8 +155,10 @@ import { processPathMacros } from '../../utils/path';
 import {
 	attachFormController,
 	findAncestorFormControllerEntry,
+	isFieldPathIrrelevant,
 	runFormControllerCleanup
 } from './formControllers/runtime';
+import { createEmbeddedRelevanceResolver } from './formControllers/relevance';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -462,6 +464,11 @@ function FormBootstrap(props: FormsEngineProps) {
 			const seedValues = repeat.values ? { ...repeat.values } : {};
 			preloadControlPluginsForFields(siteId, fieldsToRender, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
+				const validatorsData = {
+					siteId,
+					contentTypesById,
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+				};
 				const atomValueCreator: Parameters<typeof createParsedValuesObject>[3] = (fieldId, value, isAdditional) => {
 					setFieldAtoms(
 						stableFormContextRef,
@@ -470,7 +477,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						fieldId,
 						atoms,
 						value,
-						{ siteId, contentTypesById },
+						validatorsData,
 						isAdditional
 					);
 				};
@@ -558,7 +565,8 @@ function FormBootstrap(props: FormsEngineProps) {
 						parentPathInSite,
 						siteId,
 						contentTypesById: effectRefs.current.contentTypesById,
-						customControls
+						customControls,
+						dispatch
 					});
 					initializeState(requirements.atoms, requirements.values, requirements.itemMeta, failures);
 				});
@@ -601,6 +609,11 @@ function FormBootstrap(props: FormsEngineProps) {
 			const contentObject = createObjectWithSystemProps(contentType);
 			const initCreateForm = (failures: ControlPluginPreloadFailure[] = []) => {
 				if (disposed) return;
+				const validatorsData = {
+					siteId,
+					contentTypesById,
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+				};
 				const values = createParsedValuesObject(
 					contentType.fields,
 					contentObject,
@@ -615,7 +628,7 @@ function FormBootstrap(props: FormsEngineProps) {
 							fieldId,
 							atoms,
 							value,
-							{ siteId, contentTypesById },
+							validatorsData,
 							isAdditional
 						);
 					},
@@ -696,6 +709,11 @@ function FormBootstrap(props: FormsEngineProps) {
 						effectRefs.current.contentTypesById
 					).then((failures) => {
 						if (disposed) return;
+						const validatorsData = {
+							siteId,
+							contentTypesById: effectRefs.current.contentTypesById,
+							resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+						};
 						const values = createParsedValuesObject(
 							requirements.contentType.fields,
 							requirements.contentObject,
@@ -708,7 +726,7 @@ function FormBootstrap(props: FormsEngineProps) {
 									fieldId,
 									atoms,
 									value,
-									{ siteId, contentTypesById: effectRefs.current.contentTypesById },
+									validatorsData,
 									isAdditional
 								);
 							},
@@ -825,7 +843,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
 	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
-	const irrelevantFieldIds = formControllerState?.irrelevantFieldIds ?? null;
+	const irrelevantFieldPaths = formControllerState?.irrelevantFieldPaths ?? null;
 	const formControllerFileMissing = Boolean(formControllerState?.fileMissing);
 	const formControllerLoadFailed = Boolean(formControllerState?.loadFailed);
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
@@ -853,22 +871,24 @@ function FormOrchestrator(props: FormsEngineProps) {
 				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
 			}));
 		}
-		if (irrelevantFieldIds && !fieldsToRender) {
+		if (irrelevantFieldPaths && !fieldsToRender) {
 			sections = sections
 				.map((section) => ({
 					...section,
-					fields: section.fields.filter((fieldId) => !irrelevantFieldIds.has(fieldId))
+					fields: section.fields.filter((fieldId) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId))
 				}))
 				// Remove sections that contain no remaining fields.
 				.filter((section) => section.fields.length > 0);
 		}
 		return sections;
-	}, [contentType.sections, isEmbedded, irrelevantFieldIds, fieldsToRender]);
+	}, [contentType.sections, isEmbedded, irrelevantFieldPaths, fieldsToRender]);
 	const visibleFieldsToRender = useMemo(() => {
 		if (!fieldsToRender) return fieldsToRender;
-		if (!irrelevantFieldIds?.size) return fieldsToRender;
-		return fieldsToRender.filter((field) => !irrelevantFieldIds.has(field.id));
-	}, [fieldsToRender, irrelevantFieldIds]);
+		if (!irrelevantFieldPaths?.size) return fieldsToRender;
+		// Repeat item fields are subfields. Qualify them with the repeat group so `title_s` in
+		// another group is not hidden by this one.
+		return fieldsToRender.filter((field) => !isFieldPathIrrelevant(irrelevantFieldPaths, field.id, repeat?.fieldId));
+	}, [fieldsToRender, irrelevantFieldPaths, repeat?.fieldId]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
 	const tableOfContents = (
 		<TableOfContents
@@ -901,7 +921,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 			const validityStates = await Promise.all(
 				getValidationAtomsExcludingIrrelevant(
 					stableFormContext.atoms.validationByFieldId,
-					stableFormContext.formControllerState?.irrelevantFieldIds
+					stableFormContext.formControllerState?.irrelevantFieldPaths,
+					repeat?.fieldId
 				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			setInvalidForm(validityStates.some((state) => !state.isValid));

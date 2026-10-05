@@ -37,6 +37,7 @@ import {
 import { buildSectionExpandedStateAtoms, setFieldAtoms } from '../FormsEngine/lib/formUtils';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
+import { atom } from 'jotai';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
@@ -553,7 +554,9 @@ export const createStableFormContextProps = (
 			isLargeContainer: undefined,
 			tableOfContentsDrawerOpen: undefined,
 			closeAfterSave: undefined,
-			minimizeAfterSave: undefined
+			minimizeAfterSave: undefined,
+			// Field validation atoms always read this, even where no form controller attaches.
+			relevanceVersion: atom(0)
 		},
 		changedFieldIds: null,
 		fieldUpdates$: null,

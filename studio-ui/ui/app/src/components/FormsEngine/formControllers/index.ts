@@ -17,5 +17,6 @@
 export * from './types';
 export * from './loader';
 export * from './runtime';
+export * from './relevance';
 export * from './host';
 export * from './stub';
