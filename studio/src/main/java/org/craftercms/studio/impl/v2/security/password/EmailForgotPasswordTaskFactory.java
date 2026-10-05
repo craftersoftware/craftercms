@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,8 +18,7 @@ package org.craftercms.studio.impl.v2.security.password;
 
 import freemarker.template.Template;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.servlet.http.HttpServletRequest;
-import org.craftercms.commons.http.RequestContext;
+import org.apache.commons.lang3.StringUtils;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v2.dal.User;
@@ -55,6 +54,7 @@ public class EmailForgotPasswordTaskFactory implements ForgotPasswordTaskFactory
 	private static final String AUTHORING_URL_MODEL_KEY = "authoringUrl";
 	private static final String SERVICE_URL_MODEL_KEY = "serviceUrl";
 	private static final String TOKEN_MODEL_KEY = "token";
+	private static final String DEFAULT_AUTHORING_URL = "http://localhost:8080/studio";
 	private final UserService userService;
 	private final StudioConfiguration studioConfiguration;
 	private final JavaMailSender emailService;
@@ -80,9 +80,7 @@ public class EmailForgotPasswordTaskFactory implements ForgotPasswordTaskFactory
 	public void afterPropertiesSet() throws IOException {
 		// Retrieving the template here allows the template loader to have access to the right context, so it can find the template
 		this.template = freeMarkerConfig.getObject().getConfiguration().getTemplate(studioConfiguration.getProperty(SECURITY_FORGOT_PASSWORD_EMAIL_TEMPLATE));
-		RequestContext context = RequestContext.getCurrent();
-		HttpServletRequest request = context.getRequest();
-		authoringUrl = request.getRequestURL().toString().replace(request.getPathInfo(), "");
+		this.authoringUrl = resolveAuthoringUrl();
 	}
 
 	@NonNull
@@ -155,6 +153,20 @@ public class EmailForgotPasswordTaskFactory implements ForgotPasswordTaskFactory
 
 	private boolean isAuthenticatedSMTP() {
 		return Boolean.parseBoolean(studioConfiguration.getProperty(MAIL_SMTP_AUTH));
+	}
+
+	private String resolveAuthoringUrl() {
+		String configuredUrl = StringUtils.trimToNull(studioConfiguration.getProperty(AUTHORING_SERVER_URL));
+		if (configuredUrl == null) {
+			configuredUrl = DEFAULT_AUTHORING_URL;
+		}
+		configuredUrl = StringUtils.stripEnd(configuredUrl, "/");
+		if (DEFAULT_AUTHORING_URL.equals(configuredUrl)) {
+			logger.warn("Property '{}' is not configured or using default value '{}'. " +
+					"Reset emails will point to this URL, which may not be accessible to external users.",
+					AUTHORING_SERVER_URL, DEFAULT_AUTHORING_URL);
+		}
+		return configuredUrl;
 	}
 
 }

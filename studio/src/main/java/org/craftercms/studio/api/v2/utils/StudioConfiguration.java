@@ -157,10 +157,13 @@ public interface StudioConfiguration {
 	String CONFIGURATION_SITE_DEFAULT_GRAPHQL_SERVER_URL = "studio.configuration.site.defaultGraphqlServerUrl";
 	String CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN = "studio.configuration.management.authorizationToken";
 	String CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN =
-		"studio.configuration.management.previewAuthorizationToken";
+			"studio.configuration.management.previewAuthorizationToken";
+	String CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN =
+			"studio.configuration.management.deployerAuthorizationToken";
 	String CONFIGURATION_MANAGEMENT_PREVIEW_PROTECTED_URLS =
-		"studio.configuration.management.previewProtectedUrls";
+			"studio.configuration.management.previewProtectedUrls";
 	String CONFIGURATION_PUBLISHING_BLACKLIST_PATHSPECS = "studio.configuration.publishing.blacklist.pathspecs";
+
 	String CONFIGURATION_DEFAULT_TIME_ZONE = "studio.configuration.defaultTimeZone";
 
 	String CONFIGURATION_PATH_PATTERNS = "studio.configuration.cache.site.patterns";
@@ -254,6 +257,7 @@ public interface StudioConfiguration {
 	String AUTHORING_REPLACE = "studio.authoring.replace";
 	String AUTHORING_DISABLE_DEPLOY_CRON = "studio.authoring.disableDeployCron";
 	String AUTHORING_TEMPLATE_NAME = "studio.authoring.templateName";
+	String AUTHORING_SERVER_URL = "studio.authoring.serverUrl";
 
 	/**
 	 * Deployer HTTP requests

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -22,7 +22,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
@@ -71,8 +70,8 @@ public class PluginController extends ManagementTokenAware {
 		this.marketplaceService = marketplaceService;
 	}
 
-	@GetMapping(value = "/get_configuration", produces = APPLICATION_JSON_VALUE)
-	public ResultOne<String> getPluginConfiguration(@ValidSiteId String siteId, String pluginId) throws ServiceLayerException {
+	@GetMapping(value = "/{siteId}/get_configuration", produces = APPLICATION_JSON_VALUE)
+	public ResultOne<String> getPluginConfiguration(@ValidSiteId @PathVariable String siteId, String pluginId) throws ServiceLayerException {
 		String content = marketplaceService.getPluginConfigurationAsString(siteId, pluginId);
 
 		ResultOne<String> result = new ResultOne<>();
@@ -81,10 +80,10 @@ public class PluginController extends ManagementTokenAware {
 		return result;
 	}
 
-	@PostMapping(value = "/write_configuration", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result writeConfiguration(@Valid @RequestBody WriteConfigurationRequest request)
+	@PostMapping(value = "/{siteId}/write_configuration", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result writeConfiguration(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody WriteConfigurationRequest request)
 		throws UserNotFoundException, ServiceLayerException, AuthenticationException {
-		marketplaceService.writePluginConfiguration(request.getSiteId(), request.getPluginId(), request.getContent());
+		marketplaceService.writePluginConfiguration(siteId, request.getPluginId(), request.getContent());
 
 		Result result = new Result();
 		result.setResponse(OK);
@@ -94,8 +93,8 @@ public class PluginController extends ManagementTokenAware {
 	/**
 	 * Reloads the groovy classes for the given site
 	 */
-	@GetMapping(value = "/script/reload", produces = APPLICATION_JSON_VALUE)
-	public Result reloadClasses(@ValidSiteId @RequestParam String siteId, @RequestParam String token)
+	@GetMapping(value = "/{siteId}/script/reload", produces = APPLICATION_JSON_VALUE)
+	public Result reloadClasses(@ValidSiteId @PathVariable String siteId, @RequestParam String token)
 		throws InvalidParametersException, InvalidManagementTokenException {
 		validateToken(token);
 
@@ -110,12 +109,12 @@ public class PluginController extends ManagementTokenAware {
 	/**
 	 * Executes a rest script for the given site
 	 */
-	@RequestMapping(value = "/script/**")
-	public ResultOne<Object> runScript(@ValidSiteId @RequestParam String siteId, HttpServletRequest request, HttpServletResponse response)
+	@RequestMapping(value = "/{siteId}/script/**")
+	public ResultOne<Object> runScript(@ValidSiteId @PathVariable String siteId, HttpServletRequest request, HttpServletResponse response)
 		throws ResourceException, ScriptException, ConfigurationException {
 		// No better way to do this for now, later can be replaced by "/script/{*scriptUrl}"
 		var scriptUrl = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-		scriptUrl = removeStart(removeExtension(scriptUrl), "/api/2/plugin/script");
+		scriptUrl = removeStart(removeExtension(scriptUrl), "/api/2/plugin/" + siteId + "/script");
 
 		// Add the binding with the right values
 		// Execute the script
@@ -138,23 +137,10 @@ public class PluginController extends ManagementTokenAware {
 	public static class WriteConfigurationRequest {
 
 		@NotEmpty
-		@Size(max = 50)
-		@ValidSiteId
-		private String siteId;
-
-		@NotEmpty
 		private String pluginId;
 
 		@NotEmpty
 		private String content;
-
-		public String getSiteId() {
-			return siteId;
-		}
-
-		public void setSiteId(String siteId) {
-			this.siteId = siteId;
-		}
 
 		public String getPluginId() {
 			return pluginId;

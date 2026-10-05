@@ -103,8 +103,8 @@ public class ContentController {
 		this.contentTypeService = contentTypeService;
 	}
 
-	@GetMapping(value = EXISTS, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Boolean> contentExists(@NotEmpty @ValidSiteId @RequestParam String siteId,
+	@GetMapping(value = SITE_ID + EXISTS, produces = APPLICATION_JSON_VALUE)
+	public ResultOne<Boolean> contentExists(@NotEmpty @ValidSiteId @PathVariable String siteId,
 											@ValidExistingContentPath @ValidateSecurePathParam @RequestParam String path)
 			throws SiteNotFoundException {
 		var result = new ResultOne<Boolean>();
@@ -113,8 +113,8 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(value = LIST_QUICK_CREATE_CONTENT, produces = APPLICATION_JSON_VALUE)
-	public ResultList<QuickCreateItem> listQuickCreateContent(@NotBlank @ValidSiteId @RequestParam(name = "siteId") String siteId)
+	@GetMapping(value = SITE_ID + LIST_QUICK_CREATE_CONTENT, produces = APPLICATION_JSON_VALUE)
+	public ResultList<QuickCreateItem> listQuickCreateContent(@NotBlank @ValidSiteId @PathVariable String siteId)
 			throws ServiceLayerException {
 		List<QuickCreateItem> items = contentTypeService.getQuickCreatableContentTypes(siteId);
 		ResultList<QuickCreateItem> result = new ResultList<>();
@@ -123,10 +123,11 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = GET_DELETE_PACKAGE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Map<String, Collection<LightItem>>> getDeletePackage(@RequestBody @Valid GetDeletePackageRequestBody request) throws SiteNotFoundException {
-		List<LightItem> childItems = contentService.getChildItems(request.getSiteId(), request.getPaths());
-		Collection<LightItem> dependentItems = dependencyService.getDependentPaths(request.getSiteId(), request.getPaths());
+	@PostMapping(value = SITE_ID + GET_DELETE_PACKAGE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public ResultOne<Map<String, Collection<LightItem>>> getDeletePackage(@ValidSiteId @PathVariable String siteId,
+																		 @RequestBody @Valid GetDeletePackageRequestBody request) throws SiteNotFoundException {
+		List<LightItem> childItems = contentService.getChildItems(siteId, request.getPaths());
+		Collection<LightItem> dependentItems = dependencyService.getDependentPaths(siteId, request.getPaths());
 		ResultOne<Map<String, Collection<LightItem>>> result = new ResultOne<>();
 		result.setResponse(OK);
 		Map<String, Collection<LightItem>> items = new HashMap<>();
@@ -136,10 +137,10 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = DELETE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result delete(@RequestBody @Validated DeleteRequestBody deleteRequestBody)
+	@PostMapping(value = SITE_ID + DELETE, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result delete(@ValidSiteId @PathVariable String siteId, @RequestBody @Validated DeleteRequestBody deleteRequestBody)
 			throws UserNotFoundException, ServiceLayerException, AuthenticationException {
-		UnwrappedResult<DeleteContentResult> result = UnwrappedResult.of(contentService.deleteContent(deleteRequestBody.getSiteId(),
+		UnwrappedResult<DeleteContentResult> result = UnwrappedResult.of(contentService.deleteContent(siteId,
 				deleteRequestBody.getItems(), deleteRequestBody.getTitle(),
 				deleteRequestBody.getComment()));
 		result.setResponse(OK);
@@ -158,8 +159,8 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(value = GET_DESCRIPTOR, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<String> getDescriptor(@NotEmpty @ValidSiteId @RequestParam String siteId,
+	@GetMapping(value = SITE_ID + GET_DESCRIPTOR, produces = APPLICATION_JSON_VALUE)
+	public ResultOne<String> getDescriptor(@NotEmpty @ValidSiteId @PathVariable String siteId,
 										   @ValidExistingContentPath @ValidateSecurePathParam @RequestParam String path,
 										   @RequestParam(required = false, defaultValue = "false") boolean flatten) throws
 			ContentNotFoundException, SiteNotFoundException {
@@ -182,19 +183,18 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = DUPLICATE_ITEM, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
-	public ResultOne<String> duplicateItem(@Valid @RequestBody DuplicateRequest request) throws Exception {
+	@PostMapping(value = SITE_ID + DUPLICATE_ITEM, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	public ResultOne<String> duplicateItem(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody DuplicateRequest request) throws Exception {
 		var result = new ResultOne<String>();
 		result.setResponse(OK);
 		result.setEntity(RESULT_KEY_ITEM,
-				clipboardService.duplicateItem(request.getSiteId(), request.getPath()));
+				clipboardService.duplicateItem(siteId, request.getPath()));
 
 		return result;
 	}
 
-	@GetMapping(value = ITEM_BY_PATH, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<ContentItem> getItemByPath(@ValidSiteId
-												@RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+	@GetMapping(value = SITE_ID + ITEM_BY_PATH, produces = APPLICATION_JSON_VALUE)
+	public ResultOne<ContentItem> getItemByPath(@ValidSiteId @PathVariable String siteId,
 												@ValidExistingContentPath
 												@RequestParam(value = REQUEST_PARAM_PATH) String path,
 												@RequestParam(value = REQUEST_PARAM_PREFER_CONTENT, required = false,
@@ -207,10 +207,10 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = SANDBOX_ITEMS_BY_PATH, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
-	public GetContentItemsByPathResult getSandboxItemsByPath(@RequestBody @Valid GetSandboxItemsByPathRequestBody request)
+	@PostMapping(value = SITE_ID + SANDBOX_ITEMS_BY_PATH, produces = APPLICATION_JSON_VALUE, consumes = APPLICATION_JSON_VALUE)
+	public GetContentItemsByPathResult getSandboxItemsByPath(@ValidSiteId @PathVariable String siteId,
+															@RequestBody @Valid GetSandboxItemsByPathRequestBody request)
 			throws ServiceLayerException, UserNotFoundException {
-		String siteId = request.getSiteId();
 		Collection<String> missing = Collections.emptyList();
 		List<String> paths = request.getPaths();
 		boolean preferContent = request.isPreferContent();
@@ -232,27 +232,27 @@ public class ContentController {
 		return result;
 	}
 
-	@PostMapping(value = ITEM_LOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result itemLockByPath(@RequestBody @Valid LockItemByPathRequest request)
+	@PostMapping(value = SITE_ID + ITEM_LOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result itemLockByPath(@ValidSiteId @PathVariable String siteId, @RequestBody @Valid LockItemByPathRequest request)
 			throws UserNotFoundException, ServiceLayerException {
-		contentService.lockContent(request.getSiteId(), request.getPath());
+		contentService.lockContent(siteId, request.getPath());
 		Result result = new Result();
 		result.setResponse(OK);
 		return result;
 	}
 
-	@PostMapping(value = ITEM_UNLOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result itemUnlockByPath(@RequestBody @Valid UnlockItemByPathRequest request)
+	@PostMapping(value = SITE_ID + ITEM_UNLOCK_BY_PATH, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result itemUnlockByPath(@ValidSiteId @PathVariable String siteId, @RequestBody @Valid UnlockItemByPathRequest request)
 			throws ContentNotFoundException, SiteNotFoundException, RepositoryException {
-		contentService.unlockContent(request.getSiteId(), request.getPath());
+		contentService.unlockContent(siteId, request.getPath());
 		Result result = new Result();
 		result.setResponse(OK);
 		return result;
 	}
 
 	@Valid
-	@GetMapping(GET_CONTENT_BY_COMMIT_ID)
-	public ResponseEntity<Resource> getContentByCommitId(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+	@GetMapping(SITE_ID + GET_CONTENT_BY_COMMIT_ID)
+	public ResponseEntity<Resource> getContentByCommitId(@ValidSiteId @PathVariable String siteId,
 														 @ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH) String path,
 														 @NotBlank @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(value = REQUEST_PARAM_COMMIT_ID) String commitId)
 			throws ServiceLayerException, UserNotFoundException {
@@ -300,10 +300,10 @@ public class ContentController {
 				.body(result);
 	}
 
-	@PostMapping(value = RENAME, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result rename(@Valid @RequestBody RenameRequestBody renameRequestBody)
+	@PostMapping(value = SITE_ID + RENAME, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result rename(@ValidSiteId @PathVariable String siteId, @Valid @RequestBody RenameRequestBody renameRequestBody)
 			throws AuthenticationException, UserNotFoundException, ServiceLayerException, ValidationException {
-		contentService.renameContent(renameRequestBody.getSiteId(), renameRequestBody.getPath(), renameRequestBody.getName());
+		contentService.renameContent(siteId, renameRequestBody.getPath(), renameRequestBody.getName());
 		var result = new Result();
 		result.setResponse(OK);
 		return result;
@@ -329,8 +329,8 @@ public class ContentController {
 		return result;
 	}
 
-	@GetMapping(value = ITEM_HISTORY, produces = APPLICATION_JSON_VALUE)
-	public ResultList<ItemVersion> getHistory(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+	@GetMapping(value = SITE_ID + ITEM_HISTORY, produces = APPLICATION_JSON_VALUE)
+	public ResultList<ItemVersion> getHistory(@ValidSiteId @PathVariable String siteId,
 											  @ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH) String path) throws ServiceLayerException {
 		ResultList<ItemVersion> result = new ResultList<>();
 		result.setResponse(OK);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -24,6 +24,13 @@ export function encrypt(text: string, site: string = ''): Observable<string> {
 	return postJSON(`/studio/api/2/security/encrypt.json`, { text, siteId: site }).pipe(
 		map((response) => response?.response?.item)
 	);
+}
+
+export function generatePreviewToken(siteIds: string[], expiresAt: string | Date): Observable<string> {
+  return postJSON(`/studio/api/2/security/preview/generate_token.json`, {
+    siteIds,
+    expiresAt: expiresAt instanceof Date ? expiresAt.toISOString() : expiresAt
+  }).pipe(map((response) => response?.response?.token));
 }
 
 export function previewSwitch(): Observable<true> {

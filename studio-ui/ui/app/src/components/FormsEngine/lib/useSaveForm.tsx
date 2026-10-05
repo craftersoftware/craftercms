@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai/index';
 import { useDispatch, useStore as useReduxStore } from 'react-redux';
 import GlobalState from '../../../models/GlobalState';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -59,7 +58,7 @@ import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
-import { atom, PrimitiveAtom, useAtom } from 'jotai';
+import { atom, PrimitiveAtom, useAtom, useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
 import { showSystemNotification } from '../../../state/actions/system';
 import {
 	AffectedPluginControlField,

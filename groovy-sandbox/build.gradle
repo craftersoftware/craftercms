@@ -39,6 +39,7 @@ dependencies {
 	compileOnly libs.groovy
 
 	testImplementation libs.groovy
+	implementation libs.groovy.callsite
 	testImplementation libs.junit
 	testImplementation libs.test.annotations
 }

@@ -19,7 +19,7 @@ import { getSimplifiedVersion } from '../../utils/string';
 import React, { useEffect, useState } from 'react';
 import TranslationOrText from '../../models/TranslationOrText';
 import { useIntl } from 'react-intl';
-import { LauncherSectionUI, LauncherSectionUIProps } from '../LauncherSection';
+import { LauncherSectionUI, LauncherSectionUIProps } from '../LauncherSection/LauncherSectionUI';
 import { getLauncherSectionLink, urlMapping } from '../LauncherSection/utils';
 import { messages } from '../LauncherSection/utils';
 import { closeLauncher } from '../../state/actions/dialogs';

@@ -19,7 +19,7 @@ import Alert from '@mui/material/Alert';
 import { FormattedMessage } from 'react-intl';
 import React, { ElementType, memo, Suspense, useCallback, useContext, useMemo } from 'react';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
-import { Atom, useAtom } from 'jotai/index';
+import { Atom, useAtom } from 'jotai';
 import { controlMap } from './controlMap';
 import { UnknownControl } from '../components/UnknownControl';
 import ErrorBoundary from '../../ErrorBoundary';

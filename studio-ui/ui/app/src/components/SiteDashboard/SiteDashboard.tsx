@@ -23,7 +23,7 @@ import useActiveUser from '../../hooks/useActiveUser';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { useDispatch } from 'react-redux';
 import { initDashboardConfig } from '../../state/actions/dashboard';
-import { renderWidgets } from '../Widget';
+import { renderWidgets } from '../Widget/renderWidgets';
 import EmptyState from '../EmptyState';
 import { FormattedMessage } from 'react-intl';
 import Skeleton from '@mui/material/Skeleton';

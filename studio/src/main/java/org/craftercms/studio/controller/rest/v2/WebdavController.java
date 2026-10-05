@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -65,7 +65,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
  */
 @Validated
 @RestController
-@RequestMapping("/api/2/webdav")
+@RequestMapping("/api/2/webdav/{siteId}")
 public class WebdavController {
 
 	/**
@@ -92,7 +92,7 @@ public class WebdavController {
 	 */
 	@GetMapping(value = "list", produces = APPLICATION_JSON_VALUE)
 	public ResultList<WebDavItem> listItems(
-		@NotBlank @ValidSiteId @RequestParam(REQUEST_PARAM_SITEID) String siteId,
+		@NotBlank @ValidSiteId @PathVariable String siteId,
 		@NotBlank @RequestParam(REQUEST_PARAM_PROFILE_ID) String profileId,
 		@ValidExistingContentPath @RequestParam(value = REQUEST_PARAM_PATH, required = false, defaultValue = StringUtils.EMPTY) String path,
 		@RequestParam(value = REQUEST_PARAM_TYPE, required = false, defaultValue = StringUtils.EMPTY) String type)
@@ -116,7 +116,7 @@ public class WebdavController {
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
 	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
-	public ResultOne<WebDavItem> uploadItem(HttpServletRequest request) throws IOException, WebDavException,
+	public ResultOne<WebDavItem> uploadItem(@ValidSiteId @PathVariable String siteId, HttpServletRequest request) throws IOException, WebDavException,
 		InvalidParametersException, SiteNotFoundException, ConfigurationProfileNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {
 			throw new InvalidParametersException("The request is not multipart");
@@ -125,7 +125,6 @@ public class WebdavController {
 		try {
 			JakartaServletFileUpload upload = new JakartaServletFileUpload();
 			FileItemInputIterator iterator = upload.getItemIterator(request);
-			String siteId = null;
 			String profileId = null;
 			String path = null;
 			if (!iterator.hasNext()) {
@@ -137,9 +136,6 @@ public class WebdavController {
 				try (InputStream stream = item.getInputStream()) {
 					if (item.isFormField()) {
 						switch (name) {
-							case REQUEST_PARAM_SITEID:
-								siteId = Streams.asString(stream);
-								break;
 							case REQUEST_PARAM_PROFILE_ID:
 								profileId = Streams.asString(stream);
 								break;

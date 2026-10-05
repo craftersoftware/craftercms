@@ -31,7 +31,11 @@ dependencies {
 
 	implementation libs.commons.lang3
 	implementation libs.jakarta.validation.api
-	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
+	implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta") {
+		// Keep standalone Xerces out of the published POM; it breaks OpenSAML's parser pool
+		exclude group: 'xerces', module: 'xercesImpl'
+		exclude group: 'xml-apis', module: 'xml-apis'
+	}
 	implementation libs.hibernate.validator
 	implementation libs.spring.context
 	implementation libs.spring.context.support

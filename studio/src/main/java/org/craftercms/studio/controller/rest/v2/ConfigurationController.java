@@ -51,6 +51,7 @@ import org.craftercms.studio.model.rest.ResultOne;
 import org.craftercms.studio.model.rest.WriteConfigurationRequest;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -72,7 +73,7 @@ public class ConfigurationController {
 	}
 
 	@GetMapping(value = CLEAR_CACHE, produces = APPLICATION_JSON_VALUE)
-	public Result clearCache(@ValidSiteId @RequestParam String siteId) {
+	public Result clearCache(@ValidSiteId @PathVariable String siteId) {
 		configurationService.invalidateConfiguration(siteId);
 		var result = new Result();
 		result.setResponse(OK);
@@ -81,7 +82,7 @@ public class ConfigurationController {
 
 	@GetMapping(value = GET_CONFIGURATION, produces = APPLICATION_JSON_VALUE)
 	@LogExecutionTime
-	public ResultOne<String> getConfiguration(@ValidSiteId @RequestParam(name = "siteId", required = true) String siteId,
+	public ResultOne<String> getConfiguration(@ValidSiteId @PathVariable String siteId,
 						  @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "module", required = true) String module,
 						  @ValidConfigurationPath @RequestParam(name = "path", required = true) String path,
 						  @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "environment", required = false) String environment)
@@ -100,10 +101,10 @@ public class ConfigurationController {
 	}
 
 	@PostMapping(value = WRITE_CONFIGURATION, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result writeConfiguration(@Validated @RequestBody WriteConfigurationRequest wcRequest)
+	public Result writeConfiguration(@ValidSiteId @PathVariable String siteId,
+									 @Validated @RequestBody WriteConfigurationRequest wcRequest)
 		throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		InputStream is = IOUtils.toInputStream(wcRequest.getContent(), UTF_8);
-		String siteId = wcRequest.getSiteId();
 		if (CS.equals(siteId, studioConfiguration.getProperty(CONFIGURATION_GLOBAL_SYSTEM_SITE))) {
 			configurationService.writeGlobalConfiguration(wcRequest.getPath(), is);
 		} else {
@@ -116,7 +117,7 @@ public class ConfigurationController {
 	}
 
 	@GetMapping(value = GET_CONFIGURATION_HISTORY, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<ConfigurationHistory> getConfigurationHistory(@ValidSiteId @RequestParam(name = "siteId", required = true) String siteId,
+	public ResultOne<ConfigurationHistory> getConfigurationHistory(@ValidSiteId @PathVariable String siteId,
 								       @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "module", required = true) String module,
 								       @ValidConfigurationPath @RequestParam(name = "path", required = true) String path,
 								       @EsapiValidatedParam(type = ALPHANUMERIC) @RequestParam(name = "environment", required = false) String environment)
@@ -130,7 +131,7 @@ public class ConfigurationController {
 	}
 
 	@GetMapping(value = TRANSLATION, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<TranslationConfiguration> getTranslationConfiguration(@ValidSiteId @RequestParam String siteId) throws ServiceLayerException {
+	public ResultOne<TranslationConfiguration> getTranslationConfiguration(@ValidSiteId @PathVariable String siteId) throws ServiceLayerException {
 		ResultOne<TranslationConfiguration> result = new ResultOne<>();
 		result.setEntity(RESULT_KEY_CONFIG, configurationService.getTranslationConfiguration(siteId));
 		result.setResponse(OK);

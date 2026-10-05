@@ -19,10 +19,10 @@ package org.craftercms.engine.util.spring.security.targeting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.commons.lang.StringUtils;
-import org.bson.types.ObjectId;
 import org.craftercms.engine.controller.rest.preview.ProfileRestController;
 import org.craftercms.engine.util.spring.security.ConfigAwarePreAuthenticationFilter;
-import org.craftercms.profile.api.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.*;
 
@@ -53,46 +53,54 @@ public class TargetingPreAuthenticatedFilter extends ConfigAwarePreAuthenticatio
 			Map<String, Object> attributes = (Map<String, Object>)
 				session.getAttribute(ProfileRestController.PROFILE_SESSION_ATTRIBUTE);
 
-			if (isNotEmpty(attributes)) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Non-anonymous persona set: " + attributes);
-				}
+            if (isNotEmpty(attributes)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Non-anonymous persona set: " + attributes);
+                }
 
-				Profile profile = new Profile();
-				profile.setId(new ObjectId((String) attributes.get("id")));
-				profile.setUsername("preview");
-				profile.setEnabled(true);
-				profile.setCreatedOn(new Date());
-				profile.setLastModified(new Date());
-				profile.setTenant("preview");
-
-				Object rolesAttr = attributes.get("roles");
-				String[] roles = null;
-				if (rolesAttr instanceof String[]) {
-					roles = (String[]) rolesAttr;
-				} else if (rolesAttr instanceof ArrayList<?>) {
-					roles = ((ArrayList<?>) rolesAttr).toArray(new String[0]);
-				} else if (rolesAttr instanceof String) {
-					roles = ((String) rolesAttr).split(",");
-				}
-				if (roles != null) {
-					profile.getRoles().addAll(Arrays.stream(roles).filter(StringUtils::isNotBlank).toList());
-				}
+                Object rolesAttr = attributes.get("roles");
+                String[] roles = null;
+                if (rolesAttr instanceof String[]) {
+                    roles = (String[]) rolesAttr;
+                } else if (rolesAttr instanceof ArrayList<?>) {
+                    roles = ((ArrayList<?>) rolesAttr).toArray(new String[0]);
+                } else if (rolesAttr instanceof String) {
+                    roles = ((String) rolesAttr).split(",");
+                }
+                Collection<SimpleGrantedAuthority> authorities = roles == null
+                    ? List.of()
+                    : Arrays.stream(roles)
+                        .map(String::trim)
+                        .filter(StringUtils::isNotBlank)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
 
 				Map<String, Object> customAttributes = new HashMap<>(attributes);
 				customAttributes.remove("id");
 				customAttributes.remove("username");
 				customAttributes.remove("roles");
 
-				profile.setAttributes(customAttributes);
+                return new TargetingUser("preview", authorities, customAttributes);
+            }
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("No persona set. Trying to resolve authentication normally");
+        }
+        return null;
+    }
 
-				return new TargetingUser(new TargetingAuthentication(profile));
-			}
+	@Override
+	protected boolean principalChanged(final HttpServletRequest request, final Authentication currentAuthentication) {
+		if (super.principalChanged(request, currentAuthentication)) {
+			return true;
 		}
-		if (logger.isDebugEnabled()) {
-			logger.debug("No persona set. Trying to resolve authentication normally");
+		// TargetingUser equality ignores authorities, so persona role changes must be detected explicitly
+		Object principal = getPreAuthenticatedPrincipal(request);
+		if (!(principal instanceof TargetingUser newUser)
+			|| !(currentAuthentication.getPrincipal() instanceof TargetingUser currentUser)) {
+			return false;
 		}
-		return null;
+		return !newUser.getAuthorities().equals(currentUser.getAuthorities());
 	}
 
 	@Override

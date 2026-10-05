@@ -16,7 +16,7 @@
 package org.craftercms.engine.scripting.impl;
 
 import groovy.grape.Grape;
-import groovy.grape.GrapeIvy;
+import groovy.grape.ivy.GrapeIvy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

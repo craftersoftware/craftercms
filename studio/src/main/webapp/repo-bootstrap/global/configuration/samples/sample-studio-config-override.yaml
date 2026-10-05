@@ -54,6 +54,15 @@
 #  4 # very unguessable: strong protection from offline slow-hash scenario. (guesses >= 10^10)
 # The default value is 3
 # studio.security.passwordRequirements.minimumComplexity: 3
+
+############################################################
+##                    Authoring Server                    ##
+############################################################
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Keep this as the externally reachable URL; do not reuse an internal service-to-service Studio URL here.
+# If STUDIO_URL is internal-only, override this property directly with the public URL instead.
+# studio.authoring.serverUrl: ${env:STUDIO_URL}
+
 ################################################################
 ##                             CORS                           ##
 ################################################################
@@ -88,10 +97,6 @@
 ##########################################################
 # Indicates if serverless delivery is enabled
 # studio.serverless.delivery.enabled: true
-# The URL for the serverless delivery deployer create URL
-# studio.serverless.delivery.deployer.target.createUrl: ${studio.preview.createTargetUrl}
-# The URL for the serverless delivery deployer delete URL
-# studio.serverless.delivery.deployer.target.deleteUrl: ${studio.preview.deleteTargetUrl}
 # The template name for serverless deployer targets (supported: aws-s3, aws-cloudformed-s3)
 # studio.serverless.delivery.deployer.target.template: aws-cloudformed-s3
 # Replace existing target configuration if one exists?

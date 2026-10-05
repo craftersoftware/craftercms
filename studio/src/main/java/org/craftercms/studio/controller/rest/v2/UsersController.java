@@ -285,12 +285,12 @@ public class UsersController {
 	 * Get user roles for a site API
 	 *
 	 * @param userId User identifier
-	 * @param site   The site ID
+	 * @param siteId The site ID
 	 * @return Response containing list of roles
 	 */
 	@GetMapping(value = PATH_PARAM_ID + SITES + PATH_PARAM_SITE + ROLES, produces = APPLICATION_JSON_VALUE)
 	public ResultList<String> getUserSiteRoles(@NotNull @PathVariable(REQUEST_PARAM_ID) String userId,
-						   @NotNull @ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site)
+						   @NotNull @ValidSiteId @PathVariable(REQUEST_PARAM_SITEID) String siteId)
 		throws ServiceLayerException, UserNotFoundException, ValidationException {
 		int uId = -1;
 		String username = StringUtils.EMPTY;
@@ -301,7 +301,7 @@ public class UsersController {
 			username = userId;
 		}
 
-		List<String> roles = userService.getUserSiteRoles(uId, username, site)
+		List<String> roles = userService.getUserSiteRoles(uId, username, siteId)
 			.stream()
 			.map(NormalizedRole::toString)
 			.toList();
@@ -357,9 +357,9 @@ public class UsersController {
 	 * @return Response containing current authenticated user roles
 	 */
 	@GetMapping(value = ME + SITES + PATH_PARAM_SITE + ROLES, produces = APPLICATION_JSON_VALUE)
-	public ResultList<String> getCurrentUserSiteRoles(@NotBlank @ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site)
+	public ResultList<String> getCurrentUserSiteRoles(@NotBlank @ValidSiteId @PathVariable(REQUEST_PARAM_SITEID) String siteId)
 		throws AuthenticationException, ServiceLayerException, UserNotFoundException {
-		List<String> roles = userService.getCurrentUserSiteRoles(site);
+		List<String> roles = userService.getCurrentUserSiteRoles(siteId);
 
 		ResultList<String> result = new ResultList<>();
 		result.setResponse(OK);
@@ -493,9 +493,9 @@ public class UsersController {
 	 * @return Response containing current authenticated user permissions
 	 */
 	@GetMapping(value = ME + SITES + PATH_PARAM_SITE + PERMISSIONS, produces = APPLICATION_JSON_VALUE)
-	public ResultList<String> getCurrentUserSitePermissions(@ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site)
+	public ResultList<String> getCurrentUserSitePermissions(@ValidSiteId @PathVariable(REQUEST_PARAM_SITEID) String siteId)
 		throws ServiceLayerException, UserNotFoundException, ExecutionException {
-		List<String> permissions = userService.getCurrentUserSitePermissions(site).stream().sorted().toList();
+		List<String> permissions = userService.getCurrentUserSitePermissions(siteId).stream().sorted().toList();
 		ResultList<String> result = new ResultList<>();
 		result.setResponse(OK);
 		result.setEntities(RESULT_KEY_PERMISSIONS, permissions);
@@ -509,11 +509,11 @@ public class UsersController {
 	 */
 	@PostMapping(value = ME + SITES + PATH_PARAM_SITE + HAS_PERMISSIONS, consumes = APPLICATION_JSON_VALUE,
 		produces = APPLICATION_JSON_VALUE)
-	public ResultOne<Map<String, Boolean>> checkCurrentUserHasSitePermissions(@ValidSiteId @PathVariable(REQUEST_PARAM_SITE) String site,
+	public ResultOne<Map<String, Boolean>> checkCurrentUserHasSitePermissions(@ValidSiteId @PathVariable(REQUEST_PARAM_SITEID) String siteId,
 										  @Valid @RequestBody HasPermissionsRequest permissionsRequest)
 		throws ServiceLayerException, UserNotFoundException, ExecutionException {
 		Map<String, Boolean> hasPermissions =
-			userService.hasCurrentUserSitePermissions(site, permissionsRequest.getPermissions());
+			userService.hasCurrentUserSitePermissions(siteId, permissionsRequest.getPermissions());
 
 		ResultOne<Map<String, Boolean>> result = new ResultOne<>();
 		result.setResponse(OK);

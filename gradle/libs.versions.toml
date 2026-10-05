@@ -30,31 +30,31 @@ jakarta-servlet-api = "6.1.0"
 jakarta-activation-api = "2.1.4"
 angus-activation = "2.0.3"
 angus-mail = "2.0.5"
-slf4j = "2.0.19"
+slf4j = "2.0.20"
 bouncycastle = "1.86"
 commons-cli = "1.11.0"
 snakeyaml = "2.7"
-aws-sdk = "2.55.1"
+aws-sdk = "2.55.6"
 sardine = "5.13"
-mongo = "5.12.0"
+mongo = "5.13.0"
 guava = "33.7.1-jre"
 guava-collections = "r03"
 aspectj = "1.9.25.1"
 freemarker = "2.3.35"
-jackson = "2.22.2"
-jackson3 = "3.2.2"
+jackson = "2.22.3"
+jackson3 = "3.2.3"
 jackson-annotations = "2.22"
-groovy = "5.1.3"
+groovy = "6.0.0"
 findbugs = "3.0.1"
 bcel = "6.13.0"
-caffeine = "3.2.4"
+caffeine = "3.3.0"
 junit = "4.13.2"
-mockito = "5.23.0"
+mockito = "5.24.0"
 json-path = "3.0.0"
 # Jakarta EE variant uses classifier :jakarta — see implementation("org.owasp.esapi:esapi:${libs.versions.esapi.get()}:jakarta")
 esapi = "2.7.0.0"
 jakarta-validation-api = "3.1.1"
-hibernate-validator = "9.1.3.Final"
+hibernate-validator = "9.1.4.Final"
 xstream = "1.4.21"
 dom4j = "2.2.0"
 jaxen = "2.0.6"
@@ -65,7 +65,7 @@ jgit = "7.8.0.202609011348-r"
 eddsa = "0.3.0"
 jongo = "1.5.2"
 semver4j = "3.1.0"
-joda-time = "2.14.3"
+joda-time = "2.14.4"
 jsoup = "1.23.2"
 opensearch = "3.8.0"
 opensearch-runner = "3.8.0.0"
@@ -78,8 +78,6 @@ unit-api = "2.2"
 jdom2 = "2.0.6.1"
 hamcrest = "3.0"
 spring-security = "7.1.1"
-spring-social-web = "1.1.6.RELEASE"
-spring-social-facebook = "2.0.3.RELEASE"
 cglib = "3.3.0"
 urlrewritefilter = "5.1.3"
 graphql-java = "26.1"
@@ -99,7 +97,7 @@ commons-fileupload2 = "2.0.0-M5"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-core = "4.0.9"
 jaxb-impl = "4.0.9"
-greenmail = "2.1.13"
+greenmail = "2.1.14"
 javax-inject = "1"
 jakarta-mail-api = "2.1.5"
 jakarta-servlet-jsp-api = "4.0.0"
@@ -122,7 +120,7 @@ jose4j = "0.9.7"
 saxon-he = "13.0"
 tinify = "1.8.9"
 zxcvbn = "1.9.0"
-owasp-java-html-sanitizer = "20260313.1"
+owasp-java-html-sanitizer = "20260924.2"
 xmlunit-core = "2.14.0"
 picocli = "4.7.7"
 okhttp = "5.5.0"
@@ -132,6 +130,9 @@ aws-sdk-elastictranscoder = "2.40.14"
 node = "22.18.0"
 yarn = "1.22.22"
 rome-utils = "2.1.0"
+netty = "4.2.17.Final"
+okio = "3.17.0"
+html5diff = "1.4.5"
 
 [libraries]
 commons-lang = { module = "commons-lang:commons-lang", version.ref = "commons-lang" }
@@ -182,6 +183,8 @@ spring-aop = { module = "org.springframework:spring-aop", version.ref = "spring"
 spring-test = { module = "org.springframework:spring-test", version.ref = "spring" }
 groovy = { module = "org.apache.groovy:groovy", version.ref = "groovy" }
 groovy-sql = { module = "org.apache.groovy:groovy-sql", version.ref = "groovy" }
+groovy-callsite = { module = "org.apache.groovy:groovy-callsite", version.ref = "groovy" }
+groovy-grapeivy = { module = "org.apache.groovy:groovy-grape-ivy", version.ref = "groovy" }
 findbugs = { module = "com.google.code.findbugs:findbugs", version.ref = "findbugs" }
 bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
@@ -203,8 +206,6 @@ bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bo
 bcprov-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 bcmail-jdk18on = { module = "org.bouncycastle:bcmail-jdk18on", version.ref = "bouncycastle" }
 eddsa = { module = "net.i2p.crypto:eddsa", version.ref = "eddsa" }
-mongo-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongo" }
-mongo-driver-legacy = { module = "org.mongodb:mongodb-driver-legacy", version.ref = "mongo" }
 jongo = { module = "org.jongo:jongo", version.ref = "jongo" }
 semver4j = { module = "com.vdurmont:semver4j", version.ref = "semver4j" }
 joda-time = { module = "joda-time:joda-time", version.ref = "joda-time" }
@@ -227,8 +228,6 @@ spring-security-core = { module = "org.springframework.security:spring-security-
 spring-security-config = { module = "org.springframework.security:spring-security-config", version.ref = "spring-security" }
 spring-security-web = { module = "org.springframework.security:spring-security-web", version.ref = "spring-security" }
 spring-security-access = { module = "org.springframework.security:spring-security-access", version.ref = "spring-security" }
-spring-social-web = { module = "org.springframework.social:spring-social-web", version.ref = "spring-social-web" }
-spring-social-facebook = { module = "org.springframework.social:spring-social-facebook", version.ref = "spring-social-facebook" }
 cglib = { module = "cglib:cglib", version.ref = "cglib" }
 urlrewritefilter = { module = "org.tuckey:urlrewritefilter", version.ref = "urlrewritefilter" }
 graphql-java = { module = "com.graphql-java:graphql-java", version.ref = "graphql-java" }

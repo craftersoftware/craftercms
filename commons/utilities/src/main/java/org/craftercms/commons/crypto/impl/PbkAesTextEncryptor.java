@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -29,8 +29,8 @@ import org.craftercms.commons.crypto.CryptoException;
 import org.craftercms.commons.crypto.TextEncryptor;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.lang3.StringUtils.removeStartIgnoreCase;
-import static org.apache.commons.lang3.StringUtils.startsWithIgnoreCase;
+import static org.apache.commons.lang3.Strings.CI;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * Wrapper for {@link org.craftercms.commons.crypto.impl.AesTextEncryptor} that generates the encryption key based
@@ -40,13 +40,15 @@ import static org.apache.commons.lang3.StringUtils.startsWithIgnoreCase;
  */
 public class PbkAesTextEncryptor implements TextEncryptor {
 
+	public static final String DEFAULT_NO_ENCODE_PREFIX = "CCE-V1#";
+
 	private static final String PBK_ALGORITHM = "PBKDF2WithHmacSHA1";
 	private static final int PBK_ITER = 65536;
 	private static final int PBK_LEN = 128;
-	private static final String NO_ENCODE_PREFIX = "CCE-V1#";
 
 	private TextEncryptor actualTextEncryptor;
 	private TextEncryptor legacyTextEncryptor;
+	private String noEncodePrefix = DEFAULT_NO_ENCODE_PREFIX;
 
 	private static Key generateKey(String password, byte[] salt) throws CryptoException {
 		try {
@@ -67,21 +69,37 @@ public class PbkAesTextEncryptor implements TextEncryptor {
 		}
 	}
 
+	/**
+	 * Constructs a PbkAesTextEncryptor with the specified password, salt, and noEncodePrefix.
+	 *
+	 * @param password the password to use for key generation
+	 * @param salt the salt to use for key generation
+	 * @param noEncodePrefix the prefix added to ciphertext so it can be distinguished from values encrypted with a base64-encoded salt.
+	 */
+	@ConstructorProperties({"password", "salt", "noEncodePrefix"})
+	public PbkAesTextEncryptor(String password, String salt, String noEncodePrefix) throws CryptoException {
+		this(password, salt);
+		if (isNotBlank(noEncodePrefix)) {
+			this.noEncodePrefix = noEncodePrefix;
+		}
+	}
+
 	@Override
 	public String encrypt(String clear) throws CryptoException {
-		return NO_ENCODE_PREFIX + actualTextEncryptor.encrypt(clear);
+		return noEncodePrefix + actualTextEncryptor.encrypt(clear);
 	}
 
 	@Override
 	public String decrypt(String encrypted) throws CryptoException {
-		if (startsWithIgnoreCase(encrypted, NO_ENCODE_PREFIX)) {
-			return actualTextEncryptor.decrypt(removeStartIgnoreCase(encrypted, NO_ENCODE_PREFIX));
-		} else if (legacyTextEncryptor != null) {
-			return legacyTextEncryptor.decrypt(encrypted);
-		} else {
-			throw new IllegalStateException("The current configuration doesn't support values encrypted " +
-				"with a base64 encoded salt");
+		if (CI.startsWith(encrypted, noEncodePrefix)) {
+			return actualTextEncryptor.decrypt(CI.removeStart(encrypted, noEncodePrefix));
 		}
+		if (legacyTextEncryptor != null) {
+			return legacyTextEncryptor.decrypt(encrypted);
+		}
+
+		throw new IllegalStateException("The current configuration doesn't support values encrypted " +
+				"with a base64 encoded salt");
 	}
 
 }

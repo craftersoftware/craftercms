@@ -76,13 +76,6 @@
         <redirectToTargetedUrl /> (Sets whether the request should be redirected when the targeted URL is different from the current URL)
     </targeting>
 
-    (Profile Properties)
-    <profile>
-        <api>
-            <accessTokenId /> (The access token to use for the Crafter Profile REST calls.  This should always be specified on multi-tenant configurations)
-        </api>
-    </profile>
-
     (Security Properties)
     <security>
         <login>
@@ -222,34 +215,27 @@
 		<redirectToTargetedUrl>false</redirectToTargetedUrl>
 	</targeting>
 
-	<!-- Profile properties -->
-	<profile>
-		<api>
-			<accessTokenId>${enc:q3l5YNoKH38RldAkg6EAGjxlI7+K7Cl4iEmMJNlemNOjcuhaaQNPLwAB824QcJKCbEeLfsg+QSfHCYNcNP/yMw==}</accessTokenId>
-		</api>
-	</profile>
-
-	<!-- Security properties -->
-	<security>
-		<login>
-			<formUrl>/signin</formUrl>
-			<defaultSuccessUrl>/home</defaultSuccessUrl>
-			<alwaysUseDefaultSuccessUrl>true</alwaysUseDefaultSuccessUrl>
-			<failureUrl>/signin?error=loginFailure</failureUrl>
-		</login>
-		<logout>
-			<successUrl>/home</successUrl>
-		</logout>
-		<accessDenied>
-			<errorPageUrl>/signin?error=accessDenied</errorPageUrl>
-		</accessDenied>
-		<urlRestrictions>
-			<restriction>
-				<url>/*</url>
-				<expression>hasRole('USER')</expression>
-			</restriction>
-		</urlRestrictions>
-	</security>
+    <!-- Security properties -->
+    <security>
+        <login>
+            <formUrl>/signin</formUrl>
+            <defaultSuccessUrl>/home</defaultSuccessUrl>
+            <alwaysUseDefaultSuccessUrl>true</alwaysUseDefaultSuccessUrl>
+            <failureUrl>/signin?error=loginFailure</failureUrl>
+        </login>
+        <logout>
+            <successUrl>/home</successUrl>
+        </logout>
+        <accessDenied>
+            <errorPageUrl>/signin?error=accessDenied</errorPageUrl>
+        </accessDenied>
+        <urlRestrictions>
+            <restriction>
+                <url>/*</url>
+                <expression>hasRole('USER')</expression>
+            </restriction>
+        </urlRestrictions>
+    </security>
 
 	<!-- Social properties -->
 	<socialConnections>

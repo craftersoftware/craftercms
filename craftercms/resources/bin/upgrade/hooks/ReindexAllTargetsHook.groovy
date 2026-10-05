@@ -24,6 +24,7 @@ import groovy.json.JsonBuilder
 import java.nio.file.Path
 import okhttp3.*
 import static utils.EnvironmentUtils.getDeployerUrl
+import static utils.EnvironmentUtils.getDeployerManagementToken
 import upgrade.exceptions.UpgradeException
 
 class ReindexAllTargetsHook implements PostUpgradeHook {
@@ -31,15 +32,16 @@ class ReindexAllTargetsHook implements PostUpgradeHook {
 	def getAllTargets() {
 		OkHttpClient client = new OkHttpClient()
 
-		Request request = new Request.Builder()
-			.url("${getDeployerUrl()}/api/1/target/get-all")
-			.get()
-			.addHeader('Content-Type', 'application/json')
-			.build()
-		try (Response response = client.newCall(request).execute()) {
-			if (!response.successful) {
-				throw new UpgradeException("Error while listing targets: ${response.message()}")
-			}
+        Request request = new Request.Builder()
+                .url("${getDeployerUrl()}/api/1/target/get-all")
+                .get()
+                .addHeader('Content-Type', 'application/json')
+                .addHeader('X-Crafter-Management-Token', getDeployerManagementToken())
+                .build()
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.successful) {
+                throw new UpgradeException("Error while listing targets: ${response.message()}")
+            }
 
 			return (new JsonSlurper()).parseText(response.body().string())
 		} catch (IOException e) {
@@ -55,24 +57,25 @@ class ReindexAllTargetsHook implements PostUpgradeHook {
 			'deployment_mode'    : 'SEARCH_INDEX'
 		]
 
-		MediaType mediaType = MediaType.parse('application/json')
-		RequestBody body = RequestBody.create(new JsonBuilder(deployAllParams).toString(), mediaType)
-		Request request = new Request.Builder()
-			.url("${getDeployerUrl()}/api/1/target/deploy-all")
-			.post(body)
-			.addHeader('Content-Type', 'application/json')
-			.build()
-		try {
-			Response response = client.newCall(request).execute();
-			if (response.successful) {
-				println "'deploy-all' API triggered successfully"
-			} else {
-				println "Failed to trigger 'deploy-all' API: ${response.message()}"
-			}
-		} catch (IOException e) {
-			e.printStackTrace()
-		}
-	}
+        MediaType mediaType = MediaType.parse('application/json')
+        RequestBody body = RequestBody.create(new JsonBuilder(deployAllParams).toString(), mediaType)
+        Request request = new Request.Builder()
+                .url("${getDeployerUrl()}/api/1/target/deploy-all")
+                .post(body)
+                .addHeader('Content-Type', 'application/json')
+                .addHeader('X-Crafter-Management-Token', getDeployerManagementToken())
+                .build()
+        try {
+            Response response = client.newCall(request).execute();
+            if (response.successful) {
+                println "'deploy-all' API triggered successfully"
+            } else {
+                println "Failed to trigger 'deploy-all' API: ${response.message()}"
+            }
+        } catch (IOException e) {
+            e.printStackTrace()
+        }
+    }
 
 	@Override
 	void execute(Path binFolder, Path dataFolder, String environment) {

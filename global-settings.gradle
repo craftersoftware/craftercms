@@ -81,12 +81,6 @@ project.ext.set("overwriteArtifact", getPropertySafelyWithDefaults("refreshDownl
 project.ext.set("overwriteChangedFiles", getPropertySafelyWithDefaults("overwriteChangedFiles", "true").toBoolean())
 project.ext.set("refreshEnv", getPropertySafelyWithDefaults("refreshEnv", "false").toBoolean())
 project.ext.set("downloadGrapes", getPropertySafelyWithDefaults("downloadGrapes", "true").toBoolean())
-project.ext.set("socialRequired", getPropertySafelyWithDefaults("crafter.social", "false").toBoolean()
-	|| getPropertySafelyWithDefaults("socialRequired", "false").toBoolean())
-project.ext.set("profileRequired", (getPropertySafelyWithDefaults("crafter.profile", "false").toBoolean()
-	|| (getPropertySafelyWithDefaults("profileRequired", "false").toBoolean()
-	|| socialRequired)))
-project.ext.set("startMongoDB", getPropertySafelyWithDefaults("startMongodb", (profileRequired || socialRequired)).toBoolean())
 project.ext.set("startSearch", getPropertySafelyWithDefaults("startSearch", getPropertySafelyWithDefaults("withSearch", "true")).toBoolean())
 project.ext.set("startCommand", project.hasProperty("debug") ? "debug" : "start")
 project.ext.set("stopCommand", "stop")
@@ -99,18 +93,7 @@ project.ext.set("currentPlatform", getPropertySafelyWithDefaults("currentPlatfor
 project.ext.set("currentArch", getPropertySafelyWithDefaults("currentArch", SystemUtils.OS_ARCH == "aarch64" ? "aarch64" : "x86_64"))
 project.ext.set("openSearchPlatform", getPropertySafelyWithDefaults("openSearchPlatform", "linux"))
 project.ext.set("openSearchArch", getPropertySafelyWithDefaults("openSearchArch", "x64"))
-project.ext.set("mongodbPlatform", getPropertySafelyWithDefaults("mongodbPlatform", currentPlatform == "darwin" ? "osx" : currentPlatform))
-project.ext.set("mongodbBinary", getPropertySafelyWithDefaults("mongodbBinary", currentPlatform == "darwin" ? "macos" : currentPlatform))
-project.ext.set("mongoExtension", getPropertySafelyWithDefaults("mongoExtension", currentPlatform == "darwin" ? "zip" : "tgz"))
-if (currentPlatform == "darwin") {
-	project.ext.set("mongodbArch", getPropertySafelyWithDefaults("mongodbArch", currentArch == "aarch64" ? "arm64" : "x86_64"))
-	project.ext.set("mongoshArch", getPropertySafelyWithDefaults("mongoshArch", currentArch == "aarch64" ? "arm64" : "x64"))
-	project.ext.set("mongoToolsArch", getPropertySafelyWithDefaults("mongoToolsArch", currentArch == "aarch64" ? "macos-arm64" : "macos-x86_64"))
-} else {
-	project.ext.set("mongodbArch", getPropertySafelyWithDefaults("mongodbArch", "x86_64-${execDetermineLinuxOSWithVersion()}"))
-	project.ext.set("mongoshArch", getPropertySafelyWithDefaults("mongoshArch", "x64"))
-	project.ext.set("mongoToolsArch", getPropertySafelyWithDefaults("mongoToolsArch", "${execDetermineLinuxOSWithVersion()}-x86_64"))
-}
+
 project.ext.set("pushDockerImages", getPropertySafelyWithDefaults("pushDockerImages", "false").toBoolean())
 project.ext.set("tagDockerImages", getPropertySafelyWithDefaults("tagDockerImages", ""))
 project.ext.set("rootlessDockerImages", getPropertySafelyWithDefaults("rootlessDockerImages", "false").toBoolean())

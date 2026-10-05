@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,29 +18,17 @@ package org.craftercms.studio.model.rest.content;
 
 import org.craftercms.commons.validation.annotations.param.ValidExistingContentPath;
 import org.craftercms.commons.validation.annotations.param.ValidNewContentPath;
-import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 
 import jakarta.validation.constraints.NotEmpty;
 
 public class RenameRequestBody {
 
 	@NotEmpty
-	@ValidSiteId
-	private String siteId;
-	@NotEmpty
 	@ValidExistingContentPath
 	private String path;
 	@NotEmpty
 	@ValidNewContentPath
 	private String name;
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
-	}
 
 	public String getPath() {
 		return path;

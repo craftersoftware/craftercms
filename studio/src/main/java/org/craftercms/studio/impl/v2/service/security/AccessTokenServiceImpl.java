@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,9 +15,9 @@
  */
 package org.craftercms.studio.impl.v2.service.security;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.craftercms.commons.security.exception.ActionDeniedException;
 import org.craftercms.commons.security.permissions.DefaultPermission;
+import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.craftercms.commons.security.permissions.annotations.HasPermission;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v2.service.security.AccessTokenService;
@@ -25,12 +25,16 @@ import org.craftercms.studio.model.security.AccessToken;
 import org.craftercms.studio.model.security.PersistentAccessToken;
 import org.springframework.security.core.Authentication;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.beans.ConstructorProperties;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-
+import java.util.Map;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_MANAGE_ACCESS_TOKEN;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.SITE_ID_RESOURCE_ID;
 
 /**
  * Default implementation of {@link AccessTokenService}
@@ -41,10 +45,15 @@ import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMI
 public class AccessTokenServiceImpl implements AccessTokenService {
 
 	protected AccessTokenService accessTokenService;
+	protected PermissionEvaluator<String, Map<String, Object>> permissionEvaluator;
 
-	@ConstructorProperties({"accessTokenService"})
-	public AccessTokenServiceImpl(AccessTokenService accessTokenService) {
-		this.accessTokenService = accessTokenService;
+	@ConstructorProperties({"accessTokenServiceInternal"})
+	public AccessTokenServiceImpl(AccessTokenService accessTokenServiceInternal) {
+		this.accessTokenService = accessTokenServiceInternal;
+	}
+
+	public void setPermissionEvaluator(PermissionEvaluator<String, Map<String, Object>> permissionEvaluator) {
+		this.permissionEvaluator = permissionEvaluator;
 	}
 
 	// Temporary tokens
@@ -129,6 +138,19 @@ public class AccessTokenServiceImpl implements AccessTokenService {
 	@Override
 	public void deletePreviewCookie(HttpServletResponse response) {
 		accessTokenService.deletePreviewCookie(response);
+	}
+
+	@Override
+	public String generatePreviewToken(List<String> siteIds, Instant expiresAt) throws ServiceLayerException {
+		if (!permissionEvaluator.isAllowed(null, PERMISSION_MANAGE_ACCESS_TOKEN)) {
+			for (String siteId : siteIds.stream().distinct().toList()) {
+				Map<String, Object> resource = Map.of(SITE_ID_RESOURCE_ID, siteId);
+				if (!permissionEvaluator.isAllowed(resource, PERMISSION_MANAGE_ACCESS_TOKEN)) {
+					throw new ActionDeniedException(PERMISSION_MANAGE_ACCESS_TOKEN, siteId);
+				}
+			}
+		}
+		return accessTokenService.generatePreviewToken(siteIds, expiresAt);
 	}
 
 }

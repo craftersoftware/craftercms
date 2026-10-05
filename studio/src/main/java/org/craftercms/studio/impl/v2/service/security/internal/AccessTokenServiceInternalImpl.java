@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -34,6 +34,7 @@ import org.craftercms.studio.api.v2.service.site.SitesService;
 import org.craftercms.studio.api.v2.service.system.InstanceService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.craftercms.studio.api.v2.utils.spring.context.SystemStatusProvider;
+import org.craftercms.studio.impl.v2.utils.security.SecurityUtils;
 import org.craftercms.studio.model.security.AccessToken;
 import org.craftercms.studio.model.security.PersistentAccessToken;
 import org.jose4j.jwa.AlgorithmConstraints;
@@ -237,27 +238,56 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 				throw new SiteNotFoundException(siteName);
 			}
 		} else {
-			String previewCookie = createPreviewCookie(siteName);
+			String previewCookie = createPreviewCookie(auth.getName(), siteName);
 			previewCookieManager.addCookie(previewCookie, response);
 			logger.debug("Refreshed preview cookie for user '{}'", auth.getName());
 		}
 	}
 
+	@Override
+	public String generatePreviewToken(List<String> siteIds, Instant expiresAt) throws ServiceLayerException {
+		String username = SecurityUtils.getCurrentUsername();
+		List<String> distinctSiteIds = siteIds.stream().distinct().toList();
+		for (String siteId : distinctSiteIds) {
+			siteService.checkSiteExists(siteId);
+		}
+
+		long createdAt = System.currentTimeMillis();
+		return encryptPreviewToken(username, String.join(",", distinctSiteIds), createdAt, expiresAt.toEpochMilli());
+	}
+
 	/**
-	 * Creates an encrypted preview cookie for the given site name with the same expiration as the access token
+	 * Creates an encrypted preview cookie for the given site.
+	 * The payload is username, creation time, site id, and expiration time.
 	 *
+	 * @param username the user the cookie is issued for
 	 * @param siteName the site name
-	 * @return the preview cookie
+	 * @return the encrypted preview token
 	 * @throws ServiceLayerException if the cookie cannot be encrypted
 	 */
-	private String createPreviewCookie(final String siteName) throws ServiceLayerException {
-		long timestamp = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(previewCookieManager.getMaxAge());
+	private String createPreviewCookie(final String username, final String siteName) throws ServiceLayerException {
+		long createdAt = System.currentTimeMillis();
+		long expiresAt = createdAt + TimeUnit.SECONDS.toMillis(previewCookieManager.getMaxAge());
+		return encryptPreviewToken(username, siteName, createdAt, expiresAt);
+	}
 
-		String token = format("%s|%s", siteName, timestamp);
+	/**
+	 * Encrypts a preview token payload.
+	 *
+	 * @param username the user the token is issued for
+	 * @param siteIds comma-separated site ids
+	 * @param createdAt creation time in epoch milliseconds
+	 * @param expiresAt expiration time in epoch milliseconds
+	 * @return the encrypted preview token
+	 * @throws ServiceLayerException if the token cannot be encrypted
+	 */
+	private String encryptPreviewToken(String username, String siteIds, long createdAt, long expiresAt)
+			throws ServiceLayerException {
+		String token = format("%s|%s|%s|%s", username, createdAt, siteIds, expiresAt);
 		try {
 			return previewTokenEncryptor.encrypt(token);
 		} catch (CryptoException e) {
-			throw new ServiceLayerException("Failed to encrypt preview cookie", e);
+			throw new ServiceLayerException("Failed to encrypt preview token", e);
 		}
 	}
 
