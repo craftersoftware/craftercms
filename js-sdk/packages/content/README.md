@@ -92,7 +92,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 #### Returns
 
-[ContentInstance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts)
+[ContentInstance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts), or `null` when the item has no descriptor.
 
 #### Examples
 
