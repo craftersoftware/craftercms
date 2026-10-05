@@ -428,10 +428,14 @@ function FormBootstrap(props: FormsEngineProps) {
 				formatMessage,
 				// Attach owns the teardown of its own `initialize` when this prep run is superseded.
 				isStale: () => disposed
-			}).then(() => {
-				if (disposed) return;
-				setReady(true);
-			});
+			})
+				.catch((error) => {
+					console.error('Form controller attach failed. The form will open without a custom controller.', error);
+				})
+				.then(() => {
+					if (disposed) return;
+					setReady(true);
+				});
 		};
 		if (
 			// A repeat group is being opened as a stacked form.
