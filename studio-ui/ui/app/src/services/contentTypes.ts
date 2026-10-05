@@ -652,17 +652,29 @@ function isMissingFormDefinition(error: unknown): boolean {
 /**
  * Writes `<controller>true|false</controller>` on the saved form-definition.
  * Type Builder keeps a separate draft; this is what FE2 reads via `hasJsController`
- * if that draft is discarded. Returns `false` when the definition does not exist yet
- * (unsaved type) so the draft flag can still be stored with the type's first save.
+ * if that draft is discarded.
+ *
+ * Returns `false` only when the form-definition is missing (unsaved type), so the
+ * draft flag can still be stored with the type's first save. Errors from
+ * `writeConfiguration` on an existing definition propagate; they are not returned as `false`.
  */
 export function setJsControllerEnabled(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, module).pipe(
+		catchError((error: unknown) => {
+			if (isMissingFormDefinition(error)) {
+				return of(false as const);
+			}
+			return throwError(() => error);
+		}),
 		switchMap((doc) => {
+			if (doc === false) {
+				return of(false);
+			}
 			const form = doc.querySelector('form');
 			if (!form) {
-				return of(false);
+				return throwError(() => new Error(`Form definition for "${contentTypeId}" has no <form> element.`));
 			}
 			let controller: Element | null = null;
 			for (const child of Array.from(form.children)) {
@@ -679,12 +691,6 @@ export function setJsControllerEnabled(site: string, contentTypeId: string, enab
 			return fromPromise(beautify(serialize(doc))).pipe(
 				switchMap((xml) => writeConfiguration(site, path, module, xml))
 			);
-		}),
-		catchError((error: unknown) => {
-			if (isMissingFormDefinition(error)) {
-				return of(false);
-			}
-			return throwError(() => error);
 		})
 	);
 }

@@ -46,8 +46,8 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
  * Saving or deleting `form-controller.js` also writes `<controller>` on the saved
  * form-definition, so FE2 follows the file even if pending Type Builder edits are discarded.
  * The draft flag is committed after that write succeeds. A failed write keeps the previous
- * draft value. An unsaved type (write returns false) still keeps the draft for its first save.
- * JavaScript delete writes the flag off before removing the file.
+ * draft value. `false` means the form-definition is missing (unsaved type), not a write failure.
+ * JavaScript delete removes the file only after that call succeeds.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const { field, value, autoFocus, setValue } = props;
@@ -81,8 +81,8 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 		const priorValue = value;
 		setJsControllerEnabled(siteId, contentTypeId, enabled).subscribe({
 			next: (written) => {
-				// `false` means the type has no saved definition yet. Keep the draft flag
-				// so the first type save can store it. Existing types commit only after the write.
+				// `false` is only a missing form-definition. Write failures take the error path
+				// and do not run `onPersisted`.
 				setValue(enabled);
 				if (written) {
 					dispatch(updateContentTypeJsController({ contentTypeId, enabled }));
