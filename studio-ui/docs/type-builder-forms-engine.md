@@ -545,7 +545,7 @@ Look up other content types via the `craftercms` global (`craftercms.getStore().
 
 Controllers must not import React or reach into DOM for field visibility; relevance is declarative via `isFieldRelevant`.
 
-**Relevance / validation:** only fields the controller explicitly rejects are hidden. Those fields are excluded from the validity snapshot (so a hidden required field does not force a draft save) but their values still serialize for XML round-trip. Atoms the hook never saw (descriptor additional fields, `folder-name`, …) stay validated. `file-name` cannot be hidden.
+**Relevance / validation:** only fields the controller explicitly rejects are hidden. Those fields are excluded from the validity snapshot (so a hidden required field does not force a draft save) but their values still serialize for XML round-trip. Atoms the hook never saw (descriptor additional fields, `folder-name`, …) stay validated. The save-minimum fields (`file-name`, `internal-name`) are never offered to `isFieldRelevant`, because the save path requires them regardless of visibility.
 
 #### Relevance and recursive validation
 
@@ -690,6 +690,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-05** — `internal-name` joins `file-name` as a field `isFieldRelevant` cannot hide. The save path requires both, so hiding an empty `internal-name` used to block save with an alert for a field the author could not see.
 - **2026-10-05** — Relevance deny-list is qualified paths. Repeat subfields are resolved once by the owning form; embedded components are resolved against their own controller through a read-only context, memoised per value identity. Recursive validators skip rejected children and still enforce count and size constraints.
 - **2026-10-05** — Controller state is committed before `initialize`, so `onFieldChange` listeners can be torn down while the hook is still pending. A cleanup that arrives after disposal runs once and does not replace newer state. The host still cannot cancel other async work the controller started.
 - **2026-10-05** — A failed form-controller load evicts only its own cache entry. A concurrent reload that already replaced that entry is left in place.

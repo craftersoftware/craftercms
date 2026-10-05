@@ -19,16 +19,9 @@ import type { ContentTypeField } from '../../../models/ContentType';
 import type { Dispatch as ReduxDispatch } from 'redux';
 import { retrieveProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
-import { XmlKeys } from '../lib/formConsts';
 import { loadFormController } from './loader';
-import { getFieldFromContentType, parseFieldValuePath } from './runtime';
+import { getFieldFromContentType, parseFieldValuePath, SAVE_MINIMUM_FIELD_IDS } from './runtime';
 import type { FormController, FormControllerContext } from './types';
-
-/**
- * Fields the save path requires even when a controller would hide them.
- * Shared with the owning-form relevance pass (see `collectFieldsForRelevance`).
- */
-export const SAVE_MINIMUM_FIELD_IDS = new Set<string>([XmlKeys.fileName, XmlKeys.internalName]);
 
 const detachedWriteWarning =
 	'Form controller writes are unavailable while resolving relevance for an embedded component.';

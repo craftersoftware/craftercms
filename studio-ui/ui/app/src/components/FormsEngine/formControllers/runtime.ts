@@ -288,13 +288,21 @@ export function isFieldPathIrrelevant(
 	return irrelevantFieldPaths.has(parentPath ? `${parentPath}.${fieldId}` : fieldId);
 }
 
+/**
+ * Save still requires these, so `isFieldRelevant` is never asked to hide them.
+ * A hidden empty `internal-name` would otherwise block save with an alert for a field the author cannot see.
+ */
+export const SAVE_MINIMUM_FIELD_IDS = new Set<string>([XmlKeys.fileName, XmlKeys.internalName]);
+
 /** Top-level fields plus one level of repeat subfields, addressed by qualified path. */
 function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
 	const targets: Array<{ path: string; field: ContentTypeField }> = [];
 	for (const field of fields) {
+		if (SAVE_MINIMUM_FIELD_IDS.has(field.id)) continue;
 		targets.push({ path: field.id, field });
 		if (field.type === 'repeat' && field.fields) {
 			for (const subField of Object.values(field.fields)) {
+				if (SAVE_MINIMUM_FIELD_IDS.has(subField.id)) continue;
 				targets.push({ path: `${field.id}.${subField.id}`, field: subField });
 			}
 		}
@@ -353,12 +361,12 @@ export async function resolveIrrelevantFieldIds(
 }
 
 /**
- * Fields offered to `isFieldRelevant`. `file-name` is never hideable (save minimum-requirements
- * still read its validity atom). Repeat / partial forms use `fieldsToRender`.
+ * Fields offered to `isFieldRelevant`. `file-name` and `internal-name` are never hideable:
+ * the save path requires both even when they are not rendered. Repeat / partial forms use `fieldsToRender`.
  */
 function collectFieldsForRelevance(contentType: ContentType, formProps: FormControllerFormProps): ContentTypeField[] {
 	const fields = formProps.fieldsToRender?.length ? formProps.fieldsToRender : Object.values(contentType.fields);
-	return fields.filter((field) => field.id !== XmlKeys.fileName);
+	return fields.filter((field) => !SAVE_MINIMUM_FIELD_IDS.has(field.id));
 }
 
 const commonInitErrorMsg = 'The form will proceed as though no custom type controller exists.';
