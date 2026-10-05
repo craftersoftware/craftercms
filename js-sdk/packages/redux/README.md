@@ -97,7 +97,7 @@ Retrieves the current redux store state.
 ### getItem
 Creates an action to get an Item from the content store.
 
-`getItem(itemUrl: string)`
+`getItem({ url, config? })`
 
 | Parameters    |                |
 | ------------- |:--------------:|
@@ -113,7 +113,7 @@ path           | The item’s path in the content store |
 
   const itemUrl = '/site/website/index.xml';
 
-  store.dispatch(getItem(itemUrl));
+  store.dispatch(getItem({ url: itemUrl }));
 ```
 
 ### getDescriptor
