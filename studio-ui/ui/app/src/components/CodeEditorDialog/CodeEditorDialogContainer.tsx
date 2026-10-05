@@ -81,11 +81,11 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 	const [loading, setLoading] = useState(false);
 	const [content, setContent] = useState(null);
 	const [isNew, setIsNew] = useState(Boolean(isNewProp));
-	const itemLoaded = Boolean(item); // isLocked and isLockedForMe only hold accurate value if item was already loaded.
+	const itemLoaded = Boolean(item); // isLocked only holds an accurate value once the item is loaded.
 	const isLocked = isLockedState(item?.state);
-	// Do not treat a missing/unloaded item as locked-for-me (isItemLockedForMe returns true when item is null),
-	// or the editor stays read-only until/unless the item appears in the store — e.g. right after creating a new file.
-	const isLockedForMe = !isNew && itemLoaded && isItemLockedForMe(item, user.username);
+	// isItemLockedForMe returns true when item is null. Keep that for existing items so the editor
+	// stays read-only until lock state is known. New items stay editable.
+	const isLockedForMe = !isNew && isItemLockedForMe(item, user.username);
 	const shouldPerformLock = open && itemLoaded && !readonly && !isLockedForMe && !isLocked && !isNew;
 	const editorRef = useRef<any>(undefined);
 	const dispatch = useDispatch();
