@@ -554,6 +554,8 @@ Controllers must not import React or reach into DOM for field visibility; releva
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
+The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. There is no cancellation signal for other async work the controller started itself; controllers that keep working after `initialize`'s first `await` should guard their own writes.
+
 #### Integration points in FE2
 
 | Hook                      | Where                                                                                                                                               |
@@ -677,6 +679,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-05** — Controller state is committed before `initialize`, so `onFieldChange` listeners can be torn down while the hook is still pending. A cleanup that arrives after disposal runs once and does not replace newer state. The host still cannot cancel other async work the controller started.
 - **2026-10-05** — A failed form-controller load evicts only its own cache entry. A concurrent reload that already replaced that entry is left in place.
 - **2026-10-05** — `onBeforeSave` may rewrite `file-name`. The save path reads the filename atom after the hook (rename detection and path construction), and `setValue('file-name', …)` keeps the dedicated filename atom and the `file-name` value atom in lockstep so `onSave` sees the same name.
 - **2026-10-05** — `setJsControllerEnabled` returns `false` only for a missing form-definition. Failures from `writeConfiguration` on an existing definition propagate, so JavaScript delete does not treat them as the unsaved-type case or remove `form-controller.js`. Earlier the same day: the draft flag commits only after that write succeeds; saving or deleting `form-controller.js` writes `<controller>` on the saved definition. Loader contract: Blob import requires one standalone file; relative imports are unsupported. Repeat ancestor lookup stops at the nearest non-repeat form and does not borrow a further ancestor's controller when that form has none.

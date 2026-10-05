@@ -124,6 +124,8 @@ export interface FormControllerState {
 	fieldChangeUnsubscribers: Set<() => void>;
 	fileMissing: boolean;
 	loadFailed: boolean;
+	/** Set when this state was torn down. A late `initialize` cleanup still runs, but changes no shared state. */
+	disposed: boolean;
 	/**
 	 * Field ids the controller rejected via `isFieldRelevant`.
 	 * `null` means no relevance hook / no filtering from the controller.
@@ -140,6 +142,7 @@ export function createEmptyFormControllerState(): FormControllerState {
 		fieldChangeUnsubscribers: new Set(),
 		fileMissing: false,
 		loadFailed: false,
+		disposed: false,
 		irrelevantFieldIds: null
 	};
 }

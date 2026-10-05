@@ -268,6 +268,7 @@ function unsubscribeFieldChangeListeners(state: FormControllerState | null | und
 export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
 	const state = stackEntry?.formControllerState;
 	if (!state) return;
+	state.disposed = true;
 	const cleanup = state.cleanup;
 	state.cleanup = null;
 	unsubscribeFieldChangeListeners(state);
@@ -421,6 +422,12 @@ export async function attachFormController(args: {
 		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers
 	});
 
+	// Commit before `initialize` so stack pop or a replacement attach can reach listeners the
+	// hook registers while it is still pending. `cleanup` stays null until the hook returns.
+	state.controller = controller;
+	state.context = ctx;
+	stackEntry.formControllerState = state;
+
 	let ownCleanup: (() => void) | null = null;
 	try {
 		const cleanup = await controller.initialize?.(ctx);
@@ -441,20 +448,20 @@ export async function attachFormController(args: {
 		);
 		unsubscribeFieldChangeListeners(state);
 		invokeCleanup(ownCleanup);
+		// Disposal already tore this entry down. Do not clear a controller a replacement attach installed.
+		if (!state.disposed && stackEntry.formControllerState === state) {
+			stackEntry.formControllerState = null;
+		}
 		return;
 	}
-	if (stale()) {
+	if (state.disposed || stale()) {
+		// Teardown already ran (or this attach was superseded). Honour the controller's cleanup once,
+		// but do not touch whatever state replaced this one.
 		unsubscribeFieldChangeListeners(state);
 		invokeCleanup(ownCleanup);
 		return;
 	}
-
-	// Commit before awaiting relevance so a superseded attach can tear this initialize down.
-	// Overlapping attaches used to miss `ownCleanup` because it lived only on this local object.
-	state.controller = controller;
-	state.context = ctx;
 	state.cleanup = ownCleanup;
-	stackEntry.formControllerState = state;
 
 	const fields = collectFieldsForRelevance(contentType, formProps);
 	try {
@@ -478,11 +485,9 @@ export async function attachFormController(args: {
 		);
 		state.irrelevantFieldIds = null;
 	}
-	if (stale()) {
-		if (stackEntry.formControllerState === state) {
-			runFormControllerCleanup(stackEntry);
-			stackEntry.formControllerState = null;
-		}
+	if ((stale() || state.disposed) && stackEntry.formControllerState === state) {
+		runFormControllerCleanup(stackEntry);
+		stackEntry.formControllerState = null;
 	}
 }
 
