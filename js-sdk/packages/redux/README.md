@@ -116,6 +116,9 @@ path           | The item’s path in the content store |
   store.dispatch(getItem(itemUrl));
 ```
 
+### getDescriptor
+The Get Descriptor API is deprecated. Please use getItem instead.
+
 ### getChildren
 Creates an action to get the list of Items directly under a folder into your store.
 
