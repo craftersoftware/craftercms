@@ -47,7 +47,7 @@ export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>
 export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor | null> {
 	let cfg = crafterConf.mix(config);
 
-	return getItem(path, cfg).pipe(
+	return getItem(path, { ...cfg, flatten: Boolean(config?.flatten) }).pipe(
 		map((item: Item) => {
 			// GET_ITEM_URL returns null descriptorDom for folders (and other items) without a descriptor.
 			// Match the former descriptor.json endpoint, which returned item.getDescriptorDom() as-is.
