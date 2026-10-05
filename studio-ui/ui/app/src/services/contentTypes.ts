@@ -31,7 +31,7 @@ import {
 } from '../models/ContentType';
 import { LookupTable } from '../models/LookupTable';
 import { camelize, capitalize, ensureSingleSlash, isBlank, toColor } from '../utils/string';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
@@ -49,7 +49,7 @@ import {
 	systemValidationsNames
 } from '../utils/contentType';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
-import { ajax, AjaxResponse } from 'rxjs/ajax';
+import { ajax, AjaxError, AjaxResponse } from 'rxjs/ajax';
 import { DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL } from '../utils/constants';
 
 // FE2 TODO: Verify removal
@@ -637,6 +637,54 @@ export function associateTemplate(site: string, contentTypeId: string, displayTe
 			return fromPromise(beautify(serialize(doc))).pipe(
 				switchMap((xml) => writeConfiguration(site, path, module, xml))
 			);
+		})
+	);
+}
+
+function isMissingFormDefinition(error: unknown): boolean {
+	if (!error || typeof error !== 'object') return false;
+	const ajaxError = error as Partial<AjaxError> & { response?: { response?: { code?: number | string } } };
+	if (ajaxError.status === 404) return true;
+	const code = ajaxError.response?.response?.code;
+	return code === 7000 || code === '7000';
+}
+
+/**
+ * Writes `<controller>true|false</controller>` on the saved form-definition.
+ * Type Builder keeps a separate draft; this is what FE2 reads via `hasJsController`
+ * if that draft is discarded. Returns `false` when the definition does not exist yet
+ * (unsaved type) so the draft flag can still be stored with the type's first save.
+ */
+export function setJsControllerEnabled(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
+	const path = createFormDefinitionPathFromTypeId(contentTypeId);
+	const module = 'studio';
+	return fetchConfigurationDOM(site, path, module).pipe(
+		switchMap((doc) => {
+			const form = doc.querySelector('form');
+			if (!form) {
+				return of(false);
+			}
+			let controller: Element | null = null;
+			for (const child of Array.from(form.children)) {
+				if (child.localName === 'controller') {
+					controller = child;
+					break;
+				}
+			}
+			if (!controller) {
+				controller = doc.createElement('controller');
+				form.insertBefore(controller, form.firstChild);
+			}
+			controller.textContent = enabled ? 'true' : 'false';
+			return fromPromise(beautify(serialize(doc))).pipe(
+				switchMap((xml) => writeConfiguration(site, path, module, xml))
+			);
+		}),
+		catchError((error: unknown) => {
+			if (isMissingFormDefinition(error)) {
+				return of(false);
+			}
+			return throwError(() => error);
 		})
 	);
 }

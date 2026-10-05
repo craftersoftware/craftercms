@@ -28,9 +28,11 @@ import { CONTENT_TYPES_BASE_PATH, editTypeController, TypeBuilderControl } from 
 import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { checkPathExistence, deleteItems } from '../../../services/content';
+import { setJsControllerEnabled } from '../../../services/contentTypes';
 import { ensureSingleSlash } from '../../../utils/string';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../../state/actions/dialogStack';
+import { updateContentTypeJsController } from '../../../state/actions/preview';
 import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
 import { clearFormControllerCache } from '../../FormsEngine/formControllers/loader';
 
@@ -40,7 +42,9 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
 
 /**
  * Allows the selection and edition of a controller for a content type.
- * If the controller file does not exist, the editor opens empty and creates/associates it on Save.
+ * If the controller file does not exist, the editor opens empty and creates it on Save.
+ * Saving or deleting `form-controller.js` also writes `<controller>` on the saved
+ * form-definition, so FE2 follows the file even if pending Type Builder edits are discarded.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const { field, value, autoFocus, setValue } = props;
@@ -70,11 +74,24 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 
 	const hasFile = isJavascript ? Boolean(value) : groovyExists;
 
+	const persistJsControllerEnabled = (enabled: boolean) => {
+		setJsControllerEnabled(siteId, contentTypeId, enabled).subscribe({
+			next: (written) => {
+				if (!written) return;
+				dispatch(updateContentTypeJsController({ contentTypeId, enabled }));
+			},
+			error: ({ response }) => {
+				dispatch(pushErrorDialog({ props: { error: response?.response } }));
+			}
+		});
+	};
+
 	const onEditController = () => {
 		editTypeController(CONTENT_TYPES_BASE_PATH, contentTypeId, dispatch, type, () => {
 			if (isJavascript) {
 				clearFormControllerCache(siteId, contentTypeId);
 				setValue(true);
+				persistJsControllerEnabled(true);
 			} else {
 				setGroovyExists(true);
 			}
@@ -88,6 +105,7 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 					if (isJavascript) {
 						clearFormControllerCache(siteId, contentTypeId);
 						setValue(false);
+						persistJsControllerEnabled(false);
 					} else {
 						setGroovyExists(false);
 					}
@@ -100,6 +118,7 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 						if (isJavascript) {
 							clearFormControllerCache(siteId, contentTypeId);
 							setValue(false);
+							persistJsControllerEnabled(false);
 						} else {
 							setGroovyExists(false);
 						}

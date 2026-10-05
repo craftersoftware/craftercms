@@ -408,6 +408,11 @@ export const dissociateTemplateComplete = /*#__PURE__*/ createAction<{ contentTy
 
 export const dissociateTemplateFailed = /*#__PURE__*/ createAction('DISSOCIATE_TEMPLATE_FAILED');
 
+export const updateContentTypeJsController = /*#__PURE__*/ createAction<{
+	contentTypeId: string;
+	enabled: boolean;
+}>('UPDATE_CONTENT_TYPE_JS_CONTROLLER');
+
 export const requestEdit = /*#__PURE__*/ createAction<{
 	typeOfEdit: 'content' | 'controller' | 'template';
 	modelId: string;

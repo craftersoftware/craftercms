@@ -73,6 +73,10 @@ function resolveControllerExport(module: Record<string, unknown>): FormControlle
  *
  * The caller is responsible for skipping this when `hasJsController` is false.
  *
+ * The source is imported from a Blob URL, which has no module base path. Type-local
+ * controllers must be a single standalone file. Relative imports are unsupported;
+ * bundle any dependencies into `form-controller.js`.
+ *
  * @param siteId - Active site id
  * @param contentTypeId - Content type id that owns the controller file
  * @returns Promise of a {@link LoadFormControllerResult}
@@ -89,6 +93,7 @@ export function loadFormController(siteId: string, contentTypeId: string): Promi
 		try {
 			const ajax = await firstValueFrom(getText(getFormControllerUrl(siteId, contentTypeId)));
 			const source = ajax.response as string;
+			// Blob URLs cannot resolve relative imports. The controller must be one standalone file.
 			const blob = new Blob([source], { type: 'application/javascript' });
 			blobUrl = URL.createObjectURL(blob);
 			const module = (await import(/* @vite-ignore */ blobUrl)) as Record<string, unknown>;
@@ -124,7 +129,7 @@ export function loadFormController(siteId: string, contentTypeId: string): Promi
 				return { status: 'missing', controller: null };
 			}
 			console.error(
-				`Error trying to load the form controller for "${contentTypeId}". Check that form-controller.js exists next to the content type definition and exports a valid FE2 FormController. ${commonErrorMsg}`,
+				`Error trying to load the form controller for "${contentTypeId}". Check that form-controller.js is a single standalone file (relative imports are not supported), exists next to the content type definition, and exports a valid FE2 FormController. ${commonErrorMsg}`,
 				error
 			);
 			return { status: 'failed', controller: null };

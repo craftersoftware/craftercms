@@ -481,18 +481,20 @@ export async function attachFormController(args: {
 }
 
 /**
- * Nearest stack entry below `stackIndex` that owns a form-controller context.
- * Repeat entries store only a deny-list, so nested repeats skip them and reuse the
- * owning form (root or embedded child).
+ * Owning form for a stacked entry: the nearest non-repeat entry below `stackIndex`.
+ * Repeat entries are part of that form, so nested repeats skip other repeats and stop
+ * at the first real form (root or embedded child). Returns that form only when it has
+ * a controller context; otherwise null — do not keep searching past it.
  */
 export function findAncestorFormControllerEntry(
 	stack: StableFormContextProps[],
 	stackIndex: number
 ): StableFormContextProps | null {
 	for (let i = stackIndex - 1; i >= 0; i--) {
-		if (stack[i].formControllerState?.context) {
-			return stack[i];
+		if (stack[i].props?.repeat) {
+			continue;
 		}
+		return stack[i].formControllerState?.context ? stack[i] : null;
 	}
 	return null;
 }

@@ -517,7 +517,7 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 1. Form opens; content type is available. If `!contentType.hasJsController` → skip (no network call).
 2. Loader calls the form_controller API for `{ siteId, contentTypeId }` (cache hit → reuse).
-3. Response text → `Blob` (`application/javascript`) → object URL → `import(/* @vite-ignore */ blobUrl)` as ESM → revoke URL.
+3. Response text → `Blob` (`application/javascript`) → object URL → `import(/* @vite-ignore */ blobUrl)` as ESM → revoke URL. The Blob URL has no module base, so `form-controller.js` must be one standalone file. Relative imports are unsupported; bundle dependencies into that file.
 4. Resolve `module.default ?? module.formController`; validate `apiVersion` (`1` or missing-as-1).
 5. Cache by `siteId + contentTypeId` for the session.
 6. `await initialize(ctx)`; keep returned cleanup on the form stack entry.
@@ -550,7 +550,7 @@ Controllers must not import React or reach into DOM for field visibility; releva
 **Lifecycle (repeat vs embedded):**
 
 - An **embedded child is its own form**: own controller (gated on its own `hasJsController`), own context, `initialize`, and `onBeforeSave`.
-- A **repeat item is part of the parent form**: no context, no `initialize`, no `onBeforeSave`. The host runs only `isFieldRelevant(subField, parentCtx)` against the parent controller.
+- A **repeat item is part of the parent form**: no context, no `initialize`, no `onBeforeSave`. The host runs only `isFieldRelevant(subField, parentCtx)` against the parent controller. Nested repeats skip other repeat entries and stop at the nearest non-repeat form. If that form has no controller context, the host does not use a further ancestor's controller.
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
@@ -565,7 +565,7 @@ Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE
 
 #### TB companion
 
-1. **Form Controller** property edits/creates `form-controller.js` and sets `hasJsController` on Save of the editor.
+1. **Form Controller** property edits/creates `form-controller.js`. On Save (and on Delete) it also writes `<controller>true|false</controller>` on the saved form-definition and updates the in-memory content type, so FE2 follows the file even if pending Type Builder edits are discarded. The Type Builder draft flag is still updated for the next full type save. An unsaved type has no definition yet; the flag is stored with that type's first save.
 2. **Groovy Controller** is a separate type property (server-side `controller.groovy`); existence is resolved by path check, not a serialized flag.
 3. Header shortcuts were removed — the properties form is the single UI for both files (edit + delete).
 4. `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`). Sample: `samples/fe2-form-controller.example.mjs`.
@@ -677,6 +677,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-05** — Saving or deleting `form-controller.js` in Type Builder now writes `<controller>` on the saved form-definition (and the content-type store), so discarding pending type edits does not leave FE2 gated off a file that exists. Loader contract: Blob import requires one standalone file; relative imports are unsupported. Repeat ancestor lookup stops at the nearest non-repeat form and does not borrow a further ancestor's controller when that form has none.
 - **2026-10-02** — FE2 form controllers implemented under `FormsEngine/formControllers/`. Contract: `onFieldChange` (not an Observable), `notify`, `onBeforeSave` may return `{ ok, message }`, `mode` + `isEmbedded` as two axes. Repeat stacked forms reuse the parent controller for `isFieldRelevant` only (no `initialize` / `onBeforeSave`). Relevance is a deny-list (`irrelevantFieldIds`) so extra validation atoms stay in the save snapshot. TB Form/Groovy controller fields are the single edit/delete UI; header shortcuts removed. Sample: `samples/fe2-form-controller.example.mjs`.
 - **2026-09-08** — Repeat stacked-form bootstrap now awaits `preloadControlPluginsForFields` for `fieldsToRender` (+ item values for nested embeds) before `createParsedValuesObject`/`setFieldAtoms`, and passes failures into `initializeState` (parity with create/edit/embedded). Same day earlier: `useSaveForm` awaits preload before `buildContentXml`; bootstrap preload failures map to `affectedPluginControlFields` and block save.
 - **2026-08-12** — `collectControlPluginLocators` / `preloadControlPluginsForFields` now walk node-selector `item.component` values (resolve embedded content types + nested fields, including repeats) so embedded plugin controls register before `createParsedValueForField`. Call sites pass content object + `contentTypesById`.

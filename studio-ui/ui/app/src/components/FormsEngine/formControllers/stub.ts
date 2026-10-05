@@ -26,6 +26,8 @@ export const FORM_CONTROLLER_JS_STUB = `/**
  *
  * Loaded only when this type has <controller>true</controller> (hasJsController).
  * Export a FormController object as the default export (or named \`formController\`).
+ * This file is Blob-imported, so it must stay a single standalone module.
+ * Relative imports are not supported — bundle any dependencies into this file.
  *
  * Context (ctx) highlights:
  *   - getValue(fieldId) / getValues() / setValue(fieldId, value)
