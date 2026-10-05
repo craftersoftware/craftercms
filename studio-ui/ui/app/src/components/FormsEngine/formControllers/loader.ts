@@ -68,8 +68,8 @@ function resolveControllerExport(module: Record<string, unknown>): FormControlle
  * Fetches and ESM-imports a content-type-local `form-controller.js`.
  *
  * Soft-fails on network, parse, or contract errors so the form can continue without a custom
- * controller. Successful and in-flight loads are cached for the session; failed / missing loads
- * are removed from the cache so a later retry can try again.
+ * controller. Successful and in-flight loads are cached for the session; a failed / missing load
+ * removes only its own cache entry, so a concurrent reload that replaced it is kept.
  *
  * The caller is responsible for skipping this when `hasJsController` is false.
  *
@@ -87,6 +87,15 @@ export function loadFormController(siteId: string, contentTypeId: string): Promi
 	if (cached) {
 		return cached;
 	}
+
+	// `selfRef` is assigned after the IIFE is created, but the IIFE's first `await` yields
+	// before either `deleteIfOwned()` can run, so the reference is set by then.
+	let selfRef: Promise<LoadFormControllerResult>;
+	const deleteIfOwned = () => {
+		if (formControllerCache.get(key) === selfRef) {
+			formControllerCache.delete(key);
+		}
+	};
 
 	const loading = (async (): Promise<LoadFormControllerResult> => {
 		let blobUrl: string | undefined;
@@ -111,12 +120,12 @@ export function loadFormController(siteId: string, contentTypeId: string): Promi
 						`The form controller for "${contentTypeId}" loaded but did not export a FormController (default or named formController). ${commonErrorMsg}`
 					);
 				}
-				formControllerCache.delete(key);
+				deleteIfOwned();
 				return { status: 'failed', controller: null };
 			}
 			return { status: 'loaded', controller };
 		} catch (error) {
-			formControllerCache.delete(key);
+			deleteIfOwned();
 			const isMissing =
 				(error && typeof error === 'object' && 'name' in error && (error as { name: string }).name === 'AjaxError'
 					? (error as AjaxError).status
@@ -140,6 +149,7 @@ export function loadFormController(siteId: string, contentTypeId: string): Promi
 		}
 	})();
 
+	selfRef = loading;
 	formControllerCache.set(key, loading);
 	return loading;
 }
