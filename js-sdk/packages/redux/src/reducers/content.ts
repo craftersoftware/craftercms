@@ -29,7 +29,7 @@ import {
 	getNavComplete,
 	getNavBreadcrumbComplete
 } from '../actions/content';
-import { StateContainer, Item } from '@craftercms/models';
+import { StateContainer, Item, Descriptor } from '@craftercms/models';
 import { internal_getNav, internal_getNavBreadcrumb } from '../actions/content_internal';
 
 export function itemsReducer(
@@ -74,7 +74,7 @@ export function descriptorsReducer(
 		entries: {}
 	},
 	action: AnyAction
-): StateContainer<Item> {
+): StateContainer<Descriptor> {
 	switch (action.type) {
 		case getDescriptor.type: {
 			return {
