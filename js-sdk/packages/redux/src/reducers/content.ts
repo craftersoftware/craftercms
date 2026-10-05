@@ -95,7 +95,7 @@ export function descriptorsReducer(
 				},
 				entries: {
 					...state.entries,
-					[url]: descriptor
+					[url]: descriptor ?? null
 				}
 			};
 		}
