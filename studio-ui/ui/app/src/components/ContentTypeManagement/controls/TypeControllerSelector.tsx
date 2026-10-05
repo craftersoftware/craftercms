@@ -45,6 +45,9 @@ export interface TypeControllerSelectorProps extends TypeBuilderControl {
  * If the controller file does not exist, the editor opens empty and creates it on Save.
  * Saving or deleting `form-controller.js` also writes `<controller>` on the saved
  * form-definition, so FE2 follows the file even if pending Type Builder edits are discarded.
+ * The draft flag is committed after that write succeeds. A failed write keeps the previous
+ * draft value. An unsaved type (write returns false) still keeps the draft for its first save.
+ * JavaScript delete writes the flag off before removing the file.
  */
 export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const { field, value, autoFocus, setValue } = props;
@@ -74,13 +77,20 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 
 	const hasFile = isJavascript ? Boolean(value) : groovyExists;
 
-	const persistJsControllerEnabled = (enabled: boolean) => {
+	const persistJsControllerEnabled = (enabled: boolean, onPersisted?: () => void) => {
+		const priorValue = value;
 		setJsControllerEnabled(siteId, contentTypeId, enabled).subscribe({
 			next: (written) => {
-				if (!written) return;
-				dispatch(updateContentTypeJsController({ contentTypeId, enabled }));
+				// `false` means the type has no saved definition yet. Keep the draft flag
+				// so the first type save can store it. Existing types commit only after the write.
+				setValue(enabled);
+				if (written) {
+					dispatch(updateContentTypeJsController({ contentTypeId, enabled }));
+				}
+				onPersisted?.();
 			},
 			error: ({ response }) => {
+				setValue(priorValue);
 				dispatch(pushErrorDialog({ props: { error: response?.response } }));
 			}
 		});
@@ -90,7 +100,6 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 		editTypeController(CONTENT_TYPES_BASE_PATH, contentTypeId, dispatch, type, () => {
 			if (isJavascript) {
 				clearFormControllerCache(siteId, contentTypeId);
-				setValue(true);
 				persistJsControllerEnabled(true);
 			} else {
 				setGroovyExists(true);
@@ -101,31 +110,39 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	const performDelete = () => {
 		checkPathExistence(siteId, controllerPath).subscribe({
 			next: (exists) => {
-				if (!exists) {
-					if (isJavascript) {
-						clearFormControllerCache(siteId, contentTypeId);
-						setValue(false);
-						persistJsControllerEnabled(false);
-					} else {
+				if (!isJavascript) {
+					if (!exists) {
 						setGroovyExists(false);
+						return;
 					}
+					const title = formatMessage({ defaultMessage: 'Delete Controller' });
+					const comment = formatMessage({ defaultMessage: 'Deleting controller {fileName}' }, { fileName });
+					deleteItems(siteId, [controllerPath], title, comment).subscribe({
+						next: () => {
+							setGroovyExists(false);
+						},
+						error: ({ response }) => {
+							dispatch(pushErrorDialog({ props: { error: response?.response } }));
+						}
+					});
+					return;
+				}
+				if (!exists) {
+					clearFormControllerCache(siteId, contentTypeId);
+					persistJsControllerEnabled(false);
 					return;
 				}
 				const title = formatMessage({ defaultMessage: 'Delete Controller' });
 				const comment = formatMessage({ defaultMessage: 'Deleting controller {fileName}' }, { fileName });
-				deleteItems(siteId, [controllerPath], title, comment).subscribe({
-					next: () => {
-						if (isJavascript) {
+				persistJsControllerEnabled(false, () => {
+					deleteItems(siteId, [controllerPath], title, comment).subscribe({
+						next: () => {
 							clearFormControllerCache(siteId, contentTypeId);
-							setValue(false);
-							persistJsControllerEnabled(false);
-						} else {
-							setGroovyExists(false);
+						},
+						error: ({ response }) => {
+							dispatch(pushErrorDialog({ props: { error: response?.response } }));
 						}
-					},
-					error: ({ response }) => {
-						dispatch(pushErrorDialog({ props: { error: response?.response } }));
-					}
+					});
 				});
 			},
 			error: ({ response }) => {
