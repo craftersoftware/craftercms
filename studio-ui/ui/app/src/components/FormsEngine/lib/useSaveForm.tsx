@@ -112,7 +112,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const [versionComment, setVersionComment] = useAtom(stableFormContext.atoms.versionComment);
 	const setHasPendingChanges = useSetAtom(stableFormContext.atoms.hasPendingChanges);
 	const onSave = wrapOnSaveProp(props.onSave);
-	const fileName = useAtomValue(stableFormContext.atoms.fileName);
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
@@ -294,6 +293,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 				saveAsDraft = draft || isFormInvalid;
 			}
 
+			// `onBeforeSave` may have changed `file-name`; the render-time snapshot is stale from here on.
+			const currentFileName = jotai.get(stableFormContext.atoms.fileName);
+
 			// Repeat handled here. If true, execution ends inside if statement.
 			if (isRepeatMode) {
 				(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
@@ -396,13 +398,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 			}
 			let path: string;
 			let renamePath: string;
-			const isRename = !isCreateMode && fileName !== initialFileName;
+			const isRename = !isCreateMode && currentFileName !== initialFileName;
 			if (isCreateMode) {
-				path = composePathForType(createPath, fileName, contentType);
+				path = composePathForType(createPath, currentFileName, contentType);
 			} /* is a plain update (page or component) */ else {
 				if (isRename) {
 					const basePath = getBasePath(itemPath, isPage);
-					path = composePathForType(basePath, fileName, contentType);
+					path = composePathForType(basePath, currentFileName, contentType);
 					renamePath = path;
 				} else {
 					path = itemPath;

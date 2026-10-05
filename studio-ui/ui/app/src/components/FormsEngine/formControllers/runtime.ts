@@ -126,7 +126,13 @@ export function createFormControllerContext({
 		getValue: readValue,
 		setValue(fieldId, value) {
 			if (fieldId === XmlKeys.fileName && atoms.fileName) {
+				// `file-name` is stored twice: the dedicated atom the save path reads, and the
+				// field value atom `getValues` / `onSave` see. Keep them in lockstep.
 				store.set(atoms.fileName as PrimitiveAtom<string>, value as string);
+				const fileNameValueAtom = atoms.valueByFieldId[XmlKeys.fileName];
+				if (fileNameValueAtom) {
+					store.set(fileNameValueAtom, value);
+				}
 				return;
 			}
 			const valueAtom = atoms.valueByFieldId[fieldId];
