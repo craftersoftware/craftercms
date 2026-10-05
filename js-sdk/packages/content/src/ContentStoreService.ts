@@ -42,13 +42,18 @@ export function getItem(path: string, config?: Partial<CrafterConfig>): Observab
  * @param {string} path - The item’s path
  * @param {CrafterConfig & GetDescriptorConfig} config? - The config override options to use
  */
-export function getDescriptor(path: string): Observable<Descriptor>;
-export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor>;
-export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor> {
+export function getDescriptor(path: string): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor | null> {
 	let cfg = crafterConf.mix(config);
 
 	return getItem(path, cfg).pipe(
 		map((item: Item) => {
+			// GET_ITEM_URL returns null descriptorDom for folders (and other items) without a descriptor.
+			// Match the former descriptor.json endpoint, which returned item.getDescriptorDom() as-is.
+			if (item.descriptorDom == null) {
+				return null;
+			}
 			// Extract the root key and value from the descriptorDom object (page/component/etc.), then we set the localId property that the getDescriptor API used to return to the descriptorDom object.
 			const [rootKey, rootValue] = Object.entries(item.descriptorDom)[0];
 			return {
