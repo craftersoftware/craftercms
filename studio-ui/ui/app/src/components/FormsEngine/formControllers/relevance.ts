@@ -232,16 +232,16 @@ export function forgetCommittedRelevance(component: object): void {
 }
 
 /**
- * Moves a session deny-list from one component value object to another.
+ * Copies a session deny-list from one component value object to another.
  * Used when an immutable nested `setValue` shallow-copies or replaces a component so
- * {@link createEmbeddedRelevanceResolver} still finds the committed list.
+ * {@link createEmbeddedRelevanceResolver} still finds the committed list. The source entry is
+ * retained because older snapshots or pending validation may still reference that object.
  */
 export function transferCommittedRelevance(from: object, to: object): void {
 	if (from === to) return;
 	const entry = committedRelevanceByComponent.get(from);
 	if (!entry) return;
 	committedRelevanceByComponent.set(to, entry);
-	committedRelevanceByComponent.delete(from);
 }
 
 /**
