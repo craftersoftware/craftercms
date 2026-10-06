@@ -34,7 +34,7 @@ import {
 } from './types';
 import { extractAtomValues } from '../lib/formUtils';
 import type { PrimitiveAtom } from 'jotai';
-import { retrieveProperty, setProperty } from '../../../utils/object';
+import { retrieveProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
 import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
 import {
@@ -44,6 +44,7 @@ import {
 	resolveComponentRelevance,
 	resolveFieldRelevance,
 	SAVE_MINIMUM_FIELD_IDS,
+	transferCommittedRelevance,
 	type FieldRelevanceResult
 } from './relevance';
 
@@ -179,13 +180,13 @@ export function createFormControllerContext({
 				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
 				return;
 			}
-			const next = structuredClone(root) as object;
-			if (!canSetNestedProperty(next, parsed.nestedPath)) {
+			if (!canSetNestedProperty(root as object, parsed.nestedPath)) {
 				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
 				return;
 			}
-			setProperty(next, parsed.nestedPath, value);
-			store.set(rootAtom, next);
+			// Copy only containers along the path so sibling embeds keep object identity (and
+			// WeakMap committed relevance). Transfer the deny-list when a component is replaced.
+			store.set(rootAtom, setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value));
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
@@ -243,6 +244,51 @@ function canSetNestedProperty(root: object, nestedPath: string): boolean {
 		return Number.isInteger(index) && index >= 0 && index < parent.length;
 	}
 	return true;
+}
+
+function shallowCopyContainer(value: object): object {
+	return Array.isArray(value) ? value.slice() : { ...value };
+}
+
+/**
+ * Immutable nested write: shallow-copies only the containers on `nestedPath`.
+ * Untouched siblings (including embedded component objects) keep their identity.
+ * When a plain object on the path is copied or the leaf object is replaced, any
+ * committed relevance entry moves to the new object.
+ */
+function setNestedPropertyCopyingPath(root: object, nestedPath: string, value: unknown): object {
+	const segments = nestedPath.split('.');
+	const nextRoot = shallowCopyContainer(root);
+	if (!Array.isArray(root)) {
+		transferCommittedRelevance(root, nextRoot);
+	}
+	let prevParent: object = root;
+	let nextParent: object = nextRoot;
+	for (let i = 0; i < segments.length - 1; i++) {
+		const key = segments[i];
+		const prevChild = (prevParent as Record<string, unknown>)[key];
+		const nextChild = shallowCopyContainer(prevChild as object);
+		if (prevChild != null && typeof prevChild === 'object' && !Array.isArray(prevChild)) {
+			transferCommittedRelevance(prevChild, nextChild);
+		}
+		(nextParent as Record<string, unknown>)[key] = nextChild;
+		prevParent = prevChild as object;
+		nextParent = nextChild;
+	}
+	const last = segments[segments.length - 1];
+	const previousLeaf = (prevParent as Record<string, unknown>)[last];
+	(nextParent as Record<string, unknown>)[last] = value;
+	if (
+		previousLeaf != null &&
+		typeof previousLeaf === 'object' &&
+		!Array.isArray(previousLeaf) &&
+		value != null &&
+		typeof value === 'object' &&
+		!Array.isArray(value)
+	) {
+		transferCommittedRelevance(previousLeaf, value);
+	}
+	return nextRoot;
 }
 
 function invokeCleanup(cleanup: (() => void) | null | undefined): void {

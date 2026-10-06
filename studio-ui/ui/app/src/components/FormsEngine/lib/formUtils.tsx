@@ -248,7 +248,7 @@ export type ValidatorsData = {
 
 type FieldTrackingContext = Pick<
 	StableFormContextProps,
-	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta'
+	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta' | 'formControllerState'
 >;
 
 /**
