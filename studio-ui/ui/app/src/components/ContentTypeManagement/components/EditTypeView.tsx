@@ -87,6 +87,7 @@ import { deserialize, fromString, serialize } from '../../../utils/xml';
 import useSpreadState from '../../../hooks/useSpreadState';
 import { asArray } from '../../../utils/array';
 import { fetchContentItem } from '../../../services/content';
+import { queueFormDefinitionWrite } from '../../../services/contentTypes';
 import { batchActions } from '../../../state/actions/misc';
 import { fetchItemVersions } from '../../../state/actions/versions';
 import { getRootPath } from '../../../utils/path';
@@ -494,7 +495,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const latestUpdate = commitOpenFormChanges();
 				dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: true });
 				const typeToSave = latestUpdate ?? type;
-				save(site, typeToSave, configDescriptors).subscribe({
+				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
 						onUpdateHasPendingChanges(false);
 						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
@@ -1277,19 +1278,25 @@ function buildXmlFromType(
 
 // merge the basic details, the non-edited field values, the manipulated field atoms into a single object
 // that gets serialized to XML and stored
+// `getType` is read when the write's turn comes, after any queued `<controller>` write for this type
+// has landed, so the full definition carries the latest persisted flag instead of reverting it.
 function save(
 	siteId: string,
-	type: ContentType,
+	typeId: string,
+	getType: () => ContentType,
 	configDescriptors?: {
 		controlDescriptors: LookupTable<DescriptorContentType>;
 		dataSourceDescriptors: LookupTable<DescriptorContentType>;
 	}
 ): Observable<string> {
-	let xml = buildXmlFromType(type, configDescriptors);
-	xml = cleanupStaleDatasourceValuesFromXml(xml, type);
-	const requests = [writeConfiguration(siteId, createFormDefinitionPathFromTypeId(type.id), 'studio', xml)];
+	return queueFormDefinitionWrite(siteId, typeId, () => {
+		const type = getType();
+		let xml = buildXmlFromType(type, configDescriptors);
+		xml = cleanupStaleDatasourceValuesFromXml(xml, type);
+		const requests = [writeConfiguration(siteId, createFormDefinitionPathFromTypeId(type.id), 'studio', xml)];
 
-	return forkJoin(requests).pipe(map(() => xml));
+		return forkJoin(requests).pipe(map(() => xml));
+	});
 }
 
 /**

@@ -31,9 +31,9 @@ import {
 } from '../models/ContentType';
 import { LookupTable } from '../models/LookupTable';
 import { camelize, capitalize, ensureSingleSlash, isBlank, toColor } from '../utils/string';
-import { Observable, of, throwError } from 'rxjs';
+import { defer, Observable, of, Subscription, throwError } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
 import { fetchContentItems } from './content';
 import { ContentItem } from '../models/Item';
@@ -607,7 +607,58 @@ export function deleteContentType(site: string, contentTypeId: string): Observab
 	}).pipe(map(() => true));
 }
 
+const formDefinitionWriteTails = new Map<string, Promise<void>>();
+
+/**
+ * Runs `task` once every earlier queued write to the same site + type form-definition has settled.
+ * `task` is only called at its turn, so read-modify-write helpers fetch the document then, and a full
+ * definition write builds its XML then. Otherwise two writers that each read before the other wrote
+ * would silently drop one change. Unsubscribing before the turn skips the task.
+ */
+export function queueFormDefinitionWrite<T>(
+	site: string,
+	contentTypeId: string,
+	task: () => Observable<T>
+): Observable<T> {
+	return new Observable<T>((subscriber) => {
+		const key = `${site}:${contentTypeId}`;
+		const previous = formDefinitionWriteTails.get(key) ?? Promise.resolve();
+		let release: () => void;
+		const settled = new Promise<void>((resolve) => (release = resolve));
+		const tail = previous.then(() => settled);
+		formDefinitionWriteTails.set(key, tail);
+		tail.then(() => {
+			if (formDefinitionWriteTails.get(key) === tail) formDefinitionWriteTails.delete(key);
+		});
+		let closed = false;
+		let inner: Subscription | null = null;
+		previous.then(() => {
+			if (closed) {
+				release();
+				return;
+			}
+			inner = defer(task)
+				.pipe(finalize(() => release()))
+				.subscribe({
+					next: (value) => subscriber.next(value),
+					error: (error) => subscriber.error(error),
+					complete: () => subscriber.complete()
+				});
+		});
+		return () => {
+			closed = true;
+			inner?.unsubscribe();
+		};
+	});
+}
+
 export function associateTemplate(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () =>
+		associateTemplateNow(site, contentTypeId, displayTemplate)
+	);
+}
+
+function associateTemplateNow(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
@@ -659,6 +710,10 @@ function isMissingFormDefinition(error: unknown): boolean {
  * `writeConfiguration` on an existing definition propagate; they are not returned as `false`.
  */
 export function setJsControllerEnabled(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () => setJsControllerEnabledNow(site, contentTypeId, enabled));
+}
+
+function setJsControllerEnabledNow(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, module).pipe(
@@ -696,6 +751,10 @@ export function setJsControllerEnabled(site: string, contentTypeId: string, enab
 }
 
 export function dissociateTemplate(site: string, contentTypeId: string): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () => dissociateTemplateNow(site, contentTypeId));
+}
+
+function dissociateTemplateNow(site: string, contentTypeId: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
