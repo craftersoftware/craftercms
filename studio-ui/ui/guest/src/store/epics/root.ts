@@ -98,7 +98,7 @@ import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
 import { processPathMacros } from '@craftercms/studio-ui/utils/path';
-import { getRequestForgeryToken } from '@craftercms/studio-ui/utils/auth';
+import { getRequestForgeryTokenParamName } from '@craftercms/studio-ui/utils/auth';
 import { ensureSingleSlash } from '@craftercms/studio-ui/utils/string';
 import { getInheritanceParentIdsForField, validateImageRestrictions } from '@craftercms/studio-ui/utils/content';
 import { SearchItem } from '@craftercms/studio-ui/models';
@@ -444,7 +444,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 																						dataUrl: event.target.result
 																					},
 																					path,
-																					getRequestForgeryToken()
+																					getRequestForgeryTokenParamName()
 																				).pipe(
 																					switchMap((action) => {
 																						if (action.type === 'progress') {
@@ -560,7 +560,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 											blob
 										},
 										path,
-										getRequestForgeryToken()
+										getRequestForgeryTokenParamName()
 									).pipe(
 										switchMap((action) => {
 											if (action.type === 'progress') {
