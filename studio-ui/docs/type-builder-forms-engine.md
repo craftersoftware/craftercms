@@ -440,7 +440,7 @@ interface FormController {
 	/** Bump when breaking the host↔controller contract. */
 	apiVersion: 1;
 	/**
-	 * Called once per form that owns a controller (root and embedded children).
+	 * Called once per form that owns a controller (root and embedded children), after relevance.
 	 * Not called for repeat stacked forms.
 	 * May return a cleanup (or a Promise of cleanup) invoked on form unmount / stack pop.
 	 */
@@ -448,9 +448,10 @@ interface FormController {
 	/**
 	 * Return false to omit the field (or repeat definition) from the rendered form.
 	 * Default true. Async allowed — host awaits before first field paint for that form.
-	 * Repeat subfields are judged once with the owning form's context; the repeat item form reuses that result.
+	 * Runs before `initialize` on a read-only snapshot (see "Relevance and recursive validation").
+	 * Repeat subfields are judged once by the owning form; the repeat item form reuses that result.
 	 */
-	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerContext): MaybePromise<boolean>;
+	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerRelevanceContext): MaybePromise<boolean>;
 	/**
 	 * Return false / `{ ok: false }` / rejected promise to veto save.
 	 * `{ ok: false, message }` shows `message` to the author.
@@ -507,11 +508,11 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 | Piece     | Location                                                                                                                            |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `host`, `stub`                                          |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                            |
 | Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render |
 | Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths       |
 | Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                              |
-| Types     | `FormController` / `FormControllerContext` in `formControllers/types.ts`                                                            |
+| Types     | `FormController` / `FormControllerContext` / `FormControllerRelevanceContext` in `formControllers/types.ts`                         |
 
 **Load sequence:**
 
@@ -520,8 +521,9 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 3. Response text → `Blob` (`application/javascript`) → object URL → `import(/* @vite-ignore */ blobUrl)` as ESM → revoke URL. The Blob URL has no module base, so `form-controller.js` must be one standalone file. Relative imports are unsupported; bundle dependencies into that file.
 4. Resolve `module.default ?? module.formController`; validate `apiVersion` (`1` or missing-as-1).
 5. Cache by `siteId + contentTypeId` for the session. A failed load only evicts its own cache entry, so a concurrent reload is not discarded.
-6. `await initialize(ctx)`; keep returned cleanup on the form stack entry.
-7. Later: `await isFieldRelevant(...)` per field; `await onBeforeSave(ctx)` on save.
+6. `await isFieldRelevant(field, snapshot)` per field, on a read-only snapshot of the values as loaded; store the deny-list.
+7. Build the live context, `await initialize(ctx)`; keep returned cleanup on the form stack entry.
+8. Later: `await onBeforeSave(ctx)` on save.
 
 Why Blob instead of pointing `<script>` / `import()` at the API URL: that endpoint requires auth; a raw script/module request does not reliably carry the same credentials FE1 needed — hence authenticated `getText` then Blob module (same constraint as FE1’s current loader).
 
@@ -549,6 +551,10 @@ Controllers must not import React or reach into DOM for field visibility; releva
 
 #### Relevance and recursive validation
 
+`isFieldRelevant` has one contract for every form. It runs **before** `initialize` and receives a `FormControllerRelevanceContext`: `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, plus `getValues` / `getValue` / `getField` over a snapshot of the values as loaded. There is no `readonly`, and nothing `initialize` sets up is visible. Writes, listeners and notifications are not part of the type; untyped calls to `setValue`, `onFieldChange` or `notify` are ignored with a warning. One factory (`createRelevanceContext`) builds this context for an open form and for a parent validating an embedded component it never opened, so a controller that depends only on these inputs gives the same verdict on both paths.
+
+An existing embedded component is judged in `edit` mode with `isEmbedded: true`, and `path` is the containing item's path, which is what its form reports when opened. Its open form does not recompute: it reuses the verdict cached for the same value object, which is the object the parent validates.
+
 The deny-list stores qualified paths, not bare ids:
 
 - A top-level field is its id (`heroImage_s`).
@@ -556,7 +562,7 @@ The deny-list stores qualified paths, not bare ids:
 
 The owning form resolves top-level fields and one level of repeat subfields in a single pass, then bumps `relevanceVersion` so validation atoms created during bootstrap recompute. A repeat item form does not call `isFieldRelevant` again; it copies that deny-list. Deeper nesting (a repeat inside a repeat) is not addressed individually.
 
-`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through a read-only context where `setValue` and `onFieldChange` are inert. Results are memoised per controller object and then per component value identity (values update immutably). Saving `form-controller.js` clears the loader cache, the next load yields a new controller object, and its `isFieldRelevant` runs again even for unchanged components. Offered fields come from the same collector the owning form uses (top level plus one repeat level). A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
+`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through the same snapshot context. Results are memoised per controller object, then per component value identity (values update immutably), then per item path. Saving `form-controller.js` clears the loader cache, the next load yields a new controller object, and its `isFieldRelevant` runs again even for unchanged components. Offered fields come from the same collector the owning form uses (top level plus one repeat level). A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
 
 **Lifecycle (repeat vs embedded):**
 
@@ -571,7 +577,7 @@ The host registers the form's controller state before calling `initialize`, so l
 
 | Hook                      | Where                                                                                                                                               |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Load + `await initialize` | New loader called from `FormsEngine` / `FormBootstrap` after atoms exist, before field render                                                       |
+| Load + `await initialize` | New loader called from `FormsEngine` / `FormBootstrap` after atoms exist and relevance is resolved, before field render                             |
 | Cleanup                   | Form unmount / stack pop                                                                                                                            |
 | `await isFieldRelevant`   | When mapping `contentType.sections` → visible fields (same place FE already strips `file-name` for embeds); wait before paint if any check is async |
 | `await onBeforeSave`      | `useSaveForm`, after validity snapshot / draft decision, **before** `buildContentXml` / write; veto restores submitting UI and stops                |
@@ -690,6 +696,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-06** — One relevance contract: `isFieldRelevant` runs before `initialize` on a read-only `FormControllerRelevanceContext` (values as loaded, plus `siteId`, `contentType`, `path`, `mode`, `isEmbedded`), built by one factory for open forms and for parent validation of unopened embedded components. An open embedded component reuses the parent's cached verdict for its value object. Writes, listeners and notifications during relevance are ignored with a warning. Path helpers moved to `formControllers/fieldPaths.ts`.
 - **2026-10-06** — Embedded relevance verdicts are cached per controller object, then per component. A reloaded controller re-judges unchanged components instead of reusing the previous code's deny-list. The embedded resolver reuses the owning form's relevance-target collector.
 - **2026-10-06** — A disposed controller context refuses `onFieldChange` (no-op unsubscribe, no subscription) and `setValue`. A pending `initialize` that resumes after a replacement attach can no longer subscribe to the shared `fieldUpdates$` or write the form's atoms.
 - **2026-10-05** — A `<controller>` write that lands after the type properties form closed now updates the Type Builder working copy, so saving the type no longer reverts it. Rollback keeps the persisted flag.

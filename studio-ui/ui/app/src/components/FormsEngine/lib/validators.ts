@@ -46,8 +46,13 @@ export interface ValidatorMetaData {
 	/**
 	 * Resolves the deny-list for an embedded component's own content type, using that type's
 	 * form controller. Returns `null` when the type has no controller or no relevance hook.
+	 * `path` is the containing item's path, the same one the component's form reports when opened.
 	 */
-	resolveEmbeddedRelevance?(contentType: ContentType, component: Record<string, unknown>): Promise<Set<string> | null>;
+	resolveEmbeddedRelevance?(
+		contentType: ContentType,
+		component: Record<string, unknown>,
+		path?: string
+	): Promise<Set<string> | null>;
 }
 export type ValidatorFunctionDef = (
 	field: ContentTypeField,
@@ -478,7 +483,9 @@ export async function nodeSelectorValidator(
 		if (!contentType) continue;
 		const fields = contentType.fields;
 		if (!fields) continue;
-		const denyList = (await meta.resolveEmbeddedRelevance?.(contentType, component as Record<string, unknown>)) ?? null;
+		const denyList =
+			(await meta.resolveEmbeddedRelevance?.(contentType, component as Record<string, unknown>, meta.itemMeta?.path)) ??
+			null;
 		const childMeta: ValidatorMetaData = { ...meta, irrelevantFieldPaths: denyList };
 		Object.values(fields).forEach((embeddedField) => {
 			if (isFieldPathIrrelevant(denyList, embeddedField.id)) return;
