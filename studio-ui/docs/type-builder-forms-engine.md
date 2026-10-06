@@ -565,7 +565,7 @@ The owning form resolves top-level fields and one level of repeat subfields in a
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
-The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. There is no cancellation signal for other async work the controller started itself; controllers that keep working after `initialize`'s first `await` should guard their own writes.
+The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. Once disposed, the context refuses further host calls: `onFieldChange` returns a no-op unsubscribe without subscribing, and `setValue` is ignored (both warn), so a late `initialize` cannot reach the form that replaced it. There is no cancellation signal for other async work the controller started itself (timers, fetches); controllers that keep working after `initialize`'s first `await` should still guard that work.
 
 #### Integration points in FE2
 
@@ -690,6 +690,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-06** — A disposed controller context refuses `onFieldChange` (no-op unsubscribe, no subscription) and `setValue`. A pending `initialize` that resumes after a replacement attach can no longer subscribe to the shared `fieldUpdates$` or write the form's atoms.
 - **2026-10-05** — A `<controller>` write that lands after the type properties form closed now updates the Type Builder working copy, so saving the type no longer reverts it. Rollback keeps the persisted flag.
 - **2026-10-05** — Type Builder controller actions are serialized. A JavaScript delete that disables the flag and then fails to remove the file stays visible as "disabled, file still exists," with Delete still available to retry.
 - **2026-10-05** — `onFieldChange` and dirty-tracking run when a field value is written, not when its validation atom is read. A hidden field now notifies listeners, and editing `file-name` no longer emits a change for every other field. The validation-read side effect is gone.

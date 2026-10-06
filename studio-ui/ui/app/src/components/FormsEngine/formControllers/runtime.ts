@@ -61,7 +61,15 @@ export interface CreateFormControllerContextArgs {
 	dispatch: ReduxDispatch;
 	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
 	fieldChangeUnsubscribers: Set<() => void>;
+	/**
+	 * True once this context's form state was torn down or superseded. A pending `initialize` can
+	 * still hold the context, so writes and new listeners must be refused rather than reach the
+	 * stack entry's shared atoms and `fieldUpdates$`.
+	 */
+	isDisposed: () => boolean;
 }
+
+const disposedContextWarning = 'Form controller context is no longer attached to a form; the call was ignored.';
 
 /**
  * Builds the narrow {@link FormControllerContext} host API for a type-local form controller.
@@ -76,7 +84,8 @@ export function createFormControllerContext({
 	isEmbedded,
 	fieldUpdates$,
 	dispatch,
-	fieldChangeUnsubscribers
+	fieldChangeUnsubscribers,
+	isDisposed
 }: CreateFormControllerContextArgs): FormControllerContext {
 	const readValue = (fieldId: string): unknown => {
 		if (fieldId === XmlKeys.fileName && atoms.fileName) {
@@ -125,6 +134,10 @@ export function createFormControllerContext({
 		},
 		getValue: readValue,
 		setValue(fieldId, value) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return;
+			}
 			if (fieldId === XmlKeys.fileName && atoms.fileName) {
 				// `file-name` is stored twice: the dedicated atom the save path reads, and the
 				// field value atom `getValues` / `onSave` see. The dedicated atom's writer mirrors
@@ -168,7 +181,12 @@ export function createFormControllerContext({
 			return getFieldFromContentType(contentType, fieldId);
 		},
 		onFieldChange(listener) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return () => undefined;
+			}
 			const subscription = fieldUpdates$.subscribe((fieldId) => {
+				if (isDisposed()) return;
 				listener(fieldId, readValue(fieldId));
 			});
 			const unsubscribe = () => {
@@ -431,7 +449,10 @@ export async function attachFormController(args: {
 		isEmbedded,
 		fieldUpdates$: stackEntry.fieldUpdates$,
 		dispatch,
-		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers
+		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers,
+		// Not `stale()`: a remounted drawer slot restores this stack entry without re-attaching, so its
+		// context stays live. A superseded prep re-attaches, and that attach disposes this state.
+		isDisposed: () => state.disposed
 	});
 
 	// Commit before `initialize` so stack pop or a replacement attach can reach listeners the

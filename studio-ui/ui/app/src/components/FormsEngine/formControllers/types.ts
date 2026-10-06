@@ -64,6 +64,7 @@ export interface FormControllerContext {
 	 * Sets a field value.
 	 * Same key rules as {@link getValue}: top-level atom id, or a dotted path into a
 	 * nested value (immutable update of the root atom). Missing paths warn and no-op.
+	 * Ignored (with a warning) once the form this context belongs to was torn down.
 	 */
 	setValue(fieldId: string, value: unknown): void;
 	/**
@@ -74,6 +75,7 @@ export interface FormControllerContext {
 	/**
 	 * Registers a listener called whenever a field value is written, including a field that
 	 * is not rendered. Returns a function that removes it. The host also drops listeners registered here on form teardown.
+	 * After teardown, registering is refused: nothing subscribes and the returned function is a no-op.
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
 	/** Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return. */
