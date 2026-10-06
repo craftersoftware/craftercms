@@ -1,7 +1,7 @@
 {
 	"name": "@craftercms/experience-builder",
 	"description": "CrafterCMS' Experience Builder integration sdk.",
-	"version": "4.2.0",
+	"version": "5.0.0-alpha.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/craftercms/studio-ui.git",
@@ -50,11 +50,11 @@
 		"i18n:extract": "formatjs extract './src/**/*.{ts,tsx}' --ignore='**/*.d.ts' --out-file src/translations/en-extract.json"
 	},
 	"dependencies": {
-		"@craftercms/classes": "4.4.0",
-		"@craftercms/content": "4.4.2",
-		"@craftercms/ice": "4.3.1",
+		"@craftercms/classes": "5.0.0-alpha.0",
+		"@craftercms/content": "6.0.0-alpha.0",
+		"@craftercms/ice": "5.0.0-alpha.0",
 		"@craftercms/npm-content": "workspace:^",
-		"@craftercms/search": "4.3.0",
+		"@craftercms/search": "5.0.0-alpha.0",
 		"@craftercms/studio-ui": "workspace:^",
 		"@emotion/css": "^11.13.5",
 		"@emotion/react": "^11.14.0",

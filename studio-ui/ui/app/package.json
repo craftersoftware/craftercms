@@ -1,7 +1,7 @@
 {
 	"name": "@craftercms/studio-ui",
 	"description": "Services, components, models & utils to build CrafterCMS authoring extensions.",
-	"version": "4.2.0",
+	"version": "5.0.0-alpha.0",
 	"private": true,
 	"repository": {
 		"type": "git",
