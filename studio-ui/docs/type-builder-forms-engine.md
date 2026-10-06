@@ -484,6 +484,68 @@ export default {
 
 **FE1 scripts are not loadable.** They register via `CStudioAuthoring.Module.moduleLoaded('{typeId}-controller', Class)` and extend `CStudioForms.FormController`. Same migration stance as FE1 DS → `DataSourceModule`: rewrite to the FE2 export. No dual-loader in v1 of this feature.
 
+#### Example
+
+```js
+/**
+ * FE2 form-controller example (ES module).
+ *
+ * This is a content-type-local file, not a PluginDescriptor.
+ * Place it at:
+ *   /config/studio/content-types/{contentTypeId}/form-controller.js
+ * and set <controller>true</controller> (hasJsController) on the type.
+ *
+ * Export a FormController as the default export (or named `formController`).
+ * The host fetches the authenticated form_controller API and Blob-imports this
+ * file. Do not register via craftercms.define / importPlugin.
+ * Blob import has no module base path: keep this a single standalone file.
+ * Relative imports are not supported — bundle any dependencies into this file.
+ *
+ * Host context (ctx) — no React, no DOM:
+ *   getValue / getValues / setValue  (dotted paths into repeats)
+ *   getField(fieldId)
+ *   onFieldChange(listener) → unsubscribe
+ *   notify(message, severity?)
+ *   siteId, contentType, path, mode ('create' | 'edit'), isEmbedded, readonly
+ *
+ * Other content types: craftercms.getStore().getState().contentTypes.byId
+ */
+
+export default {
+	apiVersion: 1,
+
+	initialize(ctx) {
+		const unsubscribe = ctx.onFieldChange((fieldId, value) => {
+			if (fieldId === 'title_s') {
+				ctx.notify(`Title is now ${value ?? ''}`, 'info');
+			}
+		});
+		return unsubscribe;
+	},
+
+	isFieldRelevant(field, ctx) {
+		// Hide a legacy field on new items. Runs before `initialize`, on a read-only
+		// snapshot of the values as loaded: no setValue/onFieldChange/notify/readonly, and
+		// nothing `initialize` set up. Parent validation of an unopened embedded component
+		// uses the same snapshot (in `edit` mode), so decide from these inputs only.
+		// Repeat subfields are judged once by the owning form — you cannot tell which repeat item is open. A repeat
+		// subfield is addressed as `<repeatFieldId>.<subFieldId>` on the deny-list.
+		// `file-name` and `internal-name` are never offered here; save requires them.
+		if (field.id === 'legacyId_s' && ctx.mode === 'create') {
+			return false;
+		}
+		return true;
+	},
+
+	async onBeforeSave(ctx) {
+		if (!ctx.getValue('agree_b')) {
+			return { ok: false, message: 'You must agree before saving.' };
+		}
+		return true;
+	}
+};
+```
+
 #### Where the file lives and how FE2 loads it
 
 **On disk (site repo):**
@@ -587,7 +649,7 @@ The host registers the form's controller state before calling `initialize`, so l
 1. **Form Controller** property edits/creates `form-controller.js`. On Save (and on Delete) it also writes `<controller>true|false</controller>` on the saved form-definition and updates the in-memory content type, so FE2 follows the file even if pending Type Builder edits are discarded. The Type Builder draft flag is committed only after that write succeeds; a failed write leaves the previous draft value. `setJsControllerEnabled` returns `false` only when the form-definition is missing (unsaved type); that draft flag is still kept for the type's first save. Errors while writing an existing definition propagate and are not returned as `false`. JavaScript delete removes `form-controller.js` only after that call succeeds: `true` means the saved flag is now false, `false` means there was no definition to update. A write failure does not remove the file. If the flag write succeeds and the file delete then fails, the controller stays disabled and the field shows that the file is still there so delete can be retried. Edit and Delete are disabled while a flag write, existence check, or delete is in flight. A flag write that lands is also applied to the Type Builder working copy (`TypeControllerFlagContext`), because the code editor can be minimized and saved after the type properties form closed; otherwise a later type save would write the old `<controller>` back. Rollback and the XML diff start from that persisted flag, not from the type as it was opened. Writes to one type's form-definition go through `queueFormDefinitionWrite` (`services/contentTypes.ts`), keyed by site and type: the `<controller>` write, template associate/dissociate, and the Type Builder save. Each one fetches the document, or builds its XML, only when the previous write has settled, so a type save started while a flag write is in flight carries the new flag instead of overwriting it. Writers outside these helpers (e.g. editing the XML in site configuration) are not coordinated. Groovy delete only removes `controller.groovy`.
 2. **Groovy Controller** is a separate type property (server-side `controller.groovy`); existence is resolved by path check, not a serialized flag.
 3. Header shortcuts were removed — the properties form is the single UI for both files (edit + delete).
-4. `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`). Sample: `samples/fe2-form-controller.example.mjs`.
+4. `FORM_CONTROLLER_JS_STUB` seeds new `form-controller.js` in the code editor (`isNew`). The worked example is earlier in this section.
 
 #### Non-goals (initial)
 
@@ -709,7 +771,7 @@ Keep newest first. One short bullet per meaningful session.
 - **2026-10-05** — A failed form-controller load evicts only its own cache entry. A concurrent reload that already replaced that entry is left in place.
 - **2026-10-05** — `onBeforeSave` may rewrite `file-name`. The save path reads the filename atom after the hook (rename detection and path construction), and `setValue('file-name', …)` keeps the dedicated filename atom and the `file-name` value atom in lockstep so `onSave` sees the same name.
 - **2026-10-05** — `setJsControllerEnabled` returns `false` only for a missing form-definition. Failures from `writeConfiguration` on an existing definition propagate, so JavaScript delete does not treat them as the unsaved-type case or remove `form-controller.js`. Earlier the same day: the draft flag commits only after that write succeeds; saving or deleting `form-controller.js` writes `<controller>` on the saved definition. Loader contract: Blob import requires one standalone file; relative imports are unsupported. Repeat ancestor lookup stops at the nearest non-repeat form and does not borrow a further ancestor's controller when that form has none.
-- **2026-10-02** — FE2 form controllers implemented under `FormsEngine/formControllers/`. Contract: `onFieldChange` (not an Observable), `notify`, `onBeforeSave` may return `{ ok, message }`, `mode` + `isEmbedded` as two axes. Repeat stacked forms reuse the parent controller for `isFieldRelevant` only (no `initialize` / `onBeforeSave`). Relevance is a deny-list (`irrelevantFieldIds`) so extra validation atoms stay in the save snapshot. TB Form/Groovy controller fields are the single edit/delete UI; header shortcuts removed. Sample: `samples/fe2-form-controller.example.mjs`.
+- **2026-10-02** — FE2 form controllers implemented under `FormsEngine/formControllers/`. Contract: `onFieldChange` (not an Observable), `notify`, `onBeforeSave` may return `{ ok, message }`, `mode` + `isEmbedded` as two axes. Repeat stacked forms reuse the parent controller for `isFieldRelevant` only (no `initialize` / `onBeforeSave`). Relevance is a deny-list (`irrelevantFieldIds`) so extra validation atoms stay in the save snapshot. TB Form/Groovy controller fields are the single edit/delete UI; header shortcuts removed. Worked example inlined in §5.9.
 - **2026-09-08** — Repeat stacked-form bootstrap now awaits `preloadControlPluginsForFields` for `fieldsToRender` (+ item values for nested embeds) before `createParsedValuesObject`/`setFieldAtoms`, and passes failures into `initializeState` (parity with create/edit/embedded). Same day earlier: `useSaveForm` awaits preload before `buildContentXml`; bootstrap preload failures map to `affectedPluginControlFields` and block save.
 - **2026-08-12** — `collectControlPluginLocators` / `preloadControlPluginsForFields` now walk node-selector `item.component` values (resolve embedded content types + nested fields, including repeats) so embedded plugin controls register before `createParsedValueForField`. Call sites pass content object + `contentTypesById`.
 - **2026-08-11** — Embedded stacked-form bootstrap now awaits `preloadControlPluginsForFields` for the embedded content type before `prepareEmbeddedItemForm`/`setFieldAtoms` (parity with create/edit preload so plugin validators/retrievers exist).
