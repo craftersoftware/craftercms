@@ -63,6 +63,26 @@ export function asLocalizedDateTime(
 	return new Intl.DateTimeFormat(localeCode, dateTimeFormatOptions).format(new Date(date));
 }
 
+/**
+ * Same as `asLocalizedDateTime`, but discarding the time portion of the configured format options.
+ **/
+export function asLocalizedDate(
+	date: string | number | Date,
+	localeCode: string,
+	dateTimeFormatOptions?: GlobalState['uiConfig']['locale']['dateTimeFormatOptions']
+): string {
+	return asLocalizedDateTime(date, localeCode, {
+		...dateTimeFormatOptions,
+		timeStyle: undefined,
+		hour: undefined,
+		minute: undefined,
+		second: undefined,
+		fractionalSecondDigits: undefined,
+		dayPeriod: undefined,
+		timeZoneName: undefined
+	});
+}
+
 export function getUserTimeZone(): string {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }

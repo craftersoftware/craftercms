@@ -43,7 +43,7 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 	const { field, value, setValue, readonly: formReadonly } = props;
 	const siteId = useActiveSiteId();
 	const { authoringBase } = useEnv();
-	const url = `${authoringBase}/api/2/aws/s3/upload.json`;
+	const url = `${authoringBase}/api/2/aws/${siteId}/s3/upload.json`;
 	const fileType = getAwsFileType(value?.url);
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();

@@ -17,7 +17,7 @@
 import React, { useContext } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { ItemContext, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
-import { useAtomValue, useStore as useJotaiStore } from 'jotai/index';
+import { useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import useLocale from '../../../hooks/useLocale';
 import { getFieldAtomValue } from '../lib/formUtils';
 import { ContentItem } from '../../../models';
@@ -39,7 +39,6 @@ import { copyToClipboard } from '../../../utils/system';
 import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
 import MenuOpenIcon from '@mui/icons-material/MenuOpenRounded';
 import { XmlKeys } from '../lib/formConsts';
-import { useAtom } from 'jotai';
 import Collapse from '@mui/material/Collapse';
 import { DraftChip } from '../../DraftChip';
 
@@ -266,13 +265,7 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 									{objectId}
 								</Box>
 								<Tooltip title={<FormattedMessage defaultMessage="Copy ID to clipboard" />}>
-									<IconButton
-										size="small"
-										sx={{ padding: '1px', ml: 1 }}
-										onClick={() =>
-											copyToClipboard(getFieldAtomValue(atoms.valueByFieldId[XmlKeys.modelId], store) as string)
-										}
-									>
+									<IconButton size="small" sx={{ padding: '1px', ml: 1 }} onClick={() => copyToClipboard(objectId)}>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>

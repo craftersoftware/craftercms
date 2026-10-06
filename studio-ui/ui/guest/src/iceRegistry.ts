@@ -239,37 +239,66 @@ export function getMediaDropTargets(type: string): ICERecord[] {
 export function getRecordDropTargets(id: number): ICERecord[] {
 	const record = getById(id);
 	const { index, field, fieldId, model } = getReferentialEntries(record);
-	// With components, the model lookup contains ids of each of the components, in cases like repeat groups and files,
-	// the model lookup contains the actual model of the file/repeat group.
-	const isModelId = model[fieldId]?.every((id) => typeof id === 'string');
 	if (nullOrUndefined(index)) {
 		// Can't move something that's not part of a collection.
 		// Collection items will always have an index.
 		return [];
-	} else if (field.type === 'node-selector' && isModelId) {
+	} else if (field.type === 'node-selector') {
+		// Resolve via extractCollection so nested node-selectors (e.g. inside a repeat
+		// group, fieldId like `repeat_o.ns_o`) work; `model[fieldId]` is always undefined
+		// for compound paths. Component collections are string ids; file selectors are not.
+		const collection = Model.extractCollection(model, fieldId, index);
+		const isModelId = Array.isArray(collection) && collection.every((item) => typeof item === 'string');
+		if (!isModelId) {
+			return getRepeatGroupItemDropTargets(record);
+		}
 		// Get content type of item
 		const models = contentController.getCachedModels();
-		const id = Model.extractCollectionItem(model, fieldId, index);
-		const nestedModel = models[id];
+		const draggedModelId = Model.extractCollectionItem(model, fieldId, index);
+		const nestedModel = models[draggedModelId];
 		const contentType = Model.getContentTypeId(nestedModel);
 		const hierarchyMap = contentController.modelHierarchyMap;
 		const allChildren = [];
+		// Keep the origin zone even when it already contains the item (needed for reorder).
+		const originContainer = findContainerRecord(record.modelId, fieldId, index);
 
-		function flattenChildren(id: string, accum: string[]) {
-			if (hierarchyMap[id].children.length) {
-				accum.push(...hierarchyMap[id].children);
-				hierarchyMap[id].children.forEach((child) => flattenChildren(child, accum));
+		function flattenChildren(modelId: string, accum: string[]) {
+			const children = hierarchyMap[modelId]?.children ?? [];
+			if (children.length) {
+				accum.push(...children);
+				children.forEach((child) => flattenChildren(child, accum));
 			}
 		}
 
-		flattenChildren(id, allChildren);
+		flattenChildren(draggedModelId, allChildren);
 
 		return getContentTypeDropTargets(contentType, (rec) => {
 			// Exclude if it's the current item or a descendant of it (i.e. can't
 			// move an item deeper inside itself).
-			return rec.modelId === id || allChildren.includes(rec.modelId);
+			if (rec.modelId === draggedModelId || allChildren.includes(rec.modelId)) {
+				return true;
+			}
+			// Origin zone always allowed so the item can be reordered in place.
+			if (originContainer && rec.id === originContainer.id) {
+				return false;
+			}
+			const {
+				field: { validations } = {},
+				model: targetModel,
+				fieldId: targetFieldId,
+				index: targetIndex
+			} = getReferentialEntries(rec);
+			const allowDuplicates = validations?.allowDuplicates?.value ?? false;
+			if (allowDuplicates) {
+				return false;
+			}
+			const targetCollection = nullOrUndefined(targetIndex)
+				? Model.value(targetModel, targetFieldId)
+				: Model.extractCollectionItem(targetModel, targetFieldId, targetIndex);
+			// Exclude zones that already hold this instance when duplicates aren't allowed.
+			return Array.isArray(targetCollection) && targetCollection.includes(draggedModelId);
 		});
-	} else if (field.type === 'repeat' || (field.type === 'node-selector' && !isModelId)) {
+	} else if (field.type === 'repeat') {
 		return getRepeatGroupItemDropTargets(record);
 	} else {
 		console.error('[ICERegistry/getRecordDropTargets] Unhandled path');
@@ -680,7 +709,7 @@ export function findContainerRecord(modelId: string, fieldId: string, index: str
 		recordId = exists({
 			modelId: modelId,
 			fieldId: fieldId ?? null,
-			index: parseInt(removeLastPiece(index as string))
+			index: removeLastPiece(String(index))
 		});
 	}
 	return notNullOrUndefined(recordId) ? getById(recordId) : null;
@@ -736,8 +765,7 @@ export function getAllowedContentTypes(): AllowedContentTypesData {
 
 export function subscribeToAllowedContentTypes(
 	observerOrNext:
-		| Partial<Observer<LookupTable<AllowedContentTypesData>>>
-		| ((value: LookupTable<AllowedContentTypesData>) => void)
+		Partial<Observer<LookupTable<AllowedContentTypesData>>> | ((value: LookupTable<AllowedContentTypesData>) => void)
 ): Subscription {
 	return allowedContentTypes$.subscribe(observerOrNext);
 }

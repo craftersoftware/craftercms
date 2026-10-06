@@ -24,6 +24,10 @@ studio.configuration.site.defaultPreviewUrl: ^https?://localhost:8080/?
 studio.configuration.site.defaultAuthoringUrl: ^https?://localhost:8080/studio/?
 # Default GraphQL server URL
 studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
+# Public Studio base URL (including /studio) for generated links such as password recovery emails.
+# Keep this as the externally reachable URL; do not reuse an internal service-to-service Studio URL here.
+# If STUDIO_URL is internal-only, override this property directly with the public URL instead.
+studio.authoring.serverUrl: ${env:STUDIO_URL}
 # Studio management authorization token.
 studio.configuration.management.authorizationToken: ${env:STUDIO_MANAGEMENT_TOKEN}
 # Preview engine management authorization token.
@@ -45,6 +49,8 @@ studio.configuration.management.previewProtectedUrls: >-
 ############################################################
 ##                    Preview Deployer                    ##
 ############################################################
+# Deployer target calls send studio.configuration.management.deployerAuthorizationToken
+# in the X-Crafter-Management-Token header. Do not put the token in these URLs.
 # Default preview deployer URL (can be overridden per site)
 studio.preview.defaultPreviewDeployerUrl: ${env:DEPLOYER_URL}/api/1/target/deploy/{siteEnv}/{siteName}
 # Default preview create target URL (can be overridden per site)
@@ -113,6 +119,10 @@ studio.security.cipher.key: ${env:CRAFTER_SYSTEM_ENCRYPTION_KEY}
 studio.security.encryption.key: ${env:CRAFTER_ENCRYPTION_KEY}
 # The salt used for encryption of configuration properties
 studio.security.encryption.salt: ${env:CRAFTER_ENCRYPTION_SALT}
+# The key used for encryption of preview tokens
+studio.security.preview.token.key: ${env:CRAFTER_PREVIEW_TOKEN_KEY}
+# The salt used for encryption of preview tokens
+studio.security.preview.token.salt: ${env:CRAFTER_PREVIEW_TOKEN_SALT}
 
 # The path of the folder used for the SSH configuration
 studio.security.ssh.config: ${env:CRAFTER_SSH_CONFIG}

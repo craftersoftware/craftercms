@@ -27,11 +27,10 @@ export function list(
 	options: { path?: string; type?: string } = {}
 ): Observable<AwsItem[]> {
 	const qs = toQueryString({
-		siteId,
 		profileId,
 		...options
 	});
-	return get<Api2ResponseFormat<{ items: AwsItem[] }>>(`/studio/api/2/aws/s3/list${qs}`).pipe(
+	return get<Api2ResponseFormat<{ items: AwsItem[] }>>(`/studio/api/2/aws/${siteId}/s3/list${qs}`).pipe(
 		map((response) => response?.response?.items)
 	);
 }

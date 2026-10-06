@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -29,6 +29,7 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 import org.springframework.util.ResourceUtils;
+import org.xml.sax.SAXException;
 
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
@@ -120,6 +121,20 @@ public class XmlFileVersionProvider extends AbstractVersionProvider<String> {
 	}
 
 	/**
+	 * Creates and configures an XML SAX reader with XXE protections.
+	 *
+	 * @return configured SAXReader instance
+	 * @throws SAXException if a security feature cannot be configured
+	 */
+	protected SAXReader createSaxReader() throws SAXException {
+		SAXReader reader = new SAXReader();
+		reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		return reader;
+	}
+
+	/**
 	 * Get the version from the XML file.
 	 * This method assumes the file existence has been checked previously.
 	 *
@@ -130,7 +145,7 @@ public class XmlFileVersionProvider extends AbstractVersionProvider<String> {
 	 */
 	protected String getVersionFromFile(String site, String filePath) throws Exception {
 		try (InputStream is = contentRepository.getContent(site, filePath)) {
-			SAXReader reader = new SAXReader();
+			SAXReader reader = createSaxReader();
 			Document document = reader.read(is);
 
 			String fileVersion = XmlUtils.selectSingleNodeValue(document, xpath);
@@ -149,7 +164,7 @@ public class XmlFileVersionProvider extends AbstractVersionProvider<String> {
 
 		Document document;
 		try (InputStream is = Files.newInputStream(file)) {
-			SAXReader reader = new SAXReader();
+			SAXReader reader = createSaxReader();
 			document = reader.read(is);
 		}
 

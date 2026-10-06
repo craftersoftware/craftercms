@@ -62,7 +62,7 @@ function ExternalAssetUploadDialogBody(props: ExternalAssetUploadDialogBodyProps
 	const siteId = useActiveSiteId();
 	const { authoringBase } = useEnv();
 
-	const url = `${authoringBase}${profileType === 'aws' ? (transcode ? videoTranscodeUri : s3UploadUri) : webDAVUploadUri}`;
+	const url = `${authoringBase}${profileType === 'aws' ? (transcode ? videoTranscodeUri.replace('{siteId}', siteId) : s3UploadUri.replace('{siteId}', siteId)) : webDAVUploadUri.replace('{siteId}', siteId)}`;
 	const onStart = useCallback(() => {
 		onUploadStart?.();
 		updateSubmittingOrHasPendingChanges({ isSubmitting: true });

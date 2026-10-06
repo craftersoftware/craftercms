@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -161,10 +161,21 @@ public interface AccessTokenService {
 		refreshPreviewCookie(authentication, request, response, true);
 	}
 
-	/**
-	 * Deletes the preview cookie
-	 *
-	 * @param response the response
-	 */
-	void deletePreviewCookie(HttpServletResponse response);
+    /**
+     * Deletes the preview cookie
+     *
+     * @param response the response
+     */
+    void deletePreviewCookie(HttpServletResponse response);
+
+    /**
+     * Generates an encrypted preview token for the given sites.
+     * The current user must have the {@code manage_access_token} permission globally or on every requested site.
+     *
+     * @param siteIds the sites the token grants preview access to
+     * @param expiresAt the expiration of the token
+     * @return the encrypted preview token
+     * @throws ServiceLayerException if a site does not exist or the token cannot be encrypted
+     */
+    String generatePreviewToken(List<String> siteIds, Instant expiresAt) throws ServiceLayerException;
 }

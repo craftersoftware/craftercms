@@ -146,6 +146,21 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
 	};
 
+	const onSelectAllDependencies = (checked: boolean) => {
+		if (!checked) {
+			setSelectedDependenciesMap({});
+			return;
+		}
+		if (!dependencyData) return;
+		const next: LookupTable<boolean> = {};
+		dependencyData.items.forEach((item) => {
+			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
+				next[item.path] = true;
+			}
+		});
+		setSelectedDependenciesMap(next);
+	};
+
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 
 	const onApplyDependenciesChanges = () => {
@@ -188,10 +203,8 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 
 	useEffect(() => {
 		if (pkg.id) {
-			if (!mainItems.length) {
-				setState({ fetchingItems: true });
-			}
-			recalculatePackage(siteId, pkg.id, state.publishingTarget).subscribe({
+			setState({ fetchingItems: true });
+			const sub = recalculatePackage(siteId, pkg.id, state.publishingTarget).subscribe({
 				next(calculatedPackage) {
 					const itemsList = [
 						...calculatedPackage.items,
@@ -207,6 +220,7 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 						depMap[path] = 'soft';
 					});
 					setState({ fetchingItems: false });
+					setSelectedDependenciesMap({});
 					setDependencyData({
 						typeByPath: depMap,
 						paths: Object.keys(depMap),
@@ -217,11 +231,13 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 				},
 				error() {
 					setState({ fetchingItems: false });
+					setSelectedDependenciesMap({});
 					setDependencyData(null);
 				}
 			});
+			return () => sub.unsubscribe();
 		}
-	}, [pkg.id, setState, siteId, state.publishingTarget, setDependencyData, mainItems?.length]);
+	}, [pkg.id, setState, siteId, state.publishingTarget, setDependencyData, setSelectedDependenciesMap]);
 
 	return (
 		<>
@@ -269,6 +285,7 @@ export function PublishingPackageResubmitDialogContainer(props: PublishingPackag
 									selectedDependenciesMap={selectedDependenciesMap}
 									trees={trees}
 									onCheckboxChange={onDependencyCheckboxChange}
+									onSelectAllDependencies={onSelectAllDependencies}
 								/>
 								{Boolean(selectedDependenciesPaths.length) && (
 									<Fade in={Boolean(selectedDependenciesPaths?.length)}>

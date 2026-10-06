@@ -21,6 +21,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.Map;
 
 import static org.craftercms.studio.api.v2.dal.QueryParameterNames.REPOSITORY;
+import static org.craftercms.studio.api.v2.dal.QueryParameterNames.SITE_ID;
 
 public interface RemoteRepositoryDAO {
 
@@ -29,9 +30,10 @@ public interface RemoteRepositoryDAO {
 	/**
 	 * Inserts a new remote repository.
 	 *
+	 * @param siteId     the site ID
 	 * @param repository the remote repository to insert
 	 */
-	void insertRemoteRepository(@Param(REPOSITORY) RemoteRepository repository);
+	void insertRemoteRepository(@Param(SITE_ID) String siteId, @Param(REPOSITORY) RemoteRepository repository);
 
 	void deleteRemoteRepository(Map params);
 }

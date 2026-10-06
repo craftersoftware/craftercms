@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,7 +18,6 @@ package org.craftercms.studio.model.rest.workflow;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.craftercms.commons.validation.annotations.param.ValidExistingContentPath;
-import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -29,22 +28,11 @@ import java.util.List;
 public class ItemStatesPostRequestBody {
 
 	@NotEmpty
-	@ValidSiteId
-	private String siteId;
-	@NotEmpty
 	private List<@NotBlank @ValidExistingContentPath String> items;
 
 	@NotNull
 	@JsonUnwrapped
 	private ItemStatesUpdate update;
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
-	}
 
 	public List<String> getItems() {
 		return items;

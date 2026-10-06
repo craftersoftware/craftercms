@@ -82,24 +82,25 @@ def printHelp(cli) {
 def deleteDeployerTarget(siteName) {
 	println 'Deleting Deployer Target...'
 
-	OkHttpClient client = new OkHttpClient()
-	MediaType mediaType = MediaType.parse('application/json')
-	RequestBody body = RequestBody.create('', mediaType)
-	Request request = new Request.Builder()
-		.url("${getDeployerUrl()}/api/1/target/delete/default/${siteName}")
-		.post(body)
-		.addHeader('Content-Type', 'application/json')
-		.build()
-	try {
-		Response response = client.newCall(request).execute()
-		if (response.successful) {
-			println 'Target deleted successfully'
-		} else {
-			println "Error while deleting Target: ${response.message()}"
-		}
-	} catch (IOException e) {
-		e.printStackTrace()
-	}
+    OkHttpClient client = new OkHttpClient()
+    MediaType mediaType = MediaType.parse('application/json')
+    RequestBody body = RequestBody.create('', mediaType)
+    Request request = new Request.Builder()
+            .url("${getDeployerUrl()}/api/1/target/delete/default/${siteName}")
+            .post(body)
+            .addHeader('Content-Type', 'application/json')
+            .addHeader('X-Crafter-Management-Token', getDeployerManagementToken())
+            .build()
+    try {
+        Response response = client.newCall(request).execute()
+        if (response.successful) {
+            println 'Target deleted successfully'
+        } else {
+            println "Error while deleting Target: ${response.message()}"
+        }
+    } catch (IOException e) {
+        e.printStackTrace()
+    }
 }
 
 /**

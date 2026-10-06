@@ -272,6 +272,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 							setChildrenItems([]);
 						}
 					}
+					setSelectedDependenciesMap({});
 					setDependencyData({
 						typeByPath: depMap,
 						paths: Object.keys(depMap),
@@ -282,6 +283,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 				error() {
 					setState({ fetchingItems: false });
 					setIsFetchingItems(false);
+					setSelectedDependenciesMap({});
 					setDependencyData(null);
 					setPackageDependenciesFetchFailed(true);
 				}
@@ -382,6 +384,21 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
 	};
 
+	const onSelectAllDependencies = (checked: boolean) => {
+		if (!checked) {
+			setSelectedDependenciesMap({});
+			return;
+		}
+		if (!dependencyData) return;
+		const next: LookupTable<boolean> = {};
+		dependencyData.items.forEach((item) => {
+			if (dependencyData.typeByPath[item.path] === 'soft' && item.canRequestPublish) {
+				next[item.path] = true;
+			}
+		});
+		setSelectedDependenciesMap(next);
+	};
+
 	const onApplyDependenciesChanges = () => {
 		setPreviousItems(mainItems);
 		// Update the list of mainItems for the dependencies to be re-calculated. Also clear the current set of selected
@@ -462,6 +479,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 											selectedDependenciesMap={selectedDependenciesMap}
 											trees={trees}
 											onCheckboxChange={onDependencyCheckboxChange}
+											onSelectAllDependencies={onSelectAllDependencies}
 											includeChildren={includeChildren}
 											setIncludeChildren={setIncludeChildren}
 										/>

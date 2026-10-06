@@ -26,15 +26,14 @@
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
 
-	<import resource="classpath:crafter/core/core-context.xml"/>
-	<import resource="classpath:crafter/engine/services/profile-context.xml"/>
-	<!-- Spring Security context, optional to avoid conflicts in Studio -->
-	<import resource="classpath*:crafter/engine/services/security-context.xml"/>
-	<import resource="classpath:crafter/engine/services/scripting-context.xml"/>
-	<import resource="classpath:crafter/engine/services/url-transformation-context.xml"/>
-	<import resource="classpath:crafter/engine/services/targeting-context.xml"/>
-	<import resource="classpath:crafter/engine/services/locale-context.xml"/>
-	<import resource="classpath:crafter/engine/services/search-legacy-context.xml"/>
+    <import resource="classpath:crafter/core/core-context.xml"/>
+    <!-- Spring Security context, optional to avoid conflicts in Studio -->
+    <import resource="classpath*:crafter/engine/services/security-context.xml"/>
+    <import resource="classpath:crafter/engine/services/scripting-context.xml"/>
+    <import resource="classpath:crafter/engine/services/url-transformation-context.xml"/>
+    <import resource="classpath:crafter/engine/services/targeting-context.xml"/>
+    <import resource="classpath:crafter/engine/services/locale-context.xml"/>
+    <import resource="classpath:crafter/engine/services/search-legacy-context.xml"/>
 
 	<!-- ////////////////////////////////// -->
 	<!--								 	-->
@@ -42,17 +41,16 @@
 	<!--									-->
 	<!-- ////////////////////////////////// -->
 
-	<bean name="crafter.properties" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
-		<property name="order" value="0"/>
-		<property name="locations">
-			<list>
-				<value>classpath:crafter/core/core.properties</value>
-				<value>classpath:crafter/security/security.properties</value>
-				<value>classpath:crafter/engine/server-config.properties</value>
-			</list>
-		</property>
-		<property name="ignoreUnresolvablePlaceholders" value="true"/>
-	</bean>
+    <bean name="crafter.properties" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+        <property name="order" value="0"/>
+        <property name="locations">
+            <list>
+                <value>classpath:crafter/core/core.properties</value>
+                <value>classpath:crafter/engine/server-config.properties</value>
+            </list>
+        </property>
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+    </bean>
 
 	<!-- ////////////////////////////////// -->
 	<!--								 	-->
@@ -69,6 +67,15 @@
 	 -->
 	<bean id="methodValidationPostProcessor" class="org.springframework.validation.beanvalidation.MethodValidationPostProcessor">
 		<property name="validator" ref="commonValidator"/>
+	</bean>
+
+	<bean class="org.craftercms.commons.spring.InfrastructureConfigurerBean">
+		<property name="beanNames">
+			<list>
+				<value>commonValidator</value>
+				<value>messageSource</value>
+			</list>
+		</property>
 	</bean>
 
 	<!-- Runs after the mode post processors -->
@@ -359,19 +366,26 @@
 	<!--                                    -->
 	<!-- ////////////////////////////////// -->
 
-	<bean id="crafter.textEncryptor" class="org.craftercms.commons.crypto.impl.PbkAesTextEncryptor">
-		<constructor-arg name="password" value="${crafter.security.encryption.key}"/>
-		<constructor-arg name="salt" value="${crafter.security.encryption.salt}"/>
-	</bean>
+    <bean id="crafter.textEncryptor" class="org.craftercms.commons.crypto.impl.PbkAesTextEncryptor">
+        <constructor-arg name="password" value="${crafter.security.encryption.key}"/>
+        <constructor-arg name="salt" value="${crafter.security.encryption.salt}"/>
+    </bean>
+
+    <bean id="crafter.previewTokenEncryptor" class="org.craftercms.commons.crypto.impl.PbkAesTextEncryptor">
+        <constructor-arg name="password" value="${crafter.security.preview.token.key}"/>
+        <constructor-arg name="salt" value="${crafter.security.preview.token.salt}"/>
+		<constructor-arg name="noEncodePrefix" value="${crafter.security.preview.token.prefix}"/>
+    </bean>
 
 	<bean id="crafter.configurationReader" class="org.craftercms.commons.config.EncryptionAwareConfigurationReader">
 		<constructor-arg name="textEncryptor" ref="crafter.textEncryptor"/>
 	</bean>
 
-	<bean id="crafter.pageAccessManager" class="org.craftercms.engine.security.CrafterPageAccessManager">
-		<constructor-arg name="authorizedRolesXPathQuery"
-				 value="${crafter.security.authorization.page.authorizedRoles.xpathQuery}"/>
-	</bean>
+    <bean id="crafter.pageAccessManager" class="org.craftercms.engine.security.CrafterPageAccessManager">
+        <constructor-arg name="securityEnabled" value="${crafter.security.enabled}"/>
+        <constructor-arg name="authorizedRolesXPathQuery"
+                  value="${crafter.security.authorization.page.authorizedRoles.xpathQuery}"/>
+    </bean>
 
 	<!-- ////////////////////////////////// -->
 	<!--								 	-->
@@ -807,38 +821,12 @@
 		<entry key="pluginService" value-ref="crafter.pluginService"/>
 		<entry key="applicationContext" value-ref="crafter.applicationContextAccessor"/>
 
-		<!-- For backwards compatibility only, should not be used anymore -->
-		<entry key="tenantsResolver" value-ref="crafter.tenantsResolver"/>
-	</util:map>
+    </util:map>
 
-	<bean id="crafter.freeMarkerConfigFactory"
-	      class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
-		<property name="targetBeanName" value="crafter.freeMarkerConfig"/>
-	</bean>
-
-	<!-- ////////////////////////////////// -->
-	<!--								 	-->
-	<!--		  Social Services			-->
-	<!--									-->
-	<!-- ////////////////////////////////// -->
-	<bean id="crafter.connectionFactoryLocator"
-	      class="org.craftercms.engine.util.spring.social.ConfigAwareConnectionFactoryLocator">
-		<constructor-arg name="defaultLocator" ref="crafter.defaultConnectionFactoryLocator"/>
-		<constructor-arg name="cacheTemplate" ref="crafter.cacheTemplate"/>
-	</bean>
-
-	<bean id="crafter.defaultConnectionFactoryLocator"
-	      class="org.springframework.social.connect.support.ConnectionFactoryRegistry">
-		<!-- Override to specify default connection factories -->
-	</bean>
-
-	<bean id="crafter.providerLoginSupport"
-	      class="org.craftercms.engine.util.spring.security.profile.SecurityContextAwareProviderLoginSupport">
-		<constructor-arg name="connectionFactoryLocator" ref="crafter.connectionFactoryLocator"/>
-		<constructor-arg name="profileService" ref="crafter.profileServiceRestClient"/>
-		<constructor-arg name="authenticationManager" ref="crafter.profileAuthenticationManager"/>
-		<constructor-arg name="textEncryptor" ref="crafter.textEncryptor"/>
-	</bean>
+    <bean id="crafter.freeMarkerConfigFactory"
+          class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
+        <property name="targetBeanName" value="crafter.freeMarkerConfig"/>
+    </bean>
 
 	<!-- ////////////////////////////////// -->
 	<!--								 	-->

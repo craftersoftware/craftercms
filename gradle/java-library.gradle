@@ -27,6 +27,14 @@ plugins.withType(JavaPlugin).configureEach {
 		withJavadocJar()
 	}
 
+	configurations.configureEach {
+		// OpenSAML 5.2.2+ sets jdk.xml.* attributes on its parser pool that standalone
+		// Xerces does not implement (XERCESJ-1759), so the JDK JAXP parser must win the
+		// DocumentBuilderFactory service lookup. xml-apis only shadows java.xml classes.
+		exclude group: 'xerces', module: 'xercesImpl'
+		exclude group: 'xml-apis', module: 'xml-apis'
+	}
+
 	tasks.withType(JavaCompile).configureEach {
 		options.encoding = 'UTF-8'
 		options.compilerArgs += ['-parameters']

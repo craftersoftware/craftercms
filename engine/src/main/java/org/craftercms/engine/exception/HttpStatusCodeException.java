@@ -16,6 +16,7 @@
 package org.craftercms.engine.exception;
 
 import org.craftercms.core.exception.CrafterException;
+import org.craftercms.core.exception.HttpStatusCodeAwareException;
 import org.springframework.http.HttpStatus;
 
 /**

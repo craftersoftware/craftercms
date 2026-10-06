@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -19,30 +19,16 @@ package org.craftercms.studio.model.rest.content;
 import java.util.List;
 
 import org.craftercms.commons.validation.annotations.param.ValidExistingContentPath;
-import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 
 @JsonIgnoreProperties
 public class GetDeletePackageRequestBody {
 
-	@NotBlank
-	@ValidSiteId
-	private String siteId;
-
 	@NotEmpty
 	private List<@NotEmpty @ValidExistingContentPath String> paths;
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
-	}
 
 	public List<String> getPaths() {
 		return paths;

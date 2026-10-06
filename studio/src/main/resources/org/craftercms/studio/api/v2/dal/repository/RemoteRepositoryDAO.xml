@@ -21,7 +21,6 @@
 <mapper namespace="org.craftercms.studio.api.v2.dal.repository.RemoteRepositoryDAO">
 	<resultMap id="RemoteRepositoryMap" type="org.craftercms.studio.api.v2.dal.repository.RemoteRepository">
 		<id property="id" column="id"/>
-		<result property="siteId" column="site_id"/>
 		<result property="remoteName" column="remote_name"/>
 		<result property="remoteUrl" column="remote_url"/>
 		<result property="authenticationType" column="authentication_type"/>
@@ -38,10 +37,10 @@
 		  AND remote_name = #{remoteName} limit 0, 1
 	</select>
 
-	<insert id="insertRemoteRepository" parameterType="org.craftercms.studio.api.v2.dal.repository.RemoteRepository">
+	<insert id="insertRemoteRepository">
 		INSERT INTO remote_repository (site_id, remote_name, remote_url, authentication_type,
 					       remote_username, remote_password, remote_token, remote_private_key)
-		VALUES (#{repository.siteId}, #{repository.remoteName}, #{repository.remoteUrl}, #{repository.authenticationType}, #{repository.remoteUsername},
+		VALUES (#{siteId}, #{repository.remoteName}, #{repository.remoteUrl}, #{repository.authenticationType}, #{repository.remoteUsername},
 			#{repository.remotePassword}, #{repository.remoteToken}, #{repository.remotePrivateKey})
 	</insert>
 

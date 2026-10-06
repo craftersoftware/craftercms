@@ -31,8 +31,8 @@ export function fetchItemStates(
 	states?: number,
 	options?: PaginationOptions
 ): Observable<PagedArray<ContentItem>> {
-	const qs = toQueryString({ siteId, path, states, ...options });
-	return get(`/studio/api/2/workflow/item_states${qs}`).pipe(
+	const qs = toQueryString({ path, states, ...options });
+	return get(`/studio/api/2/workflow/${siteId}/item_states${qs}`).pipe(
 		map((response) => {
 			const { items, total, offset, limit } = response?.response ?? {};
 			return Object.assign(
@@ -59,8 +59,7 @@ export interface StatesToUpdate {
 }
 
 export function setItemStates(siteId: string, items: string[], { ...rest }: StatesToUpdate): Observable<ApiResponse> {
-	return postJSON('/studio/api/2/workflow/item_states', {
-		siteId,
+	return postJSON(`/studio/api/2/workflow/${siteId}/item_states`, {
 		items: items,
 		...rest
 	}).pipe(map(({ response }) => response));
@@ -72,9 +71,8 @@ export function setItemStatesByQuery(
 	update: StatesToUpdate,
 	path?: string
 ): Observable<ApiResponse> {
-	return postJSON('/studio/api/2/workflow/update_item_states_by_query', {
+	return postJSON(`/studio/api/2/workflow/${siteId}/update_item_states_by_query`, {
 		query: {
-			siteId,
 			...(path && { path }),
 			states
 		},

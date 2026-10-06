@@ -44,9 +44,7 @@
 		<Logger name="software.amazon.awssdk.profiles.internal.ProfileFileReader" level="error"/>
 		<Logger name="org.apache.commons.beanutils.FluentPropertyBeanIntrospector" level="warn"/>
 
-		<Logger name="org.springframework" level="warn"/>
-
-		<Logger name="org.mongodb.driver" level="warn"/>
+        <Logger name="org.springframework" level="warn"/>
 
 		<Logger name="org.tuckey" level="info"/>
 

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { atom } from 'jotai/index';
+import { atom } from 'jotai';
 
 export const ItemNotFoundError = Symbol('ItemNotFoundError');
 export const ContentTypeNotFoundError = Symbol('ContentTypeNotFoundError');

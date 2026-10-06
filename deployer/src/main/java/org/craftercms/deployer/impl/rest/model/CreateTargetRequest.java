@@ -19,6 +19,9 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.NotEmpty;
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+
 /**
  * Holds the parameters to create a Target
  */
@@ -38,8 +41,9 @@ public class CreateTargetRequest {
 		this.siteName = siteName;
 	}
 
-	@JsonUnwrapped
-	private TargetTemplateParams targetTemplateParams;
+    @JsonUnwrapped
+    @Valid
+    private TargetTemplateParams targetTemplateParams;
 
 	public String getEnv() {
 		return env;

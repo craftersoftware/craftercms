@@ -26,10 +26,9 @@ export function list(
 	options: { path?: string; type?: string } = {}
 ): Observable<WebDAVItem[]> {
 	const qs = toQueryString({
-		siteId,
 		profileId,
 		...options
 	});
 
-	return get(`/studio/api/2/webdav/list${qs}`).pipe(map((response) => response?.response?.items));
+	return get(`/studio/api/2/webdav/${siteId}/list${qs}`).pipe(map((response) => response?.response?.items));
 }

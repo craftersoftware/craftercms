@@ -2,16 +2,17 @@ openapi: 3.0.0
 servers:
     - url: 'http://localhost:9191'
 info:
-    description: |-
-        Crafter Deployer API
-    version: '5.0.0'
-    title: Crafter Deployer
-    termsOfService: ''
-    contact:
-        email: info@craftercms.org
-    license:
-        name: GPL 3.0
-        url: 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+  description: |-
+    Crafter Deployer API.<br>
+    Target management operations require the X-Crafter-Management-Token header. The token query parameter is not accepted for those operations. Monitoring operations still authenticate with the token query parameter.
+  version: '5.0.0'
+  title: Crafter Deployer
+  termsOfService: ''
+  contact:
+    email: info@craftercms.org
+  license:
+    name: GPL 3.0
+    url: 'https://www.gnu.org/licenses/gpl-3.0.en.html'
 externalDocs:
     description: CrafterCMS - Deployer
     url: 'https://craftercms.com/docs/current/reference/modules/deployer.html'
@@ -23,710 +24,749 @@ tags:
 
 paths:
 
-    /api/1/target/create:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Create a Crafter Deployer target
-            description: |
-                    Module: Deployer <br>
-                    "Target creation is based on templates. The deployer comes with two out of the box: remote and local. The remote template creates targets that pull changes from a remote Git repository, making it ideal to create targets for delivery environments. The local template instead generates targets that use a local Git repo and the last processed commit to infer the changes, without executing a pull, so it's used mostly to create targets for authoring environments. <br><br> If a target already exists and <b><i>replace</i></b> is true, then the new target will replace the existing one. If <b><i>replace</i></b> is false and the target exists, a 409 is returned."
-            operationId: createTarget
-            requestBody:
-                description: Create target request body
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/CreateTargetRequest'
-                        examples:
-                            simpleExample:
-                                summary: Simple example of the request body
-                                description: "Module: Deployer"
-                                value:
-                                    env: preview
-                                    site_name: my-editorial
-                                    replace: true
-                                    disable_deploy_cron: true
-                                    template_name: local
-                                    repo_url: /opt/crafter/data/repos/sites/my-editorial/sandbox
-                                    engine_url: http://localhost:8080
-                            withNotificationAddresses:
-                                summary: Example of request body with notification addresses
-                                description: "Module: Deployer"
-                                value:
-                                    env: dev
-                                    site_name: my-editorial
-                                    replace: false
-                                    template_name: remote
-                                    repo_url: ssh://crafter@server/opt/crafter/data/repos/sites/my-editorial/published
-                                    repo_username: crafter
-                                    repo_password: crafter
-                                    repo_branch: live
-                                    engine_url: http://localhost:8080
-                                    notification_addresses: admin1@my-editorial.com", "admin2@my-editorial.com
-                            withGitPullOptions:
-                                summary: Example of request body with git pull options
-                                description: "Module: Deployer"
-                                value:
-                                    env: dev
-                                    site_name: my-editorial
-                                    replace: false
-                                    template_name: remote
-                                    repo_url: ssh://crafter@server/opt/crafter/data/repos/sites/my-editorial/published
-                                    repo_username: crafter
-                                    repo_password: crafter
-                                    repo_branch: live
-                                    engine_url: http://localhost:8080
-                                    fast_forward_mode: "FF"
-                                    merge_strategy: "recursive"
-                                    content_merge_option: "THEIRS"
+  /api/1/target/create:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Create a Crafter Deployer target
+      description: |
+              Module: Deployer <br>
+              Target creation is based on templates. The deployer comes with two out of the box: remote and local. The remote template creates targets that pull changes from a remote Git repository, making it ideal to create targets for delivery environments. The local template instead generates targets that use a local Git repo and the last processed commit to infer the changes, without executing a pull, so it’s used mostly to create targets for authoring environments. <br><br> If a target already exists and <b><i>replace</i></b> is true, then the new target will replace the existing one. If <b><i>replace</i></b> is false and the target exists, a 409 is returned.
+      operationId: createTarget
+      parameters:
+        - $ref: '#/components/parameters/ManagementToken'
+      requestBody:
+        description: Create target request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTargetRequest'
+            examples:
+              simpleExample:
+                summary: Simple example of the request body
+                description: "Module: Deployer"
+                value:
+                  env: preview
+                  site_name: my-editorial
+                  replace: true
+                  disable_deploy_cron: true
+                  template_name: local
+                  repo_url: /opt/crafter/data/repos/sites/my-editorial/sandbox
+                  engine_url: http://localhost:8080
+              withNotificationAddresses:
+                summary: Example of request body with notification addresses
+                description: "Module: Deployer"
+                value:
+                  env: dev
+                  site_name: my-editorial
+                  replace: false
+                  template_name: remote
+                  repo_url: ssh://crafter@server/opt/crafter/data/repos/sites/my-editorial/published
+                  repo_username: crafter
+                  repo_password: crafter
+                  repo_branch: live
+                  engine_url: http://localhost:8080
+                  notification_addresses: "admin1@my-editorial.com, admin2@my-editorial.com"
+              withGitPullOptions:
+                summary: Example of request body with git pull options
+                description: "Module: Deployer"
+                value:
+                  env: dev
+                  site_name: my-editorial
+                  replace: false
+                  template_name: remote
+                  repo_url: ssh://crafter@server/opt/crafter/data/repos/sites/my-editorial/published
+                  repo_username: crafter
+                  repo_password: crafter
+                  repo_branch: live
+                  engine_url: http://localhost:8080
+                  fast_forward_mode: "FF"
+                  merge_strategy: "recursive"
+                  content_merge_option: "THEIRS"
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-            responses:
-                '201':
-                    $ref: '#/components/responses/Created'
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '409':
-                    $ref: '#/components/responses/Conflict'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/get/{env}/{site_name}:
+    get:
+      security: []
+      tags:
+        - target
+      summary: Get a Crafter Deployer target.
+      description: "Module: Deployer"
+      operationId: getTarget
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Targets'
+              example:
+                env: dev
+                siteName: editorial
+                id: editorial-dev
+                load_date: 2023-01-26T10:00:01.234-05:00
+                status: INIT_COMPLETED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/get/{env}/{site_name}:
-        get:
-            security: [ ]
-            tags:
-                - target
-            summary: Get a Crafter Deployer target.
-            description: "Module: Deployer"
-            operationId: getTarget
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Targets'
-                            example:
-                                env: dev
-                                siteName: editorial
-                                id: editorial-dev
-                                load_date: 2023-01-26T10:00:1.234-05:00
-                                status: INIT_COMPLETED
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/get-all:
+    get:
+      security: []
+      tags:
+        - target
+      summary: Get all Crafter Deployer targets.
+      description: "Module: Deployer"
+      operationId: getAllTargets
+      parameters:
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Targets'
+              example:
+                - load_date: 2023-03-30T13:24:36.042181-04:00
+                  env: preview
+                  siteName: hi
+                  status: INIT_COMPLETED
+                  id: hi-preview
+                - load_date: 2023-03-31T09:48:48.214383-04:00
+                  env: preview
+                  siteName: third
+                  status: INIT_COMPLETED
+                  id: third-preview
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/get-all:
-        get:
-            security: [ ]
-            tags:
-                - target
-            summary: Get all Crafter Deployer targets.
-            description: "Module: Deployer"
-            operationId: getAllTargets
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/Targets'
-                            example:
-                                - load_date: 2023-03-30T13:24:36.042181-04:00
-                                  env: preview
-                                  siteName: hi
-                                  status: INIT_COMPLETED
-                                  id: hi-preview
-                                - load_date: 2023-03-31T09:48:48.214383-04:00
-                                  env: preview
-                                  siteName: third
-                                  status: INIT_COMPLETED
-                                  id: third-preview
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/delete/{env}/{site_name}:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Delete a Crafter Deployer target.
+      description: "Module: Deployer"
+      operationId: deleteTarget
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '204':
+          description: NO CONTENT
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/delete/{env}/{site_name}:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Delete a Crafter Deployer target.
-            description: "Module: Deployer"
-            operationId: deleteTarget
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '204':
-                    description: NO CONTENT
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/delete-if-exists/{env}/{site_name}:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Delete a Crafter Deployer target if it exists.
+      description: "Module: Deployer"
+      operationId: deleteTargetIfExists
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '204':
+          description: NO CONTENT
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/delete-if-exists/{env}/{site_name}:
-        post:
-            security: []
-            tags:
-                - target
-            summary: Delete a Crafter Deployer target if it exists.
-            description: "Module: Deployer"
-            operationId: deleteTargetIfExists
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '204':
-                    description: NO CONTENT
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
-                '503':
-                    $ref: '#/components/responses/ServiceUnavailable'
+  /api/1/target/deploy/{env}/{site_name}:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Deploy a Crafter Deployer target.
+      description: "Module: Deployer"
+      operationId: deployTarget
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reprocess_all_files:
+                  description: If all files in all the target repos should be reprocessed.
+                  type: boolean
+                from_commit_id:
+                  description: The id of the commit to start processing changes<br><br> <i>Available since version 4.0.0</i>
+                  type: string
+                deployment_mode:
+                  description: "The deployment mode to execute. Possible values: <br> &nbsp;&nbsp;&nbsp;<b>PUBLISH</b>: All processors will run<br> &nbsp;&nbsp;&nbsp;<b>SEARCH_INDEX</b>: Only the indexing processor will run <br><br> <i>Available since version 4.0.0</i>"
+                  type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
-    /api/1/target/deploy/{env}/{site_name}:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Deploy a Crafter Deployer target.
-            description: "Module: Deployer"
-            operationId: deployTarget
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                reprocess_all_files:
-                                    description: If all files in all the target repos should be reprocessed.
-                                    type: boolean
-                                from_commit_id:
-                                    description: The id of the commit to start processing changes<br><br> <i>Available since version 4.0.0</i>
-                                    type: string
-                                deployment_mode:
-                                    description: "The deployment mode to execute. Possible values: <br> nbsp;&nbsp;&nbsp;<b>PUBLISH</b>: All processors will run<br> &nbsp;&nbsp;&nbsp;<b>SEARCH_INDEX</b>: Only the indexing processor will run <br><br> <i>Available since version 4.0.0</i>"
-                                    type: string
-            responses:
-                '202':
-                    description: Accepted
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    message:
-                                        type: string
-                                        example: OK
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/deploy-all:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Deploy all Crafter Deployer targets.
+      description: "Module: Deployer"
+      operationId: deployAllTargets
+      parameters:
+        - $ref: '#/components/parameters/ManagementToken'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reprocess_all_files:
+                  description: If all files in all the target repos should be reprocessed.
+                  type: boolean
+                deployment_mode:
+                  description: "The deployment mode to execute. Possible values: <br> &nbsp;&nbsp;&nbsp;<b>PUBLISH</b>: All processors will run<br> &nbsp;&nbsp;&nbsp;<b>SEARCH_INDEX</b>: Only the indexing processor will run <br><br> <i>Available since version 4.0.0</i>"
+                  type: string
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/deploy-all:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Deploy all Crafter Deployer targets.
-            description: "Module: Deployer"
-            operationId: deployAllTargets
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            properties:
-                                reprocess_all_files:
-                                    description: If all files in all the target repos should be reprocessed.
-                                    type: boolean
-                                deployment_mode:
-                                    description: "The deployment mode to execute. Possible values: <br> &nbsp;&nbsp;&nbsp;<b>PUBLISH</b>: All processors will run<br> &nbsp;&nbsp;&nbsp;<b>SEARCH_INDEX</b>: Only the indexing processor will run <br><br> <i>Available since version 4.0.0</i>"
-                                    type: string
-            responses:
-                '202':
-                    $ref: '#/components/responses/Accepted'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/deployments/get-pending/{env}/{site_name}:
+    get:
+      security: []
+      tags:
+        - target
+      summary: Get the pending deployments for a target.
+      description: "Module: Deployer"
+      operationId: getPendingDeployments
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deployment'
+              example:
+                [
+                  {
+                    "mode": "PUBLISH",
+                    "status": null,
+                    "running": false,
+                    "duration": null,
+                    "start": null,
+                    "end": null,
+                    "target": {
+                      "env": "preview",
+                      "site_name": "ed",
+                      "load_date": "2025-03-10T11:44:03.613404-04:00",
+                      "status": "INIT_COMPLETED",
+                      "id": "ed-preview"
+                    },
+                    "changeSet": {
+                      "created_files": [],
+                      "updated_files": [],
+                      "deleted_files": []
+                    },
+                    "processorExecutions": []
+                  },
+                  {
+                    "mode": "PUBLISH",
+                    "status": null,
+                    "running": false,
+                    "duration": null,
+                    "start": null,
+                    "end": null,
+                    "target": {
+                      "env": "preview",
+                      "site_name": "ed",
+                      "load_date": "2025-03-10T11:44:03.613404-04:00",
+                      "status": "INIT_COMPLETED",
+                      "id": "ed-preview"
+                    },
+                    "changeSet": {
+                      "created_files": [],
+                      "updated_files": [],
+                      "deleted_files": []
+                    },
+                    "processorExecutions": []
+                  },
+                ]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/deployments/get-pending/{env}/{site_name}:
-        get:
-            security: []
-            tags:
-                - target
-            summary: Get the pending deployments for a target.
-            description: "Module: Deployer"
-            operationId: getPendingDeployments
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/Deployment'
-                            example:
-                                [
-                                    {
-                                        "mode": "PUBLISH",
-                                        "status": null,
-                                        "running": false,
-                                        "duration": null,
-                                        "start": null,
-                                        "end": null,
-                                        "target": {
-                                            "env": "preview",
-                                            "site_name": "ed",
-                                            "load_date": "2025-03-10T11:44:03.613404-04:00",
-                                            "status": "INIT_COMPLETED",
-                                            "id": "ed-preview"
-                                        },
-                                        "changeSet": {
-                                            "created_files": [],
-                                            "updated_files": [],
-                                            "deleted_files": []
-                                        },
-                                        "processorExecutions": []
-                                    },
-                                    {
-                                        "mode": "PUBLISH",
-                                        "status": null,
-                                        "running": false,
-                                        "duration": null,
-                                        "start": null,
-                                        "end": null,
-                                        "target": {
-                                            "env": "preview",
-                                            "site_name": "ed",
-                                            "load_date": "2025-03-10T11:44:03.613404-04:00",
-                                            "status": "INIT_COMPLETED",
-                                            "id": "ed-preview"
-                                        },
-                                        "changeSet": {
-                                            "created_files": [],
-                                            "updated_files": [],
-                                            "deleted_files": []
-                                        },
-                                        "processorExecutions": []
-                                    },
-                                ]
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/deployments/get-current/{env}/{site_name}:
+    get:
+      security: []
+      tags:
+        - target
+      summary: Get the current deployment for a target.
+      description: "Module: Deployer"
+      operationId: getCurrentDeployments
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deployment'
+              example:
+                {
+                  "mode": "PUBLISH",
+                  "status": null,
+                  "running": true,
+                  "duration": null,
+                  "start": "2025-03-11T17:07:00.006221-04:00",
+                  "end": null,
+                  "target": {
+                    "env": "default",
+                    "site_name": "ed",
+                    "load_date": "2025-03-11T17:00:09.935316-04:00",
+                    "status": "INIT_COMPLETED",
+                    "id": "ed-default"
+                  },
+                  "changeSet": {
+                    "created_files": [
+                      "/site/website/articles/2023/2/10-tips-to-get-in-shape/index.xml",
+                      "/site/website/articles/2023/2/top-romantic-valentine-movies/index.xml",
+                      "/site/website/articles/2023/3/5-popular-diets-for-women/index.xml",
+                      "/site/website/articles/2023/3/top-clubs-in-virginia/index.xml",
+                      "/site/website/articles/2023/jan/men-styles-for-winter/index.xml",
+                      "/site/website/articles/2023/jan/women-styles-for-winter/index.xml"
+                    ],
+                    "updated_files": [],
+                    "deleted_files": []
+                  },
+                  "processorExecutions": [
+                    {
+                      "processor_name": "gitPullProcessor",
+                      "start": "2025-03-11T17:07:00.006486-04:00",
+                      "end": "2025-03-11T17:07:00.241206-04:00",
+                      "status": "SUCCESS",
+                      "status_details": "Changes successfully pulled from remote repo /Users/craftercms/crafter-authoring/data/repos/sites/ed/published into local repo /Users/craftercms/crafter-delivery/data/repos/sites/ed (merge result with status Fast-forward)",
+                      "running": false
+                    },
+                    {
+                      "processor_name": "gitDiffProcessor",
+                      "start": "2025-03-11T17:07:00.241546-04:00",
+                      "end": "2025-03-11T17:07:00.254525-04:00",
+                      "status": "SUCCESS",
+                      "status_details": "Changes detected and resolved successfully",
+                      "running": false
+                    },
+                    {
+                      "processor_name": "searchIndexingProcessor",
+                      "start": "2025-03-11T17:07:00.255056-04:00",
+                      "end": null,
+                      "status": null,
+                      "status_details": {
+                        "successful_updates": [
+                          "/site/website/articles/2023/2/10-tips-to-get-in-shape/index.xml",
+                          "/site/website/articles/2023/2/top-romantic-valentine-movies/index.xml",
+                          "/site/website/articles/2023/3/5-popular-diets-for-women/index.xml"
+                        ],
+                        "successful_deletes": [],
+                        "failed_updates": [],
+                        "failed_deletes": [],
+                        "successful_updates_and_deletes": 3,
+                        "attempted_updates_and_deletes": 3,
+                        "failed_updates_and_deletes": 0
+                      },
+                      "running": true
+                    }
+                  ]
+                }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/deployments/get-current/{env}/{site_name}:
-        get:
-            security: []
-            tags:
-                - target
-            summary: Get the current deployment for a target.
-            description: "Module: Deployer"
-            operationId: getCurrentDeployments
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Deployment'
-                            example:
-                                {
-                                    "mode": "PUBLISH",
-                                    "status": null,
-                                    "running": true,
-                                    "duration": null,
-                                    "start": "2025-03-11T17:07:00.006221-04:00",
-                                    "end": null,
-                                    "target": {
-                                        "env": "default",
-                                        "site_name": "ed",
-                                        "load_date": "2025-03-11T17:00:09.935316-04:00",
-                                        "status": "INIT_COMPLETED",
-                                        "id": "ed-default"
-                                    },
-                                    "changeSet": {
-                                        "created_files": [
-                                            "/site/website/articles/2023/2/10-tips-to-get-in-shape/index.xml",
-                                            "/site/website/articles/2023/2/top-romantic-valentine-movies/index.xml",
-                                            "/site/website/articles/2023/3/5-popular-diets-for-women/index.xml",
-                                            "/site/website/articles/2023/3/top-clubs-in-virginia/index.xml",
-                                            "/site/website/articles/2023/jan/men-styles-for-winter/index.xml",
-                                            "/site/website/articles/2023/jan/women-styles-for-winter/index.xml"
-                                        ],
-                                        "updated_files": [],
-                                        "deleted_files": []
-                                    },
-                                    "processorExecutions": [
-                                        {
-                                            "processor_name": "gitPullProcessor",
-                                            "start": "2025-03-11T17:07:00.006486-04:00",
-                                            "end": "2025-03-11T17:07:00.241206-04:00",
-                                            "status": "SUCCESS",
-                                            "status_details": "Changes successfully pulled from remote repo /Users/craftercms/crafter-authoring/data/repos/sites/ed/published into local repo /Users/craftercms/crafter-delivery/data/repos/sites/ed (merge result with status Fast-forward)",
-                                            "running": false
-                                        },
-                                        {
-                                            "processor_name": "gitDiffProcessor",
-                                            "start": "2025-03-11T17:07:00.241546-04:00",
-                                            "end": "2025-03-11T17:07:00.254525-04:00",
-                                            "status": "SUCCESS",
-                                            "status_details": "Changes detected and resolved successfully",
-                                            "running": false
-                                        },
-                                        {
-                                            "processor_name": "searchIndexingProcessor",
-                                            "start": "2025-03-11T17:07:00.255056-04:00",
-                                            "end": null,
-                                            "status": null,
-                                            "status_details": {
-                                                "successful_updates": [
-                                                    "/site/website/articles/2023/2/10-tips-to-get-in-shape/index.xml",
-                                                    "/site/website/articles/2023/2/top-romantic-valentine-movies/index.xml",
-                                                    "/site/website/articles/2023/3/5-popular-diets-for-women/index.xml"
-                                                ],
-                                                "successful_deletes": [],
-                                                "failed_updates": [],
-                                                "failed_deletes": [],
-                                                "successful_updates_and_deletes": 3,
-                                                "attempted_updates_and_deletes": 3,
-                                                "failed_updates_and_deletes": 0
-                                            },
-                                            "running": true
-                                        }
-                                    ]
-                                }
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/deployments/get-all/{env}/{site_name}:
+    get:
+      security: []
+      tags:
+        - target
+      summary: Get the current and pending deployments for a target.
+      description: "Module: Deployer"
+      operationId: getAllDeployments
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deployment'
+              example:
+                [
+                  {
+                    "mode": "PUBLISH",
+                    "status": null,
+                    "running": false,
+                    "duration": null,
+                    "start": null,
+                    "end": null,
+                    "target": {
+                      "env": "preview",
+                      "site_name": "ed",
+                      "load_date": "2025-03-10T11:44:03.613404-04:00",
+                      "status": "INIT_COMPLETED",
+                      "id": "ed-preview"
+                    },
+                    "changeSet": {
+                      "created_files": [],
+                      "updated_files": [],
+                      "deleted_files": []
+                    },
+                    "processorExecutions": []
+                  },
+                  {
+                    "mode": "PUBLISH",
+                    "status": null,
+                    "running": false,
+                    "duration": null,
+                    "start": null,
+                    "end": null,
+                    "target": {
+                      "env": "preview",
+                      "site_name": "ed",
+                      "load_date": "2025-03-10T11:44:03.613404-04:00",
+                      "status": "INIT_COMPLETED",
+                      "id": "ed-preview"
+                    },
+                    "changeSet": {
+                      "created_files": [],
+                      "updated_files": [],
+                      "deleted_files": []
+                    },
+                    "processorExecutions": []
+                  },
+                ]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/deployments/get-all/{env}/{site_name}:
-        get:
-            security: []
-            tags:
-                - target
-            summary: Get the current and pending deployments for a target.
-            description: "Module: Deployer"
-            operationId: getAllDeployments
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-            responses:
-                '200':
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/Deployment'
-                            example:
-                                [
-                                    {
-                                        "mode": "PUBLISH",
-                                        "status": null,
-                                        "running": false,
-                                        "duration": null,
-                                        "start": null,
-                                        "end": null,
-                                        "target": {
-                                            "env": "preview",
-                                            "site_name": "ed",
-                                            "load_date": "2025-03-10T11:44:03.613404-04:00",
-                                            "status": "INIT_COMPLETED",
-                                            "id": "ed-preview"
-                                        },
-                                        "changeSet": {
-                                            "created_files": [],
-                                            "updated_files": [],
-                                            "deleted_files": []
-                                        },
-                                        "processorExecutions": []
-                                    },
-                                    {
-                                        "mode": "PUBLISH",
-                                        "status": null,
-                                        "running": false,
-                                        "duration": null,
-                                        "start": null,
-                                        "end": null,
-                                        "target": {
-                                            "env": "preview",
-                                            "site_name": "ed",
-                                            "load_date": "2025-03-10T11:44:03.613404-04:00",
-                                            "status": "INIT_COMPLETED",
-                                            "id": "ed-preview"
-                                        },
-                                        "changeSet": {
-                                            "created_files": [],
-                                            "updated_files": [],
-                                            "deleted_files": []
-                                        },
-                                        "processorExecutions": []
-                                    },
-                                ]
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/unlock/{env}/{site_name}:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Clear git lock of a Crafter Deployer target.
+      description: "Module: Deployer"
+      operationId: unlockTarget
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '200':
+          description: OK
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/unlock/{env}/{site_name}:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Clear git lock of a Crafter Deployer target.
-            description: "Module: Deployer"
-            operationId: unlockTarget
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-                - name: token
-                  in: query
-                  description: The authorization token
-                  required: true
-                  schema:
-                      type: string
-                  example: defaultManagementToken
-            responses:
-                '200':
-                    description: OK
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/recreate/{env}/{site_name}:
+    post:
+      security: []
+      tags:
+        - target
+      summary: Recreate the underlying search index for a Crafter Deployer target.
+      description: "Module: Deployer"
+      operationId: recreateIndex
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example:
+            env: dev
+        - name: site_name
+          in: path
+          description: The target’s project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example:
+            site_name: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    /api/1/target/recreate/{env}/{site_name}:
-        post:
-            security: [ ]
-            tags:
-                - target
-            summary: Recreate the underlying search index for a Crafter Deployer target.
-            description: "Module: Deployer"
-            operationId: recreateIndex
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      env: dev
-                - name: site_name
-                  in: path
-                  description: The target's project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example:
-                      site_name: editorial
-                - name: token
-                  in: query
-                  description: The authorization token
-                  required: true
-                  schema:
-                      type: string
-                  example: defaultManagementToken
-            responses:
-                '202':
-                    $ref: '#/components/responses/Accepted'
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
-
-    /api/1/target/duplicate/{env}/{source_site_name}:
-        post:
-            tags:
-                - target
-            summary: Duplicate a target
-            description: "Module: Deployer"
-            operationId: duplicateTarget
-            parameters:
-                - name: env
-                  in: path
-                  description: The target's environment (e.g. dev).
-                  required: true
-                  schema:
-                      type: string
-                  example: dev
-                - name: source_site_name
-                  in: path
-                  description: The source project/site name (e.g. editorial).
-                  required: true
-                  schema:
-                      type: string
-                  example: editorial
-            requestBody:
-                description: Duplicate target's request body
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/DuplicateTargetRequest'
-            responses:
-                '201':
-                    $ref: '#/components/responses/Created'
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '409':
-                    $ref: '#/components/responses/Conflict'
-                '500':
-                    $ref: '#/components/responses/InternalServerError'
+  /api/1/target/duplicate/{env}/{source_site_name}:
+    post:
+      tags:
+        - target
+      summary: Duplicate a target
+      description: "Module: Deployer"
+      operationId: duplicateTarget
+      parameters:
+        - name: env
+          in: path
+          description: The target’s environment (e.g. dev).
+          required: true
+          schema:
+            type: string
+          example: dev
+        - name: source_site_name
+          in: path
+          description: The source project/site name (e.g. editorial).
+          required: true
+          schema:
+            type: string
+          example: editorial
+        - $ref: '#/components/parameters/ManagementToken'
+      requestBody:
+        description: Duplicate target's request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuplicateTargetRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
     /api/1/monitoring/version:
         get:
             security: [ ]
             tags:
                 - monitoring
-            summary: Get a Crafter Deployer's version details.
+            summary: Get Crafter Deployer's version details.
             description: "Module: Deployer"
             operationId: version
             parameters:
@@ -736,7 +776,7 @@ paths:
                   required: true
                   schema:
                       type: string
-                  example: defaultManagementToken
+                  example: aValidTokenValue
             responses:
                 '200':
                     description: OK
@@ -770,7 +810,7 @@ paths:
             security: []
             tags:
                 - monitoring
-            summary: Get a Crafter Deployer's version details.
+            summary: Get Crafter Deployer's system information details.
             description: "Module: Deployer"
             operationId: sysinfo
             parameters:
@@ -780,7 +820,7 @@ paths:
                   required: true
                   schema:
                       type: string
-                  example: defaultManagementToken
+                  example: aValidTokenValue
             responses:
                 '200':
                     description: OK
@@ -820,13 +860,19 @@ paths:
                                     javaVersion: 17
                                     javaVendor: Oracle Corporation
                                     javaVm: OpenJDK 64-Bit Server VM
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
 
     /api/1/monitoring/status:
         get:
             security: [ ]
             tags:
                 - monitoring
-            summary: Get a Crafter Deployer's status details.
+            summary: Get Crafter Deployer's status details.
             description: "Module: Deployer"
             operationId: status
             parameters:
@@ -836,7 +882,7 @@ paths:
                   required: true
                   schema:
                       type: string
-                  example: defaultManagementToken
+                  example: aValidTokenValue
             responses:
                 '200':
                     description: OK
@@ -867,7 +913,7 @@ paths:
             security: [ ]
             tags:
                 - monitoring
-            summary: Get a Crafter Deployer's memory details.
+            summary: Get Crafter Deployer's memory details.
             description: "Module: Deployer"
             operationId: memory
             parameters:
@@ -877,7 +923,7 @@ paths:
                   required: true
                   schema:
                       type: string
-                  example: defaultManagementToken
+                  example: aValidTokenValue
             responses:
                 '200':
                     description: OK
@@ -919,20 +965,32 @@ paths:
                     $ref: '#/components/responses/InternalServerError'
 
 components:
-    schemas:
-        Targets:
-            type: object
-            properties:
-                env:
-                    type: string
-                siteName:
-                    type: string
-                id:
-                    type: string
-                load_date:
-                    type: string
-                status:
-                    type: string
+  parameters:
+    ManagementToken:
+      name: X-Crafter-Management-Token
+      in: header
+      description: >
+        Management token for Deployer target operations. Send the configured
+        deployer.main.management.authorizationToken value. The token query parameter
+        is not accepted. A request that sends only the query parameter is unauthorized.
+      required: true
+      schema:
+        type: string
+      example: aValidTokenValue
+  schemas:
+    Targets:
+      type: object
+      properties:
+        env:
+          type: string
+        siteName:
+          type: string
+        id:
+          type: string
+        load_date:
+          type: string
+        status:
+          type: string
 
         Deployment:
             type: object
@@ -1056,65 +1114,67 @@ components:
                         example:
                             message: "OK"
 
-        BadRequest:
-            description: Invalid request
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: Required request parameter 'token' for method parameter type String is not present
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Invalid request
 
-        Unauthorized:
-            description: Unauthorized
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: Invalid management token
-        Conflict:
-            description: Conflict
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: Target already exists
-        InternalServerError:
-            description: Internal server error
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: Internal Server Error
+    Unauthorized:
+      description: >
+        Unauthorized. Target operations require a valid X-Crafter-Management-Token header.
+        The token query parameter is not accepted for target operations.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Invalid management token
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Target already exists
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Internal Server Error
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Not available
 
-        ServiceUnavailable:
-            description: Service unavailable
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: Not available
-        Accepted:
-            description: Accepted
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                example: OK
+    Accepted:
+      description: Accepted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: OK

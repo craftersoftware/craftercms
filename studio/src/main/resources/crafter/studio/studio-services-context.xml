@@ -975,6 +975,16 @@
 		<constructor-arg name="configLocation" value="crafter/studio/studio-config.yaml"/>
 	</bean>
 
+	<bean class="org.craftercms.commons.spring.InfrastructureConfigurerBean">
+		<property name="beanNames">
+			<list>
+				<value>studioConfiguration</value>
+				<value>studioTaskExecutor</value>
+				<value>configurationCache</value>
+			</list>
+		</property>
+    </bean>
+
 	<bean id="configurationCache" class="org.craftercms.commons.cache.GuavaCacheFactoryBean">
 		<!-- These properties can't be externalized because the bean is created before the yaml is loaded -->
 		<property name="maxSize" value="100"/>
@@ -1061,6 +1071,12 @@
 	<bean id="crafter.textEncryptor" class="org.craftercms.commons.crypto.impl.PbkAesTextEncryptor">
 		<constructor-arg name="password" value="#{studioConfiguration.getProperty('studio.security.encryption.key')}"/>
 		<constructor-arg name="salt" value="#{studioConfiguration.getProperty('studio.security.encryption.salt')}"/>
+	</bean>
+
+	<bean id="crafter.previewTokenEncryptor" class="org.craftercms.commons.crypto.impl.PbkAesTextEncryptor">
+		<constructor-arg name="password" value="#{studioConfiguration.getProperty('studio.security.preview.token.key')}"/>
+		<constructor-arg name="salt" value="#{studioConfiguration.getProperty('studio.security.preview.token.salt')}"/>
+		<constructor-arg name="noEncodePrefix" value="#{studioConfiguration.getProperty('studio.security.preview.token.prefix')}"/>
 	</bean>
 
 	<bean id="encryptionServiceInternal"
@@ -1202,7 +1218,7 @@
 		<constructor-arg name="siteService" ref="sitesServiceInternal"/>
 		<constructor-arg name="retryingDatabaseOperationFacade" ref="studio.retryingDatabaseOperationFacade"/>
 		<constructor-arg name="systemStatusProvider" ref="bootstrapManager"/>
-		<constructor-arg name="previewTokenEncryptor" ref="crafter.textEncryptor"/>
+		<constructor-arg name="previewTokenEncryptor" ref="crafter.previewTokenEncryptor"/>
 		<constructor-arg name="userService" ref="userServiceInternal"/>
 		<property name="audience" value="#{studioConfiguration.getProperty('studio.security.token.audience')}"/>
 		<property name="refreshTokenCookieManager">
@@ -1239,9 +1255,10 @@
 		</property>
 	</bean>
 
-	<bean id="accessTokenService" class="org.craftercms.studio.impl.v2.service.security.AccessTokenServiceImpl">
-		<constructor-arg name="accessTokenServiceInternal" ref="accessTokenServiceInternal"/>
-	</bean>
+    <bean id="accessTokenService" class="org.craftercms.studio.impl.v2.service.security.AccessTokenServiceImpl">
+        <constructor-arg name="accessTokenServiceInternal" ref="accessTokenServiceInternal"/>
+        <property name="permissionEvaluator" ref="crafter.studioPermissionEvaluator"/>
+    </bean>
 
 	<bean id="cstudioMonitorService" class="org.craftercms.studio.impl.v2.service.monitor.MonitorServiceImpl">
 		<constructor-arg name="monitorServiceInternal" ref="cstudioMonitorServiceInternal"/>

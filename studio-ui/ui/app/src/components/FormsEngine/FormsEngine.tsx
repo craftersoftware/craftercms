@@ -78,11 +78,10 @@ import { pushDialog } from '../../state/actions/dialogStack';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
 import ErrorBoundary from '../ErrorBoundary';
 import { debounceTime } from 'rxjs/operators';
-import { atom, createStore, Provider, useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, createStore, Provider, PrimitiveAtom, useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import useSelection from '../../hooks/useSelection';
 import ApiResponse from '../../models/ApiResponse';
-import { PrimitiveAtom } from 'jotai/index';
 import { AjaxError } from 'rxjs/ajax';
 import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {

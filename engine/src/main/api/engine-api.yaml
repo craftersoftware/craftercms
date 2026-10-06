@@ -410,12 +410,12 @@ paths:
                     in: query
                     description: |-
                       Type of cache.
-                      
+
                       Possible values are:
                       - <b>system</b> : Cache for objects cached by Engine itself.
                       - <b>application</b> : Cache for objects cached by Groovy code.
                         This cache is enabled by specifying the value "crafter_core_applicationCache" in the <b>SPRING_PROFILES_ACTIVE</b> env variable.
-                      
+
                       Default is "system".
                     schema:
                         type: string
@@ -1204,7 +1204,7 @@ paths:
 
     /api/1/site/search/search.json:
         post:
-            security: [ ]
+            security: []
             tags:
                 - search
             summary: Search
@@ -1212,6 +1212,8 @@ paths:
             description: |
                 Module: Engine <br>
                 Performs a search operation in the OpenSearch index of the current site resolved for the request and optional other indexes. See <a class="reference external" href="https://craftercms.com/docs/current/reference/api/search.html#search-multi-index-query" rel="noopener noreferrer" target="_blank">Multi-index Query</a> for more information on performing a multiple index search. <br><br> <i>Note:</i> <br> <i>The request body must be a valid OpenSearch JSON query as described in the</i> <a class="reference external" href="https://opensearch.org/docs/latest/api-reference/search/" rel="noopener noreferrer" target="_blank">official docs</a>
+                <br><br>
+                Restricted keys: object keys that match Engine's <code>crafter.engine.search.restricted.key.patterns</code> (comma-separated regexes; default: <code>script</code>) are not allowed anywhere in the request body, including nested objects and arrays. A matching key returns HTTP 400.
             parameters:
                 -   name: index
                     in: query
@@ -1226,12 +1228,13 @@ paths:
                         type: string
                     example: "my-editorial"
             requestBody:
-                description: User entity to create
+                description: OpenSearch query body. Must not contain restricted keys (see operation description).
                 required: true
                 content:
                     application/json:
                         schema:
                             type: object
+                            additionalProperties: true
                             properties:
                                 _source:
                                     type: string
@@ -1242,7 +1245,7 @@ paths:
                                 query:
                                     type: object
                                     example:
-                                        match_all: { }
+                                        match_all: {}
             responses:
                 '200':
                     description: OK
@@ -1251,31 +1254,41 @@ paths:
                             schema:
                                 type: object
                             example:
-                              {
-                                  "took": 41,
-                                  "timed_out": false,
-                                  "_shards": {
-                                      "total": 5,
-                                      "successful": 5,
-                                      "skipped": 0,
-                                      "failed": 0
-                                  },
-                                  "hits": {
-                                      "total": 28,
-                                      "max_score": 1.0,
-                                      "hits": [
-                                          {
-                                              "_index": "editorial-preview_v1",
-                                              "_type": "_doc",
-                                              "_id": "f4a1af43fed0b4e246abb3a8c7d7323d",
-                                              "_score": 1.0,
-                                              "_source": {
-                                                  "localId": "/site/components/articles-widget/latest-articles-widget.xml"
-                                              }
-                                          }
-                                      ]
-                                  }
-                              }
+                                {
+                                    "took": 41,
+                                    "timed_out": false,
+                                    "_shards": {
+                                        "total": 5,
+                                        "successful": 5,
+                                        "skipped": 0,
+                                        "failed": 0
+                                    },
+                                    "hits": {
+                                        "total": 28,
+                                        "max_score": 1.0,
+                                        "hits": [
+                                        {
+                                            "_index": "editorial-preview_v1",
+                                            "_type": "_doc",
+                                            "_id": "f4a1af43fed0b4e246abb3a8c7d7323d",
+                                            "_score": 1.0,
+                                            "_source": {
+                                            "localId": "/site/components/articles-widget/latest-articles-widget.xml"
+                                            }
+                                        }
+                                        ]
+                                    }
+                                }
+                '400':
+                    description: Invalid request (for example, a restricted key such as script)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: Search request must not contain a 'script' key
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -1630,7 +1643,7 @@ paths:
                     $ref: '#/components/responses/Unauthorized'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
-    
+
     /api/1/monitoring/sysinfo.json:
         get:
             security: []

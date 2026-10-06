@@ -190,7 +190,7 @@ Flow:
 4. Each catalog entry is resolved by `CStudioAuthoring.Utils.form.getPluginInfo`:
    - built-in control: `/static-assets/components/cstudio-forms/controls/<name>.js`
    - built-in DS: `/static-assets/components/cstudio-forms/data-sources/<name>.js`
-   - plugin: `/studio/1/plugin/file?...` assembled from `type`, `name`, `filename`, optional `pluginId`
+   - plugin: `/studio/1/plugin/{siteId}/file?...` assembled from `type`, `name`, `filename`, optional `pluginId`
 5. `CStudioAuthoring.Module.requireModule` injects the script, waits for `moduleLoaded(prefix, Class)`, and caches the class globally in `loadedModules`.
 6. TB instantiates a fake control/DS to introspect behavior:
    - controls: `getName`, `getLabel`, `getSupportedProperties`, `getSupportedConstraints`, `getSupportedPostFixes`, etc.

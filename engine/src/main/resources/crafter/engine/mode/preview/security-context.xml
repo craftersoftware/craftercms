@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+  * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   *
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License version 3 as published by
@@ -16,21 +16,21 @@
   -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="
-       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xsi:schemaLocation="
+	   http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
 	<!-- Add beans & overrides needed to support Targeting -->
 
 	<bean id="crafter.targetingAuthenticationProvider"
-	      class="org.craftercms.engine.util.spring.security.targeting.TargetingAuthenticationProvider">
+		  class="org.craftercms.engine.util.spring.security.targeting.TargetingAuthenticationProvider">
 		<property name="preAuthenticatedUserDetailsService" ref="crafter.preAuthenticatedUserDetailsService"/>
 	</bean>
 
 	<bean id="crafter.targetingAuthenticationFilter"
-	      class="org.craftercms.engine.util.spring.security.targeting.TargetingPreAuthenticatedFilter">
+		  class="org.craftercms.engine.util.spring.security.targeting.TargetingPreAuthenticatedFilter">
 		<property name="invalidateSessionOnPrincipalChange" value="false"/>
 		<property name="authenticationManager" ref="crafter.authenticationManager"/>
 		<property name="authenticationDetailsSource" ref="crafter.defaultDetailsSource"/>
@@ -55,13 +55,13 @@
 	</util:list>
 
 	<bean id="crafter.previewSecurityFilterChain"
-	      class="org.craftercms.engine.util.spring.security.DefaultSecurityFilterChain">
+		  class="org.craftercms.engine.util.spring.security.DefaultSecurityFilterChain">
 		<constructor-arg name="securityEnabled" value="${crafter.security.preview.enabled}"/>
 		<constructor-arg name="urlsToExclude" value="${crafter.security.preview.urlsToExclude}"/>
 		<constructor-arg name="filters">
 			<util:list>
 				<bean class="org.craftercms.engine.util.spring.security.preview.ConfigAwarePreviewAccessTokenFilter">
-					<constructor-arg name="encryptor" ref="crafter.textEncryptor"/>
+					<constructor-arg name="textEncryptor" ref="crafter.previewTokenEncryptor"/>
 					<constructor-arg name="corsConfigSource" ref="crafter.corsConfigSource" />
 					<constructor-arg name="siteNameParam" value="${crafter.engine.request.param.siteName}"/>
 					<constructor-arg name="cookiePath" value="${crafter.security.preview.cookie.path}"/>

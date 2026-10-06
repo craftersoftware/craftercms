@@ -22,7 +22,7 @@ import {
 } from '../../../models/ContentType';
 import FieldChip from './FieldChip';
 import React, { useMemo, useRef, useState } from 'react';
-import { createStore, Provider } from 'jotai/index';
+import { atom, createStore, Provider } from 'jotai';
 import { StableFormContext, StableFormContextProps } from '../../FormsEngine/lib/formsEngineContext';
 import { createStableFormContextProps, createVirtualDataSourceFields, createVirtualSection } from '../utils';
 import ErrorBoundary from '../../ErrorBoundary';
@@ -38,14 +38,15 @@ import { accordionClasses } from '@mui/material/Accordion';
 import Button from '@mui/material/Button';
 import TypeDetailsViewHeader, { TypeDetailsViewHeaderProps } from './TypeDetailsViewHeader';
 import LookupTable from '../../../models/LookupTable';
-import { atom } from 'jotai';
 import SectionInsertionDialog, { SectionInsertionProps } from './SectionInsertionDialog';
 import { defaultDataSourcesSection } from '../descriptors/controls/commonDescriptors';
 import MoveDownIcon from '@mui/icons-material/MoveDown';
 import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
+import { ContentItem } from '../../../models/Item';
 
 export interface TypeDetailsViewProps {
 	type: PossibleContentTypeDraft;
+	contentItem?: ContentItem;
 	fieldPathsWithErrors: LookupTable<boolean>;
 	selectedFieldIdPath: string;
 	onFieldSelected(fieldPath: string, field: ContentTypeField, sectionId: string): void;
@@ -62,6 +63,7 @@ export interface TypeDetailsViewProps {
 export function TypeDetailsView(props: TypeDetailsViewProps) {
 	const {
 		type,
+		contentItem,
 		selectedFieldIdPath,
 		onFieldSelected,
 		fieldPathsWithErrors,
@@ -139,7 +141,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		<ErrorBoundary>
 			<Provider store={store}>
 				<StableFormContext.Provider value={stableFormContextRef.current}>
-					<TypeDetailsViewHeader type={type} onActionClick={onEditTypeAction} />
+					<TypeDetailsViewHeader type={type} contentItem={contentItem} onActionClick={onEditTypeAction} />
 
 					<Box
 						sx={{

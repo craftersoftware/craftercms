@@ -82,7 +82,7 @@ export type FetchPublishingTargetsResponse = Api2ResponseFormat<{
 }>;
 
 export function fetchPublishingTargets(site: string): Observable<FetchPublishingTargetsResponse> {
-	return get<FetchPublishingTargetsResponse>(`/studio/api/2/publish/available_targets?siteId=${site}`).pipe(
+	return get<FetchPublishingTargetsResponse>(`/studio/api/2/publish/${site}/available_targets`).pipe(
 		map((response) => response?.response)
 	);
 }

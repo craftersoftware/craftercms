@@ -132,7 +132,7 @@ Legacy FE plugins do **not** use the modern `PluginDescriptor`/widget registry. 
 </plugin>
 ```
 
-That locator identifies one implementation file through `/studio/1/plugin/file`.
+That locator identifies one implementation file through `/studio/1/plugin/{siteId}/file`.
 
 **FE2** loads the same locator through `importPlugin` and expects a `PluginDescriptor`. Control contributions live on `descriptor.controls` (keyed by `field.type`); DS contributions on `descriptor.dataSources` (keyed by `record.type`). The host registers everything — plugins do not self-register.
 

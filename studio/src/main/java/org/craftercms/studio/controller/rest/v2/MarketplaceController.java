@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -86,17 +86,17 @@ public class MarketplaceController {
 		return result;
 	}
 
-	@GetMapping(value = "/installed", produces = APPLICATION_JSON_VALUE)
-	public ResultList<PluginRecord> getInstalledPlugins(@RequestParam @ValidSiteId String siteId) throws MarketplaceException {
+	@GetMapping(value = "/{siteId}/installed", produces = APPLICATION_JSON_VALUE)
+	public ResultList<PluginRecord> getInstalledPlugins(@PathVariable @ValidSiteId String siteId) throws MarketplaceException {
 		ResultList<PluginRecord> result = new ResultList<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntities(RESULT_KEY_PLUGINS, marketplaceService.getInstalledPlugins(siteId));
 		return result;
 	}
 
-	@PostMapping(value = "/install", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result installPlugin(@Valid @RequestBody InstallPluginRequest request) throws MarketplaceException {
-		marketplaceService.installPlugin(request.getSiteId(), request.getPluginId(), request.getPluginVersion(),
+	@PostMapping(value = "/{siteId}/install", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result installPlugin(@PathVariable @ValidSiteId String siteId, @Valid @RequestBody InstallPluginRequest request) throws MarketplaceException {
+		marketplaceService.installPlugin(siteId, request.getPluginId(), request.getPluginVersion(),
 			request.getParameters());
 
 		Result result = new Result();
@@ -104,8 +104,8 @@ public class MarketplaceController {
 		return result;
 	}
 
-	@GetMapping(value = "/usage", produces = APPLICATION_JSON_VALUE)
-	public ResultList<String> getDependantItems(@RequestParam @ValidSiteId String siteId, @RequestParam String pluginId)
+	@GetMapping(value = "/{siteId}/usage", produces = APPLICATION_JSON_VALUE)
+	public ResultList<String> getDependantItems(@PathVariable @ValidSiteId String siteId, @RequestParam String pluginId)
 		throws ServiceLayerException {
 		ResultList<String> result = new ResultList<>();
 		result.setResponse(ApiResponse.OK);
@@ -113,9 +113,9 @@ public class MarketplaceController {
 		return result;
 	}
 
-	@PostMapping(value = "/remove", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result removePlugin(@Valid @RequestBody RemovePluginRequest request) throws ServiceLayerException {
-		marketplaceService.removePlugin(request.getSiteId(), request.getPluginId(), request.isForce());
+	@PostMapping(value = "/{siteId}/remove", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result removePlugin(@PathVariable @ValidSiteId String siteId, @Valid @RequestBody RemovePluginRequest request) throws ServiceLayerException {
+		marketplaceService.removePlugin(siteId, request.getPluginId(), request.isForce());
 
 		Result result = new Result();
 		result.setResponse(ApiResponse.OK);
@@ -126,21 +126,9 @@ public class MarketplaceController {
 	protected static class RemovePluginRequest {
 
 		@NotEmpty
-		@ValidSiteId
-		protected String siteId;
-
-		@NotEmpty
 		protected String pluginId;
 
 		protected boolean force;
-
-		public String getSiteId() {
-			return siteId;
-		}
-
-		public void setSiteId(String siteId) {
-			this.siteId = siteId;
-		}
 
 		public String getPluginId() {
 			return pluginId;
@@ -160,9 +148,9 @@ public class MarketplaceController {
 
 	}
 
-	@PostMapping(value = "copy", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-	public Result copyPlugin(@Valid @RequestBody CopyPluginRequest request) throws MarketplaceException {
-		marketplaceService.copyPlugin(request.getSiteId(), request.getPath(), request.getParameters());
+	@PostMapping(value = "/{siteId}/copy", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+	public Result copyPlugin(@PathVariable @ValidSiteId String siteId, @Valid @RequestBody CopyPluginRequest request) throws MarketplaceException {
+		marketplaceService.copyPlugin(siteId, request.getPath(), request.getParameters());
 
 		Result result = new Result();
 		result.setResponse(ApiResponse.OK);
@@ -173,22 +161,10 @@ public class MarketplaceController {
 	protected static class CopyPluginRequest {
 
 		@NotEmpty
-		@ValidSiteId
-		protected String siteId;
-
-		@NotEmpty
 		@ValidExistingContentPath
 		protected String path;
 
 		protected Map<String, String> parameters = new HashMap<>();
-
-		public String getSiteId() {
-			return siteId;
-		}
-
-		public void setSiteId(String siteId) {
-			this.siteId = siteId;
-		}
 
 		public String getPath() {
 			return path;

@@ -16,9 +16,9 @@
 package org.craftercms.commons.http;
 
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -31,7 +31,8 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.Strings.CS;
 
 /**
- * Filter that strips specific suffixes from the request path info and forwards the request to the new path.
+ * Filter that strips specific suffixes from the request path, so the rest of the chain sees the request as if it had
+ * been made without the suffix.
  */
 public class SuffixStrippingFilter extends OncePerRequestFilter {
 
@@ -53,9 +54,7 @@ public class SuffixStrippingFilter extends OncePerRequestFilter {
 		if (path != null) {
 			for (String suffix : suffixes) {
 				if (path.endsWith(suffix)) {
-					String newPath = CS.removeEnd(path, suffix);
-					RequestDispatcher dispatcher = request.getRequestDispatcher(newPath);
-					dispatcher.forward(request, response);
+					filterChain.doFilter(new SuffixStrippingRequestWrapper(request, suffix), response);
 					return;
 				}
 			}
@@ -68,5 +67,51 @@ public class SuffixStrippingFilter extends OncePerRequestFilter {
 		String pathInfo = request.getPathInfo();
 		return (pathInfo != null && Stream.of(includedUrls).noneMatch(url -> pathMatcher.match(url, pathInfo)))
 				|| super.shouldNotFilter(request);
+	}
+
+	/**
+	 * Wrapper that hides the suffix from every path accessor, instead of dispatching to the stripped path. A
+	 * {@link jakarta.servlet.RequestDispatcher#forward} cannot be used here because the containers suspend the
+	 * underlying response once the forward returns, which silently discards the body of any filter that buffers the
+	 * response (e.g. {@link org.springframework.web.filter.ShallowEtagHeaderFilter}) and flushes it afterwards.
+	 */
+	private static class SuffixStrippingRequestWrapper extends HttpServletRequestWrapper {
+
+		private final String suffix;
+
+		SuffixStrippingRequestWrapper(final HttpServletRequest request, final String suffix) {
+			super(request);
+			this.suffix = suffix;
+		}
+
+		@Override
+		public String getRequestURI() {
+			return stripSuffix(super.getRequestURI());
+		}
+
+		@Override
+		public StringBuffer getRequestURL() {
+			StringBuffer requestUrl = super.getRequestURL();
+			return requestUrl == null ? null : new StringBuffer(stripSuffix(requestUrl.toString()));
+		}
+
+		@Override
+		public String getServletPath() {
+			return stripSuffix(super.getServletPath());
+		}
+
+		@Override
+		public String getPathInfo() {
+			return stripSuffix(super.getPathInfo());
+		}
+
+		@Override
+		public String getPathTranslated() {
+			return stripSuffix(super.getPathTranslated());
+		}
+
+		private String stripSuffix(final String path) {
+			return path == null ? null : CS.removeEnd(path, suffix);
+		}
 	}
 }
