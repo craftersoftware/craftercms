@@ -38,9 +38,13 @@ export const FORM_CONTROLLER_JS_STUB = `/**
  *   - siteId, contentType, path, mode ('create' | 'edit'), isEmbedded, readonly
  *
  * Prefer declarative field visibility via isFieldRelevant (do not toggle DOM).
- * Repeat item forms reuse this parent context; they do not call initialize again.
- * The host unsubscribes onFieldChange listeners on teardown; returning a cleanup
- * from initialize is still the place for any other resources you open.
+ * isFieldRelevant runs once, before initialize, on a read-only snapshot of the
+ * values as loaded: no setValue, onFieldChange, notify or readonly, and nothing
+ * initialize set up. Repeat item forms do not call it; they reuse the owning
+ * form's deny-list.
+ * The host drops onFieldChange listeners on teardown and then ignores setValue,
+ * onFieldChange and notify. Returning a cleanup from initialize is still the
+ * place for any other resources you open.
  */
 export default {
 	/** Bump only when breaking the host-controller contract. */
@@ -48,7 +52,7 @@ export default {
 
 	/**
 	 * Called once per form that owns a controller (root and embedded children),
-	 * after form atoms/context exist, before fields paint.
+	 * after relevance is resolved, before fields paint.
 	 * May return a cleanup function (or a Promise of one) for unmount / stack pop.
 	 */
 	initialize(ctx) {
@@ -63,8 +67,9 @@ export default {
 
 	/**
 	 * Return false to omit a field from the rendered form (and ToC).
-	 * Evaluated once before first paint; async is allowed (host awaits).
-	 * Repeat stacked forms call this against the parent form's context.
+	 * Runs once before initialize, on the read-only snapshot described above.
+	 * Async is allowed (host awaits). Repeat item forms reuse the owning
+	 * form's deny-list and do not call this.
 	 */
 	isFieldRelevant(field, ctx) {
 		// Example: hide a field in create mode

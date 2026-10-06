@@ -527,7 +527,8 @@ export default {
 		// Hide a legacy field on new items. Runs before `initialize`, on a read-only
 		// snapshot of the values as loaded: no setValue/onFieldChange/notify/readonly, and
 		// nothing `initialize` set up. Parent validation of an unopened embedded component
-		// uses the same snapshot (in `edit` mode), so decide from these inputs only.
+		// uses the same snapshot (in `edit` mode). A commit keeps this session's result,
+		// so a field hidden here stays hidden for the parent. Decide from these inputs only.
 		// Repeat subfields are judged once by the owning form — you cannot tell which repeat item is open. A repeat
 		// subfield is addressed as `<repeatFieldId>.<subFieldId>` on the deny-list.
 		// `file-name` and `internal-name` are never offered here; save requires them.
@@ -613,9 +614,11 @@ Controllers must not import React or reach into DOM for field visibility; releva
 
 #### Relevance and recursive validation
 
-`isFieldRelevant` has one contract for every form. It runs **before** `initialize` and receives a `FormControllerRelevanceContext`: `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, plus `getValues` / `getValue` / `getField` over a snapshot of the values as loaded. There is no `readonly`, and nothing `initialize` sets up is visible. Writes, listeners and notifications are not part of the type; untyped calls to `setValue`, `onFieldChange` or `notify` are ignored with a warning. One factory (`createRelevanceContext`) builds this context for an open form and for a parent validating an embedded component it never opened, so a controller that depends only on these inputs gives the same verdict on both paths.
+`isFieldRelevant` has one contract for every form. It runs **before** `initialize` and receives a `FormControllerRelevanceContext`: `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, plus `getValues` / `getValue` / `getField` over a snapshot of the values as loaded. There is no `readonly`, and nothing `initialize` sets up is visible. Writes, listeners and notifications are not part of the type; untyped calls to `setValue`, `onFieldChange` or `notify` are ignored with a warning. One factory (`createRelevanceContext`) builds this context when a form opens and when a parent validates a component that has not been opened this session.
 
-An existing embedded component is judged in `edit` mode with `isEmbedded: true`, and `path` is the containing item's path, which is what its form reports when opened. Its open form does not recompute: it reuses the verdict cached for the same value object, which is the object the parent validates.
+Relevance is bootstrap-only: it is not run again when values change. An embedded commit keeps that session's deny-list on the values object the parent stores (`rememberCommittedRelevance`). Parent validation uses the list, so a field the child hid — because of the values as loaded, or because the form was in `create` mode — stays out of the parent's validity check after commit. The list is a WeakMap entry, not a field, so spread and the XML serializer never write it. It applies only to the controller object that produced it. Saving `form-controller.js` loads a new controller, and the component is judged again.
+
+An existing component with no stored list (loaded from XML, or just opened) is judged in `edit` mode with `isEmbedded: true`, and `path` is the containing item's path. Opening it starts a new session: the stored list is dropped, and the verdict cached for that value object is what both the form and the parent use until the next commit.
 
 The deny-list stores qualified paths, not bare ids:
 
@@ -624,7 +627,7 @@ The deny-list stores qualified paths, not bare ids:
 
 The owning form resolves top-level fields and one level of repeat subfields in a single pass, then bumps `relevanceVersion` so validation atoms created during bootstrap recompute. A repeat item form does not call `isFieldRelevant` again; it copies that deny-list. Deeper nesting (a repeat inside a repeat) is not addressed individually.
 
-`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through the same snapshot context. Results are memoised per controller object, then per component value identity (values update immutably), then per item path. Saving `form-controller.js` clears the loader cache, the next load yields a new controller object, and its `isFieldRelevant` runs again even for unchanged components. Offered fields come from the same collector the owning form uses (top level plus one repeat level). A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
+`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller. One committed from an open form this session reuses that session's deny-list. One that was never opened is judged through the same snapshot context, in `edit` mode. Fresh results are memoised per controller object, then per component value identity (values update immutably), then per item path. Saving `form-controller.js` clears the loader cache, the next load yields a new controller object, and its `isFieldRelevant` runs again even for unchanged components. Offered fields come from the same collector the owning form uses (top level plus one repeat level). A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
 
 **Lifecycle (repeat vs embedded):**
 
@@ -633,7 +636,7 @@ The owning form resolves top-level fields and one level of repeat subfields in a
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
-The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. Once disposed, the context refuses further host calls: `onFieldChange` returns a no-op unsubscribe without subscribing, and `setValue` is ignored (both warn), so a late `initialize` cannot reach the form that replaced it. There is no cancellation signal for other async work the controller started itself (timers, fetches); controllers that keep working after `initialize`'s first `await` should still guard that work.
+The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. Once disposed, the context refuses further host calls: `onFieldChange` returns a no-op unsubscribe without subscribing, and `setValue` and `notify` are ignored (all three warn), so a late `initialize` cannot reach the form that replaced it. A failed `initialize` disposes that context before the stack entry drops it, with the same teardown as a stack pop. The identity check stays, so the failure cannot clear a controller a replacement attach already installed. There is no cancellation signal for other async work the controller started itself (timers, fetches); controllers that keep working after `initialize`'s first `await` should still guard that work.
 
 #### Integration points in FE2
 
@@ -758,6 +761,8 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-06** — An embedded commit keeps that form session's deny-list on the values object (WeakMap, not XML). Parent validation uses it, so a field hidden at bootstrap or only in `create` mode is not re-judged after commit. Opening the component again starts a new session. A reloaded controller does not reuse the stored list.
+- **2026-10-06** — A failed `initialize` disposes its context before the stack entry drops it, so a continuation cannot `setValue`, `onFieldChange` or `notify`. A disposed context ignores `notify` as well as writes and new listeners.
 - **2026-10-06** — Form-definition writes for a site + type are queued (`queueFormDefinitionWrite`). `setJsControllerEnabled`, `associateTemplate`, `dissociateTemplate` and the Type Builder save each read or build their document at their turn; the Type Builder save applies the latest persisted `<controller>` flag then. Two writers can no longer each read the old definition and drop the other's change.
 - **2026-10-06** — One relevance contract: `isFieldRelevant` runs before `initialize` on a read-only `FormControllerRelevanceContext` (values as loaded, plus `siteId`, `contentType`, `path`, `mode`, `isEmbedded`), built by one factory for open forms and for parent validation of unopened embedded components. An open embedded component reuses the parent's cached verdict for its value object. Writes, listeners and notifications during relevance are ignored with a warning. Path helpers moved to `formControllers/fieldPaths.ts`.
 - **2026-10-06** — Embedded relevance verdicts are cached per controller object, then per component. A reloaded controller re-judges unchanged components instead of reusing the previous code's deny-list. The embedded resolver reuses the owning form's relevance-target collector.

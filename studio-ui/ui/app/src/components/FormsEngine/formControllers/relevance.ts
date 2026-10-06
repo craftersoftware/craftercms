@@ -22,8 +22,9 @@ import { getFieldFromContentType, readValueFromSnapshot } from './fieldPaths';
 import type { FormController, FormControllerMode, FormControllerRelevanceContext } from './types';
 
 // Single relevance contract for every form. `isFieldRelevant` always runs before `initialize`, on a
-// read-only snapshot built by `createRelevanceContext`, whether the form is open or a parent is
-// validating that component unopened. Equal inputs give equal verdicts on both paths.
+// read-only snapshot built by `createRelevanceContext`: once when a form opens, and once when a
+// parent validates a component that was never opened this session. A commit keeps that session's
+// deny-list, so the parent does not judge the new value object again.
 
 /**
  * Save still requires these, so `isFieldRelevant` is never asked to hide them.
@@ -161,12 +162,12 @@ function getComponentRelevanceCache(controller: FormController, component: objec
 
 /**
  * Relevance for an existing embedded component, from that component's own type controller.
- * Used by parent validation and by the component's own form when it opens, so both read the same
- * cached result. An existing component is always judged in `edit` mode, as it would open.
+ * An existing component is always judged in `edit` mode, as it would open.
  * Returns `null` when the type has no controller or no `isFieldRelevant` hook. Those fast paths are
  * not cached: a later load of the controller must still be able to run.
  * An open form passes the `controller` it already loaded, so the verdict comes from the same code
- * its `initialize` runs.
+ * its `initialize` runs. Parent validation of a component this session already committed does not
+ * call this; it uses {@link readCommittedRelevance}.
  */
 export async function resolveComponentRelevance({
 	siteId,
@@ -212,14 +213,64 @@ export async function resolveComponentRelevance({
 }
 
 /**
- * Embedded-component resolver handed to validators. Validation fails open and only logs (inside
- * {@link resolveFieldRelevance}): a snackbar here would fire on every revalidation.
+ * Deny-list from the form session that produced `component`, valid only for that controller object.
+ * A commit stores it so parent validation matches the fields the child showed, including a hide that
+ * depended on `create` mode or on values that have since changed. Relevance
+ * stays bootstrap-only: the parent does not re-run the hook on the committed object.
+ * Not a field value. A WeakMap entry is not copied by spread or written by the XML serializer.
+ * A new controller object (the file was saved) does not match, so the component is judged again.
+ */
+const committedRelevanceByComponent = new WeakMap<object, { controller: FormController; denied: Set<string> }>();
+
+export function rememberCommittedRelevance(component: object, controller: FormController, denied: Set<string>): void {
+	committedRelevanceByComponent.set(component, { controller, denied });
+}
+
+/** Drops a stored list. Opening the component starts a new session, which judges it again. */
+export function forgetCommittedRelevance(component: object): void {
+	committedRelevanceByComponent.delete(component);
+}
+
+/**
+ * The session deny-list when `controller` is the one that produced it.
+ * A different controller object drops the list (the file was saved; judge again).
+ * `controller === null` (the file failed to load just now) still returns the stored list, so a
+ * hidden required field does not become invalid because this validation could not reload the file.
+ */
+export function readCommittedRelevance(component: object, controller: FormController | null): Set<string> | undefined {
+	const entry = committedRelevanceByComponent.get(component);
+	if (!entry) return undefined;
+	if (controller && entry.controller !== controller) {
+		committedRelevanceByComponent.delete(component);
+		return undefined;
+	}
+	return entry.denied;
+}
+
+/**
+ * Embedded-component resolver handed to validators. A component committed from an open form this
+ * session keeps that session's deny-list. Anything else is judged now (edit mode, values as stored).
+ * Validation fails open and only logs (inside {@link resolveFieldRelevance}): a snackbar here would
+ * fire on every revalidation.
  */
 export function createEmbeddedRelevanceResolver(
 	siteId: string
 ): (contentType: ContentType, component: Record<string, unknown>, path?: string) => Promise<Set<string> | null> {
 	return async (contentType, component, path) => {
-		const result = await resolveComponentRelevance({ siteId, contentType, component, path });
+		if (!contentType?.hasJsController) return null;
+		if (component == null || typeof component !== 'object') return null;
+		const loadResult = await loadFormController(siteId, contentType.id);
+		const controller = loadResult.status === 'loaded' ? loadResult.controller : null;
+		// This file no longer hides fields. Drop a list stored for an older controller.
+		if (controller && !controller.isFieldRelevant) {
+			forgetCommittedRelevance(component);
+			return null;
+		}
+		const remembered = readCommittedRelevance(component, controller);
+		// An empty set is a real verdict (nothing hidden). Only a miss is `undefined`.
+		if (remembered !== undefined) return remembered;
+		if (!controller) return null;
+		const result = await resolveComponentRelevance({ siteId, contentType, component, path, controller });
 		return result?.denied ?? null;
 	};
 }

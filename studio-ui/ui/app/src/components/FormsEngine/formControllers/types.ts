@@ -93,7 +93,10 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * After teardown, registering is refused: nothing subscribes and the returned function is a no-op.
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
-	/** Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return. */
+	/**
+	 * Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return.
+	 * Ignored (with a warning) once this context was torn down, including when `initialize` failed.
+	 */
 	notify(message: string, severity?: FormControllerNotifySeverity): void;
 }
 
@@ -118,7 +121,8 @@ export interface FormController {
 	 * Default true. Async allowed — host awaits before first field paint for that form.
 	 * Runs **before** `initialize`, on a {@link FormControllerRelevanceContext} snapshot, so it must not
 	 * rely on anything `initialize` sets up. The same snapshot is used when a parent validates an
-	 * embedded component that was never opened, which is why the verdicts agree.
+	 * embedded component that was never opened. A commit keeps this session's deny-list for the
+	 * values handed back, so the parent does not judge those committed values again.
 	 * Repeat subfields are judged once by the owning form; the repeat item form reuses that result.
 	 */
 	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerRelevanceContext): MaybePromise<boolean>;
