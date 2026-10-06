@@ -98,13 +98,13 @@ import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
 import { processPathMacros } from '@craftercms/studio-ui/utils/path';
-import { uploadDataUrl } from '@craftercms/studio-ui/services/content';
 import { getRequestForgeryToken } from '@craftercms/studio-ui/utils/auth';
 import { ensureSingleSlash } from '@craftercms/studio-ui/utils/string';
 import { getInheritanceParentIdsForField, validateImageRestrictions } from '@craftercms/studio-ui/utils/content';
 import { SearchItem } from '@craftercms/studio-ui/models';
 import type { ImageRestrictions } from '@craftercms/studio-ui/components/ImageEditorDialog/types';
 import { imageEditCancelled, imageEdited, showImageEditorDialog } from '@craftercms/studio-ui/state/actions/dialogs';
+import { uploadDataUrl } from '../../utils/upload';
 
 const createReader$ = (file: File) =>
 	new Observable((subscriber: Subscriber<ProgressEvent<FileReader>>) => {

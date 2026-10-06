@@ -18,7 +18,7 @@ import * as auditService from '../services/audit';
 import * as authService from '../services/auth';
 import * as awsService from '../services/aws';
 import * as configurationService from '../services/configuration';
-import * as contentService from '../services/content';
+import * as contentService from '../services/contentApi';
 import * as contentTypesService from '../services/contentTypes';
 import * as dashboardService from '../services/dashboard';
 import * as dependenciesService from '../services/dependencies';

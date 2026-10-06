@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { errorSelectorApi1, get, getBinary, getGlobalHeaders, getText, post, postJSON, put } from '../utils/ajax';
+import { get, getBinary, getText, post, postJSON, put } from '../utils/ajax';
 import { catchError, map, pluck, switchMap, tap } from 'rxjs/operators';
 import { forkJoin, Observable, of, zip } from 'rxjs';
 import {
@@ -30,11 +30,10 @@ import {
 import { ContentType } from '../models/ContentType';
 import { createLookupTable, nnou, nou, toQueryString } from '../utils/object';
 import { LookupTable } from '../models/LookupTable';
-import { dataUriToBlob, ensureSingleSlash, isBlank, isPath, popPiece, removeLastPiece } from '../utils/string';
+import { ensureSingleSlash, isBlank, isPath, popPiece, removeLastPiece } from '../utils/string';
 import ContentInstance, { InstanceRecord } from '../models/ContentInstance';
 import { AjaxResponse } from 'rxjs/ajax';
 import { ComponentsContentTypeParams, ContentInstancePage } from '../models/Search';
-import { Uppy as Core, XHRUpload } from 'uppy';
 import { getRequestForgeryToken } from '../utils/auth';
 import { ContentItem, LegacyItem } from '../models/Item';
 import { ItemHistoryEntry } from '../models/Version';
@@ -45,7 +44,6 @@ import ApiResponse, { Api2ResponseFormat } from '../models/ApiResponse';
 import { fetchContentTypes } from './contentTypes';
 import { Clipboard } from '../models/GlobalState';
 import { getFileNameFromPath } from '../utils/path';
-import { StandardAction } from '../models/StandardAction';
 import { GetChildrenResponse } from '../models/GetChildrenResponse';
 import { GetItemWithChildrenResponse } from '../models/GetItemWithChildrenResponse';
 import { FetchItemsByPathOptions } from '../models/FetchItemsByPath';
@@ -1048,172 +1046,6 @@ function insertCollectionItem(
 	} else {
 		fieldNode.insertBefore(newItem, itemList[index]);
 	}
-}
-
-export function createFileUpload(
-	uploadUrl: string,
-	file: any,
-	path: string,
-	uploadMeta: (Record<string, unknown> & { site: string }) | Record<string, unknown>,
-	xsrfArgumentName: string = '_csrf'
-): Observable<StandardAction> {
-	const blob = file.blob ?? dataUriToBlob(file.dataUrl);
-	return uploadBlob(
-		(uploadMeta?.site ?? uploadMeta?.siteId) as string,
-		path,
-		{ name: file.name, type: file.type, blob },
-		uploadMeta,
-		uploadUrl,
-		xsrfArgumentName
-	);
-}
-
-// region uploadBlob
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	}
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>,
-	uploadUrl: string
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>,
-	uploadUrl: string,
-	xsrfArgumentName: string
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown> = {},
-	uploadUrl: string = `/studio/api/2/content/${site}`,
-	xsrfArgumentName: string = '_csrf'
-): Observable<StandardAction> {
-	const qs = toQueryString({ [xsrfArgumentName]: getRequestForgeryToken() });
-	return new Observable((subscriber) => {
-		const uppy = new Core({ autoProceed: true });
-
-		uppy.use(XHRUpload, { endpoint: `${uploadUrl}${qs}`, method: 'PUT', headers: getGlobalHeaders() });
-
-		const fullPath = ensureSingleSlash(`${path}/${fileData.name}`);
-		uppy.setMeta({ ...uploadMeta, path: fullPath });
-
-		uppy.on('upload-success', (file, response) => {
-			subscriber.next({ type: 'complete', payload: response });
-			subscriber.complete();
-		});
-
-		uppy.on('upload-progress', (file, progress) => {
-			subscriber.next({ type: 'progress', payload: { file, progress } });
-		});
-
-		uppy.on('upload-error', (file, error, response) => {
-			subscriber.error(Object.assign({}, response, { error: response }));
-		});
-
-		uppy.addFile({ name: fileData.name, type: fileData.type, data: fileData.blob });
-
-		return () => {
-			uppy.cancelAll();
-		};
-	});
-}
-// endregion
-
-export function uploadDataUrl(
-	site: string,
-	file: any,
-	path: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		`/studio/api/2/content/${site}`,
-		file,
-		path,
-		{
-			site,
-			name: file.name,
-			type: file.type,
-			path
-		},
-		xsrfArgumentName
-	);
-}
-
-export function uploadToS3(
-	site: string,
-	file: any,
-	path: string,
-	profileId: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		`/studio/api/2/aws/${site}/s3/upload.json`,
-		file,
-		path,
-		{
-			name: file.name,
-			type: file.type,
-			path,
-			profileId: profileId
-		},
-		xsrfArgumentName
-	);
-}
-
-export function uploadToWebDAV(
-	site: string,
-	file: any,
-	path: string,
-	profileId: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		`/studio/api/2/webdav/${site}/upload`,
-		file,
-		path,
-		{
-			name: file.name,
-			type: file.type,
-			path,
-			profileId: profileId
-		},
-		xsrfArgumentName
-	);
 }
 
 export function getBulkUploadUrl(site: string, path: string): string {

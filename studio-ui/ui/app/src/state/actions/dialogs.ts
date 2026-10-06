@@ -35,11 +35,11 @@ import { CompareVersionsDialogStateProps } from '../../components/CompareVersion
 import { ConfirmDialogStateProps } from '../../components/ConfirmDialog';
 import { ChangeContentTypeDialogStateProps } from '../../components/ChangeContentTypeDialog';
 import { CreateFileStateProps } from '../../components/CreateFileDialog';
-import { UploadDialogStateProps } from '../../components/UploadDialog/util';
+import type { UploadDialogStateProps } from '../../components/UploadDialog/util';
 import { PreviewDialogStateProps } from '../../components/PreviewDialog/utils';
 import { EditSiteDialogStateProps } from '../../components/EditSiteDialog/utils';
 import { LegacyFormDialogStateProps } from '../../components/LegacyFormDialog/utils';
-import { SingleFileUploadDialogStateProps } from '../../components/SingleFileUploadDialog';
+import type { SingleFileUploadDialogStateProps } from '../../components/SingleFileUploadDialog/utils';
 import ContentInstance from '../../models/ContentInstance';
 import type { ContentItem, ContentTypeFieldValidation, LegacyItem } from '../../models';
 import { RenameAssetStateProps } from '../../components/RenameAssetDialog';
