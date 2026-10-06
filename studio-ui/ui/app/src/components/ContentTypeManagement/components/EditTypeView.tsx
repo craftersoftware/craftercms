@@ -182,6 +182,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	if (!stateRef.current) stateRef.current = createContextObject();
 
 	const [type, setType] = useState(() => ({ ...props.type })); // Working copy of the ContentType being edited.
+	const typeRef = useRef(type);
+	typeRef.current = type;
 	const [open, setOpen] = useState(false);
 	const xmlViewerDialogState = useEnhancedDialogState();
 	const [xmlViewerContent, setXmlViewerContent] = useState<string>(undefined);
@@ -245,20 +247,21 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// No form open, nothing to commit. Or, a form was opened but no changes were made.
 		// Derive dirty from the active form's changedFieldIds so commit is not gated on the
 		// background-validation debounce that mirrors formFieldsChanged.
+		const currentType = typeRef.current;
 		if (!open || !activeFormHasChanges()) return;
 		const formContext = stateRef.current.activeFormContext;
 		let updatedType: ContentType;
 		const values = extractAtomValues(jotai, formContext.atoms.valueByFieldId);
 		if (stateRef.current.selectedField) {
 			updatedType = updateTypeFromFieldUpdate(
-				type,
+				currentType,
 				stateRef.current,
 				values,
 				selectedFieldIdPath,
 				configDescriptors.controlDescriptors
 			);
 		} else if (stateRef.current.selectedSection) {
-			updatedType = updateTypeFromSectionUpdate(type, stateRef.current.selectedSection, values);
+			updatedType = updateTypeFromSectionUpdate(currentType, stateRef.current.selectedSection, values);
 		} else if (stateRef.current.selectedDataSource) {
 			const currentDataSource = stateRef.current.selectedDataSource;
 			const descriptor =
@@ -267,10 +270,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				console.error(`No data source descriptor found for type "${currentDataSource.type}"`);
 				return type;
 			}
-			updatedType = updateTypeFromDataSourceUpdate(type, currentDataSource, values, descriptor);
+			updatedType = updateTypeFromDataSourceUpdate(currentType, currentDataSource, values, descriptor);
 		} else {
 			// There's no selected field, section or data source, so assume the type itself is being edited.
-			updatedType = updateTypeProps(type, values as TypePropsToEdit);
+			updatedType = updateTypeProps(currentType, values as TypePropsToEdit);
 		}
 		formContext.changedFieldIds.clear();
 		stateRef.current.formFieldsChanged = false;
@@ -314,7 +317,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	 */
 	const closeAndCleanup = async (): Promise<ContentType | false> => {
 		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
-		const postCloseType = commitOpenFormChanges() ?? type;
+		const postCloseType = commitOpenFormChanges() ?? typeRef.current;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
 		stateRef.current.selectedDataSource = null;
@@ -725,7 +728,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the swap runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); use the committed id for lookup/mutation.
 		const committedFieldId = stateRef.current.selectedField?.id ?? fieldId;
 		const nextType = {
