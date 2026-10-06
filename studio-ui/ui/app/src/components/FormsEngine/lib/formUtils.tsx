@@ -241,7 +241,8 @@ export type ValidatorsData = {
 	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
 	resolveEmbeddedRelevance?: (
 		contentType: ContentType,
-		component: Record<string, unknown>
+		component: Record<string, unknown>,
+		path?: string
 	) => Promise<Set<string> | null>;
 };
 
@@ -1043,7 +1044,6 @@ export function prepareEmbeddedItemForm(props: {
 	siteId: string;
 	contentTypesById?: LookupTable<ContentType>;
 	customControls?: LookupTable<DescriptorContentType>;
-	dispatch: ReduxDispatch;
 }): { atoms: FormsEngineAtoms; values: LookupTable<unknown>; itemMeta: FormsEngineItemMetaContextProps } {
 	const {
 		username,
@@ -1057,8 +1057,7 @@ export function prepareEmbeddedItemForm(props: {
 		affectedPackages,
 		siteId,
 		contentTypesById,
-		customControls,
-		dispatch
+		customControls
 	} = props;
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
@@ -1076,7 +1075,7 @@ export function prepareEmbeddedItemForm(props: {
 	const validatorsData: ValidatorsData = {
 		siteId,
 		contentTypesById,
-		resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+		resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
 	};
 
 	const descriptors = resolveControlDescriptors(customControls);

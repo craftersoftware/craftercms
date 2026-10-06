@@ -16,138 +16,210 @@
 
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
-import type { Dispatch as ReduxDispatch } from 'redux';
-import { retrieveProperty } from '../../../utils/object';
-import { showSystemNotification } from '../../../state/actions/system';
+import { XmlKeys } from '../lib/formConsts';
 import { loadFormController } from './loader';
-import { getFieldFromContentType, parseFieldValuePath, SAVE_MINIMUM_FIELD_IDS } from './runtime';
-import type { FormController, FormControllerContext } from './types';
+import { getFieldFromContentType, readValueFromSnapshot } from './fieldPaths';
+import type { FormController, FormControllerMode, FormControllerRelevanceContext } from './types';
 
-const detachedWriteWarning =
-	'Form controller writes are unavailable while resolving relevance for an embedded component.';
-
-export interface DetachedFormControllerContextArgs {
-	siteId: string;
-	contentType: ContentType;
-	values: Record<string, unknown>;
-	dispatch: ReduxDispatch;
-}
+// Single relevance contract for every form. `isFieldRelevant` always runs before `initialize`, on a
+// read-only snapshot built by `createRelevanceContext`, whether the form is open or a parent is
+// validating that component unopened. Equal inputs give equal verdicts on both paths.
 
 /**
- * Read-only {@link FormControllerContext} over an embedded component's values.
- * Used to resolve that component's own `isFieldRelevant` without opening its form.
- * `setValue` and `onFieldChange` are inert: relevance must not mutate the component.
+ * Save still requires these, so `isFieldRelevant` is never asked to hide them.
+ * A hidden empty `internal-name` would otherwise block save with an alert for a field the author cannot see.
  */
-export function createDetachedFormControllerContext({
+export const SAVE_MINIMUM_FIELD_IDS = new Set<string>([XmlKeys.fileName, XmlKeys.internalName]);
+
+/** Top-level fields plus one level of repeat subfields, addressed by qualified path. */
+export function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
+	const targets: Array<{ path: string; field: ContentTypeField }> = [];
+	for (const field of fields) {
+		if (SAVE_MINIMUM_FIELD_IDS.has(field.id)) continue;
+		targets.push({ path: field.id, field });
+		if (field.type === 'repeat' && field.fields) {
+			for (const subField of Object.values(field.fields)) {
+				if (SAVE_MINIMUM_FIELD_IDS.has(subField.id)) continue;
+				targets.push({ path: `${field.id}.${subField.id}`, field: subField });
+			}
+		}
+	}
+	return targets;
+}
+
+export interface RelevanceContextArgs {
+	siteId: string;
+	contentType: ContentType;
+	/** Values as loaded, before `initialize`. Not copied: the snapshot must not be mutated. */
+	values: Record<string, unknown>;
+	path: string | undefined;
+	mode: FormControllerMode;
+	isEmbedded: boolean;
+}
+
+const relevanceSideEffectWarning =
+	'Form controller isFieldRelevant must not write, subscribe or notify. The call was ignored.';
+
+/**
+ * The only context `isFieldRelevant` ever receives. Typed as {@link FormControllerRelevanceContext};
+ * the inert write/subscribe/notify stubs only exist so untyped controllers get a warning, not a throw.
+ */
+export function createRelevanceContext({
 	siteId,
 	contentType,
 	values,
-	dispatch
-}: DetachedFormControllerContextArgs): FormControllerContext {
-	return {
+	path,
+	mode,
+	isEmbedded
+}: RelevanceContextArgs): FormControllerRelevanceContext {
+	const warn = () => console.warn(relevanceSideEffectWarning);
+	const ctx: FormControllerRelevanceContext = {
 		siteId,
 		contentType,
-		path: undefined,
-		mode: 'edit',
-		isEmbedded: true,
-		readonly: true,
+		path,
+		mode,
+		isEmbedded,
 		getValues() {
 			return { ...values };
 		},
 		getValue(fieldId) {
-			if (Object.prototype.hasOwnProperty.call(values, fieldId)) {
-				return values[fieldId];
-			}
-			const parsed = parseFieldValuePath(fieldId);
-			if (!parsed) return undefined;
-			const root = values[parsed.rootId];
-			if (root == null || typeof root !== 'object') return undefined;
-			try {
-				return retrieveProperty(root as object, parsed.nestedPath);
-			} catch {
-				return undefined;
-			}
-		},
-		setValue() {
-			console.warn(detachedWriteWarning);
+			return readValueFromSnapshot(values, fieldId);
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
-		},
-		onFieldChange() {
-			console.warn(detachedWriteWarning);
-			return () => undefined;
-		},
-		notify(message, severity = 'info') {
-			dispatch(showSystemNotification({ message, options: { variant: severity } }));
 		}
 	};
+	return Object.assign(ctx, {
+		setValue: warn,
+		notify: warn,
+		onFieldChange() {
+			warn();
+			return () => undefined;
+		}
+	});
+}
+
+export interface FieldRelevanceResult {
+	/** Qualified paths the controller rejected. */
+	denied: Set<string>;
+	/** Fields whose hook threw. They fail open (stay visible and validated). */
+	failedCount: number;
 }
 
 /**
- * One entry per component value. Values update immutably, so a new object is a new resolution
- * and an unchanged component is free. WeakMap drops entries when the value is no longer referenced.
+ * Awaits `isFieldRelevant` for each target. A field whose hook throws fails open and is logged;
+ * the caller decides whether to surface `failedCount`.
  */
-const embeddedRelevanceByComponent = new WeakMap<object, Promise<Set<string> | null>>();
-
-async function considerField(
+export async function resolveFieldRelevance(
 	controller: FormController,
-	ctx: FormControllerContext,
-	path: string,
-	field: ContentTypeField,
-	denied: Set<string>
-): Promise<void> {
-	try {
-		const relevant = await controller.isFieldRelevant!(field, ctx);
-		if (relevant === false) denied.add(path);
-	} catch (error) {
-		// Fail open and log only. This runs inside validation, so a snackbar would fire on every revalidation.
-		console.error(
-			`Form controller isFieldRelevant for embedded field "${path}" failed. The field will stay validated.`,
-			error
-		);
-	}
-}
-
-async function resolveEmbeddedFieldPaths(
-	controller: FormController,
-	ctx: FormControllerContext,
-	contentType: ContentType
-): Promise<Set<string>> {
+	ctx: FormControllerRelevanceContext,
+	targets: Array<{ path: string; field: ContentTypeField }>
+): Promise<FieldRelevanceResult> {
 	const denied = new Set<string>();
-	const fields = Object.values(contentType.fields ?? {}).filter((field) => !SAVE_MINIMUM_FIELD_IDS.has(field.id));
+	let failedCount = 0;
 	await Promise.all(
-		fields.map(async (field) => {
-			await considerField(controller, ctx, field.id, field, denied);
-			if (field.type !== 'repeat' || !field.fields) return;
-			const subFields = Object.values(field.fields).filter((subField) => !SAVE_MINIMUM_FIELD_IDS.has(subField.id));
-			await Promise.all(
-				subFields.map((subField) => considerField(controller, ctx, `${field.id}.${subField.id}`, subField, denied))
-			);
+		targets.map(async ({ path, field }) => {
+			try {
+				const relevant = await controller.isFieldRelevant!(field, ctx);
+				if (relevant === false) denied.add(path);
+			} catch (error) {
+				failedCount += 1;
+				console.error(
+					`Form controller isFieldRelevant for field "${path}" failed. The field will remain visible and validated.`,
+					error
+				);
+			}
 		})
 	);
-	return denied;
+	return { denied, failedCount };
 }
 
 /**
- * Resolves the deny-list for an embedded component from that type's own form controller.
- * Returns `null` when the type has no controller or no `isFieldRelevant` hook.
- * Those fast paths are not cached: a later load of the controller must still be able to run.
+ * Keyed by controller, then by component value, then by item path. A controller edit clears the
+ * loader cache and the next load yields a new controller object, so verdicts from the previous code
+ * are never reused. The controller is per site and type, so it also scopes the entry. Values update
+ * immutably, so a new component object is a new resolution and an unchanged one is free.
+ */
+const componentRelevanceByController = new WeakMap<
+	FormController,
+	WeakMap<object, Map<string, Promise<FieldRelevanceResult>>>
+>();
+
+function getComponentRelevanceCache(controller: FormController, component: object) {
+	let byComponent = componentRelevanceByController.get(controller);
+	if (!byComponent) {
+		byComponent = new WeakMap();
+		componentRelevanceByController.set(controller, byComponent);
+	}
+	let byPath = byComponent.get(component);
+	if (!byPath) {
+		byPath = new Map();
+		byComponent.set(component, byPath);
+	}
+	return byPath;
+}
+
+/**
+ * Relevance for an existing embedded component, from that component's own type controller.
+ * Used by parent validation and by the component's own form when it opens, so both read the same
+ * cached result. An existing component is always judged in `edit` mode, as it would open.
+ * Returns `null` when the type has no controller or no `isFieldRelevant` hook. Those fast paths are
+ * not cached: a later load of the controller must still be able to run.
+ * An open form passes the `controller` it already loaded, so the verdict comes from the same code
+ * its `initialize` runs.
+ */
+export async function resolveComponentRelevance({
+	siteId,
+	contentType,
+	component,
+	path,
+	controller: loadedController
+}: {
+	siteId: string;
+	contentType: ContentType;
+	component: Record<string, unknown>;
+	path: string | undefined;
+	controller?: FormController;
+}): Promise<FieldRelevanceResult | null> {
+	if (!contentType?.hasJsController) return null;
+	if (component == null || typeof component !== 'object') return null;
+	let controller = loadedController;
+	if (!controller) {
+		const loadResult = await loadFormController(siteId, contentType.id);
+		if (loadResult.status !== 'loaded') return null;
+		controller = loadResult.controller;
+	}
+	if (!controller.isFieldRelevant) return null;
+	const byPath = getComponentRelevanceCache(controller, component);
+	const pathKey = path ?? '';
+	const cached = byPath.get(pathKey);
+	if (cached) return cached;
+	const ctx = createRelevanceContext({
+		siteId,
+		contentType,
+		values: component,
+		path: path || undefined,
+		mode: 'edit',
+		isEmbedded: true
+	});
+	const pending = resolveFieldRelevance(
+		controller,
+		ctx,
+		collectRelevanceTargets(Object.values(contentType.fields ?? {}))
+	);
+	byPath.set(pathKey, pending);
+	return pending;
+}
+
+/**
+ * Embedded-component resolver handed to validators. Validation fails open and only logs (inside
+ * {@link resolveFieldRelevance}): a snackbar here would fire on every revalidation.
  */
 export function createEmbeddedRelevanceResolver(
-	siteId: string,
-	dispatch: ReduxDispatch
-): (contentType: ContentType, component: Record<string, unknown>) => Promise<Set<string> | null> {
-	return async (contentType, component) => {
-		if (!contentType?.hasJsController) return null;
-		if (component == null || typeof component !== 'object') return null;
-		const loadResult = await loadFormController(siteId, contentType.id);
-		if (loadResult.status !== 'loaded' || !loadResult.controller.isFieldRelevant) return null;
-		const cached = embeddedRelevanceByComponent.get(component);
-		if (cached) return cached;
-		const ctx = createDetachedFormControllerContext({ siteId, contentType, values: component, dispatch });
-		const pending = resolveEmbeddedFieldPaths(loadResult.controller, ctx, contentType);
-		embeddedRelevanceByComponent.set(component, pending);
-		return pending;
+	siteId: string
+): (contentType: ContentType, component: Record<string, unknown>, path?: string) => Promise<Set<string> | null> {
+	return async (contentType, component, path) => {
+		const result = await resolveComponentRelevance({ siteId, contentType, component, path });
+		return result?.denied ?? null;
 	};
 }

@@ -466,7 +466,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				const validatorsData = {
 					siteId,
 					contentTypesById,
-					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
 				};
 				const atomValueCreator: Parameters<typeof createParsedValuesObject>[3] = (fieldId, value, isAdditional) => {
 					setFieldAtoms(
@@ -564,8 +564,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						parentPathInSite,
 						siteId,
 						contentTypesById: effectRefs.current.contentTypesById,
-						customControls,
-						dispatch
+						customControls
 					});
 					initializeState(requirements.atoms, requirements.values, requirements.itemMeta, failures);
 				});
@@ -611,7 +610,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				const validatorsData = {
 					siteId,
 					contentTypesById,
-					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
 				};
 				const values = createParsedValuesObject(
 					contentType.fields,
@@ -711,7 +710,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						const validatorsData = {
 							siteId,
 							contentTypesById: effectRefs.current.contentTypesById,
-							resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId, dispatch)
+							resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
 						};
 						const values = createParsedValuesObject(
 							requirements.contentType.fields,

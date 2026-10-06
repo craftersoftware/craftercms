@@ -36,6 +36,15 @@ import { extractAtomValues } from '../lib/formUtils';
 import type { PrimitiveAtom } from 'jotai';
 import { retrieveProperty, setProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
+import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
+import {
+	collectRelevanceTargets,
+	createRelevanceContext,
+	resolveComponentRelevance,
+	resolveFieldRelevance,
+	SAVE_MINIMUM_FIELD_IDS,
+	type FieldRelevanceResult
+} from './relevance';
 
 type FormControllerFormProps = Pick<FormsEngineProps, 'create' | 'update' | 'repeat' | 'fieldsToRender'>;
 
@@ -61,7 +70,15 @@ export interface CreateFormControllerContextArgs {
 	dispatch: ReduxDispatch;
 	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
 	fieldChangeUnsubscribers: Set<() => void>;
+	/**
+	 * True once this context's form state was torn down or superseded. A pending `initialize` can
+	 * still hold the context, so writes and new listeners must be refused rather than reach the
+	 * stack entry's shared atoms and `fieldUpdates$`.
+	 */
+	isDisposed: () => boolean;
 }
+
+const disposedContextWarning = 'Form controller context is no longer attached to a form; the call was ignored.';
 
 /**
  * Builds the narrow {@link FormControllerContext} host API for a type-local form controller.
@@ -76,7 +93,8 @@ export function createFormControllerContext({
 	isEmbedded,
 	fieldUpdates$,
 	dispatch,
-	fieldChangeUnsubscribers
+	fieldChangeUnsubscribers,
+	isDisposed
 }: CreateFormControllerContextArgs): FormControllerContext {
 	const readValue = (fieldId: string): unknown => {
 		if (fieldId === XmlKeys.fileName && atoms.fileName) {
@@ -125,6 +143,10 @@ export function createFormControllerContext({
 		},
 		getValue: readValue,
 		setValue(fieldId, value) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return;
+			}
 			if (fieldId === XmlKeys.fileName && atoms.fileName) {
 				// `file-name` is stored twice: the dedicated atom the save path reads, and the
 				// field value atom `getValues` / `onSave` see. The dedicated atom's writer mirrors
@@ -168,7 +190,12 @@ export function createFormControllerContext({
 			return getFieldFromContentType(contentType, fieldId);
 		},
 		onFieldChange(listener) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return () => undefined;
+			}
 			const subscription = fieldUpdates$.subscribe((fieldId) => {
+				if (isDisposed()) return;
 				listener(fieldId, readValue(fieldId));
 			});
 			const unsubscribe = () => {
@@ -189,35 +216,7 @@ export function createFormControllerContext({
 	};
 }
 
-/**
- * Looks up a field definition, walking nested `.fields` and skipping numeric (repeat index) segments.
- */
-export function getFieldFromContentType(contentType: ContentType, fieldId: string): ContentTypeField | undefined {
-	if (!fieldId.includes('.')) {
-		return contentType.fields[fieldId];
-	}
-	const segments = fieldId.split('.').filter((segment) => segment !== '' && !/^\d+$/.test(segment));
-	if (!segments.length) {
-		return undefined;
-	}
-	let current: ContentTypeField | undefined = contentType.fields[segments[0]];
-	for (let i = 1; i < segments.length && current; i++) {
-		current = current.fields?.[segments[i]];
-	}
-	return current;
-}
-
-export function parseFieldValuePath(fieldId: string): { rootId: string; nestedPath: string } | null {
-	if (!fieldId.includes('.')) {
-		return null;
-	}
-	const segments = fieldId.split('.');
-	if (segments.length < 2 || segments.some((segment) => segment === '')) {
-		return null;
-	}
-	const [rootId, ...rest] = segments;
-	return { rootId, nestedPath: rest.join('.') };
-}
+export { getFieldFromContentType, parseFieldValuePath };
 
 function canSetNestedProperty(root: object, nestedPath: string): boolean {
 	const segments = nestedPath.split('.');
@@ -289,76 +288,24 @@ export function isFieldPathIrrelevant(
 	return irrelevantFieldPaths.has(parentPath ? `${parentPath}.${fieldId}` : fieldId);
 }
 
-/**
- * Save still requires these, so `isFieldRelevant` is never asked to hide them.
- * A hidden empty `internal-name` would otherwise block save with an alert for a field the author cannot see.
- */
-export const SAVE_MINIMUM_FIELD_IDS = new Set<string>([XmlKeys.fileName, XmlKeys.internalName]);
-
-/** Top-level fields plus one level of repeat subfields, addressed by qualified path. */
-function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
-	const targets: Array<{ path: string; field: ContentTypeField }> = [];
-	for (const field of fields) {
-		if (SAVE_MINIMUM_FIELD_IDS.has(field.id)) continue;
-		targets.push({ path: field.id, field });
-		if (field.type === 'repeat' && field.fields) {
-			for (const subField of Object.values(field.fields)) {
-				if (SAVE_MINIMUM_FIELD_IDS.has(subField.id)) continue;
-				targets.push({ path: `${field.id}.${subField.id}`, field: subField });
-			}
-		}
-	}
-	return targets;
-}
-
-/**
- * Awaits `isFieldRelevant` for each field (and one level of repeat subfields) and returns the
- * qualified paths the controller rejected.
- *
- * Returns `null` when there is no relevance hook (caller should not filter). On rejection/error for
- * a single field, that field stays visible (not added to the deny-list).
- */
-export async function resolveIrrelevantFieldIds(
-	fields: ContentTypeField[],
-	controller: FormController | null | undefined,
-	ctx: FormControllerContext | null | undefined,
+function notifyRelevanceFailures(
+	failedCount: number,
 	dispatch: ReduxDispatch,
 	formatMessage: IntlShape['formatMessage']
-): Promise<Set<string> | null> {
-	if (!controller?.isFieldRelevant || !ctx) {
-		return null;
-	}
-	let failedCount = 0;
-	const results = await Promise.all(
-		collectRelevanceTargets(fields).map(async ({ path, field }) => {
-			try {
-				const relevant = await controller.isFieldRelevant!(field, ctx);
-				return [path, relevant !== false] as const;
-			} catch (error) {
-				failedCount += 1;
-				console.error(
-					`Form controller isFieldRelevant for field "${path}" failed. The field will remain visible.`,
-					error
-				);
-				return [path, true] as const;
-			}
+): void {
+	if (!failedCount) return;
+	dispatch(
+		showSystemNotification({
+			message: formatMessage(
+				{
+					defaultMessage:
+						'{count, plural, one {Form controller isFieldRelevant failed for # field. That field will remain visible.} other {Form controller isFieldRelevant failed for # fields. Those fields will remain visible.}}'
+				},
+				{ count: failedCount }
+			),
+			options: { variant: 'error' }
 		})
 	);
-	if (failedCount > 0) {
-		dispatch(
-			showSystemNotification({
-				message: formatMessage(
-					{
-						defaultMessage:
-							'{count, plural, one {Form controller isFieldRelevant failed for # field. That field will remain visible.} other {Form controller isFieldRelevant failed for # fields. Those fields will remain visible.}}'
-					},
-					{ count: failedCount }
-				),
-				options: { variant: 'error' }
-			})
-		);
-	}
-	return new Set(results.filter(([, relevant]) => !relevant).map(([id]) => id));
 }
 
 /**
@@ -373,8 +320,25 @@ function collectFieldsForRelevance(contentType: ContentType, formProps: FormCont
 const commonInitErrorMsg = 'The form will proceed as though no custom type controller exists.';
 
 /**
- * Loads the type's form controller (if gated by `hasJsController`), builds context, awaits
- * `initialize`, resolves field relevance, and stores controller + cleanup on the stack entry.
+ * Snapshot of the form's values as loaded, before `initialize` can write to them.
+ * Same shape the embedded path reads from the parent's component object.
+ */
+function snapshotFormValues(store: JotaiStore, atoms: FormsEngineAtoms): Record<string, unknown> {
+	const values = extractAtomValues(store, atoms.valueByFieldId);
+	if (atoms.fileName) {
+		values[XmlKeys.fileName] = store.get(atoms.fileName);
+	}
+	return values;
+}
+
+/**
+ * Loads the type's form controller (if gated by `hasJsController`), resolves field relevance on a
+ * read-only snapshot, then builds the live context, awaits `initialize`, and stores controller +
+ * cleanup on the stack entry.
+ *
+ * Relevance runs **before** `initialize` and never sees the live context, so an open form and a
+ * parent validating that same component unopened give `isFieldRelevant` identical inputs. An open
+ * embedded component reuses the verdict parent validation cached for its value object.
  *
  * Repeat stacked forms do **not** own a controller: they copy the owning form's already-resolved
  * deny-list (including that form's repeat subfields) and do not call `isFieldRelevant` again.
@@ -421,6 +385,52 @@ export async function attachFormController(args: {
 	const controller = loadResult.controller;
 	const mode = resolveFormControllerMode(formProps);
 	const isEmbedded = Boolean(formProps.create?.embedded || formProps.update?.modelId);
+	const path = stackEntry.itemMeta?.path || undefined;
+
+	if (controller.isFieldRelevant) {
+		let result: FieldRelevanceResult | null = null;
+		try {
+			// An existing embedded component opens with the same value object its parent validates.
+			const component = formProps.update?.modelId ? formProps.update.values : undefined;
+			result =
+				component && typeof component === 'object'
+					? await resolveComponentRelevance({ siteId, contentType, component, path, controller })
+					: await resolveFieldRelevance(
+							controller,
+							createRelevanceContext({
+								siteId,
+								contentType,
+								values: snapshotFormValues(store, stackEntry.atoms),
+								path,
+								mode,
+								isEmbedded
+							}),
+							collectRelevanceTargets(collectFieldsForRelevance(contentType, formProps))
+						);
+		} catch (error) {
+			console.error(
+				`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
+				error
+			);
+			dispatch(
+				showSystemNotification({
+					message: formatMessage(
+						{
+							defaultMessage:
+								'Form controller field relevance for "{contentTypeId}" failed. All fields will remain visible.'
+						},
+						{ contentTypeId: contentType.id }
+					),
+					options: { variant: 'error' }
+				})
+			);
+		}
+		// Nothing is committed yet, so a superseded attach has nothing to tear down.
+		if (stale()) return;
+		notifyRelevanceFailures(result?.failedCount ?? 0, dispatch, formatMessage);
+		state.irrelevantFieldPaths = result?.denied ?? null;
+	}
+
 	const ctx = createFormControllerContext({
 		siteId,
 		store,
@@ -431,7 +441,10 @@ export async function attachFormController(args: {
 		isEmbedded,
 		fieldUpdates$: stackEntry.fieldUpdates$,
 		dispatch,
-		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers
+		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers,
+		// Not `stale()`: a remounted drawer slot restores this stack entry without re-attaching, so its
+		// context stays live. A superseded prep re-attaches, and that attach disposes this state.
+		isDisposed: () => state.disposed
 	});
 
 	// Commit before `initialize` so stack pop or a replacement attach can reach listeners the
@@ -439,6 +452,8 @@ export async function attachFormController(args: {
 	state.controller = controller;
 	state.context = ctx;
 	stackEntry.formControllerState = state;
+	// Validation atoms may already have been read during bootstrap, before this deny-list existed.
+	store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
 
 	let ownCleanup: (() => void) | null = null;
 	try {
@@ -463,6 +478,8 @@ export async function attachFormController(args: {
 		// Disposal already tore this entry down. Do not clear a controller a replacement attach installed.
 		if (!state.disposed && stackEntry.formControllerState === state) {
 			stackEntry.formControllerState = null;
+			// Proceeding without the controller also drops its deny-list.
+			store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
 		}
 		return;
 	}
@@ -474,38 +491,6 @@ export async function attachFormController(args: {
 		return;
 	}
 	state.cleanup = ownCleanup;
-
-	const fields = collectFieldsForRelevance(contentType, formProps);
-	try {
-		state.irrelevantFieldPaths = await resolveIrrelevantFieldIds(fields, controller, ctx, dispatch, formatMessage);
-	} catch (error) {
-		console.error(
-			`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
-			error
-		);
-		dispatch(
-			showSystemNotification({
-				message: formatMessage(
-					{
-						defaultMessage:
-							'Form controller field relevance for "{contentTypeId}" failed. All fields will remain visible.'
-					},
-					{ contentTypeId: contentType.id }
-				),
-				options: { variant: 'error' }
-			})
-		);
-		state.irrelevantFieldPaths = null;
-	}
-	if ((stale() || state.disposed) && stackEntry.formControllerState === state) {
-		runFormControllerCleanup(stackEntry);
-		stackEntry.formControllerState = null;
-		return;
-	}
-	// Validation atoms may already have been read during bootstrap, before this deny-list existed.
-	if (stackEntry.formControllerState === state) {
-		store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
-	}
 }
 
 /**

@@ -30,50 +30,67 @@ export type FormControllerNotifySeverity = 'info' | 'success' | 'warning' | 'err
 export type FormControllerSaveResult = boolean | { ok: boolean; message?: string };
 
 /**
- * Narrow host API over FE2 form state for type-local `form-controller.js` modules.
- * Controllers must not import React or reach into the DOM for field visibility;
- * use `isFieldRelevant` instead.
+ * Read-only snapshot passed to `isFieldRelevant`. It is the same for an open form and for a parent
+ * validating that component without opening it, so a verdict may depend only on these inputs:
+ * the values as loaded (before `initialize`), the type, and how the form opens.
+ * No `readonly`, no writes, no listeners, no notifications, and no state set up by `initialize`.
  */
-export interface FormControllerContext {
+export interface FormControllerRelevanceContext {
 	/** Active site id for site-scoped reads/writes from the controller. */
 	siteId: string;
 	/** Content type definition for the form this controller is attached to. */
 	contentType: ContentType;
-	/** Live item path when editing an existing item; `undefined` in create (and some stacked) modes. */
+	/**
+	 * Item path when editing an existing item; `undefined` in create (and some stacked) modes.
+	 * An embedded component reports the path of the item that contains it.
+	 */
 	readonly path: string | undefined;
-	/** How the form was opened: create or edit. Combine with `isEmbedded` for embedded create/edit. */
+	/**
+	 * How the form was opened: create or edit. Combine with `isEmbedded` for embedded create/edit.
+	 * An existing embedded component is always `edit`, the way it opens from its parent.
+	 */
 	mode: FormControllerMode;
 	/** True when this form is an embedded component (stacked or root). */
 	isEmbedded: boolean;
-	/** Live read of the form's readonly atom; true when the form is view-only. */
-	readonly: boolean;
 	/**
-	 * Returns a snapshot of all current field values keyed by top-level field id.
+	 * Returns a snapshot of all field values keyed by top-level field id.
 	 * Repeat groups appear as arrays of item objects (not flattened paths).
 	 * `file-name` is the dedicated file-name atom (same as {@link getValue}).
 	 */
 	getValues(): Record<string, unknown>;
 	/**
-	 * Returns the current value for a field id.
+	 * Returns the value for a field id.
 	 * Prefer a top-level atom id when present. Otherwise supports dotted paths into
 	 * nested values (e.g. `myRepeat.0.title_s` → item 0's `title_s` inside the repeat).
 	 * Numeric path segments are array indices. `onFieldChange` still emits the root field id.
 	 */
 	getValue(fieldId: string): unknown;
 	/**
-	 * Sets a field value.
-	 * Same key rules as {@link getValue}: top-level atom id, or a dotted path into a
-	 * nested value (immutable update of the root atom). Missing paths warn and no-op.
-	 */
-	setValue(fieldId: string, value: unknown): void;
-	/**
 	 * Looks up a field definition on the current content type.
 	 * Accepts a top-level id or a dotted path; numeric segments (repeat indexes) are skipped.
 	 */
 	getField(fieldId: string): ContentTypeField | undefined;
+}
+
+/**
+ * Narrow host API over FE2 form state for type-local `form-controller.js` modules.
+ * Controllers must not import React or reach into the DOM for field visibility;
+ * use `isFieldRelevant` instead. Reads here are live (`path`, `readonly`, values).
+ */
+export interface FormControllerContext extends FormControllerRelevanceContext {
+	/** Live read of the form's readonly atom; true when the form is view-only. */
+	readonly: boolean;
+	/**
+	 * Sets a field value.
+	 * Same key rules as {@link getValue}: top-level atom id, or a dotted path into a
+	 * nested value (immutable update of the root atom). Missing paths warn and no-op.
+	 * Ignored (with a warning) once the form this context belongs to was torn down.
+	 */
+	setValue(fieldId: string, value: unknown): void;
 	/**
 	 * Registers a listener called whenever a field value is written, including a field that
 	 * is not rendered. Returns a function that removes it. The host also drops listeners registered here on form teardown.
+	 * After teardown, registering is refused: nothing subscribes and the returned function is a no-op.
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
 	/** Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return. */
@@ -91,18 +108,20 @@ export interface FormController {
 	apiVersion?: 1;
 	/**
 	 * Called once per form that owns a controller (root and embedded children), after
-	 * form context/atoms exist. Not called for repeat stacked forms — those are part of
-	 * the parent form and reuse the parent's context for `isFieldRelevant` only.
+	 * form atoms exist and relevance is resolved. Not called for repeat stacked forms — those
+	 * are part of the parent form and reuse its deny-list.
 	 * May return a cleanup (or a Promise of cleanup) invoked on form unmount / stack pop.
 	 */
 	initialize?(ctx: FormControllerContext): MaybePromise<void | (() => void)>;
 	/**
 	 * Return false to omit the field (or repeat definition) from the rendered form.
 	 * Default true. Async allowed — host awaits before first field paint for that form.
-	 * Repeat subfields are judged once, with the owning form's context, when that form attaches.
-	 * The repeat item form reuses that result and does not call this again.
+	 * Runs **before** `initialize`, on a {@link FormControllerRelevanceContext} snapshot, so it must not
+	 * rely on anything `initialize` sets up. The same snapshot is used when a parent validates an
+	 * embedded component that was never opened, which is why the verdicts agree.
+	 * Repeat subfields are judged once by the owning form; the repeat item form reuses that result.
 	 */
-	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerContext): MaybePromise<boolean>;
+	isFieldRelevant?(field: ContentTypeField, ctx: FormControllerRelevanceContext): MaybePromise<boolean>;
 	/**
 	 * Return false / `{ ok: false }` / rejected promise to veto save.
 	 * `{ ok: false, message }` shows `message` to the author.

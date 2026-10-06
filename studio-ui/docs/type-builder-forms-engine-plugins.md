@@ -354,7 +354,7 @@ The runtime retains the source datasource on the resolved action/choice. It does
 - Host context: narrow read/write API over form values and type metadata (not the YUI form object). See main doc §5.9 for `onFieldChange` / `notify` / save-result shape.
 - Project plugins may ship the type folder including the file; runtime still loads by content-type id.
 
-**Implementation:** landed in `FormsEngine/formControllers/`. TB Form Controller property edits `form-controller.js` (separate from Groovy). Sample: `samples/fe2-form-controller.example.mjs`.
+**Implementation:** landed in `FormsEngine/formControllers/`. TB Form Controller property edits `form-controller.js` (separate from Groovy). Worked example: main doc §5.9.
 
 ## 6.1 FE1 → FE2 data-source migration notes
 
