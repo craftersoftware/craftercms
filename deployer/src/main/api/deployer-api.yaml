@@ -5,7 +5,7 @@ info:
   description: |-
     Crafter Deployer API.<br>
     Target management operations require the X-Crafter-Management-Token header. The token query parameter is not accepted for those operations. Monitoring operations still authenticate with the token query parameter.
-  version: '4.6.1'
+  version: '4.7.0'
   title: Crafter Deployer
   termsOfService: ''
   contact:
