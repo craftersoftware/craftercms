@@ -66,6 +66,7 @@ import {
 	preloadControlPluginsForFields
 } from './controlPluginLoader';
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
+import { rememberCommittedRelevance } from '../formControllers/relevance';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -328,6 +329,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 				// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
 				if (isStackedForm) {
+					// Same object the parent will validate. Keep this session's deny-list on it so a
+					// field hidden at bootstrap — or only in create mode — is not re-judged and then
+					// required. Callers pass `values` through; copying it would drop the association.
+					const committed = stableFormContext.formControllerState;
+					if (committed?.controller && committed.irrelevantFieldPaths) {
+						rememberCommittedRelevance(values, committed.controller, committed.irrelevantFieldPaths);
+					}
 					(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
 						onSavePromiseHandler,
 						showSaveError

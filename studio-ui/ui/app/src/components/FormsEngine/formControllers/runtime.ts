@@ -40,6 +40,7 @@ import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
 import {
 	collectRelevanceTargets,
 	createRelevanceContext,
+	forgetCommittedRelevance,
 	resolveComponentRelevance,
 	resolveFieldRelevance,
 	SAVE_MINIMUM_FIELD_IDS,
@@ -206,6 +207,10 @@ export function createFormControllerContext({
 			return unsubscribe;
 		},
 		notify(message, severity: FormControllerNotifySeverity = 'info') {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return;
+			}
 			dispatch(
 				showSystemNotification({
 					message,
@@ -262,17 +267,26 @@ function unsubscribeFieldChangeListeners(state: FormControllerState | null | und
 }
 
 /**
+ * Marks `state` detached and runs the teardown a stack pop would: drop listeners, then the
+ * controller's cleanup. `setValue`, `onFieldChange` and `notify` all refuse a disposed state.
+ * `cleanup` defaults to whatever the state stored; a failed `initialize` passes its own (often null)
+ * because that cleanup was never stored.
+ */
+function detachFormControllerState(state: FormControllerState, cleanup: (() => void) | null = state.cleanup): void {
+	state.disposed = true;
+	state.cleanup = null;
+	unsubscribeFieldChangeListeners(state);
+	invokeCleanup(cleanup);
+}
+
+/**
  * Runs and clears the cleanup stored on a form stack entry (idempotent), including
  * `onFieldChange` listeners the host tracked for this entry.
  */
 export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
 	const state = stackEntry?.formControllerState;
-	if (!state) return;
-	state.disposed = true;
-	const cleanup = state.cleanup;
-	state.cleanup = null;
-	unsubscribeFieldChangeListeners(state);
-	invokeCleanup(cleanup);
+	if (!state || state.disposed) return;
+	detachFormControllerState(state);
 }
 
 /**
@@ -389,24 +403,32 @@ export async function attachFormController(args: {
 
 	if (controller.isFieldRelevant) {
 		let result: FieldRelevanceResult | null = null;
+		// An existing embedded component opens with the same value object its parent validates.
+		const component = formProps.update?.modelId ? formProps.update.values : undefined;
+		const openedComponent = component && typeof component === 'object' ? component : null;
 		try {
-			// An existing embedded component opens with the same value object its parent validates.
-			const component = formProps.update?.modelId ? formProps.update.values : undefined;
-			result =
-				component && typeof component === 'object'
-					? await resolveComponentRelevance({ siteId, contentType, component, path, controller })
-					: await resolveFieldRelevance(
-							controller,
-							createRelevanceContext({
-								siteId,
-								contentType,
-								values: snapshotFormValues(store, stackEntry.atoms),
-								path,
-								mode,
-								isEmbedded
-							}),
-							collectRelevanceTargets(collectFieldsForRelevance(contentType, formProps))
-						);
+			if (openedComponent) {
+				result = await resolveComponentRelevance({
+					siteId,
+					contentType,
+					component: openedComponent,
+					path,
+					controller
+				});
+			} else {
+				result = await resolveFieldRelevance(
+					controller,
+					createRelevanceContext({
+						siteId,
+						contentType,
+						values: snapshotFormValues(store, stackEntry.atoms),
+						path,
+						mode,
+						isEmbedded
+					}),
+					collectRelevanceTargets(collectFieldsForRelevance(contentType, formProps))
+				);
+			}
 		} catch (error) {
 			console.error(
 				`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
@@ -429,6 +451,9 @@ export async function attachFormController(args: {
 		if (stale()) return;
 		notifyRelevanceFailures(result?.failedCount ?? 0, dispatch, formatMessage);
 		state.irrelevantFieldPaths = result?.denied ?? null;
+		// This open is a new session. Drop the list stored at the previous commit so the parent
+		// uses the verdict just cached for this object until the next commit stores a new one.
+		if (openedComponent && result) forgetCommittedRelevance(openedComponent);
 	}
 
 	const ctx = createFormControllerContext({
@@ -473,10 +498,14 @@ export async function attachFormController(args: {
 				options: { variant: 'error' }
 			})
 		);
-		unsubscribeFieldChangeListeners(state);
-		invokeCleanup(ownCleanup);
-		// Disposal already tore this entry down. Do not clear a controller a replacement attach installed.
-		if (!state.disposed && stackEntry.formControllerState === state) {
+		// Dispose before dropping the entry. Otherwise a continuation that kept `ctx` can still
+		// write or subscribe, and nothing on the stack entry will tear that listener down.
+		// A replacement attach may already have disposed this state; do not clear the one it installed.
+		const stillOwnsEntry = !state.disposed && stackEntry.formControllerState === state;
+		if (!state.disposed) {
+			detachFormControllerState(state, ownCleanup);
+		}
+		if (stillOwnsEntry) {
 			stackEntry.formControllerState = null;
 			// Proceeding without the controller also drops its deny-list.
 			store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
