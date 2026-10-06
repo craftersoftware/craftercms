@@ -20,7 +20,7 @@ import type { Dispatch as ReduxDispatch } from 'redux';
 import { retrieveProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
 import { loadFormController } from './loader';
-import { getFieldFromContentType, parseFieldValuePath, SAVE_MINIMUM_FIELD_IDS } from './runtime';
+import { collectRelevanceTargets, getFieldFromContentType, parseFieldValuePath } from './runtime';
 import type { FormController, FormControllerContext } from './types';
 
 const detachedWriteWarning =
@@ -85,10 +85,21 @@ export function createDetachedFormControllerContext({
 }
 
 /**
- * One entry per component value. Values update immutably, so a new object is a new resolution
- * and an unchanged component is free. WeakMap drops entries when the value is no longer referenced.
+ * Keyed by controller, then by component value. A controller edit clears the loader cache and the
+ * next load yields a new controller object, so verdicts from the previous code are never reused.
+ * The controller is per site and type, so it also scopes the entry. Values update immutably, so a
+ * new component object is a new resolution and an unchanged one is free. Both levels are weak.
  */
-const embeddedRelevanceByComponent = new WeakMap<object, Promise<Set<string> | null>>();
+const embeddedRelevanceByController = new WeakMap<FormController, WeakMap<object, Promise<Set<string>>>>();
+
+function getComponentRelevanceCache(controller: FormController): WeakMap<object, Promise<Set<string>>> {
+	let byComponent = embeddedRelevanceByController.get(controller);
+	if (!byComponent) {
+		byComponent = new WeakMap();
+		embeddedRelevanceByController.set(controller, byComponent);
+	}
+	return byComponent;
+}
 
 async function considerField(
 	controller: FormController,
@@ -115,16 +126,10 @@ async function resolveEmbeddedFieldPaths(
 	contentType: ContentType
 ): Promise<Set<string>> {
 	const denied = new Set<string>();
-	const fields = Object.values(contentType.fields ?? {}).filter((field) => !SAVE_MINIMUM_FIELD_IDS.has(field.id));
 	await Promise.all(
-		fields.map(async (field) => {
-			await considerField(controller, ctx, field.id, field, denied);
-			if (field.type !== 'repeat' || !field.fields) return;
-			const subFields = Object.values(field.fields).filter((subField) => !SAVE_MINIMUM_FIELD_IDS.has(subField.id));
-			await Promise.all(
-				subFields.map((subField) => considerField(controller, ctx, `${field.id}.${subField.id}`, subField, denied))
-			);
-		})
+		collectRelevanceTargets(Object.values(contentType.fields ?? {})).map(({ path, field }) =>
+			considerField(controller, ctx, path, field, denied)
+		)
 	);
 	return denied;
 }
@@ -143,11 +148,12 @@ export function createEmbeddedRelevanceResolver(
 		if (component == null || typeof component !== 'object') return null;
 		const loadResult = await loadFormController(siteId, contentType.id);
 		if (loadResult.status !== 'loaded' || !loadResult.controller.isFieldRelevant) return null;
-		const cached = embeddedRelevanceByComponent.get(component);
+		const byComponent = getComponentRelevanceCache(loadResult.controller);
+		const cached = byComponent.get(component);
 		if (cached) return cached;
 		const ctx = createDetachedFormControllerContext({ siteId, contentType, values: component, dispatch });
 		const pending = resolveEmbeddedFieldPaths(loadResult.controller, ctx, contentType);
-		embeddedRelevanceByComponent.set(component, pending);
+		byComponent.set(component, pending);
 		return pending;
 	};
 }

@@ -313,8 +313,11 @@ export function isFieldPathIrrelevant(
  */
 export const SAVE_MINIMUM_FIELD_IDS = new Set<string>([XmlKeys.fileName, XmlKeys.internalName]);
 
-/** Top-level fields plus one level of repeat subfields, addressed by qualified path. */
-function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
+/**
+ * Top-level fields plus one level of repeat subfields, addressed by qualified path.
+ * Shared by the open-form and embedded resolvers so both offer the same fields.
+ */
+export function collectRelevanceTargets(fields: ContentTypeField[]): Array<{ path: string; field: ContentTypeField }> {
 	const targets: Array<{ path: string; field: ContentTypeField }> = [];
 	for (const field of fields) {
 		if (SAVE_MINIMUM_FIELD_IDS.has(field.id)) continue;

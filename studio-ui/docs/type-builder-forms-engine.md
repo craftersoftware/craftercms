@@ -556,7 +556,7 @@ The deny-list stores qualified paths, not bare ids:
 
 The owning form resolves top-level fields and one level of repeat subfields in a single pass, then bumps `relevanceVersion` so validation atoms created during bootstrap recompute. A repeat item form does not call `isFieldRelevant` again; it copies that deny-list. Deeper nesting (a repeat inside a repeat) is not addressed individually.
 
-`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through a read-only context where `setValue` and `onFieldChange` are inert. Results are memoised per component value identity (values update immutably), so `isFieldRelevant` should stay cheap and free of side effects. A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
+`repeatGroupValidator` and `nodeSelectorValidator` skip rejected children and still enforce occurrence and size constraints. An embedded component is resolved against **its own** content type's controller, whether or not its form was opened, through a read-only context where `setValue` and `onFieldChange` are inert. Results are memoised per controller object and then per component value identity (values update immutably). Saving `form-controller.js` clears the loader cache, the next load yields a new controller object, and its `isFieldRelevant` runs again even for unchanged components. Offered fields come from the same collector the owning form uses (top level plus one repeat level). A relevance failure during that validation fails open and is only logged — a snackbar here would fire on every revalidation.
 
 **Lifecycle (repeat vs embedded):**
 
@@ -690,6 +690,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-06** — Embedded relevance verdicts are cached per controller object, then per component. A reloaded controller re-judges unchanged components instead of reusing the previous code's deny-list. The embedded resolver reuses the owning form's relevance-target collector.
 - **2026-10-06** — A disposed controller context refuses `onFieldChange` (no-op unsubscribe, no subscription) and `setValue`. A pending `initialize` that resumes after a replacement attach can no longer subscribe to the shared `fieldUpdates$` or write the form's atoms.
 - **2026-10-05** — A `<controller>` write that lands after the type properties form closed now updates the Type Builder working copy, so saving the type no longer reverts it. Rollback keeps the persisted flag.
 - **2026-10-05** — Type Builder controller actions are serialized. A JavaScript delete that disables the flag and then fails to remove the file stays visible as "disabled, file still exists," with Delete still available to retry.
