@@ -2,15 +2,19 @@
 
 ## 5.0.1
 ## @craftercms/content@5.0.1
+- Restored deprecated `getDescriptor` API for backwards compatibility (use `getItem` instead)
 - `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
+
+## @craftercms/redux@5.0.1
+- Restored deprecated `getDescriptor` API for backwards compatibility (use `getItem` instead)
 
 ## 5.0.0
 ## @craftercms/content@5.0.0
-- "Get Descriptor" API deprecated (use getItem instead)
+- "Get Descriptor" API removed (use getItem instead)
 - New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
 
 ## @craftercms/redux@5.0.0
-- "Get Descriptor" API deprecated (use getItem instead)
+- "Get Descriptor" API removed (use getItem instead)
 - `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
 
 ## @craftercms/classes4.4.1
