@@ -36,6 +36,10 @@ export function getItem(path: string, config?: Partial<CrafterConfig>): Observab
 	);
 }
 
+export interface GetDescriptorConfig extends CrafterConfig {
+	flatten: boolean;
+}
+
 /**
  * @deprecated Use getItem instead.
  * Returns the descriptor data of an Item in the content store.
@@ -64,10 +68,6 @@ export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig
 			};
 		})
 	);
-}
-
-export interface GetDescriptorConfig extends CrafterConfig {
-	flatten: boolean;
 }
 
 /**

@@ -87,8 +87,8 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 `parseDescriptor(response: Descriptor | Item | GraphQLResponse | Descriptor[] | Item[] | GraphQLResponse)`
 
 | Parameters    |                |
-| ------------- |:--------------------------------------------------------------:|
-| response      | The response of a getItem, getDescriptor or GraphQL fetch call |
+| ------------- |:-----------------------------------------------:|
+| response      | The response of a getItem or GraphQL fetch call |
 
 #### Returns
 
@@ -96,7 +96,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 #### Examples
 
-- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem, getDescriptor or GraphQL responses.
+- If you want a cleaner/parsed response, you may use `parseDescriptor` util to parse the response for you. You may use it to parse getItem or GraphQL responses.
 
 ```typescript
   import { map } from 'rxjs/operators';

@@ -1,5 +1,9 @@
 # SDK Changelog
 
+## 5.0.1
+## @craftercms/content@5.0.1
+- `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
+
 ## 5.0.0
 ## @craftercms/content@5.0.0
 - "Get Descriptor" API deprecated (use getItem instead)
