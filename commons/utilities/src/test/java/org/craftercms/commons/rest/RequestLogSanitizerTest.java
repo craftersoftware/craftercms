@@ -19,6 +19,7 @@ import org.junit.Test;
 import org.springframework.http.HttpHeaders;
 
 import java.net.URI;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -67,6 +68,37 @@ public class RequestLogSanitizerTest {
         assertEquals(RequestLogSanitizer.REDACTED, sanitized.getFirst(ManagementToken.HEADER_NAME));
         assertEquals(RequestLogSanitizer.REDACTED, sanitized.getFirst(HttpHeaders.AUTHORIZATION));
         assertEquals("application/json", sanitized.getFirst(HttpHeaders.CONTENT_TYPE));
+        assertFalse(sanitized.toString().contains(SECRET));
+    }
+
+    @Test
+    public void cookieAndProxyAuthorizationAreRedacted() {
+        String cookieSecret = "cookie-session-secret";
+        String secondCookieSecret = "cookie-csrf-secret";
+        String proxySecret = "proxy-basic-secret";
+        String secondProxySecret = "proxy-bearer-secret";
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("CoOkIe", "session=" + cookieSecret);
+        headers.add("CoOkIe", "csrf=" + secondCookieSecret);
+        headers.add("pRoXy-AuThOrIzAtIoN", "Basic " + proxySecret);
+        headers.add("pRoXy-AuThOrIzAtIoN", "Bearer " + secondProxySecret);
+        headers.add(ManagementToken.HEADER_NAME, SECRET);
+        headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + SECRET);
+        headers.add(HttpHeaders.ACCEPT, "text/html");
+        headers.add(HttpHeaders.ACCEPT, "application/json");
+
+        HttpHeaders sanitized = RequestLogSanitizer.sanitizeHeaders(headers);
+
+        assertEquals(List.of(RequestLogSanitizer.REDACTED, RequestLogSanitizer.REDACTED), sanitized.get("cookie"));
+        assertEquals(List.of(RequestLogSanitizer.REDACTED, RequestLogSanitizer.REDACTED),
+                sanitized.get("PROXY-AUTHORIZATION"));
+        assertEquals(RequestLogSanitizer.REDACTED, sanitized.getFirst(ManagementToken.HEADER_NAME));
+        assertEquals(RequestLogSanitizer.REDACTED, sanitized.getFirst(HttpHeaders.AUTHORIZATION));
+        assertEquals(List.of("text/html", "application/json"), sanitized.get(HttpHeaders.ACCEPT));
+        assertFalse(sanitized.toString().contains(cookieSecret));
+        assertFalse(sanitized.toString().contains(secondCookieSecret));
+        assertFalse(sanitized.toString().contains(proxySecret));
+        assertFalse(sanitized.toString().contains(secondProxySecret));
         assertFalse(sanitized.toString().contains(SECRET));
     }
 

@@ -64,6 +64,7 @@ dependencies {
 	implementation libs.spring.boot.starter
 	implementation libs.spring.boot.starter.log4j2
 	implementation libs.spring.boot.starter.restclient
+	implementation libs.spring.boot.jackson2
 	implementation libs.jackson.databind
 	implementation libs.jackson.core
 	implementation libs.jackson.dataformat.xml

@@ -54,7 +54,8 @@ public final class RequestLogSanitizer {
     }
 
     /**
-     * Returns a copy of the headers with management-token and authorization values replaced.
+     * Returns a copy of the headers with management-token, authorization, cookie,
+     * and proxy-authorization values replaced.
      */
     public static HttpHeaders sanitizeHeaders(HttpHeaders headers) {
         HttpHeaders sanitized = new HttpHeaders();
@@ -63,7 +64,11 @@ public final class RequestLogSanitizer {
         }
         headers.forEach((name, values) -> {
             if (isSensitiveHeader(name)) {
-                sanitized.add(name, REDACTED);
+                if (values == null || values.isEmpty()) {
+                    sanitized.add(name, REDACTED);
+                } else {
+                    values.forEach(value -> sanitized.add(name, REDACTED));
+                }
             } else if (values != null) {
                 values.forEach(value -> sanitized.add(name, value));
             }
@@ -73,7 +78,9 @@ public final class RequestLogSanitizer {
 
     private static boolean isSensitiveHeader(String name) {
         return ManagementToken.HEADER_NAME.equalsIgnoreCase(name)
-                || HttpHeaders.AUTHORIZATION.equalsIgnoreCase(name);
+                || HttpHeaders.AUTHORIZATION.equalsIgnoreCase(name)
+                || HttpHeaders.COOKIE.equalsIgnoreCase(name)
+                || HttpHeaders.PROXY_AUTHORIZATION.equalsIgnoreCase(name);
     }
 
 }

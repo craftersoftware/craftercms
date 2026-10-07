@@ -92,7 +92,7 @@ interface FieldModeProps {
 	): void;
 	onSwapField(fieldId: string, sectionId: string, newField: PartialContentType): void;
 	onReorderRepGroupFields?(fields: ReorderFieldsDialogProps['fields'], fieldIdPath: string, sectionId: string): void;
-	performCurrentFormErrorCheckAndWarning(): boolean;
+	performCurrentFormErrorCheckAndWarning(): boolean | Promise<boolean>;
 }
 
 interface SectionModeProps {
@@ -113,7 +113,7 @@ interface BaseProps extends Partial<FieldModeProps & SectionModeProps & DataSour
 	formApiContext: FormsEngineFormApiContextProps;
 	stableFormContext: StableFormContextProps;
 	onReorderTypeSections?(fields: ReorderFieldsDialogProps['fields']): void;
-	onClose(): void;
+	onClose(): void | Promise<void>;
 }
 
 export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | SectionModeProps | DataSourceModeProps);
@@ -266,8 +266,8 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 	if (!field) return;
 	const fields = Object.values(field.fields ?? {}).map((f) => ({ key: f.id, value: f.name })) || [];
 
-	const onOpenMoveFieldDialog = () => {
-		if (!performCurrentFormErrorCheckAndWarning()) return;
+	const onOpenMoveFieldDialog = async () => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
 		setOpenMoveFieldDialog(true);
 	};
 

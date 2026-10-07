@@ -112,7 +112,7 @@ public class RestScriptsController implements ServletContextAware {
 		this.pluginService = pluginService;
 	}
 
-	@RequestMapping(path = "/**", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+	@RequestMapping(path = "/**", produces = {MediaType.APPLICATION_JSON_VALUE})
 	protected ResponseEntity handleRequest(final HttpServletRequest request, final HttpServletResponse response) {
 		SiteContext siteContext = SiteContext.getCurrent();
 		ScriptFactory scriptFactory = siteContext.getScriptFactory();

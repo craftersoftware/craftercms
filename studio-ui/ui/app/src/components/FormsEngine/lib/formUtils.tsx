@@ -236,8 +236,13 @@ export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme:
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
 export type ValidatorsData = {
-	siteId: string;
-	contentTypesById: LookupTable<ContentType>;
+	siteId?: string;
+	contentTypesById?: LookupTable<ContentType>;
+	siblingIds?: string[];
+	/** IDs belonging to the field/data source being edited (for example fieldId + additionalFieldId(s)); excluded from duplicate checks. */
+	currentIds?: string[];
+	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
+	additionalFields?: string[];
 	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
 	resolveEmbeddedRelevance?: (
 		contentType: ContentType,
@@ -358,6 +363,9 @@ export function createFieldAtoms(
 		return validateFieldValue(field, value, {
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
+			siblingIds: validatorsData?.siblingIds,
+			currentIds: validatorsData?.currentIds,
+			additionalFields: validatorsData?.additionalFields,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.

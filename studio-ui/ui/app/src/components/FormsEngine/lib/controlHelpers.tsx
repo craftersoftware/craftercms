@@ -398,16 +398,22 @@ export const showExternalAssetUploadDialog = ({
 	dispatch,
 	path,
 	profileId,
+	inputProfileId,
+	outputProfileId,
 	profileType = 'aws',
 	fileTypes,
+	transcode,
 	onUploadComplete,
 	onClose
 }: {
 	dispatch: ReduxDispatch;
 	path: string;
-	profileId: string;
+	profileId?: string;
+	inputProfileId?: string;
+	outputProfileId?: string;
 	profileType?: ExternalAssetUploadDialogProps['profileType'];
 	fileTypes?: string[];
+	transcode?: boolean;
 	onUploadComplete?: ExternalAssetUploadDialogProps['onUploadComplete'];
 	onClose?(): void;
 }): void => {
@@ -419,8 +425,11 @@ export const showExternalAssetUploadDialog = ({
 			props: {
 				path,
 				profileId,
+				inputProfileId,
+				outputProfileId,
 				profileType,
 				fileTypes,
+				transcode,
 				onClose: () => {
 					dispatch(popDialog({ id }));
 					onClose?.();

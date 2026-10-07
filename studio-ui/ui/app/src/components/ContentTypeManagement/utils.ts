@@ -34,7 +34,13 @@ import {
 	StableFormContextProps,
 	StableGlobalContextProps
 } from '../FormsEngine/lib/formsEngineContext';
-import { buildSectionExpandedStateAtoms, setFieldAtoms } from '../FormsEngine/lib/formUtils';
+import {
+	buildSectionExpandedStateAtoms,
+	getAdditionalFieldsIdsFromDescriptor,
+	resolveControlDescriptors,
+	setFieldAtoms,
+	type ValidatorsData
+} from '../FormsEngine/lib/formUtils';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
@@ -491,7 +497,8 @@ export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,
 	contentTypesLookup: LookupTable<ContentType>,
-	mixin?: Partial<StableFormContextProps>
+	mixin?: Partial<StableFormContextProps>,
+	validatorsData?: ValidatorsData
 ): StableFormContextProps {
 	const context = createStableFormContextProps({ type });
 	const contextRef: RefObject<StableFormContextProps> = { current: context };
@@ -504,7 +511,7 @@ export function createVirtualTypeFormContext(
 	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
-		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id]);
+		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);
 	});
 	return context;
 }
@@ -875,6 +882,60 @@ export function getFieldFromType(type: ContentType, fieldIdPath: string): Conten
 	} else {
 		return type.fields[fieldIdPath];
 	}
+}
+
+/**
+ * Returns field IDs that share the same parent as `fieldIdPath` (root or repeat-group siblings),
+ * including IDs generated from each sibling's `descriptor.metadata.additionalFields`.
+ */
+export function getSiblingFieldIds(
+	type: ContentType,
+	fieldIdPath: string,
+	customControlDescriptors?: LookupTable<DescriptorContentType>
+): string[] {
+	const siblingFields: LookupTable<ContentTypeField> = isComposedPath(fieldIdPath)
+		? (getFieldFromType(type, fieldIdPath.split('.').slice(0, -1).join('.'))?.fields ?? {})
+		: (type.fields ?? {});
+	const descriptors = resolveControlDescriptors(customControlDescriptors);
+	const ids: string[] = [];
+	for (const [key, field] of Object.entries(siblingFields)) {
+		// New drafts are keyed as `{NEW}` while `field.id` is still null; prefer the explicit id when set.
+		ids.push(field.id ?? key);
+		if (!field.id) continue;
+		const descriptor = descriptors[field.type];
+		if (descriptor) {
+			ids.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
+		}
+	}
+	return ids;
+}
+
+/** Explicit field ID plus any IDs generated from the control descriptor's additionalFields. */
+export function getFieldIdSet(
+	fieldId: string,
+	fieldType: string,
+	customControlDescriptors?: LookupTable<DescriptorContentType>
+): string[] {
+	if (!fieldId) return [];
+	const descriptor = resolveControlDescriptors(customControlDescriptors)[fieldType];
+	return descriptor ? [fieldId, ...getAdditionalFieldsIdsFromDescriptor(fieldId, descriptor)] : [fieldId];
+}
+
+/**
+ * Type used when opening the next artefact form after closing the previous one.
+ * Prefer `overrideType` (move/reorder already computed the next type); otherwise use the
+ * post-commit type from closeAndCleanup — not the pre-commit React state closure alone.
+ */
+export function typeForNextArtefactForm(
+	overrideType: ContentType | undefined,
+	postCloseType: ContentType
+): ContentType {
+	return overrideType ?? postCloseType;
+}
+
+/** Data source IDs used as siblingIds for duplicate variable-name validation. */
+export function getDataSourceSiblingIds(type: ContentType): string[] {
+	return (type.dataSources ?? []).map((ds) => ds.id);
 }
 
 export function getSectionFromType(type: ContentType, sectionId: string): ContentTypeSection | undefined {

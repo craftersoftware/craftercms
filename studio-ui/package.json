@@ -60,7 +60,7 @@
 	},
 	"resolutions": {
 		"clsx": "^2.0.0",
-		"preact": "^10.27.2"
+		"preact": "^11.0.0"
 	},
 	"packageManager": "yarn@4.2.2",
 	"scripts": {

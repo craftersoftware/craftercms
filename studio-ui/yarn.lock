@@ -12847,10 +12847,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"preact@npm:^10.27.2":
-  version: 10.28.3
-  resolution: "preact@npm:10.28.3"
-  checksum: 10/b89c328f7ea13976dc2849962141fb4268afbbb364fa2f0a235788c2dba2a32786db43531fec5b64960917a078e4b78bd88967f13120df350573a619c8286f86
+"preact@npm:^11.0.0":
+  version: 11.0.0
+  resolution: "preact@npm:11.0.0"
+  peerDependencies:
+    preact-render-to-string: ">=6.7.0"
+  peerDependenciesMeta:
+    preact-render-to-string:
+      optional: true
+  checksum: 10/93d49880af80f0a9afe5425e22431020a3d5197eb3c60a6a21e3b22863cd16fd3723b048b0270d025f124329d591f32088346f142c46a68e9754b9f6c45de2b5
   languageName: node
   linkType: hard
 

@@ -23,6 +23,9 @@ spring:
         checkTemplateLocation: false
     jackson:
         property-naming-strategy: SNAKE_CASE
+    # Jackson 2 mapper (jackson2ObjectMapper) used by notification senders
+    jackson2:
+        property-naming-strategy: SNAKE_CASE
 
 ####################################################
 ##               Deployer Properties              ##

@@ -22,14 +22,19 @@ import { defineMessage, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
 import { checkPathExistence } from '../../../services/content';
-import { computePathFromFileName, getBasePath, getPropertyValue } from './formUtils';
+import {
+	computePathFromFileName,
+	getBasePath,
+	getPropertyValue,
+	getValidationValue,
+	processAdditionalFieldMacro
+} from './formUtils';
 import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './controlHelpers';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { RepeatItem } from '../controls/Repeat';
-import { getValidationValue } from './formUtils';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import type { CheckboxGroupProps } from '../controls/CheckboxGroup';
 import { macroCreatorLookupTable } from '../../ContentTypeManagement/controls/PathWithMacroCreator';
@@ -41,6 +46,12 @@ export interface ValidatorMetaData {
 	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
+	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
+	siblingIds?: string[];
+	/** IDs belonging to the field/data source being edited; excluded from duplicate checks. */
+	currentIds?: string[];
+	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
+	additionalFields?: string[];
 	/** Qualified field paths the owning form's controller rejected. `null`/absent means no filtering. */
 	irrelevantFieldPaths?: Set<string> | null;
 	/**
@@ -96,7 +107,8 @@ export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorContro
 	'input-link': (field, currentValue, messages) => inputLinkValidator(field, currentValue as string, messages),
 	'input-phone': (field, currentValue, messages) => inputPhoneValidator(field, currentValue as string, messages),
 	'path-with-macro-creator': (field, currentValue, messages) =>
-		pathWithMacroValidator(field, currentValue as string, messages)
+		pathWithMacroValidator(field, currentValue as string, messages),
+	variable: (field, currentValue, messages, meta) => variableValidator(field, currentValue as string, messages, meta)
 };
 
 // TODO: Fix FormatXMLElementFn generics
@@ -644,6 +656,28 @@ const pathWithMacroValidator = (
 		return false;
 	}
 
+	return true;
+};
+
+const variableValidator = (
+	field: ContentTypeField,
+	currentValue: string,
+	messages: FieldValidityMessage[],
+	meta: ValidatorMetaData
+): boolean => {
+	if (!currentValue?.trim() || !meta.siblingIds?.length) {
+		return true;
+	}
+	const ownIds = new Set(meta.currentIds ?? []);
+	const candidateIds = [
+		currentValue,
+		...(meta.additionalFields ?? []).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
+	];
+	const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
+	if (isDuplicate) {
+		messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
+		return false;
+	}
 	return true;
 };
 

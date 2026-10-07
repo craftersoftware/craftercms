@@ -57,7 +57,7 @@ export interface TypeDetailsViewProps {
 	onOpenInsertFieldDialog(sectionId: string, fieldPath?: string): void;
 	onOpenInsertDataSourceDialog(): void;
 	onReorderSectionFields?(fields: ReorderFieldsDialogProps['fields'], sectionId: string): void;
-	performCurrentFormErrorCheckAndWarning?(): boolean;
+	performCurrentFormErrorCheckAndWarning?(): boolean | Promise<boolean>;
 }
 
 export function TypeDetailsView(props: TypeDetailsViewProps) {
@@ -84,8 +84,8 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 	const [openSectionInserter, setOpenSectionInserter] = useState<boolean>(false);
 	const [reorderSectionId, setReorderSectionId] = useState<string>(null);
 
-	const onAddSection = () => {
-		if (!performCurrentFormErrorCheckAndWarning()) return false;
+	const onAddSection = async () => {
+		if (performCurrentFormErrorCheckAndWarning && !(await performCurrentFormErrorCheckAndWarning())) return false;
 		setOpenSectionInserter(true);
 	};
 
