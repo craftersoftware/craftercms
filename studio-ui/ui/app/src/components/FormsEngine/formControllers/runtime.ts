@@ -284,7 +284,12 @@ function setNestedPropertyCopyingPath(root: object, nestedPath: string, value: u
 		!Array.isArray(previousLeaf) &&
 		value != null &&
 		typeof value === 'object' &&
-		!Array.isArray(value)
+		!Array.isArray(value) &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.modelId] != null &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.modelId] ===
+			(value as Record<string, unknown>)[XmlKeys.modelId] &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.contentTypeId] ===
+			(value as Record<string, unknown>)[XmlKeys.contentTypeId]
 	) {
 		transferCommittedRelevance(previousLeaf, value);
 	}
