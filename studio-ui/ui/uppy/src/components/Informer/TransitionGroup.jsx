@@ -295,7 +295,7 @@ class TransitionGroup extends Component {
 
   render(
     {
-      childFactory,
+      childFactory = identity,
       transitionLeave,
       transitionName,
       transitionAppear,
@@ -303,7 +303,7 @@ class TransitionGroup extends Component {
       transitionLeaveTimeout,
       transitionEnterTimeout,
       transitionAppearTimeout,
-      component,
+      component = "span",
       ...props
     },
     { children },
@@ -322,10 +322,5 @@ class TransitionGroup extends Component {
     return h(component, props, childrenToRender);
   }
 }
-
-TransitionGroup.defaultProps = {
-  component: "span",
-  childFactory: identity,
-};
 
 export default TransitionGroup;
