@@ -43,6 +43,7 @@ dependencies {
 
 	compileOnly libs.bcpg.jdk18on
 	compileOnly libs.commons.configuration2
+	compileOnly libs.dom4j
 	compileOnly libs.commons.cli
 	compileOnly libs.jakarta.servlet.api
 	compileOnly libs.spring.context
@@ -77,6 +78,7 @@ dependencies {
 	testImplementation libs.jackson.annotations
 	testImplementation libs.guava
 	testImplementation libs.commons.configuration2
+	testImplementation libs.dom4j
 	testImplementation libs.snakeyaml
 	testImplementation libs.jakarta.servlet.api
 }

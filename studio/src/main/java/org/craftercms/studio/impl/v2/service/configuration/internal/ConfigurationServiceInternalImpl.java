@@ -80,6 +80,7 @@ import static java.util.Collections.emptyMap;
 import static org.apache.commons.io.FilenameUtils.getExtension;
 import static org.apache.commons.io.FilenameUtils.normalize;
 import static org.apache.commons.lang3.StringUtils.*;
+import static org.craftercms.commons.xml.XmlSecurityUtils.createSaxReader;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.*;
 import static org.craftercms.studio.api.v1.constant.StudioXmlConstants.*;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_UPDATE;
@@ -559,11 +560,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	}
 
 	private static void readXml(byte[] bytes) throws Exception {
-		SAXReader saxReader = new SAXReader();
-		saxReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-		saxReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
-		saxReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-		saxReader.read(new ByteArrayInputStream(bytes));
+		createSaxReader().read(new ByteArrayInputStream(bytes));
 	}
 
 	private static boolean declaresDoctype(Throwable error) {
