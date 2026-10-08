@@ -1316,23 +1316,27 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						);
 						break;
 					}
-					uploadDataUrl(siteId, file, path, xsrfArgumentName).subscribe({
-						next: (uploadAction) => {
-							if (uploadAction.type === 'progress') {
-								hostToGuest$.next(
-									guestUploadProgress({
-										id,
-										progress: uploadAction.payload.progress
-									})
-								);
-							} else {
-								hostToGuest$.next(guestUploadComplete({ id, response: uploadAction.payload }));
+					try {
+						uploadDataUrl(siteId, file, path, xsrfArgumentName).subscribe({
+							next: (uploadAction) => {
+								if (uploadAction.type === 'progress') {
+									hostToGuest$.next(
+										guestUploadProgress({
+											id,
+											progress: uploadAction.payload.progress
+										})
+									);
+								} else {
+									hostToGuest$.next(guestUploadComplete({ id, response: uploadAction.payload }));
+								}
+							},
+							error: (error) => {
+								hostToGuest$.next(guestUploadFailed({ id, error }));
 							}
-						},
-						error: (error) => {
-							hostToGuest$.next(guestUploadFailed({ id, error }));
-						}
-					});
+						});
+					} catch (error) {
+						hostToGuest$.next(guestUploadFailed({ id, error }));
+					}
 					break;
 				}
 				case showItemMegaMenu.type: {
