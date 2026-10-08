@@ -186,6 +186,26 @@ export const requestWorkflowCancellationDialogOnResult = /*#__PURE__*/ createAct
 	type: 'continue' | 'close';
 	cancelPackagesComment?: string;
 }>('REQUEST_WORKFLOW_CANCELLATION_DIALOG_ON_RESULT');
+/** Guest asks host to run Uppy-backed upload (keeps Uppy out of the guest/Next graph). */
+export const requestGuestUpload = /*#__PURE__*/ createAction<{
+	id: string;
+	site: string;
+	file: { name: string; type: string; dataUrl?: string | ArrayBuffer; blob?: Blob };
+	path: string;
+	xsrfArgumentName: string;
+}>('REQUEST_GUEST_UPLOAD');
+export const guestUploadProgress = /*#__PURE__*/ createAction<{
+	id: string;
+	progress: { bytesUploaded: number; bytesTotal: number };
+}>('GUEST_UPLOAD_PROGRESS');
+export const guestUploadComplete = /*#__PURE__*/ createAction<{
+	id: string;
+	response: unknown;
+}>('GUEST_UPLOAD_COMPLETE');
+export const guestUploadFailed = /*#__PURE__*/ createAction<{
+	id: string;
+	error?: unknown;
+}>('GUEST_UPLOAD_FAILED');
 export const updateRteConfig = /*#__PURE__*/ createAction('UPDATE_RTE_CONFIG');
 export const highlightModeChanged = /*#__PURE__*/ createAction('HIGHLIGHT_MODE_CHANGED');
 export const contentTypesRequest = /*#__PURE__*/ createAction('CONTENT_TYPES_REQUEST');

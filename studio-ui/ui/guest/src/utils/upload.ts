@@ -15,70 +15,54 @@
  */
 
 import { Observable } from 'rxjs';
+import { filter } from 'rxjs/operators';
+import { v4 as uuid } from 'uuid';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
-import { getGlobalHeaders } from '@craftercms/studio-ui/utils/ajax';
-import { getRequestForgeryToken } from '@craftercms/studio-ui/utils/auth';
-import { toQueryString } from '@craftercms/studio-ui/utils/object';
-import { dataUriToBlob, ensureSingleSlash } from '@craftercms/studio-ui/utils/string';
+import {
+	guestUploadComplete,
+	guestUploadFailed,
+	guestUploadProgress,
+	requestGuestUpload
+} from '@craftercms/studio-ui/state/actions/preview';
+import { message$, post } from './communicator';
 
-/** XHR upload for EB guests — avoids importing Uppy-backed studio-ui/services/contentUpload. */
+/**
+ * Asks Studio (host) to run Uppy-backed `contentUpload.uploadDataUrl`.
+ * Keeps Uppy out of the Experience Builder / Next guest module graph.
+ */
 export function uploadDataUrl(
 	site: string,
 	file: { name: string; type: string; dataUrl?: string | ArrayBuffer; blob?: Blob },
 	path: string,
 	xsrfArgumentName: string
 ): Observable<StandardAction> {
-	const blob = file.blob ?? dataUriToBlob(String(file.dataUrl));
-	const qs = toQueryString({ [xsrfArgumentName]: getRequestForgeryToken() });
-	const fullPath = ensureSingleSlash(`${path}/${file.name}`);
+	const id = uuid();
 
 	return new Observable((subscriber) => {
-		const xhr = new XMLHttpRequest();
-		const formData = new FormData();
-		formData.append('site', site);
-		formData.append('name', file.name);
-		formData.append('type', file.type);
-		formData.append('path', fullPath);
-		formData.append('file', blob, file.name);
-
-		xhr.upload.onprogress = (event) => {
-			if (!event.lengthComputable) return;
-			subscriber.next({
-				type: 'progress',
-				payload: {
-					file,
-					progress: { bytesUploaded: event.loaded, bytesTotal: event.total }
+		const subscription = message$
+			.pipe(
+				filter(
+					(action) =>
+						action.payload?.id === id &&
+						[guestUploadProgress.type, guestUploadComplete.type, guestUploadFailed.type].includes(action.type)
+				)
+			)
+			.subscribe((action) => {
+				if (action.type === guestUploadProgress.type) {
+					subscriber.next({
+						type: 'progress',
+						payload: { file, progress: action.payload.progress }
+					});
+				} else if (action.type === guestUploadComplete.type) {
+					subscriber.next({ type: 'complete', payload: action.payload.response });
+					subscriber.complete();
+				} else {
+					subscriber.error(action.payload?.error ?? action.payload);
 				}
 			});
-		};
 
-		xhr.onload = () => {
-			let body: unknown = xhr.responseText;
-			try {
-				body = JSON.parse(xhr.responseText);
-			} catch {
-				// keep raw text
-			}
-			const response = { status: xhr.status, body, bytesUploaded: blob.size };
-			if (xhr.status >= 200 && xhr.status < 300) {
-				subscriber.next({ type: 'complete', payload: response });
-				subscriber.complete();
-			} else {
-				subscriber.error(Object.assign({}, response, { error: response }));
-			}
-		};
+		post(requestGuestUpload({ id, site, file, path, xsrfArgumentName }));
 
-		xhr.onerror = () => {
-			const response = { status: xhr.status, body: xhr.responseText };
-			subscriber.error(Object.assign({}, response, { error: response }));
-		};
-
-		xhr.open('PUT', `/studio/api/2/content/${site}${qs}`);
-		Object.entries(getGlobalHeaders() ?? {}).forEach(([key, value]) => {
-			if (value != null) xhr.setRequestHeader(key, String(value));
-		});
-		xhr.send(formData);
-
-		return () => xhr.abort();
+		return () => subscription.unsubscribe();
 	});
 }
