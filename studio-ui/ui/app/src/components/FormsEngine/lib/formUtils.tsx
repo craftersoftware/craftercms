@@ -718,16 +718,23 @@ export type SystemPropsObject = Pick<
 	| XmlKeys.navLabel
 >;
 
+/** System props written by {@link createObjectWithSystemProps} (excludes optional nav/disabled fields). */
+export type CreatedSystemPropsObject = Omit<
+	SystemPropsObject,
+	XmlKeys.disabled | XmlKeys.placeInNav | XmlKeys.navLabel
+>;
+
 /**
  * Creates an object with all the base content item system props (objectId, content-type, etc.)
  * Assigns the supplied values if provided.
+ * Does not include `disabled`, `placeInNav`, or `navLabel`.
  **/
 export function createObjectWithSystemProps(
 	contentType: ContentType,
 	mixin?: Partial<SystemPropsObject>
-): SystemPropsObject {
+): CreatedSystemPropsObject {
 	const dateIsoString = new Date().toISOString();
-	const contentObject: SystemPropsObject = {
+	const contentObject: CreatedSystemPropsObject = {
 		[XmlKeys.modelId]: mixin?.[XmlKeys.modelId] ?? uuid(),
 		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
@@ -738,11 +745,7 @@ export function createObjectWithSystemProps(
 		[XmlKeys.dateCreatedDt]: mixin?.[XmlKeys.dateCreatedDt] ?? dateIsoString,
 		[XmlKeys.dateModified]: mixin?.[XmlKeys.dateModified] ?? dateIsoString,
 		[XmlKeys.dateModifiedDt]: mixin?.[XmlKeys.dateModifiedDt] ?? dateIsoString,
-		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false',
-		// TODO: These are part of the type
-		[XmlKeys.disabled]: mixin?.[XmlKeys.disabled] ?? false,
-		[XmlKeys.placeInNav]: mixin?.[XmlKeys.placeInNav] ?? false,
-		[XmlKeys.navLabel]: mixin?.[XmlKeys.navLabel] ?? ''
+		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
 	return contentObject;
 }
