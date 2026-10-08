@@ -36,9 +36,8 @@ export function uploadDataUrl(
 	path: string,
 	xsrfArgumentName: string
 ): Observable<StandardAction> {
-	const id = uuid();
-
 	return new Observable((subscriber) => {
+		const id = uuid();
 		const subscription = message$
 			.pipe(
 				filter(
