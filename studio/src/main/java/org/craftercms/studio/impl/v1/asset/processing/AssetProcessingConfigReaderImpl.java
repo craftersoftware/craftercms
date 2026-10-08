@@ -53,7 +53,7 @@ public class AssetProcessingConfigReaderImpl implements AssetProcessingConfigRea
     public List<ProcessorPipelineConfiguration> readConfig(InputStream in) throws AssetProcessingConfigurationException {
         HierarchicalConfiguration config;
         try {
-            config = ConfigUtils.readXmlConfiguration(in, ',', null, null, "UTF-8");
+            config = ConfigUtils.readXmlConfiguration(in);
         } catch (ConfigurationException e) {
             throw new AssetProcessingConfigurationException("Unable to read XML configuration file", e);
         }
