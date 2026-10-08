@@ -268,7 +268,16 @@ function setNestedPropertyCopyingPath(root: object, nestedPath: string, value: u
 		const key = segments[i];
 		const prevChild = (prevParent as Record<string, unknown>)[key];
 		const nextChild = shallowCopyContainer(prevChild as object);
-		if (prevChild != null && typeof prevChild === 'object' && !Array.isArray(prevChild)) {
+		const changesComponentIdentity =
+			prevChild != null &&
+			typeof prevChild === 'object' &&
+			!Array.isArray(prevChild) &&
+			prevChild[XmlKeys.modelId] != null &&
+			prevChild[XmlKeys.contentTypeId] != null &&
+			segments.length - i === 2 &&
+			((segments[i + 1] === XmlKeys.modelId && prevChild[XmlKeys.modelId] !== value) ||
+				(segments[i + 1] === XmlKeys.contentTypeId && prevChild[XmlKeys.contentTypeId] !== value));
+		if (prevChild != null && typeof prevChild === 'object' && !Array.isArray(prevChild) && !changesComponentIdentity) {
 			transferCommittedRelevance(prevChild, nextChild);
 		}
 		(nextParent as Record<string, unknown>)[key] = nextChild;
