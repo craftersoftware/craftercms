@@ -1,6 +1,6 @@
 {
   "name": "@craftercms/content",
-  "version": "5.0.1",
+  "version": "5.0.1-alpha.0",
   "description": "Crafter CMS services for content and navigation retrieval",
   "main": "./bundles/content.umd.js",
   "module": "./esm5/content.js",
