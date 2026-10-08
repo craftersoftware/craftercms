@@ -1305,7 +1305,18 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case requestGuestUpload.type: {
 					const { id, site, file, path, xsrfArgumentName } = payload;
-					uploadDataUrl(site, file, path, xsrfArgumentName).subscribe({
+					if (site !== siteId) {
+						hostToGuest$.next(
+							guestUploadFailed({
+								id,
+								error: {
+									message: formatMessage({ defaultMessage: 'Upload site does not match the active preview site' })
+								}
+							})
+						);
+						break;
+					}
+					uploadDataUrl(siteId, file, path, xsrfArgumentName).subscribe({
 						next: (uploadAction) => {
 							if (uploadAction.type === 'progress') {
 								hostToGuest$.next(
