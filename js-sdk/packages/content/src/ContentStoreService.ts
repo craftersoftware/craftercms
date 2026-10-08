@@ -49,6 +49,8 @@ export interface GetDescriptorConfig extends CrafterConfig {
 export function getDescriptor(path: string): Observable<Descriptor | null>;
 export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor | null>;
 export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor | null> {
+	console.warn('Warning: getDescriptor is deprecated. Use getItem instead.');
+
 	let cfg = crafterConf.mix(config);
 
 	return getItem(path, { ...cfg, flatten: Boolean(config?.flatten) }).pipe(
