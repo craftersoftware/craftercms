@@ -51,6 +51,33 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
+	public void validateRejectsDoctypeRegardlessOfExtensionCase() {
+		assertThrows(InvalidConfigurationException.class, () -> service.validate(stream(DOCTYPE_XML), "site-config.XML"));
+	}
+
+	@Test
+	public void validateRejectsDoctypeWithoutExtension() {
+		assertThrows(InvalidConfigurationException.class, () -> service.validate(stream(DOCTYPE_XML), "config"));
+	}
+
+	@Test
+	public void validateAllowsNonXmlWithoutExtension() throws Exception {
+		String text = "key: value";
+		InputStream result = service.validate(stream(text), "config");
+		assertEquals(text, IOUtils.toString(result, StandardCharsets.UTF_8));
+	}
+
+	@Test
+	public void writeConfigurationRejectsExtensionlessDoctypeBeforePersist() {
+		ContentService contentService = mock(ContentService.class);
+		service.setContentService(contentService);
+
+		assertThrows(InvalidConfigurationException.class, () ->
+				service.writeConfiguration("site", "studio", "config", null, stream(DOCTYPE_XML)));
+		verifyNoInteractions(contentService);
+	}
+
+	@Test
 	public void writeConfigurationRejectsDoctypeBeforePersist() {
 		ContentService contentService = mock(ContentService.class);
 		service.setContentService(contentService);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -504,27 +504,14 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
     }
 
     protected InputStream validate(InputStream content, String filename) throws ServiceLayerException {
-        // Check the filename to see if it needs to be validated
         String extension = getExtension(filename);
-        if (isEmpty(extension)) {
-            // without extension there is no way to know
-            logger.debug("Configuration file '{}' is of unknown type, will not validate", filename);
-            return content;
-        }
         try {
-            // Copy the contents of the stream
-            byte[] bytes;
-            bytes = IOUtils.toByteArray(content);
+			byte[] bytes = IOUtils.toByteArray(content);
 
-            // Perform the validation
-            switch (extension.toLowerCase()) {
+            switch (defaultString(extension).toLowerCase()) {
                 case "xml":
                     try {
-						SAXReader saxReader = new SAXReader();
-						saxReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-						saxReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
-						saxReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-						saxReader.read(new ByteArrayInputStream(bytes));
+						readXml(bytes);
                     } catch (Exception e) {
                         logger.error("Failed to validate the configuration file '{}'", filename, e);
                         throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'",
@@ -535,16 +522,19 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
                 case "yml":
                     try {
                         YamlConfiguration yamlConfig = new YamlConfiguration();
-                        // Read in order to detect invalid files
                         yamlConfig.read(new ByteArrayInputStream(bytes));
                     } catch (Exception e) {
                         logger.error("Failed to validate the configuration file '{}'", filename, e);
                         throw new InvalidConfigurationException(format("Invalid YAML configuration file '%s'",
                                 filename), e);
                     }
+					break;
+				default:
+					// Unknown names are not required to be XML, but a DOCTYPE must not be stored for a later XML read.
+					rejectDoctypeInXml(bytes, filename);
+					break;
             }
 
-            // Return a new stream
             return new ByteArrayInputStream(bytes);
 
         } catch (IOException e) {
@@ -552,6 +542,41 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
             throw new ServiceLayerException(format("Failed to validate the configuration file '%s'", filename), e);
         }
     }
+
+	/**
+	 * Rejects XML that declares a DOCTYPE. Non-XML content is left unchanged.
+	 */
+	private void rejectDoctypeInXml(byte[] bytes, String filename) throws InvalidConfigurationException {
+		try {
+			readXml(bytes);
+		} catch (Exception e) {
+			if (declaresDoctype(e)) {
+				logger.error("Failed to validate the configuration file '{}'", filename, e);
+				throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename), e);
+			}
+			logger.debug("Configuration file '{}' is not XML, will not validate", filename);
+		}
+	}
+
+	private static void readXml(byte[] bytes) throws Exception {
+		SAXReader saxReader = new SAXReader();
+		saxReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		saxReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		saxReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		saxReader.read(new ByteArrayInputStream(bytes));
+	}
+
+	private static boolean declaresDoctype(Throwable error) {
+		Throwable current = error;
+		while (current != null) {
+			String message = current.getMessage();
+			if (message != null && message.toLowerCase().contains("doctype")) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
+	}
 
     private String getConfigurationPath(String siteId, String module, String path, String environment) throws SiteNotFoundException {
         String configBasePath = null;
