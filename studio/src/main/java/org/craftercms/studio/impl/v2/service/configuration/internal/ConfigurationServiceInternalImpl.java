@@ -394,6 +394,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
                                    String environment,
                                    InputStream content)
             throws ServiceLayerException, UserNotFoundException {
+		content = validate(content, path);
         writeEnvironmentConfiguration(siteId, module, path, environment, content);
         invalidateConfiguration(siteId, module, path, environment);
         applicationEventPublisher.publishEvent(
@@ -519,7 +520,11 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
             switch (extension.toLowerCase()) {
                 case "xml":
                     try {
-                        DocumentHelper.parseText(new String(bytes));
+						SAXReader saxReader = new SAXReader();
+						saxReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+						saxReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+						saxReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+						saxReader.read(new ByteArrayInputStream(bytes));
                     } catch (Exception e) {
                         logger.error("Failed to validate the configuration file '{}'", filename, e);
                         throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'",

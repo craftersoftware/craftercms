@@ -34,8 +34,10 @@ import org.apache.commons.text.lookup.StringLookupFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -57,13 +59,14 @@ public class ConfigUtils {
     public static final String DEFAULT_ENCODING = "UTF-8";
 
 	/**
-	 * Creates a {@link DocumentBuilder} that rejects DOCTYPE declarations and external entities.
-	 * Commons Configuration uses this builder instead of a default JAXP parser.
+	 * Creates a new {@link DocumentBuilder} that rejects DOCTYPE declarations and external entities.
+	 * A new builder is created for each configuration read. {@link DocumentBuilder} is not thread-safe
+	 * and must not be cached or shared across threads.
 	 *
 	 * @return a hardened document builder
 	 * @throws ParserConfigurationException if the parser cannot be configured securely
 	 */
-	public static DocumentBuilder createDocumentBuilder() throws ParserConfigurationException {
+	private static DocumentBuilder createDocumentBuilder() throws ParserConfigurationException {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
@@ -154,6 +157,13 @@ public class ConfigUtils {
                                                         Map<String, Lookup> prefixLookups,
                                                         Map<String,String> lookupVariables)
         throws ConfigurationException {
+		URL resourceUrl;
+		try {
+			resourceUrl = resource.getURL();
+		} catch (IOException e) {
+			throw new ConfigurationException("Unable to get URL of resource " + resource, e);
+		}
+
         Parameters params = new Parameters();
         FileBasedConfigurationBuilder<XMLConfiguration> builder =
             new FileBasedConfigurationBuilder<>(XMLConfiguration.class);
@@ -161,7 +171,7 @@ public class ConfigUtils {
         try {
             XMLBuilderParameters xmlParams = params
                 .xml()
-                .setURL(resource.getURL())
+                .setURL(resourceUrl)
                 .setListDelimiterHandler(new DefaultListDelimiterHandler(listDelimiter));
 
             if (MapUtils.isNotEmpty(prefixLookups)) {
@@ -176,7 +186,7 @@ public class ConfigUtils {
 
             return builder.getConfiguration();
         } catch (Exception e) {
-            throw new ConfigurationException("Unable to get URL of resource " + resource, e);
+            throw new ConfigurationException("Unable to read XML configuration from resource " + resource, e);
         }
     }
 

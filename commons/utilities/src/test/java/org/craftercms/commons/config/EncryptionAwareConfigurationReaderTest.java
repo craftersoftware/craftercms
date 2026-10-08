@@ -28,6 +28,8 @@ import org.springframework.core.io.FileSystemResource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -126,11 +128,51 @@ public class EncryptionAwareConfigurationReaderTest extends TestCase {
 		try {
 			ConfigurationException ex = assertThrows(ConfigurationException.class, () ->
 					encryptionAwareConfigurationReader.readXmlConfiguration(new FileSystemResource(config), lookupVariables));
+			assertTrue(ex.getMessage().contains("Unable to read XML configuration"));
+			assertFalse(ex.getMessage().contains("Unable to get URL"));
 			assertFalse(exceptionText(ex).contains(XXE_MARKER));
 			assertTrue(exceptionText(ex).toLowerCase().contains("doctype"));
 		} finally {
 			Files.deleteIfExists(config);
 			Files.deleteIfExists(secret);
+		}
+	}
+
+	@Test
+	public void testReadXmlIgnoresXInclude() throws IOException {
+		Path secret = Files.createTempFile("xxe-secret", ".txt");
+		Files.writeString(secret, XXE_MARKER);
+		String payload = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+				"<configuration xmlns:xi=\"http://www.w3.org/2001/XInclude\">" +
+				"<secret><xi:include href=\"" + secret.toUri() + "\" parse=\"text\"/></secret>" +
+				"</configuration>";
+		try {
+			try {
+				HierarchicalConfiguration<?> xmlConfiguration = encryptionAwareConfigurationReader.readXmlConfiguration(
+						new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), lookupVariables);
+				String value = xmlConfiguration.getString("secret");
+				assertFalse(value != null && value.contains(XXE_MARKER));
+			} catch (ConfigurationException ex) {
+				assertFalse(exceptionText(ex).contains(XXE_MARKER));
+			}
+		} finally {
+			Files.deleteIfExists(secret);
+		}
+	}
+
+	@Test
+	public void testReadXmlRejectsRemoteEntityWithoutConnecting() throws IOException {
+		try (ServerSocket server = new ServerSocket(0)) {
+			server.setSoTimeout(250);
+			String payload = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+					"<!DOCTYPE configuration [<!ENTITY xxe SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/probe\">]>" +
+					"<configuration><secret>&xxe;</secret></configuration>";
+			ConfigurationException ex = assertThrows(ConfigurationException.class, () ->
+					encryptionAwareConfigurationReader.readXmlConfiguration(
+							new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), lookupVariables));
+			assertFalse(exceptionText(ex).contains(XXE_MARKER));
+			assertTrue(exceptionText(ex).toLowerCase().contains("doctype"));
+			assertThrows(SocketTimeoutException.class, server::accept);
 		}
 	}
 
