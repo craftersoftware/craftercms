@@ -27,9 +27,9 @@ import org.apache.http.HttpStatus;
 import org.craftercms.commons.lang.UrlUtils;
 import org.craftercms.commons.validation.ValidationException;
 import org.craftercms.commons.validation.ValidationRuntimeException;
+import org.craftercms.core.exception.HttpStatusCodeAwareException;
 import org.craftercms.core.service.ContentStoreService;
 import org.craftercms.core.util.ExceptionUtils;
-import org.craftercms.engine.exception.HttpStatusCodeAwareException;
 import org.craftercms.engine.exception.HttpStatusCodeException;
 import org.craftercms.engine.exception.ScriptNotFoundException;
 import org.craftercms.engine.plugin.PluginService;
@@ -112,7 +112,7 @@ public class RestScriptsController implements ServletContextAware {
 		this.pluginService = pluginService;
 	}
 
-	@RequestMapping(path = "/**", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+	@RequestMapping(path = "/**", produces = {MediaType.APPLICATION_JSON_VALUE})
 	protected ResponseEntity handleRequest(final HttpServletRequest request, final HttpServletResponse response) {
 		SiteContext siteContext = SiteContext.getCurrent();
 		ScriptFactory scriptFactory = siteContext.getScriptFactory();

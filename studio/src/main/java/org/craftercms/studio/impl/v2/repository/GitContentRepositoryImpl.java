@@ -645,7 +645,6 @@ public class GitContentRepositoryImpl implements GitContentRepository, GitPublis
 								  String remoteToken, String remotePrivateKey) throws CryptoException {
 		logger.debug("Insert git remote '{}' in site '{}' into the database", remoteName, siteId);
 		RemoteRepository remote = new RemoteRepository();
-		remote.setSiteId(siteId);
 		remote.setRemoteName(remoteName);
 		remote.setRemoteUrl(remoteUrl);
 		remote.setAuthenticationType(authenticationType);
@@ -674,7 +673,7 @@ public class GitContentRepositoryImpl implements GitContentRepository, GitPublis
 		}
 
 		// Insert site remote record into database
-		retryingDatabaseOperationFacade.retry(() -> remoteRepositoryDAO.insertRemoteRepository(remote));
+		retryingDatabaseOperationFacade.retry(() -> remoteRepositoryDAO.insertRemoteRepository(siteId, remote));
 	}
 
 	@Override

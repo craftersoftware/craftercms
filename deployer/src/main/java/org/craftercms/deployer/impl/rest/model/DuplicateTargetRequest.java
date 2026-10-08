@@ -16,6 +16,8 @@
 package org.craftercms.deployer.impl.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import org.craftercms.commons.validation.annotations.param.ValidSiteId;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 
@@ -36,6 +38,7 @@ public class DuplicateTargetRequest {
 	}
 
 	@JsonUnwrapped
+	@Valid
 	private TargetTemplateParams targetTemplateParams;
 
 	public TargetTemplateParams getTargetTemplateParams() {

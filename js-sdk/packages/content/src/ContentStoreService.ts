@@ -16,7 +16,7 @@
 
 import { Observable } from 'rxjs';
 import { crafterConf, SDKService } from '@craftercms/classes';
-import { CrafterConfig, Item } from '@craftercms/models';
+import { CrafterConfig, Descriptor, Item } from '@craftercms/models';
 import { composeUrl } from '@craftercms/utils';
 import { map } from 'rxjs/operators';
 
@@ -38,6 +38,38 @@ export function getItem(path: string, config?: Partial<CrafterConfig>): Observab
 
 export interface GetDescriptorConfig extends CrafterConfig {
 	flatten: boolean;
+}
+
+/**
+ * @deprecated Use getItem instead.
+ * Returns the descriptor data of an Item in the content store.
+ * @param {string} path - The item’s path
+ * @param {CrafterConfig & GetDescriptorConfig} config? - The config override options to use
+ */
+export function getDescriptor(path: string): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor | null> {
+	console.warn('Warning: getDescriptor is deprecated. Use getItem instead.');
+
+	let cfg = crafterConf.mix(config);
+
+	return getItem(path, { ...cfg, flatten: Boolean(config?.flatten) }).pipe(
+		map((item: Item) => {
+			// GET_ITEM_URL returns null descriptorDom for folders (and other items) without a descriptor.
+			// Match the former descriptor.json endpoint, which returned item.getDescriptorDom() as-is.
+			if (item.descriptorDom == null) {
+				return null;
+			}
+			// Extract the root key and value from the descriptorDom object (page/component/etc.), then we set the localId property that the getDescriptor API used to return to the descriptorDom object.
+			const [rootKey, rootValue] = Object.entries(item.descriptorDom)[0];
+			return {
+				[rootKey]: {
+					...(rootValue as object),
+					localId: path
+				}
+			};
+		})
+	);
 }
 
 /**
@@ -85,6 +117,7 @@ export function getTree(
 
 export const ContentStoreService = {
 	getItem,
+	getDescriptor,
 	getChildren,
 	getTree
 };

@@ -23,6 +23,7 @@ import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
 import org.craftercms.commons.validation.annotations.param.ValidUsername;
 import org.craftercms.commons.validation.annotations.param.ValidateNoTagsParam;
 import org.craftercms.commons.validation.annotations.param.ValidateSecurePathParam;
+import org.craftercms.commons.validation.annotations.param.ValidateStringParam;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,27 +36,28 @@ import static org.craftercms.commons.validation.annotations.param.EsapiValidatio
  */
 public class TargetTemplateParams {
 
-	@NotBlank
-	@Size(max = 50)
-	@ValidateNoTagsParam
-	@ValidateSecurePathParam
-	private String templateName = "remote";
-	@ValidateNoTagsParam
-	private String repoUrl;
-	@ValidateNoTagsParam
-	@ValidateSecurePathParam
-	private String repoBranch;
-	@ValidUsername
-	private String repoUsername;
-	@ValidateNoTagsParam
-	@ValidateSecurePathParam
-	private String sshPrivateKeyPath;
-	@ValidateNoTagsParam
-	private String engineUrl;
-	private boolean replace;
-	private List<@NotBlank @EsapiValidatedParam(type = EMAIL) String> notificationAddresses;
-	@JsonUnwrapped
-	private final Map<String, Object> extraParams;
+    @NotBlank
+    @Size(max = 50)
+    @ValidateNoTagsParam
+    @ValidateSecurePathParam
+    private String templateName = "remote";
+    @ValidateNoTagsParam
+    @ValidateStringParam(blacklistedPatterns = "\\n|\\r", matchFullInput = false)
+    private String repoUrl;
+    @ValidateNoTagsParam
+    @ValidateSecurePathParam
+    private String repoBranch;
+    @ValidUsername
+    private String repoUsername;
+    @ValidateNoTagsParam
+    @ValidateSecurePathParam
+    private String sshPrivateKeyPath;
+    @ValidateNoTagsParam
+    private String engineUrl;
+    private boolean replace;
+    private List<@NotBlank @EsapiValidatedParam(type = EMAIL) String> notificationAddresses;
+    @JsonUnwrapped
+    private final Map<String, Object> extraParams;
 
 	public TargetTemplateParams() {
 		this.extraParams = new HashMap<>();

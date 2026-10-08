@@ -199,7 +199,7 @@
 	<bean id="notificationSenderBase" abstract="true">
 		<constructor-arg name="dateTimePattern" value="${target.defaultDateTimePattern}"/>
 		<constructor-arg name="durationPattern" value="${target.defaultDurationPattern}"/>
-		<constructor-arg name="objectMapper" ref="objectMapper"/>
+		<constructor-arg name="objectMapper" ref="jackson2ObjectMapper"/>
 	</bean>
 
 	<bean id="emailNotificationSender" class="org.craftercms.commons.notification.impl.EmailSender"

@@ -14,14 +14,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { type Atom, useAtomValue } from 'jotai/index';
+import { atom, type Atom, useAtomValue } from 'jotai';
+import { unwrap } from 'jotai/utils';
 import { useMemo } from 'react';
-import { loadable } from 'jotai/utils';
-import type { Loadable } from 'jotai/vanilla/utils/loadable';
+
+export type Loadable<Value> =
+	{ state: 'loading' } | { state: 'hasData'; data: Awaited<Value> } | { state: 'hasError'; error: unknown };
 
 /**
- * A custom hook that wraps an async atom using the `loadable` API and retrieves its value.
- * https://jotai.org/docs/utilities/async#loadable
+ * Jotai v3 removed the built-in `loadable` util. This recreates the previous
+ * `{ loading | hasData | hasError }` shape using `unwrap`.
+ * See https://github.com/pmndrs/jotai/blob/main/docs/guides/migrating-to-v3.mdx#loadable-util
+ */
+function loadable<Value>(anAtom: Atom<Value>) {
+	const LOADING = { state: 'loading' } as const;
+	const unwrappedAtom = unwrap(anAtom, () => LOADING);
+	return atom((get): Loadable<Value> => {
+		try {
+			const data = get(unwrappedAtom);
+			if (data === LOADING) {
+				return LOADING;
+			}
+			return { state: 'hasData', data: data as Awaited<Value> };
+		} catch (error) {
+			return { state: 'hasError', error };
+		}
+	});
+}
+
+/**
+ * A custom hook that wraps an async atom using a local `loadable` helper and retrieves its value.
  *
  * @template Value - The type of the value stored in the atom.
  * @param {Atom<Value>} atom - The Jotai atom to be wrapped and accessed.
@@ -29,8 +51,8 @@ import type { Loadable } from 'jotai/vanilla/utils/loadable';
  * `loading`, `hasData`, or `hasError`.
  *
  */
-export function useLoadableAtom<Value>(atom: Atom<Value>): Loadable<Value> {
-	const loadableAtom = useMemo(() => loadable(atom), [atom]);
+export function useLoadableAtom<Value>(anAtom: Atom<Value>): Loadable<Value> {
+	const loadableAtom = useMemo(() => loadable(anAtom), [anAtom]);
 	return useAtomValue(loadableAtom);
 }
 

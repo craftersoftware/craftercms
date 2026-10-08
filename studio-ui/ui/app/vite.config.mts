@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => ({
       '/static-assets': proxyConfig,
       '/studio/static-assets': proxyConfig,
       '/studio/refresh.json': proxyConfig,
-      '/studio/1/plugin/file': proxyConfig,
+      '/studio/1/plugin/': proxyConfig,
       '/studio/events': { target: 'ws://localhost:8080', changeOrigin: true, secure: true }
     }
   },

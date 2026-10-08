@@ -2556,7 +2556,7 @@ var nodeOpen = false,
        *  opens a dialog to upload an asset
        */
       openWebDAVUploadDialog: function (site, path, profileId, callback, fileTypes) {
-        var serviceUri = CStudioAuthoring.Service.writeWebDAVContentUri;
+        var serviceUri = CStudioAuthoring.Service.writeWebDAVContentUri.replace('{siteId}', site);
 
         var openUploadDialogCb = {
           moduleLoaded: function (moduleName, dialogClass, moduleConfig) {
@@ -2601,8 +2601,8 @@ var nodeOpen = false,
         var params = params ? params : {};
         serviceUri =
           params && params.transcode
-            ? CStudioAuthoring.Service.videoTranscode
-            : CStudioAuthoring.Service.writeS3ContentUri;
+            ? CStudioAuthoring.Service.videoTranscode.replace('{siteId}', site)
+            : CStudioAuthoring.Service.writeS3ContentUri.replace('{siteId}', site);
 
         var openUploadDialogCb = {
           moduleLoaded: function (moduleName, dialogClass, moduleConfig) {
@@ -2808,7 +2808,7 @@ var nodeOpen = false,
       // READ OPS
       getContentUri: '/api/1/services/api/1/content/get-content.json',
       lookupContentItemServiceUri: '/api/1/services/api/1/content/get-item.json',
-      searchServiceUrl: '/api/2/search/search.json',
+      searchServiceUrl: '/api/2/search/{siteId}/search.json',
       writeContentServiceUrl: '/api/1/services/api/1/content/write-content.json',
       allContentTypesForSite: '/api/1/services/api/1/content/get-content-types.json',
       allowedContentTypesForPath: '/api/1/services/api/1/content/get-content-types.json',
@@ -2816,11 +2816,11 @@ var nodeOpen = false,
       lookupFoldersServiceUri: '/api/1/services/api/1/content/get-pages.json', // NEED A SERVICE
 
       //WEBDAV
-      writeWebDAVContentUri: '/api/2/webdav/upload',
+      writeWebDAVContentUri: '/api/2/webdav/{siteId}/upload',
 
       //S3
-      writeS3ContentUri: '/api/2/aws/s3/upload.json',
-      videoTranscode: '/api/2/aws/mediaconvert/upload',
+      writeS3ContentUri: '/api/2/aws/{siteId}/s3/upload.json',
+      videoTranscode: '/api/2/aws/{siteId}/mediaconvert/upload',
 
       // ORDER SERVICES
       // READ
@@ -2835,10 +2835,10 @@ var nodeOpen = false,
       syncRepoServiceUrl: '/api/1/services/api/1/repo/sync-from-repo.json',
 
       // Quick Create
-      getQuickCreateURL: '/api/2/content/list_quick_create_content.json',
+      getQuickCreateURL: '/api/2/content/{siteId}/list_quick_create_content.json',
 
       // Plugin
-      getPluginURL: '/1/plugin/file',
+      getPluginURL: '/1/plugin/{siteId}/file',
 
       /**
        * lookup authoring role. having 'admin' role in one of user roles will return admin. otherwise it will return contributor
@@ -3363,8 +3363,7 @@ var nodeOpen = false,
        * get Quick Create
        */
       getQuickCreate: function (callback) {
-        var serviceUrl = this.getQuickCreateURL;
-        serviceUrl += '?siteId=' + CStudioAuthoringContext.site;
+        var serviceUrl = this.getQuickCreateURL.replace('{siteId}', CStudioAuthoringContext.site);
 
         CrafterCMSNext.util.ajax.get(this.createServiceUri(serviceUrl)).subscribe(
           function (response) {
@@ -3941,8 +3940,7 @@ var nodeOpen = false,
        * execute a search
        */
       search: function (site, searchQuery, callback) {
-        var serviceUrl = this.searchServiceUrl;
-        serviceUrl += '?siteId=' + site;
+        var serviceUrl = this.searchServiceUrl.replace('{siteId}', site);
 
         CrafterCMSNext.util.ajax.postJSON(CStudioAuthoring.Service.createServiceUri(serviceUrl), searchQuery).subscribe(
           (response) => {
@@ -6444,10 +6442,10 @@ var nodeOpen = false,
           if (item.plugin != null) {
             isPlugin = true;
             name = item.plugin.name;
-            path = CStudioAuthoring.Service.getPluginURL + '?siteId=' + CStudioAuthoringContext.site;
+            path = CStudioAuthoring.Service.getPluginURL.replace('{siteId}', CStudioAuthoringContext.site);
             prefix = name;
             if (item.plugin.type) {
-              path += '&type=' + item.plugin.type;
+              path += '?type=' + item.plugin.type;
             } else {
               missingProp.push('Type');
             }

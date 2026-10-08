@@ -93,6 +93,10 @@
 * FE2 TODO: image=>image-picker, text=>input, etc services/contentType typeMap removed
 * Removed WidgetDialogContextType, WidgetDialogContext, useWidgetDialogContext. Use `useEnhancedDialogContext` instead.
 * [services]
+  * Moved Uppy-backed upload helpers out of `content` into `contentUpload` so consumers can import content APIs without pulling Uppy into their module graph.
+    * No longer exported from `@craftercms/studio-ui/services/content`: `createFileUpload`, `uploadBlob`, `uploadDataUrl`, `uploadToS3`, `uploadToWebDAV`.
+    * Import these from `@craftercms/studio-ui/services/contentUpload` instead. Do not re-export them from `services/content` (that would restore the Uppy dependency path).
+    * The global `craftercms.services.content` API (including upload helpers) remains available via `contentApi`.
   * `publishing/fetchPackages` filters param updated to be a Partial of `target`, `states`, `approvalStates`, `submitter`, `reviewer`, `isScheduled`, `sort`, `offset` and `limit`.
   `environment` is now `target` and `path` was removed from filters param.
   * `publishing/fetchPackage`: `packageId` is now of type `number`.

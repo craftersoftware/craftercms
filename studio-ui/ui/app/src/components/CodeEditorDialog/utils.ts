@@ -25,6 +25,10 @@ export interface CodeEditorDialogBaseProps {
 	mode?: string;
 	contentType?: string;
 	readonly?: boolean;
+	/** When true, the file does not exist yet; content starts empty and is created on Save. */
+	isNew?: boolean;
+	/** When true and contentType is set, associate the path as the display template after the first successful save of a new file. */
+	associateTemplateOnSave?: boolean;
 }
 
 export interface CodeEditorDialogProps extends CodeEditorDialogBaseProps, EnhancedDialogProps {

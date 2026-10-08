@@ -16,7 +16,7 @@
 
 import { ContentTypeField } from '../../models';
 import ContentType from '../../models/ContentType';
-import { createStore } from 'jotai/index';
+import { createStore } from 'jotai';
 import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
 import type { ResolvedDataSources } from './dataSources/types';

@@ -49,6 +49,8 @@ studio.configuration.management.previewProtectedUrls: >-
 ############################################################
 ##                    Preview Deployer                    ##
 ############################################################
+# Deployer target calls send studio.configuration.management.deployerAuthorizationToken
+# in the X-Crafter-Management-Token header. Do not put the token in these URLs.
 # Default preview deployer URL (can be overridden per site)
 studio.preview.defaultPreviewDeployerUrl: ${env:DEPLOYER_URL}/api/1/target/deploy/{siteEnv}/{siteName}
 # Default preview create target URL (can be overridden per site)
@@ -180,6 +182,10 @@ studio.security.cipher.key: ${env:CRAFTER_SYSTEM_ENCRYPTION_KEY}
 studio.security.encryption.key: ${env:CRAFTER_ENCRYPTION_KEY}
 # The salt used for encryption of configuration properties
 studio.security.encryption.salt: ${env:CRAFTER_ENCRYPTION_SALT}
+# The key used for encryption of preview tokens
+studio.security.preview.token.key: ${env:CRAFTER_PREVIEW_TOKEN_KEY}
+# The salt used for encryption of preview tokens
+studio.security.preview.token.salt: ${env:CRAFTER_PREVIEW_TOKEN_SALT}
 
 ###############################################################
 ##               SAML Security                               ##

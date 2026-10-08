@@ -35,7 +35,7 @@ import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
 import EmptyState from '../EmptyState/EmptyState';
 import UploadIcon from '@mui/icons-material/Publish';
 import { pluckProps } from '../../utils/object';
-import { uploadDataUrl } from '../../services/content';
+import { uploadDataUrl } from '../../services/contentUpload';
 import palette from '../../styles/palette';
 import { useSelection } from '../../hooks/useSelection';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';

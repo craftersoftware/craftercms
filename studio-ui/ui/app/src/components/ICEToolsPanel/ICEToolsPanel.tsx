@@ -22,7 +22,7 @@ import LoadingState, { ConditionalLoadingState } from '../LoadingState/LoadingSt
 import { useSelection } from '../../hooks/useSelection';
 import { useActiveUser } from '../../hooks/useActiveUser';
 import { useSiteUIConfig } from '../../hooks/useSiteUIConfig';
-import { renderWidgets } from '../Widget';
+import { renderWidgets } from '../Widget/renderWidgets';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import EmptyState from '../EmptyState/EmptyState';

@@ -17,3 +17,5 @@
 export { default } from './GlobalDialogManager';
 
 export * from './GlobalDialogManager';
+
+export * from './createCallback';

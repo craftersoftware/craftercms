@@ -62,33 +62,29 @@ public class UiServiceInternalImpl implements UiServiceInternal {
 
 	@Override
 	public List<MenuItem> getGlobalMenu(Set<String> permissions) throws ServiceLayerException {
-		if (CollectionUtils.isNotEmpty(permissions)) {
-			var menuConfig = getGlobalMenuConfig();
-			List<MenuItem> menuItems = new ArrayList<>();
+		var menuConfig = getGlobalMenuConfig();
 
-			// TODO: Move this config to ConfigurationService
-			var itemsConfig = menuConfig.configurationsAt(MENU_ITEMS_CONFIG_KEY);
-			if (CollectionUtils.isNotEmpty(itemsConfig)) {
-				for (var itemConfig : itemsConfig) {
-					String requiredPermission = getRequiredStringProperty(itemConfig, PERMISSION_CONFIG_KEY);
-					if (requiredPermission.equals(ANY_PERMISSION_WILDCARD) ||
-						permissions.contains(requiredPermission)) {
-						MenuItem item = new MenuItem();
-						item.setId(getRequiredStringProperty(itemConfig, ID_CONFIG_KEY));
-						item.setLabel(getRequiredStringProperty(itemConfig, LABEL_CONFIG_KEY));
-						item.setIcon(getRequiredStringProperty(itemConfig, ICON_CONFIG_KEY));
-
-						menuItems.add(item);
-					}
-				}
-			} else {
-				throw new ConfigurationException("No menu items found in global menu config");
-			}
-
-			return menuItems;
-		} else {
-			return null;
+		// TODO: Move this config to ConfigurationService
+		var itemsConfig = menuConfig.configurationsAt(MENU_ITEMS_CONFIG_KEY);
+		if (CollectionUtils.isEmpty(itemsConfig)) {
+			throw new ConfigurationException("No menu items found in global menu config");
 		}
+
+		List<MenuItem> menuItems = new ArrayList<>();
+		for (var itemConfig : itemsConfig) {
+			String requiredPermission = getRequiredStringProperty(itemConfig, PERMISSION_CONFIG_KEY);
+			if (requiredPermission.equals(ANY_PERMISSION_WILDCARD) ||
+					permissions.contains(requiredPermission)) {
+				MenuItem item = new MenuItem();
+				item.setId(getRequiredStringProperty(itemConfig, ID_CONFIG_KEY));
+				item.setLabel(getRequiredStringProperty(itemConfig, LABEL_CONFIG_KEY));
+				item.setIcon(getRequiredStringProperty(itemConfig, ICON_CONFIG_KEY));
+
+				menuItems.add(item);
+			}
+		}
+
+		return menuItems;
 	}
 
 	protected HierarchicalConfiguration<?> getGlobalMenuConfig() throws ConfigurationException {

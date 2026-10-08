@@ -15,7 +15,7 @@
  */
 
 import Typography from '@mui/material/Typography';
-import { renderWidgets } from '../Widget';
+import { renderWidgets } from '../Widget/renderWidgets';
 import { PartialSxRecord, WidgetDescriptor } from '../../models';
 import React, { PropsWithChildren } from 'react';
 import TranslationOrText from '../../models/TranslationOrText';

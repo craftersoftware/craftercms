@@ -75,12 +75,17 @@ export type ParseDescriptorOptions = Partial<{
 
 export function parseDescriptor(data: DescriptorResponse): ContentInstance;
 export function parseDescriptor(data: DescriptorResponse, options: ParseDescriptorOptions): ContentInstance;
+export function parseDescriptor(data: DescriptorResponse, options?: ParseDescriptorOptions): ContentInstance;
+export function parseDescriptor(
+	data: DescriptorResponse | null,
+	options?: ParseDescriptorOptions
+): ContentInstance | null;
 export function parseDescriptor(data: DescriptorResponse[]): ContentInstance[];
 export function parseDescriptor(data: DescriptorResponse[], options: ParseDescriptorOptions): ContentInstance[];
 export function parseDescriptor(
-	data: DescriptorResponse | DescriptorResponse[],
+	data: DescriptorResponse | DescriptorResponse[] | null,
 	options?: ParseDescriptorOptions
-): ContentInstance | ContentInstance[] {
+): ContentInstance | ContentInstance[] | null {
 	options = mixParseDescriptorOptions(options);
 	if (data == null) {
 		return null;

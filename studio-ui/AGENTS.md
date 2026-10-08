@@ -11,3 +11,4 @@ These rules apply to all work in ui/\*.
 - We use `yarn` as package manager. Prefer using `yarn` for any `npm` related work (e.g. `yarn install packageName`, `yarn commandName`, etc).
 - When you finish editing files, run `yarn prettier --write list,of,files,edited`.
 - Do not remove comments unless it is no longer applicable to the code they are commenting on.
+- Use the `$` suffix for Observable/Subject-typed internals (e.g. `fieldUpdates$`). Do not use `$` on plugin-facing or `craftercms` global API. (`craftercms.store$` is a pre-existing exception — a function — and should not be used as a model.)

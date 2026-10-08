@@ -17,7 +17,10 @@ package org.craftercms.engine.util.spring.mvc;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
@@ -39,14 +42,23 @@ public class AnnotationDrivenConfigCustomizer implements BeanPostProcessor {
 	private List<HttpMessageConverter<?>> messageConverters;
 	private List<Object> interceptors;
 
+	@Lazy
+	@Autowired
+	@Qualifier("crafter.contentNegotiationManager")
 	public void setContentNegotiationManager(ContentNegotiationManager contentNegotiationManager) {
 		this.contentNegotiationManager = contentNegotiationManager;
 	}
 
+	@Lazy
+	@Autowired
+	@Qualifier("crafter.messageConverters")
 	public void setMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
 		this.messageConverters = messageConverters;
 	}
 
+	@Lazy
+	@Autowired
+	@Qualifier("crafter.interceptors")
 	public void setInterceptors(List<Object> interceptors) {
 		this.interceptors = interceptors;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,10 +15,13 @@
  */
 package org.craftercms.studio.impl.v2.utils;
 
+import net.sf.saxon.lib.FeatureKeys;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 
+import javax.xml.XMLConstants;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.URIResolver;
@@ -73,8 +76,8 @@ public abstract class XsltUtils {
 		// execute the template
 
 		// Saxon is used to support XSLT 2.0
-		Transformer transformer = TransformerFactory.newInstance(SAXON_CLASS, null)
-			.newTransformer(new StreamSource(new StringReader(templateString)));
+		Transformer transformer = createTransformerFactory()
+				.newTransformer(new StreamSource(new StringReader(templateString)));
 
 		if (MapUtils.isNotEmpty(params)) {
 			params.forEach(transformer::setParameter);
@@ -85,6 +88,30 @@ public abstract class XsltUtils {
 		}
 
 		transformer.transform(new StreamSource(new StringReader(contentString)), new StreamResult(output));
+	}
+
+	/**
+	 * Creates a Saxon {@link TransformerFactory} hardened against XXE / external resource access.
+	 */
+	public static TransformerFactory createTransformerFactory() throws TransformerConfigurationException {
+		TransformerFactory factory = TransformerFactory.newInstance(SAXON_CLASS, null);
+
+		// JAXP standard hardening
+		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+
+		// Saxon configuration for underlying SAX parsers and extension functions
+		factory.setAttribute(FeatureKeys.ALLOW_EXTERNAL_FUNCTIONS, false);
+		factory.setAttribute(FeatureKeys.ALLOWED_PROTOCOLS, "");
+		factory.setAttribute(FeatureKeys.XML_PARSER_FEATURE +
+				"http://apache.org/xml/features/disallow-doctype-decl", true);
+		factory.setAttribute(FeatureKeys.XML_PARSER_FEATURE +
+				"http://xml.org/sax/features/external-general-entities", false);
+		factory.setAttribute(FeatureKeys.XML_PARSER_FEATURE +
+				"http://xml.org/sax/features/external-parameter-entities", false);
+
+		return factory;
 	}
 
 }

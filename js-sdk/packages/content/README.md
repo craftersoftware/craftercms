@@ -92,7 +92,7 @@ Parse a [Descriptor](https://github.com/craftersoftware/craftercms/blob/support/
 
 #### Returns
 
-[ContentInstance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts)
+[ContentInstance](https://github.com/craftersoftware/craftercms/blob/support/4.x/js-sdk/packages/models/src/ContentInstance.ts), or `null` when the item has no descriptor.
 
 #### Examples
 
@@ -185,6 +185,9 @@ Get an Item from the content store.
     console.log(content);
   });
 ```
+
+### Get Descriptor
+The Get Descriptor API is deprecated. Please use getItem instead.
 
 ### Get Children
 Get the list of Items directly under a folder in the content store.

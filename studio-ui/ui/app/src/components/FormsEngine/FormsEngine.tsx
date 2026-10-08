@@ -78,11 +78,10 @@ import { pushDialog } from '../../state/actions/dialogStack';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
 import ErrorBoundary from '../ErrorBoundary';
 import { debounceTime } from 'rxjs/operators';
-import { atom, createStore, Provider, useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, createStore, Provider, PrimitiveAtom, useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import useSelection from '../../hooks/useSelection';
 import ApiResponse from '../../models/ApiResponse';
-import { PrimitiveAtom } from 'jotai/index';
 import { AjaxError } from 'rxjs/ajax';
 import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {
@@ -97,6 +96,7 @@ import {
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
+	getValidationAtomsExcludingIrrelevant,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
@@ -151,6 +151,13 @@ import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
+import {
+	attachFormController,
+	findAncestorFormControllerEntry,
+	isFieldPathIrrelevant,
+	runFormControllerCleanup
+} from './formControllers/runtime';
+import { createEmbeddedRelevanceResolver } from './formControllers/relevance';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -244,7 +251,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				stableGlobalContextRef.current.formsStackData.pop();
+				const stack = stableGlobalContextRef.current.formsStackData;
+				runFormControllerCleanup(stack[stack.length - 1]);
+				stack.pop();
 				setCount(-1);
 			},
 			updateProps(stackIndex, formProps) {
@@ -256,6 +265,16 @@ function GlobalFormsState(props: FormsEngineProps) {
 		};
 		return api;
 	}, [store]);
+	// Root engine unmount: clean up any remaining controllers (including the root entry).
+	useEffect(() => {
+		return () => {
+			const stack = stableGlobalContextRef.current?.formsStackData;
+			if (!stack) return;
+			for (let i = stack.length - 1; i >= 0; i--) {
+				runFormControllerCleanup(stack[i]);
+			}
+		};
+	}, []);
 	return (
 		<ErrorBoundary>
 			<StableGlobalContext.Provider value={stableGlobalContextRef.current}>
@@ -290,7 +309,9 @@ function FormBootstrap(props: FormsEngineProps) {
 	const theme = useTheme();
 	const { isFullScreen = false } = useEnhancedDialogContext() ?? {};
 	const username = useActiveUser()?.username;
-	const effectRefs = useUpdateRefs({ contentTypesById, username });
+	// `effectiveProps` is a new object on every render of the parent; keep it out of the prep effect's
+	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
+	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
@@ -398,7 +419,24 @@ function FormBootstrap(props: FormsEngineProps) {
 				return fields.map((field) => ({ ...field, fromBootstrap: true }));
 			})();
 			setItemMeta(stableFormContextRef.current.itemMeta);
-			setReady(true);
+			return attachFormController({
+				siteId,
+				store,
+				stackEntry: stableFormContextRef.current,
+				parentStackEntry: findAncestorFormControllerEntry(formsStackData, stackIndex),
+				formProps: effectRefs.current.effectiveProps,
+				dispatch,
+				formatMessage,
+				// Attach owns the teardown of its own `initialize` when this prep run is superseded.
+				isStale: () => disposed
+			})
+				.catch((error) => {
+					console.error('Form controller attach failed. The form will open without a custom controller.', error);
+				})
+				.then(() => {
+					if (disposed) return;
+					setReady(true);
+				});
 		};
 		if (
 			// A repeat group is being opened as a stacked form.
@@ -420,11 +458,16 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockResult: lockResultAtom,
 				readonly: createReadonlyAtom(lockResultAtom),
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: atom('')
+				fileName: createFileNameAtom('', stableFormContextRef)
 			});
 			const seedValues = repeat.values ? { ...repeat.values } : {};
 			preloadControlPluginsForFields(siteId, fieldsToRender, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
+				const validatorsData = {
+					siteId,
+					contentTypesById,
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
+				};
 				const atomValueCreator: Parameters<typeof createParsedValuesObject>[3] = (fieldId, value, isAdditional) => {
 					setFieldAtoms(
 						stableFormContextRef,
@@ -433,7 +476,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						fieldId,
 						atoms,
 						value,
-						{ siteId, contentTypesById },
+						validatorsData,
 						isAdditional
 					);
 				};
@@ -557,13 +600,18 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockResult: lockResultAtom,
 				readonly: atom(false),
 				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: atom(''),
+				fileName: createFileNameAtom('', stableFormContextRef),
 				// Default version comment for new content.
 				versionComment: atom(generateDefaultCreationComment('', formatMessage))
 			});
 			const contentObject = createObjectWithSystemProps(contentType);
 			const initCreateForm = (failures: ControlPluginPreloadFailure[] = []) => {
 				if (disposed) return;
+				const validatorsData = {
+					siteId,
+					contentTypesById,
+					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
+				};
 				const values = createParsedValuesObject(
 					contentType.fields,
 					contentObject,
@@ -578,7 +626,7 @@ function FormBootstrap(props: FormsEngineProps) {
 							fieldId,
 							atoms,
 							value,
-							{ siteId, contentTypesById },
+							validatorsData,
 							isAdditional
 						);
 					},
@@ -650,7 +698,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						lockResult: lockResultAtom,
 						readonly: createReadonlyAtom(lockResultAtom),
 						expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
-						fileName: createFileNameAtom(requirements.item.path)
+						fileName: createFileNameAtom(requirements.item.path, stableFormContextRef)
 					});
 					preloadControlPluginsForFields(
 						siteId,
@@ -659,6 +707,11 @@ function FormBootstrap(props: FormsEngineProps) {
 						effectRefs.current.contentTypesById
 					).then((failures) => {
 						if (disposed) return;
+						const validatorsData = {
+							siteId,
+							contentTypesById: effectRefs.current.contentTypesById,
+							resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
+						};
 						const values = createParsedValuesObject(
 							requirements.contentType.fields,
 							requirements.contentObject,
@@ -671,7 +724,7 @@ function FormBootstrap(props: FormsEngineProps) {
 									fieldId,
 									atoms,
 									value,
-									{ siteId, contentTypesById: effectRefs.current.contentTypesById },
+									validatorsData,
 									isAdditional
 								);
 							},
@@ -707,6 +760,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		dispatch,
 		effectRefs,
 		fieldsToRender,
+		formatMessage,
 		formsStackData,
 		readonlyProp,
 		repeat,
@@ -786,7 +840,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
-	const { fieldUpdates$, changedFieldIds, atoms } = stableFormContext;
+	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
+	const irrelevantFieldPaths = formControllerState?.irrelevantFieldPaths ?? null;
+	const formControllerFileMissing = Boolean(formControllerState?.fileMissing);
+	const formControllerLoadFailed = Boolean(formControllerState?.loadFailed);
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
@@ -803,19 +860,43 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = useMemo(() => {
-		if (!isEmbedded) return contentType.sections;
-		// If the item is embedded, exclude the 'file-name' field from the sections.
-		// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
-		// being rendered in the ToC and the form.
-		return contentType.sections.map((section) => ({
-			...section,
-			fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
-		}));
-	}, [contentType.sections, isEmbedded]);
+		let sections = contentType.sections;
+		if (isEmbedded) {
+			// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
+			// being rendered in the ToC and the form.
+			sections = sections.map((section) => ({
+				...section,
+				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
+			}));
+		}
+		if (irrelevantFieldPaths && !fieldsToRender) {
+			sections = sections
+				.map((section) => ({
+					...section,
+					fields: section.fields.filter((fieldId) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId))
+				}))
+				// Remove sections that contain no remaining fields.
+				.filter((section) => section.fields.length > 0);
+		}
+		return sections;
+	}, [contentType.sections, isEmbedded, irrelevantFieldPaths, fieldsToRender]);
+	const visibleFieldsToRender = useMemo(() => {
+		if (!fieldsToRender) return fieldsToRender;
+		if (!irrelevantFieldPaths?.size) return fieldsToRender;
+		// Repeat item fields are subfields. Qualify them with the repeat group so `title_s` in
+		// another group is not hidden by this one.
+		return fieldsToRender.filter((field) => !isFieldPathIrrelevant(irrelevantFieldPaths, field.id, repeat?.fieldId));
+	}, [fieldsToRender, irrelevantFieldPaths, repeat?.fieldId]);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
-	const tableOfContents = <TableOfContents fieldsToRender={fieldsToRender} containerRef={containerRef} />;
+	const tableOfContents = (
+		<TableOfContents
+			fieldsToRender={visibleFieldsToRender}
+			sections={contentTypeSections}
+			containerRef={containerRef}
+		/>
+	);
 	const effectRefs = useUpdateRefs({
-		fieldsToRender,
+		fieldsToRender: visibleFieldsToRender,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
@@ -836,9 +917,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 		const checkValidationState = async () => {
 			const validityStates = await Promise.all(
-				Object.values(stableFormContext.atoms.validationByFieldId).map((validityDataAtom) =>
-					jotai.get(validityDataAtom)
-				)
+				getValidationAtomsExcludingIrrelevant(
+					stableFormContext.atoms.validationByFieldId,
+					stableFormContext.formControllerState?.irrelevantFieldPaths,
+					repeat?.fieldId
+				).map((validityDataAtom) => jotai.get(validityDataAtom))
 			);
 			setInvalidForm(validityStates.some((state) => !state.isValid));
 		};
@@ -1205,10 +1288,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 								{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
 							</Alert>
 						)}
-						{fieldsToRender ? (
+						{formControllerFileMissing && (
+							<Alert severity="warning" variant="outlined">
+								<AlertTitle>
+									<FormattedMessage defaultMessage="Form controller missing" />
+								</AlertTitle>
+								<FormattedMessage defaultMessage="This content type has a client-side form controller enabled, but form-controller.js was not found. The form will open without a custom controller." />
+							</Alert>
+						)}
+						{formControllerLoadFailed && (
+							<Alert severity="warning" variant="outlined">
+								<AlertTitle>
+									<FormattedMessage defaultMessage="Form controller failed to load" />
+								</AlertTitle>
+								<FormattedMessage defaultMessage="This content type has a client-side form controller, but it could not be loaded. Check form-controller.js for syntax or export errors. The form will open without a custom controller." />
+							</Alert>
+						)}
+						{visibleFieldsToRender ? (
 							// Renders the specified set of fields only
 							<Paper sx={{ p: 2 }}>
-								{fieldsToRender.map((field, index) =>
+								{visibleFieldsToRender.map((field, index) =>
 									renderFieldControl(field, stableFormContext.atoms.valueByFieldId, index === 0, readonly, contentType)
 								)}
 							</Paper>
@@ -1417,7 +1516,7 @@ export default FormGuard;
 //    - Should test controls in a root form and in a nested form
 //  - Use the "cdata config" to apply cdata
 //  - Where do we put the "config" to determine whether to use new or old form engine?
-//  - Form controller loading and execution
+//  - Form controller: landed (see formControllers/ + docs/type-builder-forms-engine.md §5.9)
 //  - FOR LATER...
 //    - Inherited non overridable if not in the model
 //    - AI

@@ -31,9 +31,9 @@ import {
 } from '../models/ContentType';
 import { LookupTable } from '../models/LookupTable';
 import { camelize, capitalize, ensureSingleSlash, isBlank, toColor } from '../utils/string';
-import { Observable, of } from 'rxjs';
+import { defer, Observable, of, Subscription, throwError } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
 import { fetchContentItems } from './content';
 import { ContentItem } from '../models/Item';
@@ -49,7 +49,7 @@ import {
 	systemValidationsNames
 } from '../utils/contentType';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
-import { ajax, AjaxResponse } from 'rxjs/ajax';
+import { ajax, AjaxError, AjaxResponse } from 'rxjs/ajax';
 import { DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL } from '../utils/constants';
 
 // FE2 TODO: Verify removal
@@ -607,7 +607,58 @@ export function deleteContentType(site: string, contentTypeId: string): Observab
 	}).pipe(map(() => true));
 }
 
+const formDefinitionWriteTails = new Map<string, Promise<void>>();
+
+/**
+ * Runs `task` once every earlier queued write to the same site + type form-definition has settled.
+ * `task` is only called at its turn, so read-modify-write helpers fetch the document then, and a full
+ * definition write builds its XML then. Otherwise two writers that each read before the other wrote
+ * would silently drop one change. Unsubscribing before the turn skips the task.
+ */
+export function queueFormDefinitionWrite<T>(
+	site: string,
+	contentTypeId: string,
+	task: () => Observable<T>
+): Observable<T> {
+	return new Observable<T>((subscriber) => {
+		const key = `${site}:${contentTypeId}`;
+		const previous = formDefinitionWriteTails.get(key) ?? Promise.resolve();
+		let release: () => void;
+		const settled = new Promise<void>((resolve) => (release = resolve));
+		const tail = previous.then(() => settled);
+		formDefinitionWriteTails.set(key, tail);
+		tail.then(() => {
+			if (formDefinitionWriteTails.get(key) === tail) formDefinitionWriteTails.delete(key);
+		});
+		let closed = false;
+		let inner: Subscription | null = null;
+		previous.then(() => {
+			if (closed) {
+				release();
+				return;
+			}
+			inner = defer(task)
+				.pipe(finalize(() => release()))
+				.subscribe({
+					next: (value) => subscriber.next(value),
+					error: (error) => subscriber.error(error),
+					complete: () => subscriber.complete()
+				});
+		});
+		return () => {
+			closed = true;
+			inner?.unsubscribe();
+		};
+	});
+}
+
 export function associateTemplate(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () =>
+		associateTemplateNow(site, contentTypeId, displayTemplate)
+	);
+}
+
+function associateTemplateNow(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
@@ -641,7 +692,69 @@ export function associateTemplate(site: string, contentTypeId: string, displayTe
 	);
 }
 
+function isMissingFormDefinition(error: unknown): boolean {
+	if (!error || typeof error !== 'object') return false;
+	const ajaxError = error as Partial<AjaxError> & { response?: { response?: { code?: number | string } } };
+	if (ajaxError.status === 404) return true;
+	const code = ajaxError.response?.response?.code;
+	return code === 7000 || code === '7000';
+}
+
+/**
+ * Writes `<controller>true|false</controller>` on the saved form-definition.
+ * Type Builder keeps a separate draft; this is what FE2 reads via `hasJsController`
+ * if that draft is discarded.
+ *
+ * Returns `false` only when the form-definition is missing (unsaved type), so the
+ * draft flag can still be stored with the type's first save. Errors from
+ * `writeConfiguration` on an existing definition propagate; they are not returned as `false`.
+ */
+export function setJsControllerEnabled(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () => setJsControllerEnabledNow(site, contentTypeId, enabled));
+}
+
+function setJsControllerEnabledNow(site: string, contentTypeId: string, enabled: boolean): Observable<boolean> {
+	const path = createFormDefinitionPathFromTypeId(contentTypeId);
+	const module = 'studio';
+	return fetchConfigurationDOM(site, path, module).pipe(
+		catchError((error: unknown) => {
+			if (isMissingFormDefinition(error)) {
+				return of(false as const);
+			}
+			return throwError(() => error);
+		}),
+		switchMap((doc) => {
+			if (doc === false) {
+				return of(false);
+			}
+			const form = doc.querySelector('form');
+			if (!form) {
+				return throwError(() => new Error(`Form definition for "${contentTypeId}" has no <form> element.`));
+			}
+			let controller: Element | null = null;
+			for (const child of Array.from(form.children)) {
+				if (child.localName === 'controller') {
+					controller = child;
+					break;
+				}
+			}
+			if (!controller) {
+				controller = doc.createElement('controller');
+				form.insertBefore(controller, form.firstChild);
+			}
+			controller.textContent = enabled ? 'true' : 'false';
+			return fromPromise(beautify(serialize(doc))).pipe(
+				switchMap((xml) => writeConfiguration(site, path, module, xml))
+			);
+		})
+	);
+}
+
 export function dissociateTemplate(site: string, contentTypeId: string): Observable<boolean> {
+	return queueFormDefinitionWrite(site, contentTypeId, () => dissociateTemplateNow(site, contentTypeId));
+}
+
+function dissociateTemplateNow(site: string, contentTypeId: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
@@ -693,9 +806,15 @@ export function fetchContentTypePreviewImageUrl(
 }
 
 /**
- * @deprecated Only for Forms Engine v1 (FE1) usage. FE1 gets replaced by FE2 in CrafterCMS v5.
- **/
-export function getFetchLegacyFormControllerUrl(site: string, contentTypeId: string): string {
+ * Authenticated URL for a content type's client-side `form-controller.js`.
+ * Use with `getText` (or equivalent); do not load via bare `<script src>` / `import()`.
+ */
+export function getFormControllerUrl(site: string, contentTypeId: string): string {
 	const qs = toQueryString({ contentTypeId });
 	return `/studio/api/2/configuration/content_types/${site}/form_controller${qs}`;
 }
+
+/**
+ * @deprecated Use {@link getFormControllerUrl}. Kept for Forms Engine v1 (FE1) call sites.
+ */
+export const getFetchLegacyFormControllerUrl = getFormControllerUrl;

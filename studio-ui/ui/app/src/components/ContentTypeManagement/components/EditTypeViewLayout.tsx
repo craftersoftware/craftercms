@@ -32,7 +32,7 @@ export type EditAppLayoutAction = 'exit' | 'save' | 'viewXml' | 'diff' | 'histor
 type MenuItemOrButtonEvent = Parameters<MenuItemProps['onClick']>[0] | Parameters<ButtonProps['onClick']>[0];
 
 export interface EditAppLayoutProps extends Omit<LayoutProps, 'toolbarContent'> {
-	onActionClick(e: MenuItemOrButtonEvent, action: EditAppLayoutAction): void;
+	onActionClick(e: MenuItemOrButtonEvent, action: EditAppLayoutAction): void | Promise<void>;
 	disableSave?: boolean;
 	isNew?: boolean;
 }

@@ -26,6 +26,7 @@ import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
+import type { FormControllerState } from '../formControllers/types';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -93,6 +94,11 @@ export interface FormsEngineAtoms {
 	closeAfterSave: AtomWithStorage;
 	minimizeAfterSave: AtomWithStorage;
 	fileName?: Atom<string>;
+	/**
+	 * Bumped after form-controller relevance is stored. Validation atoms read it so a
+	 * deny-list that arrives after bootstrap invalidates verdicts computed without it.
+	 */
+	relevanceVersion: PrimitiveAtom<number>;
 }
 
 // Contains information to restore the state of a form when it comes back to being the active form on the stack
@@ -125,6 +131,11 @@ export interface StableFormContextProps {
 	 * each save attempt.
 	 */
 	affectedPluginControlFields: AffectedPluginControlField[];
+	/**
+	 * Form-controller attachment for this stack entry (`null` when none).
+	 * Repeat entries may hold only a deny-list (`irrelevantFieldPaths`) and no controller.
+	 */
+	formControllerState: FormControllerState | null;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

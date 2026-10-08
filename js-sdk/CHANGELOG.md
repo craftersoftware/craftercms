@@ -1,5 +1,13 @@
 # SDK Changelog
 
+## 5.0.1
+## @craftercms/content@5.0.1
+- Restored deprecated `getDescriptor` API for backwards compatibility (use `getItem` instead)
+- `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
+
+## @craftercms/redux@5.0.1
+- Restored deprecated `getDescriptor` API for backwards compatibility (use `getItem` instead)
+
 ## 5.0.0
 ## @craftercms/content@5.0.0
 - "Get Descriptor" API removed (use getItem instead)

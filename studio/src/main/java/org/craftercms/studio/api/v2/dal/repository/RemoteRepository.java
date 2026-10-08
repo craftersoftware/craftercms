@@ -21,7 +21,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.craftercms.commons.git.utils.AuthenticationType;
 import org.craftercms.commons.jackson.CaseInsensitiveEnumDeserializer;
-import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.commons.validation.annotations.param.ValidateNoTagsParam;
 
 import java.io.Serializable;
@@ -31,8 +30,6 @@ public class RemoteRepository implements Serializable {
 	private static final long serialVersionUID = -5031083831374591061L;
 
 	private long id;
-	@ValidSiteId
-	private String siteId;
 	@Size(max = 50)
 	private String remoteName;
 	@Size(max = 2000)
@@ -56,14 +53,6 @@ public class RemoteRepository implements Serializable {
 
 	public void setId(long id) {
 		this.id = id;
-	}
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
 	}
 
 	public String getRemoteName() {

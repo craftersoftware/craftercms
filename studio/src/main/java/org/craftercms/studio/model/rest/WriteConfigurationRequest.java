@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,7 +18,6 @@ package org.craftercms.studio.model.rest;
 
 import org.craftercms.commons.validation.annotations.param.EsapiValidatedParam;
 import org.craftercms.commons.validation.annotations.param.ValidConfigurationPath;
-import org.craftercms.commons.validation.annotations.param.ValidSiteId;
 import org.craftercms.studio.model.validation.annotations.ConfigurableMax;
 
 import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.ALPHANUMERIC;
@@ -26,8 +25,6 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATI
 
 public class WriteConfigurationRequest {
 
-	@ValidSiteId
-	private String siteId;
 	@EsapiValidatedParam(type = ALPHANUMERIC)
 	private String module;
 	@ValidConfigurationPath
@@ -36,14 +33,6 @@ public class WriteConfigurationRequest {
 	private String environment;
 	@ConfigurableMax(CONFIGURATION_MAX_CONFIGURATION_LENGTH)
 	private String content;
-
-	public String getSiteId() {
-		return siteId;
-	}
-
-	public void setSiteId(String siteId) {
-		this.siteId = siteId;
-	}
 
 	public String getModule() {
 		return module;

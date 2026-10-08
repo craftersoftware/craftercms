@@ -48,9 +48,9 @@ public class LoggingRequestInterceptor implements ClientHttpRequestInterceptor {
 
 	private void traceRequest(HttpRequest request, byte[] body) throws IOException {
 		logger.debug("===========================request begin================================================");
-		logger.debug("URI         : {}", request.getURI());
+		logger.debug("URI         : {}", RequestLogSanitizer.sanitizeUri(request.getURI()));
 		logger.debug("Method      : {}", request.getMethod());
-		logger.debug("Headers     : {}", request.getHeaders());
+		logger.debug("Headers     : {}", RequestLogSanitizer.sanitizeHeaders(request.getHeaders()));
 		logger.debug("Request body: {}", new String(body, "UTF-8"));
 		logger.debug("==========================request end================================================");
 	}

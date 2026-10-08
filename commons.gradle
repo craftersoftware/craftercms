@@ -116,7 +116,6 @@ ext.gradleModules = [
 	'commons': [
 		':commons:utilities',
 		':commons:security',
-		':commons:mongo',
 		':commons:audit',
 		':commons:git',
 		':commons:entitlements',
@@ -130,19 +129,7 @@ ext.gradleModules = [
 		':search:batch-indexer',
 		':search:opensearch'
 	],
-	'profile': [
-		':profile:api',
-		':profile:client',
-		':profile:security-provider',
-		':profile:server',
-		':profile:admin-console'
-	],
 	'engine': ':engine',
-	'social': [
-		':social:virus-scanner',
-		':social:server',
-		':social:admin'
-	],
 	'studio-ui': ':studio-ui',
 	'studio': ':studio',
 	'deployer': ':deployer',

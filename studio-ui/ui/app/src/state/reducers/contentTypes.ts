@@ -22,7 +22,8 @@ import {
 	dissociateTemplateComplete,
 	fetchContentTypes,
 	fetchContentTypesComplete,
-	fetchContentTypesFailed
+	fetchContentTypesFailed,
+	updateContentTypeJsController
 } from '../actions/preview';
 import ContentType from '../../models/ContentType';
 import { changeSiteComplete } from '../actions/sites';
@@ -64,7 +65,23 @@ const reducer = createReducer<GlobalState['contentTypes']>(createEntityState(), 
 					displayTemplate: ''
 				}
 			}
-		}));
+		}))
+		.addCase(updateContentTypeJsController, (state, { payload }) => {
+			const current = state.byId[payload.contentTypeId];
+			if (!current) {
+				return state;
+			}
+			return {
+				...state,
+				byId: {
+					...state.byId,
+					[payload.contentTypeId]: {
+						...current,
+						hasJsController: payload.enabled
+					}
+				}
+			};
+		});
 });
 
 export default reducer;

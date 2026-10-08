@@ -85,7 +85,7 @@ public final class RequestMappingConstants {
 	public static final String ENABLE = "/enable";
 	public static final String DISABLE = "/disable";
 	public static final String SITES = "/sites";
-	public static final String PATH_PARAM_SITE = "/{site}";
+	public static final String PATH_PARAM_SITE = SITE_ID;
 	public static final String ROLES = "/roles";
 	public static final String ME = "/me";
 	public static final String LOGOUT_SSO_URL = "/logout/sso/url";
@@ -103,16 +103,16 @@ public final class RequestMappingConstants {
 	 * Repository Management controller
 	 **/
 	public static final String REPOSITORY = "/repository";
-	public static final String ADD_REMOTE = "/add_remote";
-	public static final String LIST_REMOTES = "/list_remotes";
-	public static final String PULL_FROM_REMOTE = "/pull_from_remote";
-	public static final String PUSH_TO_REMOTE = "/push_to_remote";
-	public static final String REMOVE_REMOTE = "/remove_remote";
+	public static final String ADD_REMOTE = SITE_ID + "/add_remote";
+	public static final String LIST_REMOTES = SITE_ID + "/list_remotes";
+	public static final String PULL_FROM_REMOTE = SITE_ID + "/pull_from_remote";
+	public static final String PUSH_TO_REMOTE = SITE_ID + "/push_to_remote";
+	public static final String REMOVE_REMOTE = SITE_ID + "/remove_remote";
 	public static final String STATUS = "/status";
-	public static final String RESOLVE_CONFLICT = "/resolve_conflict";
-	public static final String DIFF_CONFLICTED_FILE = "/diff_conflicted_file";
-	public static final String COMMIT_RESOLUTION = "/commit_resolution";
-	public static final String CANCEL_FAILED_PULL = "/cancel_failed_pull";
+	public static final String RESOLVE_CONFLICT = SITE_ID + "/resolve_conflict";
+	public static final String DIFF_CONFLICTED_FILE = SITE_ID + "/diff_conflicted_file";
+	public static final String COMMIT_RESOLUTION = SITE_ID + "/commit_resolution";
+	public static final String CANCEL_FAILED_PULL = SITE_ID + "/cancel_failed_pull";
 	public static final String UNLOCK = "/unlock";
 	public static final String CORRUPTED = "/corrupted";
 	public static final String REPAIR = "/repair";
@@ -129,8 +129,8 @@ public final class RequestMappingConstants {
 	public static final String PACKAGES = "/packages";
 	public static final String PACKAGE = "/package";
 	public static final String CANCEL = "/cancel";
-	public static final String AVAILABLE_TARGETS = "/available_targets";
-	public static final String HAS_INITIAL_PUBLISH = "/has_initial_publish";
+	public static final String AVAILABLE_TARGETS = SITE_ID + "/available_targets";
+	public static final String HAS_INITIAL_PUBLISH = SITE_ID + "/has_initial_publish";
 	public static final String ENABLE_PUBLISHER = "/enable";
 	public static final String PATH_PARAM_PACKAGE = "/{packageId}";
 	public static final String ITEMS = "/items";
@@ -149,8 +149,8 @@ public final class RequestMappingConstants {
 	 * Workflow Controller
 	 */
 	public static final String WORKFLOW = "/workflow";
-	public static final String ITEM_STATES = "/item_states";
-	public static final String UPDATE_ITEM_STATES_BY_QUERY = "/update_item_states_by_query";
+	public static final String ITEM_STATES = SITE_ID + "/item_states";
+	public static final String UPDATE_ITEM_STATES_BY_QUERY = SITE_ID + "/update_item_states_by_query";
 	public static final String AFFECTED_PACKAGES = "/affected_packages";
 	public static final String REJECT = "/reject";
 	public static final String APPROVE = "/approve";
@@ -170,11 +170,11 @@ public final class RequestMappingConstants {
 	 * Configuration Controller
 	 */
 	public static final String CONFIGURATION = "/configuration";
-	public static final String CLEAR_CACHE = "/clear_cache";
-	public static final String GET_CONFIGURATION = "/get_configuration";
-	public static final String WRITE_CONFIGURATION = "/write_configuration";
-	public static final String GET_CONFIGURATION_HISTORY = "/get_configuration_history";
-	public static final String TRANSLATION = "/translation";
+	public static final String CLEAR_CACHE = SITE_ID + "/clear_cache";
+	public static final String GET_CONFIGURATION = SITE_ID + "/get_configuration";
+	public static final String WRITE_CONFIGURATION = SITE_ID + "/write_configuration";
+	public static final String GET_CONFIGURATION_HISTORY = SITE_ID + "/get_configuration_history";
+	public static final String TRANSLATION = SITE_ID + "/translation";
 	public static final String CONTENT_TYPES = "/content_types";
 	public static final String USAGE = "/usage";
 	public static final String PREVIEW_IMAGE = "/preview_image";

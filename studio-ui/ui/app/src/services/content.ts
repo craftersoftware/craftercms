@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { errorSelectorApi1, get, getBinary, getGlobalHeaders, getText, post, postJSON, put } from '../utils/ajax';
+import { get, getBinary, getText, post, postJSON, put } from '../utils/ajax';
 import { catchError, map, pluck, switchMap, tap } from 'rxjs/operators';
 import { forkJoin, Observable, of, zip } from 'rxjs';
 import {
@@ -30,11 +30,10 @@ import {
 import { ContentType } from '../models/ContentType';
 import { createLookupTable, nnou, nou, toQueryString } from '../utils/object';
 import { LookupTable } from '../models/LookupTable';
-import { dataUriToBlob, ensureSingleSlash, isBlank, isPath, popPiece, removeLastPiece } from '../utils/string';
+import { ensureSingleSlash, isBlank, isPath, popPiece, removeLastPiece } from '../utils/string';
 import ContentInstance, { InstanceRecord } from '../models/ContentInstance';
 import { AjaxResponse } from 'rxjs/ajax';
 import { ComponentsContentTypeParams, ContentInstancePage } from '../models/Search';
-import { Uppy as Core, XHRUpload } from 'uppy';
 import { getRequestForgeryToken } from '../utils/auth';
 import { ContentItem, LegacyItem } from '../models/Item';
 import { ItemHistoryEntry } from '../models/Version';
@@ -45,7 +44,6 @@ import ApiResponse, { Api2ResponseFormat } from '../models/ApiResponse';
 import { fetchContentTypes } from './contentTypes';
 import { Clipboard } from '../models/GlobalState';
 import { getFileNameFromPath } from '../utils/path';
-import { StandardAction } from '../models/StandardAction';
 import { GetChildrenResponse } from '../models/GetChildrenResponse';
 import { GetItemWithChildrenResponse } from '../models/GetItemWithChildrenResponse';
 import { FetchItemsByPathOptions } from '../models/FetchItemsByPath';
@@ -76,8 +74,8 @@ export function fetchDescriptorXML(
 	path: string,
 	options?: Partial<GetDescriptorOptions>
 ): Observable<string> {
-	const qs = toQueryString({ siteId: site, path, flatten: true, ...options });
-	return get(`/studio/api/2/content/descriptor${qs}`).pipe(pluck('response', 'xml'));
+	const qs = toQueryString({ path, flatten: true, ...options });
+	return get(`/studio/api/2/content/${site}/descriptor${qs}`).pipe(pluck('response', 'xml'));
 }
 
 export function fetchDescriptorDOM(
@@ -94,8 +92,8 @@ export function fetchContentItem(
 	options?: { preferContent: boolean }
 ): Observable<ContentItem> {
 	const { preferContent } = { preferContent: true, ...options };
-	const qs = toQueryString({ siteId, path, preferContent });
-	return get(`/studio/api/2/content/item_by_path${qs}`).pipe(
+	const qs = toQueryString({ path, preferContent });
+	return get(`/studio/api/2/content/${siteId}/item_by_path${qs}`).pipe(
 		map(({ response }) => prepareVirtualItemProps(response?.item))
 	);
 }
@@ -832,7 +830,7 @@ export function fetchItemsByContentType(
 		contentTypes = [contentTypes];
 	}
 
-	return postJSON(`/studio/api/2/search/search.json?siteId=${site}`, {
+	return postJSON(`/studio/api/2/search/${site}/search.json`, {
 		...options,
 		filters: { 'content-type': contentTypes }
 	}).pipe(
@@ -1050,189 +1048,17 @@ function insertCollectionItem(
 	}
 }
 
-export function createFileUpload(
-	uploadUrl: string,
-	file: any,
-	path: string,
-	uploadMeta: (Record<string, unknown> & { site: string }) | (Record<string, unknown> & { siteId: string }),
-	xsrfArgumentName: string = '_csrf'
-): Observable<StandardAction> {
-	const blob = file.blob ?? dataUriToBlob(file.dataUrl);
-	return uploadBlob(
-		(uploadMeta?.site ?? uploadMeta?.siteId) as string,
-		path,
-		{ name: file.name, type: file.type, blob },
-		uploadMeta,
-		uploadUrl,
-		xsrfArgumentName
-	);
-}
-
-// region uploadBlob
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	}
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>,
-	uploadUrl: string
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown>,
-	uploadUrl: string,
-	xsrfArgumentName: string
-): Observable<StandardAction>;
-export function uploadBlob(
-	site: string,
-	path: string,
-	fileData: {
-		name: string;
-		type: string;
-		blob: Blob;
-	},
-	uploadMeta: Record<string, unknown> = {},
-	uploadUrl: string = `/studio/api/2/content/${site}`,
-	xsrfArgumentName: string = '_csrf'
-): Observable<StandardAction> {
-	const qs = toQueryString({ [xsrfArgumentName]: getRequestForgeryToken() });
-	return new Observable((subscriber) => {
-		const uppy = new Core({ autoProceed: true });
-
-		uppy.use(XHRUpload, { endpoint: `${uploadUrl}${qs}`, method: 'PUT', headers: getGlobalHeaders() });
-
-		const fullPath = ensureSingleSlash(`${path}/${fileData.name}`);
-		uppy.setMeta({ ...uploadMeta, path: fullPath });
-
-		uppy.on('upload-success', (file, response) => {
-			subscriber.next({ type: 'complete', payload: response });
-			subscriber.complete();
-		});
-
-		uppy.on('upload-progress', (file, progress) => {
-			subscriber.next({ type: 'progress', payload: { file, progress } });
-		});
-
-		uppy.on('upload-error', (file, error, response) => {
-			subscriber.error(Object.assign({}, response, { error: response }));
-		});
-
-		uppy.addFile({ name: fileData.name, type: fileData.type, data: fileData.blob });
-
-		return () => {
-			uppy.cancelAll();
-		};
-	});
-}
-// endregion
-
-export function uploadDataUrl(
-	site: string,
-	file: any,
-	path: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		`/studio/api/2/content/${site}`,
-		file,
-		path,
-		{
-			site,
-			name: file.name,
-			type: file.type,
-			path
-		},
-		xsrfArgumentName
-	);
-}
-
-export function uploadToS3(
-	site: string,
-	file: any,
-	path: string,
-	profileId: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		'/studio/api/2/aws/s3/upload.json',
-		file,
-		path,
-		{
-			name: file.name,
-			type: file.type,
-			siteId: site,
-			path,
-			profileId: profileId
-		},
-		xsrfArgumentName
-	);
-}
-
-export function uploadToWebDAV(
-	site: string,
-	file: any,
-	path: string,
-	profileId: string,
-	xsrfArgumentName: string
-): Observable<StandardAction> {
-	return createFileUpload(
-		'/studio/api/2/webdav/upload',
-		file,
-		path,
-		{
-			name: file.name,
-			type: file.type,
-			siteId: site,
-			path,
-			profileId: profileId
-		},
-		xsrfArgumentName
-	);
-}
-
 export function getBulkUploadUrl(site: string, path: string): string {
 	const qs = toQueryString({ _csrf: getRequestForgeryToken() });
 	return `/studio/api/2/content/${site}${qs}`;
 }
 
 export function fetchQuickCreateList(site: string): Observable<QuickCreateItem[]> {
-	return get(`/studio/api/2/content/list_quick_create_content.json${toQueryString({ siteId: site })}`).pipe(
-		pluck('response', 'items')
-	);
+	return get(`/studio/api/2/content/${site}/list_quick_create_content.json`).pipe(pluck('response', 'items'));
 }
 
 export function fetchItemHistory(site: string, path: string): Observable<ItemHistoryEntry[]> {
-	return get(`/studio/api/2/content/item_history${toQueryString({ siteId: site, path })}`).pipe(
-		pluck('response', 'items')
-	);
+	return get(`/studio/api/2/content/${site}/item_history${toQueryString({ path })}`).pipe(pluck('response', 'items'));
 }
 
 export function revertTo(site: string, path: string, commitId: string): Observable<AjaxResponse<ApiResponse>> {
@@ -1332,7 +1158,7 @@ export function fetchContentItems(
 		return of([] as FetchItemsByPathArray<ContentItem>);
 	}
 	const { preferContent = true } = options ?? {};
-	return postJSON('/studio/api/2/content/sandbox_items_by_path', { siteId, paths, preferContent }).pipe(
+	return postJSON(`/studio/api/2/content/${siteId}/sandbox_items_by_path`, { paths, preferContent }).pipe(
 		pluck('response'),
 		map(({ items, missingItems }) =>
 			Object.assign(items.map((item) => prepareVirtualItemProps(item)) as ContentItem[], {
@@ -1400,8 +1226,7 @@ export function paste(siteId: string, targetPath: string, clipboard: Clipboard):
 }
 
 export function duplicate(siteId: string, path: string): Observable<any> {
-	return postJSON('/studio/api/2/content/duplicate', {
-		siteId,
+	return postJSON(`/studio/api/2/content/${siteId}/duplicate`, {
 		path
 	}).pipe(pluck('response'));
 }
@@ -1413,8 +1238,7 @@ export function deleteItems(
 	comment: string,
 	optionalDependencies?: string[]
 ): Observable<boolean> {
-	return postJSON('/studio/api/2/content/delete', {
-		siteId,
+	return postJSON(`/studio/api/2/content/${siteId}/delete`, {
 		items,
 		optionalDependencies,
 		title,
@@ -1423,11 +1247,11 @@ export function deleteItems(
 }
 
 export function lock(siteId: string, path: string): Observable<boolean> {
-	return postJSON('/studio/api/2/content/item_lock_by_path', { siteId, path }).pipe(map(() => true));
+	return postJSON(`/studio/api/2/content/${siteId}/item_lock_by_path`, { path }).pipe(map(() => true));
 }
 
 export function unlock(siteId: string, path: string): Observable<boolean> {
-	return postJSON('/studio/api/2/content/item_unlock_by_path', { siteId, path }).pipe(
+	return postJSON(`/studio/api/2/content/${siteId}/item_unlock_by_path`, { path }).pipe(
 		map(() => true),
 		// Do not throw/report 409 (item is already unlocked) as an error.
 		catchError((error) => {
@@ -1446,9 +1270,9 @@ export function createFolder(site: string, path: string, name: string): Observab
 	});
 }
 
-export function createFile(site: string, path: string, fileName: string): Observable<unknown> {
+export function createFile(site: string, path: string, fileName: string, content: string = ''): Observable<unknown> {
 	const fullPath = ensureSingleSlash(`${path}/${fileName}`);
-	return writeContent(site, fullPath, '', { unlock: true });
+	return writeContent(site, fullPath, content, { unlock: true });
 }
 
 export function renameFolder(site: string, path: string, name: string) {
@@ -1456,18 +1280,18 @@ export function renameFolder(site: string, path: string, name: string) {
 }
 
 export function renameContent(siteId: string, path: string, name: string) {
-	return postJSON(`/studio/api/2/content/rename`, { siteId, path, name }).pipe(pluck('response'));
+	return postJSON(`/studio/api/2/content/${siteId}/rename`, { path, name }).pipe(pluck('response'));
 }
 
 export function checkPathExistence(siteId: string, path: string): Observable<boolean> {
-	return get(`/studio/api/2/content/exists${toQueryString({ siteId, path })}`).pipe(
+	return get(`/studio/api/2/content/${siteId}/exists${toQueryString({ path })}`).pipe(
 		map(({ response }) => response.exists)
 	);
 }
 
 export function fetchContentByCommitId(site: string, path: string, commitId: string): Observable<string | Blob> {
 	return getBinary(
-		`/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId })}`,
+		`/studio/api/2/content/${site}/get_content_by_commit_id${toQueryString({ path, commitId })}`,
 		void 0,
 		'blob'
 	).pipe(

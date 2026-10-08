@@ -83,6 +83,7 @@ import static org.apache.commons.io.FilenameUtils.normalize;
 import static org.apache.commons.lang3.StringUtils.*;
 import static org.apache.commons.lang3.Strings.CI;
 import static org.apache.commons.lang3.Strings.CS;
+import static org.craftercms.commons.xml.XmlSecurityUtils.createSaxReader;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.*;
 import static org.craftercms.studio.api.v1.constant.StudioXmlConstants.*;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
@@ -410,6 +411,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 								   String environment,
 								   InputStream content)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
+		content = validate(content, path);
 		writeEnvironmentConfiguration(siteId, module, path, environment, content);
 		invalidateConfiguration(siteId, module, path, environment);
 		applicationEventPublisher.publishEvent(
@@ -512,23 +514,14 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	}
 
 	protected InputStream validate(InputStream content, String filename) throws ServiceLayerException {
-		// Check the filename to see if it needs to be validated
 		String extension = getExtension(filename);
-		if (isEmpty(extension)) {
-			// without extension there is no way to know
-			logger.debug("Configuration file '{}' is of unknown type, will not validate", filename);
-			return content;
-		}
 		try {
-			// Copy the contents of the stream
-			byte[] bytes;
-			bytes = IOUtils.toByteArray(content);
+			byte[] bytes = IOUtils.toByteArray(content);
 
-			// Perform the validation
-			switch (extension.toLowerCase()) {
+			switch (defaultString(extension).toLowerCase()) {
 				case "xml":
 					try {
-						DocumentHelper.parseText(new String(bytes));
+						readXml(bytes);
 					} catch (Exception e) {
 						logger.error("Failed to validate the configuration file '{}'", filename, e);
 						throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'",
@@ -539,22 +532,56 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 				case "yml":
 					try {
 						YamlConfiguration yamlConfig = new YamlConfiguration();
-						// Read in order to detect invalid files
 						yamlConfig.read(new ByteArrayInputStream(bytes));
 					} catch (Exception e) {
 						logger.error("Failed to validate the configuration file '{}'", filename, e);
 						throw new InvalidConfigurationException(format("Invalid YAML configuration file '%s'",
 								filename), e);
 					}
+					break;
+				default:
+					// Unknown names are not required to be XML, but a DOCTYPE must not be stored for a later XML read.
+					rejectDoctypeInXml(bytes, filename);
+					break;
 			}
 
-			// Return a new stream
 			return new ByteArrayInputStream(bytes);
 
 		} catch (IOException e) {
 			logger.error("Failed to validate the configuration file '{}'", filename, e);
 			throw new ServiceLayerException(format("Failed to validate the configuration file '%s'", filename), e);
 		}
+	}
+
+	/**
+	 * Rejects XML that declares a DOCTYPE. Non-XML content is left unchanged.
+	 */
+	private void rejectDoctypeInXml(byte[] bytes, String filename) throws InvalidConfigurationException {
+		try {
+			readXml(bytes);
+		} catch (Exception e) {
+			if (declaresDoctype(e)) {
+				logger.error("Failed to validate the configuration file '{}'", filename, e);
+				throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename), e);
+			}
+			logger.debug("Configuration file '{}' is not XML, will not validate", filename);
+		}
+	}
+
+	private static void readXml(byte[] bytes) throws Exception {
+		createSaxReader().read(new ByteArrayInputStream(bytes));
+	}
+
+	private static boolean declaresDoctype(Throwable error) {
+		Throwable current = error;
+		while (current != null) {
+			String message = current.getMessage();
+			if (message != null && message.toLowerCase().contains("doctype")) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
 	}
 
 	private String getConfigurationPath(String siteId, String module, String path, String environment) throws SiteNotFoundException {

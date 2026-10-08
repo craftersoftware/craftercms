@@ -39,9 +39,11 @@ dependencies {
 	implementation libs.slf4j.api
 	implementation libs.jcl.over.slf4j
 	implementation libs.aws.s3.transfer.manager
+	implementation libs.mongo.bson
 
 	compileOnly libs.bcpg.jdk18on
 	compileOnly libs.commons.configuration2
+	compileOnly libs.dom4j
 	compileOnly libs.commons.cli
 	compileOnly libs.jakarta.servlet.api
 	compileOnly libs.spring.context
@@ -53,7 +55,6 @@ dependencies {
 	compileOnly libs.jackson.databind
 	compileOnly libs.jackson.core
 	compileOnly libs.jackson.dataformat.cbor
-	compileOnly libs.mongo.bson
 	compileOnly libs.guava
 	compileOnly libs.aspectjrt
 	compileOnly libs.aspectjweaver
@@ -77,6 +78,7 @@ dependencies {
 	testImplementation libs.jackson.annotations
 	testImplementation libs.guava
 	testImplementation libs.commons.configuration2
+	testImplementation libs.dom4j
 	testImplementation libs.snakeyaml
 	testImplementation libs.jakarta.servlet.api
 }

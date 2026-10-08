@@ -131,28 +131,29 @@ def validateRepoPath(cli, repoPath) {
 def createDeployerTarget(siteName, repoPath, targetParams) {
 	println 'Creating Deployer Target...'
 
-	OkHttpClient client = new OkHttpClient.Builder()
-			.connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-			.writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-			.readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-			.build()
-	MediaType mediaType = MediaType.parse('application/json')
-	RequestBody body = RequestBody.create(new JsonBuilder(targetParams).toString(), mediaType)
-	Request request = new Request.Builder()
-		.url("${getDeployerUrl()}/api/1/target/create")
-		.post(body)
-		.addHeader('Content-Type', 'application/json')
-		.build()
-	try {
-		Response response = client.newCall(request).execute()
-		if (response.successful) {
-			println 'Target created successfully'
-		} else {
-			println "Error while creating Target: ${response.message()}"
-		}
-	} catch (IOException e) {
-		e.printStackTrace()
-	}
+    OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    MediaType mediaType = MediaType.parse('application/json')
+    RequestBody body = RequestBody.create(new JsonBuilder(targetParams).toString(), mediaType)
+    Request request = new Request.Builder()
+            .url("${getDeployerUrl()}/api/1/target/create")
+            .post(body)
+            .addHeader('Content-Type', 'application/json')
+            .addHeader('X-Crafter-Management-Token', getDeployerManagementToken())
+            .build()
+    try {
+        Response response = client.newCall(request).execute()
+        if (response.successful) {
+            println 'Target created successfully'
+        } else {
+            println "Error while creating Target: ${response.message()}"
+        }
+    } catch (IOException e) {
+        e.printStackTrace()
+    }
 }
 
 /**

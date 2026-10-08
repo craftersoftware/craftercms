@@ -38,6 +38,10 @@ import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceAct
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '../../EmptyState';
+import MenuList from '@mui/material/MenuList';
+import { menuItemClasses } from '@mui/material/MenuItem';
+import { svgIconClasses } from '@mui/material/SvgIcon';
+import { listItemIconClasses } from '@mui/material/ListItemIcon';
 
 export interface TranscodedVideoPickerProps extends ControlProps {
 	value: { url: string }[];
@@ -154,12 +158,33 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 			) : (
 				<Box
 					sx={{
-						display: 'flex',
-						gap: 1,
-						flexWrap: 'wrap'
+						p: 1,
+						py: 0.5,
+						color: 'primary.main',
+						[`.${svgIconClasses.root}`]: {
+							color: 'primary.main'
+						},
+						[`.${menuItemClasses.root}`]: {
+							flexDirection: 'column',
+							justifyContent: 'center',
+							borderRadius: 1
+						},
+						[`.${listItemIconClasses.root}`]: {
+							justifyContent: 'center'
+						}
 					}}
 				>
-					{actionMenuItems}
+					<MenuList
+						sx={{
+							display: 'flex',
+							flexDirection: 'column',
+							gap: 1,
+							width: '100%',
+							alignItems: 'center'
+						}}
+					>
+						{actionMenuItems}
+					</MenuList>
 				</Box>
 			)}
 			<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>

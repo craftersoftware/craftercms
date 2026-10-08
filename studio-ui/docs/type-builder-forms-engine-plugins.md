@@ -132,7 +132,7 @@ Legacy FE plugins do **not** use the modern `PluginDescriptor`/widget registry. 
 </plugin>
 ```
 
-That locator identifies one implementation file through `/studio/1/plugin/file`.
+That locator identifies one implementation file through `/studio/1/plugin/{siteId}/file`.
 
 **FE2** loads the same locator through `importPlugin` and expects a `PluginDescriptor`. Control contributions live on `descriptor.controls` (keyed by `field.type`); DS contributions on `descriptor.dataSources` (keyed by `record.type`). The host registers everything — plugins do not self-register.
 
@@ -351,10 +351,10 @@ The runtime retains the source datasource on the resolved action/choice. It does
 - File on disk: `/config/studio/content-types/{contentTypeId}/form-controller.js`.
 - Load: authenticated `form_controller` API → ESM via Blob URL; FE2 owns this in a dedicated loader called from form bootstrap (not `importPlugin` / plugin file URLs).
 - Export: `{ apiVersion, initialize?, isFieldRelevant?, onBeforeSave? }` — all hooks may be async; host awaits. FE1 `moduleLoaded('{typeId}-controller', Class)` scripts are not compatible.
-- Host context: narrow read/write API over form values and type metadata (not the YUI form object).
+- Host context: narrow read/write API over form values and type metadata (not the YUI form object). See main doc §5.9 for `onFieldChange` / `notify` / save-result shape.
 - Project plugins may ship the type folder including the file; runtime still loads by content-type id.
 
-**Implementation:** still open in FE2 (`FormsEngine.tsx` TODO). TB “Client-side Controller” currently opens `controller.groovy` by mistake — fix when implementing.
+**Implementation:** landed in `FormsEngine/formControllers/`. TB Form Controller property edits `form-controller.js` (separate from Groovy). Worked example: main doc §5.9.
 
 ## 6.1 FE1 → FE2 data-source migration notes
 

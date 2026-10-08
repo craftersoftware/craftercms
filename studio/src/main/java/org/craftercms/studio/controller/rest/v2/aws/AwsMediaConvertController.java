@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -36,6 +36,7 @@ import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.ResultOne;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.Validator;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,7 +47,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import static org.craftercms.commons.validation.annotations.param.EsapiValidationType.*;
-import static org.craftercms.studio.controller.rest.v2.RequestConstants.REQUEST_PARAM_SITEID;
 import static org.craftercms.studio.controller.rest.v2.RequestConstants.REQUEST_PARAM_SITE_ID;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_ITEM;
 import static org.craftercms.studio.controller.rest.ValidationUtils.validateValue;
@@ -59,7 +59,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
  * @since 3.1.1
  */
 @RestController
-@RequestMapping("/api/2/aws/mediaconvert")
+@RequestMapping("/api/2/aws/{siteId}/mediaconvert")
 public class AwsMediaConvertController {
 
 	public static final String INPUT_PROFILE_PARAM = "inputProfileId";
@@ -80,7 +80,7 @@ public class AwsMediaConvertController {
 	 * @throws ConfigurationProfileNotFoundException if the profile is not found
 	 */
 	@PostMapping(value = "/upload", produces = APPLICATION_JSON_VALUE)
-	public ResultOne<MediaConvertResult> uploadVideo(HttpServletRequest request)
+	public ResultOne<MediaConvertResult> uploadVideo(@PathVariable String siteId, HttpServletRequest request)
 		throws IOException, AwsException, InvalidParametersException, ConfigurationProfileNotFoundException, SiteNotFoundException, ValidationException {
 		if (!JakartaServletFileUpload.isMultipartContent(request)) {
 			throw new InvalidParametersException("The request is not multipart");
@@ -89,7 +89,6 @@ public class AwsMediaConvertController {
 		try {
 			JakartaServletFileUpload upload = new JakartaServletFileUpload();
 			FileItemInputIterator iterator = upload.getItemIterator(request);
-			String siteId = null;
 			String inputProfileId = null;
 			String outputProfileId = null;
 			while (iterator.hasNext()) {
@@ -98,9 +97,6 @@ public class AwsMediaConvertController {
 				try (InputStream stream = item.getInputStream()) {
 					if (item.isFormField()) {
 						switch (name) {
-							case REQUEST_PARAM_SITEID:
-								siteId = Streams.asString(stream);
-								break;
 							case INPUT_PROFILE_PARAM:
 								inputProfileId = Streams.asString(stream);
 								break;

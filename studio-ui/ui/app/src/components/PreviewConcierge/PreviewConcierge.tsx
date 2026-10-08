@@ -56,7 +56,11 @@ import {
 	moveItemOperationComplete,
 	moveItemOperationFailed,
 	reloadRequest,
+	guestUploadComplete,
+	guestUploadFailed,
+	guestUploadProgress,
 	requestEdit,
+	requestGuestUpload,
 	requestWorkflowCancellationDialog,
 	requestWorkflowCancellationDialogOnResult,
 	selectForEdit,
@@ -90,6 +94,7 @@ import {
 	updateField,
 	writeInstance
 } from '../../services/content';
+import { uploadDataUrl } from '../../services/contentUpload';
 import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -1296,6 +1301,42 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							}
 						})
 					);
+					break;
+				}
+				case requestGuestUpload.type: {
+					const { id, site, file, path, xsrfArgumentName } = payload;
+					if (site !== siteId) {
+						hostToGuest$.next(
+							guestUploadFailed({
+								id,
+								error: {
+									message: formatMessage({ defaultMessage: 'Upload site does not match the active preview site' })
+								}
+							})
+						);
+						break;
+					}
+					try {
+						uploadDataUrl(siteId, file, path, xsrfArgumentName).subscribe({
+							next: (uploadAction) => {
+								if (uploadAction.type === 'progress') {
+									hostToGuest$.next(
+										guestUploadProgress({
+											id,
+											progress: uploadAction.payload.progress
+										})
+									);
+								} else {
+									hostToGuest$.next(guestUploadComplete({ id, response: uploadAction.payload }));
+								}
+							},
+							error: (error) => {
+								hostToGuest$.next(guestUploadFailed({ id, error }));
+							}
+						});
+					} catch (error) {
+						hostToGuest$.next(guestUploadFailed({ id, error }));
+					}
 					break;
 				}
 				case showItemMegaMenu.type: {

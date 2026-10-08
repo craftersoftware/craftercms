@@ -14,8 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-if (!authentication) {
-	response.sendError(400, "You're not a subscriber")
+if (!authToken) {
+   response.sendError(400, "You're not a subscriber")
 } else {
 	filterChain.doFilter(request, response)
 }

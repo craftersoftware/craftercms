@@ -20,6 +20,8 @@ import { flattenEntries } from '../utils';
 import {
 	getItem,
 	getItemComplete,
+	getDescriptor,
+	getDescriptorComplete,
 	getChildren,
 	getChildrenComplete,
 	getTree,
@@ -27,7 +29,7 @@ import {
 	getNavComplete,
 	getNavBreadcrumbComplete
 } from '../actions/content';
-import { StateContainer, Item } from '@craftercms/models';
+import { StateContainer, Item, Descriptor } from '@craftercms/models';
 import { internal_getNav, internal_getNavBreadcrumb } from '../actions/content_internal';
 
 export function itemsReducer(
@@ -58,6 +60,42 @@ export function itemsReducer(
 				entries: {
 					...state.entries,
 					[url]: item
+				}
+			};
+		}
+		default:
+			return state;
+	}
+}
+
+export function descriptorsReducer(
+	state = {
+		loading: {}, // { all: boolean, [id: string]: boolean }
+		entries: {}
+	},
+	action: AnyAction
+): StateContainer<Descriptor | null> {
+	switch (action.type) {
+		case getDescriptor.type: {
+			return {
+				...state,
+				loading: {
+					...state.loading,
+					[action.payload]: true
+				}
+			};
+		}
+		case getDescriptorComplete.type: {
+			const { descriptor, url } = action.payload;
+			return {
+				...state,
+				loading: {
+					...state.loading,
+					[url]: false
+				},
+				entries: {
+					...state.entries,
+					[url]: descriptor ?? null
 				}
 			};
 		}

@@ -27,7 +27,6 @@ class SyncTo extends AbstractSyncCommand {
 
 	def run(client) {
 		def params = [
-			siteId      : siteOptions.siteId,
 			remoteName  : remoteOptions.remoteName,
 			remoteBranch: remoteOptions.remoteBranch
 		]
@@ -35,7 +34,7 @@ class SyncTo extends AbstractSyncCommand {
 			params.force = force
 		}
 
-		def path = '/studio/api/2/repository/push_to_remote.json'
+		def path = "/studio/api/2/repository/${siteOptions.siteId}/push_to_remote.json"
 		def result = client.post(path, params)
 		if (result) {
 			println result.response.message

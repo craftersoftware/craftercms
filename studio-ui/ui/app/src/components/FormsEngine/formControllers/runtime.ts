@@ -1,0 +1,644 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import type ContentType from '../../../models/ContentType';
+import type { ContentTypeField } from '../../../models/ContentType';
+import type { Subject } from 'rxjs';
+import type { Dispatch as ReduxDispatch } from 'redux';
+import type { IntlShape } from 'react-intl';
+import type { JotaiStore } from '../types';
+import { XmlKeys } from '../lib/formConsts';
+import type { FormsEngineAtoms, StableFormContextProps } from '../lib/formsEngineContext';
+import type { FormsEngineProps } from '../FormsEngine';
+import { loadFormController } from './loader';
+import {
+	createEmptyFormControllerState,
+	type FormController,
+	type FormControllerContext,
+	type FormControllerMode,
+	type FormControllerNotifySeverity,
+	type FormControllerState
+} from './types';
+import { extractAtomValues } from '../lib/formUtils';
+import type { PrimitiveAtom } from 'jotai';
+import { retrieveProperty } from '../../../utils/object';
+import { showSystemNotification } from '../../../state/actions/system';
+import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
+import {
+	collectRelevanceTargets,
+	createRelevanceContext,
+	forgetCommittedRelevance,
+	resolveComponentRelevance,
+	resolveFieldRelevance,
+	SAVE_MINIMUM_FIELD_IDS,
+	transferCommittedRelevance,
+	type FieldRelevanceResult
+} from './relevance';
+
+type FormControllerFormProps = Pick<FormsEngineProps, 'create' | 'update' | 'repeat' | 'fieldsToRender'>;
+
+/**
+ * Derives the controller mode from how the form was opened.
+ * Repeat stacked forms do not build a context, so they never call this.
+ */
+export function resolveFormControllerMode(props: FormControllerFormProps): FormControllerMode {
+	return props.create ? 'create' : 'edit';
+}
+
+/** Arguments for building the narrow host API passed to type-local form controllers. */
+export interface CreateFormControllerContextArgs {
+	siteId: string;
+	store: JotaiStore;
+	atoms: FormsEngineAtoms;
+	contentType: ContentType;
+	/** Live path reader so create/rename updates are visible without re-attaching. */
+	getPath: () => string | null | undefined;
+	mode: FormControllerMode;
+	isEmbedded: boolean;
+	fieldUpdates$: Subject<string>;
+	dispatch: ReduxDispatch;
+	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
+	fieldChangeUnsubscribers: Set<() => void>;
+	/**
+	 * True once this context's form state was torn down or superseded. A pending `initialize` can
+	 * still hold the context, so writes and new listeners must be refused rather than reach the
+	 * stack entry's shared atoms and `fieldUpdates$`.
+	 */
+	isDisposed: () => boolean;
+}
+
+const disposedContextWarning = 'Form controller context is no longer attached to a form; the call was ignored.';
+
+/**
+ * Builds the narrow {@link FormControllerContext} host API for a type-local form controller.
+ */
+export function createFormControllerContext({
+	siteId,
+	store,
+	atoms,
+	contentType,
+	getPath,
+	mode,
+	isEmbedded,
+	fieldUpdates$,
+	dispatch,
+	fieldChangeUnsubscribers,
+	isDisposed
+}: CreateFormControllerContextArgs): FormControllerContext {
+	const readValue = (fieldId: string): unknown => {
+		if (fieldId === XmlKeys.fileName && atoms.fileName) {
+			return store.get(atoms.fileName);
+		}
+		const valueAtom = atoms.valueByFieldId[fieldId];
+		if (valueAtom) {
+			return store.get(valueAtom);
+		}
+		const parsed = parseFieldValuePath(fieldId);
+		if (!parsed) {
+			return undefined;
+		}
+		const rootAtom = atoms.valueByFieldId[parsed.rootId];
+		if (!rootAtom) {
+			return undefined;
+		}
+		const root = store.get(rootAtom);
+		if (root == null || typeof root !== 'object') {
+			return undefined;
+		}
+		try {
+			return retrieveProperty(root as object, parsed.nestedPath);
+		} catch {
+			return undefined;
+		}
+	};
+
+	return {
+		siteId,
+		contentType,
+		get path() {
+			return getPath() ?? undefined;
+		},
+		mode,
+		isEmbedded,
+		get readonly() {
+			return store.get(atoms.readonly);
+		},
+		getValues() {
+			const values = extractAtomValues(store, atoms.valueByFieldId);
+			if (atoms.fileName) {
+				values[XmlKeys.fileName] = store.get(atoms.fileName);
+			}
+			return values;
+		},
+		getValue: readValue,
+		setValue(fieldId, value) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return;
+			}
+			if (fieldId === XmlKeys.fileName && atoms.fileName) {
+				// `file-name` is stored twice: the dedicated atom the save path reads, and the
+				// field value atom `getValues` / `onSave` see. The dedicated atom's writer mirrors
+				// the value atom and is the only one that emits, so writing both is still one event.
+				store.set(atoms.fileName as PrimitiveAtom<string>, value as string);
+				const fileNameValueAtom = atoms.valueByFieldId[XmlKeys.fileName];
+				if (fileNameValueAtom && store.get(fileNameValueAtom) !== value) {
+					store.set(fileNameValueAtom, value);
+				}
+				return;
+			}
+			const valueAtom = atoms.valueByFieldId[fieldId];
+			if (valueAtom) {
+				store.set(valueAtom, value);
+				return;
+			}
+			const parsed = parseFieldValuePath(fieldId);
+			if (!parsed) {
+				console.warn(`Form controller setValue: field "${fieldId}" has no value atom.`);
+				return;
+			}
+			const rootAtom = atoms.valueByFieldId[parsed.rootId];
+			if (!rootAtom) {
+				console.warn(`Form controller setValue: field "${parsed.rootId}" has no value atom.`);
+				return;
+			}
+			const root = store.get(rootAtom);
+			if (root == null || typeof root !== 'object') {
+				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+				return;
+			}
+			if (!canSetNestedProperty(root as object, parsed.nestedPath)) {
+				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+				return;
+			}
+			// Copy only containers along the path so sibling embeds keep object identity (and
+			// WeakMap committed relevance). Transfer the deny-list when a component is replaced.
+			store.set(rootAtom, setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value));
+		},
+		getField(fieldId) {
+			return getFieldFromContentType(contentType, fieldId);
+		},
+		onFieldChange(listener) {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return () => undefined;
+			}
+			const subscription = fieldUpdates$.subscribe((fieldId) => {
+				if (isDisposed()) return;
+				listener(fieldId, readValue(fieldId));
+			});
+			const unsubscribe = () => {
+				subscription.unsubscribe();
+				fieldChangeUnsubscribers.delete(unsubscribe);
+			};
+			fieldChangeUnsubscribers.add(unsubscribe);
+			return unsubscribe;
+		},
+		notify(message, severity: FormControllerNotifySeverity = 'info') {
+			if (isDisposed()) {
+				console.warn(disposedContextWarning);
+				return;
+			}
+			dispatch(
+				showSystemNotification({
+					message,
+					options: { variant: severity }
+				})
+			);
+		}
+	};
+}
+
+export { getFieldFromContentType, parseFieldValuePath };
+
+function canSetNestedProperty(root: object, nestedPath: string): boolean {
+	const segments = nestedPath.split('.');
+	const last = segments[segments.length - 1];
+	const parentPath = segments.slice(0, -1).join('.');
+	let parent: unknown = root;
+	if (parentPath) {
+		try {
+			parent = retrieveProperty(root, parentPath);
+		} catch {
+			return false;
+		}
+	}
+	if (parent == null || typeof parent !== 'object') {
+		return false;
+	}
+	if (Array.isArray(parent) && /^\d+$/.test(last)) {
+		const index = Number(last);
+		return Number.isInteger(index) && index >= 0 && index < parent.length;
+	}
+	return true;
+}
+
+function shallowCopyContainer(value: object): object {
+	return Array.isArray(value) ? value.slice() : { ...value };
+}
+
+/**
+ * Immutable nested write: shallow-copies only the containers on `nestedPath`.
+ * Untouched siblings (including embedded component objects) keep their identity.
+ * When a plain object on the path is copied or the leaf object is replaced, any
+ * committed relevance entry moves to the new object.
+ */
+function setNestedPropertyCopyingPath(root: object, nestedPath: string, value: unknown): object {
+	const segments = nestedPath.split('.');
+	const nextRoot = shallowCopyContainer(root);
+	if (!Array.isArray(root)) {
+		transferCommittedRelevance(root, nextRoot);
+	}
+	let prevParent: object = root;
+	let nextParent: object = nextRoot;
+	for (let i = 0; i < segments.length - 1; i++) {
+		const key = segments[i];
+		const prevChild = (prevParent as Record<string, unknown>)[key];
+		const nextChild = shallowCopyContainer(prevChild as object);
+		const changesComponentIdentity =
+			prevChild != null &&
+			typeof prevChild === 'object' &&
+			!Array.isArray(prevChild) &&
+			prevChild[XmlKeys.modelId] != null &&
+			prevChild[XmlKeys.contentTypeId] != null &&
+			segments.length - i === 2 &&
+			((segments[i + 1] === XmlKeys.modelId && prevChild[XmlKeys.modelId] !== value) ||
+				(segments[i + 1] === XmlKeys.contentTypeId && prevChild[XmlKeys.contentTypeId] !== value));
+		if (prevChild != null && typeof prevChild === 'object' && !Array.isArray(prevChild) && !changesComponentIdentity) {
+			transferCommittedRelevance(prevChild, nextChild);
+		}
+		(nextParent as Record<string, unknown>)[key] = nextChild;
+		prevParent = prevChild as object;
+		nextParent = nextChild;
+	}
+	const last = segments[segments.length - 1];
+	const previousLeaf = (prevParent as Record<string, unknown>)[last];
+	(nextParent as Record<string, unknown>)[last] = value;
+	if (
+		previousLeaf != null &&
+		typeof previousLeaf === 'object' &&
+		!Array.isArray(previousLeaf) &&
+		value != null &&
+		typeof value === 'object' &&
+		!Array.isArray(value) &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.modelId] != null &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.modelId] ===
+			(value as Record<string, unknown>)[XmlKeys.modelId] &&
+		(previousLeaf as Record<string, unknown>)[XmlKeys.contentTypeId] ===
+			(value as Record<string, unknown>)[XmlKeys.contentTypeId]
+	) {
+		transferCommittedRelevance(previousLeaf, value);
+	}
+	return nextRoot;
+}
+
+function invokeCleanup(cleanup: (() => void) | null | undefined): void {
+	if (!cleanup) return;
+	try {
+		cleanup();
+	} catch (error) {
+		console.error('Form controller cleanup threw.', error);
+	}
+}
+
+function unsubscribeFieldChangeListeners(state: FormControllerState | null | undefined): void {
+	if (!state?.fieldChangeUnsubscribers.size) return;
+	for (const unsubscribe of [...state.fieldChangeUnsubscribers]) {
+		try {
+			unsubscribe();
+		} catch (error) {
+			console.error('Form controller onFieldChange unsubscribe threw.', error);
+		}
+	}
+	state.fieldChangeUnsubscribers.clear();
+}
+
+/**
+ * Marks `state` detached and runs the teardown a stack pop would: drop listeners, then the
+ * controller's cleanup. `setValue`, `onFieldChange` and `notify` all refuse a disposed state.
+ * `cleanup` defaults to whatever the state stored; a failed `initialize` passes its own (often null)
+ * because that cleanup was never stored.
+ */
+function detachFormControllerState(state: FormControllerState, cleanup: (() => void) | null = state.cleanup): void {
+	state.disposed = true;
+	state.cleanup = null;
+	unsubscribeFieldChangeListeners(state);
+	invokeCleanup(cleanup);
+}
+
+/**
+ * Runs and clears the cleanup stored on a form stack entry (idempotent), including
+ * `onFieldChange` listeners the host tracked for this entry.
+ */
+export function runFormControllerCleanup(stackEntry: StableFormContextProps | undefined | null): void {
+	const state = stackEntry?.formControllerState;
+	if (!state || state.disposed) return;
+	detachFormControllerState(state);
+}
+
+/**
+ * True when `fieldId` (qualified by `parentPath` for a repeat subfield) is on the controller deny-list.
+ * A flat id match is not used for subfields: `title_s` hidden in one repeat group must not hide `title_s` in another.
+ */
+export function isFieldPathIrrelevant(
+	irrelevantFieldPaths: Set<string> | null | undefined,
+	fieldId: string,
+	parentPath?: string
+): boolean {
+	if (!irrelevantFieldPaths?.size) return false;
+	return irrelevantFieldPaths.has(parentPath ? `${parentPath}.${fieldId}` : fieldId);
+}
+
+function notifyRelevanceFailures(
+	failedCount: number,
+	dispatch: ReduxDispatch,
+	formatMessage: IntlShape['formatMessage']
+): void {
+	if (!failedCount) return;
+	dispatch(
+		showSystemNotification({
+			message: formatMessage(
+				{
+					defaultMessage:
+						'{count, plural, one {Form controller isFieldRelevant failed for # field. That field will remain visible.} other {Form controller isFieldRelevant failed for # fields. Those fields will remain visible.}}'
+				},
+				{ count: failedCount }
+			),
+			options: { variant: 'error' }
+		})
+	);
+}
+
+/**
+ * Fields offered to `isFieldRelevant`. `file-name` and `internal-name` are never hideable:
+ * the save path requires both even when they are not rendered. Repeat / partial forms use `fieldsToRender`.
+ */
+function collectFieldsForRelevance(contentType: ContentType, formProps: FormControllerFormProps): ContentTypeField[] {
+	const fields = formProps.fieldsToRender?.length ? formProps.fieldsToRender : Object.values(contentType.fields);
+	return fields.filter((field) => !SAVE_MINIMUM_FIELD_IDS.has(field.id));
+}
+
+const commonInitErrorMsg = 'The form will proceed as though no custom type controller exists.';
+
+/**
+ * Snapshot of the form's values as loaded, before `initialize` can write to them.
+ * Same shape the embedded path reads from the parent's component object.
+ */
+function snapshotFormValues(store: JotaiStore, atoms: FormsEngineAtoms): Record<string, unknown> {
+	const values = extractAtomValues(store, atoms.valueByFieldId);
+	if (atoms.fileName) {
+		values[XmlKeys.fileName] = store.get(atoms.fileName);
+	}
+	return values;
+}
+
+/**
+ * Loads the type's form controller (if gated by `hasJsController`), resolves field relevance on a
+ * read-only snapshot, then builds the live context, awaits `initialize`, and stores controller +
+ * cleanup on the stack entry.
+ *
+ * Relevance runs **before** `initialize` and never sees the live context, so an open form and a
+ * parent validating that same component unopened give `isFieldRelevant` identical inputs. An open
+ * embedded component reuses the verdict parent validation cached for its value object.
+ *
+ * Repeat stacked forms do **not** own a controller: they copy the owning form's already-resolved
+ * deny-list (including that form's repeat subfields) and do not call `isFieldRelevant` again.
+ */
+export async function attachFormController(args: {
+	siteId: string;
+	store: JotaiStore;
+	stackEntry: StableFormContextProps;
+	parentStackEntry?: StableFormContextProps | null;
+	formProps: FormControllerFormProps;
+	dispatch: ReduxDispatch;
+	formatMessage: IntlShape['formatMessage'];
+	isStale?: () => boolean;
+}): Promise<void> {
+	const { siteId, store, stackEntry, parentStackEntry, formProps, dispatch, formatMessage, isStale } = args;
+	const stale = () => Boolean(isStale?.());
+	runFormControllerCleanup(stackEntry);
+	stackEntry.formControllerState = null;
+
+	if (formProps.repeat) {
+		const state = createEmptyFormControllerState();
+		// Resolved once by the owning form, so a repeat item cannot disagree with its parent.
+		state.irrelevantFieldPaths = parentStackEntry?.formControllerState?.irrelevantFieldPaths ?? null;
+		if (stale()) return;
+		stackEntry.formControllerState = state;
+		store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
+		return;
+	}
+
+	const contentType = stackEntry.itemMeta?.contentType;
+	if (!contentType?.hasJsController) return;
+
+	const loadResult = await loadFormController(siteId, contentType.id);
+	if (stale()) return;
+
+	const state = createEmptyFormControllerState();
+	state.fileMissing = loadResult.status === 'missing';
+	state.loadFailed = loadResult.status === 'failed';
+	if (loadResult.status !== 'loaded') {
+		stackEntry.formControllerState = state;
+		return;
+	}
+
+	const controller = loadResult.controller;
+	const mode = resolveFormControllerMode(formProps);
+	const isEmbedded = Boolean(formProps.create?.embedded || formProps.update?.modelId);
+	const path = stackEntry.itemMeta?.path || undefined;
+
+	if (controller.isFieldRelevant) {
+		let result: FieldRelevanceResult | null = null;
+		// An existing embedded component opens with the same value object its parent validates.
+		const component = formProps.update?.modelId ? formProps.update.values : undefined;
+		const openedComponent = component && typeof component === 'object' ? component : null;
+		try {
+			if (openedComponent) {
+				result = await resolveComponentRelevance({
+					siteId,
+					contentType,
+					component: openedComponent,
+					path,
+					controller
+				});
+			} else {
+				result = await resolveFieldRelevance(
+					controller,
+					createRelevanceContext({
+						siteId,
+						contentType,
+						values: snapshotFormValues(store, stackEntry.atoms),
+						path,
+						mode,
+						isEmbedded
+					}),
+					collectRelevanceTargets(collectFieldsForRelevance(contentType, formProps))
+				);
+			}
+		} catch (error) {
+			console.error(
+				`Form controller field relevance for "${contentType.id}" failed. All fields will remain visible.`,
+				error
+			);
+			dispatch(
+				showSystemNotification({
+					message: formatMessage(
+						{
+							defaultMessage:
+								'Form controller field relevance for "{contentTypeId}" failed. All fields will remain visible.'
+						},
+						{ contentTypeId: contentType.id }
+					),
+					options: { variant: 'error' }
+				})
+			);
+		}
+		// Nothing is committed yet, so a superseded attach has nothing to tear down.
+		if (stale()) return;
+		notifyRelevanceFailures(result?.failedCount ?? 0, dispatch, formatMessage);
+		state.irrelevantFieldPaths = result?.denied ?? null;
+		// This open is a new session. Drop the list stored at the previous commit so the parent
+		// uses the verdict just cached for this object until the next commit stores a new one.
+		if (openedComponent && result) forgetCommittedRelevance(openedComponent);
+	}
+
+	const ctx = createFormControllerContext({
+		siteId,
+		store,
+		atoms: stackEntry.atoms,
+		contentType,
+		getPath: () => stackEntry.itemMeta?.path,
+		mode,
+		isEmbedded,
+		fieldUpdates$: stackEntry.fieldUpdates$,
+		dispatch,
+		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers,
+		// Not `stale()`: a remounted drawer slot restores this stack entry without re-attaching, so its
+		// context stays live. A superseded prep re-attaches, and that attach disposes this state.
+		isDisposed: () => state.disposed
+	});
+
+	// Commit before `initialize` so stack pop or a replacement attach can reach listeners the
+	// hook registers while it is still pending. `cleanup` stays null until the hook returns.
+	state.controller = controller;
+	state.context = ctx;
+	stackEntry.formControllerState = state;
+	// Validation atoms may already have been read during bootstrap, before this deny-list existed.
+	store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
+
+	let ownCleanup: (() => void) | null = null;
+	try {
+		const cleanup = await controller.initialize?.(ctx);
+		ownCleanup = typeof cleanup === 'function' ? cleanup : null;
+	} catch (error) {
+		console.error(`Form controller initialize for "${contentType.id}" failed. ${commonInitErrorMsg}`, error);
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(
+					{
+						defaultMessage:
+							'Form controller initialize for "{contentTypeId}" failed. The form will proceed as though no custom type controller exists.'
+					},
+					{ contentTypeId: contentType.id }
+				),
+				options: { variant: 'error' }
+			})
+		);
+		// Dispose before dropping the entry. Otherwise a continuation that kept `ctx` can still
+		// write or subscribe, and nothing on the stack entry will tear that listener down.
+		// A replacement attach may already have disposed this state; do not clear the one it installed.
+		const stillOwnsEntry = !state.disposed && stackEntry.formControllerState === state;
+		if (!state.disposed) {
+			detachFormControllerState(state, ownCleanup);
+		}
+		if (stillOwnsEntry) {
+			stackEntry.formControllerState = null;
+			// Proceeding without the controller also drops its deny-list.
+			store.set(stackEntry.atoms.relevanceVersion, (version) => version + 1);
+		}
+		return;
+	}
+	if (state.disposed || stale()) {
+		// Teardown already ran (or this attach was superseded). Honour the controller's cleanup once,
+		// but do not touch whatever state replaced this one.
+		unsubscribeFieldChangeListeners(state);
+		invokeCleanup(ownCleanup);
+		return;
+	}
+	state.cleanup = ownCleanup;
+}
+
+/**
+ * Owning form for a stacked entry: the nearest non-repeat entry below `stackIndex`.
+ * Repeat entries are part of that form, so nested repeats skip other repeats and stop
+ * at the first real form (root or embedded child). Returns that form only when it has
+ * a controller context; otherwise null — do not keep searching past it.
+ */
+export function findAncestorFormControllerEntry(
+	stack: StableFormContextProps[],
+	stackIndex: number
+): StableFormContextProps | null {
+	for (let i = stackIndex - 1; i >= 0; i--) {
+		if (stack[i].props?.repeat) {
+			continue;
+		}
+		return stack[i].formControllerState?.context ? stack[i] : null;
+	}
+	return null;
+}
+
+export interface FormControllerBeforeSaveResult {
+	allowed: boolean;
+	message?: string;
+}
+
+/**
+ * Runs the form controller's `onBeforeSave` hook for a stack entry.
+ * Repeat entries store no controller, so this returns `{ allowed: true }`.
+ */
+export async function runFormControllerBeforeSave(
+	stackEntry: StableFormContextProps | null | undefined,
+	dispatch: ReduxDispatch,
+	formatMessage: IntlShape['formatMessage']
+): Promise<FormControllerBeforeSaveResult> {
+	const controller = stackEntry?.formControllerState?.controller;
+	const ctx = stackEntry?.formControllerState?.context;
+	if (!controller?.onBeforeSave || !ctx) {
+		return { allowed: true };
+	}
+	try {
+		const result = await controller.onBeforeSave(ctx);
+		if (result === false) {
+			return { allowed: false };
+		}
+		if (result && typeof result === 'object' && result.ok === false) {
+			return { allowed: false, message: result.message };
+		}
+		return { allowed: true };
+	} catch (error) {
+		console.error('Form controller onBeforeSave failed. Save was cancelled.', error);
+		dispatch(
+			showSystemNotification({
+				message: formatMessage({
+					defaultMessage: 'Form controller onBeforeSave failed. Save was cancelled.'
+				}),
+				options: { variant: 'error' }
+			})
+		);
+		return { allowed: false };
+	}
+}

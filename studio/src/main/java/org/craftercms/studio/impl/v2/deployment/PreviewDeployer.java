@@ -15,6 +15,7 @@
  */
 package org.craftercms.studio.impl.v2.deployment;
 
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.commons.rest.RestTemplate;
 import org.craftercms.studio.api.v2.event.content.ContentEvent;
 import org.craftercms.studio.api.v2.event.repository.RepositoryEvent;
@@ -100,13 +101,14 @@ public class PreviewDeployer extends AbstractDeployer {
 		String requestUrl = getDeployTargetUrl(site, environment);
 		Map<String, Object> requestBody = Collections.singletonMap("wait_till_done", waitTillDone);
 
-		try {
-			RequestEntity<Map<String, Object>> requestEntity = RequestEntity.post(new URI(requestUrl))
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(requestBody);
+        try {
+            RequestEntity<Map<String, Object>> requestEntity = RequestEntity.post(new URI(requestUrl))
+                                                                            .contentType(MediaType.APPLICATION_JSON)
+                                                                            .header(ManagementToken.HEADER_NAME, getAuthorizationToken())
+                                                                            .body(requestBody);
 
-			logger.debug("Call publishing with request '{}' in site '{}' target '{}'",
-				requestEntity, site, environment);
+            logger.debug("Call publishing with request '{}' in site '{}' target '{}'",
+                    requestForLog(requestEntity), site, environment);
 
 			restTemplate.exchange(requestEntity, Map.class);
 		} catch (Exception e) {

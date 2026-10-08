@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -36,6 +36,7 @@ import org.craftercms.studio.model.rest.dashboard.PublishingStats;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,7 +54,7 @@ import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
 @Validated
 @RestController
-@RequestMapping(API_2 + DASHBOARD)
+@RequestMapping(API_2 + DASHBOARD + SITE_ID)
 public class DashboardController {
 
 	private final DashboardService dashboardService;
@@ -66,7 +67,7 @@ public class DashboardController {
 	@Valid
 	@GetMapping(value = ACTIVITY, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<Activity> getActivitiesForUsers(
-		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@RequestParam(value = REQUEST_PARAM_USERNAMES, required = false) List<@NotBlank @EsapiValidatedParam(type = USERNAME) String> usernames,
 		@RequestParam(value = REQUEST_PARAM_DATE_FROM, required = false)
 		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime dateFrom,
@@ -91,7 +92,7 @@ public class DashboardController {
 	@Valid
 	@GetMapping(value = ACTIVITY + ME, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<Activity> getMyActivities(
-		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@RequestParam(value = REQUEST_PARAM_DATE_FROM, required = false)
 		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime dateFrom,
 		@RequestParam(value = REQUEST_PARAM_DATE_TO, required = false)
@@ -115,7 +116,7 @@ public class DashboardController {
 
 	@Valid
 	@GetMapping(value = CONTENT + UNPUBLISHED, produces = APPLICATION_JSON_VALUE)
-	public PaginatedResultList<ContentItem> getContentUnpublished(@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+	public PaginatedResultList<ContentItem> getContentUnpublished(@ValidSiteId @PathVariable String siteId,
 																  @PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
 																  @PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit,
 																  @RequestParam(value = REQUEST_PARAM_SORT, required = false, defaultValue = "dateModified desc")
@@ -137,7 +138,7 @@ public class DashboardController {
 	@Valid
 	@GetMapping(value = CONTENT + EXPIRING, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<ExpiringContentItem> getContentExpiring(
-		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@RequestParam(value = REQUEST_PARAM_DATE_FROM)
 		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime dateFrom,
 		@RequestParam(value = REQUEST_PARAM_DATE_TO)
@@ -160,7 +161,7 @@ public class DashboardController {
 	@Valid
 	@GetMapping(value = CONTENT + EXPIRED, produces = APPLICATION_JSON_VALUE)
 	public PaginatedResultList<ExpiringContentItem> getContentExpired(
-		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit)
 		throws AuthenticationException, ServiceLayerException, UserNotFoundException {
@@ -178,7 +179,7 @@ public class DashboardController {
 	@Valid
 	@GetMapping(value = PUBLISHING + STATS, produces = APPLICATION_JSON_VALUE)
 	public ResultOne<PublishingStats> getPublishingStats(
-		@ValidSiteId @RequestParam(value = REQUEST_PARAM_SITEID) String siteId,
+		@ValidSiteId @PathVariable String siteId,
 		@RequestParam(value = REQUEST_PARAM_DAYS) int days) throws SiteNotFoundException {
 		var publishingStats = dashboardService.getPublishingStats(siteId, days);
 		var result = new ResultOne<PublishingStats>();

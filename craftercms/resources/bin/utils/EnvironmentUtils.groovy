@@ -49,7 +49,11 @@ class EnvironmentUtils {
 		def port = getEnv('DEPLOYER_PORT')
 		def url = "http://${host}:${port}"
 
-		return url
+        return url
+    }
+
+	static String getDeployerManagementToken() {
+		return getEnv('DEPLOYER_MANAGEMENT_TOKEN')
 	}
 
 	/**

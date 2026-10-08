@@ -38,17 +38,16 @@
 	<!--									-->
 	<!-- ////////////////////////////////// -->
 
-	<bean name="crafter.properties" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
-		<property name="order" value="0"/>
-		<property name="locations">
-			<list>
-				<value>classpath:crafter/core/core.properties</value>
-				<value>classpath:crafter/security/security.properties</value>
-				<value>classpath:crafter/engine/server-config.properties</value>
-			</list>
-		</property>
-		<property name="ignoreUnresolvablePlaceholders" value="true"/>
-	</bean>
+    <bean name="crafter.properties" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+        <property name="order" value="0"/>
+        <property name="locations">
+            <list>
+                <value>classpath:crafter/core/core.properties</value>
+                <value>classpath:crafter/engine/server-config.properties</value>
+            </list>
+        </property>
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+    </bean>
 
 	<!-- Runs after the mode post processors -->
 	<bean class="org.craftercms.commons.spring.ListMergingPostProcessor">
@@ -72,9 +71,6 @@
 
 	<!-- Used to overwrite certain <mvc:annotation-driven> configuration -->
 	<bean id="crafter.annotationDrivenConfigCustomizer" class="org.craftercms.engine.util.spring.mvc.AnnotationDrivenConfigCustomizer">
-		<property name="contentNegotiationManager" ref="crafter.contentNegotiationManager"/>
-		<property name="messageConverters" ref="crafter.messageConverters"/>
-		<property name="interceptors" ref="crafter.interceptors"/>
 	</bean>
 
 	<bean id="crafter.contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">

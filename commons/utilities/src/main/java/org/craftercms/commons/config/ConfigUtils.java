@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -24,6 +24,8 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.builder.fluent.XMLBuilderParameters;
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
+import org.apache.commons.configuration2.convert.DisabledListDelimiterHandler;
+import org.apache.commons.configuration2.convert.ListDelimiterHandler;
 import org.apache.commons.configuration2.interpol.Lookup;
 import org.apache.commons.configuration2.io.FileHandler;
 import org.apache.commons.configuration2.tree.ImmutableNode;
@@ -34,13 +36,16 @@ import org.apache.commons.text.lookup.StringLookupFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.commons.collections4.MapUtils.isNotEmpty;
+import static org.craftercms.commons.xml.XmlSecurityUtils.createDocumentBuilder;
 
 /**
  * Utility methods for Apache Commons based configuration.
@@ -52,16 +57,36 @@ public class ConfigUtils {
 	public static final String DEFAULT_ENCODING = "UTF-8";
 
 	/**
-	 * Reads the XML configuration from the specified input stream, using the {@link #DEFAULT_ENCODING}.
+	 * Sentinel for {@link #readXmlConfiguration(InputStream, char, Map, Map, String)} and related methods:
+	 * do not split property values on commas (Commons Configuration's default for XML).
+	 */
+	public static final char NO_LIST_DELIMITER = '\0';
+
+	/**
+	 * Reads the XML configuration from the specified input stream without list-delimiter splitting,
+	 * using {@link #DEFAULT_ENCODING}.
 	 *
 	 * @param input the input stream from where to read the configuration
+	 * @return the loaded XML configuration
+	 * @throws ConfigurationException if an error occurs while reading the configuration
+	 */
+	public static HierarchicalConfiguration<ImmutableNode> readXmlConfiguration(InputStream input)
+			throws ConfigurationException {
+		return readXmlConfiguration(input, NO_LIST_DELIMITER, null, null, DEFAULT_ENCODING);
+	}
+
+	/**
+	 * Reads the XML configuration from the specified input stream, using the {@link #DEFAULT_ENCODING}.
+	 *
+	 * @param input         the input stream from where to read the configuration
+	 * @param listDelimiter the list delimiter, or {@link #NO_LIST_DELIMITER} to disable splitting
 	 * @return the loaded XML configuration, as a an Apache Commons {@link HierarchicalConfiguration}
 	 * @throws ConfigurationException if an error occurs while reading the configuration
 	 */
 	public static HierarchicalConfiguration<ImmutableNode> readXmlConfiguration(InputStream input,
-										    char listDelimiter,
-										    Map<String, Lookup> prefixLookups,
-										    Map<String, String> lookupVariables)
+											    char listDelimiter,
+											    Map<String, Lookup> prefixLookups,
+											    Map<String, String> lookupVariables)
 		throws ConfigurationException {
 		return readXmlConfiguration(input, listDelimiter, prefixLookups, lookupVariables, null);
 	}
@@ -81,16 +106,17 @@ public class ConfigUtils {
 	/**
 	 * Reads the XML configuration from the specified input stream, using the given file encoding.
 	 *
-	 * @param input        the input stream from where to read the configuration
-	 * @param fileEncoding the encoding of the file. If not specified {@link #DEFAULT_ENCODING} will be used
+	 * @param input         the input stream from where to read the configuration
+	 * @param listDelimiter the list delimiter, or {@link #NO_LIST_DELIMITER} to disable splitting
+	 * @param fileEncoding  the encoding of the file. If not specified {@link #DEFAULT_ENCODING} will be used
 	 * @return the loaded XML configuration, as a an Apache Commons {@link HierarchicalConfiguration}
 	 * @throws ConfigurationException if an error occurs while reading the configuration
 	 */
 	public static HierarchicalConfiguration<ImmutableNode> readXmlConfiguration(InputStream input,
-										    char listDelimiter,
-										    Map<String, Lookup> prefixLookups,
-										    final Map<String, String> lookupVariables,
-										    String fileEncoding)
+											    char listDelimiter,
+											    Map<String, Lookup> prefixLookups,
+											    final Map<String, String> lookupVariables,
+											    String fileEncoding)
 		throws ConfigurationException {
 		Parameters params = new Parameters();
 		FileBasedConfigurationBuilder<XMLConfiguration> builder =
@@ -106,7 +132,8 @@ public class ConfigUtils {
 				xmlParams = xmlParams.setDefaultLookups(getLookups(lookupVariables));
 			}
 
-			xmlParams.setListDelimiterHandler(new DefaultListDelimiterHandler(listDelimiter));
+			xmlParams.setListDelimiterHandler(createListDelimiterHandler(listDelimiter));
+			xmlParams.setDocumentBuilder(createDocumentBuilder());
 
 			builder.configure(xmlParams);
 			XMLConfiguration config = builder.getConfiguration();
@@ -125,6 +152,13 @@ public class ConfigUtils {
 							    Map<String, Lookup> prefixLookups,
 							    Map<String, String> lookupVariables)
 		throws ConfigurationException {
+		URL resourceUrl;
+		try {
+			resourceUrl = resource.getURL();
+		} catch (IOException e) {
+			throw new ConfigurationException("Unable to get URL of resource " + resource, e);
+		}
+
 		Parameters params = new Parameters();
 		FileBasedConfigurationBuilder<XMLConfiguration> builder =
 			new FileBasedConfigurationBuilder<>(XMLConfiguration.class);
@@ -132,8 +166,8 @@ public class ConfigUtils {
 		try {
 			XMLBuilderParameters xmlParams = params
 				.xml()
-				.setURL(resource.getURL())
-				.setListDelimiterHandler(new DefaultListDelimiterHandler(listDelimiter));
+				.setURL(resourceUrl)
+				.setListDelimiterHandler(createListDelimiterHandler(listDelimiter));
 
 			if (MapUtils.isNotEmpty(prefixLookups)) {
 				xmlParams = xmlParams.setPrefixLookups(prefixLookups);
@@ -142,12 +176,20 @@ public class ConfigUtils {
 				xmlParams = xmlParams.setDefaultLookups(getLookups(lookupVariables));
 			}
 
+			xmlParams.setDocumentBuilder(createDocumentBuilder());
 			builder.configure(xmlParams);
 
 			return builder.getConfiguration();
 		} catch (Exception e) {
-			throw new ConfigurationException("Unable to get URL of resource " + resource, e);
+			throw new ConfigurationException("Unable to read XML configuration from resource " + resource, e);
 		}
+	}
+
+	private static ListDelimiterHandler createListDelimiterHandler(char listDelimiter) {
+		if (listDelimiter == NO_LIST_DELIMITER) {
+			return DisabledListDelimiterHandler.INSTANCE;
+		}
+		return new DefaultListDelimiterHandler(listDelimiter);
 	}
 
 	public static HierarchicalConfiguration<?> readYamlConfiguration(Reader reader,

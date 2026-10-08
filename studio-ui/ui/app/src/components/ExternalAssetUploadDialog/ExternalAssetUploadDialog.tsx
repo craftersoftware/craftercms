@@ -23,13 +23,16 @@ import { SingleFileUpload } from '../SingleFileUpload';
 import useEnv from '../../hooks/useEnv';
 import type { Uppy } from 'uppy';
 import type { UppyFile, Meta, Body } from '@uppy/core';
-import { s3UploadUri, webDAVUploadUri } from '../../utils/constants';
+import { s3UploadUri, videoTranscodeUri, webDAVUploadUri } from '../../utils/constants';
 
 export interface ExternalAssetUploadDialogBaseProps {
 	path: string;
-	profileId: string;
+	profileId?: string;
+	inputProfileId?: string;
+	outputProfileId?: string;
 	profileType?: 'aws' | 'webdav';
 	fileTypes?: string[];
+	transcode?: boolean;
 	onUploadStart?(): void;
 	onUploadComplete?(result: any): void;
 	onUploadError?({ file, error, response }): void;
@@ -45,8 +48,11 @@ function ExternalAssetUploadDialogBody(props: ExternalAssetUploadDialogBodyProps
 	const {
 		path,
 		profileId,
+		inputProfileId,
+		outputProfileId,
 		profileType = 'aws',
 		fileTypes,
+		transcode,
 		onUploadStart,
 		onUploadComplete,
 		onUploadError,
@@ -56,7 +62,7 @@ function ExternalAssetUploadDialogBody(props: ExternalAssetUploadDialogBodyProps
 	const siteId = useActiveSiteId();
 	const { authoringBase } = useEnv();
 
-	const url = `${authoringBase}${profileType === 'aws' ? s3UploadUri : webDAVUploadUri}`;
+	const url = `${authoringBase}${profileType === 'aws' ? (transcode ? videoTranscodeUri.replace('{siteId}', siteId) : s3UploadUri.replace('{siteId}', siteId)) : webDAVUploadUri.replace('{siteId}', siteId)}`;
 	const onStart = useCallback(() => {
 		onUploadStart?.();
 		updateSubmittingOrHasPendingChanges({ isSubmitting: true });
@@ -84,7 +90,9 @@ function ExternalAssetUploadDialogBody(props: ExternalAssetUploadDialogBodyProps
 			<DialogBody sx={{ p: 4 }}>
 				<form id="asset_upload_form">
 					<input type="hidden" name="siteId" value={siteId} />
-					<input type="hidden" name="profileId" value={profileId} />
+					{profileId && <input type="hidden" name="profileId" value={profileId} />}
+					{inputProfileId && <input type="hidden" name="inputProfileId" value={inputProfileId} />}
+					{outputProfileId && <input type="hidden" name="outputProfileId" value={outputProfileId} />}
 					<input type="hidden" name="path" value={path} />
 					<SingleFileUpload
 						site={siteId}
@@ -107,8 +115,11 @@ export function ExternalAssetUploadDialog(props: ExternalAssetUploadDialogProps)
 	const {
 		path,
 		profileId,
+		inputProfileId,
+		outputProfileId,
 		profileType,
 		fileTypes,
+		transcode,
 		onClose,
 		onUploadStart,
 		onUploadComplete,
@@ -126,8 +137,11 @@ export function ExternalAssetUploadDialog(props: ExternalAssetUploadDialogProps)
 			<ExternalAssetUploadDialogBody
 				path={path}
 				profileId={profileId}
+				inputProfileId={inputProfileId}
+				outputProfileId={outputProfileId}
 				profileType={profileType}
 				fileTypes={fileTypes}
+				transcode={transcode}
 				onClose={onClose}
 				onUploadStart={onUploadStart}
 				onUploadComplete={onUploadComplete}

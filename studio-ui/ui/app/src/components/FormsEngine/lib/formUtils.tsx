@@ -39,7 +39,7 @@ import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
 import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
-import React, { ReactNode, RefObject, useContext, useEffect, useRef } from 'react';
+import React, { ReactNode, RefObject, useContext, useEffect, useRef, type SetStateAction } from 'react';
 import { fromString, getInnerHtml } from '../../../utils/xml';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
@@ -68,6 +68,8 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
+import { isFieldPathIrrelevant } from '../formControllers/runtime';
+import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
 import {
@@ -233,60 +235,142 @@ export const displayFormBeingSavedSnack = (dispatch: ReduxDispatch, formatMessag
 export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme: Theme) =>
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
-export type ValidatorsData = { siteId: string; contentTypesById: LookupTable<ContentType> };
+export type ValidatorsData = {
+	siteId?: string;
+	contentTypesById?: LookupTable<ContentType>;
+	siblingIds?: string[];
+	/** IDs belonging to the field/data source being edited (for example fieldId + additionalFieldId(s)); excluded from duplicate checks. */
+	currentIds?: string[];
+	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
+	additionalFields?: string[];
+	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
+	resolveEmbeddedRelevance?: (
+		contentType: ContentType,
+		component: Record<string, unknown>,
+		path?: string
+	) => Promise<Set<string> | null>;
+};
+
+type FieldTrackingContext = Pick<
+	StableFormContextProps,
+	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta' | 'formControllerState'
+>;
+
+/**
+ * Records whether `field` differs from the value it was opened with.
+ * `file-name` is compared to the original path; every other field is compared to `originalValues`.
+ * Callers pass the value just written. Does not emit — the writer does that once.
+ */
+function trackFieldChange(field: ContentTypeField, value: unknown, formContext: FieldTrackingContext): void {
+	if (field.id === XmlKeys.fileName) {
+		const currentFileName = value as string;
+		const originalPath = formContext.itemMeta.path;
+
+		if (nou(originalPath)) {
+			// If no originalPath exists => creating content
+			if (currentFileName) {
+				formContext.changedFieldIds.add(field.id);
+			} else {
+				formContext.changedFieldIds.delete(field.id);
+			}
+		} else {
+			// If originalPath exists, validate if differs from original value
+			const isPage = isPagePath(originalPath);
+			const originalFileName = getFileNameValueFromPath(originalPath, isPage);
+			if (currentFileName !== originalFileName) {
+				formContext.changedFieldIds.add(field.id);
+			} else {
+				formContext.changedFieldIds.delete(field.id);
+			}
+		}
+	} else if (value !== formContext.originalValues[field.id]) {
+		formContext.changedFieldIds.add(field.id);
+	} else {
+		formContext.changedFieldIds.delete(field.id);
+	}
+}
+
+function applyAtomUpdate<T>(
+	get: (atom: PrimitiveAtom<T>) => T,
+	baseAtom: PrimitiveAtom<T>,
+	update: SetStateAction<T>
+): T {
+	return typeof update === 'function' ? (update as (prev: T) => T)(get(baseAtom)) : update;
+}
+
+/**
+ * Filename atom whose writes update dirty-tracking and emit `fieldUpdates$` once.
+ * Also mirrors `valueByFieldId['file-name']` when that atom exists, without a second event:
+ * the field atom's writer does not emit for `file-name`.
+ */
+function createTrackedFileNameAtom(
+	initialFileName: string,
+	formContextRef: RefObject<FieldTrackingContext>
+): PrimitiveAtom<string> {
+	const baseAtom = atom(initialFileName);
+	return atom(
+		(get) => get(baseAtom),
+		(get, set, update: SetStateAction<string>) => {
+			const next = applyAtomUpdate(get, baseAtom, update);
+			set(baseAtom, next);
+			const formContext = formContextRef.current;
+			const valueAtom = formContext.atoms?.valueByFieldId?.[XmlKeys.fileName] as PrimitiveAtom<unknown> | undefined;
+			// Guard so the field atom's writer can call back into this atom without looping.
+			if (valueAtom && get(valueAtom) !== next) {
+				set(valueAtom, next);
+			}
+			const field =
+				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
+			trackFieldChange(field, next, formContext);
+			formContext.fieldUpdates$.next(XmlKeys.fileName);
+		}
+	);
+}
 
 /**
  * Creates the value and validity atoms for a give field.
+ * Dirty-tracking and `fieldUpdates$` run from the value write, not from validation.
+ * `file-name` is the exception: the dedicated filename atom emits for it, so this writer only stores.
  **/
 export function createFieldAtoms(
 	field: ContentTypeField,
 	initialValue: unknown,
-	formContextRef: RefObject<
-		Pick<StableFormContextProps, 'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta'>
-	>,
+	formContextRef: RefObject<FieldTrackingContext>,
 	validatorsData?: ValidatorsData
 ): [PrimitiveAtom<unknown>, Atom<Promise<FieldValidityState>>] {
-	let isInitialization = true;
-	const valueAtom = atom(initialValue);
-	const validationAtom = atom(async (get) => {
-		// TODO: It would be best for this to be in a different place and be a sort of effect.
-		const value = get(valueAtom);
-		if (isInitialization) {
-			isInitialization = false;
-		} else {
-			if (field.id === XmlKeys['fileName']) {
-				const currentFileName = get(formContextRef.current.atoms.fileName);
-				const originalPath = formContextRef.current.itemMeta.path;
-
-				if (nou(originalPath)) {
-					// If no originalPath exists => creating content
-					if (currentFileName) {
-						formContextRef.current.changedFieldIds.add(field.id);
-					} else {
-						formContextRef.current.changedFieldIds.delete(field.id);
-					}
-				} else {
-					// If originalPath exists, validate if differs from original value
-					const isPage = isPagePath(originalPath);
-					const originalFileName = getFileNameValueFromPath(originalPath, isPage);
-					if (currentFileName !== originalFileName) {
-						formContextRef.current.changedFieldIds.add(field.id);
-					} else {
-						formContextRef.current.changedFieldIds.delete(field.id);
-					}
+	const baseAtom = atom(initialValue);
+	const valueAtom = atom(
+		(get) => get(baseAtom),
+		(get, set, update: SetStateAction<unknown>) => {
+			const next = applyAtomUpdate(get, baseAtom, update);
+			set(baseAtom, next);
+			const formContext = formContextRef.current;
+			if (field.id === XmlKeys.fileName) {
+				const fileNameAtom = formContext.atoms?.fileName as PrimitiveAtom<string> | undefined;
+				if (fileNameAtom && get(fileNameAtom) !== next) {
+					set(fileNameAtom, next as string);
 				}
-			} else if (value !== formContextRef.current.originalValues[field.id]) {
-				formContextRef.current.changedFieldIds.add(field.id);
-			} else {
-				formContextRef.current.changedFieldIds.delete(field.id);
+				return;
 			}
-			formContextRef.current.fieldUpdates$.next(field.id);
+			trackFieldChange(field, next, formContext);
+			formContext.fieldUpdates$.next(field.id);
 		}
+	);
+	const validationAtom = atom(async (get) => {
+		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
+		get(formContextRef.current.atoms.relevanceVersion);
+		const value = get(valueAtom);
 		return validateFieldValue(field, value, {
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
+			siblingIds: validatorsData?.siblingIds,
+			currentIds: validatorsData?.currentIds,
+			additionalFields: validatorsData?.additionalFields,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : ''
+			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : '',
+			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
+			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
+			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance
 		});
 	});
 	return [valueAtom, validationAtom];
@@ -298,15 +382,19 @@ export const createReadonlyAtom = (lockedResultAtom: Atom<FormsEngineEditContext
 
 /**
  * Creates a Jotai atom for the file name based on the given path.
+ * Writes update dirty-tracking and emit on `fieldUpdates$` (see {@link createTrackedFileNameAtom}).
  *
- * @param {string} path - The full path of the file.
- * @returns {PrimitiveAtom<string>} - A Jotai atom containing the file name extracted from the path.
- *
+ * @param path - Full item path. `''` starts the atom empty (create / repeat, where there is no path yet).
+ * @param initialValue - Used as-is when the filename is not derived from a path (embedded forms seed the model id).
  */
-export const createFileNameAtom = (path: string): PrimitiveAtom<string> => {
-	const isPage = isPagePath(path);
-	return atom(getFileNameValueFromPath(path, isPage));
-};
+export function createFileNameAtom(
+	path: string,
+	formContextRef: RefObject<FieldTrackingContext>,
+	initialValue?: string
+): PrimitiveAtom<string> {
+	const initial = initialValue ?? (path ? getFileNameValueFromPath(path, isPagePath(path)) : '');
+	return createTrackedFileNameAtom(initial, formContextRef);
+}
 
 /**
  * Retrieves the base path from a given file path.
@@ -366,6 +454,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
+		formControllerState: null,
 		...mixin
 	};
 	return data;
@@ -425,6 +514,25 @@ export const extractAtomValues: (store: JotaiStore, valueAtoms: LookupTable<Atom
 		values[fieldId] = store.get(valueAtom);
 		return values;
 	}, {});
+
+/**
+ * Validation atoms for the save / invalid-form snapshot.
+ * The deny-list is qualified (`repeatFieldId.subFieldId`). Only the unqualified entry applies
+ * at this form's level, unless `parentPath` names the repeat group these atoms belong to.
+ * Atoms the controller never rejected (descriptor additional fields, `folder-name`, …) stay.
+ */
+export function getValidationAtomsExcludingIrrelevant(
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
+	irrelevantFieldPaths: Set<string> | null | undefined,
+	parentPath?: string
+): Array<Atom<Promise<FieldValidityState>>> {
+	if (!irrelevantFieldPaths?.size) {
+		return Object.values(validationByFieldId);
+	}
+	return Object.entries(validationByFieldId)
+		.filter(([fieldId]) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId, parentPath))
+		.map(([, validityAtom]) => validityAtom);
+}
 
 /**
  * Retrieves all the data requirements to show an update form
@@ -531,7 +639,8 @@ export function createFormsEngineAtoms(
 		minimizeAfterSave: atomWithStorage(getFormsEngineMinimizeAfterSave(username), false, undefined, {
 			getOnInit: true
 		}) as unknown as AtomWithStorage,
-		...mixin
+		...mixin,
+		relevanceVersion: atom(0)
 	};
 	return atoms;
 }
@@ -970,11 +1079,15 @@ export function prepareEmbeddedItemForm(props: {
 		lockResult: lockResultAtom,
 		readonly: createReadonlyAtom(lockResultAtom),
 		expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-		fileName: atom(update.modelId)
+		fileName: createFileNameAtom('', stableFormContextRef, update.modelId)
 	});
 	const values = { ...update.values };
 	delete values[XmlKeys.fileName];
-	const validatorsData = { siteId, contentTypesById };
+	const validatorsData: ValidatorsData = {
+		siteId,
+		contentTypesById,
+		resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
+	};
 
 	const descriptors = resolveControlDescriptors(customControls);
 	const additionalFieldsIds: string[] = [];
