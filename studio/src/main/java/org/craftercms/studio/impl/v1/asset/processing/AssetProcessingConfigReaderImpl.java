@@ -18,13 +18,13 @@ package org.craftercms.studio.impl.v1.asset.processing;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
+import org.craftercms.commons.config.ConfigUtils;
+import org.craftercms.commons.config.ConfigurationException;
 import org.craftercms.studio.api.v1.asset.processing.AssetProcessingConfigReader;
 import org.craftercms.studio.api.v1.asset.processing.ProcessorConfiguration;
 import org.craftercms.studio.api.v1.asset.processing.ProcessorPipelineConfiguration;
 import org.craftercms.studio.api.v1.exception.AssetProcessingConfigurationException;
-import org.craftercms.studio.impl.v1.util.ConfigUtils;
 
 import java.io.InputStream;
 import java.util.*;
