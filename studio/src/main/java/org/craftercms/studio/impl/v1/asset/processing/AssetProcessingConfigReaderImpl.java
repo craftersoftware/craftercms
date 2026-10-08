@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -26,13 +26,13 @@ import java.util.Map;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
+import org.craftercms.commons.config.ConfigUtils;
+import org.craftercms.commons.config.ConfigurationException;
 import org.craftercms.studio.api.v1.asset.processing.AssetProcessingConfigReader;
 import org.craftercms.studio.api.v1.asset.processing.ProcessorConfiguration;
 import org.craftercms.studio.api.v1.asset.processing.ProcessorPipelineConfiguration;
 import org.craftercms.studio.api.v1.exception.AssetProcessingConfigurationException;
-import org.craftercms.studio.impl.v1.util.ConfigUtils;
 
 /**
  * Default implementation for {@link AssetProcessingConfigReader}.
@@ -53,7 +53,7 @@ public class AssetProcessingConfigReaderImpl implements AssetProcessingConfigRea
     public List<ProcessorPipelineConfiguration> readConfig(InputStream in) throws AssetProcessingConfigurationException {
         HierarchicalConfiguration config;
         try {
-            config = ConfigUtils.readXmlConfiguration(in);
+            config = ConfigUtils.readXmlConfiguration(in, ',', null, null, "UTF-8");
         } catch (ConfigurationException e) {
             throw new AssetProcessingConfigurationException("Unable to read XML configuration file", e);
         }
