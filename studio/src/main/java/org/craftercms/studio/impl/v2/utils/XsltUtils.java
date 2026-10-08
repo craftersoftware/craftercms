@@ -103,6 +103,7 @@ public abstract class XsltUtils {
 
 		// Saxon configuration for underlying SAX parsers and extension functions
 		factory.setAttribute(FeatureKeys.ALLOW_EXTERNAL_FUNCTIONS, false);
+		factory.setAttribute(FeatureKeys.ALLOWED_PROTOCOLS, "");
 		factory.setAttribute(FeatureKeys.XML_PARSER_FEATURE +
 				"http://apache.org/xml/features/disallow-doctype-decl", true);
 		factory.setAttribute(FeatureKeys.XML_PARSER_FEATURE +

@@ -93,20 +93,53 @@ public class XsltUtilsTest {
 				</xsl:stylesheet>
 				""";
 
-		assertThrows(TransformerException.class, () -> execute(xxeTemplate, "<form/>"));
+		TransformerException thrown = assertThrows(TransformerException.class, () -> execute(xxeTemplate, "<form/>"));
+		assertTrue(thrown.getMessage().toLowerCase().contains("prohibited")
+				|| thrown.getMessage().toLowerCase().contains("doctype")
+				|| String.valueOf(thrown.getCause()).toLowerCase().contains("prohibited")
+				|| String.valueOf(thrown.getCause()).toLowerCase().contains("doctype"));
 	}
 
 	@Test
-	public void testRejectsExternalDocumentFunction() {
-		String template = """
-				<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
-					<xsl:template match="/">
-						<out><xsl:value-of select="doc('file:///etc/passwd')"/></out>
-					</xsl:template>
-				</xsl:stylesheet>
-				""";
+	public void testRejectsExternalDocumentFunction() throws Exception {
+		Path tempFile = Files.createTempFile("valid-doc-", ".xml");
+		try {
+			Files.writeString(tempFile, "<root>secret</root>", UTF_8);
+			String template = String.format("""
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+						<xsl:template match="/">
+							<out><xsl:value-of select="doc('%s')"/></out>
+						</xsl:template>
+					</xsl:stylesheet>
+					""", tempFile.toUri());
 
-		assertThrows(TransformerException.class, () -> execute(template, "<form/>"));
+			TransformerException thrown = assertThrows(TransformerException.class, () -> execute(template, "<form/>"));
+			assertTrue(thrown.getMessage().toLowerCase().contains("prohibited")
+					|| String.valueOf(thrown.getCause()).toLowerCase().contains("prohibited"));
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+	}
+
+	@Test
+	public void testRejectsUnparsedTextFunction() throws Exception {
+		Path tempFile = Files.createTempFile("valid-text-", ".txt");
+		try {
+			Files.writeString(tempFile, "secret content", UTF_8);
+			String template = String.format("""
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+						<xsl:template match="/">
+							<out><xsl:value-of select="unparsed-text('%s')"/></out>
+						</xsl:template>
+					</xsl:stylesheet>
+					""", tempFile.toUri());
+
+			TransformerException thrown = assertThrows(TransformerException.class, () -> execute(template, "<form/>"));
+			assertTrue(thrown.getMessage().toLowerCase().contains("prohibited")
+					|| String.valueOf(thrown.getCause()).toLowerCase().contains("prohibited"));
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
 	}
 
 	@Test
