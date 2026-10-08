@@ -40,6 +40,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import static org.apache.commons.collections4.MapUtils.isNotEmpty;
 
 /**
@@ -50,6 +55,25 @@ import static org.apache.commons.collections4.MapUtils.isNotEmpty;
 public class ConfigUtils {
 
     public static final String DEFAULT_ENCODING = "UTF-8";
+
+	/**
+	 * Creates a {@link DocumentBuilder} that rejects DOCTYPE declarations and external entities.
+	 * Commons Configuration uses this builder instead of a default JAXP parser.
+	 *
+	 * @return a hardened document builder
+	 * @throws ParserConfigurationException if the parser cannot be configured securely
+	 */
+	public static DocumentBuilder createDocumentBuilder() throws ParserConfigurationException {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		factory.setXIncludeAware(false);
+		factory.setExpandEntityReferences(false);
+		return factory.newDocumentBuilder();
+	}
 
     /**
      * Reads the XML configuration from the specified input stream, using the {@link #DEFAULT_ENCODING}.
@@ -111,6 +135,7 @@ public class ConfigUtils {
             }
 
             xmlParams.setListDelimiterHandler(new DefaultListDelimiterHandler(listDelimiter));
+			xmlParams.setDocumentBuilder(createDocumentBuilder());
 
             builder.configure(xmlParams);
             XMLConfiguration config = builder.getConfiguration();
@@ -146,6 +171,7 @@ public class ConfigUtils {
                 xmlParams = xmlParams.setDefaultLookups(getLookups(lookupVariables));
             }
 
+			xmlParams.setDocumentBuilder(createDocumentBuilder());
             builder.configure(xmlParams);
 
             return builder.getConfiguration();

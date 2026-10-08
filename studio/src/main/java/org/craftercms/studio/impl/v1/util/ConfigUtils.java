@@ -18,6 +18,8 @@ package org.craftercms.studio.impl.v1.util;
 
 import java.io.InputStream;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.XMLConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
@@ -26,6 +28,8 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.configuration2.io.FileHandler;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 
+import static org.craftercms.commons.config.ConfigUtils.createDocumentBuilder;
+
 public class ConfigUtils {
 
     public static HierarchicalConfiguration<ImmutableNode> readXmlConfiguration(InputStream input)
@@ -33,7 +37,12 @@ public class ConfigUtils {
         Parameters params = new Parameters();
         FileBasedConfigurationBuilder<XMLConfiguration> builder =
                 new FileBasedConfigurationBuilder<>(XMLConfiguration.class);
-        XMLConfiguration config = builder.configure(params.xml()).getConfiguration();
+		XMLConfiguration config;
+		try {
+			config = builder.configure(params.xml().setDocumentBuilder(createDocumentBuilder())).getConfiguration();
+		} catch (ParserConfigurationException e) {
+			throw new ConfigurationException("Unable to create a secure XML parser", e);
+		}
         FileHandler fileHandler = new FileHandler(config);
 
         fileHandler.setEncoding("UTF-8");

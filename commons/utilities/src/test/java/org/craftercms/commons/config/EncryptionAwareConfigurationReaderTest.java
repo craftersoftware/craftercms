@@ -23,12 +23,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.core.io.FileSystemResource;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -47,6 +52,7 @@ public class EncryptionAwareConfigurationReaderTest extends TestCase {
     public static final String SECRET_PROPERTY_KEY = "secret";
     private static final String DECRYPTED_SECRET_VALUE = "this is the secret";
     private static final String ENCRYPTED_VALUE = "ENCRYPTED_VALUE";
+	private static final String XXE_MARKER = "XXE_MARKER_SHOULD_NOT_LEAK";
     private Map<String, String> lookupVariables;
 
     @Mock
@@ -81,4 +87,68 @@ public class EncryptionAwareConfigurationReaderTest extends TestCase {
                 .readXmlConfiguration(new ByteArrayInputStream(CONFIG_CONTENT.getBytes(StandardCharsets.UTF_8)), lookupVariables);
         assertEquals(DECRYPTED_SECRET_VALUE, xmlConfiguration.getString(SECRET_PROPERTY_KEY));
     }
+
+	@Test
+	public void testReadXmlResource() throws IOException, ConfigurationException {
+		Path config = Files.createTempFile("config", ".xml");
+		Files.writeString(config, "<configuration><header>ok</header></configuration>");
+		try {
+			HierarchicalConfiguration<?> xmlConfiguration = encryptionAwareConfigurationReader
+					.readXmlConfiguration(new FileSystemResource(config), lookupVariables);
+			assertEquals("ok", xmlConfiguration.getString("header"));
+		} finally {
+			Files.deleteIfExists(config);
+		}
+	}
+
+	@Test
+	public void testReadXmlRejectsExternalEntity() throws IOException {
+		Path secret = Files.createTempFile("xxe-secret", ".txt");
+		Files.writeString(secret, XXE_MARKER);
+		String payload = externalEntityPayload(secret);
+		try {
+			ConfigurationException ex = assertThrows(ConfigurationException.class, () ->
+					encryptionAwareConfigurationReader.readXmlConfiguration(
+							new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), lookupVariables));
+			assertFalse(exceptionText(ex).contains(XXE_MARKER));
+			assertTrue(exceptionText(ex).toLowerCase().contains("doctype"));
+		} finally {
+			Files.deleteIfExists(secret);
+		}
+	}
+
+	@Test
+	public void testReadXmlResourceRejectsExternalEntity() throws IOException {
+		Path secret = Files.createTempFile("xxe-secret", ".txt");
+		Path config = Files.createTempFile("xxe-config", ".xml");
+		Files.writeString(secret, XXE_MARKER);
+		Files.writeString(config, externalEntityPayload(secret));
+		try {
+			ConfigurationException ex = assertThrows(ConfigurationException.class, () ->
+					encryptionAwareConfigurationReader.readXmlConfiguration(new FileSystemResource(config), lookupVariables));
+			assertFalse(exceptionText(ex).contains(XXE_MARKER));
+			assertTrue(exceptionText(ex).toLowerCase().contains("doctype"));
+		} finally {
+			Files.deleteIfExists(config);
+			Files.deleteIfExists(secret);
+		}
+	}
+
+	private static String externalEntityPayload(Path secret) {
+		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+				"<!DOCTYPE configuration [<!ENTITY xxe SYSTEM \"" + secret.toUri() + "\">]>" +
+				"<configuration><secret>&xxe;</secret></configuration>";
+	}
+
+	private static String exceptionText(Throwable error) {
+		StringBuilder text = new StringBuilder();
+		Throwable current = error;
+		while (current != null) {
+			if (current.getMessage() != null) {
+				text.append(current.getMessage());
+			}
+			current = current.getCause();
+		}
+		return text.toString();
+	}
 }
