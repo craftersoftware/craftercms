@@ -27,13 +27,16 @@ import org.springframework.core.io.FileSystemResource;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
@@ -160,10 +163,14 @@ public class EncryptionAwareConfigurationReaderTest extends TestCase {
 		}
 	}
 
-	@Test
-	public void testReadXmlRejectsRemoteEntityWithoutConnecting() throws IOException {
-		try (ServerSocket server = new ServerSocket(0)) {
-			server.setSoTimeout(250);
+	@Test(timeout = 5000)
+	public void testReadXmlRejectsRemoteEntityWithoutConnecting() throws Exception {
+		AtomicInteger connections = new AtomicInteger();
+		ServerSocket server = new ServerSocket(0);
+		server.setReuseAddress(true);
+		server.setSoTimeout(100);
+		Thread listener = createListener(server, connections);
+		try {
 			String payload = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
 					"<!DOCTYPE configuration [<!ENTITY xxe SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/probe\">]>" +
 					"<configuration><secret>&xxe;</secret></configuration>";
@@ -172,7 +179,46 @@ public class EncryptionAwareConfigurationReaderTest extends TestCase {
 							new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), lookupVariables));
 			assertFalse(exceptionText(ex).contains(XXE_MARKER));
 			assertTrue(exceptionText(ex).toLowerCase().contains("doctype"));
-			assertThrows(SocketTimeoutException.class, server::accept);
+			assertEquals(0, connections.get());
+		} finally {
+			listener.interrupt();
+			server.close();
+			listener.join(1000);
+		}
+	}
+
+	private static Thread createListener(ServerSocket server, AtomicInteger connections) {
+		Thread listener = new Thread(() -> {
+			byte[] response = ("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+					.getBytes(StandardCharsets.US_ASCII);
+			while (!Thread.currentThread().isInterrupted()) {
+				try (Socket socket = server.accept()) {
+					connections.incrementAndGet();
+					drainRequest(socket);
+					OutputStream out = socket.getOutputStream();
+					out.write(response);
+					out.flush();
+				} catch (SocketTimeoutException ignored) {
+					// keep waiting until the test finishes and closes the server
+				} catch (IOException e) {
+					break;
+				}
+			}
+		}, "xxe-probe-listener");
+		listener.setDaemon(true);
+		listener.start();
+		return listener;
+	}
+
+	private static void drainRequest(Socket socket) throws IOException {
+		socket.setSoTimeout(100);
+		byte[] buffer = new byte[1024];
+		try {
+			while (socket.getInputStream().read(buffer) > 0) {
+				// discard request bytes so the client can finish writing
+			}
+		} catch (SocketTimeoutException ignored) {
+			// request body may be empty; response can still be sent
 		}
 	}
 
