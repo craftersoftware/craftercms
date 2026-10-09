@@ -33,6 +33,7 @@ import com.sun.net.httpserver.HttpServer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.junit.Assume;
 import org.junit.Test;
 import org.tuckey.web.filters.urlrewrite.Conf;
 import org.tuckey.web.filters.urlrewrite.NormalRule;
@@ -166,6 +167,7 @@ public class SecuredConfTest {
 
 	@Test
 	public void testFileEntityIsNotOpened() throws Exception {
+		Assume.assumeFalse(System.getProperty("os.name").toLowerCase().contains("win"));
 		Path dir = Files.createTempDirectory("secured-conf-xxe");
 		Path fifo = dir.resolve("secret");
 		Process mkfifo = new ProcessBuilder("mkfifo", fifo.toString()).start();
