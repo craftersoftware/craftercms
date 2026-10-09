@@ -31,6 +31,13 @@ import javax.xml.parsers.ParserConfigurationException;
  */
 public final class XmlSecurityUtils {
 
+	public static final String DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl";
+	public static final String EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities";
+	public static final String EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities";
+	public static final String LOAD_EXTERNAL_DTD = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+	public static final String DECLARATION_HANDLER = "http://xml.org/sax/properties/declaration-handler";
+	public static final String ENTITY_EXPANSION_LIMIT = "http://www.oracle.com/xml/jaxp/properties/entityExpansionLimit";
+
 	private XmlSecurityUtils() {
 	}
 
@@ -43,10 +50,10 @@ public final class XmlSecurityUtils {
 	public static DocumentBuilder createDocumentBuilder() throws ParserConfigurationException {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-		factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-		factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-		factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		factory.setFeature(DISALLOW_DOCTYPE_DECL, true);
+		factory.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+		factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+		factory.setFeature(LOAD_EXTERNAL_DTD, false);
 		factory.setXIncludeAware(false);
 		factory.setExpandEntityReferences(false);
 		return factory.newDocumentBuilder();
@@ -60,9 +67,9 @@ public final class XmlSecurityUtils {
 	 */
 	public static SAXReader createSaxReader() throws SAXException {
 		SAXReader reader = new SAXReader();
-		reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-		reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
-		reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		reader.setFeature(DISALLOW_DOCTYPE_DECL, true);
+		reader.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+		reader.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
 		return reader;
 	}
 
