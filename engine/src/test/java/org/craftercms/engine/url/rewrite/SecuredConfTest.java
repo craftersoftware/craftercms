@@ -168,6 +168,7 @@ public class SecuredConfTest {
 	@Test
 	public void testFileEntityIsNotOpened() throws Exception {
 		Assume.assumeFalse(System.getProperty("os.name").toLowerCase().contains("win"));
+		Assume.assumeTrue("mkfifo is not available", isMkfifoAvailable());
 		Path dir = Files.createTempDirectory("secured-conf-xxe");
 		Path fifo = dir.resolve("secret");
 		Process mkfifo = new ProcessBuilder("mkfifo", fifo.toString()).start();
@@ -311,6 +312,17 @@ public class SecuredConfTest {
 			assertTrue(probe.hits() > 0);
 			assertFalse(conf.getRules().isEmpty());
 			assertEquals("OOB-HIT", ((NormalRule) conf.getRules().getFirst()).getFrom());
+		}
+	}
+
+	private static boolean isMkfifoAvailable() {
+		try {
+			return new ProcessBuilder("sh", "-c", "command -v mkfifo").start().waitFor() == 0;
+		} catch (IOException e) {
+			return false;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return false;
 		}
 	}
 

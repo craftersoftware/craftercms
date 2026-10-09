@@ -45,11 +45,17 @@ import org.xml.sax.ext.EntityResolver2;
 
 import jakarta.servlet.ServletContext;
 
+import static org.craftercms.commons.xml.XmlSecurityUtils.DECLARATION_HANDLER;
+import static org.craftercms.commons.xml.XmlSecurityUtils.ENTITY_EXPANSION_LIMIT;
+import static org.craftercms.commons.xml.XmlSecurityUtils.EXTERNAL_GENERAL_ENTITIES;
+import static org.craftercms.commons.xml.XmlSecurityUtils.EXTERNAL_PARAMETER_ENTITIES;
+import static org.craftercms.commons.xml.XmlSecurityUtils.LOAD_EXTERNAL_DTD;
+
 /**
  * Tuckey {@link Conf} that loads URL rewrite XML without resolving external entities.
  * <p>
  * Shipped site configuration declares the Tuckey DTD, so rejecting every DOCTYPE would
- * stop those sites from loading. This parser accepts only the DTD public IDs packaged in
+ * stop those sites from loading. This parser accepts only the DTD public ids packaged in
  * urlrewritefilter and reads those DTDs from that jar. Internal subsets and any other
  * entity are rejected. {@link Conf#loadDom(InputStream)} is not used.
  * <p>
@@ -62,18 +68,13 @@ public final class SecuredConf extends Conf {
 
 	private static final Logger logger = LoggerFactory.getLogger(SecuredConf.class);
 
-	private static final String EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities";
-	private static final String EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities";
-	private static final String LOAD_EXTERNAL_DTD = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
-	private static final String DECLARATION_HANDLER = "http://xml.org/sax/properties/declaration-handler";
-	private static final String ENTITY_EXPANSION_LIMIT = "http://www.oracle.com/xml/jaxp/properties/entityExpansionLimit";
 	/**
-	 * Well above the predefined entities a real rewrite file uses, and far below an expansion bomb.
+	 * Above the predefined entities a rewrite file uses, and below an expansion bomb.
 	 */
 	private static final int MAX_ENTITY_EXPANSIONS = 10_000;
 
 	/**
-	 * Public IDs shipped in urlrewritefilter 5.1.3. Values are classpath resources in that jar.
+	 * Public ids shipped in urlrewritefilter 5.1.3. Values are classpath resources in that jar.
 	 */
 	private static final Map<String, String> TUCKEY_DTDS = Map.ofEntries(
 		Map.entry("-//tuckey.org//DTD UrlRewrite 1.0//EN", "/org/tuckey/web/filters/urlrewrite/dtds/urlrewrite1.0.dtd"),
@@ -95,8 +96,7 @@ public final class SecuredConf extends Conf {
 	private static final ErrorHandler ERROR_HANDLER = new RejectingErrorHandler();
 	private static final RejectingDtdHandler DTD_HANDLER = new RejectingDtdHandler();
 
-	public SecuredConf(ServletContext context, InputStream inputStream, String fileName, String systemId,
-	                   boolean modRewriteStyleConf) {
+	public SecuredConf(ServletContext context, InputStream inputStream, String fileName, String systemId, boolean modRewriteStyleConf) {
 		super(context, inputStream, fileName, systemId, modRewriteStyleConf);
 	}
 
