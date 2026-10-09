@@ -51,6 +51,7 @@ import org.craftercms.engine.macro.MacroResolver;
 import org.craftercms.engine.scripting.ScriptFactory;
 import org.craftercms.engine.scripting.ScriptJobResolver;
 import org.craftercms.engine.scripting.impl.GroovyScriptFactory;
+import org.craftercms.engine.url.rewrite.SecuredConf;
 import static org.craftercms.engine.util.GroovyScriptUtils.getCompilerConfiguration;
 import org.craftercms.engine.util.SchedulingUtils;
 import org.craftercms.engine.util.config.SiteAwarePublishingTargetResolver;
@@ -565,9 +566,8 @@ public class SiteContextFactory implements ApplicationContextAware, ServletConte
 				boolean modRewriteStyleConf = !confPath.endsWith(".xml");
 
 				try (InputStream is = confResource.getInputStream()) {
-					conf = new Conf(servletContext, is, confPath, "", modRewriteStyleConf);
-
-					logger.info("URL rewrite configuration loaded @ " + confResource);
+					conf = new SecuredConf(servletContext, is, confPath, "", modRewriteStyleConf);
+					logger.info("URL rewrite configuration loaded @ '{}'", confResource);
 				}
 			}
 
@@ -575,9 +575,11 @@ public class SiteContextFactory implements ApplicationContextAware, ServletConte
 				if (conf.isOk() && conf.isEngineEnabled()) {
 					urlRewriter = new UrlRewriter(conf);
 
-					logger.info("URL rewrite engine loaded for site " + siteName + " (conf ok)");
+					logger.info("URL rewrite engine loaded for site '{}' (conf ok)", siteName);
 				} else {
-					logger.error("URL rewrite engine not loaded, there might have been conf errors");
+					logger.error("URL rewrite engine not loaded for site '{}'. " +
+							"Requests will be served without URL rewriting. Configuration errors: '{}'",
+							siteName, conf.getErrors());
 				}
 			}
 
