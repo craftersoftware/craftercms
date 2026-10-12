@@ -55,6 +55,8 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
     public static final String CONTENT_TYPE_REGEX_COMPONENT = "/?component/.*";
     public static final String COMPONENT_INCLUDE_REGEX = ".*\\.item\\.component";
 
+    public static final String DEFAULT_IGNORED_FIELD = "__typename";
+
     /**
      * The default value for the 'limit' argument
      */
@@ -75,12 +77,27 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
      */
     protected OpenSearchClientWrapper searchClient;
 
+    /**
+     * The GraphQL fields that should not be added to the OpenSearch query includes
+     */
+    protected Set<String> ignoredFields;
+
     public ContentTypeBasedDataFetcher(final int defaultLimit, final String defaultSortField, final String defaultSortOrder,
                                        final OpenSearchClientWrapper searchClient) {
+        this(defaultLimit, defaultSortField, defaultSortOrder, searchClient, new String[] { DEFAULT_IGNORED_FIELD });
+    }
+
+    public ContentTypeBasedDataFetcher(final int defaultLimit, final String defaultSortField, final String defaultSortOrder,
+                                       final OpenSearchClientWrapper searchClient, final String[] ignoredFields) {
         this.defaultLimit = defaultLimit;
         this.defaultSortField = defaultSortField;
         this.defaultSortOrder = defaultSortOrder;
         this.searchClient = searchClient;
+        this.ignoredFields = ignoredFields == null ? Collections.emptySet() :
+                Arrays.stream(ignoredFields)
+                        .map(StringUtils::trim)
+                        .filter(StringUtils::isNotEmpty)
+                        .collect(Collectors.toSet());
     }
 
     /**
@@ -97,7 +114,7 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
         String sortBy = Optional.ofNullable(env.<String>getArgument(ARG_NAME_SORT_BY)).orElse(defaultSortField);
         String sortOrder = Optional.ofNullable(env.<String>getArgument(ARG_NAME_SORT_ORDER)).orElse(defaultSortOrder);
 
-        List<String> queryFieldIncludes = new LinkedList<>();
+        Set<String> queryFieldIncludes = new HashSet<>();
         // Add content-type to includes, we might need it for a GraphQL TypeResolver
         queryFieldIncludes.add(QUERY_FIELD_NAME_CONTENT_TYPE);
 
@@ -173,7 +190,7 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
             // Only fetch the selected fields for better performance
             .source(s -> s
                 .filter(f -> f
-                    .includes(queryFieldIncludes)
+                    .includes(new ArrayList<>(queryFieldIncludes))
                 )
             )
             .from(offset)
@@ -207,11 +224,13 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
      * Adds the required filters to the ES query for the given field
      */
     protected void processSelection(String path, Selection currentSelection, BoolQuery.Builder query,
-                                    List<String> queryFieldIncludes, DataFetchingEnvironment env)  {
+                                    Set<String> queryFieldIncludes, DataFetchingEnvironment env)  {
         if (currentSelection instanceof Field) {
             // If the current selection is a field
             Field currentField = (Field) currentSelection;
 
+            // Fields in the list of ignored fields are not included in the query, but their filters still apply
+            boolean ignored = ignoredFields.contains(currentField.getName());
             // Get the original field name
             String propertyName = getOriginalName(currentField.getName());
             // Build the ES-friendly path
@@ -219,6 +238,9 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
 
             // If the field has sub selection
             if (Objects.nonNull(currentField.getSelectionSet())) {
+                if (ignored) {
+                    return;
+                }
                 // If the field is a flattened component
                 if (fullPath.matches(COMPONENT_INCLUDE_REGEX)) {
                     // Include the 'content-type' field to make sure the type can be resolved during runtime
@@ -234,9 +256,11 @@ public class ContentTypeBasedDataFetcher extends RequestAwareDataFetcher<Object>
                 return;
             }
 
-            // Add the field to the list
-            logger.debug("Adding selected field '{}' to query", fullPath);
-            queryFieldIncludes.add(fullPath);
+            if (!ignored) {
+                // Add the field to the list
+                logger.debug("Adding selected field '{}' to query", fullPath);
+                queryFieldIncludes.add(fullPath);
+            }
 
             // Check the filters to build the ES query
             Optional<Argument> arg =

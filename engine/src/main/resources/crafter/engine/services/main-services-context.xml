@@ -1008,6 +1008,7 @@
         <constructor-arg name="defaultSortField" value="${crafter.engine.graphql.query.sort.field}"/>
         <constructor-arg name="defaultSortOrder" value="${crafter.engine.graphql.query.sort.order}"/>
         <constructor-arg name="searchClient" ref="crafter.searchClient"/>
+        <constructor-arg name="ignoredFields" value="${crafter.engine.graphql.query.includes.ignore:__typename}"/>
     </bean>
 
     <bean id="crafter.urlTransformDataFetcher" class="org.craftercms.engine.graphql.impl.fetchers.UrlTransformDataFetcher">
