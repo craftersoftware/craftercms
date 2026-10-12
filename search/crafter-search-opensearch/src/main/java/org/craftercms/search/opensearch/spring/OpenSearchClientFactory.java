@@ -38,6 +38,7 @@ import java.net.URISyntaxException;
 import static org.apache.hc.core5.util.Timeout.ofMilliseconds;
 import static org.craftercms.search.opensearch.spring.ClientFactoryUtils.*;
 
+
 /**
  * Implementation of {@link AbstractFactoryBean} to create instances of {@link OpenSearchClient}
  *
@@ -190,6 +191,10 @@ public class OpenSearchClientFactory extends AbstractFactoryBean<OpenSearchClien
                     createConnectionManager(connectTimeout, maxTotalConnections, maxConnectionsPerRoute));
             builder.setIOReactorConfig(createIOReactorConfig(socketTimeout, threadCount, socketKeepAlive));
             builder.setIoReactorExceptionCallback(createIOReactorExceptionCallback());
+
+            builder.addExecInterceptorFirst(OpenSearchRequestLoggingInterceptor.NAME,
+                    new OpenSearchRequestLoggingInterceptor());
+
             return builder;
         };
         ObjectMapper mapper = new ObjectMapper()
