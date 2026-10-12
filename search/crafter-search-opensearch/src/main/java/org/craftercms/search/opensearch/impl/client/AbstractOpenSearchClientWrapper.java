@@ -119,9 +119,13 @@ public abstract class AbstractOpenSearchClientWrapper implements OpenSearchClien
      */
     protected void ensureNoShardFailures(SearchRequest request, SearchResponse<?> response) {
         ShardStatistics shards = response.shards();
-        if (shards == null || shards.failed() == 0 || !failOnPartialShardFailure) {
+        if (shards == null || shards.failed() == 0 ) {
             return;
         }
+		if (!failOnPartialShardFailure) {
+			logger.warn("Search failed on {} of {} shards, but failOnPartialShardFailure is false. Ignoring shard failures.", shards.failed(), shards.total());
+			return;
+		}
 
         String details = shards.failures().stream()
                 .map(this::describeShardFailure)
