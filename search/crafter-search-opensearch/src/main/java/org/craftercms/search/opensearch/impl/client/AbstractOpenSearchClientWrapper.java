@@ -19,6 +19,7 @@ package org.craftercms.search.opensearch.impl.client;
 import jakarta.json.stream.JsonParser;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.craftercms.search.opensearch.client.OpenSearchClientWrapper;
 import org.craftercms.search.opensearch.exception.OpenSearchException;
 import org.craftercms.search.opensearch.exception.TooManyNestedClausesSearchException;
@@ -28,6 +29,8 @@ import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.ErrorCause;
 import org.opensearch.client.opensearch._types.ErrorResponse;
 import org.opensearch.client.opensearch._types.SearchType;
+import org.opensearch.client.opensearch._types.ShardSearchFailure;
+import org.opensearch.client.opensearch._types.ShardStatistics;
 import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.SearchRequest;
@@ -43,6 +46,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.MapUtils.isNotEmpty;
 
@@ -73,8 +77,19 @@ public abstract class AbstractOpenSearchClientWrapper implements OpenSearchClien
      */
     protected String[] filterQueries;
 
+    /**
+     * When {@code true}, a search that fails on some shards is treated as a failed search.
+     * OpenSearch otherwise returns a successful response with partial results.
+     */
+    protected final boolean failOnPartialShardFailure;
+
     public AbstractOpenSearchClientWrapper(OpenSearchClient client) {
+        this(client, false);
+    }
+
+    public AbstractOpenSearchClientWrapper(OpenSearchClient client, boolean failOnPartialShardFailure) {
         this.client = client;
+        this.failOnPartialShardFailure = failOnPartialShardFailure;
     }
 
     public void setFilterQueries(final String[] filterQueries) {
@@ -84,8 +99,11 @@ public abstract class AbstractOpenSearchClientWrapper implements OpenSearchClien
     @Override
     public <T> SearchResponse<T> search(SearchRequest request, Class<T> docClass, Map<String, Object> parameters)
             throws IOException, OpenSearchException {
+        SearchRequest searchRequest = new SearchRequestWrapper(request, parameters).build();
         try {
-            return client.search(new SearchRequestWrapper(request, parameters).build(), docClass);
+            SearchResponse<T> response = client.search(searchRequest, docClass);
+            ensureNoShardFailures(searchRequest, response);
+            return response;
         } catch (ResponseException e) {
             String errorType = getErrorRootCauseType(e);
             if (TOO_MANY_NESTED_CLAUSES_ERROR.equalsIgnoreCase(errorType)) {
@@ -93,6 +111,48 @@ public abstract class AbstractOpenSearchClientWrapper implements OpenSearchClien
             }
             throw e;
         }
+    }
+
+    /**
+     * OpenSearch returns a successful response when {@code allow_partial_search_results} is enabled and only some
+     * shards fail. Treat that as a failed search so callers do not use an incomplete result.
+     */
+    protected void ensureNoShardFailures(SearchRequest request, SearchResponse<?> response) {
+        ShardStatistics shards = response.shards();
+        if (shards == null || shards.failed() == 0 || !failOnPartialShardFailure) {
+            return;
+        }
+
+        String details = shards.failures().stream()
+                .map(this::describeShardFailure)
+                .collect(joining("; "));
+        String indexId = request.index().isEmpty() ? null : String.join(",", request.index());
+        String message = String.format("Search failed on %d of %d shards%s",
+                shards.failed(), shards.total(), StringUtils.isEmpty(details) ? "" : ": " + details);
+
+        if (shards.failures().stream().anyMatch(failure -> isTooManyNestedClauses(failure.reason()))) {
+            throw new TooManyNestedClausesSearchException(indexId, message, null);
+        }
+        throw new OpenSearchException(indexId, message);
+    }
+
+    protected String describeShardFailure(ShardSearchFailure failure) {
+        ErrorCause reason = failure.reason();
+        String description = reason.type();
+        if (StringUtils.isNotEmpty(reason.reason())) {
+            description = description + ": " + reason.reason();
+        }
+        return String.format("[%s][%d] %s", failure.index(), failure.shard(), description);
+    }
+
+    protected boolean isTooManyNestedClauses(ErrorCause cause) {
+        if (cause == null) {
+            return false;
+        }
+        if (TOO_MANY_NESTED_CLAUSES_ERROR.equalsIgnoreCase(cause.type())) {
+            return true;
+        }
+        return cause.rootCause().stream().anyMatch(root -> TOO_MANY_NESTED_CLAUSES_ERROR.equalsIgnoreCase(root.type()));
     }
 
     /**

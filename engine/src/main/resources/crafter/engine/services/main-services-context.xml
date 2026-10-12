@@ -767,6 +767,7 @@
         <constructor-arg name="indexIdFormat" value="${crafter.engine.search.index.format}"/>
         <constructor-arg name="enableTranslation" value="${crafter.engine.translation.enable}"/>
         <constructor-arg name="enableDefaultFilters" value="${crafter.engine.search.defaultFilters.enabled}"/>
+        <constructor-arg name="failOnPartialShardFailure" value="${crafter.engine.search.failOnPartialShardFailure}"/>
     </bean>
 
     <!-- ////////////////////////////////// -->

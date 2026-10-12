@@ -35,6 +35,7 @@
         <constructor-arg name="client" ref="searchClient"/>
         <constructor-arg name="indexSuffix" value="#{studioConfiguration.getProperty('studio.search.index.suffix')}"/>
         <constructor-arg name="pathFieldName" value="#{studioConfiguration.getProperty('studio.search.field.path')}"/>
+        <constructor-arg name="failOnPartialShardFailure" value="#{studioConfiguration.getProperty('studio.search.failOnPartialShardFailure')}"/>
     </bean>
 
     <bean id="searchServiceInternal" init-method="init"

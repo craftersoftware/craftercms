@@ -759,6 +759,8 @@ studio.search.keepAlive: false
 studio.search.maxTotalConnections: -1
 # The max connections per route, if set to -1 the default will be used
 studio.search.maxConnectionsPerRoute: -1
+# Indicates if a search should fail when some shards fail. When false, partial results are returned
+studio.search.failOnPartialShardFailure: false
 # Suffix added to the name for authoring indexes
 studio.search.index.suffix: -authoring
 # Name of the field for paths
