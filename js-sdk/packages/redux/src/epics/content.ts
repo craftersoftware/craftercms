@@ -16,7 +16,7 @@
 
 import { Observable, of } from 'rxjs';
 import { AnyAction } from 'redux';
-import { mergeMap, map, catchError } from 'rxjs/operators';
+import { mergeMap, map, catchError, groupBy, switchMap } from 'rxjs/operators';
 import { ofType } from 'redux-observable';
 
 import { ContentStoreService, NavigationService } from '@craftercms/content';
@@ -60,19 +60,24 @@ export const getItemEpic = (action$: Observable<AnyAction>) =>
 export const getDescriptorEpic = (action$: Observable<AnyAction>) =>
 	action$.pipe(
 		ofType(getDescriptor.type),
-		mergeMap(({ payload }) =>
-			ContentStoreService.getDescriptor(payload).pipe(
-				map((descriptor) =>
-					getDescriptorComplete({
-						descriptor,
-						url: payload
-					})
-				),
-				catchError(() =>
-					of(
-						getDescriptorComplete({
-							url: payload
-						})
+		groupBy(({ payload }) => payload),
+		mergeMap((group$) =>
+			group$.pipe(
+				switchMap(({ payload }) =>
+					ContentStoreService.getDescriptor(payload).pipe(
+						map((descriptor) =>
+							getDescriptorComplete({
+								descriptor,
+								url: payload
+							})
+						),
+						catchError(() =>
+							of(
+								getDescriptorComplete({
+									url: payload
+								})
+							)
+						)
 					)
 				)
 			)
