@@ -14,9 +14,9 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { Observable, of } from 'rxjs';
+import { GroupedObservable, Observable, of } from 'rxjs';
 import { AnyAction } from 'redux';
-import { mergeMap, map, catchError, groupBy, switchMap } from 'rxjs/operators';
+import { mergeMap, map, catchError, groupBy, switchMap, share } from 'rxjs/operators';
 import { ofType } from 'redux-observable';
 
 import { ContentStoreService, NavigationService } from '@craftercms/content';
@@ -57,12 +57,14 @@ export const getItemEpic = (action$: Observable<AnyAction>) =>
 		)
 	);
 
-export const getDescriptorEpic = (action$: Observable<AnyAction>) =>
-	action$.pipe(
-		ofType(getDescriptor.type),
-		groupBy(({ payload }) => payload),
-		mergeMap((group$) =>
-			group$.pipe(
+export const getDescriptorEpic = (action$: Observable<AnyAction>) => {
+	// Share one pipeline per URL group between duration (closes group on settle) and mergeMap.
+	const responses = new WeakMap<GroupedObservable<string, AnyAction>, Observable<AnyAction>>();
+
+	const sharedGroupResponse = (group$: GroupedObservable<string, AnyAction>) => {
+		let shared$ = responses.get(group$);
+		if (!shared$) {
+			shared$ = group$.pipe(
 				switchMap(({ payload }) =>
 					ContentStoreService.getDescriptor(payload).pipe(
 						map((descriptor) =>
@@ -79,10 +81,20 @@ export const getDescriptorEpic = (action$: Observable<AnyAction>) =>
 							)
 						)
 					)
-				)
-			)
-		)
+				),
+				share()
+			);
+			responses.set(group$, shared$);
+		}
+		return shared$;
+	};
+
+	return action$.pipe(
+		ofType(getDescriptor.type),
+		groupBy(({ payload }) => payload as string, { duration: sharedGroupResponse }),
+		mergeMap(sharedGroupResponse)
 	);
+};
 
 export const getChildrenEpic = (action$: Observable<AnyAction>) =>
 	action$.pipe(
