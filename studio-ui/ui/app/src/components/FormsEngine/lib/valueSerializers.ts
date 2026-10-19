@@ -19,7 +19,7 @@ import { NodeSelectorItem } from '../controls/NodeSelector';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
 import { getPluginControlValueSerializer } from '../controls/registry';
-import { XmlKeys } from './formConsts';
+import { omitOptionalSystemPropsNotInForm, XmlKeys } from './formConsts';
 import { BuiltInControlType } from './controlMap';
 import { RepeatItem } from '../controls/Repeat';
 import { XMLBuilder, XmlBuilderOptions } from 'fast-xml-parser';
@@ -107,6 +107,10 @@ function prepareValuesForXmlSerialising(
 	contentTypesLookup: LookupTable<ContentType>
 ): LookupTable<unknown> {
 	const jObj = { ...values };
+	// These three are form fields, not unconditional system props. A values object can still
+	// carry them (stale XML, a control that writes the canonical nav key, a nested component).
+	// Emit the tag only when this content type — or this repeat/component's fields — defines it.
+	omitOptionalSystemPropsNotInForm(fields, jObj);
 	Object.entries(jObj).forEach(([id, value]) => {
 		// System props are not in the model, hence field might be undefined at times.
 		const field = fields[id];

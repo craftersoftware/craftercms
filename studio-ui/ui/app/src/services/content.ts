@@ -217,7 +217,7 @@ function createComponentObject(
 		}
 	}
 
-	return mergeContentDocumentProps('component', {
+	return mergeContentDocumentProps({
 		'@attributes': { id },
 		'content-type': contentType.id,
 		'display-template': contentType.displayTemplate,
@@ -973,10 +973,12 @@ function extractNode(doc: XMLDocument | Element, fieldId: string, index: string 
 	}
 }
 
-function mergeContentDocumentProps(type: 'page' | 'component', data: AnyObject): LegacyContentDocumentProps {
+function mergeContentDocumentProps(data: AnyObject): LegacyContentDocumentProps {
 	// Dasherized props...
 	// content-type, display-template, no-template-required, internal-name, file-name
 	// merge-strategy, folder-name, parent-descriptor
+	// placeInNav is not defaulted here. It is written only when the caller already has it
+	// (the content type form definition defines the field).
 	const now = data.lastModifiedDate_dt && data.createdDate_dt ? null : createModifiedDate();
 	const dateCreated = data.createdDate_dt ? data.createdDate_dt : now;
 	const dateModified = data.lastModifiedDate_dt ? data.lastModifiedDate_dt : now;
@@ -991,7 +993,6 @@ function mergeContentDocumentProps(type: 'page' | 'component', data: AnyObject):
 			lastModifiedDate_dt: dateModified,
 			objectId: ''
 		},
-		type === 'page' ? { placeInNav: 'false' as 'false' } : {},
 		data
 	);
 }

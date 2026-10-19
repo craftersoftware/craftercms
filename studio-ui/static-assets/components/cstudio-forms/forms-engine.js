@@ -3619,7 +3619,6 @@ const initializeCStudioForms = () => {
 							'lastModifiedDate_dt',
 							'components',
 							'orderDefault_f',
-							'placeInNav',
 							'rteComponents'
 						],
 						output = '',
@@ -3638,6 +3637,13 @@ const initializeCStudioForms = () => {
 						section.fields.forEach((field) => {
 							let fieldId = isRepeat ? `${section.id}.${field.id}` : field.id;
 							validFields.push(fieldId);
+							// The page-nav-order control also writes the canonical `placeInNav` key
+							// the server reads. Keep that key only when the form actually has the
+							// control. A stale model.placeInNav on a type that does not define it
+							// (editorial /page/home) must not be written back.
+							if (!isRepeat && field.type === 'page-nav-order' && field.id !== 'placeInNav') {
+								validFields.push('placeInNav');
+							}
 							let fieldInstruction = { tokenize: false };
 							fieldInstructions[fieldId] = fieldInstruction;
 							let fieldList = { list: false };

@@ -45,6 +45,29 @@ export enum XmlKeys {
 	navLabel = 'navLabel'
 }
 
+/**
+ * Optional system fields. They are part of some content types (for example page-nav-order's
+ * `placeInNav`) but must not be written unless that content type's form definition defines
+ * a field with the same id. `disabled` is also on `systemPropsList`, so a stray tag does not
+ * warn; `placeInNav` and `navLabel` do.
+ */
+export const optionalSystemFieldIds = [XmlKeys.disabled, XmlKeys.placeInNav, XmlKeys.navLabel] as const;
+
+/**
+ * Drops `disabled`, `placeInNav`, and `navLabel` from a values object when the form
+ * definition does not define that field. Mutates `values`.
+ */
+export function omitOptionalSystemPropsNotInForm(
+	fields: { [id: string]: unknown } | null | undefined,
+	values: { [id: string]: unknown }
+): void {
+	for (const id of optionalSystemFieldIds) {
+		if (id in values && !fields?.[id]) {
+			delete values[id];
+		}
+	}
+}
+
 // These are not in the content type definition
 export const systemFieldsNotInType = [
 	XmlKeys.contentTypeId,
