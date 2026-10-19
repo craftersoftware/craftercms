@@ -14,9 +14,9 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-import { GroupedObservable, Observable, of } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { AnyAction } from 'redux';
-import { mergeMap, map, catchError, groupBy, switchMap, share } from 'rxjs/operators';
+import { mergeMap, map, catchError, groupBy, switchMap, tap } from 'rxjs/operators';
 import { ofType } from 'redux-observable';
 
 import { ContentStoreService, NavigationService } from '@craftercms/content';
@@ -58,13 +58,20 @@ export const getItemEpic = (action$: Observable<AnyAction>) =>
 	);
 
 export const getDescriptorEpic = (action$: Observable<AnyAction>) => {
-	// Share one pipeline per URL group between duration (closes group on settle) and mergeMap.
-	const responses = new WeakMap<GroupedObservable<string, AnyAction>, Observable<AnyAction>>();
+	// Closes the URL group after the active request settles. Not part of the epic output.
+	const closeGroup = new Map<string, Subject<void>>();
 
-	const sharedGroupResponse = (group$: GroupedObservable<string, AnyAction>) => {
-		let shared$ = responses.get(group$);
-		if (!shared$) {
-			shared$ = group$.pipe(
+	return action$.pipe(
+		ofType(getDescriptor.type),
+		groupBy(({ payload }) => payload as string, {
+			duration: ({ key }) => {
+				const settled$ = new Subject<void>();
+				closeGroup.set(key, settled$);
+				return settled$;
+			}
+		}),
+		mergeMap((group$) =>
+			group$.pipe(
 				switchMap(({ payload }) =>
 					ContentStoreService.getDescriptor(payload).pipe(
 						map((descriptor) =>
@@ -79,20 +86,17 @@ export const getDescriptorEpic = (action$: Observable<AnyAction>) => {
 									url: payload
 								})
 							)
-						)
+						),
+						tap({
+							complete: () => {
+								closeGroup.get(group$.key)?.next();
+								closeGroup.delete(group$.key);
+							}
+						})
 					)
-				),
-				share()
-			);
-			responses.set(group$, shared$);
-		}
-		return shared$;
-	};
-
-	return action$.pipe(
-		ofType(getDescriptor.type),
-		groupBy(({ payload }) => payload as string, { duration: sharedGroupResponse }),
-		mergeMap(sharedGroupResponse)
+				)
+			)
+		)
 	);
 };
 
