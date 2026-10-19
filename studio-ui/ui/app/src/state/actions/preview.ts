@@ -206,6 +206,8 @@ export const guestUploadFailed = /*#__PURE__*/ createAction<{
 	id: string;
 	error?: unknown;
 }>('GUEST_UPLOAD_FAILED');
+/** Guest stopped listening; host should unsubscribe the matching Uppy upload. */
+export const cancelGuestUpload = /*#__PURE__*/ createAction<{ id: string }>('CANCEL_GUEST_UPLOAD');
 export const updateRteConfig = /*#__PURE__*/ createAction('UPDATE_RTE_CONFIG');
 export const highlightModeChanged = /*#__PURE__*/ createAction('HIGHLIGHT_MODE_CHANGED');
 export const contentTypesRequest = /*#__PURE__*/ createAction('CONTENT_TYPES_REQUEST');

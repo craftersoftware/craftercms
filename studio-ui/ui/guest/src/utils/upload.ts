@@ -19,6 +19,7 @@ import { filter } from 'rxjs/operators';
 import { v4 as uuid } from 'uuid';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import {
+	cancelGuestUpload,
 	guestUploadComplete,
 	guestUploadFailed,
 	guestUploadProgress,
@@ -62,6 +63,10 @@ export function uploadDataUrl(
 
 		post(requestGuestUpload({ id, site, file, path, xsrfArgumentName }));
 
-		return () => subscription.unsubscribe();
+		return () => {
+			subscription.unsubscribe();
+			// Tell the host to stop the Uppy upload so an abandoned request cannot keep writing a file.
+			post(cancelGuestUpload({ id }));
+		};
 	});
 }
