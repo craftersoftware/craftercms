@@ -104,13 +104,13 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 function prepareValuesForXmlSerialising(
 	fields: LookupTable<ContentTypeField>,
 	values: LookupTable<unknown>,
-	contentTypesLookup: LookupTable<ContentType>
+	contentTypesLookup: LookupTable<ContentType>,
+	options?: { topLevel?: boolean }
 ): LookupTable<unknown> {
 	const jObj = { ...values };
-	// These three are form fields, not unconditional system props. A values object can still
-	// carry them (stale XML, a control that writes the canonical nav key, a nested component).
-	// Emit the tag only when this content type — or this repeat/component's fields — defines it.
-	omitOptionalSystemPropsNotInForm(fields, jObj);
+	// `disabled`, `placeInNav`, and `navLabel` are form fields. A top-level page-nav-order
+	// control also writes the canonical placeInNav element. Repeat items opt out.
+	omitOptionalSystemPropsNotInForm(fields, jObj, options);
 	Object.entries(jObj).forEach(([id, value]) => {
 		// System props are not in the model, hence field might be undefined at times.
 		const field = fields[id];
@@ -186,7 +186,9 @@ function prepareRepeat(
 	const nestedFields = field.fields ?? ({} as LookupTable<ContentTypeField>);
 	return {
 		'@:item-list': true,
-		item: value.map((item) => prepareValuesForXmlSerialising(nestedFields, item, contentTypesLookup))
+		item: value.map((item) =>
+			prepareValuesForXmlSerialising(nestedFields, item, contentTypesLookup, { topLevel: false })
+		)
 	};
 }
 

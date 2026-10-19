@@ -46,22 +46,43 @@ export enum XmlKeys {
 }
 
 /**
- * Optional system fields. They are part of some content types (for example page-nav-order's
- * `placeInNav`) but must not be written unless that content type's form definition defines
- * a field with the same id. `disabled` is also on `systemPropsList`, so a stray tag does not
- * warn; `placeInNav` and `navLabel` do.
+ * Optional system fields. Written only when this field lookup defines them.
+ * `disabled` is also on `systemPropsList`, so a stray tag does not warn; `placeInNav` and `navLabel` do.
+ * A top-level `page-nav-order` field defines `placeInNav` even when its id is not `placeInNav`
+ * (the server reads `/*[1]/placeInNav`).
  */
 export const optionalSystemFieldIds = [XmlKeys.disabled, XmlKeys.placeInNav, XmlKeys.navLabel] as const;
 
+const pageNavOrderControlType = 'page-nav-order';
+
 /**
- * Drops `disabled`, `placeInNav`, and `navLabel` from a values object when the form
- * definition does not define that field. Mutates `values`.
+ * Drops `disabled`, `placeInNav`, and `navLabel` when this field lookup does not define them.
+ * On a top-level document, any `page-nav-order` field supplies `placeInNav` (legacy page-nav-order.js).
+ * Repeat items pass `topLevel: false` so a nested control does not invent that tag.
+ * Mutates `values`.
  */
 export function omitOptionalSystemPropsNotInForm(
-	fields: { [id: string]: unknown } | null | undefined,
-	values: { [id: string]: unknown }
+	fields: { [id: string]: { type?: string } | undefined } | null | undefined,
+	values: { [id: string]: unknown },
+	options?: { topLevel?: boolean }
 ): void {
+	const topLevel = options?.topLevel !== false;
+	let pageNavOrderFieldId: string | undefined;
+	if (topLevel && fields) {
+		for (const fieldId of Object.keys(fields)) {
+			if (fields[fieldId]?.type === pageNavOrderControlType) {
+				pageNavOrderFieldId = fieldId;
+				break;
+			}
+		}
+	}
+	if (pageNavOrderFieldId) {
+		values[XmlKeys.placeInNav] = values[pageNavOrderFieldId];
+	}
 	for (const id of optionalSystemFieldIds) {
+		if (id === XmlKeys.placeInNav && pageNavOrderFieldId) {
+			continue;
+		}
 		if (id in values && !fields?.[id]) {
 			delete values[id];
 		}

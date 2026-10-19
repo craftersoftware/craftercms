@@ -3622,8 +3622,7 @@ const initializeCStudioForms = () => {
 							'rteComponents'
 						],
 						output = '',
-						validFieldsStr,
-						fieldRe,
+						validFieldSet,
 						section;
 
 					// Add valid fields from the ones created dynamically by controls
@@ -3692,7 +3691,10 @@ const initializeCStudioForms = () => {
 					}
 
 					validFields.push('$!'); // End element
-					validFieldsStr = validFields.join(',');
+					// Exact ids only. The previous comma-regex treated an empty alternative as a match,
+					// so a field named placeInNavLabel or disabledDate kept a stale placeInNav/disabled.
+					// Repeat sub-fields stay in the set as `repeatId.subFieldId`.
+					validFieldSet = new Set(validFields);
 
 					for (var key in formModel) {
 						var attributes = [' '],
@@ -3733,11 +3735,7 @@ const initializeCStudioForms = () => {
 							attributes.pop();
 						}
 
-						// Because we added start and end elements, we can be sure that any field names will
-						// be delimited by the delimiter token (ie. comma)
-						fieldRe = new RegExp(',' + key + '(?:,||d+|)', 'g');
-
-						if (fieldRe.test(validFieldsStr)) {
+						if (validFieldSet.has(key)) {
 							if (isModelItemArray) {
 								output += '\t<' + key + attributes.join(' ') + '>';
 								output = this.recursiveRetrieveItemValues(modelItem, output, key, fieldInstructions);
