@@ -347,7 +347,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 						sx={[
 							{
 								display: 'grid',
-								gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
+								gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
 								gridGap: '16px',
 								padding: 'initial'
 							},
