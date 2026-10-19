@@ -822,6 +822,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					// A fresh check-in means the guest reloaded (possibly without checking out, e.g. when the
 					// iFrame url changes abruptly), so any picker request from the previous page is orphaned.
 					upToDateRefs.current.cancelActiveRteDataSourcePicker();
+					guestUploadSubscriptionsRef.current.forEach((subscription) => subscription.unsubscribe());
+					guestUploadSubscriptionsRef.current.clear();
 					getHostToGuestBus().next(
 						hostCheckIn({
 							editMode: false,
