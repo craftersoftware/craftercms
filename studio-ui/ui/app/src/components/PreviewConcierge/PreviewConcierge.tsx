@@ -1630,8 +1630,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			if (guest) {
 				// Changing the site will force-reload the iFrame and 'beforeunload'
 				// event won't trigger withing; guest won't be submitting it's own checkout
-				// in such cases.
+				// in such cases. Clear uploads here since guestCheckOut is dispatched to
+				// Redux directly (not via the guest bus), so the bus handler won't run.
 				upToDateRefs.current.cancelActiveRteDataSourcePicker();
+				guestUploadSubscriptionsRef.current.forEach((subscription) => subscription.unsubscribe());
+				guestUploadSubscriptionsRef.current.clear();
 				dispatch(guestCheckOut({ path: guest.path }));
 			}
 		}
