@@ -224,6 +224,7 @@
 	"contentType.contentTypeWarningMessage": "Bitte beachten Sie, dass die Datenquelle für untergeordnete Inhalte aus CrafterCMS ausläuft. Verwenden Sie für Komponenten, die seiten- oder komponentenübergreifend freigegeben werden müssen, stattdessen Shared Content. Verwenden Sie für Komponenten, die ausschließlich zu diesem Inhaltsobjekt gehören, Embedded Content.",
 	"contentType.continueEditing": "Weiter bearbeiten",
 	"contentType.createATemplate": "Erstellen Sie eine Vorlage",
+	"contentType.datasourceIdError": "Bitte geben Sie die ID für Datenquelle(n) ein:",
 	"contentType.dependsOn": "Diese Eigenschaft ist abhängig von \"{dependency}\"",
 	"contentType.enableSpellCheck": "Rechtschreibprüfung aktivieren",
 	"contentType.fileManager": "Dateimanager",

@@ -174,6 +174,10 @@ export const contentTypesMessages = defineMessages({
 		id: 'contentType.idError',
 		defaultMessage: 'Please fill variable name for: '
 	},
+	datasourceIdError: {
+		id: 'contentType.datasourceIdError',
+		defaultMessage: 'Please fill id for data source(s): '
+	},
 	noTemplateAssoc: {
 		id: 'contentType.noTemplateAssoc',
 		defaultMessage:
