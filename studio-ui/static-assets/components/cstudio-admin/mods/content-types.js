@@ -2389,7 +2389,7 @@
 						}
 					}
 				);
-				this.createRowFn(CMgs.format(langBundle, 'name'), 'name', item.id, '', 'variable', sheetEl, function (e, el) {
+				this.createRowFn(CMgs.format(langBundle, 'id'), 'name', item.id, '', 'variable', sheetEl, function (e, el) {
 					item.id = el.value;
 					onSetDirty(true);
 				});

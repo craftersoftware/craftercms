@@ -655,6 +655,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'es', {
 	datasourceBasics: 'Conceptos básicos de origen de datos',
 	title: 'Título',
 	name: 'Nombre',
+	id: 'Id',
 	properties: 'Propiedades',
 	sectionBasics: 'Sección de Fundamentos',
 	variableName: 'Nombre / Nombre de la variable',
