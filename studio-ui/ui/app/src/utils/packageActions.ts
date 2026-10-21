@@ -21,7 +21,7 @@ import { ContextMenuOption } from '../components/ContextMenu';
 import { createPresenceTable } from './array';
 import { Action, Dispatch } from 'redux';
 import { batchActions } from '../state/actions/misc';
-import { hasApproveAction, hasCancelAction, hasRejectAction, hasResubmitAction } from './content';
+import { hasApproveAction, hasCancelAction, hasEditPackageAction, hasRejectAction, hasResubmitAction } from './content';
 import { popDialog, pushDialog } from '../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { createComponentId } from './system';
@@ -32,6 +32,9 @@ const translations = defineMessages({
 	},
 	review: {
 		defaultMessage: 'Review'
+	},
+	edit: {
+		defaultMessage: 'Edit'
 	},
 	resubmit: {
 		defaultMessage: 'Resubmit'
@@ -52,6 +55,10 @@ const unparsedOptions: Record<PackageActions, ContextMenuOptionDescriptor<Packag
 	review: {
 		id: 'review',
 		label: translations.review
+	},
+	edit: {
+		id: 'edit',
+		label: translations.edit
 	},
 	resubmit: {
 		id: 'resubmit',
@@ -94,6 +101,12 @@ export const generatePackageOptions = (
 			) {
 				packageOptions.push(unparsedOptions.review);
 			}
+			// TODO: uncomment this when the edit action is properly implemented
+			// if (hasEditPackageAction(pkg.availableActions) && actionsToInclude.edit) {
+			if (true) {
+				// TODO: remove this line
+				packageOptions.push(unparsedOptions.edit);
+			}
 			if (hasResubmitAction(pkg.availableActions) && actionsToInclude.resubmit) {
 				if (pkg.target === 'staging' && pkg.approvalState === 'APPROVED') {
 					// Promote is a virtual action, it's shown when the package is approved and the target is staging
@@ -129,6 +142,22 @@ export const packageActionDispatcher = ({
 					component: createComponentId('PackageDetailsDialog'),
 					props: {
 						packageId: (pkg as PublishPackage).id
+					}
+				})
+			);
+			break;
+		}
+		case 'edit': {
+			const dialogId = nanoid();
+			dispatch(
+				pushDialog({
+					id: dialogId,
+					component: createComponentId('EditPublishPackageDialog'),
+					props: {
+						pkg,
+						onSuccess: () => {
+							dispatch(batchActions([popDialog({ id: dialogId }), onActionSuccess].filter(Boolean)));
+						}
 					}
 				})
 			);

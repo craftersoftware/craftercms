@@ -214,6 +214,7 @@ export const components = {
 	NonReactWidget: lazy(() => import('../components/NonReactWidget')),
 	NotistackVariant: lazy(() => import('../components/NotistackVariant')),
 	PackageDetailsDialog: lazy(() => import('../components/PackageDetailsDialog')),
+	EditPublishPackageDialog: lazy(() => import('../components/EditPublishPackageDialog')),
 	PackageItems: lazy(() => import('../components/PackageItems')),
 	PaddingModeSwitchListItem: lazy(() => import('../components/PaddingModeSwitchListItem')),
 	PagesSearchAhead: lazy(() => import('../components/PagesSearchAhead')),
