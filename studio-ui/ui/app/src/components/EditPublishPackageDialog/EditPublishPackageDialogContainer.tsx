@@ -121,7 +121,7 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const handleSubmit = (e?: SyntheticEvent) => {
 		e?.preventDefault();
 		if (submitDisabled) return;
-		updateSubmittingOrHasPendingChanges({ hasPendingChanges: false });
+		updateSubmittingOrHasPendingChanges({ hasPendingChanges: false, isSubmitting: true });
 
 		updatePackage(siteId, pkg.id, {
 			title: state.packageTitle,
