@@ -101,10 +101,7 @@ export const generatePackageOptions = (
 			) {
 				packageOptions.push(unparsedOptions.review);
 			}
-			// TODO: uncomment this when the edit action is properly implemented
-			// if (hasEditPackageAction(pkg.availableActions) && actionsToInclude.edit) {
-			if (true) {
-				// TODO: remove this line
+			if (hasEditPackageAction(pkg.availableActions) && actionsToInclude.edit) {
 				packageOptions.push(unparsedOptions.edit);
 			}
 			if (hasResubmitAction(pkg.availableActions) && actionsToInclude.resubmit) {
