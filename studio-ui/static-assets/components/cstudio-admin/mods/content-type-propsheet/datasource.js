@@ -41,18 +41,32 @@ YAHOO.extend(
 
       var datasources = this.form.datasources;
 
+      // If the control is a node selector and the data source is a taxonomy, we don't want to show it because the node selector is not compatible with the taxonomy data source.
+      var isControlNodeSelector = false;
+      var findField = function (fields) {
+        for (var i = 0; i < (fields || []).length; i++) {
+          if (fields[i].id === itemId && fields[i].type === 'node-selector') {
+            isControlNodeSelector = true;
+          }
+          findField(fields[i].fields);
+        }
+      };
+      (this.form.sections || []).forEach(function (section) {
+        findField(section.fields);
+      });
+
       if (datasources.length) {
         this.fieldValue = !value
           ? []
           : typeof value == 'string'
-          ? value.split(',').filter((name) => datasources.some((ds) => ds.id === name))
-          : value;
+            ? value.split(',').filter((name) => datasources.some((ds) => ds.id === name))
+            : value;
 
         valuesEl = document.createElement('div');
 
         for (var i = 0; i < datasources.length; i++) {
           var datasource = datasources[i];
-          if (datasource['interface'] === type) {
+          if (datasource['interface'] === type && !(isControlNodeSelector && datasource.type === 'simpleTaxonomy')) {
             controlEl = this.createControl(datasource, updateFn, type, itemId);
             valuesEl.appendChild(controlEl);
           }
