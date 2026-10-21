@@ -145,14 +145,6 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 				dispatch(pushErrorDialog({ props: { error: error.response.response } }));
 			}
 		});
-
-		onSuccess?.({
-			packageId: pkg.id,
-			title: state.packageTitle,
-			comment: state.submissionComment,
-			schedule: state.scheduling === 'custom' ? state.scheduledDateTime.toISOString() : null,
-			publishingTarget: pkg.target
-		});
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
