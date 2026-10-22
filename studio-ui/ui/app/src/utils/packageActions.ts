@@ -96,7 +96,6 @@ export const generatePackageOptions = (
 			}
 			if (
 				(hasApproveAction(pkg.availableActions) || hasRejectAction(pkg.availableActions)) &&
-				pkg.approvalState === 'SUBMITTED' &&
 				actionsToInclude.review
 			) {
 				packageOptions.push(unparsedOptions.review);
