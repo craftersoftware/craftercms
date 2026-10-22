@@ -853,8 +853,10 @@ function NodeSelector(props: NodeSelectorProps) {
 							children={
 								menuOptions.length || customActionItems ? (
 									<>
-										<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{menuOptions}</MenuList>
-										{customActionItems}
+										<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>
+											{menuOptions}
+											{customActionItems}
+										</MenuList>
 									</>
 								) : (
 									<EmptyState
