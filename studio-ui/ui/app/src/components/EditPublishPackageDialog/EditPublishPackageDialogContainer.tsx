@@ -142,7 +142,7 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 			},
 			error: (error) => {
 				updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: true });
-				dispatch(pushErrorDialog({ props: { error: error.response.response } }));
+				dispatch(pushErrorDialog({ props: { error: error.response?.response ?? error } }));
 			}
 		});
 	};
