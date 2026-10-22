@@ -111,14 +111,17 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 					.querySelectorAll('[id="craftercms.components.ContentTypeManagement"] > configuration > controls')
 					.forEach((tag) => {
 						const deserialized = deserialize(tag.innerHTML);
-						asArray(deserialized?.descriptor).forEach((descriptor) => {
+						// Deserializing the <controls> element yields { control: [...] }:
+						// each control entry carries its own nested <descriptor>.
+						asArray(deserialized?.control).forEach((control) => {
+							const descriptor = control?.descriptor;
 							if (!descriptor?.id) return;
 							// Normalize XML-deserialized shapes (single nodes vs arrays, empty fields tag, etc.)
 							controls[descriptor.id] = {
 								...descriptor,
 								id: descriptor.id,
-								// empty <fields /> deserializes as []; treat as empty object map
-								fields: Array.isArray(descriptor.fields) ? {} : (descriptor.fields ?? {}),
+								// empty <fields /> deserializes as ''/[]; treat as empty object map
+								fields: Array.isArray(descriptor.fields) || !descriptor.fields ? {} : descriptor.fields,
 								sections: descriptor.sections
 									? asArray(descriptor.sections).map((section) => ({
 											...section,

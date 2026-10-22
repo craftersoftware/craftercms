@@ -24,6 +24,7 @@ import {
 import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { useFieldValue } from '../lib/formsEngineContext';
 
 /**
  * Public runtime surface for the data-source *module registry* (built-ins and
@@ -51,6 +52,13 @@ export const formsEngineDataSourcesHost = {
  * `FormsEngineField` is the field chrome built-in controls use (label, required/invalid
  * state, validity messages, field menu, inheritance notice). Plugin controls are rendered
  * bare, so they must wrap their input in it to display validation state like built-ins do.
+ *
+ * `useFieldValue(fieldId)` is the supported way for plugin controls to access sibling
+ * fields — e.g. a descriptor-declared additional field such as `{id}_tz` (date/time) or
+ * `{id}_bk`. It returns `[value, setValue, exists]` (`exists` is `false` when the field
+ * wasn't initialized, instead of throwing) and keeps the atom map and Jotai internal.
+ * The hook must be the host's own instance, so it is exposed here rather than
+ * imported/bundled by the plugin.
  */
 export const formsEngineControlsHost = {
 	registerDataSourceBindings: registerControlDataSourceBindings,
@@ -59,5 +67,6 @@ export const formsEngineControlsHost = {
 	getValueRetriever: getPluginControlValueRetriever,
 	getValueSerializer: getPluginControlValueSerializer,
 	getValidator: getPluginControlValidator,
+	useFieldValue,
 	FormsEngineField
 };
