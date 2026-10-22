@@ -35,6 +35,7 @@ import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { EditPublishPackageDialogContainerProps } from './types';
+import { hasApproveAction } from '../../utils/content';
 import { updatePackage } from '../../services/publishing';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import useActiveUser from '../../hooks/useActiveUser';
@@ -55,13 +56,16 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const { permissionsBySite } = useActiveUser();
 	const dispatch = useDispatch();
 	const hasPublishPermission = permissionsBySite[siteId].includes('publish_review');
+	// Gate on APPROVE only (not REJECT): peer review strips APPROVE for the submitter — while
+	// leaving REJECT — and APPROVED packages never carry APPROVE, so without it the package
+	// can't be kept (self-)approved and must always (re)request approval.
+	const canApprovePackage = hasApproveAction(pkg.availableActions);
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: pkg.title ?? '',
 		// Default approved packages to request approval: on peer-review sites the backend rejects
-		// `requestApproval: false` for them, so saving with the old default always failed. Publishers
-		// can still uncheck this where the site policy allows keeping the package approved — the
-		// backend remains the enforcer of that policy.
-		requestApproval: !hasPublishPermission || pkg.approvalState === PACKAGE_APPROVED,
+		// `requestApproval: false` for them, so saving with the old default always failed. Since
+		// APPROVED packages never carry the APPROVE action, this is forced for them (checkbox hidden).
+		requestApproval: !hasPublishPermission || !canApprovePackage || pkg.approvalState === PACKAGE_APPROVED,
 		publishingTarget: pkg.target ?? '',
 		submissionComment: pkg.submitterComment ?? '',
 		scheduling: pkg.schedule ? 'custom' : 'now',
@@ -73,8 +77,8 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const { updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
 	const isInitialPublish = pkg.packageType === PACKAGE_TYPE_INITIAL_PUBLISH;
-	const isRequestPublish = !hasPublishPermission || state.requestApproval;
-	const showRequestApproval = hasPublishPermission;
+	const isRequestPublish = !hasPublishPermission || !canApprovePackage || state.requestApproval;
+	const showRequestApproval = hasPublishPermission && canApprovePackage;
 
 	// Submit button should be disabled when:
 	const submitDisabled =
