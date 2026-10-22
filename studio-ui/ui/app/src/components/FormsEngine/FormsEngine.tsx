@@ -148,7 +148,7 @@ import {
 import { getHostToHostBus } from '../../utils/subjects';
 import { fetchAffectedPackages } from '../../services/workflow';
 import useMount from '../../hooks/useMount';
-import { nnou, nou } from '../../utils/object';
+import { nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
 import {
@@ -1112,18 +1112,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 	};
 
-	const [mainContent, setMainContent] = useState(null);
-	const collapseHeaderAllowed = useRef(false);
+	const [mainContent, setMainContent] = useState<HTMLDivElement | null>(null);
 	const sentinelRef = useRef<HTMLDivElement>(null);
 	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
 	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
 	const mainContentRefCallback: RefCallback<HTMLDivElement> = (element) => {
 		setMainContent(element);
-		if (!mainContent && nnou(element)) {
-			// First time the main content is set, if the scrollHeight is not 100px larger than clientHeight, we don't allow collapsing the header.
-			collapseHeaderAllowed.current = element.scrollHeight - element.clientHeight > 100;
-		}
 	};
 
 	const beginSettledFieldScroll = useCallback((fieldId: string) => {
@@ -1133,29 +1128,27 @@ function FormOrchestrator(props: FormsEngineProps) {
 		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId);
 	}, []);
 
-	// Monitor when sentinel element crosses the threshold
+	// Collapse when the sentinel (~60px) scrolls out of view. The header is a sibling of this scroll
+	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
+	// overflow exceeds the header height, which is more than that growth can remove.
 	useEffect(() => {
 		if (!mainContent || !sentinelRef.current) return;
 
 		const observer = new IntersectionObserver(
 			([entry]) => {
-				// When sentinel is NOT intersecting (scrolled past 60px, sentinel's top position), collapse header
-				if (collapseHeaderAllowed.current) {
-					setCollapseHeader(!entry.isIntersecting);
+				const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
+				const overflow = mainContent.scrollHeight - mainContent.clientHeight;
+				if (!entry.isIntersecting && overflow > (header?.offsetHeight ?? 0)) {
+					setCollapseHeader(true);
+				} else if (entry.isIntersecting) {
+					setCollapseHeader(false);
 				}
 			},
-			{
-				root: mainContent,
-				threshold: 0,
-				rootMargin: '0px'
-			}
+			{ root: mainContent, threshold: 0, rootMargin: '0px' }
 		);
 
 		observer.observe(sentinelRef.current);
-
-		return () => {
-			observer?.disconnect();
-		};
+		return () => observer.disconnect();
 	}, [mainContent]);
 
 	// Scroll to the field requested via the `fieldToScroll` prop, once form body layout settles
