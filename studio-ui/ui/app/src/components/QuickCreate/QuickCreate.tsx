@@ -44,7 +44,7 @@ import useSystemVersion from '../../hooks/useSystemVersion';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { LoadingState } from '../LoadingState';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
-import { createComponentId, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, showContentFormAction } from '../../utils/system';
 import useEnv from '../../hooks/useEnv';
 import { nanoid } from 'nanoid';
 import { batchActions } from '../../state/actions/misc';
@@ -311,7 +311,7 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 						dispatch(
 							batchActions([
 								popDialog({ id: dialogId }),
-								pickShowContentFormAction({
+								showContentFormAction({
 									authoringBase,
 									path,
 									contentTypeId: contentType.id,
@@ -328,7 +328,7 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 	const onQuickCreateItemSelected = (props) => {
 		onMenuClose();
 		dispatch(
-			pickShowContentFormAction({
+			showContentFormAction({
 				...props,
 				inProgress: false,
 				onSaveSuccess: ({ item, redirectUrl }) => dispatch(newContentCreationComplete({ item, redirectUrl }))

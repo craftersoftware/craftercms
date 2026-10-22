@@ -197,7 +197,7 @@ import { Dispatch } from 'redux';
 import { ActionCreatorWithOptionalPayload } from '@reduxjs/toolkit';
 import { ItemMegaMenuStateProps } from '../ItemMegaMenu';
 import StandardAction from '../../models/StandardAction';
-import { createComponentId, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, showContentFormAction } from '../../utils/system';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { ImageRestrictionSubtitle } from '../FormsEngine/lib/controlHelpers';
@@ -465,7 +465,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case 'E':
 					upToDateRefs.current.item &&
 						dispatch(
-							pickShowContentFormAction({
+							showContentFormAction({
 								site: upToDateRefs.current.siteId,
 								path: upToDateRefs.current.guest.path,
 								readonly:
@@ -795,7 +795,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case 'ICE_ZONE_ON': {
 					dispatch(
-						pickShowContentFormAction({
+						showContentFormAction({
 							path: payload.itemId,
 							authoringBase,
 							site: siteId,
@@ -1246,7 +1246,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case showEditDialogAction.type: {
 					dispatch(
-						pickShowContentFormAction({
+						showContentFormAction({
 							authoringBase,
 							path: upToDateRefs.current.guest.path,
 							selectedFields: payload.selectedFields,

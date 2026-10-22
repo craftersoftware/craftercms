@@ -26,10 +26,8 @@ import {
 	newContentCreationComplete,
 	popCodeEditorDialog,
 	showCodeEditorDialog,
-	showEditDialog,
 	showPreviewDialog,
 	updateCodeEditorDialog,
-	updateEditDialogConfig,
 	updatePreviewDialog
 } from '../actions/dialogs';
 import { fetchContentXML, fetchItemVersion } from '../../services/content';
@@ -43,7 +41,6 @@ import { nnou, nou } from '../../utils/object';
 import { getHostToGuestBus } from '../../utils/subjects';
 import { unlockItem } from '../actions/content';
 import { generateDialogId } from '../../utils/dialogs';
-import type { LegacyFormDialogStateProps } from '../../components/LegacyFormDialog/utils';
 import type { CodeEditorDialogProps, CodeEditorDialogStateProps } from '../../components/CodeEditorDialog';
 import type { PreviewDialogProps, PreviewDialogStateProps } from '../../components/PreviewDialog';
 import { popDialog, pushDialog, updateDialogState } from '../actions/dialogStack';
@@ -81,10 +78,10 @@ const dialogEpics: CrafterCMSEpic[] = [
 			map(({ payload }) => changeCurrentUrl(payload.redirectUrl))
 		),
 	// endregion
-	// region showEditDialog, showCodeEditorDialog
+	// region showCodeEditorDialog
 	(action$, state$, { getIntl, store }) =>
 		action$.pipe(
-			ofType(showEditDialog.type, showCodeEditorDialog.type),
+			ofType(showCodeEditorDialog.type),
 			withLatestFrom(state$),
 			switchMap(([{ type, payload }, state]) => {
 				// If state.path isn't null and the payload.path is different, it means another form is getting opened.
@@ -96,34 +93,18 @@ const dialogEpics: CrafterCMSEpic[] = [
 				const dialogState = state.dialogStack.byId[dialogId];
 
 				if (dialogState) {
-					if (type === showEditDialog.type) {
-						showValidation =
-							payload.path !== (dialogState.props as LegacyFormDialogStateProps).path ||
-							payload.iceGroupId !== (dialogState.props as LegacyFormDialogStateProps).iceGroupId ||
-							payload.modelId !== (dialogState.props as LegacyFormDialogStateProps).modelId;
-					} else {
-						showValidation = payload.path !== (dialogState.props as CodeEditorDialogStateProps).path;
-					}
+					showValidation = payload.path !== (dialogState.props as CodeEditorDialogStateProps).path;
 				}
 
 				if (nou(payload.path) || !showValidation) {
-					// If showEditDialog action is called while the dialog is already open & minimized, we maximize it.
-					// Differences in the showEditDialog payload — to what's on the state — are ignored, except for the path,
+					// If showCodeEditorDialog action is called while the dialog is already open & minimized, we maximize it.
+					// Differences in the showCodeEditorDialog payload — to what's on the state — are ignored, except for the path,
 					// which is used to check if it's the same form that's getting opened.
 
 					if (dialogState) {
-						const { isMinimized, updateDialogAction } =
-							type === showEditDialog.type
-								? {
-										isMinimized: (dialogState.props as LegacyFormDialogStateProps).isMinimized,
-										updateDialogAction: updateEditDialogConfig
-									}
-								: {
-										isMinimized: (dialogState.props as CodeEditorDialogStateProps).isMinimized,
-										updateDialogAction: updateCodeEditorDialog
-									};
+						const isMinimized = (dialogState.props as CodeEditorDialogStateProps).isMinimized;
 						if (isMinimized === true) {
-							return of(updateDialogAction({ isMinimized: false }));
+							return of(updateCodeEditorDialog({ isMinimized: false }));
 						}
 						return EMPTY;
 					} else {

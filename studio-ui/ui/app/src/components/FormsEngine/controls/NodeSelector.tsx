@@ -91,7 +91,7 @@ import type { FileUploadResult } from '../../SingleFileUpload';
 import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import { showCodeEditorDialog } from '../../../state/actions/dialogs';
 import { getEditorMode, isAudio, isEditableAsset, isPdfDocument, isVideo } from '../../../utils/content';
-import { createComponentId, pickShowContentFormAction } from '../../../utils/system';
+import { createComponentId, showContentFormAction } from '../../../utils/system';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
 	getEditorMode as getItemEditorMode,
@@ -242,7 +242,7 @@ function NodeSelector(props: NodeSelectorProps) {
 
 		if (isEditableViaFormEditor(item)) {
 			// If the item is editable via form editor (page, component or taxonomy), open the form editor in read-only mode
-			dispatch(pickShowContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
+			dispatch(showContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
 		} else {
 			// Otherwise, open the preview dialog, it may be a preview of media (image, video, audio) or document (pdf) or code editor for other text-based files
 			const dialogProps =
