@@ -26,7 +26,7 @@ import PackageItems from '../PackageItems/PackageItems';
 import { PublishingTarget } from '../../models';
 import { isBlank } from '../../utils/string';
 import { createAtLeastHalfHourInFutureDate } from '../../utils/datetime';
-import { PACKAGE_TYPE_INITIAL_PUBLISH } from '../../utils/constants';
+import { PACKAGE_APPROVED, PACKAGE_TYPE_INITIAL_PUBLISH } from '../../utils/constants';
 import { DateTimeTimezonePickerProps } from '../DateTimeTimezonePicker';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 import DialogBody from '../DialogBody';
@@ -57,7 +57,11 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const hasPublishPermission = permissionsBySite[siteId].includes('publish_review');
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: pkg.title ?? '',
-		requestApproval: !hasPublishPermission,
+		// Default approved packages to request approval: on peer-review sites the backend rejects
+		// `requestApproval: false` for them, so saving with the old default always failed. Publishers
+		// can still uncheck this where the site policy allows keeping the package approved — the
+		// backend remains the enforcer of that policy.
+		requestApproval: !hasPublishPermission || pkg.approvalState === PACKAGE_APPROVED,
 		publishingTarget: pkg.target ?? '',
 		submissionComment: pkg.submitterComment ?? '',
 		scheduling: pkg.schedule ? 'custom' : 'now',
