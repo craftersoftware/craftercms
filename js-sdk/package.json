@@ -30,8 +30,8 @@
   },
   "homepage": "https://github.com/craftersoftware/craftercms/tree/develop/js-sdk#readme",
   "devDependencies": {
-    "prettier": "^3.9.9",
-    "react": "^19.3.0",
+    "prettier": "^3.9.10",
+    "react": "^19.3.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
