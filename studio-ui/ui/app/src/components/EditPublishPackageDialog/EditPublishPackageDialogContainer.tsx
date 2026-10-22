@@ -180,6 +180,9 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 							) : (
 								<PackageItems packageId={pkg.id} />
 							)}
+							<Alert severity="warning" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+								<FormattedMessage defaultMessage="If already approved, saving will resubmit this package for approval." />
+							</Alert>
 						</Grid>
 					</Grid>
 				)}
