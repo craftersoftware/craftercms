@@ -193,6 +193,13 @@ export function renderActivity(
 					values={{ render_package_link }}
 				/>
 			);
+		case 'UPDATE_PUBLISH_PACKAGE':
+			return (
+				<FormattedMessage
+					defaultMessage="Updated <render_package_link>a package</render_package_link>"
+					values={{ render_package_link }}
+				/>
+			);
 		default:
 			console.log('[INFO] An unknown activity was received from the server.', activity);
 			return <FormattedMessage defaultMessage="Unlabelled activity" />;
