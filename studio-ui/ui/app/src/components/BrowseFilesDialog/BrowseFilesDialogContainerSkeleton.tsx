@@ -18,6 +18,7 @@ import React from 'react';
 import DialogBody from '../DialogBody';
 import { Box } from '@mui/material';
 import MediaSkeletonCard from './MediaSkeletonCard';
+import { MEDIA_CARD_GRID_TEMPLATE_COLUMNS } from './utils';
 
 export interface BrowseFilesDialogContainerSkeletonProps {}
 
@@ -40,7 +41,7 @@ export function BrowseFilesDialogContainerSkeleton(props: BrowseFilesDialogConta
 						<Box
 							sx={{
 								display: 'grid',
-								gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
+								gridTemplateColumns: MEDIA_CARD_GRID_TEMPLATE_COLUMNS,
 								gridGap: '16px',
 								padding: 'initial'
 							}}

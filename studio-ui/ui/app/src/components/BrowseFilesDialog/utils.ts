@@ -114,3 +114,5 @@ export function contentItemToMediaItem(item: ContentItem): MediaItem {
 		snippets: ''
 	};
 }
+
+export const MEDIA_CARD_GRID_TEMPLATE_COLUMNS = 'repeat(auto-fill, minmax(min(250px, 100%), 1fr))';
