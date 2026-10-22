@@ -46,6 +46,7 @@ import {
 	FOLDER_CREATE_MASK,
 	PACKAGE_APPROVE_MASK,
 	PACKAGE_CANCEL_MASK,
+	PACKAGE_EDIT_MASK,
 	PACKAGE_REJECT_MASK,
 	PACKAGE_RESUBMIT_MASK,
 	pageControllersFieldId,
@@ -1151,6 +1152,7 @@ export const hasApproveAction = (value: number) => Boolean(value & PACKAGE_APPRO
 export const hasRejectAction = (value: number) => Boolean(value & PACKAGE_REJECT_MASK);
 export const hasCancelAction = (value: number) => Boolean(value & PACKAGE_CANCEL_MASK);
 export const hasResubmitAction = (value: number) => Boolean(value & PACKAGE_RESUBMIT_MASK);
+export const hasEditPackageAction = (value: number) => Boolean(value & PACKAGE_EDIT_MASK);
 
 export function isVideo(item: Pick<ContentItem, 'mimeType'>): boolean {
 	return item?.mimeType.startsWith('video/');

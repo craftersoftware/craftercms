@@ -24,7 +24,8 @@ import {
 	PublishingStatus,
 	PublishingTarget,
 	PublishPackage,
-	PublishParams
+	PublishParams,
+	UpdatePackageParams
 } from '../models/Publishing';
 import { Api2BulkResponseFormat, Api2ResponseFormat, ApiResponse } from '../models/ApiResponse';
 import { PagedArray } from '../models/PagedArray';
@@ -74,6 +75,10 @@ export function fetchPackageItems(
 	return get<Api2ResponseFormat<{ limit: number; offset: number; total: number; items: PublishingItem[] }>>(
 		`/studio/api/2/publish/${siteId}/package/${packageId}/items${qs}`
 	).pipe(map(({ response }) => Object.assign(response.items, pluckProps(response, 'limit', 'offset', 'total'))));
+}
+
+export function updatePackage(siteId: string, packageId: number, data: UpdatePackageParams): Observable<ApiResponse> {
+	return postJSON(`/studio/api/2/publish/${siteId}/package/${packageId}`, data).pipe(map(({ response }) => response));
 }
 
 export type FetchPublishingTargetsResponse = Api2ResponseFormat<{

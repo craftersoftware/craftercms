@@ -78,6 +78,7 @@ export * from './EditFormPanel';
 export * from './EditGroupDialog';
 export * from './EditModeSwitch';
 export * from './EditModesSwitcher';
+export * from './EditPublishPackageDialog';
 export * from './EditSiteDialog';
 export * from './EditUserDialog';
 export * from './EmbeddedSearchIframe';

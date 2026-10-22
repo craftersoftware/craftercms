@@ -122,7 +122,14 @@ export interface PublishingPackagesApproveParams {
 
 export interface PublishingPackageApproveParams extends Omit<PublishingPackagesApproveParams, 'packageIds'> {}
 
-export type PackageActions = 'view' | 'review' | 'cancel' | 'resubmit' | 'promote';
+export interface UpdatePackageParams
+	extends
+		Pick<PublishParams, 'title' | 'comment' | 'requestApproval'>,
+		Pick<PublishingPackagesApproveParams, 'updateSchedule'> {
+	schedule?: string | null;
+}
+
+export type PackageActions = 'view' | 'review' | 'cancel' | 'resubmit' | 'promote' | 'edit';
 
 export interface PublishingItem {
 	action: string;
