@@ -229,7 +229,8 @@ export const activityNameLookup: Record<Activities | 'ALL', any> = {
 	REVERT: <FormattedMessage id="words.revert" defaultMessage="Revert" />,
 	UPDATE: <FormattedMessage id="words.update" defaultMessage="Update" />,
 	PUBLISH_ALL_COMPLETE: <FormattedMessage defaultMessage="Publish All" />,
-	CANCEL_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Cancel" />
+	CANCEL_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Cancel" />,
+	UPDATE_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Update Publishing Package" />
 };
 
 function getSelectedKeys<K extends string>(selection: Partial<Record<K, boolean>>): K[] {
