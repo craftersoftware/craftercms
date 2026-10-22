@@ -166,7 +166,6 @@ export * from './NewRemoteRepositoryForm';
 export * from './NonReactWidget';
 export * from './NotistackVariant';
 export * from './PackageDetailsDialog';
-export * from './EditPublishPackageDialog';
 export * from './PackageItems';
 export * from './PaddingModeSwitchListItem';
 export * from './PagesSearchAhead';
