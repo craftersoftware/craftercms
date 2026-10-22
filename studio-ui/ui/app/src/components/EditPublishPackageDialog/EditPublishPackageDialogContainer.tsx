@@ -37,12 +37,14 @@ import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { EditPublishPackageDialogContainerProps } from './types';
 import { updatePackage } from '../../services/publishing';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
+import useActiveUser from '../../hooks/useActiveUser';
 import { useDispatch } from 'react-redux';
 import { pushErrorDialog } from '../../utils/system';
 
 /**
  * Edit form for an existing publishing package, based on `PublishDialogContainer`.
- * Only `packageTitle`, `submissionComment` and `scheduling`/`scheduledDateTime` are
+ * Only `packageTitle`, `submissionComment`, `requestApproval` (for users with publish
+ * permission) and `scheduling`/`scheduledDateTime` are
  * editable: the publishing target is rendered disabled (via `disablePublishingTarget`)
  * and the package items are display-only, rendered with `PackageItems` (which fetches
  * them by package id) exactly as `PackageDetails` does.
@@ -50,10 +52,12 @@ import { pushErrorDialog } from '../../utils/system';
 export function EditPublishPackageDialogContainer(props: EditPublishPackageDialogContainerProps) {
 	const { pkg, isSubmitting, onSuccess, onClose } = props;
 	const siteId = useActiveSiteId();
+	const { permissionsBySite } = useActiveUser();
 	const dispatch = useDispatch();
+	const hasPublishPermission = permissionsBySite[siteId].includes('publish_review');
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: pkg.title ?? '',
-		requestApproval: true,
+		requestApproval: !hasPublishPermission,
 		publishingTarget: pkg.target ?? '',
 		submissionComment: pkg.submitterComment ?? '',
 		scheduling: pkg.schedule ? 'custom' : 'now',
@@ -65,6 +69,8 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const { updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
 	const isInitialPublish = pkg.packageType === PACKAGE_TYPE_INITIAL_PUBLISH;
+	const isRequestPublish = !hasPublishPermission || state.requestApproval;
+	const showRequestApproval = hasPublishPermission;
 
 	// Submit button should be disabled when:
 	const submitDisabled =
@@ -128,7 +134,7 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 			comment: state.submissionComment,
 			schedule: state.scheduling === 'custom' ? state.scheduledDateTime.toISOString() : null,
 			updateSchedule: true,
-			requestApproval: state.requestApproval
+			requestApproval: isRequestPublish
 		}).subscribe({
 			next: () => {
 				updateSubmittingOrHasPendingChanges({ isSubmitting: false });
@@ -162,7 +168,8 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 								onSubmit={handleSubmit}
 								onInputChange={onPublishingArgumentChange}
 								onDateTimePickerChange={handleDateTimePickerChange}
-								showRequestApproval={false}
+								showRequestApproval={showRequestApproval}
+								isRequestPublish={isRequestPublish}
 								disabled={isSubmitting}
 								disablePublishingTarget
 								onFetchedPublishedTargets={({ targets }) => {
@@ -180,9 +187,11 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 							) : (
 								<PackageItems packageId={pkg.id} />
 							)}
-							<Alert severity="warning" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
-								<FormattedMessage defaultMessage="If already approved, saving will resubmit this package for approval." />
-							</Alert>
+							{isRequestPublish && (
+								<Alert severity="warning" sx={{ borderTopRightRadius: 0, borderTopLeftRadius: 0 }}>
+									<FormattedMessage defaultMessage="If already approved, saving will resubmit this package for approval." />
+								</Alert>
+							)}
 						</Grid>
 					</Grid>
 				)}
