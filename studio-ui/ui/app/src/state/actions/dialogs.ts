@@ -40,7 +40,7 @@ import { PreviewDialogStateProps } from '../../components/PreviewDialog/utils';
 import { EditSiteDialogStateProps } from '../../components/EditSiteDialog/utils';
 import type { SingleFileUploadDialogStateProps } from '../../components/SingleFileUploadDialog/utils';
 import ContentInstance from '../../models/ContentInstance';
-import type { ContentItem, ContentTypeFieldValidation, LegacyItem } from '../../models';
+import type { ContentItem, ContentTypeFieldValidation } from '../../models';
 import { RenameAssetStateProps } from '../../components/RenameAssetDialog';
 import { AjaxError } from 'rxjs/ajax';
 import { BrokenReferencesDialogStateProps } from '../../components/BrokenReferencesDialog/types';
@@ -154,7 +154,7 @@ export const closeDependenciesDialog = /*#__PURE__*/ createAction<StandardAction
 export const dependenciesDialogClosed = /*#__PURE__*/ createAction('DEPENDENCIES_DIALOG_CLOSED');
 // endregion
 
-export const newContentCreationComplete = /*#__PURE__*/ createAction<{ item: LegacyItem; redirectUrl: string }>(
+export const newContentCreationComplete = /*#__PURE__*/ createAction<{ item: ContentItem; redirectUrl: string }>(
 	'NEW_CONTENT_CREATION_COMPLETE'
 );
 

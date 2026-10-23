@@ -104,7 +104,7 @@ export function consolidateSx(...sxs: SxProps<Theme>[]): SxProps<Theme> {
 	return sxs.flatMap((item) => item ?? []);
 }
 
-export interface PickShowContentFormProps {
+export interface ShowContentFormProps {
 	path: string;
 	authoringBase: string;
 	site?: string;
@@ -115,27 +115,23 @@ export interface PickShowContentFormProps {
 	changeTemplate?: string;
 	contentTypeId?: string;
 	isNewContent?: boolean;
-	iceGroupId?: string;
-	isHidden?: boolean;
-	index?: string | number;
-	inProgress?: boolean;
-	onSaveSuccess?(response?: any): any;
+	onSaveSuccess?(result?: { path?: string }): any;
 }
 
-export function showContentFormAction(oldProps: PickShowContentFormProps) {
+export function showContentFormAction(props: ShowContentFormProps) {
 	return pushDialog({
 		component: createComponentId('FormsEngineDialog'),
 		allowFullScreen: true,
 		allowMinimize: true,
 		props: {
 			formProps: {
-				...(oldProps.isNewContent
-					? { create: { path: oldProps.path, contentTypeId: oldProps.contentTypeId } }
-					: oldProps.isEmbedded || Boolean(oldProps.modelId)
-						? { update: { path: oldProps.path, modelId: oldProps.modelId } }
-						: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
-				readonly: oldProps.readonly ?? false,
-				fieldToScroll: oldProps.selectedFields?.[0] ?? undefined,
+				...(props.isNewContent
+					? { create: { path: props.path, contentTypeId: props.contentTypeId } }
+					: props.isEmbedded || Boolean(props.modelId)
+						? { update: { path: props.path, modelId: props.modelId } }
+						: { update: { path: props.path, changeTypeId: props.changeTemplate } }),
+				readonly: props.readonly ?? false,
+				fieldToScroll: props.selectedFields?.[0] ?? undefined,
 				onSave(result) {
 					if (isPreviewAppUrl()) {
 						const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
@@ -143,9 +139,9 @@ export function showContentFormAction(oldProps: PickShowContentFormProps) {
 						if (
 							previewURL &&
 							result.path &&
-							isPagePath(oldProps.path) &&
-							getPathFromPreviewURL(previewURL) === oldProps.path &&
-							oldProps.path !== result.path
+							isPagePath(props.path) &&
+							getPathFromPreviewURL(previewURL) === props.path &&
+							props.path !== result.path
 						) {
 							// oldProps.path is a page and the same as the preview page path, but the new path is different,
 							// which means there was a rename of the page currently being previewed. Then we need to update the
@@ -153,14 +149,14 @@ export function showContentFormAction(oldProps: PickShowContentFormProps) {
 							window.location.href = getSystemLink({
 								page: getPreviewURLFromPath(result.path),
 								systemLinkId: 'preview',
-								site: oldProps.site,
-								authoringBase: oldProps.authoringBase
+								site: props.site,
+								authoringBase: props.authoringBase
 							});
 						} else {
 							getHostToGuestBus().next(reloadRequest());
 						}
 					}
-					// FE2 TODO: handling oldProps.onSaveSuccess required?
+					props.onSaveSuccess?.(result);
 				}
 			} as FormsEngineProps
 		}

@@ -508,10 +508,11 @@ export const itemActionDispatcher = ({
 						site,
 						path,
 						authoringBase,
-						onSaveSuccess: ({ action }) =>
+						onSaveSuccess: () =>
 							dispatch(
 								batchActions([
-									showEditItemSuccessNotification({ action }),
+									// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
+									showEditItemSuccessNotification({ action: 'saveAndClose' }),
 									...(onActionSuccess ? [onActionSuccess] : [])
 								])
 							),

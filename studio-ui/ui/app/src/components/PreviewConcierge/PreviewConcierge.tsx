@@ -799,9 +799,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							path: payload.itemId,
 							authoringBase,
 							site: siteId,
-							iceGroupId: payload.iceId || UNDEFINED,
 							modelId: payload.embeddedItemId || UNDEFINED,
-							isHidden: Boolean(payload.embeddedItemId),
 							isEmbedded: Boolean(payload.embeddedItemId)
 						})
 					);

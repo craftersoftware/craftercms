@@ -80,8 +80,9 @@ const getEditDialogProps = (props: {
 			authoringBase,
 			site,
 			path: parentPath,
-			isHidden: true,
 			modelId: selectedId,
+			// This is the embedded scenario. Passing it since is what the FE expects.
+			isEmbedded: true,
 			...(selectedFields ? { selectedFields } : {})
 		};
 	}

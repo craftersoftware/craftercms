@@ -54,8 +54,14 @@ const epics = [
 							path,
 							authoringBase: state.env.authoringBase,
 							changeTemplate: newContentTypeId,
-							onSaveSuccess: ({ action }) =>
-								store.dispatch(batchActions([showEditItemSuccessNotification({ action }), reloadContentItem({ path })]))
+							onSaveSuccess: () =>
+								store.dispatch(
+									batchActions([
+										// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
+										showEditItemSuccessNotification({ action: 'saveAndClose' }),
+										reloadContentItem({ path })
+									])
+								)
 						})
 					);
 				}

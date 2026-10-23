@@ -36,7 +36,7 @@ import { useSelection } from '../../hooks/useSelection';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import { useItemsByPath } from '../../hooks/useItemsByPath';
 import { lookupItemByPath } from '../../utils/content';
-import { processPathMacros } from '../../utils/path';
+import { getPreviewURLFromPath, processPathMacros } from '../../utils/path';
 import { fetchQuickCreateList } from '../../state/actions/content';
 import useQuickCreateState from '../../hooks/useQuickCreateState';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
@@ -53,6 +53,7 @@ import useArchetypes from '../../hooks/useArchetypes';
 import type { ContentType, LookupTable } from '../../models';
 import type { Archetype } from '../ContentTypeManagement/descriptors/archetypes';
 import Box from '@mui/material/Box';
+import { fetchItemByPath } from '../../services/content';
 
 const translations = defineMessages({
 	quickCreateBtnLabel: {
@@ -298,6 +299,18 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 
 	const onMenuClose = () => setAnchorEl(null);
 
+	const onNewContentSaveSuccess = (result?: { path?: string }) => {
+		if (!result?.path) return;
+		fetchItemByPath(site, result.path).subscribe((item) => {
+			dispatch(
+				newContentCreationComplete({
+					item,
+					redirectUrl: getPreviewURLFromPath(result.path)
+				})
+			);
+		});
+	};
+
 	const onNewContentSelected = () => {
 		onMenuClose();
 		const dialogId = nanoid();
@@ -315,7 +328,8 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 									authoringBase,
 									path,
 									contentTypeId: contentType.id,
-									isNewContent: true
+									isNewContent: true,
+									onSaveSuccess: onNewContentSaveSuccess
 								})
 							])
 						);
@@ -330,8 +344,7 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 		dispatch(
 			showContentFormAction({
 				...props,
-				inProgress: false,
-				onSaveSuccess: ({ item, redirectUrl }) => dispatch(newContentCreationComplete({ item, redirectUrl }))
+				onSaveSuccess: onNewContentSaveSuccess
 			})
 		);
 	};
