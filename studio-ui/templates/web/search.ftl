@@ -51,7 +51,6 @@
 	const searchConfig = openerChildSearchMgr.searches[searchId];
 	const callback = searchConfig.saveCallback;
 
-
 	const closeSearch = () => {
 		window.close();
 		$(window.frameElement.parentElement)
