@@ -203,8 +203,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					| PrimitiveAtom<unknown>
-					| undefined;
+					PrimitiveAtom<unknown> | undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
@@ -1293,17 +1292,19 @@ function updateTypeFromSubFieldUpdate(
 	} else {
 		const updatedField = reverseTypeFieldValuesObject(state.selectedField, updatedValues, descriptor);
 		let updatedFields = { ...fields };
+		// Drafts are keyed as `{NEW}` while `field.id` is still null — same as root-level updateTypeFromFieldUpdate.
+		const selectedFieldId = state.selectedField.id || NEW_FIELD_ID;
 
-		if (updatedField.id !== state.selectedField.id) {
-			// Since the order of the fields is determined by the lookupTable order, we need to convert it to array, set the
-			// field in the proper position and convert it back to a lookupTable.
+		if (updatedField.id !== selectedFieldId) {
+			// Replace in place (don't insert + delete): createLookupTable re-keys by field.id, so a
+			// draft would become `null` and delete(`{NEW}`) would leave both entries.
 			const updatedFieldsArray = Object.values(updatedFields);
-			const originalFieldIndex = updatedFieldsArray.findIndex((field) => field.id === state.selectedField.id);
-			updatedFieldsArray.splice(originalFieldIndex, 0, updatedField);
-			updatedFields = createLookupTable(updatedFieldsArray, 'id');
-
-			// Delete the old id
-			delete updatedFields[state.selectedField.id];
+			const originalFieldIndex = Object.keys(updatedFields).indexOf(selectedFieldId);
+			updatedFieldsArray.splice(originalFieldIndex, 1, updatedField);
+			updatedFields = updatedFieldsArray.reduce((lookup, field) => {
+				lookup[field.id || NEW_FIELD_ID] = field;
+				return lookup;
+			}, {});
 		} else {
 			updatedFields[updatedField.id] = updatedField;
 		}
