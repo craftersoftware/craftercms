@@ -30,7 +30,7 @@ import LookupTable from '../../../models/LookupTable';
 import Asterisk from '../../../icons/Asterisk';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
-import { applyTranslations } from '../utils';
+import { applyTranslations, NEW_FIELD_ID } from '../utils';
 import Button from '@mui/material/Button';
 import AdditionalFieldChip from './AdditionalFieldChip';
 
@@ -58,7 +58,8 @@ export function FieldChip(props: FieldChipProps) {
 	const theme = useTheme();
 	const isDark = useIsDarkModeTheme();
 	const isRepeat = field.type === 'repeat';
-	const currentFieldPath = composeFieldPath(fieldPath, field.id);
+	// Drafts are keyed as `{NEW}` while `field.id` is still null/empty — match selectedFieldIdPath.
+	const currentFieldPath = composeFieldPath(fieldPath, field.id || NEW_FIELD_ID);
 	const isSelected = currentFieldPath === selectedFieldIdPath;
 	const error = Boolean(fieldPathsWithErrors[currentFieldPath]); // TODO: make this into an atom
 	const Root: ElementType<BoxProps> = (isRepeat ? Box : ButtonBase) as ElementType<BoxProps>;
