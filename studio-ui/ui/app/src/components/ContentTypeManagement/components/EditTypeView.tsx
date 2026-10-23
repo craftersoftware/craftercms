@@ -203,8 +203,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					| PrimitiveAtom<unknown>
-					| undefined;
+					PrimitiveAtom<unknown> | undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
@@ -700,11 +699,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			showAlert(`No control descriptor found for field type "${fieldType}"`);
 			return;
 		}
+		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
 		const newFieldPath = fieldPath ? `${fieldPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
-		setType(addField(type, newField, newFieldPath, sectionId, position));
+		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
+		setType(nextType);
 		onUpdateHasPendingChanges(true);
-		handleFieldSelected(newFieldPath, newField, sectionId);
+		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
 		const configEntry = config.dataSources?.[dataSourceType];
