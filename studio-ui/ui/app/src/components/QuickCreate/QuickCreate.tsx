@@ -44,7 +44,7 @@ import useSystemVersion from '../../hooks/useSystemVersion';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { LoadingState } from '../LoadingState';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
-import { createComponentId, showContentFormAction } from '../../utils/system';
+import { createComponentId, pushErrorDialog, showContentFormAction } from '../../utils/system';
 import useEnv from '../../hooks/useEnv';
 import { nanoid } from 'nanoid';
 import { batchActions } from '../../state/actions/misc';
@@ -301,13 +301,16 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 
 	const onNewContentSaveSuccess = (result?: { path?: string }) => {
 		if (!result?.path) return;
-		fetchItemByPath(site, result.path).subscribe((item) => {
-			dispatch(
-				newContentCreationComplete({
-					item,
-					redirectUrl: getPreviewURLFromPath(result.path)
-				})
-			);
+		fetchItemByPath(site, result.path).subscribe({
+			next: (item) => {
+				dispatch(
+					newContentCreationComplete({
+						item,
+						redirectUrl: getPreviewURLFromPath(result.path)
+					})
+				);
+			},
+			error: (error) => dispatch(pushErrorDialog({ props: { error: error.response ?? error } }))
 		});
 	};
 
