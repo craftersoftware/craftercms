@@ -714,8 +714,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				}
 				segments[0] = committedRootId;
 				resolvedParentPath = segments.join('.');
-			} else if (selectedFieldIdPath === fieldPath && stateRef.current.selectedField?.id) {
-				resolvedParentPath = replaceIdPathLeaf(fieldPath, stateRef.current.selectedField.id);
+			} else if (
+				selectedFieldIdPath &&
+				stateRef.current.selectedField?.id &&
+				(fieldPath === selectedFieldIdPath || fieldPath.startsWith(`${selectedFieldIdPath}.`))
+			) {
+				const selectedPathSegments = selectedFieldIdPath.split('.');
+				segments[selectedPathSegments.length - 1] = stateRef.current.selectedField.id;
+				resolvedParentPath = segments.join('.');
 			}
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
