@@ -701,8 +701,23 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
 		const baseType = commitOpenFormChanges() ?? typeRef.current;
+		// Parent path was captured pre-commit; if the open form renamed the root, rewrite it.
+		let resolvedParentPath = fieldPath;
+		if (fieldPath) {
+			const segments = fieldPath.split('.');
+			const rootId = segments[0];
+			if (!baseType.fields[rootId]) {
+				const committedRootId = stateRef.current.selectedField?.id;
+				if (!committedRootId || !baseType.fields[committedRootId]) {
+					showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
+					return;
+				}
+				segments[0] = committedRootId;
+				resolvedParentPath = segments.join('.');
+			}
+		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
-		const newFieldPath = fieldPath ? `${fieldPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
+		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
 		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
 		setType(nextType);
 		onUpdateHasPendingChanges(true);
