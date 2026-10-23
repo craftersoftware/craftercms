@@ -1301,7 +1301,10 @@ function updateTypeFromSubFieldUpdate(
 			const updatedFieldsArray = Object.values(updatedFields);
 			const originalFieldIndex = Object.keys(updatedFields).indexOf(selectedFieldId);
 			updatedFieldsArray.splice(originalFieldIndex, 1, updatedField);
-			updatedFields = createLookupTable(updatedFieldsArray, 'id');
+			updatedFields = updatedFieldsArray.reduce((lookup, field) => {
+				lookup[field.id || NEW_FIELD_ID] = field;
+				return lookup;
+			}, {});
 		} else {
 			updatedFields[updatedField.id] = updatedField;
 		}
