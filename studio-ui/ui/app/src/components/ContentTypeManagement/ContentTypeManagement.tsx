@@ -14,29 +14,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import EditTypeView, { EditTypeAppProps } from './components/EditTypeView';
 import ContentType from '../../models/ContentType';
 import { TypeListProps } from './components/TypeList';
 import { TypeListingView } from './components/TypeListingView';
-import { useDispatch } from 'react-redux';
-import { filter, fromEvent } from 'rxjs';
 import Fade from '@mui/material/Fade';
-import { fetchContentTypes } from '../../state/actions/preview';
 
 export interface ContentTypeManagementProps {
 	embedded?: boolean;
 	showAppsButton?: boolean;
-	mountMode?: 'dialog' | 'page';
-	onClose?: () => void;
-	onMinimize?: () => void;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
 
 export function ContentTypeManagement(props: ContentTypeManagementProps) {
-	const { embedded = false, showAppsButton } = props;
-	const dispatch = useDispatch();
+	const { embedded = false, showAppsButton, onSubmittingAndOrPendingChange } = props;
 	const [view, setView] = useState<'list' | 'edit' | 'create'>('list');
 	const [selectedType, setSelectedType] = useState<ContentType>(null);
 
@@ -48,23 +41,6 @@ export function ContentTypeManagement(props: ContentTypeManagementProps) {
 		setSelectedType(null);
 		setView('list');
 	};
-
-	useEffect(() => {
-		const messagesSubscription = fromEvent<MessageEvent>(window, 'message')
-			.pipe(filter((e) => ['CONTENT_TYPES_ON_DELETED'].includes(e.data?.type)))
-			.subscribe((e) => {
-				switch (e.data?.type) {
-					case 'CONTENT_TYPES_ON_DELETED': {
-						dispatch(fetchContentTypes());
-						break;
-					}
-				}
-			});
-
-		return () => {
-			messagesSubscription.unsubscribe();
-		};
-	}, [dispatch]);
 
 	return (
 		<>
@@ -80,7 +56,11 @@ export function ContentTypeManagement(props: ContentTypeManagementProps) {
 			)}
 			{view === 'edit' && (
 				<Fade in>
-					<EditTypeView type={selectedType} onClose={handleBackToList} />
+					<EditTypeView
+						type={selectedType}
+						onClose={handleBackToList}
+						onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
+					/>
 				</Fade>
 			)}
 		</>
