@@ -154,7 +154,13 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	useEffect(() => {
 		if (published === false && isBlank(state.submissionComment)) {
 			setState({ submissionComment: formatMessage({ defaultMessage: 'Initial publish' }) });
-		} else if (state && mainItems && Array.isArray(mainItems) && isBlank(state.submissionComment)) {
+		} else if (
+			published !== null &&
+			state &&
+			mainItems &&
+			Array.isArray(mainItems) &&
+			isBlank(state.submissionComment)
+		) {
 			const labels = mainItems.map((item) => item.label).filter(Boolean);
 			const base = `${formatMessage({ defaultMessage: 'Publishing' })}: `;
 
