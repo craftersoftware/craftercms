@@ -681,7 +681,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(null);
 		setFieldFormViewProps(null);
-		setHasPendingChanges(false);
+		onUpdateHasPendingChanges(false);
 		setDrawerOpenTransitionEnded(false);
 		setOpen(false);
 	};
