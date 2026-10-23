@@ -1293,7 +1293,7 @@ function updateTypeFromSubFieldUpdate(
 		const updatedField = reverseTypeFieldValuesObject(state.selectedField, updatedValues, descriptor);
 		let updatedFields = { ...fields };
 		// Drafts are keyed as `{NEW}` while `field.id` is still null — same as root-level updateTypeFromFieldUpdate.
-		const selectedFieldId = (state.selectedField as NewContentTypeField).NEW ? NEW_FIELD_ID : state.selectedField.id;
+		const selectedFieldId = state.selectedField.id || NEW_FIELD_ID;
 
 		if (updatedField.id !== selectedFieldId) {
 			// Replace in place (don't insert + delete): createLookupTable re-keys by field.id, so a
