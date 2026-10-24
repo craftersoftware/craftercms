@@ -31,6 +31,8 @@ export interface ToolsPanelListItemButtonProps extends Omit<ListItemButtonProps,
 	subtitle?: string;
 	icon?: SystemIconDescriptor;
 	secondaryActionIcon?: React.ReactNode;
+	/** Accessible name for the trailing action. Defaults to "Open {title}". */
+	secondaryActionLabel?: string;
 	onSecondaryActionClick?(): void;
 }
 
@@ -40,20 +42,27 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 		title,
 		subtitle,
 		onClick,
+		sx,
+		className,
 		secondaryActionIcon = <ChevronRounded />,
+		secondaryActionLabel,
 		onSecondaryActionClick,
 		...listItemButtonProps
 	} = props;
 	const { formatMessage } = useIntl();
 	const translatedTitle = usePossibleTranslation(title);
+	const trailingActionLabel =
+		secondaryActionLabel ?? formatMessage({ defaultMessage: 'Open {title}' }, { title: translatedTitle });
 	return (
 		<ListItem
 			disablePadding
+			className={className}
+			sx={sx}
 			secondaryAction={
 				onSecondaryActionClick ? (
 					<IconButton
 						size="small"
-						aria-label={formatMessage({ defaultMessage: 'Open {title}' }, { title: translatedTitle })}
+						aria-label={trailingActionLabel}
 						onClick={(event) => {
 							event.stopPropagation();
 							onSecondaryActionClick();

@@ -287,29 +287,26 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderRepGroupFields?.(newFields, fieldIdPath, sectionId);
 	};
+	const reorderFieldsLabel = formatMessage(
+		{ defaultMessage: 'Reorder fields in {fieldName}' },
+		{ fieldName: field.name }
+	);
+	const moveFieldLabel = formatMessage(
+		{ defaultMessage: 'Move {fieldName} to another section' },
+		{ fieldName: field.name }
+	);
 
 	return (
 		<>
 			{field.type === 'repeat' && Object.keys(field.fields ?? {}).length > 0 && (
-				<Tooltip title={formatMessage({ defaultMessage: 'Reorder fields in {fieldName}' }, { fieldName: field.name })}>
-					<IconButton
-						onClick={() => setOpenReorderFieldsDialog(true)}
-						aria-label={formatMessage({ defaultMessage: 'Reorder fields in {fieldName}' }, { fieldName: field.name })}
-					>
+				<Tooltip title={reorderFieldsLabel}>
+					<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderFieldsLabel}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			)}
-			<Tooltip
-				title={formatMessage({ defaultMessage: 'Move {fieldName} to another section' }, { fieldName: field.name })}
-			>
-				<IconButton
-					onClick={() => onOpenMoveFieldDialog()}
-					aria-label={formatMessage(
-						{ defaultMessage: 'Move {fieldName} to another section' },
-						{ fieldName: field.name }
-					)}
-				>
+			<Tooltip title={moveFieldLabel}>
+				<IconButton onClick={() => onOpenMoveFieldDialog()} aria-label={moveFieldLabel}>
 					<DriveFileMoveOutlined />
 				</IconButton>
 			</Tooltip>
@@ -366,6 +363,10 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 		onSwapField?.(field.id, sectionId, newField);
 		swapFieldDialogState.onClose();
 	};
+	const swapFieldLabel =
+		field.id === 'file-name'
+			? formatMessage({ defaultMessage: 'Swap {fieldName}' }, { fieldName: controlDescriptor.name })
+			: '';
 
 	return (
 		<>
@@ -373,16 +374,8 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 				component="div"
 				secondaryAction={
 					field.id === 'file-name' && (
-						<Tooltip
-							title={formatMessage({ defaultMessage: 'Swap {fieldName}' }, { fieldName: controlDescriptor.name })}
-						>
-							<IconButton
-								onClick={() => swapFieldDialogState.onOpen()}
-								aria-label={formatMessage(
-									{ defaultMessage: 'Swap {fieldName}' },
-									{ fieldName: controlDescriptor.name }
-								)}
-							>
+						<Tooltip title={swapFieldLabel}>
+							<IconButton onClick={() => swapFieldDialogState.onOpen()} aria-label={swapFieldLabel}>
 								<SwapCallsOutlined />
 							</IconButton>
 						</Tooltip>
@@ -419,24 +412,23 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderSectionFields?.(newFields, section.id);
 	};
+	const reorderSectionFieldsLabel = formatMessage(
+		{ defaultMessage: 'Reorder fields in {section}' },
+		{ section: section.title }
+	);
+	const addFieldLabel = formatMessage({ defaultMessage: 'Add field to {section}' }, { section: section.title });
 
 	return (
 		<>
 			{section.fields?.length > 0 ? (
-				<Tooltip title={formatMessage({ defaultMessage: 'Reorder fields in {section}' }, { section: section.title })}>
-					<IconButton
-						onClick={() => setOpenReorderFieldsDialog(true)}
-						aria-label={formatMessage({ defaultMessage: 'Reorder fields in {section}' }, { section: section.title })}
-					>
+				<Tooltip title={reorderSectionFieldsLabel}>
+					<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderSectionFieldsLabel}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			) : (
-				<Tooltip title={formatMessage({ defaultMessage: 'Add field to {section}' }, { section: section.title })}>
-					<IconButton
-						onClick={() => onOpenInsertFieldDialog?.(section.id)}
-						aria-label={formatMessage({ defaultMessage: 'Add field to {section}' }, { section: section.title })}
-					>
+				<Tooltip title={addFieldLabel}>
+					<IconButton onClick={() => onOpenInsertFieldDialog?.(section.id)} aria-label={addFieldLabel}>
 						<AddCircleOutlineOutlinedIcon />
 					</IconButton>
 				</Tooltip>
@@ -494,14 +486,12 @@ function ContentTypeActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderTypeSections?.(newSections);
 	};
+	const reorderSectionsLabel = formatMessage({ defaultMessage: 'Reorder sections' });
 
 	return (
 		<>
-			<Tooltip title={formatMessage({ defaultMessage: 'Reorder sections' })}>
-				<IconButton
-					onClick={() => setOpenReorderFieldsDialog(true)}
-					aria-label={formatMessage({ defaultMessage: 'Reorder sections' })}
-				>
+			<Tooltip title={reorderSectionsLabel}>
+				<IconButton onClick={() => setOpenReorderFieldsDialog(true)} aria-label={reorderSectionsLabel}>
 					<MoveDownIcon />
 				</IconButton>
 			</Tooltip>

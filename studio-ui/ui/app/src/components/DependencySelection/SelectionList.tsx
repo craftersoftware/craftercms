@@ -73,6 +73,7 @@ export function SelectionList(props: SelectionListProps) {
 	const { formatMessage } = useIntl();
 	const titleId = useId();
 	const selectAllLabelId = useId();
+	const listId = useId();
 	const isAllChecked = useMemo(
 		() => (selectedItems ? !paths?.some((path) => !selectedItems[path]) : null),
 		[paths, selectedItems]
@@ -144,8 +145,8 @@ export function SelectionList(props: SelectionListProps) {
 			</ListItem>
 			{items ? (
 				<List sx={{ paddingTop: 0 }}>
-					{items.map((item) => {
-						const labelId = `checkbox-list-label-${item.path}`;
+					{items.map((item, index) => {
+						const labelId = `${listId}-item-${index}`;
 						const listItemComponentChildren = (
 							<>
 								{onItemClicked && (
@@ -283,8 +284,8 @@ export function SelectionList(props: SelectionListProps) {
 			) : (
 				<List>
 					{paths.length ? (
-						paths.map((path: string) => {
-							const labelId = `checkbox-list-label-${path}`;
+						paths.map((path: string, index) => {
+							const labelId = `${listId}-path-${index}`;
 							const listItemComponentChildren = (
 								<>
 									{onItemClicked && (

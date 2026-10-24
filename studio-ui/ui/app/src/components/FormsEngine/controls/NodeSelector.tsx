@@ -28,7 +28,7 @@ import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemButton from '@mui/material/ListItemButton';
+import ListItemButton, { listItemButtonClasses } from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -632,6 +632,10 @@ function NodeSelector(props: NodeSelectorProps) {
 		) : null;
 	const maxLimitReached = value.length >= field.validations.maxCount?.value;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
+	const addItemsLabel =
+		isAddDisabled && maxLimitReached
+			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
+			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
 	return (
 		<>
 			<Menu
@@ -736,12 +740,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
-								aria-label={formatMessage(
-									isAddDisabled && maxLimitReached
-										? { defaultMessage: 'Maximum amount of items reached for {fieldName}' }
-										: { defaultMessage: 'Add items to {fieldName}' },
-									{ fieldName: field.name }
-								)}
+								aria-label={addItemsLabel}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {
@@ -792,15 +791,15 @@ function NodeSelector(props: NodeSelectorProps) {
 								const itemLabel = item.value || item.include || String(item.key);
 								const editLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel });
 								const viewLabel = formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
-								const removeLabel = formatMessage(
-									isEmbedded ? { defaultMessage: 'Delete {item}' } : { defaultMessage: 'Unlink {item}' },
-									{ item: itemLabel }
-								);
+								const removeLabel = isEmbedded
+									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
+									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
 								return (
 									<ListItem
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
 										divider={index !== value.length - 1}
 										disablePadding
+										sx={{ [`& > .${listItemButtonClasses.root}`]: { pr: '112px' } }}
 										secondaryAction={
 											<Box sx={{ display: 'flex' }}>
 												{canBeEdited ? (
@@ -837,7 +836,6 @@ function NodeSelector(props: NodeSelectorProps) {
 										<ListItemButton
 											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
 											onKeyDown={(e) => handleItemKeyDown(e, index)}
-											sx={{ pr: 12 }}
 										>
 											<ListItemText
 												primary={

@@ -1185,6 +1185,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return cancelSettle;
 	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store, beginSettledFieldScroll]);
 
+	const minimizeLabel = formatMessage({ defaultMessage: 'Minimize' });
+	const closeLabel = formatMessage({ defaultMessage: 'Close' });
+	const fullscreenLabel = isFullScreen
+		? formatMessage({ defaultMessage: 'Exit full screen' })
+		: formatMessage({ defaultMessage: 'Maximize' });
+
 	const bodyFragment = (
 		<FormLayout
 			stackIndex={stackIndex}
@@ -1211,40 +1217,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={formatMessage({ defaultMessage: 'Minimize' })}>
-									<IconButton
-										size="small"
-										onClick={props.onMinimize}
-										aria-label={formatMessage({ defaultMessage: 'Minimize' })}
-									>
+								<Tooltip title={minimizeLabel}>
+									<IconButton size="small" onClick={props.onMinimize} aria-label={minimizeLabel}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
-								<Tooltip
-									title={formatMessage(
-										isFullScreen ? { defaultMessage: 'Exit full screen' } : { defaultMessage: 'Maximize' }
-									)}
-								>
+								<Tooltip title={fullscreenLabel}>
 									<IconButton
 										size="small"
 										onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
-										aria-label={formatMessage(
-											isFullScreen ? { defaultMessage: 'Exit full screen' } : { defaultMessage: 'Maximize' }
-										)}
+										aria-label={fullscreenLabel}
 									>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
-								<Tooltip title={formatMessage({ defaultMessage: 'Close' })}>
-									<IconButton
-										size="small"
-										onClick={handleClose}
-										aria-label={formatMessage({ defaultMessage: 'Close' })}
-									>
+								<Tooltip title={closeLabel}>
+									<IconButton size="small" onClick={handleClose} aria-label={closeLabel}>
 										<Close />
 									</IconButton>
 								</Tooltip>

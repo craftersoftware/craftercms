@@ -189,6 +189,7 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 								itemsByPath,
 								node,
 								dependencyTypeMap,
+								formatMessage,
 								onMenuClick: onContextMenuOpen,
 								onCheckboxChange,
 								selectedDependencies: selectedDependenciesPaths,

@@ -345,13 +345,7 @@ function PluginCard(props: PluginCardProps) {
 							disabled={!usePermission || inUse || beingInstalled}
 							loading={beingInstalled}
 							onClick={() => onPluginSelected(plugin, 1)}
-							aria-label={
-								typeof useLabel === 'string'
-									? formatMessage({ defaultMessage: '{action} {name}' }, { action: useLabel, name: pluginLabel })
-									: useLabel
-										? undefined
-										: formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })
-							}
+							aria-label={useLabel ? undefined : formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })}
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
@@ -364,10 +358,7 @@ function PluginCard(props: PluginCardProps) {
 							color: (theme) => theme.palette.text.secondary,
 							flex: 1
 						}}
-						aria-label={formatMessage(
-							{ defaultMessage: '{more} {name}' },
-							{ more: formatMessage(messages.more), name: pluginLabel }
-						)}
+						aria-label={formatMessage({ defaultMessage: 'More about {name}' }, { name: pluginLabel })}
 						onClick={() => onDetails(plugin)}
 					>
 						{formatMessage(messages.more)}

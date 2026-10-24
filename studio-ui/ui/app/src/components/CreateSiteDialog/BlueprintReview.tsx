@@ -163,12 +163,11 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label={formatMessage(
+						aria-label={
 							passwordFields && passwordFields[parameter.name]
-								? { defaultMessage: 'Hide {field}' }
-								: { defaultMessage: 'Show {field}' },
-							{ field: parameter.label }
-						)}
+								? formatMessage({ defaultMessage: 'Hide {field}' }, { field: parameter.label })
+								: formatMessage({ defaultMessage: 'Show {field}' }, { field: parameter.label })
+						}
 						onClick={() => {
 							showPassword(parameter);
 						}}
@@ -229,8 +228,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		<Box sx={{ maxWidth: '600px', margin: 'auto' }}>
 			<Grid container spacing={3}>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.creationStrategy)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.creationStrategy)}
+						</Typography>
 						<IconButton
 							aria-label={formatMessage(
 								{ defaultMessage: 'Edit {section}' },
@@ -247,7 +248,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					{blueprint.id !== 'GIT' ? (
 						<div>
 							<Typography variant="body2" gutterBottom>
@@ -269,8 +270,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 					)}
 				</Grid>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.siteInfo)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.siteInfo)}
+						</Typography>
 						<IconButton
 							aria-label={formatMessage(
 								{ defaultMessage: 'Edit {section}' },
@@ -287,7 +290,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					<Typography variant="body2" gutterBottom noWrap>
 						<Box component="span" sx={{ fontWeight: 'bold' }}>
 							{formatMessage(messages.siteName)}:{' '}
@@ -323,8 +326,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 				</Grid>
 				{blueprint.parameters && !!blueprint.parameters.length && (
 					<Grid size={12}>
-						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-							{formatMessage(messages.blueprintParameters)}
+						<Box sx={{ display: 'flex', alignItems: 'center' }}>
+							<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+								{formatMessage(messages.blueprintParameters)}
+							</Typography>
 							<IconButton
 								aria-label={formatMessage(
 									{ defaultMessage: 'Edit {section}' },
@@ -341,7 +346,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							>
 								<EditIcon />
 							</IconButton>
-						</Typography>
+						</Box>
 						{renderBlueprintParameters()}
 					</Grid>
 				)}

@@ -81,6 +81,7 @@ export function PreviewDropTargetsPanel() {
 		? Object.values(contentTypesBranch.byId).filter((contentType) => contentType.type === 'component')
 		: null;
 	const { formatMessage } = useIntl();
+	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
 	const [listMode, setListMode] = useState(true);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
@@ -206,12 +207,12 @@ export function PreviewDropTargetsPanel() {
 								</Select>
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
-								<Tooltip title={formatMessage({ defaultMessage: 'Cancel selection' })}>
+								<Tooltip title={cancelSelectionLabel}>
 									<IconButton
 										edge="end"
 										sx={{ ml: 0.625 }}
 										onClick={() => resetState()}
-										aria-label={formatMessage({ defaultMessage: 'Cancel selection' })}
+										aria-label={cancelSelectionLabel}
 									>
 										<CloseRoundedIcon />
 									</IconButton>

@@ -77,7 +77,6 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 			}}
 		>
 			<ListItemButton
-				role="option"
 				disableRipple
 				draggable
 				onDragStart={onDragStart}
@@ -97,7 +96,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 							width: 30,
 							height: 30,
 							backgroundColor: over || avatarSrc ? 'transparent' : backgroundColor,
-							transition: 'color 0.25s ease-in-out'
+							transition: 'background-color 0.25s ease-in-out'
 						}}
 					>
 						<DragIndicatorRounded
