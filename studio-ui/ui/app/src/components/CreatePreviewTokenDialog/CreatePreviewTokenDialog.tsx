@@ -299,9 +299,25 @@ function Body(props: BodyProps) {
 				<Box>
 					<Box
 						component="pre"
-						sx={{ width: '100%', overflow: 'auto', bgcolor: 'background.paper', p: 1, borderRadius: 1 }}
+						role="button"
+						tabIndex={0}
+						aria-label={formatMessage({ defaultMessage: 'Copy code' })}
+						sx={{
+							width: '100%',
+							overflow: 'auto',
+							bgcolor: 'background.paper',
+							p: 1,
+							borderRadius: 1,
+							cursor: 'pointer'
+						}}
 						onClick={() => {
 							copy(cookieSettingCode);
+						}}
+						onKeyDown={(event) => {
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault();
+								copy(cookieSettingCode);
+							}
 						}}
 					>
 						<code

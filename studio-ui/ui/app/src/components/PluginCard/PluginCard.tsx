@@ -30,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
 
 interface PluginCardProps {
@@ -187,9 +188,16 @@ function PluginCard(props: PluginCardProps) {
 		return merged.map((item, index) => {
 			if (item.type !== 'video') {
 				return (
-					<Box
+					<ButtonBase
 						key={index}
+						aria-label={
+							item.description
+								? formatMessage({ defaultMessage: 'View {description}' }, { description: item.description })
+								: formatMessage({ defaultMessage: 'View image {number}' }, { number: index + 1 })
+						}
 						sx={{
+							display: 'block',
+							width: '100%',
 							background: isGitOrDuplicateCard ? 'none' : backgroundColor,
 							height: isGitOrDuplicateCard ? 'unset' : '180px',
 							overflow: 'hidden'
@@ -210,7 +218,7 @@ function PluginCard(props: PluginCardProps) {
 								alt={item.description}
 							/>
 						)}
-					</Box>
+					</ButtonBase>
 				);
 			} else {
 				return (

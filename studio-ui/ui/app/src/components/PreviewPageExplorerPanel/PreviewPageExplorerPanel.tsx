@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMoreRounded';
@@ -59,6 +59,7 @@ import { LoadingState } from '../LoadingState';
 import { svgIconClasses, typographyClasses } from '@mui/material';
 import Box from '@mui/material/Box';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
+import { cancelTreeItemKey, isTreeContextMenuKey } from '../../utils/treeKeyboard';
 
 const rootPrefix = '{root}_';
 
@@ -229,6 +230,8 @@ interface TreeItemCustomInterface {
 	node: RenderTree;
 	isRootChild?: boolean;
 	keyword?: string;
+	level?: number;
+	selectedId?: string;
 
 	handleScroll?(node: RenderTree): void;
 
@@ -238,8 +241,20 @@ interface TreeItemCustomInterface {
 }
 
 function TreeItemCustom(props: TreeItemCustomInterface) {
-	const { nodeLookup, node, handleScroll, handleClick, handleOptions, isRootChild, keyword } = props;
+	const {
+		nodeLookup,
+		node,
+		handleScroll,
+		handleClick,
+		handleOptions,
+		isRootChild,
+		keyword,
+		level = 1,
+		selectedId
+	} = props;
 	const [over, setOver] = useState(false);
+	const labelId = useId();
+	const { formatMessage } = useIntl();
 	let timeout = React.useRef<any>(undefined);
 	const isMounted = useRef(null);
 	let Icon;
@@ -302,14 +317,36 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 		<TreeItem
 			key={node.id}
 			itemId={node.id}
+			aria-level={level}
+			aria-selected={node.id === selectedId}
+			aria-labelledby={labelId}
 			onMouseOver={(e) => setOverState(e, true)}
 			onMouseOut={(e) => setOverState(e, false)}
+			onClick={(event) => {
+				const target = event.target as HTMLElement;
+				if (target.closest('button, .MuiTreeItem-iconContainer')) {
+					return;
+				}
+				handleScroll?.(node);
+			}}
+			onKeyDown={(event) => {
+				if (event.key === 'Enter') {
+					cancelTreeItemKey(event);
+					handleScroll?.(node);
+				} else if (isTreeContextMenuKey(event) && node.path) {
+					cancelTreeItemKey(event);
+					handleOptions?.(event, node);
+				}
+			}}
 			slots={{
 				icon: isPageOrComponent(node.type) && ChevronRightIcon
 			}}
 			slotProps={{
 				icon: isPageOrComponent(node.type) && {
-					onClick: () => handleClick(node)
+					onClick: (event: React.MouseEvent) => {
+						event.stopPropagation();
+						handleClick?.(node);
+					}
 				}
 			}}
 			label={
@@ -330,10 +367,9 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 							wordBreak: 'break-all'
 						}
 					}}
-					onClick={() => handleScroll(node)}
 				>
 					<Icon sx={{ color: palette.teal.main }} />
-					<p title={node.name}>
+					<p id={labelId} title={node.name}>
 						{nodeName.length === 1 ? (
 							nodeName[0]
 						) : (
@@ -351,6 +387,8 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 							sx={{ marginLeft: 'auto', padding: '6px' }}
 							onMouseOver={(e) => setOverState(e, true)}
 							onClick={(e) => handleOptions(e, node)}
+							aria-label={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}
+							tabIndex={-1}
 							size="large"
 						>
 							<MoreVertIcon />
@@ -375,13 +413,9 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 						paddingLeft: 0
 					}
 				},
-				'&:focus > .MuiTreeItem-content': {
-					'& .MuiTreeItem-label': {
-						backgroundColor: 'inherit'
-					},
-					'& .MuiTreeItem-label:hover': {
-						backgroundColor: 'rgba(0, 0, 0, 0.04)'
-					}
+				['&:focus-visible > .MuiTreeItem-content']: {
+					outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+					outlineOffset: '-2px'
 				},
 				[`& .${treeItemClasses.iconContainer}`]: {
 					[`& .${svgIconClasses.root}`]: {
@@ -397,6 +431,7 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 					key={String(childNodeId) + i}
 					node={nodeLookup[String(childNodeId)]}
 					isRootChild={node.type === 'root'}
+					level={level + 1}
 				/>
 			))}
 		</TreeItem>
@@ -605,10 +640,8 @@ export function PreviewPageExplorerPanel() {
 		});
 	};
 
-	const handleChange = (event: any, nodes: string[]) => {
-		if (event.target.classList.contains('toggle') || event.target.parentElement.classList.contains('toggle')) {
-			setState({ ...state, expanded: [...nodes] });
-		}
+	const handleChange = (_event: React.SyntheticEvent | null, nodes: string[]) => {
+		setState({ ...state, expanded: [...nodes] });
 	};
 
 	const handleOptions = (event: any, node: RenderTree) => {
@@ -621,13 +654,30 @@ export function PreviewPageExplorerPanel() {
 		const left = anchorRect.left + getOffsetLeft(anchorRect, 'left');
 
 		if (path) {
-			dispatch(
-				showItemMegaMenu({
-					path: path,
-					anchorReference: 'anchorPosition',
-					anchorPosition: { top, left }
-				})
-			);
+			// The treeitem stays mounted, so anchor to it and let the menu restore focus there.
+			// The hover options button unmounts, so that path keeps a coordinate anchor.
+			if (element?.getAttribute?.('role') === 'treeitem') {
+				dispatch(
+					showItemMegaMenu(
+						Object.assign(
+							{
+								path,
+								anchorReference: 'anchorEl' as const,
+								anchorOrigin: { vertical: 'bottom' as const, horizontal: 'right' as const }
+							},
+							{ anchorEl: element as HTMLElement }
+						)
+					)
+				);
+			} else {
+				dispatch(
+					showItemMegaMenu({
+						path: path,
+						anchorReference: 'anchorPosition',
+						anchorPosition: { top, left }
+					})
+				);
+			}
 		}
 	};
 
@@ -641,57 +691,30 @@ export function PreviewPageExplorerPanel() {
 
 	return (
 		<>
-			<SimpleTreeView
-				sx={{
-					'& > li > ul': {
-						marginLeft: '0'
-					},
-					[`& .${treeItemClasses.iconContainer}`]: {
-						[`& .${svgIconClasses.root}`]: {
-							color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
-							fontSize: '1.4rem'
-						}
-					}
-				}}
-				slots={{
-					collapseIcon: ExpandMoreIcon,
-					expandIcon: ChevronRightIcon
-				}}
-				slotProps={{
-					collapseIcon: {
-						className: 'toggle'
-					},
-					expandIcon: {
-						className: 'toggle'
-					}
-				}}
-				disableSelection
-				expandedItems={state.expanded}
-				onExpandedItemsChange={handleChange}
-			>
-				<Box sx={{ padding: '10px' }}>
-					<SearchBar showActionButton={Boolean(keyword)} onChange={handleSearchKeyword} keyword={keyword} autoFocus />
-					<Divider sx={{ marginTop: '10px' }} />
-				</Box>
-				{models && ContentTypesById ? (
-					<PageExplorerUI
-						handleBreadCrumbClick={handleBreadCrumbClick}
-						handleClick={handleClick}
-						handleClose={handleClose}
-						handleScroll={handleScroll}
-						optionsMenu={optionsMenu}
-						rootPrefix={rootPrefix}
-						handleOptions={handleOptions}
-						keyword={keyword}
-						nodeLookup={nodeLookup}
-						selected={state.selected}
-						breadcrumbs={state.breadcrumbs}
-						rootChildren={Object.keys(processedModels.current)}
-					/>
-				) : (
-					<LoadingState title={formatMessage(translations.loading)} />
-				)}
-			</SimpleTreeView>
+			<Box sx={{ padding: '10px' }}>
+				<SearchBar showActionButton={Boolean(keyword)} onChange={handleSearchKeyword} keyword={keyword} autoFocus />
+				<Divider sx={{ marginTop: '10px' }} />
+			</Box>
+			{models && ContentTypesById ? (
+				<PageExplorerUI
+					handleBreadCrumbClick={handleBreadCrumbClick}
+					handleClick={handleClick}
+					handleClose={handleClose}
+					handleScroll={handleScroll}
+					optionsMenu={optionsMenu}
+					rootPrefix={rootPrefix}
+					handleOptions={handleOptions}
+					keyword={keyword}
+					nodeLookup={nodeLookup}
+					selected={state.selected}
+					expanded={state.expanded}
+					onExpandedItemsChange={handleChange}
+					breadcrumbs={state.breadcrumbs}
+					rootChildren={Object.keys(processedModels.current)}
+				/>
+			) : (
+				<LoadingState title={formatMessage(translations.loading)} />
+			)}
 		</>
 	);
 }
@@ -711,6 +734,8 @@ interface PageExplorerUIProps {
 	handleBreadCrumbClick(event, node?: RenderTree): void;
 	nodeLookup: any;
 	selected: any;
+	expanded: string[];
+	onExpandedItemsChange(event: React.SyntheticEvent | null, itemIds: string[]): void;
 	breadcrumbs: any;
 	rootChildren: string[];
 }
@@ -726,6 +751,8 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 		rootPrefix,
 		nodeLookup,
 		selected,
+		expanded,
+		onExpandedItemsChange,
 		keyword,
 		breadcrumbs,
 		rootChildren
@@ -815,28 +842,83 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 					>
 						<FormattedMessage id="pageExplorerPanel.currentContentItems" defaultMessage="Current Content Items" />
 					</Typography>
-					{node.children
-						?.filter((childNodeId) =>
-							nodeLookup[String(childNodeId)].name.toLowerCase().includes(keyword.toLowerCase())
-						)
-						.map((childNodeId, i) => (
-							<TreeItemCustom
-								{...props}
-								key={String(childNodeId) + i}
-								node={nodeLookup[String(childNodeId)]}
-								isRootChild={node.type === 'root'}
-							/>
-						))}
+					<SimpleTreeView
+						aria-label={formatMessage(translations.onThisPage)}
+						sx={{
+							'& > li > ul': {
+								marginLeft: '0'
+							},
+							[`& .${treeItemClasses.iconContainer}`]: {
+								[`& .${svgIconClasses.root}`]: {
+									color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
+									fontSize: '1.4rem'
+								}
+							}
+						}}
+						slots={{
+							collapseIcon: ExpandMoreIcon,
+							expandIcon: ChevronRightIcon
+						}}
+						slotProps={{
+							collapseIcon: {
+								className: 'toggle'
+							},
+							expandIcon: {
+								className: 'toggle'
+							}
+						}}
+						disableSelection
+						expansionTrigger="iconContainer"
+						expandedItems={expanded}
+						onExpandedItemsChange={onExpandedItemsChange}
+					>
+						{node.children
+							?.filter((childNodeId) =>
+								nodeLookup[String(childNodeId)].name.toLowerCase().includes(keyword.toLowerCase())
+							)
+							.map((childNodeId, i) => (
+								<TreeItemCustom
+									key={String(childNodeId) + i}
+									node={nodeLookup[String(childNodeId)]}
+									nodeLookup={nodeLookup}
+									keyword={keyword}
+									selectedId={selected}
+									level={1}
+									isRootChild={node.type === 'root'}
+									handleScroll={handleScroll}
+									handleClick={handleClick}
+									handleOptions={handleOptions}
+								/>
+							))}
+					</SimpleTreeView>
 				</>
 			) : (
-				<TreeItemCustom
-					node={node}
-					keyword={keyword}
-					nodeLookup={nodeLookup}
-					handleScroll={handleScroll}
-					handleClick={handleClick}
-					handleOptions={handleOptions}
-				/>
+				<SimpleTreeView
+					aria-label={node?.name}
+					disableSelection
+					expansionTrigger="iconContainer"
+					expandedItems={expanded}
+					onExpandedItemsChange={onExpandedItemsChange}
+					slots={{
+						collapseIcon: ExpandMoreIcon,
+						expandIcon: ChevronRightIcon
+					}}
+					slotProps={{
+						collapseIcon: { className: 'toggle' },
+						expandIcon: { className: 'toggle' }
+					}}
+				>
+					<TreeItemCustom
+						node={node}
+						keyword={keyword}
+						nodeLookup={nodeLookup}
+						selectedId={selected}
+						level={1}
+						handleScroll={handleScroll}
+						handleClick={handleClick}
+						handleOptions={handleOptions}
+					/>
+				</SimpleTreeView>
 			)}
 			{Boolean(optionsMenu.anchorEl) && (
 				<ItemActionsMenu
