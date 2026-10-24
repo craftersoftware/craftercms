@@ -434,7 +434,6 @@
 	"editUserDialog.lastNameRequired": "성이 필요합니다.",
 	"eEh5bC": "선택된 콘텐츠 유형",
 	"embeddedContentDS.embeddedContent": "임베디드 컨텐츠",
-	"embeddedLegacyFormMessages.openContentFormFailedError": "콘텐츠 양식을 여는 동안 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. 오류가 지속되면 관리자에게 문의하십시오.",
 	"emptyUiConfigMessageTitle.subtitle": "여기에 표시되도록 설정된 것이 없습니다.",
 	"emptyUiConfigMessageTitle.title": "구성이 비어 있습니다.",
 	"encryptTool.buttonText": "텍스트 암호화",

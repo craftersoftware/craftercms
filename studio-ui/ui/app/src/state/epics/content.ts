@@ -88,7 +88,7 @@ import { isBlank } from '../../utils/string';
 import SocketEvent, { MoveContentEventPayload } from '../../models/SocketEvent';
 import { popDialog, pushDialog } from '../actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { createComponentId, pickShowContentFormAction, pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+import { createComponentId, showContentFormAction, pushConfirmDialog, pushErrorDialog } from '../../utils/system';
 import type { ContentItem } from '../../models';
 import { popCodeEditorDialog, showItemMegaMenu } from '../actions/dialogs';
 
@@ -230,7 +230,7 @@ const content: CrafterCMSEpic[] = [
 					duplicate(state.sites.active, payload.path).pipe(
 						switchMap(({ item: path }) => [
 							unblockUI(),
-							pickShowContentFormAction({
+							showContentFormAction({
 								site: state.sites.active,
 								path,
 								authoringBase: state.env.authoringBase,

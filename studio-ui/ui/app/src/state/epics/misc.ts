@@ -35,7 +35,7 @@ import { getFileNameFromPath, getParentPath } from '../../utils/path';
 import { popPiece } from '../../utils/string';
 import { associateTemplate } from '../actions/preview';
 import { pushDialog } from '../actions/dialogStack';
-import { createComponentId, pickShowContentFormAction, pushErrorDialog } from '../../utils/system';
+import { createComponentId, showContentFormAction, pushErrorDialog } from '../../utils/system';
 import { nanoid } from 'nanoid';
 import { popCodeEditorDialog } from '../actions/dialogs';
 
@@ -49,13 +49,19 @@ const epics = [
 				const path = payload.path;
 				if (payload.originalContentTypeId !== newContentTypeId) {
 					return of(
-						pickShowContentFormAction({
+						showContentFormAction({
 							site: state.sites.active,
 							path,
 							authoringBase: state.env.authoringBase,
 							changeTemplate: newContentTypeId,
-							onSaveSuccess: ({ action }) =>
-								store.dispatch(batchActions([showEditItemSuccessNotification({ action }), reloadContentItem({ path })]))
+							onSaveSuccess: () =>
+								store.dispatch(
+									batchActions([
+										// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
+										showEditItemSuccessNotification({ action: 'saveAndClose' }),
+										reloadContentItem({ path })
+									])
+								)
 						})
 					);
 				}

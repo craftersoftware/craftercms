@@ -434,7 +434,6 @@
 	"editUserDialog.lastNameRequired": "Nachname ist erforderlich",
 	"eEh5bC": "Ausgewählter Inhaltstyp",
 	"embeddedContentDS.embeddedContent": "Eingebetteter Inhalt",
-	"embeddedLegacyFormMessages.openContentFormFailedError": "Beim Öffnen des Inhaltsformulars ist ein Fehler aufgetreten. Bitte versuchen Sie es kurz erneut. Wenden Sie sich an den Administrator, wenn der Fehler weiterhin besteht.",
 	"emptyUiConfigMessageTitle.subtitle": "Hier wird nichts angezeigt.",
 	"emptyUiConfigMessageTitle.title": "Konfiguration ist leer",
 	"encryptTool.buttonText": "Text verschlüsseln",

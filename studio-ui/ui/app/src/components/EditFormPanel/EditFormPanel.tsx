@@ -33,7 +33,7 @@ import { usePreviewState } from '../../hooks/usePreviewState';
 import ContentInstance from '../../models/ContentInstance';
 import { pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { createComponentId, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, showContentFormAction } from '../../utils/system';
 import { popCodeEditorDialog } from '../../state/actions/dialogs';
 
 interface EditFormPanelProps {
@@ -80,8 +80,9 @@ const getEditDialogProps = (props: {
 			authoringBase,
 			site,
 			path: parentPath,
-			isHidden: true,
 			modelId: selectedId,
+			// This is the embedded scenario. Passing it since is what the FE expects.
+			isEmbedded: true,
 			...(selectedFields ? { selectedFields } : {})
 		};
 	}
@@ -196,7 +197,7 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 		if (type === 'form') {
 			const selectedFields = selected[0]?.fieldId.length ? selected[0].fieldId : null;
 			dispatch(
-				pickShowContentFormAction(
+				showContentFormAction(
 					getEditDialogProps({ authoringBase, hierarchyMap, model, models, path, selectedFields, selectedId, site })
 				)
 			);

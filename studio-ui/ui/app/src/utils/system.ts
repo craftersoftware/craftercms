@@ -26,7 +26,6 @@ import type { FormsEngineProps } from '../components/FormsEngine/FormsEngine';
 import { getHostToGuestBus } from './subjects';
 import { reloadRequest } from '../state/actions/preview';
 import { Context, useContext } from 'react';
-import type { LegacyFormDialogProps } from '../components/LegacyFormDialog/utils';
 import { nanoid } from 'nanoid';
 import { DialogStackItem } from '../models';
 import type { ConfirmDialogProps } from '../components/ConfirmDialog';
@@ -105,59 +104,63 @@ export function consolidateSx(...sxs: SxProps<Theme>[]): SxProps<Theme> {
 	return sxs.flatMap((item) => item ?? []);
 }
 
-export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
-	const useLegacy = window.localStorage.getItem('useLegacyFormEngine') === 'true';
-	const dialogId = nanoid();
-	return useLegacy
-		? pushDialog({
-				id: dialogId,
-				component: createComponentId('LegacyFormDialog'),
-				allowFullScreen: true,
-				allowMinimize: true,
-				props: { ...oldProps, dialogId }
-			})
-		: pushDialog({
-				component: createComponentId('FormsEngineDialog'),
-				allowFullScreen: true,
-				allowMinimize: true,
-				props: {
-					formProps: {
-						...(oldProps.isNewContent
-							? { create: { path: oldProps.path, contentTypeId: oldProps.contentTypeId } }
-							: oldProps.isEmbedded || Boolean(oldProps.modelId)
-								? { update: { path: oldProps.path, modelId: oldProps.modelId } }
-								: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
-						readonly: oldProps.readonly ?? false,
-						fieldToScroll: oldProps.selectedFields?.[0] ?? undefined,
-						onSave(result) {
-							if (isPreviewAppUrl()) {
-								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
-								const previewURL = params.get('page');
-								if (
-									previewURL &&
-									result.path &&
-									isPagePath(oldProps.path) &&
-									getPathFromPreviewURL(previewURL) === oldProps.path &&
-									oldProps.path !== result.path
-								) {
-									// oldProps.path is a page and the same as the preview page path, but the new path is different,
-									// which means there was a rename of the page currently being previewed. Then we need to update the
-									// preview URL to reflect the new page path.
-									window.location.href = getSystemLink({
-										page: getPreviewURLFromPath(result.path),
-										systemLinkId: 'preview',
-										site: oldProps.site,
-										authoringBase: oldProps.authoringBase
-									});
-								} else {
-									getHostToGuestBus().next(reloadRequest());
-								}
-							}
-							// FE2 TODO: handling oldProps.onSaveSuccess required?
+export interface ShowContentFormProps {
+	path: string;
+	authoringBase: string;
+	site?: string;
+	readonly?: boolean;
+	selectedFields?: string[];
+	modelId?: string;
+	isEmbedded?: boolean;
+	changeTemplate?: string;
+	contentTypeId?: string;
+	isNewContent?: boolean;
+	onSaveSuccess?(result?: { path?: string }): any;
+}
+
+export function showContentFormAction(props: ShowContentFormProps) {
+	return pushDialog({
+		component: createComponentId('FormsEngineDialog'),
+		allowFullScreen: true,
+		allowMinimize: true,
+		props: {
+			formProps: {
+				...(props.isNewContent
+					? { create: { path: props.path, contentTypeId: props.contentTypeId } }
+					: props.isEmbedded || Boolean(props.modelId)
+						? { update: { path: props.path, modelId: props.modelId } }
+						: { update: { path: props.path, changeTypeId: props.changeTemplate } }),
+				readonly: props.readonly ?? false,
+				fieldToScroll: props.selectedFields?.[0] ?? undefined,
+				onSave(result) {
+					if (isPreviewAppUrl()) {
+						const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
+						const previewURL = params.get('page');
+						if (
+							previewURL &&
+							result.path &&
+							isPagePath(props.path) &&
+							getPathFromPreviewURL(previewURL) === props.path &&
+							props.path !== result.path
+						) {
+							// oldProps.path is a page and the same as the preview page path, but the new path is different,
+							// which means there was a rename of the page currently being previewed. Then we need to update the
+							// preview URL to reflect the new page path.
+							window.location.href = getSystemLink({
+								page: getPreviewURLFromPath(result.path),
+								systemLinkId: 'preview',
+								site: props.site,
+								authoringBase: props.authoringBase
+							});
+						} else {
+							getHostToGuestBus().next(reloadRequest());
 						}
-					} as FormsEngineProps
+					}
+					props.onSaveSuccess?.(result);
 				}
-			});
+			} as FormsEngineProps
+		}
+	});
 }
 
 export function createUseContextHook<T>(name: string, context: Context<T>): () => T;

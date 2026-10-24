@@ -93,7 +93,7 @@ State: Jotai atoms + React context (`StableFormContext`, `ItemMetaContext`, …)
 
 ```text
 ContentTypeManagement/
-  ContentTypeManagement.tsx   # list | edit | create; can fall back to legacy iframe
+  ContentTypeManagement.tsx   # list | edit | create;
   utils.ts                    # serialize/deserialize helpers, TypePropsToEdit, paths
   controlMap.ts / suffixesMap.ts
   descriptors/                # control & datasource “virtual type” descriptors
@@ -150,7 +150,7 @@ Field id suffixes (`_s`, `_html`, `_o`, `_dt`, …) matter for indexing/Engine �
 ## 4. Strategic objectives (current effort)
 
 1. **Modern FE** — React FormsEngine replacing `forms-engine.js` (substantial progress).
-2. **Modern TB** — ContentTypeManagement replacing `content-types.js` (in progress; legacy toggle still exists).
+2. **Modern TB** — ContentTypeManagement replacing `content-types.js`.
 3. **Single type artifact** — fold `config.xml` into `form-definition.xml` and delete `config.xml` (requires Studio **backend** alignment, not UI-only).
 4. **Descriptors / site-config-tools** — control & datasource listing + property forms driven by code defaults + optional XML overrides/plugins (`proposal.xml`, crawl → walk → run).
 

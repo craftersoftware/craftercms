@@ -83,7 +83,7 @@ import { findParentModelId, getModelIdFromInheritedField, isInheritedField } fro
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
 import { pushDialog } from '../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { createComponentId, pickShowContentFormAction } from './system';
+import { createComponentId, showContentFormAction } from './system';
 import { popCodeEditorDialog } from '../state/actions/dialogs';
 import { ImageRestrictions } from '../components/ImageEditorDialog/types';
 
@@ -969,7 +969,7 @@ export const openItemEditor = (
 
 	if (type === 'form') {
 		dispatch(
-			pickShowContentFormAction({
+			showContentFormAction({
 				path: item.path,
 				authoringBase,
 				site: siteId,
