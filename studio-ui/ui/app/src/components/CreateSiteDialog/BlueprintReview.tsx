@@ -163,7 +163,12 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label="toggle password visibility"
+						aria-label={formatMessage(
+							passwordFields && passwordFields[parameter.name]
+								? { defaultMessage: 'Hide {field}' }
+								: { defaultMessage: 'Show {field}' },
+							{ field: parameter.label }
+						)}
 						onClick={() => {
 							showPassword(parameter);
 						}}
@@ -227,7 +232,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
 						{formatMessage(messages.creationStrategy)}
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.creationStrategy) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -264,7 +272,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
 						{formatMessage(messages.siteInfo)}
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.siteInfo) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -315,7 +326,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
 							{formatMessage(messages.blueprintParameters)}
 							<IconButton
-								aria-label="goto"
+								aria-label={formatMessage(
+									{ defaultMessage: 'Edit {section}' },
+									{ section: formatMessage(messages.blueprintParameters) }
+								)}
 								sx={{
 									color: (theme) => theme.palette.primary.main,
 									'& svg': {

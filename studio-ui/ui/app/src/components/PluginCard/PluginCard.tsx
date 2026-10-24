@@ -95,6 +95,9 @@ function PluginCard(props: PluginCardProps) {
 	} = props;
 	const { media, name, license, id, developer } = plugin;
 	const { formatMessage } = useIntl();
+	const pluginLabel =
+		typeof name === 'string' ? name : id === 'DUPLICATE' ? formatMessage({ defaultMessage: 'Duplicate Project' }) : id;
+	const selectLabel = formatMessage({ defaultMessage: 'Select {name}' }, { name: pluginLabel });
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
@@ -295,6 +298,7 @@ function PluginCard(props: PluginCardProps) {
 			)}
 			<CardActionArea
 				disabled={disableCardActionClick}
+				aria-label={isGitOrDuplicateCard ? undefined : selectLabel}
 				onClick={() => {
 					onPluginSelected(plugin, 1);
 				}}
@@ -341,6 +345,13 @@ function PluginCard(props: PluginCardProps) {
 							disabled={!usePermission || inUse || beingInstalled}
 							loading={beingInstalled}
 							onClick={() => onPluginSelected(plugin, 1)}
+							aria-label={
+								typeof useLabel === 'string'
+									? formatMessage({ defaultMessage: '{action} {name}' }, { action: useLabel, name: pluginLabel })
+									: useLabel
+										? undefined
+										: formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })
+							}
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
@@ -353,6 +364,10 @@ function PluginCard(props: PluginCardProps) {
 							color: (theme) => theme.palette.text.secondary,
 							flex: 1
 						}}
+						aria-label={formatMessage(
+							{ defaultMessage: '{more} {name}' },
+							{ more: formatMessage(messages.more), name: pluginLabel }
+						)}
 						onClick={() => onDetails(plugin)}
 					>
 						{formatMessage(messages.more)}

@@ -329,7 +329,7 @@ export function PreviewComponentsPanel() {
 												secondaryAction={
 													<IconButton
 														edge="end"
-														aria-label="delete"
+														aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: type.name })}
 														size="small"
 														onClick={(e) => onMenuButtonClickHandler(e, type)}
 													>

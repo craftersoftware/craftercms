@@ -20,6 +20,7 @@ import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import ChevronRounded from '@mui/icons-material/ChevronRightRounded';
 import React from 'react';
+import { useIntl } from 'react-intl';
 import SystemIcon, { SystemIconDescriptor } from '../SystemIcon';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
 import TranslationOrText from '../../models/TranslationOrText';
@@ -43,34 +44,43 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 		onSecondaryActionClick,
 		...listItemButtonProps
 	} = props;
+	const { formatMessage } = useIntl();
+	const translatedTitle = usePossibleTranslation(title);
 	return (
-		<ListItemButton
-			component={ListItem}
-			{...listItemButtonProps}
-			onClick={onClick}
+		<ListItem
+			disablePadding
 			secondaryAction={
 				onSecondaryActionClick ? (
-					<IconButton size="small" onClick={onSecondaryActionClick}>
+					<IconButton
+						size="small"
+						aria-label={formatMessage({ defaultMessage: 'Open {title}' }, { title: translatedTitle })}
+						onClick={(event) => {
+							event.stopPropagation();
+							onSecondaryActionClick();
+						}}
+					>
 						{secondaryActionIcon}
 					</IconButton>
 				) : null
 			}
 		>
-			{icon && (
-				<ListItemIcon>
-					<SystemIcon icon={icon} fontIconProps={{ fontSize: 'small' }} />
-				</ListItemIcon>
-			)}
-			<ListItemText
-				primary={usePossibleTranslation(title)}
-				secondary={subtitle}
-				slotProps={{
-					primary: { noWrap: true },
-					secondary: { noWrap: true }
-				}}
-			/>
-			{!onSecondaryActionClick && <ChevronRounded />}
-		</ListItemButton>
+			<ListItemButton {...listItemButtonProps} onClick={onClick}>
+				{icon && (
+					<ListItemIcon>
+						<SystemIcon icon={icon} fontIconProps={{ fontSize: 'small' }} />
+					</ListItemIcon>
+				)}
+				<ListItemText
+					primary={translatedTitle}
+					secondary={subtitle}
+					slotProps={{
+						primary: { noWrap: true },
+						secondary: { noWrap: true }
+					}}
+				/>
+				{!onSecondaryActionClick && <ChevronRounded />}
+			</ListItemButton>
+		</ListItem>
 	);
 }
 

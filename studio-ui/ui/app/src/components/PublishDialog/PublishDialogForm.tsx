@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import TextFieldWithMax from '../TextFieldWithMax';
@@ -109,6 +109,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 
 	const siteId = useActiveSiteId();
 	const { formatMessage } = useIntl();
+	const schedulingLabelId = useId();
+	const publishingTargetLabelId = useId();
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const [publishingTargetsStatus, setPublishingTargetsStatus] = useState('Loading');
 	const [published, setPublished] = useState<boolean>(null);
@@ -199,7 +201,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 									}
 								>
 									<IconButton
-										aria-label="help"
+										aria-label={formatMessage({ defaultMessage: 'More information about request approval' })}
 										size="small"
 										sx={{ ml: 1 }}
 										color={isRequestPublish ? 'warning' : undefined}
@@ -216,11 +218,16 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				)}
 			</Box>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
-				<FormLabel component="legend">
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
+				<FormLabel component="legend" id={schedulingLabelId}>
 					<FormattedMessage defaultMessage="Scheduling" />
 				</FormLabel>
 				<RadioGroup
+					aria-labelledby={schedulingLabelId}
 					value={formState.scheduling}
 					onChange={onInputChange}
 					name="scheduling"
@@ -296,13 +303,18 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				</Collapse>
 			</FormControl>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
-				<FormLabel component="legend">
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
+				<FormLabel component="legend" id={publishingTargetLabelId}>
 					<FormattedMessage defaultMessage="Publishing Target" />
 				</FormLabel>
 				{publishingTargets ? (
 					publishingTargets.length ? (
 						<RadioGroup
+							aria-labelledby={publishingTargetLabelId}
 							value={formState.publishingTarget}
 							onChange={onInputChange}
 							name="publishingTarget"

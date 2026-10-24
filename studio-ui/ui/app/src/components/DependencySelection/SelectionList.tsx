@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useId, useMemo } from 'react';
 import { ContentItem } from '../../models/Item';
 import { useLocale } from '../../hooks/useLocale';
 import ListItem from '@mui/material/ListItem';
@@ -35,7 +35,6 @@ import Button from '@mui/material/Button';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 
 import LookupTable from '../../models/LookupTable';
-import ListItemButton from '@mui/material/ListItemButton';
 
 export interface SelectionListProps {
 	title: ReactNode;
@@ -48,7 +47,7 @@ export interface SelectionListProps {
 	selectedItems?: LookupTable<boolean>;
 	disabled?: boolean; // Entire Selection List disabled
 	disabledPaths?: LookupTable<true>; // Presence table of disabled paths
-	onItemClicked?(event: React.MouseEvent, path: string): void;
+	onItemClicked?(event: React.MouseEvent | null, path: string): void;
 	onSelectAllClicked?(event: React.ChangeEvent, checked: boolean): void;
 	onEditClick?(event: React.MouseEvent, path: string): void;
 }
@@ -72,6 +71,8 @@ export function SelectionList(props: SelectionListProps) {
 
 	const locale = useLocale();
 	const { formatMessage } = useIntl();
+	const titleId = useId();
+	const selectAllLabelId = useId();
 	const isAllChecked = useMemo(
 		() => (selectedItems ? !paths?.some((path) => !selectedItems[path]) : null),
 		[paths, selectedItems]
@@ -92,12 +93,34 @@ export function SelectionList(props: SelectionListProps) {
 						indeterminate={isIndeterminate}
 						checked={isAllChecked || isIndeterminate || !onSelectAllClicked}
 						onChange={onSelectAllClicked}
+						slotProps={{
+							input: {
+								'aria-labelledby': `${selectAllLabelId} ${titleId}`
+							}
+						}}
 					/>
 				</ListItemIcon>
 				<ListItemText
 					primary={
 						<>
-							<Typography variant="subtitle1" component="h2">
+							<Box
+								component="span"
+								id={selectAllLabelId}
+								sx={{
+									border: 0,
+									clip: 'rect(0 0 0 0)',
+									height: '1px',
+									margin: '-1px',
+									overflow: 'hidden',
+									padding: 0,
+									position: 'absolute',
+									width: '1px',
+									whiteSpace: 'nowrap'
+								}}
+							>
+								{formatMessage({ defaultMessage: 'Select all' })}
+							</Box>
+							<Typography id={titleId} variant="subtitle1" component="h2">
 								{title}
 							</Typography>
 							{subtitle ? (
@@ -131,13 +154,14 @@ export function SelectionList(props: SelectionListProps) {
 											color="primary"
 											edge="start"
 											checked={!!selectedItems[item.path]}
-											tabIndex={-1}
 											disableRipple
 											slotProps={{
 												input: {
-													'aria-labelledby': item.path
+													'aria-labelledby': labelId
 												}
 											}}
+											onClick={(event) => event.stopPropagation()}
+											onChange={() => onItemClicked?.(null, item.path)}
 											disabled={disabled || disabledPaths[item.path]}
 										/>
 									</ListItemIcon>
@@ -240,19 +264,20 @@ export function SelectionList(props: SelectionListProps) {
 							</>
 						);
 
-						if (onItemClicked) {
-							return (
-								<ListItemButton
-									dense
-									key={item.path}
-									disabled={disabled || disabledPaths[item.path]}
-									onClick={(e) => onItemClicked(e, item.path)}
-									children={listItemComponentChildren}
-								/>
-							);
-						} else {
-							return <ListItem dense key={item.path} children={listItemComponentChildren} />;
-						}
+						const itemDisabled = disabled || disabledPaths[item.path];
+						// The row stays a non-interactive list item so the checkbox is not nested in a button.
+						return (
+							<ListItem
+								dense
+								key={item.path}
+								onClick={onItemClicked && !itemDisabled ? (e) => onItemClicked(e, item.path) : undefined}
+								sx={{
+									...(onItemClicked && !itemDisabled ? { cursor: 'pointer' } : {}),
+									...(itemDisabled ? { opacity: 0.38 } : {})
+								}}
+								children={listItemComponentChildren}
+							/>
+						);
 					})}
 				</List>
 			) : (
@@ -268,13 +293,14 @@ export function SelectionList(props: SelectionListProps) {
 												color="primary"
 												edge="start"
 												checked={Boolean(selectedItems[path])}
-												tabIndex={-1}
 												disableRipple
 												slotProps={{
 													input: {
-														'aria-labelledby': path
+														'aria-labelledby': labelId
 													}
 												}}
+												onClick={(event) => event.stopPropagation()}
+												onChange={() => onItemClicked?.(null, path)}
 												disabled={disabled || disabledPaths[path]}
 											/>
 										</ListItemIcon>
@@ -293,7 +319,10 @@ export function SelectionList(props: SelectionListProps) {
 										<ListItemSecondaryAction>
 											<Button
 												color="primary"
-												onClick={(e) => onEditClick(e, path)}
+												onClick={(e) => {
+													e.stopPropagation();
+													onEditClick(e, path);
+												}}
 												size="small"
 												sx={{
 													marginLeft: 'auto',
@@ -308,19 +337,19 @@ export function SelectionList(props: SelectionListProps) {
 								</>
 							);
 
-							if (onItemClicked) {
-								return (
-									<ListItemButton
-										dense
-										key={path}
-										disabled={disabled || disabledPaths[path]}
-										onClick={(e) => onItemClicked(e, path)}
-										children={listItemComponentChildren}
-									/>
-								);
-							} else {
-								return <ListItem key={path} dense children={listItemComponentChildren} />;
-							}
+							const pathDisabled = disabled || disabledPaths[path];
+							return (
+								<ListItem
+									dense
+									key={path}
+									onClick={onItemClicked && !pathDisabled ? (e) => onItemClicked(e, path) : undefined}
+									sx={{
+										...(onItemClicked && !pathDisabled ? { cursor: 'pointer' } : {}),
+										...(pathDisabled ? { opacity: 0.38 } : {})
+									}}
+									children={listItemComponentChildren}
+								/>
+							);
 						})
 					) : (
 						<Box

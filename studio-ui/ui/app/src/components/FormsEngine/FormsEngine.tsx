@@ -1211,22 +1211,40 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={<FormattedMessage defaultMessage="Miminize" />}>
-									<IconButton size="small" onClick={props.onMinimize}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Minimize' })}>
+									<IconButton
+										size="small"
+										onClick={props.onMinimize}
+										aria-label={formatMessage({ defaultMessage: 'Minimize' })}
+									>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
-								<Tooltip title={<FormattedMessage defaultMessage="Maximize" />}>
-									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
+								<Tooltip
+									title={formatMessage(
+										isFullScreen ? { defaultMessage: 'Exit full screen' } : { defaultMessage: 'Maximize' }
+									)}
+								>
+									<IconButton
+										size="small"
+										onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
+										aria-label={formatMessage(
+											isFullScreen ? { defaultMessage: 'Exit full screen' } : { defaultMessage: 'Maximize' }
+										)}
+									>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
-								<Tooltip title={<FormattedMessage defaultMessage="Close" />}>
-									<IconButton size="small" onClick={handleClose}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Close' })}>
+									<IconButton
+										size="small"
+										onClick={handleClose}
+										aria-label={formatMessage({ defaultMessage: 'Close' })}
+									>
 										<Close />
 									</IconButton>
 								</Tooltip>
@@ -1247,7 +1265,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 					<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
 						<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
 							{useCollapsedToC ? (
-								<IconButton size="small" onClick={handleOpenDrawerSidebar}>
+								<IconButton
+									size="small"
+									onClick={handleOpenDrawerSidebar}
+									aria-label={formatMessage({ defaultMessage: 'Open table of contents' })}
+								>
 									<MenuRounded />
 								</IconButton>
 							) : (

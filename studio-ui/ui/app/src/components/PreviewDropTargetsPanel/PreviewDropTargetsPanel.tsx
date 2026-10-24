@@ -206,8 +206,13 @@ export function PreviewDropTargetsPanel() {
 								</Select>
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
-								<Tooltip title={<FormattedMessage defaultMessage="Cancel selection" />}>
-									<IconButton edge="end" sx={{ ml: 0.625 }} onClick={() => resetState()}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Cancel selection' })}>
+									<IconButton
+										edge="end"
+										sx={{ ml: 0.625 }}
+										onClick={() => resetState()}
+										aria-label={formatMessage({ defaultMessage: 'Cancel selection' })}
+									>
 										<CloseRoundedIcon />
 									</IconButton>
 								</Tooltip>

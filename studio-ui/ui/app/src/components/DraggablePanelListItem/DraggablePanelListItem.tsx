@@ -15,6 +15,7 @@
  */
 
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Avatar from '@mui/material/Avatar';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
@@ -50,57 +51,67 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 	} = props;
 	const hasMenu = Boolean(onMenu);
 	const theme = useTheme();
+	const { formatMessage } = useIntl();
 	const { backgroundColor, textColor } = getAvatarWithIconColors(avatarColorBase ?? primaryText, theme, darken);
 	const [over, setOver] = useState(false);
 	return (
-		<ListItemButton
-			role="option"
-			component={ListItem}
-			disableRipple
-			key={secondaryText}
-			draggable
-			onDragStart={onDragStart}
-			onDragEnd={onDragEnd}
+		<ListItem
+			disablePadding
 			onMouseEnter={() => setOver(true)}
 			onMouseLeave={() => setOver(false)}
-			sx={{
-				pl: 1.5,
-				pr: hasMenu ? 6 : undefined,
-				border: `1px solid ${isBeingDragged ? backgroundColor : 'transparent'}`,
-				borderRadius: isBeingDragged ? 2 : 0,
-				cursor: isBeingDragged ? 'grabbing' : 'grab'
-			}}
 			secondaryAction={
 				hasMenu ? (
-					<IconButton edge="end" onClick={onMenu} size="small">
+					<IconButton
+						edge="end"
+						onClick={onMenu}
+						size="small"
+						aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
+					>
 						<MoreVertRounded />
 					</IconButton>
 				) : null
 			}
+			sx={{
+				border: `1px solid ${isBeingDragged ? backgroundColor : 'transparent'}`,
+				borderRadius: isBeingDragged ? 2 : 0
+			}}
 		>
-			<ListItemAvatar sx={{ minWidth: 0 }}>
-				<Avatar
-					alt=""
-					src={avatarSrc}
-					sx={{
-						mr: 1.5,
-						width: 30,
-						height: 30,
-						backgroundColor: over || avatarSrc ? 'transparent' : backgroundColor,
-						transition: 'background-color 0.25s ease-in-out'
-					}}
-				>
-					<DragIndicatorRounded
-						fontSize="small"
+			<ListItemButton
+				role="option"
+				disableRipple
+				draggable
+				onDragStart={onDragStart}
+				onDragEnd={onDragEnd}
+				sx={{
+					pl: 1.5,
+					pr: hasMenu ? 6 : undefined,
+					cursor: isBeingDragged ? 'grabbing' : 'grab'
+				}}
+			>
+				<ListItemAvatar sx={{ minWidth: 0 }}>
+					<Avatar
+						alt=""
+						src={avatarSrc}
 						sx={{
-							color: over ? backgroundColor : textColor,
+							mr: 1.5,
+							width: 30,
+							height: 30,
+							backgroundColor: over || avatarSrc ? 'transparent' : backgroundColor,
 							transition: 'color 0.25s ease-in-out'
 						}}
-					/>
-				</Avatar>
-			</ListItemAvatar>
-			<ListItemText primary={primaryText} secondary={secondaryText} />
-		</ListItemButton>
+					>
+						<DragIndicatorRounded
+							fontSize="small"
+							sx={{
+								color: over ? backgroundColor : textColor,
+								transition: 'color 0.25s ease-in-out'
+							}}
+						/>
+					</Avatar>
+				</ListItemAvatar>
+				<ListItemText primary={primaryText} secondary={secondaryText} />
+			</ListItemButton>
+		</ListItem>
 	);
 }
 

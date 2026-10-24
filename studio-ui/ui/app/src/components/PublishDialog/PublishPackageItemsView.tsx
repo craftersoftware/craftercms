@@ -229,7 +229,10 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 														e.stopPropagation();
 														onContextMenuOpen?.(e, path);
 													}}
-													aria-label={formatMessage({ defaultMessage: 'Options' })}
+													aria-label={formatMessage(
+														{ defaultMessage: 'Options for {name}' },
+														{ name: itemMap[path].label || path }
+													)}
 												>
 													<MoreVertRounded />
 												</IconButton>
@@ -248,6 +251,14 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 																size="small"
 																disabled={!itemMap[path].canRequestPublish}
 																checked={selectedDependenciesMap[path]}
+																slotProps={{
+																	input: {
+																		'aria-label': formatMessage(
+																			{ defaultMessage: 'Include {name}' },
+																			{ name: itemMap[path].label || path }
+																		)
+																	}
+																}}
 																onChange={(e, checked) => onCheckboxChange?.(e, checked, path)}
 															/>
 														</span>
