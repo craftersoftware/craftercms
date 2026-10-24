@@ -20,7 +20,7 @@ import { FormattedMessage } from 'react-intl';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import Button from '@mui/material/Button';
 import { USER_PASSWORD_MAX_LENGTH, USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
-import { PartialSxRecord } from '../../models';
+import type { PartialSxRecord } from '../../models';
 
 export type LogInFormClassKey = 'username' | 'password' | 'submit' | 'recover';
 
@@ -39,6 +39,9 @@ export type LogInFormProps = PropsWithChildren<{
 	onRecover?: Function;
 	xsrfParamName?: string;
 	xsrfToken?: string;
+	/** Credential failure: both fields are invalid and point at the alert via `credentialsErrorId`. */
+	invalidCredentials?: boolean;
+	credentialsErrorId?: string;
 }>;
 
 export function LogInForm(props: LogInFormProps) {
@@ -57,8 +60,12 @@ export function LogInForm(props: LogInFormProps) {
 		method = 'post',
 		onRecover,
 		xsrfParamName,
-		xsrfToken
+		xsrfToken,
+		invalidCredentials = false,
+		credentialsErrorId
 	} = props;
+	const credentialsDescribedBy =
+		invalidCredentials && credentialsErrorId ? { 'aria-describedby': credentialsErrorId } : undefined;
 	return (
 		<form action={action} method={method} onSubmit={onSubmit}>
 			{children}
@@ -68,6 +75,7 @@ export function LogInForm(props: LogInFormProps) {
 				fullWidth
 				autoFocus={enableUsernameInput && !Boolean(username)}
 				disabled={!enableUsernameInput}
+				error={invalidCredentials}
 				type="text"
 				value={username}
 				onChange={(e: any) => onSetUsername?.(e.target.value)}
@@ -89,7 +97,9 @@ export function LogInForm(props: LogInFormProps) {
 						}
 					},
 					htmlInput: {
-						maxLength: USER_USERNAME_MAX_LENGTH
+						maxLength: USER_USERNAME_MAX_LENGTH,
+						autoComplete: 'username',
+						...credentialsDescribedBy
 					}
 				}}
 			/>
@@ -98,6 +108,7 @@ export function LogInForm(props: LogInFormProps) {
 				name="password"
 				fullWidth
 				autoFocus={!enableUsernameInput || Boolean(username)}
+				error={invalidCredentials}
 				value={password}
 				onChange={(e: any) => onSetPassword?.(e.target.value)}
 				className={['last-before-button', classes?.password].join(' ')}
@@ -120,7 +131,9 @@ export function LogInForm(props: LogInFormProps) {
 						}
 					},
 					htmlInput: {
-						maxLength: USER_PASSWORD_MAX_LENGTH
+						maxLength: USER_PASSWORD_MAX_LENGTH,
+						autoComplete: 'current-password',
+						...credentialsDescribedBy
 					}
 				}}
 			/>

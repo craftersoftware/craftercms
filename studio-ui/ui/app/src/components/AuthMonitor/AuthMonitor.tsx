@@ -39,6 +39,8 @@ import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
 
+const authMonitorCredentialsErrorId = 'authMonitorCredentialsError';
+
 const translations = defineMessages({
 	sessionExpired: {
 		id: 'authMonitor.sessionExpiredMessage',
@@ -111,6 +113,7 @@ interface AuthMonitorBodyProps {
 function AuthMonitorBody(props: AuthMonitorBodyProps) {
 	const { authoringUrl, username, isSSO, dispatch, formatMessage } = props;
 	const { error, isFetching } = useSelection((state) => state.auth);
+	const credentialsError = error?.code === INCORRECT_CREDENTIALS_ERROR_CODE;
 	const [password, setPassword] = useState<string>('');
 	const [ssoButtonClicked, setSSOButtonClicked] = useState(false);
 	const styles: CSSProperties = isFetching ? { visibility: 'hidden' } : {};
@@ -133,13 +136,15 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 			<DialogContent sx={{ width: '400px' }}>
 				<>
 					{error ? (
-						error.code === INCORRECT_CREDENTIALS_ERROR_CODE ? (
+						credentialsError ? (
 							<Typography
+								id={authMonitorCredentialsErrorId}
 								variant="body2"
 								role="alert"
 								sx={(theme) => ({
 									backgroundColor: palette.red.tint,
-									color: palette.white,
+									// #000 on #FF6961 is 7.45:1. #fff on #FF6961 is 2.82:1 (below the 4.5:1 text minimum).
+									color: palette.black,
 									marginBottom: theme.spacing(2),
 									padding: theme.spacing(1),
 									borderRadius: theme.spacing(1),
@@ -149,7 +154,7 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 									lineHeight: 1.7,
 									'& .MuiSvgIcon-root': {
 										marginRight: theme.spacing(0.5),
-										color: palette.white
+										color: palette.black
 									}
 								})}
 							>
@@ -180,6 +185,8 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 							onSubmit={onSubmit}
 							password={password}
 							onSetPassword={setPassword}
+							invalidCredentials={credentialsError}
+							credentialsErrorId={authMonitorCredentialsErrorId}
 						/>
 					)}
 				</>
