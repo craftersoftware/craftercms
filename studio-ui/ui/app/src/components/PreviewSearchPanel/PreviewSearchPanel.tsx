@@ -83,8 +83,9 @@ interface SearchResultsProps {
 
 function SearchResults(props: SearchResultsProps) {
 	const { items, contentInstanceLookup, onDragStart, onDragEnd } = props;
+	const { formatMessage } = useIntl();
 	return (
-		<List>
+		<List aria-label={formatMessage({ defaultMessage: 'Search results' })}>
 			{items.map((item: SearchItem) => (
 				<DraggablePanelListItem
 					key={item.path}

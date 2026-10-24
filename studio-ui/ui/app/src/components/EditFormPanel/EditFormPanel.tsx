@@ -121,19 +121,15 @@ export function EditFormPanel(props: EditFormPanelProps) {
 			anchorReference="anchorPosition"
 			anchorPosition={props.open ? getAnchorPosition() : null}
 		>
-			<div>
-				{selected ? (
-					<EditFormPanelBody
-						models={models}
-						selected={selected}
-						hierarchyMap={hierarchyMap}
-						modelIdByPath={modelIdByPath}
-						onDismiss={props.onDismiss}
-					/>
-				) : (
-					''
-				)}
-			</div>
+			{selected ? (
+				<EditFormPanelBody
+					models={models}
+					selected={selected}
+					hierarchyMap={hierarchyMap}
+					modelIdByPath={modelIdByPath}
+					onDismiss={props.onDismiss}
+				/>
+			) : null}
 		</Menu>
 	);
 }
@@ -233,7 +229,7 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 
 	return (
 		<>
-			<Typography variant="caption" style={{ padding: '0 16px 5px' }} component="p">
+			<Typography variant="caption" component="li" role="presentation" style={{ padding: '0 16px 5px' }}>
 				{title}
 			</Typography>
 			<MenuItem onClick={() => openDialog('form')}>{formatMessage(translations.openComponentForm)}</MenuItem>

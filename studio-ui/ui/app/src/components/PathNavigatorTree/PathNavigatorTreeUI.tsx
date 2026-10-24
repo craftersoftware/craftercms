@@ -49,7 +49,7 @@ export interface PathNavigatorTreeUIProps extends Pick<
 	isRootPathMissing: boolean;
 	itemsByPath: LookupTable<ContentItem>;
 	onIconClick(path: string): void;
-	onLabelClick(event: React.MouseEvent<Element, MouseEvent>, path: string): void;
+	onLabelClick(event: React.MouseEvent<Element> | React.KeyboardEvent<Element>, path: string): void;
 	onChangeCollapsed(collapsed: boolean): void;
 	onOpenItemMenu(element: Element, path: string): void;
 	onHeaderButtonClick(element: Element): void;
@@ -144,7 +144,18 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 				/>
 			) : (
 				<AccordionDetails className={props.classes?.body} sx={{ padding: 0, flexDirection: 'column', ...sxs?.body }}>
-					<SimpleTreeView expandedItems={expandedNodes} disableSelection>
+					<SimpleTreeView
+						aria-label={typeof title === 'string' ? title : undefined}
+						expandedItems={expandedNodes}
+						// Label activation (open/preview) stays on the item. The icon container expands.
+						expansionTrigger="iconContainer"
+						disableSelection
+						onItemExpansionToggle={(_event, itemId) => {
+							if (!itemId.endsWith('::__more__')) {
+								onIconClick(itemId);
+							}
+						}}
+					>
 						<PathNavigatorTreeItem
 							path={rootPath}
 							active={active}
