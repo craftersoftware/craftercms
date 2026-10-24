@@ -16,6 +16,7 @@
 
 import type { TItem } from './SortableList';
 import { sortableListActionProcessor, SortAction } from '../lib/sortableListUtil';
+import { useIntl } from 'react-intl';
 import List from '@mui/material/List';
 import { ListItem } from '@mui/material';
 import ListItemText from '@mui/material/ListItemText';
@@ -35,8 +36,19 @@ export interface TouchSortableListProps<T = unknown> {
 }
 
 export function TouchSortableList({ items, onChange, selectedItemId }: TouchSortableListProps) {
+	const { formatMessage } = useIntl();
 	const handleMove = (action: SortAction, moveToEdge: boolean, index: number) =>
 		sortableListActionProcessor(action, moveToEdge, items, index, onChange);
+	const label = (id: 'up' | 'down' | 'top' | 'bottom', name: string) =>
+		formatMessage(
+			{
+				up: { defaultMessage: 'Move {name} up' },
+				down: { defaultMessage: 'Move {name} down' },
+				top: { defaultMessage: 'Move {name} to top' },
+				bottom: { defaultMessage: 'Move {name} to bottom' }
+			}[id],
+			{ name }
+		);
 	return (
 		<List>
 			{items.map((item, index) => (
@@ -53,16 +65,27 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 							>
 								<Typography>{item.value}</Typography>
 								<Box sx={{ display: 'flex' }}>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', false, index)}>
+									<IconButton
+										color="primary"
+										disabled={index === 0}
+										aria-label={label('up', item.value)}
+										onClick={() => handleMove('up', false, index)}
+									>
 										<KeyboardArrowUpRounded />
 									</IconButton>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', true, index)}>
+									<IconButton
+										color="primary"
+										disabled={index === 0}
+										aria-label={label('top', item.value)}
+										onClick={() => handleMove('up', true, index)}
+									>
 										<KeyboardDoubleArrowUpRounded />
 									</IconButton>
 									<Divider orientation="vertical" flexItem sx={{ height: 15, alignSelf: 'center' }} />
 									<IconButton
 										color="primary"
 										disabled={index === items.length - 1}
+										aria-label={label('down', item.value)}
 										onClick={() => handleMove('down', false, index)}
 									>
 										<KeyboardArrowDownRounded />
@@ -70,6 +93,7 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 									<IconButton
 										color="primary"
 										disabled={index === items.length - 1}
+										aria-label={label('bottom', item.value)}
 										onClick={() => handleMove('down', true, index)}
 									>
 										<KeyboardDoubleArrowDownRounded />

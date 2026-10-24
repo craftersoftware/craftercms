@@ -29,6 +29,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MoreRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
+import DriveFileMoveOutlinedIcon from '@mui/icons-material/DriveFileMoveOutlined';
 import {
 	deleteItem,
 	duplicateItem,
@@ -41,6 +42,7 @@ import {
 	insertItem,
 	isInheritedField,
 	modelHierarchyMap,
+	moveItem,
 	sortDownItem,
 	sortUpItem
 } from '../contentController';
@@ -51,7 +53,14 @@ import { extractCollection, findParentModelId } from '@craftercms/studio-ui/util
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
 import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
-import { exists, findContainerRecord, getById, getReferentialEntries, runValidation } from '../iceRegistry';
+import {
+	exists,
+	findContainerRecord,
+	getById,
+	getRecordDropTargets,
+	getReferentialEntries,
+	runValidation
+} from '../iceRegistry';
 import { post } from '../utils/communicator';
 import { requestEdit, snackGuestMessage } from '@craftercms/studio-ui/state/actions/preview';
 import Menu from '@mui/material/Menu';
@@ -66,7 +75,8 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { appendIndexForDropZone, isSymmetricIndex } from '../utils/keyboardPlacement';
 
 export interface ZoneMenuProps {
 	record: ElementRecord;
@@ -92,7 +102,10 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		: (models[modelId].craftercms.path ?? models[parentModelId].craftercms.path);
 
 	const trashButtonRef = React.useRef(undefined);
+	const menuRef = React.useRef<HTMLDivElement>(null);
 	const [showTrashConfirmation, setShowTrashConfirmation] = useState<boolean>(false);
+	const [moveToAnchor, setMoveToAnchor] = useState<HTMLElement | null>(null);
+	const { formatMessage } = useIntl();
 
 	const iceRecord = getById(record.iceIds[0]);
 	const recordType = iceRecord.recordType;
@@ -244,6 +257,37 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		isItemFile
 	]);
 	const showItemMenuButton = ['node-selector-item', 'component', 'page'].includes(recordType);
+	const zoneLabel = record.label || field?.name || contentType?.name || '';
+	const controlLabel = (action: string) => (zoneLabel ? `${action}: ${zoneLabel}` : action);
+	const moveTargets = useMemo(() => {
+		if (!isMovable || !nodeSelectorItemRecord) {
+			return [] as Array<{ iceId: number; label: string }>;
+		}
+		const origin = findContainerRecord(
+			nodeSelectorItemRecord.modelId,
+			nodeSelectorItemRecord.fieldId,
+			nodeSelectorItemRecord.index
+		);
+		return getRecordDropTargets(nodeSelectorItemRecord.id).flatMap((target) => {
+			if (target.id === origin?.id) {
+				return [];
+			}
+			const targetIndex = appendIndexForDropZone(target);
+			if (!isSymmetricIndex(target.fieldId, targetIndex)) {
+				return [];
+			}
+			const length = typeof targetIndex === 'number' ? targetIndex : parseInt(popPiece(String(targetIndex)), 10);
+			if (runValidation(target.id, 'maxCount', [Number.isNaN(length) ? 0 : length])) {
+				return [];
+			}
+			const entry = fromICEId(target.id);
+			if (!entry) {
+				return [];
+			}
+			const labeled = get(entry.id);
+			return [{ iceId: target.id, label: labeled?.label || entry.label || target.fieldId }];
+		});
+	}, [isMovable, nodeSelectorItemRecord]);
 
 	const store = useStore();
 	const getItemData = () => {
@@ -437,6 +481,23 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		post(unlockItem({ path }));
 	};
 
+	const onMoveTo = (targetIceId: number) => {
+		setMoveToAnchor(null);
+		const source = nodeSelectorItemRecord;
+		const target = getById(targetIceId);
+		if (!source || !target) {
+			return;
+		}
+		const targetIndex = appendIndexForDropZone(target);
+		if (!isSymmetricIndex(source.fieldId, source.index) || !isSymmetricIndex(target.fieldId, targetIndex)) {
+			return;
+		}
+		execOperation(() => {
+			moveItem(source.modelId, source.fieldId, source.index, target.modelId, target.fieldId, targetIndex);
+		});
+		onCancel();
+	};
+
 	// endregion
 
 	const refs = useRef({ onMoveUp, onMoveDown, onTrash, doTrash, onCancel, isFirstItem, isLastItem });
@@ -469,12 +530,18 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			}
 		};
 		const onClickOut = (e: MouseEvent) => {
+			const target = e.target as Element | null;
+			// Zone keyboard buttons dispatch their own click. Cancelling here would drop that selection.
+			if (target?.closest?.('[data-craftercms-ice-control]')) {
+				return;
+			}
 			e.stopPropagation();
 			e.preventDefault();
 			refs.current.onCancel();
 		};
 		document.addEventListener('keydown', onKeyDown, false);
 		document.addEventListener('click', onClickOut, false);
+		menuRef.current?.querySelector('button')?.focus();
 		return () => {
 			document.removeEventListener('keydown', onKeyDown, false);
 			document.removeEventListener('click', onClickOut, false);
@@ -482,18 +549,26 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	}, []);
 
 	return (
-		<>
+		<Box ref={menuRef} data-craftercms-zone-menu="" sx={{ display: 'contents' }}>
 			<Box sx={{ display: 'flex' }}>
 				{hasEditAction && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />} key="edit">
-						<UltraStyledIconButton size="small" onClick={onEdit}>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(formatMessage({ id: 'words.edit', defaultMessage: 'Edit' }))}
+							onClick={onEdit}
+						>
 							<PencilIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isLockedByCurrentUser && (
-					<UltraStyledTooltip title="Unlock" key="unlock">
-						<UltraStyledIconButton size="small" onClick={onUnlock}>
+					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.unlock" defaultMessage="Unlock" />} key="unlock">
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(formatMessage({ id: 'zoneMenu.unlock', defaultMessage: 'Unlock' }))}
+							onClick={onUnlock}
+						>
 							<UnlockIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -505,7 +580,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editTemplate" defaultMessage="Edit template" />}
 								key="editTemplate"
 							>
-								<UltraStyledIconButton size="small" onClick={onEditTemplate}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={controlLabel(
+										formatMessage({ id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' })
+									)}
+									onClick={onEditTemplate}
+								>
 									<FreemarkerIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -515,7 +596,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editController" defaultMessage="Edit controller" />}
 								key="editController"
 							>
-								<UltraStyledIconButton size="small" onClick={onEditController}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={controlLabel(
+										formatMessage({ id: 'zoneMenu.editController', defaultMessage: 'Edit controller' })
+									)}
+									onClick={onEditController}
+								>
 									<GroovyIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -527,7 +614,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.addItem" defaultMessage="Add new item" />}
 						key="addNewItem"
 					>
-						<UltraStyledIconButton size="small" onClick={onAddRepeatItem}>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(formatMessage({ id: 'zoneMenu.addItem', defaultMessage: 'Add new item' }))}
+							onClick={onAddRepeatItem}
+						>
 							<AddCircleOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -537,7 +628,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.duplicateItem" defaultMessage="Duplicate item" />}
 						key="duplicateItem"
 					>
-						<UltraStyledIconButton size="small" onClick={onDuplicateItem}>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(
+								formatMessage({ id: 'zoneMenu.duplicateItem', defaultMessage: 'Duplicate item' })
+							)}
+							onClick={onDuplicateItem}
+						>
 							<ContentCopyRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -550,7 +647,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveUp" defaultMessage="Move up/left (← or ↑)" />}
 								key="moveUp"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveUp}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={controlLabel(
+										formatMessage({ id: 'zoneMenu.moveUp', defaultMessage: 'Move up/left (← or ↑)' })
+									)}
+									onClick={onMoveUp}
+								>
 									<ArrowUpwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -560,22 +663,63 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveDown" defaultMessage="Move down/right (→ or ↓)" />}
 								key="moveDown"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveDown}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={controlLabel(
+										formatMessage({ id: 'zoneMenu.moveDown', defaultMessage: 'Move down/right (→ or ↓)' })
+									)}
+									onClick={onMoveDown}
+								>
 									<ArrowDownwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
 						)
 					]}
+				{moveTargets.length > 0 && (!isLockedItem || !isEmbedded) && (
+					<UltraStyledTooltip
+						title={<FormattedMessage id="zoneMenu.moveTo" defaultMessage="Move to another zone" />}
+						key="moveTo"
+					>
+						<UltraStyledIconButton
+							size="small"
+							aria-haspopup="menu"
+							aria-expanded={Boolean(moveToAnchor)}
+							aria-label={controlLabel(
+								formatMessage({ id: 'zoneMenu.moveTo', defaultMessage: 'Move to another zone' })
+							)}
+							onClick={(event) => {
+								event.stopPropagation();
+								setMoveToAnchor(event.currentTarget);
+							}}
+						>
+							<DriveFileMoveOutlinedIcon />
+						</UltraStyledIconButton>
+					</UltraStyledTooltip>
+				)}
 				{isTrashable && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />} key="trash">
-						<UltraStyledIconButton size="small" onClick={onTrash} ref={trashButtonRef}>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(formatMessage({ id: 'zoneMenu.trash', defaultMessage: 'Trash (⌫)' }))}
+							onClick={onTrash}
+							ref={trashButtonRef}
+						>
 							<DeleteOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isMovable && (!isLockedItem || !isEmbedded) && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.move" defaultMessage="Move" />} key="move">
-						<UltraStyledIconButton size="small" draggable sx={{ cursor: 'grab' }} onDragStart={onDragStart}>
+						<UltraStyledIconButton
+							size="small"
+							draggable
+							aria-label={formatMessage(
+								{ id: 'zoneMenu.drag', defaultMessage: 'Drag {label}' },
+								{ label: zoneLabel || formatMessage({ id: 'ice.untitledZone', defaultMessage: 'Content zone' }) }
+							)}
+							sx={{ cursor: 'grab' }}
+							onDragStart={onDragStart}
+						>
 							<DragIndicatorRounded />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -584,21 +728,53 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Box sx={{ display: 'flex' }}>
 				<Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 				{showItemMenuButton && (
-					<UltraStyledTooltip
-						title={<FormattedMessage id="words.options" defaultMessage="Options" />}
-						onClick={handleRequestItemMenu}
-					>
-						<UltraStyledIconButton size="small">
+					<UltraStyledTooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={controlLabel(formatMessage({ id: 'words.options', defaultMessage: 'Options' }))}
+							onClick={handleRequestItemMenu}
+						>
 							<MoreRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}>
-					<UltraStyledIconButton size="small" onClick={onCancel}>
+					<UltraStyledIconButton
+						size="small"
+						aria-label={controlLabel(formatMessage({ id: 'zoneMenu.cancel', defaultMessage: 'Cancel (Esc)' }))}
+						onClick={onCancel}
+					>
 						<CloseRoundedIcon />
 					</UltraStyledIconButton>
 				</UltraStyledTooltip>
 			</Box>
+			<Menu
+				anchorEl={moveToAnchor}
+				open={Boolean(moveToAnchor)}
+				onClose={() => setMoveToAnchor(null)}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				sx={{ zIndex: 1501 }}
+			>
+				{moveTargets.map((target) => (
+					<MenuItem
+						key={target.iceId}
+						onClick={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+							onMoveTo(target.iceId);
+						}}
+					>
+						<UltraStyledTypography>
+							<FormattedMessage
+								id="zoneMenu.moveToZone"
+								defaultMessage="Move to {zone}"
+								values={{ zone: target.label }}
+							/>
+						</UltraStyledTypography>
+					</MenuItem>
+				))}
+			</Menu>
 			<Menu
 				anchorEl={trashButtonRef.current}
 				open={showTrashConfirmation}
@@ -636,7 +812,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledTypography>
 				</MenuItem>
 			</Menu>
-		</>
+		</Box>
 	);
 }
 

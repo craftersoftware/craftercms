@@ -62,6 +62,7 @@ import {
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
 	contentTypeDropTargetsResponse,
+	insertComponentAtDropZone,
 	instanceDragBegun,
 	instanceDragEnded,
 	snackGuestMessage,
@@ -69,6 +70,8 @@ import {
 } from '@craftercms/studio-ui/state/actions/preview';
 import { MouseEventActionObservable } from '../models/Actions';
 import { GuestState } from '../models/GuestStore';
+import ContentType from '@craftercms/studio-ui/models/ContentType';
+import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
 import { notNullOrUndefined, nullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { ElementRecord, ICEProps } from '../../models/InContextEditing';
 import * as ElementRegistry from '../../elementRegistry';
@@ -94,6 +97,7 @@ import {
 } from '../actions';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 import { getParentModelId } from '../../utils/ice';
+import { placeComponentAtDropZone } from '../../utils/keyboardPlacement';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
@@ -900,6 +904,99 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			ignoreElements()
 		);
 	},
+	// endregion
+	// region insertComponentAtDropZone
+	(
+		action$: Observable<GuestStandardAction<{ contentType: ContentType; iceId: number; instance?: ContentInstance }>>,
+		state$,
+		{ getIntl }
+	) =>
+		action$.pipe(
+			ofType(insertComponentAtDropZone.type),
+			withLatestFrom(state$),
+			switchMap(([action, state]) => {
+				const { contentType, iceId, instance } = action.payload;
+				const record = iceRegistry.getById(iceId);
+				if (!record) {
+					post(
+						snackGuestMessage({
+							level: 'suggestion',
+							message: getIntl().formatMessage({
+								id: 'keyboardPlacement.missingZone',
+								defaultMessage: 'The drop zone is no longer available.'
+							})
+						})
+					);
+					return EMPTY;
+				}
+				const models = getCachedModels();
+				const parentModelId = getParentModelId(record.modelId, models, modelHierarchyMap);
+				const path = models[record.modelId]?.craftercms.path ?? models[parentModelId]?.craftercms.path;
+				if (!path) {
+					post(
+						snackGuestMessage({
+							level: 'suggestion',
+							message: getIntl().formatMessage({
+								id: 'keyboardPlacement.missingZone',
+								defaultMessage: 'The drop zone is no longer available.'
+							})
+						})
+					);
+					return EMPTY;
+				}
+				const cachedContentItem = getCachedContentItem(path);
+				return beforeWrite$({
+					path,
+					site: state.activeSite,
+					username: state.username,
+					localItem: cachedContentItem
+				}).pipe(
+					switchMap(() => {
+						const result = placeComponentAtDropZone(iceId, contentType, instance);
+						if (result.ok === false) {
+							if (result.reason === 'max' && result.validation) {
+								post(snackGuestMessage(result.validation));
+							} else if (result.reason === 'notEditable') {
+								post(
+									snackGuestMessage({
+										level: 'suggestion',
+										message: getIntl().formatMessage({
+											id: 'keyboardPlacement.notEditable',
+											defaultMessage: 'This zone cannot be edited.'
+										})
+									})
+								);
+							} else if (result.reason === 'notAccepted') {
+								post(
+									snackGuestMessage({
+										level: 'suggestion',
+										message: getIntl().formatMessage(
+											{
+												id: 'keyboardPlacement.notAccepted',
+												defaultMessage: 'This zone does not accept {contentType}.'
+											},
+											{ contentType: contentType?.name ?? '' }
+										)
+									})
+								);
+							} else {
+								post(
+									snackGuestMessage({
+										level: 'suggestion',
+										message: getIntl().formatMessage({
+											id: 'keyboardPlacement.missingZone',
+											defaultMessage: 'The drop zone is no longer available.'
+										})
+									})
+								);
+							}
+							return EMPTY;
+						}
+						return of(startListening());
+					})
+				);
+			})
+		),
 	// endregion
 	// region startListening
 	(action$: MouseEventActionObservable) => {

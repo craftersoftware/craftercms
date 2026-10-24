@@ -26,7 +26,10 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
+import { sortableListActionProcessor, sortableListKeyDownHandler } from '../lib/sortableListUtil';
 import Tooltip from '@mui/material/Tooltip';
 import { lazy, MouseEvent as ReactMouseEvent, Suspense, useMemo, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
@@ -66,6 +69,7 @@ function getRepeatItemSummary(item: RepeatItem): string {
 
 export function Repeat(props: RepeatProps) {
 	const { field, value, setValue, readonly, autoFocus } = props;
+	const { formatMessage } = useIntl();
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
 	const handleCancelReorder = () => setSortMode(false);
@@ -78,7 +82,7 @@ export function Repeat(props: RepeatProps) {
 		nextValue.splice(index, 1);
 		setValue(nextValue);
 	};
-	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem, index: number) => {
+	const handleEditItem = (event: { stopPropagation(): void }, item: RepeatItem, index: number) => {
 		api.pushForm({
 			repeat: { fieldId: field.id, values: item, index },
 			fieldsToRender: Object.values(field.fields),
@@ -148,6 +152,14 @@ export function Repeat(props: RepeatProps) {
 									key={index}
 									divider={index !== value.length - 1}
 									onClick={(e) => handleEditItem(e, item, index)}
+									onKeyDown={
+										readonly
+											? undefined
+											: (event) =>
+													sortableListKeyDownHandler(event, value, index, setValue, (itemIndex, edit) =>
+														handleEditItem(event, value[itemIndex], itemIndex)
+													)
+									}
 								>
 									<ListItemText
 										primary={getRepeatItemTitle(item)}
@@ -163,13 +175,66 @@ export function Repeat(props: RepeatProps) {
 									/>
 									{!readonly && (
 										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
-											<Tooltip title="Edit">
-												<IconButton size="small">
+											{value.length > 1 && (
+												<>
+													<Tooltip title={<FormattedMessage defaultMessage="Move up" />}>
+														<span>
+															<IconButton
+																size="small"
+																disabled={index === 0}
+																aria-label={formatMessage(
+																	{ defaultMessage: 'Move {name} up' },
+																	{ name: getRepeatItemTitle(item) }
+																)}
+																onClick={(event) => {
+																	event.stopPropagation();
+																	sortableListActionProcessor('up', false, value, index, setValue);
+																}}
+															>
+																<ArrowUpwardRounded fontSize="small" />
+															</IconButton>
+														</span>
+													</Tooltip>
+													<Tooltip title={<FormattedMessage defaultMessage="Move down" />}>
+														<span>
+															<IconButton
+																size="small"
+																disabled={index === value.length - 1}
+																aria-label={formatMessage(
+																	{ defaultMessage: 'Move {name} down' },
+																	{ name: getRepeatItemTitle(item) }
+																)}
+																onClick={(event) => {
+																	event.stopPropagation();
+																	sortableListActionProcessor('down', false, value, index, setValue);
+																}}
+															>
+																<ArrowDownwardRounded fontSize="small" />
+															</IconButton>
+														</span>
+													</Tooltip>
+												</>
+											)}
+											<Tooltip title={<FormattedMessage defaultMessage="Edit" />}>
+												<IconButton
+													size="small"
+													aria-label={formatMessage(
+														{ defaultMessage: 'Edit {name}' },
+														{ name: getRepeatItemTitle(item) }
+													)}
+												>
 													<EditOutlined fontSize="small" />
 												</IconButton>
 											</Tooltip>
 											<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
-												<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
+												<IconButton
+													size="small"
+													aria-label={formatMessage(
+														{ defaultMessage: 'Delete {name}' },
+														{ name: getRepeatItemTitle(item) }
+													)}
+													onClick={(e) => handleRemoveItem(e, index)}
+												>
 													<DeleteOutlined fontSize="small" />
 												</IconButton>
 											</Tooltip>

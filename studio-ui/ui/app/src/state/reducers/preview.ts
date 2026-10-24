@@ -19,6 +19,7 @@ import GlobalState, { HighlightMode, PagedEntityState } from '../../models/Globa
 import {
 	allowedContentTypesUpdate,
 	clearDropTargets,
+	setDropTargetPlacement,
 	clearSelectForEdit,
 	closeToolsPanel,
 	contentTypeDropTargetsResponse,
@@ -166,7 +167,8 @@ const initialState: GlobalState['preview'] = {
 	components: componentsInitialState,
 	dropTargets: {
 		selectedContentType: null,
-		byId: null
+		byId: null,
+		placement: null
 	},
 	toolsPanel: null,
 	toolbar: {
@@ -543,12 +545,20 @@ const reducer = createReducer<GlobalState['preview']>(initialState, (builder) =>
 				byId: { ...state.dropTargets.byId, ...createLookupTable(payload.dropTargets) }
 			}
 		}))
+		.addCase(setDropTargetPlacement, (state, { payload }) => ({
+			...state,
+			dropTargets: {
+				...state.dropTargets,
+				placement: payload
+			}
+		}))
 		.addCase(clearDropTargets, (state) => ({
 			...state,
 			dropTargets: {
 				...state.dropTargets,
 				selectedContentType: null,
-				byId: null
+				byId: null,
+				placement: null
 			}
 		}))
 		.addCase(setContentTypeFilter, (state, { payload }) => ({

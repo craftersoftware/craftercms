@@ -80,7 +80,14 @@ import { getFileExtension, processPathMacros } from '../../../utils/path';
 import { ensureSingleSlash, isEmpty } from '../../../utils/string';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import FieldBox from '../components/FieldBox';
-import { isTouchDevice, KeyDownEvent, sortableListKeyDownHandler } from '../lib/sortableListUtil';
+import {
+	isTouchDevice,
+	KeyDownEvent,
+	sortableListActionProcessor,
+	sortableListKeyDownHandler
+} from '../lib/sortableListUtil';
+import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
 import { XmlKeys } from '../lib/formConsts';
@@ -186,6 +193,7 @@ function getInitialCreatePickerValue(
 
 function NodeSelector(props: NodeSelectorProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -319,12 +327,17 @@ function NodeSelector(props: NodeSelectorProps) {
 		}
 	};
 	const handleItemKeyDown = (e: KeyDownEvent, index: number) => {
+		if (readonly && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) {
+			return;
+		}
 		sortableListKeyDownHandler(
 			e,
 			value,
 			index,
-			(newList) => setValue(newList),
-			(index, edit) => handleEditItem(e, index, edit && !readonly)
+			(newList) => {
+				if (!readonly) setValue(newList);
+			},
+			(itemIndex, edit) => handleEditItem(e, itemIndex, edit && !readonly)
 		);
 	};
 	const applyDataSourceSelection = (
@@ -823,6 +836,40 @@ function NodeSelector(props: NodeSelectorProps) {
 											}
 										/>
 										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
+											{!readonly && value.length > 1 && (
+												<>
+													<Tooltip title={<FormattedMessage defaultMessage="Move up" />}>
+														<span>
+															<IconButton
+																size="small"
+																disabled={index === 0}
+																aria-label={formatMessage({ defaultMessage: 'Move {name} up' }, { name: item.value })}
+																onClick={(event) => {
+																	event.stopPropagation();
+																	sortableListActionProcessor('up', false, value, index, setValue);
+																}}
+															>
+																<ArrowUpwardRounded fontSize="small" />
+															</IconButton>
+														</span>
+													</Tooltip>
+													<Tooltip title={<FormattedMessage defaultMessage="Move down" />}>
+														<span>
+															<IconButton
+																size="small"
+																disabled={index === value.length - 1}
+																aria-label={formatMessage({ defaultMessage: 'Move {name} down' }, { name: item.value })}
+																onClick={(event) => {
+																	event.stopPropagation();
+																	sortableListActionProcessor('down', false, value, index, setValue);
+																}}
+															>
+																<ArrowDownwardRounded fontSize="small" />
+															</IconButton>
+														</span>
+													</Tooltip>
+												</>
+											)}
 											{canBeEdited ? (
 												<Tooltip title="Edit">
 													<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>

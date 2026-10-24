@@ -23,5 +23,18 @@
   "zoneMenu.moveDown": "아래/오른쪽으로 이동하세요 (→ 또는 ↓)",
   "zoneMenu.moveUp": "위/왼쪽으로 이동(← 또는 ↑)",
   "zoneMenu.trash": "쓰레기 (⌫)",
-  "zoneMenu.trashConfirmation": "{isEmbedded, select, true {삭제} other {분리하다}} 이 항목을?"
+  "zoneMenu.trashConfirmation": "{isEmbedded, select, true {삭제} other {분리하다}} 이 항목을?",
+  "ice.editZone": "{label} 편집",
+  "ice.selectToMove": "이동할 {label} 선택",
+  "ice.insertHereNamed": "{contentType}을(를) {zone}에 삽입",
+  "ice.zoneControls": "컨텍스트 내 편집",
+  "ice.untitledZone": "콘텐츠 영역",
+  "zoneMenu.moveTo": "다른 영역으로 이동",
+  "zoneMenu.moveToZone": "{zone}(으)로 이동",
+  "zoneMenu.unlock": "잠금 해제",
+  "zoneMenu.drag": "{label} 끌기",
+  "zoneMarker.dropTargetSummary": "{type} ({modes})",
+  "keyboardPlacement.notAccepted": "이 영역은 {contentType}을(를) 허용하지 않습니다.",
+  "keyboardPlacement.notEditable": "이 영역은 편집할 수 없습니다.",
+  "keyboardPlacement.missingZone": "대상 영역을 더 이상 사용할 수 없습니다."
 }

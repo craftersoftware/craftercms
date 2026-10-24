@@ -23,5 +23,18 @@
   "zoneMenu.moveDown": "Mover hacia abajo/derecha (→ o ↓)",
   "zoneMenu.moveUp": "Mover hacia arriba/izquierda (← o ↑)",
   "zoneMenu.trash": "Basura (⌫)",
-  "zoneMenu.trashConfirmation": "{isEmbedded, select, true {Borrar} other {Desasociar}} este artículo?"
+  "zoneMenu.trashConfirmation": "{isEmbedded, select, true {Borrar} other {Desasociar}} este artículo?",
+  "ice.editZone": "Editar {label}",
+  "ice.selectToMove": "Seleccionar {label} para mover",
+  "ice.insertHereNamed": "Insertar {contentType} en {zone}",
+  "ice.zoneControls": "Edición en contexto",
+  "ice.untitledZone": "Zona de contenido",
+  "zoneMenu.moveTo": "Mover a otra zona",
+  "zoneMenu.moveToZone": "Mover a {zone}",
+  "zoneMenu.unlock": "Desbloquear",
+  "zoneMenu.drag": "Arrastrar {label}",
+  "zoneMarker.dropTargetSummary": "{type} ({modes})",
+  "keyboardPlacement.notAccepted": "Esta zona no acepta {contentType}.",
+  "keyboardPlacement.notEditable": "Esta zona no se puede editar.",
+  "keyboardPlacement.missingZone": "La zona de destino ya no está disponible."
 }

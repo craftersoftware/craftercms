@@ -1,4 +1,5 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { useIntl } from 'react-intl';
 import {
 	draggable,
 	dropTargetForElements,
@@ -23,7 +24,11 @@ import ListItemButton from '@mui/material/ListItemButton';
 import Box from '@mui/material/Box';
 import { SxProps, SystemStyleObject } from '@mui/system';
 import List from '@mui/material/List';
+import IconButton from '@mui/material/IconButton';
+import KeyboardArrowUpRounded from '@mui/icons-material/KeyboardArrowUpRounded';
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
+import { sortableListActionProcessor } from '../lib/sortableListUtil';
 
 // Adapted from:
 // https://stackblitz.com/github/alexreardon/pdnd-react-tailwind
@@ -163,9 +168,24 @@ function DragPreview({ item }: { item: TItem }) {
 	);
 }
 
-function SortableItem({ item, selected, sortable = true }: { item: TItem; selected?: boolean; sortable?: boolean }) {
+function SortableItem({
+	item,
+	index,
+	count,
+	selected,
+	sortable = true,
+	onMove
+}: {
+	item: TItem;
+	index: number;
+	count: number;
+	selected?: boolean;
+	sortable?: boolean;
+	onMove(index: number, direction: 'up' | 'down', toEdge: boolean): void;
+}) {
 	const ref = useRef<HTMLDivElement | null>(null);
 	const [state, setState] = useState<ItemState>(idle);
+	const { formatMessage } = useIntl();
 	useEffect(() => {
 		const element = ref.current;
 		invariant(element);
@@ -242,28 +262,78 @@ function SortableItem({ item, selected, sortable = true }: { item: TItem; select
 			})
 		);
 	}, [item, sortable]);
+	const moveLabel = (direction: 'up' | 'down') =>
+		formatMessage(direction === 'up' ? { defaultMessage: 'Move {name} up' } : { defaultMessage: 'Move {name} down' }, {
+			name: item.value
+		});
 	return (
 		<>
-			<ListItemButton
-				ref={ref}
-				data-item-id={item.key}
-				sx={[
-					{ position: 'relative', borderRadius: 1, cursor: sortable ? 'grab' : 'default' },
-					state.type === 'is-dragging' && { opacity: 0.4 },
-					!sortable && { background: 'none !important' }
-				]}
-				selected={selected}
-			>
-				{sortable && (
-					<ListItemIcon>
-						<DragIndicator fontSize="small" />
-					</ListItemIcon>
+			<Box ref={ref} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+				<ListItemButton
+					data-item-id={item.key}
+					onKeyDown={
+						sortable && count > 1
+							? (event) => {
+									if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+										event.preventDefault();
+										event.stopPropagation();
+										onMove(index, 'up', event.shiftKey);
+									} else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+										event.preventDefault();
+										event.stopPropagation();
+										onMove(index, 'down', event.shiftKey);
+									}
+								}
+							: undefined
+					}
+					sx={[
+						{ position: 'relative', borderRadius: 1, cursor: sortable ? 'grab' : 'default', flex: 1 },
+						state.type === 'is-dragging' && { opacity: 0.4 },
+						!sortable && { background: 'none !important' }
+					]}
+					selected={selected}
+				>
+					{sortable && (
+						<ListItemIcon>
+							<DragIndicator fontSize="small" />
+						</ListItemIcon>
+					)}
+					<ListItemText primary={item.value} />
+					{state.type === 'is-dragging-over' && state.closestEdge ? (
+						<DropIndicator edge={state.closestEdge} gap={gapBetweenItems} />
+					) : null}
+				</ListItemButton>
+				{sortable && count > 1 && (
+					<Box sx={{ display: 'flex', flexShrink: 0 }}>
+						<IconButton
+							size="small"
+							aria-label={moveLabel('up')}
+							disabled={index === 0}
+							onPointerDown={(event) => event.stopPropagation()}
+							onMouseDown={(event) => event.stopPropagation()}
+							onClick={(event) => {
+								event.stopPropagation();
+								onMove(index, 'up', false);
+							}}
+						>
+							<KeyboardArrowUpRounded fontSize="small" />
+						</IconButton>
+						<IconButton
+							size="small"
+							aria-label={moveLabel('down')}
+							disabled={index === count - 1}
+							onPointerDown={(event) => event.stopPropagation()}
+							onMouseDown={(event) => event.stopPropagation()}
+							onClick={(event) => {
+								event.stopPropagation();
+								onMove(index, 'down', false);
+							}}
+						>
+							<KeyboardArrowDownRounded fontSize="small" />
+						</IconButton>
+					</Box>
 				)}
-				<ListItemText primary={item.value} />
-				{state.type === 'is-dragging-over' && state.closestEdge ? (
-					<DropIndicator edge={state.closestEdge} gap={gapBetweenItems} />
-				) : null}
-			</ListItemButton>
+			</Box>
 			{state.type === 'preview' ? createPortal(<DragPreview item={item} />, state.container) : null}
 		</>
 	);
@@ -331,14 +401,19 @@ export function SortableList({ items, onChange, selectedItemId, onlySelectedSort
 			}
 		});
 	}, [items, onChangeRef]);
+	const onMove = (index: number, direction: 'up' | 'down', toEdge: boolean) =>
+		sortableListActionProcessor(direction, toEdge, items, index, onChange);
 	return (
 		<List sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
-			{items.map((item) => (
+			{items.map((item, index) => (
 				<SortableItem
 					key={item.key}
 					item={item}
+					index={index}
+					count={items.length}
 					selected={item.key === selectedItemId}
 					sortable={onlySelectedSortable ? item.key === selectedItemId : true}
+					onMove={onMove}
 				/>
 			))}
 		</List>
