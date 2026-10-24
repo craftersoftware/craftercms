@@ -16,13 +16,16 @@
 
 import ContentType, { ValidationResult } from '@craftercms/studio-ui/models/ContentType';
 import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
+import { nullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { processPathMacros } from '@craftercms/studio-ui/utils/path';
+import { extractCollectionItem, value } from '@craftercms/studio-ui/utils/model';
 import { ICERecord } from '../models/InContextEditing';
 import { getById, getReferentialEntries, isTypeAcceptedAsByField, runValidation } from '../iceRegistry';
 import {
 	createContentInstance,
 	getCachedContentItems,
 	getCachedModels,
+	getModelIdFromInheritedField,
 	insertComponent,
 	modelHierarchyMap
 } from '../contentController';
@@ -47,6 +50,14 @@ export function appendIndexForDropZone(record: ICERecord): number | string {
 	return length;
 }
 
+export function collectionLength(targetIndex: number | string): number {
+	if (typeof targetIndex === 'number') {
+		return targetIndex;
+	}
+	const parsed = parseInt(String(targetIndex).split('.').pop(), 10);
+	return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function isSymmetricIndex(fieldId: string, index: number | string | null | undefined): boolean {
 	if (fieldId == null || index == null || `${index}` === '') {
 		return false;
@@ -54,26 +65,68 @@ export function isSymmetricIndex(fieldId: string, index: number | string | null 
 	return fieldId.split('.').length === `${index}`.split('.').length;
 }
 
-export type PlacementFailure = 'missing' | 'notEditable' | 'notAccepted' | 'max';
+/**
+ * Path to lock before writing a drop zone. Inherited fields lock the ancestor model,
+ * matching the inline-edit path in the guest drop epic.
+ */
+export function contentPathForIceRecord(record: ICERecord): string | null {
+	const models = getCachedModels();
+	const model = models[record.modelId];
+	if (!model) {
+		return null;
+	}
+	const parentModelId = getParentModelId(record.modelId, models, modelHierarchyMap);
+	const ownPath = model.craftercms.path ?? models[parentModelId]?.craftercms.path ?? null;
+	if (record.fieldId && model.craftercms.sourceMap?.[record.fieldId]) {
+		const ancestorId = getModelIdFromInheritedField(record.modelId, record.fieldId);
+		return models[ancestorId]?.craftercms.path ?? ownPath;
+	}
+	return ownPath;
+}
 
-export type PlacementResult = { ok: true } | { ok: false; reason: PlacementFailure; validation?: ValidationResult };
+export function zoneContainsInstance(record: ICERecord, instanceId: string): boolean {
+	const { model, fieldId, index, field } = getReferentialEntries(record);
+	const allowDuplicates = field?.validations?.allowDuplicates?.value ?? false;
+	if (allowDuplicates || !instanceId) {
+		return false;
+	}
+	const collection = nullOrUndefined(index) ? value(model, fieldId) : extractCollectionItem(model, fieldId, index);
+	return Array.isArray(collection) && collection.includes(instanceId);
+}
+
+export type PlacementFailure = 'missing' | 'notEditable' | 'notAccepted' | 'max' | 'duplicate';
+
+export type PlacementFailureResult = {
+	ok: false;
+	reason: PlacementFailure;
+	validation?: ValidationResult;
+};
+
+export type PlacementSuccess = {
+	ok: true;
+	path: string;
+	modelId: string;
+	fieldId: string;
+	targetIndex: number | string;
+	instance?: ContentInstance;
+	contentType?: ContentType;
+	newComponentPath: string | null;
+	shared: boolean;
+	create: boolean;
+};
+
+export type PlacementResult = PlacementSuccess | PlacementFailureResult;
 
 /**
- * Inserts a new or existing component at the end of a drop zone.
- * Caller is responsible for locking (beforeWrite$) first.
+ * Edit, max-count and duplicate checks shared by the drop-target list and insert.
+ * Does not lock and does not write.
  */
-export function placeComponentAtDropZone(
-	iceId: number,
-	contentType: ContentType,
-	instance?: ContentInstance
-): PlacementResult {
-	const record = getById(iceId);
+export function dropZoneBlocker(record: ICERecord, instance?: ContentInstance): PlacementFailureResult | null {
 	if (!record?.fieldId) {
 		return { ok: false, reason: 'missing' };
 	}
 	const models = getCachedModels();
 	const parentModelId = getParentModelId(record.modelId, models, modelHierarchyMap);
-	const path = models[record.modelId]?.craftercms.path ?? models[parentModelId]?.craftercms.path;
 	if (
 		!isEditActionAvailable({
 			record,
@@ -84,19 +137,59 @@ export function placeComponentAtDropZone(
 	) {
 		return { ok: false, reason: 'notEditable' };
 	}
-	const entries = getReferentialEntries(record);
-	const targetIndex = appendIndexForDropZone(record);
-	const length = typeof targetIndex === 'number' ? targetIndex : parseInt(String(targetIndex).split('.').pop(), 10);
-	const maxCount = runValidation(iceId, 'maxCount', [Number.isNaN(length) ? 0 : length]);
+	const length = collectionLength(appendIndexForDropZone(record));
+	const maxCount = runValidation(record.id, 'maxCount', [length]);
 	if (maxCount) {
 		return { ok: false, reason: 'max', validation: maxCount };
 	}
+	if (instance && zoneContainsInstance(record, instance.craftercms.id)) {
+		return { ok: false, reason: 'duplicate' };
+	}
+	return null;
+}
+
+export function isAvailableKeyboardDropZone(record: ICERecord, instance?: ContentInstance): boolean {
+	return dropZoneBlocker(record, instance) == null;
+}
+
+/**
+ * Validates a keyboard insert. Does not lock and does not write.
+ * `applyComponentPlacement` performs the write and must run only after the lock succeeds.
+ */
+export function validateComponentPlacement(
+	iceId: number,
+	contentType: ContentType,
+	instance?: ContentInstance
+): PlacementResult {
+	const record = getById(iceId);
+	if (!record) {
+		return { ok: false, reason: 'missing' };
+	}
+	const blocked = dropZoneBlocker(record, instance);
+	if (blocked) {
+		return blocked;
+	}
+	const path = contentPathForIceRecord(record);
+	if (!path) {
+		return { ok: false, reason: 'missing' };
+	}
+	const entries = getReferentialEntries(record);
+	const targetIndex = appendIndexForDropZone(record);
 	if (instance) {
 		if (!isTypeAcceptedAsByField(entries.field, instance.craftercms.contentTypeId, 'sharedExisting')) {
 			return { ok: false, reason: 'notAccepted' };
 		}
-		insertComponent(record.modelId, record.fieldId, targetIndex, instance, true);
-		return { ok: true };
+		return {
+			ok: true,
+			path,
+			modelId: record.modelId,
+			fieldId: record.fieldId,
+			targetIndex,
+			instance,
+			newComponentPath: null,
+			shared: true,
+			create: false
+		};
 	}
 	const createAsEmbedded = isTypeAcceptedAsByField(entries.field, contentType.id, 'embedded');
 	const createAsShared = isTypeAcceptedAsByField(entries.field, contentType.id, 'shared');
@@ -122,7 +215,20 @@ export function placeComponentAtDropZone(
 				})
 			: newComponentPath;
 	}
-	const created = createContentInstance(contentType, newComponentPath);
-	insertComponent(record.modelId, record.fieldId, targetIndex, created, !createAsEmbedded, true);
-	return { ok: true };
+	return {
+		ok: true,
+		path,
+		modelId: record.modelId,
+		fieldId: record.fieldId,
+		targetIndex,
+		contentType,
+		newComponentPath,
+		shared: !createAsEmbedded,
+		create: true
+	};
+}
+
+export function applyComponentPlacement(plan: PlacementSuccess): void {
+	const instance = plan.create ? createContentInstance(plan.contentType, plan.newComponentPath) : plan.instance;
+	insertComponent(plan.modelId, plan.fieldId, plan.targetIndex, instance, plan.shared, plan.create);
 }

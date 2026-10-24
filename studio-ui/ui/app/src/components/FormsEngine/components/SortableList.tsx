@@ -28,7 +28,7 @@ import IconButton from '@mui/material/IconButton';
 import KeyboardArrowUpRounded from '@mui/icons-material/KeyboardArrowUpRounded';
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
-import { sortableListActionProcessor } from '../lib/sortableListUtil';
+import { destinationIndex, sortableListActionProcessor, useReorderFocus } from '../lib/sortableListUtil';
 
 // Adapted from:
 // https://stackblitz.com/github/alexreardon/pdnd-react-tailwind
@@ -181,7 +181,7 @@ function SortableItem({
 	count: number;
 	selected?: boolean;
 	sortable?: boolean;
-	onMove(index: number, direction: 'up' | 'down', toEdge: boolean): void;
+	onMove(index: number, direction: 'up' | 'down', toEdge: boolean, control: string): void;
 }) {
 	const ref = useRef<HTMLDivElement | null>(null);
 	const [state, setState] = useState<ItemState>(idle);
@@ -262,26 +262,26 @@ function SortableItem({
 			})
 		);
 	}, [item, sortable]);
-	const moveLabel = (direction: 'up' | 'down') =>
-		formatMessage(direction === 'up' ? { defaultMessage: 'Move {name} up' } : { defaultMessage: 'Move {name} down' }, {
-			name: item.value
-		});
+	const moveUpLabel = formatMessage({ defaultMessage: 'Move {name} up' }, { name: item.value });
+	const moveDownLabel = formatMessage({ defaultMessage: 'Move {name} down' }, { name: item.value });
 	return (
 		<>
 			<Box ref={ref} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
 				<ListItemButton
 					data-item-id={item.key}
+					data-reorder-index={index}
+					data-reorder-control="row"
 					onKeyDown={
 						sortable && count > 1
 							? (event) => {
 									if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
 										event.preventDefault();
 										event.stopPropagation();
-										onMove(index, 'up', event.shiftKey);
+										onMove(index, 'up', event.shiftKey, 'row');
 									} else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
 										event.preventDefault();
 										event.stopPropagation();
-										onMove(index, 'down', event.shiftKey);
+										onMove(index, 'down', event.shiftKey, 'row');
 									}
 								}
 							: undefined
@@ -307,26 +307,30 @@ function SortableItem({
 					<Box sx={{ display: 'flex', flexShrink: 0 }}>
 						<IconButton
 							size="small"
-							aria-label={moveLabel('up')}
+							aria-label={moveUpLabel}
 							disabled={index === 0}
+							data-reorder-index={index}
+							data-reorder-control="up"
 							onPointerDown={(event) => event.stopPropagation()}
 							onMouseDown={(event) => event.stopPropagation()}
 							onClick={(event) => {
 								event.stopPropagation();
-								onMove(index, 'up', false);
+								onMove(index, 'up', false, 'up');
 							}}
 						>
 							<KeyboardArrowUpRounded fontSize="small" />
 						</IconButton>
 						<IconButton
 							size="small"
-							aria-label={moveLabel('down')}
+							aria-label={moveDownLabel}
 							disabled={index === count - 1}
+							data-reorder-index={index}
+							data-reorder-control="down"
 							onPointerDown={(event) => event.stopPropagation()}
 							onMouseDown={(event) => event.stopPropagation()}
 							onClick={(event) => {
 								event.stopPropagation();
-								onMove(index, 'down', false);
+								onMove(index, 'down', false, 'down');
 							}}
 						>
 							<KeyboardArrowDownRounded fontSize="small" />
@@ -341,6 +345,7 @@ function SortableItem({
 
 export function SortableList({ items, onChange, selectedItemId, onlySelectedSortable }: SortableListProps) {
 	const onChangeRef = useUpdateRefs(onChange);
+	const { rootRef, remember } = useReorderFocus(items);
 	useEffect(() => {
 		return monitorForElements({
 			canMonitor({ source }) {
@@ -401,10 +406,16 @@ export function SortableList({ items, onChange, selectedItemId, onlySelectedSort
 			}
 		});
 	}, [items, onChangeRef]);
-	const onMove = (index: number, direction: 'up' | 'down', toEdge: boolean) =>
+	const onMove = (index: number, direction: 'up' | 'down', toEdge: boolean, control: string) => {
+		const next = destinationIndex(direction, toEdge, index, items.length);
+		if (next == null) {
+			return;
+		}
+		remember(next, control);
 		sortableListActionProcessor(direction, toEdge, items, index, onChange);
+	};
 	return (
-		<List sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
+		<List ref={rootRef} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
 			{items.map((item, index) => (
 				<SortableItem
 					key={item.key}

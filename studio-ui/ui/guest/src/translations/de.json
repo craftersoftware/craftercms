@@ -36,5 +36,15 @@
   "zoneMarker.dropTargetSummary": "{type} ({modes})",
   "keyboardPlacement.notAccepted": "Diese Zone akzeptiert {contentType} nicht.",
   "keyboardPlacement.notEditable": "Diese Zone kann nicht bearbeitet werden.",
-  "keyboardPlacement.missingZone": "Die Zielzone ist nicht mehr verfügbar."
+  "keyboardPlacement.missingZone": "Die Zielzone ist nicht mehr verfügbar.",
+  "zoneMenu.actionForZone": "{action}, {zone}",
+  "zoneMenu.moveUpName": "Nach oben verschieben",
+  "zoneMenu.moveDownName": "Nach unten verschieben",
+  "zoneMenu.trashName": "Entfernen",
+  "zoneMenu.cancelName": "Abbrechen",
+  "zoneMenu.moveRefused": "Verschieben in diese Zone ist nicht möglich.",
+  "keyboardPlacement.duplicate": "Diese Zone enthält {contentType} bereits.",
+  "ice.inserted": "{contentType} wurde in {zone} eingefügt.",
+  "ice.moved": "{label} wurde verschoben.",
+  "ice.movedTo": "{label} wurde nach {zone} verschoben."
 }

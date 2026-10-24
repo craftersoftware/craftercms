@@ -334,6 +334,12 @@ const reducer = createReducer<GlobalState['preview']>(initialState, (builder) =>
 			const origin = location.origin;
 			const url = href.replace(location.origin, '');
 			state.error = null;
+			// ICE ids are reassigned when the guest navigates. Drop a stale insert target.
+			state.dropTargets = {
+				selectedContentType: null,
+				byId: null,
+				placement: null
+			};
 			state.guest = {
 				allowedContentTypes: null,
 				url,

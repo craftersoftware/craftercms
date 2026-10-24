@@ -22,10 +22,10 @@ export type CrafterCMSPortalProps = PropsWithChildren<{}>;
 export function CrafterCMSPortal(props: CrafterCMSPortalProps) {
 	const portalRef = useRef<HTMLElement>(null);
 	if (portalRef.current === null) {
-		// A plain div is exposed in the accessibility tree. An undefined custom element is not a
-		// reliable parent for the ICE controls that must be reachable by keyboard and assistive tech.
-		const portal = document.createElement('div');
-		portal.setAttribute('data-craftercms-portal', '');
+		// Keep the original custom element. Its children are real DOM nodes (buttons), so they are
+		// in the accessibility tree and the tab order without a plain div that customer CSS such as
+		// `body > div` or `div { position: relative }` can restyle and break zone coordinates.
+		const portal = document.createElement('craftercms-portal');
 		portalRef.current = portal;
 	}
 

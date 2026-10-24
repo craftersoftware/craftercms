@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useLayoutEffect, useRef } from 'react';
 import { ListItemButtonProps } from '@mui/material/ListItemButton';
 
 export type KeyDownEvent = Parameters<ListItemButtonProps['onKeyDown']>[0];
@@ -30,12 +31,36 @@ const sortingKeyToActionMap: Record<SortKey, SortAction | 'edit' | 'view'> = {
 	ArrowLeft: 'left'
 };
 
+/** Index the item will occupy, or null when the move would pass an edge. */
+export function destinationIndex(
+	action: SortAction,
+	moveToEdge: boolean,
+	index: number,
+	length: number
+): number | null {
+	if (length <= 1) {
+		return null;
+	}
+	const lastIndex = length - 1;
+	if (action === 'up' || action === 'left') {
+		if (index === 0) {
+			return null;
+		}
+		return moveToEdge ? 0 : index - 1;
+	}
+	if (index === lastIndex) {
+		return null;
+	}
+	return moveToEdge ? lastIndex : index + 1;
+}
+
 export function sortableListKeyDownHandler<T = unknown>(
 	event: KeyDownEvent,
 	list: T[],
 	index: number,
 	onChange: (newList: T[]) => void,
-	onOpen: (index: number, edit: boolean) => void
+	onOpen: (index: number, edit: boolean) => void,
+	onMoved?: (nextIndex: number) => void
 ): void {
 	const action = sortingKeyToActionMap[event.key];
 	if (
@@ -54,8 +79,14 @@ export function sortableListKeyDownHandler<T = unknown>(
 		case 'view':
 			onOpen(index, action === 'edit');
 			break;
-		default:
+		default: {
+			const next = destinationIndex(action, event.shiftKey, index, list.length);
+			if (next == null) {
+				return;
+			}
 			sortableListActionProcessor(action, event.shiftKey, list, index, onChange);
+			onMoved?.(next);
+		}
 	}
 }
 
@@ -66,39 +97,43 @@ export function sortableListActionProcessor<T = unknown>(
 	index: number,
 	onChange: (newList: T[]) => void
 ): void {
-	const lastIndex = list.length - 1;
-	const isFirst = index === 0;
-	const isLast = index === lastIndex;
-	switch (action) {
-		case 'up':
-		case 'left': {
-			const item = list[index];
-			const newList = list.concat();
-			newList.splice(index, 1);
-			if (moveToEdge) {
-				// Move to first (or last if already first)
-				newList.splice(isFirst ? lastIndex : 0, 0, item);
-			} else {
-				newList.splice(isFirst ? lastIndex : index - 1, 0, item);
-			}
-			onChange(newList);
-			break;
-		}
-		case 'down':
-		case 'right': {
-			const item = list[index];
-			const newList = list.concat();
-			newList.splice(index, 1);
-			if (moveToEdge) {
-				// Move to last (or first if already last)
-				newList.splice(isLast ? 0 : lastIndex, 0, item);
-			} else {
-				newList.splice(isLast ? 0 : index + 1, 0, item);
-			}
-			onChange(newList);
-			break;
-		}
+	const next = destinationIndex(action, moveToEdge, index, list.length);
+	if (next == null) {
+		return;
 	}
+	const item = list[index];
+	const newList = list.concat();
+	newList.splice(index, 1);
+	newList.splice(next, 0, item);
+	onChange(newList);
+}
+
+/** After a reorder, focus the control that belongs to the moved item. */
+export function useReorderFocus<T>(list: T[]) {
+	const rootRef = useRef<HTMLUListElement | null>(null);
+	const pendingRef = useRef<{ index: number; control: string } | null>(null);
+	useLayoutEffect(() => {
+		const pending = pendingRef.current;
+		const root = rootRef.current;
+		if (!pending || !root) {
+			return;
+		}
+		pendingRef.current = null;
+		const controls = [pending.control, 'row', 'down', 'up', 'top', 'bottom'];
+		for (const control of controls) {
+			const element = root.querySelector<HTMLElement>(
+				`[data-reorder-index="${pending.index}"][data-reorder-control="${control}"]`
+			);
+			if (element && !element.hasAttribute('disabled') && element.getAttribute('aria-disabled') !== 'true') {
+				element.focus({ preventScroll: true });
+				return;
+			}
+		}
+	}, [list]);
+	const remember = (index: number, control: string) => {
+		pendingRef.current = { index, control };
+	};
+	return { rootRef, remember };
 }
 
 export function isTouchDevice() {

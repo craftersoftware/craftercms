@@ -27,7 +27,6 @@ import { ControlProps } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
@@ -81,10 +80,12 @@ import { ensureSingleSlash, isEmpty } from '../../../utils/string';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import FieldBox from '../components/FieldBox';
 import {
+	destinationIndex,
 	isTouchDevice,
 	KeyDownEvent,
 	sortableListActionProcessor,
-	sortableListKeyDownHandler
+	sortableListKeyDownHandler,
+	useReorderFocus
 } from '../lib/sortableListUtil';
 import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
@@ -206,6 +207,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	useFetchContentItems(value.flatMap((item) => item.include ?? []));
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
+	const { rootRef, remember } = useReorderFocus(value);
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
 	const itemsByPath = useItemsByPath();
@@ -337,7 +339,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			(newList) => {
 				if (!readonly) setValue(newList);
 			},
-			(itemIndex, edit) => handleEditItem(e, itemIndex, edit && !readonly)
+			(itemIndex, edit) => handleEditItem(e, itemIndex, edit && !readonly),
+			(nextIndex) => remember(nextIndex, 'row')
 		);
 	};
 	const applyDataSourceSelection = (
@@ -777,7 +780,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				))}
 				<FieldBox dashed={!hasContent}>
 					{hasContent ? (
-						<List dense>
+						<List dense ref={rootRef}>
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
 								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
@@ -801,41 +804,54 @@ function NodeSelector(props: NodeSelectorProps) {
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
 								return (
-									<ListItemButton
-										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
-										divider={index !== value.length - 1}
-										onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
-										onKeyDown={(e) => handleItemKeyDown(e, index)}
+									<Box
+										component="li"
+										key={`${item.key}-${index}`}
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											borderBottom: index !== value.length - 1 ? 1 : 0,
+											borderColor: 'divider'
+										}}
 									>
-										<ListItemText
-											primary={
-												isEmbedded ? (
-													<ItemDisplay
-														item={{
-															...contextItem,
-															label: item.value,
-															systemType: 'component'
-														}}
-														showWorkflowState={!isEmbedded}
-														showNavigableAsLinks={false}
-													/>
-												) : itemsByPath[item.include] ? (
-													<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
-												) : (
-													item.value
-												)
-											}
-											secondary={
-												isEmbedded ? (
-													<em>
-														<FormattedMessage defaultMessage="Embedded" />
-													</em>
-												) : (
-													(item.include ?? item.key)
-												)
-											}
-										/>
-										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
+										<ListItemButton
+											component="div"
+											data-reorder-index={index}
+											data-reorder-control="row"
+											sx={{ flex: 1 }}
+											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
+											onKeyDown={(e) => handleItemKeyDown(e, index)}
+										>
+											<ListItemText
+												primary={
+													isEmbedded ? (
+														<ItemDisplay
+															item={{
+																...contextItem,
+																label: item.value,
+																systemType: 'component'
+															}}
+															showWorkflowState={!isEmbedded}
+															showNavigableAsLinks={false}
+														/>
+													) : itemsByPath[item.include] ? (
+														<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
+													) : (
+														item.value
+													)
+												}
+												secondary={
+													isEmbedded ? (
+														<em>
+															<FormattedMessage defaultMessage="Embedded" />
+														</em>
+													) : (
+														(item.include ?? item.key)
+													)
+												}
+											/>
+										</ListItemButton>
+										<Box sx={{ display: 'flex', flexShrink: 0 }}>
 											{!readonly && value.length > 1 && (
 												<>
 													<Tooltip title={<FormattedMessage defaultMessage="Move up" />}>
@@ -843,9 +859,15 @@ function NodeSelector(props: NodeSelectorProps) {
 															<IconButton
 																size="small"
 																disabled={index === 0}
+																data-reorder-index={index}
+																data-reorder-control="up"
 																aria-label={formatMessage({ defaultMessage: 'Move {name} up' }, { name: item.value })}
-																onClick={(event) => {
-																	event.stopPropagation();
+																onClick={() => {
+																	const next = destinationIndex('up', false, index, value.length);
+																	if (next == null) {
+																		return;
+																	}
+																	remember(next, 'up');
 																	sortableListActionProcessor('up', false, value, index, setValue);
 																}}
 															>
@@ -858,9 +880,15 @@ function NodeSelector(props: NodeSelectorProps) {
 															<IconButton
 																size="small"
 																disabled={index === value.length - 1}
+																data-reorder-index={index}
+																data-reorder-control="down"
 																aria-label={formatMessage({ defaultMessage: 'Move {name} down' }, { name: item.value })}
-																onClick={(event) => {
-																	event.stopPropagation();
+																onClick={() => {
+																	const next = destinationIndex('down', false, index, value.length);
+																	if (next == null) {
+																		return;
+																	}
+																	remember(next, 'down');
 																	sortableListActionProcessor('down', false, value, index, setValue);
 																}}
 															>
@@ -890,8 +918,8 @@ function NodeSelector(props: NodeSelectorProps) {
 													</IconButton>
 												</Tooltip>
 											)}
-										</ListItemSecondaryAction>
-									</ListItemButton>
+										</Box>
+									</Box>
 								);
 							})}
 						</List>

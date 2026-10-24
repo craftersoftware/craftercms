@@ -44,6 +44,7 @@ import { ElementRecord, ICERecord } from '../../models/InContextEditing';
 import { GuestState } from '../models/GuestStore';
 import { notNullOrUndefined, nullOrUndefined, reversePluckProps } from '@craftercms/studio-ui/utils/object';
 import { updateDropZoneValidations } from '../../utils/dom';
+import { isAvailableKeyboardDropZone } from '../../utils/keyboardPlacement';
 import { EditingStatus, HighlightMode } from '../../constants';
 import {
 	assetDragStarted,
@@ -528,17 +529,11 @@ const reducer = createReducer(initialState, {
 		const { contentTypeId, createMode, contentType, instance } = action.payload;
 		const highlighted = {};
 		let targets = getContentTypeDropTargets(contentTypeId, undefined, createMode);
-		// Keyboard insert only offers zones that can actually be edited. Legacy list-only
+		// Keyboard insert only offers zones that can be edited, are under maxCount, and do not
+		// already contain this instance when duplicates are disallowed. Legacy list-only
 		// requests omit createMode and keep the previous, unfiltered behaviour.
 		if (createMode) {
-			targets = targets.filter((item) =>
-				isEditActionAvailable({
-					record: item,
-					models: getCachedModels(),
-					contentItemsByPath: getCachedContentItems(),
-					parentModelId: getParentModelId(item.modelId, getCachedModels(), modelHierarchyMap)
-				})
-			);
+			targets = targets.filter((item) => isAvailableKeyboardDropZone(item, instance));
 		}
 		targets.forEach((item) => {
 			let { elementRecordId } = compileDropZone(item.id);

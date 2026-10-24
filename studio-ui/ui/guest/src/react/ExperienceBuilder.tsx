@@ -90,7 +90,7 @@ import LookupTable from '@craftercms/studio-ui/models/LookupTable';
 import { Snackbar, SnackbarProps, Theme, ThemeOptions, ThemeProvider } from '@mui/material';
 import { deepmerge } from '@mui/utils';
 import ZoneMenu from './ZoneMenu';
-import { IceKeyboardControls, InsertHereButton } from './IceKeyboardControls';
+import { GuestStatusAnnouncer, IceKeyboardControls, InsertHereButton } from './IceKeyboardControls';
 import {
 	contentReady,
 	desktopAssetDragStarted,
@@ -607,6 +607,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 			<ThemeProvider theme={theme}>
 				{editMode && (
 					<CrafterCMSPortal>
+						<GuestStatusAnnouncer />
 						<IceKeyboardControls active={showKeyboardZones} highlightMode={highlightMode} />
 						{/* region DraggedElementGhost */}
 						{draggableItemElemRecId && (

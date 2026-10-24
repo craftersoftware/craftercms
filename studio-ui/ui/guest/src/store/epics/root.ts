@@ -75,7 +75,7 @@ import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
 import { notNullOrUndefined, nullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { ElementRecord, ICEProps } from '../../models/InContextEditing';
 import * as ElementRegistry from '../../elementRegistry';
-import { compileAllDropZones, get, getElementFromICEProps } from '../../elementRegistry';
+import { compileAllDropZones, fromICEId, get, getElementFromICEProps } from '../../elementRegistry';
 import { scrollToElement } from '../../utils/dom';
 import {
 	computedDragEnd,
@@ -97,7 +97,9 @@ import {
 } from '../actions';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 import { getParentModelId } from '../../utils/ice';
-import { placeComponentAtDropZone } from '../../utils/keyboardPlacement';
+import { applyComponentPlacement, validateComponentPlacement } from '../../utils/keyboardPlacement';
+import { announceGuestStatus } from '../../utils/guestAnnounce';
+import { requestZoneFocus } from '../../utils/zoneFocus';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
@@ -916,82 +918,84 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			withLatestFrom(state$),
 			switchMap(([action, state]) => {
 				const { contentType, iceId, instance } = action.payload;
-				const record = iceRegistry.getById(iceId);
-				if (!record) {
-					post(
-						snackGuestMessage({
-							level: 'suggestion',
-							message: getIntl().formatMessage({
-								id: 'keyboardPlacement.missingZone',
-								defaultMessage: 'The drop zone is no longer available.'
+				const intl = getIntl();
+				const result = validateComponentPlacement(iceId, contentType, instance);
+				if (result.ok === false) {
+					if (result.reason === 'max' && result.validation) {
+						post(snackGuestMessage(result.validation));
+					} else if (result.reason === 'notEditable') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.notEditable',
+									defaultMessage: 'This zone cannot be edited.'
+								})
 							})
-						})
-					);
+						);
+					} else if (result.reason === 'notAccepted') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.notAccepted',
+										defaultMessage: 'This zone does not accept {contentType}.'
+									},
+									{ contentType: contentType?.name ?? '' }
+								)
+							})
+						);
+					} else if (result.reason === 'duplicate') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.duplicate',
+										defaultMessage: 'This zone already contains {contentType}.'
+									},
+									{ contentType: instance?.craftercms.label || contentType?.name || '' }
+								)
+							})
+						);
+					} else {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.missingZone',
+									defaultMessage: 'The drop zone is no longer available.'
+								})
+							})
+						);
+					}
 					return EMPTY;
 				}
-				const models = getCachedModels();
-				const parentModelId = getParentModelId(record.modelId, models, modelHierarchyMap);
-				const path = models[record.modelId]?.craftercms.path ?? models[parentModelId]?.craftercms.path;
-				if (!path) {
-					post(
-						snackGuestMessage({
-							level: 'suggestion',
-							message: getIntl().formatMessage({
-								id: 'keyboardPlacement.missingZone',
-								defaultMessage: 'The drop zone is no longer available.'
-							})
-						})
-					);
-					return EMPTY;
-				}
-				const cachedContentItem = getCachedContentItem(path);
+				const cachedContentItem = getCachedContentItem(result.path);
 				return beforeWrite$({
-					path,
+					path: result.path,
 					site: state.activeSite,
 					username: state.username,
 					localItem: cachedContentItem
 				}).pipe(
 					switchMap(() => {
-						const result = placeComponentAtDropZone(iceId, contentType, instance);
-						if (result.ok === false) {
-							if (result.reason === 'max' && result.validation) {
-								post(snackGuestMessage(result.validation));
-							} else if (result.reason === 'notEditable') {
-								post(
-									snackGuestMessage({
-										level: 'suggestion',
-										message: getIntl().formatMessage({
-											id: 'keyboardPlacement.notEditable',
-											defaultMessage: 'This zone cannot be edited.'
-										})
-									})
-								);
-							} else if (result.reason === 'notAccepted') {
-								post(
-									snackGuestMessage({
-										level: 'suggestion',
-										message: getIntl().formatMessage(
-											{
-												id: 'keyboardPlacement.notAccepted',
-												defaultMessage: 'This zone does not accept {contentType}.'
-											},
-											{ contentType: contentType?.name ?? '' }
-										)
-									})
-								);
-							} else {
-								post(
-									snackGuestMessage({
-										level: 'suggestion',
-										message: getIntl().formatMessage({
-											id: 'keyboardPlacement.missingZone',
-											defaultMessage: 'The drop zone is no longer available.'
-										})
-									})
-								);
-							}
-							return EMPTY;
-						}
+						applyComponentPlacement(result);
+						const element = fromICEId(iceId);
+						const zone = element?.label || '';
+						announceGuestStatus(
+							intl.formatMessage(
+								{
+									id: 'ice.inserted',
+									defaultMessage: 'Inserted {contentType} into {zone}.'
+								},
+								{
+									contentType: instance?.craftercms.label || contentType?.name || '',
+									zone
+								}
+							) as string
+						);
+						requestZoneFocus({ iceId });
 						return of(startListening());
 					})
 				);

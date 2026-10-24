@@ -24,12 +24,17 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
+import Box from '@mui/material/Box';
 import { FormattedMessage, useIntl } from 'react-intl';
 import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
-import { sortableListActionProcessor, sortableListKeyDownHandler } from '../lib/sortableListUtil';
+import {
+	destinationIndex,
+	sortableListActionProcessor,
+	sortableListKeyDownHandler,
+	useReorderFocus
+} from '../lib/sortableListUtil';
 import Tooltip from '@mui/material/Tooltip';
 import { lazy, MouseEvent as ReactMouseEvent, Suspense, useMemo, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
@@ -76,6 +81,7 @@ export function Repeat(props: RepeatProps) {
 	const onReorder = () => setSortMode(true);
 	const api = useStableGlobalApiContext();
 	const hasContent = value.length;
+	const { rootRef, remember } = useReorderFocus(value);
 	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
 		event.stopPropagation();
 		const nextValue = value.concat();
@@ -146,35 +152,53 @@ export function Repeat(props: RepeatProps) {
 			>
 				<FieldBox dashed={!hasContent}>
 					{hasContent ? (
-						<List dense>
+						<List dense ref={rootRef}>
 							{value.map((item, index) => (
-								<ListItemButton
+								<Box
+									component="li"
 									key={index}
-									divider={index !== value.length - 1}
-									onClick={(e) => handleEditItem(e, item, index)}
-									onKeyDown={
-										readonly
-											? undefined
-											: (event) =>
-													sortableListKeyDownHandler(event, value, index, setValue, (itemIndex, edit) =>
-														handleEditItem(event, value[itemIndex], itemIndex)
-													)
-									}
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										borderBottom: index !== value.length - 1 ? 1 : 0,
+										borderColor: 'divider'
+									}}
 								>
-									<ListItemText
-										primary={getRepeatItemTitle(item)}
-										secondary={getRepeatItemSummary(item)}
-										slotProps={{
-											primary: {
-												noWrap: true
-											},
-											secondary: {
-												noWrap: true
-											}
-										}}
-									/>
+									<ListItemButton
+										component="div"
+										data-reorder-index={index}
+										data-reorder-control="row"
+										sx={{ flex: 1 }}
+										onClick={(e) => handleEditItem(e, item, index)}
+										onKeyDown={
+											readonly
+												? undefined
+												: (event) =>
+														sortableListKeyDownHandler(
+															event,
+															value,
+															index,
+															setValue,
+															(itemIndex) => handleEditItem(event, value[itemIndex], itemIndex),
+															(nextIndex) => remember(nextIndex, 'row')
+														)
+										}
+									>
+										<ListItemText
+											primary={getRepeatItemTitle(item)}
+											secondary={getRepeatItemSummary(item)}
+											slotProps={{
+												primary: {
+													noWrap: true
+												},
+												secondary: {
+													noWrap: true
+												}
+											}}
+										/>
+									</ListItemButton>
 									{!readonly && (
-										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
+										<Box sx={{ display: 'flex', flexShrink: 0 }}>
 											{value.length > 1 && (
 												<>
 													<Tooltip title={<FormattedMessage defaultMessage="Move up" />}>
@@ -182,12 +206,18 @@ export function Repeat(props: RepeatProps) {
 															<IconButton
 																size="small"
 																disabled={index === 0}
+																data-reorder-index={index}
+																data-reorder-control="up"
 																aria-label={formatMessage(
 																	{ defaultMessage: 'Move {name} up' },
 																	{ name: getRepeatItemTitle(item) }
 																)}
-																onClick={(event) => {
-																	event.stopPropagation();
+																onClick={() => {
+																	const next = destinationIndex('up', false, index, value.length);
+																	if (next == null) {
+																		return;
+																	}
+																	remember(next, 'up');
 																	sortableListActionProcessor('up', false, value, index, setValue);
 																}}
 															>
@@ -200,12 +230,18 @@ export function Repeat(props: RepeatProps) {
 															<IconButton
 																size="small"
 																disabled={index === value.length - 1}
+																data-reorder-index={index}
+																data-reorder-control="down"
 																aria-label={formatMessage(
 																	{ defaultMessage: 'Move {name} down' },
 																	{ name: getRepeatItemTitle(item) }
 																)}
-																onClick={(event) => {
-																	event.stopPropagation();
+																onClick={() => {
+																	const next = destinationIndex('down', false, index, value.length);
+																	if (next == null) {
+																		return;
+																	}
+																	remember(next, 'down');
 																	sortableListActionProcessor('down', false, value, index, setValue);
 																}}
 															>
@@ -222,6 +258,7 @@ export function Repeat(props: RepeatProps) {
 														{ defaultMessage: 'Edit {name}' },
 														{ name: getRepeatItemTitle(item) }
 													)}
+													onClick={(event) => handleEditItem(event, item, index)}
 												>
 													<EditOutlined fontSize="small" />
 												</IconButton>
@@ -238,9 +275,9 @@ export function Repeat(props: RepeatProps) {
 													<DeleteOutlined fontSize="small" />
 												</IconButton>
 											</Tooltip>
-										</ListItemSecondaryAction>
+										</Box>
 									)}
-								</ListItemButton>
+								</Box>
 							))}
 						</List>
 					) : (

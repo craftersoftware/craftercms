@@ -914,6 +914,8 @@
 	"previewDialog.toggleBackgroundColor": "배경색 전환",
 	"previewDropTargetsPanel.chooseContentType": "콘텐츠 유형을 선택하세요.",
 	"previewDropTargetsPanel.noResults": "검색 결과가 없습니다.",
+	"previewDropTargetsPanel.insertHere": "여기에 삽입",
+	"previewDropTargetsPanel.insertHereLabel": "{contentType}을(를) {zone}에 삽입",
 	"previewDropTargetsPanelTitle": "드롭 타겟",
 	"previewEditFormTool.editController": "컨트롤러 편집",
 	"previewEditFormTool.editTemplate": "템플릿 편집",

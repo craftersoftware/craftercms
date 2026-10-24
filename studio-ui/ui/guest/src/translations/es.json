@@ -36,5 +36,15 @@
   "zoneMarker.dropTargetSummary": "{type} ({modes})",
   "keyboardPlacement.notAccepted": "Esta zona no acepta {contentType}.",
   "keyboardPlacement.notEditable": "Esta zona no se puede editar.",
-  "keyboardPlacement.missingZone": "La zona de destino ya no está disponible."
+  "keyboardPlacement.missingZone": "La zona de destino ya no está disponible.",
+  "zoneMenu.actionForZone": "{action}, {zone}",
+  "zoneMenu.moveUpName": "Mover hacia arriba",
+  "zoneMenu.moveDownName": "Mover hacia abajo",
+  "zoneMenu.trashName": "Eliminar",
+  "zoneMenu.cancelName": "Cancelar",
+  "zoneMenu.moveRefused": "No se puede mover a esa zona.",
+  "keyboardPlacement.duplicate": "Esta zona ya contiene {contentType}.",
+  "ice.inserted": "Se insertó {contentType} en {zone}.",
+  "ice.moved": "Se movió {label}.",
+  "ice.movedTo": "Se movió {label} a {zone}."
 }
