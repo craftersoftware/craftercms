@@ -144,6 +144,15 @@
 		height: 100%;
 	}
 
+	// The hint sits under the editor. The frame takes the dialog height; the Ace node fills what remains.
+	.tox-dialog__body-content [role='presentation'] .craftercms-code-editor-frame {
+		height: 100%;
+	}
+
+	.tox-dialog__body-content [role='presentation'] .craftercms-code-editor-frame > .ace_editor {
+		height: auto;
+	}
+
 	.ace_search {
 		background-color: #ddd;
 		color: #666;
@@ -326,14 +335,26 @@
 	min-width: 24px !important;
 }
 
-.ace_editor > .craftercms-code-editor-hint,
-.tox-dialog .ace_editor > .craftercms-code-editor-hint,
-.acecode-inline .ace_editor > .craftercms-code-editor-hint {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 6;
+.craftercms-code-editor-frame {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	min-height: 0;
+	width: 100%;
+}
+
+.craftercms-code-editor-frame > .ace_editor {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+
+.craftercms-code-editor-frame > .craftercms-code-editor-hint,
+.tox-dialog .craftercms-code-editor-frame > .craftercms-code-editor-hint,
+.acecode-inline .craftercms-code-editor-frame > .craftercms-code-editor-hint {
+	flex: 0 0 auto;
+	position: static;
 	box-sizing: border-box;
 	margin: 0;
 	padding: 4px 8px;
@@ -352,10 +373,27 @@
 	border-top: 1px solid #d0d0d0;
 }
 
-.ace_editor.ace_dark > .craftercms-code-editor-hint,
-.ace_editor.ace-tomorrow-night > .craftercms-code-editor-hint,
-.ace_editor.ace-nord-dark > .craftercms-code-editor-hint {
+.craftercms-code-editor-frame:has(> .ace_editor.ace_dark) > .craftercms-code-editor-hint,
+.craftercms-code-editor-frame:has(> .ace_editor.ace-tomorrow-night) > .craftercms-code-editor-hint,
+.craftercms-code-editor-frame:has(> .ace_editor.ace-nord-dark) > .craftercms-code-editor-hint {
 	background: #252526;
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
+}
+
+// Ace draws `.ace_keyboard-focus:focus` as an inset shadow under the text layer.
+.ace_scroller.ace_keyboard-focus:focus,
+.ace_gutter.ace_keyboard-focus:focus {
+	outline: none;
+}
+
+.ace_scroller.ace_keyboard-focus:focus::after,
+.ace_gutter.ace_keyboard-focus:focus::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 20;
+	box-shadow: inset 0 0 0 2px #5e9ed6;
 }

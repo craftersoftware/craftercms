@@ -68,19 +68,31 @@
 
 	// Keep in sync with studio-ui/ui/app/src/components/editorKeyboard/aceKeyboard.ts.
 	// This plugin is loaded as a classic script and cannot import that module.
+	// The hint lives outside the Ace node. Do not set renderer.$extraHeight: Ace
+	// subtracts it again whenever the horizontal scrollbar toggles, and the editor collapses.
 	const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
+	const ACE_FRAME_CLASS = 'craftercms-code-editor-frame';
 	const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
-	let aceHintSequence = 0;
-	// Specificity beats `.tox-dialog .ace_editor * { font: ... !important }`.
+	const HINT_ID_PREFIX = 'craftercms-code-editor-hint-plugin';
 	const ACE_HINT_CSS = `
-.ace_editor > .${ACE_HINT_CLASS},
-.tox-dialog .ace_editor > .${ACE_HINT_CLASS},
-.acecode-inline .ace_editor > .${ACE_HINT_CLASS} {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 6;
+.${ACE_FRAME_CLASS} {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	min-height: 0;
+	width: 100%;
+}
+.${ACE_FRAME_CLASS} > .ace_editor {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+.${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
+.tox-dialog .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
+.acecode-inline .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS} {
+	flex: 0 0 auto;
+	position: static;
 	box-sizing: border-box;
 	margin: 0;
 	padding: 4px 8px;
@@ -94,48 +106,116 @@
 	color: #333;
 	border-top: 1px solid #d0d0d0;
 }
-.ace_editor.ace_dark > .${ACE_HINT_CLASS},
-.ace_editor.ace-tomorrow-night > .${ACE_HINT_CLASS},
-.ace_editor.ace-nord-dark > .${ACE_HINT_CLASS} {
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace_dark) > .${ACE_HINT_CLASS},
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-tomorrow-night) > .${ACE_HINT_CLASS},
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-nord-dark) > .${ACE_HINT_CLASS} {
 	background: #252526;
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
 }
+.ace_scroller.ace_keyboard-focus:focus,
+.ace_gutter.ace_keyboard-focus:focus {
+	outline: none;
+}
+.ace_scroller.ace_keyboard-focus:focus::after,
+.ace_gutter.ace_keyboard-focus:focus::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 20;
+	box-shadow: inset 0 0 0 2px #5E9ED6;
+}
 `;
 
-	function pinAceHintInset(renderer, hintHeight) {
-		const bar = renderer.scrollBarH && renderer.scrollBarH.getHeight ? renderer.scrollBarH.getHeight() : 0;
-		const bottom = hintHeight + bar + 'px';
-		if (renderer.scroller) {
-			renderer.scroller.style.bottom = bottom;
-		}
-		if (renderer.$gutter) {
-			renderer.$gutter.style.bottom = hintHeight + 'px';
-		}
-		if (renderer.scrollBarH && renderer.scrollBarH.element) {
-			renderer.scrollBarH.element.style.bottom = hintHeight + 'px';
-		}
-		if (renderer.scrollBarV && renderer.scrollBarV.element) {
-			renderer.scrollBarV.element.style.bottom = bottom;
-		}
+	function createHintId() {
+		const random =
+			typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+				? crypto.randomUUID()
+				: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+		return HINT_ID_PREFIX + '-' + random;
 	}
 
-	function syncAceHintInset(aceEditor, hint) {
-		const renderer = aceEditor.renderer;
-		if (!renderer) {
+	function editorAutosizes(aceEditor) {
+		const maxLines = aceEditor.getOption('maxLines');
+		return typeof maxLines === 'number' && maxLines > 0;
+	}
+
+	function ensureEditorFrame(aceEditor) {
+		const container = aceEditor.container;
+		const parent = container && container.parentElement;
+		if (!container || !parent) {
+			return container || null;
+		}
+		if (parent.classList.contains(ACE_FRAME_CLASS)) {
+			return parent;
+		}
+		const view = container.ownerDocument.defaultView;
+		const position = view && view.getComputedStyle(container).position;
+		const wasAbsolute = position === 'absolute' || position === 'fixed';
+		const previousHeight = container.getBoundingClientRect().height;
+		const frame = container.ownerDocument.createElement('div');
+		frame.className = ACE_FRAME_CLASS;
+		parent.insertBefore(frame, container);
+		frame.appendChild(container);
+		frame.style.display = 'flex';
+		frame.style.flexDirection = 'column';
+		frame.style.boxSizing = 'border-box';
+		frame.style.minHeight = '0';
+		frame.style.width = '100%';
+		if (wasAbsolute) {
+			frame.style.position = 'absolute';
+			frame.style.top = '0';
+			frame.style.right = '0';
+			frame.style.bottom = '0';
+			frame.style.left = '0';
+		} else {
+			frame.style.position = 'relative';
+			frame.style.flex = '1 1 auto';
+			frame.style.height = '100%';
+		}
+		container.style.position = 'relative';
+		container.style.flex = '1 1 auto';
+		container.style.minHeight = '0';
+		container.style.width = '100%';
+		container.style.top = 'auto';
+		container.style.right = 'auto';
+		container.style.bottom = 'auto';
+		container.style.left = 'auto';
+		if (!editorAutosizes(aceEditor)) {
+			container.style.height = 'auto';
+		}
+		if (view && view.requestAnimationFrame) {
+			view.requestAnimationFrame(() => {
+				if (!editorAutosizes(aceEditor) && previousHeight > 24 && container.clientHeight < 24) {
+					frame.style.height = 'auto';
+					frame.style.flex = '0 0 auto';
+					container.style.flex = '0 0 auto';
+					container.style.height = Math.round(previousHeight) + 'px';
+				}
+				if (typeof aceEditor.resize === 'function') {
+					aceEditor.resize(true);
+				}
+			});
+		}
+		return frame;
+	}
+
+	function watchReadOnly(aceEditor, translate) {
+		if (aceEditor.__craftercmsReadOnlyHook) {
 			return;
 		}
-		const hintHeight = Math.ceil(hint.getBoundingClientRect().height);
-		if (!hintHeight) {
-			return;
-		}
-		if (renderer.$extraHeight !== hintHeight) {
-			renderer.$extraHeight = hintHeight;
-			if (typeof aceEditor.resize === 'function') {
-				aceEditor.resize(true);
+		aceEditor.__craftercmsReadOnlyHook = true;
+		const original = aceEditor.setOption;
+		aceEditor.setOption = function (name, value) {
+			const wasReadOnly = name === 'readOnly' && aceEditor.getOption('readOnly') === true;
+			const result = original.call(this, name, value);
+			if (name === 'readOnly' && (aceEditor.getOption('readOnly') === true) !== wasReadOnly) {
+				applyAceKeyboardAccessibility(aceEditor, translate);
 			}
-		}
-		pinAceHintInset(renderer, hintHeight);
+			return result;
+		};
 	}
 
 	function applyAceKeyboardAccessibility(aceEditor, translate) {
@@ -197,12 +277,10 @@
 		if (textInput) {
 			textInput.setAttribute('aria-label', editorName);
 		}
-		if (aceEditor.renderer && aceEditor.renderer.setScrollMargin) {
-			aceEditor.renderer.setScrollMargin(0, 0, 0, 0);
-		}
 		if (!container) {
 			return;
 		}
+		const frame = ensureEditorFrame(aceEditor) || container;
 		const doc = container.ownerDocument;
 		if (!doc.getElementById(ACE_HINT_STYLE_ID)) {
 			const style = doc.createElement('style');
@@ -210,12 +288,12 @@
 			style.textContent = ACE_HINT_CSS;
 			(doc.head || doc.documentElement).appendChild(style);
 		}
-		let hint = container.querySelector(':scope > .' + ACE_HINT_CLASS);
+		let hint = frame.querySelector(':scope > .' + ACE_HINT_CLASS);
 		if (!hint) {
 			hint = doc.createElement('div');
 			hint.className = ACE_HINT_CLASS;
-			hint.id = ACE_HINT_CLASS + '-' + ++aceHintSequence;
-			container.appendChild(hint);
+			hint.id = createHintId();
+			frame.appendChild(hint);
 		}
 		hint.textContent = instructions;
 		hint.removeAttribute('title');
@@ -232,8 +310,10 @@
 			container.addEventListener(
 				'keydown',
 				(event) => {
-					if (event.key === 'Escape' && event.target !== scroller) {
-						escFromEditor = true;
+					if (event.key === 'Escape') {
+						escFromEditor = event.target !== scroller;
+					} else {
+						escFromEditor = false;
 					}
 				},
 				true
@@ -249,23 +329,18 @@
 					event.stopPropagation();
 				}
 			});
+			container.addEventListener('focusout', (event) => {
+				const next = event.relatedTarget;
+				if (!(next instanceof Node) || !container.contains(next)) {
+					escFromEditor = false;
+				}
+			});
 		}
-		if (!container.dataset.craftercmsHintInset) {
-			container.dataset.craftercmsHintInset = 'true';
-			if (aceEditor.renderer && aceEditor.renderer.on) {
-				aceEditor.renderer.on('resize', () => {
-					const current = container.querySelector(':scope > .' + ACE_HINT_CLASS);
-					if (current) {
-						pinAceHintInset(aceEditor.renderer, Math.ceil(current.getBoundingClientRect().height));
-					}
-				});
-			}
-			if (typeof ResizeObserver !== 'undefined') {
-				const observer = new ResizeObserver(() => syncAceHintInset(aceEditor, hint));
-				observer.observe(hint);
-			}
+		watchReadOnly(aceEditor, translate);
+		frame.getBoundingClientRect();
+		if (typeof aceEditor.resize === 'function') {
+			aceEditor.resize(true);
 		}
-		syncAceHintInset(aceEditor, hint);
 	}
 
 	tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {

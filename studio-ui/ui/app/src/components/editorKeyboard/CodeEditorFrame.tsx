@@ -72,6 +72,12 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 					}
 				}
 			}}
+			onBlur={(event) => {
+				const next = event.relatedTarget;
+				if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+					delete event.currentTarget.dataset.craftercmsPendingEnter;
+				}
+			}}
 			sx={consolidateSx(
 				{
 					display: 'flex',
@@ -79,9 +85,19 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 					height,
 					width: '100%',
 					minHeight: 0,
-					outlineOffset: '-2px',
+					position: 'relative',
+					// The editor paints over an inset outline. Draw the ring above the children.
 					'&:focus-visible': {
-						outline: (theme) => `2px solid ${theme.palette.primary.main}`
+						outline: 'none'
+					},
+					'&:focus-visible::after': {
+						content: '""',
+						position: 'absolute',
+						inset: 0,
+						boxSizing: 'border-box',
+						border: (theme) => `2px solid ${theme.palette.primary.main}`,
+						pointerEvents: 'none',
+						zIndex: 20
 					}
 				},
 				sx

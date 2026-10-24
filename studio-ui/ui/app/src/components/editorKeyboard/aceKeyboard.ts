@@ -29,11 +29,19 @@
  * Keydown from the textarea is also stopped in the bubble phase so an MUI
  * dialog does not close. Escape on the scroller itself still bubbles.
  *
+ * The hint is a sibling under the Ace node, in normal flow. Do not set
+ * `renderer.$extraHeight`: Ace subtracts that value again from its own cached
+ * height every time the horizontal scrollbar appears or disappears, and the
+ * editor collapses.
+ *
  * Keep in sync with `studio-ui/static-assets/js/tinymce-plugins/ace/plugin.js`.
  */
 
 export const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
+export const ACE_FRAME_CLASS = 'craftercms-code-editor-frame';
 export const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
+/** Id prefix so a React editor and the TinyMCE plugin cannot share a hint id. */
+const HINT_ID_PREFIX = 'craftercms-code-editor-hint-react';
 
 export interface AceKeyboardLabels {
 	/** Short accessible name. Not the instruction sentence. */
@@ -44,14 +52,24 @@ export interface AceKeyboardLabels {
 }
 
 const HINT_CSS = `
-.ace_editor > .${ACE_HINT_CLASS},
-.tox-dialog .ace_editor > .${ACE_HINT_CLASS},
-.acecode-inline .ace_editor > .${ACE_HINT_CLASS} {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 6;
+.${ACE_FRAME_CLASS} {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	min-height: 0;
+	width: 100%;
+}
+.${ACE_FRAME_CLASS} > .ace_editor {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+.${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
+.tox-dialog .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
+.acecode-inline .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS} {
+	flex: 0 0 auto;
+	position: static;
 	box-sizing: border-box;
 	margin: 0;
 	padding: 4px 8px;
@@ -65,12 +83,27 @@ const HINT_CSS = `
 	color: #333333;
 	border-top: 1px solid #d0d0d0;
 }
-.ace_editor.ace_dark > .${ACE_HINT_CLASS},
-.ace_editor.ace-tomorrow-night > .${ACE_HINT_CLASS},
-.ace_editor.ace-nord-dark > .${ACE_HINT_CLASS} {
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace_dark) > .${ACE_HINT_CLASS},
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-tomorrow-night) > .${ACE_HINT_CLASS},
+.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-nord-dark) > .${ACE_HINT_CLASS} {
 	background: #252526;
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
+}
+/* Ace's own inset shadow sits under the text layer. Draw the ring above it. */
+.ace_scroller.ace_keyboard-focus:focus,
+.ace_gutter.ace_keyboard-focus:focus {
+	outline: none;
+}
+.ace_scroller.ace_keyboard-focus:focus::after,
+.ace_gutter.ace_keyboard-focus:focus::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 20;
+	box-shadow: inset 0 0 0 2px #5E9ED6;
 }
 `;
 
@@ -84,11 +117,6 @@ interface AceKeyboardEditor {
 	renderer: {
 		scroller?: HTMLElement;
 		$gutter?: HTMLElement;
-		$extraHeight?: number;
-		scrollBarH?: { getHeight(): number; element?: HTMLElement };
-		scrollBarV?: { element?: HTMLElement };
-		setScrollMargin?(top: number, bottom: number, left: number, right: number): void;
-		on?(name: string, callback: () => void): void;
 	};
 	textInput?: { getElement(): HTMLTextAreaElement };
 	commands: {
@@ -102,7 +130,19 @@ interface AceKeyboardEditor {
 }
 
 const applied = new WeakSet<object>();
-let hintSequence = 0;
+
+function createHintId() {
+	const random =
+		typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+			? crypto.randomUUID()
+			: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+	return `${HINT_ID_PREFIX}-${random}`;
+}
+
+function editorAutosizes(editor: AceKeyboardEditor) {
+	const maxLines = editor.getOption('maxLines');
+	return typeof maxLines === 'number' && maxLines > 0;
+}
 
 function ensureHintStyles(doc: Document) {
 	if (doc.getElementById(ACE_HINT_STYLE_ID)) {
@@ -143,38 +183,72 @@ function installLegacyExit(editor: AceKeyboardEditor, scroller: HTMLElement | un
 	});
 }
 
-function pinAceHintInset(renderer: AceKeyboardEditor['renderer'], hintHeight: number) {
-	const bar = renderer.scrollBarH?.getHeight?.() ?? 0;
-	const bottom = `${hintHeight + bar}px`;
-	if (renderer.scroller) {
-		renderer.scroller.style.bottom = bottom;
+/**
+ * Puts a column frame around the Ace node and returns it. The hint is appended
+ * to the frame, under the editor, so Ace's own height math is left alone.
+ * An absolutely positioned editor (Studio dialogs) keeps that fill on the frame.
+ */
+function ensureEditorFrame(editor: AceKeyboardEditor): HTMLElement | null {
+	const container = editor.container;
+	const parent = container?.parentElement;
+	if (!container || !parent) {
+		return container ?? null;
 	}
-	if (renderer.$gutter) {
-		renderer.$gutter.style.bottom = `${hintHeight}px`;
+	if (parent.classList.contains(ACE_FRAME_CLASS)) {
+		return parent;
 	}
-	if (renderer.scrollBarH?.element) {
-		renderer.scrollBarH.element.style.bottom = `${hintHeight}px`;
-	}
-	if (renderer.scrollBarV?.element) {
-		renderer.scrollBarV.element.style.bottom = bottom;
-	}
-}
+	const view = container.ownerDocument.defaultView;
+	const position = view?.getComputedStyle(container).position;
+	const wasAbsolute = position === 'absolute' || position === 'fixed';
+	const previousHeight = container.getBoundingClientRect().height;
+	const frame = container.ownerDocument.createElement('div');
+	frame.className = ACE_FRAME_CLASS;
+	parent.insertBefore(frame, container);
+	frame.appendChild(container);
 
-/** Shrinks the Ace scroller to the measured hint so the hint is not clipped and does not cover the scrollbar. */
-function syncAceHintInset(editor: AceKeyboardEditor, hint: HTMLElement) {
-	const renderer = editor.renderer;
-	if (!renderer) {
-		return;
+	frame.style.display = 'flex';
+	frame.style.flexDirection = 'column';
+	frame.style.boxSizing = 'border-box';
+	frame.style.minHeight = '0';
+	frame.style.width = '100%';
+	if (wasAbsolute) {
+		frame.style.position = 'absolute';
+		frame.style.top = '0';
+		frame.style.right = '0';
+		frame.style.bottom = '0';
+		frame.style.left = '0';
+	} else {
+		frame.style.position = 'relative';
+		frame.style.flex = '1 1 auto';
+		frame.style.height = '100%';
 	}
-	const hintHeight = Math.ceil(hint.getBoundingClientRect().height);
-	if (!hintHeight) {
-		return;
+
+	container.style.position = 'relative';
+	container.style.flex = '1 1 auto';
+	container.style.minHeight = '0';
+	container.style.width = '100%';
+	container.style.top = 'auto';
+	container.style.right = 'auto';
+	container.style.bottom = 'auto';
+	container.style.left = 'auto';
+	// Autosize (min/max lines) writes its own pixel height. Everyone else must
+	// give the remaining frame space to the editor instead of height:100% plus a hint.
+	if (!editorAutosizes(editor)) {
+		container.style.height = 'auto';
 	}
-	if (renderer.$extraHeight !== hintHeight) {
-		renderer.$extraHeight = hintHeight;
+
+	// If the parent has no definite height, percentage sizing collapses the editor.
+	// Put the previous pixel height back on the Ace node and let the frame grow.
+	view?.requestAnimationFrame(() => {
+		if (!editorAutosizes(editor) && previousHeight > 24 && container.clientHeight < 24) {
+			frame.style.height = 'auto';
+			frame.style.flex = '0 0 auto';
+			container.style.flex = '0 0 auto';
+			container.style.height = `${Math.round(previousHeight)}px`;
+		}
 		editor.resize?.(true);
-	}
-	pinAceHintInset(renderer, hintHeight);
+	});
+	return frame;
 }
 
 /**
@@ -210,19 +284,18 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	gutter?.setAttribute('aria-label', labels.gutterLabel);
 	const textInput = aceEditor.textInput?.getElement();
 	textInput?.setAttribute('aria-label', labels.name);
-	// Drop a fixed scroll margin; the measured hint inset reserves the space instead.
-	aceEditor.renderer?.setScrollMargin?.(0, 0, 0, 0);
 
 	if (!container) {
 		return;
 	}
+	const frame = ensureEditorFrame(aceEditor) ?? container;
 	ensureHintStyles(container.ownerDocument);
-	let hint = container.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
+	let hint = frame.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
 	if (!hint) {
 		hint = container.ownerDocument.createElement('div');
 		hint.className = ACE_HINT_CLASS;
-		hint.id = `${ACE_HINT_CLASS}-${++hintSequence}`;
-		container.appendChild(hint);
+		hint.id = createHintId();
+		frame.appendChild(hint);
 	}
 	hint.textContent = instructions;
 	hint.removeAttribute('title');
@@ -233,12 +306,18 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	if (!container.dataset.craftercmsEsc) {
 		container.dataset.craftercmsEsc = 'true';
 		let escFromEditor = false;
+		const resetEscFlag = () => {
+			escFromEditor = false;
+		};
 		// Capture only records the key. Stopping it here would run before Ace's own Esc command.
+		// Assign on every keydown so a stale flag from a missed keyup cannot swallow the next Esc.
 		container.addEventListener(
 			'keydown',
 			(event) => {
-				if (event.key === 'Escape' && event.target !== scroller) {
-					escFromEditor = true;
+				if (event.key === 'Escape') {
+					escFromEditor = event.target !== scroller;
+				} else {
+					resetEscFlag();
 				}
 			},
 			true
@@ -254,20 +333,15 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 				event.stopPropagation();
 			}
 		});
-	}
-
-	if (!container.dataset.craftercmsHintInset) {
-		container.dataset.craftercmsHintInset = 'true';
-		aceEditor.renderer?.on?.('resize', () => {
-			const current = container.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
-			if (current) {
-				pinAceHintInset(aceEditor.renderer, Math.ceil(current.getBoundingClientRect().height));
+		// Esc keydown focuses the scroller before keyup. Only drop the flag when focus leaves the editor.
+		container.addEventListener('focusout', (event) => {
+			const next = event.relatedTarget;
+			if (!(next instanceof Node) || !container.contains(next)) {
+				resetEscFlag();
 			}
 		});
-		if (typeof ResizeObserver !== 'undefined') {
-			const observer = new ResizeObserver(() => syncAceHintInset(aceEditor, hint));
-			observer.observe(hint);
-		}
 	}
-	syncAceHintInset(aceEditor, hint);
+	// Flush the flex layout so the first resize sees the editor height above the hint.
+	frame.getBoundingClientRect();
+	aceEditor.resize?.(true);
 }

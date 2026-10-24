@@ -108,14 +108,18 @@ export function enforceMonacoKeyboardOptions(
 	});
 }
 
-/** True when Enter was pressed on the frame before the editor existed. Clears the flag. */
+/**
+ * True when Enter was pressed on the frame before the editor existed and focus
+ * is still on that frame. Clears the flag either way, so a user who already
+ * tabbed away is not pulled back when the editor loads.
+ */
 export function takePendingCodeEditorEnter(frame: HTMLElement | null): boolean {
 	if (!frame) {
 		return false;
 	}
 	const pending = frame.dataset.craftercmsPendingEnter === 'true';
 	delete frame.dataset.craftercmsPendingEnter;
-	return pending;
+	return pending && frame.ownerDocument.activeElement === frame;
 }
 
 export function focusMonacoEditor(editor: object | null | undefined) {
