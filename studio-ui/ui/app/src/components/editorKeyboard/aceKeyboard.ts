@@ -155,12 +155,17 @@ function keepsCallerHeight(previousHeight: number, parent: HTMLElement, view: Wi
 	if (!(previousHeight > 24) || !view) {
 		return false;
 	}
-	const style = view.getComputedStyle(parent);
-	if (style.display === 'contents') {
+	// AceEditor's root element is display: contents, so measure the nearest ancestor that has a box.
+	let box: HTMLElement | null = parent;
+	while (box && view.getComputedStyle(box).display === 'contents') {
+		box = box.parentElement;
+	}
+	if (!box) {
 		return false;
 	}
+	const style = view.getComputedStyle(box);
 	const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-	const parentHeight = parent.clientHeight - padding;
+	const parentHeight = box.clientHeight - padding;
 	return parentHeight > previousHeight + 1;
 }
 
@@ -331,12 +336,15 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 			escFromEditor = false;
 		};
 		// Capture only records the key. Stopping it here would run before Ace's own Esc command.
-		// Assign on every keydown so a stale flag from a missed keyup cannot swallow the next Esc.
+		// A fresh keydown reassigns the flag. Ignore repeats: after the first Esc, focus is on the
+		// scroller, and a repeat keydown there would clear the flag before keyup.
 		container.addEventListener(
 			'keydown',
 			(event) => {
 				if (event.key === 'Escape') {
-					escFromEditor = event.target !== scroller;
+					if (!event.repeat) {
+						escFromEditor = event.target !== scroller;
+					}
 				} else {
 					resetEscFlag();
 				}

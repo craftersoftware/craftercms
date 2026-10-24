@@ -337,7 +337,10 @@
 				'keydown',
 				(event) => {
 					if (event.key === 'Escape') {
-						escFromEditor = event.target !== scroller;
+						// Repeats land on the scroller after the first Esc and would clear the flag before keyup.
+						if (!event.repeat) {
+							escFromEditor = event.target !== scroller;
+						}
 					} else {
 						escFromEditor = false;
 					}
