@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -35,6 +35,7 @@ import { defer, Observable, of, Subscription, throwError } from 'rxjs';
 import { CONTENT_TYPE_JSON, get, getBinary, getGlobalHeaders, post } from '../utils/ajax';
 import { catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
+import { parseRepeatOccursLimit } from '../utils/repeatLimits';
 import { fetchContentItems } from './content';
 import { ContentItem } from '../models/Item';
 import { fetchConfigurationDOM, writeConfiguration } from './configuration';
@@ -243,6 +244,7 @@ function getFieldDataSourceValidations(
 	return validations;
 }
 
+/** Maps legacy form-definition fields into the Forms Engine content-type model. */
 function parseLegacyFormDefinitionFields(
 	legacyFieldsToBeParsed: LegacyFormDefinitionField[] | LegacyFormDefinitionField,
 	currentFieldLookup: LookupTable<ContentTypeField>,
@@ -350,21 +352,23 @@ function parseLegacyFormDefinitionFields(
 		switch (legacyField.type) {
 			case 'repeat': {
 				field.fields = {};
-				let min = legacyField?.minOccurs !== '*' ? parseInt(legacyField?.minOccurs) : null;
-				const max = legacyField?.maxOccurs !== '*' ? parseInt(legacyField?.maxOccurs) : null;
-				isNaN(min) && (min = 0);
+				// FE1 writes minOccurs/maxOccurs as elements and duplicates them as properties.
+				// Forms Engine stores the numeric limits as minCount/maxCount. `*` means unlimited.
+				const min = parseRepeatOccursLimit(legacyField?.minOccurs, field.properties?.minOccurs?.value) ?? 0;
+				const max = parseRepeatOccursLimit(legacyField?.maxOccurs, field.properties?.maxOccurs?.value);
 				field.validations.required = {
 					id: 'required',
 					value: min > 0,
 					level: 'required'
 				};
-				min > 0 &&
-					(field.validations.minCount = {
+				if (min > 0) {
+					field.validations.minCount = {
 						id: 'minCount',
 						value: min,
 						level: 'required'
-					});
-				if (max != null && !Number.isNaN(max)) {
+					};
+				}
+				if (max != null) {
 					field.validations.maxCount = {
 						id: 'maxCount',
 						value: max,
