@@ -79,13 +79,16 @@
 	display: flex;
 	flex-direction: column;
 	box-sizing: border-box;
+	flex: 1 1 0%;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 .${ACE_FRAME_CLASS} > .ace_editor {
 	position: relative;
 	flex: 1 1 auto;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
@@ -94,6 +97,8 @@
 	flex: 0 0 auto;
 	position: static;
 	box-sizing: border-box;
+	min-width: 0;
+	contain: inline-size;
 	margin: 0;
 	padding: 4px 8px;
 	pointer-events: none;
@@ -117,8 +122,8 @@
 .ace_gutter.ace_keyboard-focus:focus {
 	outline: none;
 }
-.ace_scroller.ace_keyboard-focus:focus::after,
-.ace_gutter.ace_keyboard-focus:focus::after {
+.ace_scroller.ace_keyboard-focus:focus::before,
+.ace_gutter.ace_keyboard-focus:focus::before {
 	content: "";
 	position: absolute;
 	inset: 0;
@@ -142,6 +147,19 @@
 		return typeof maxLines === 'number' && maxLines > 0;
 	}
 
+	function keepsCallerHeight(previousHeight, parent, view) {
+		if (!(previousHeight > 24) || !view) {
+			return false;
+		}
+		const style = view.getComputedStyle(parent);
+		if (style.display === 'contents') {
+			return false;
+		}
+		const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+		const parentHeight = parent.clientHeight - padding;
+		return parentHeight > previousHeight + 1;
+	}
+
 	function ensureEditorFrame(aceEditor) {
 		const container = aceEditor.container;
 		const parent = container && container.parentElement;
@@ -151,39 +169,47 @@
 		if (parent.classList.contains(ACE_FRAME_CLASS)) {
 			return parent;
 		}
-		const view = container.ownerDocument.defaultView;
+		const doc = container.ownerDocument;
+		if (!doc.getElementById(ACE_HINT_STYLE_ID)) {
+			const style = doc.createElement('style');
+			style.id = ACE_HINT_STYLE_ID;
+			style.textContent = ACE_HINT_CSS;
+			(doc.head || doc.documentElement).appendChild(style);
+		}
+		const view = doc.defaultView;
 		const position = view && view.getComputedStyle(container).position;
 		const wasAbsolute = position === 'absolute' || position === 'fixed';
 		const previousHeight = container.getBoundingClientRect().height;
-		const frame = container.ownerDocument.createElement('div');
+		const explicitHeight = !editorAutosizes(aceEditor) && keepsCallerHeight(previousHeight, parent, view);
+		const frame = doc.createElement('div');
 		frame.className = ACE_FRAME_CLASS;
 		parent.insertBefore(frame, container);
 		frame.appendChild(container);
-		frame.style.display = 'flex';
-		frame.style.flexDirection = 'column';
-		frame.style.boxSizing = 'border-box';
-		frame.style.minHeight = '0';
-		frame.style.width = '100%';
-		if (wasAbsolute) {
+		if (explicitHeight) {
+			frame.style.flex = '0 0 auto';
+			frame.style.height = 'auto';
+		} else if (wasAbsolute) {
 			frame.style.position = 'absolute';
 			frame.style.top = '0';
 			frame.style.right = '0';
 			frame.style.bottom = '0';
 			frame.style.left = '0';
 		} else {
-			frame.style.position = 'relative';
-			frame.style.flex = '1 1 auto';
 			frame.style.height = '100%';
 		}
 		container.style.position = 'relative';
-		container.style.flex = '1 1 auto';
 		container.style.minHeight = '0';
+		container.style.minWidth = '0';
 		container.style.width = '100%';
 		container.style.top = 'auto';
 		container.style.right = 'auto';
 		container.style.bottom = 'auto';
 		container.style.left = 'auto';
-		if (!editorAutosizes(aceEditor)) {
+		if (explicitHeight) {
+			container.style.flex = '0 0 auto';
+			container.style.height = Math.round(previousHeight) + 'px';
+		} else if (!editorAutosizes(aceEditor)) {
+			container.style.flex = '1 1 auto';
 			container.style.height = 'auto';
 		}
 		if (view && view.requestAnimationFrame) {
@@ -329,10 +355,17 @@
 					event.stopPropagation();
 				}
 			});
-			container.addEventListener('focusout', (event) => {
-				const next = event.relatedTarget;
-				if (!(next instanceof Node) || !container.contains(next)) {
-					escFromEditor = false;
+			container.addEventListener('focusout', () => {
+				const view = container.ownerDocument.defaultView;
+				const reset = () => {
+					if (!container.contains(container.ownerDocument.activeElement)) {
+						escFromEditor = false;
+					}
+				};
+				if (view && view.setTimeout) {
+					view.setTimeout(reset, 0);
+				} else {
+					reset();
 				}
 			});
 		}

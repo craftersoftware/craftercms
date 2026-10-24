@@ -339,7 +339,9 @@
 	display: flex;
 	flex-direction: column;
 	box-sizing: border-box;
+	flex: 1 1 0%;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 
@@ -347,6 +349,7 @@
 	position: relative;
 	flex: 1 1 auto;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 
@@ -356,6 +359,8 @@
 	flex: 0 0 auto;
 	position: static;
 	box-sizing: border-box;
+	min-width: 0;
+	contain: inline-size;
 	margin: 0;
 	padding: 4px 8px;
 	pointer-events: none;
@@ -382,13 +387,14 @@
 }
 
 // Ace draws `.ace_keyboard-focus:focus` as an inset shadow under the text layer.
+// ::before leaves ::after for Ace's scrolled-left shadow.
 .ace_scroller.ace_keyboard-focus:focus,
 .ace_gutter.ace_keyboard-focus:focus {
 	outline: none;
 }
 
-.ace_scroller.ace_keyboard-focus:focus::after,
-.ace_gutter.ace_keyboard-focus:focus::after {
+.ace_scroller.ace_keyboard-focus:focus::before,
+.ace_gutter.ace_keyboard-focus:focus::before {
 	content: '';
 	position: absolute;
 	inset: 0;

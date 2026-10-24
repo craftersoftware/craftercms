@@ -56,13 +56,16 @@ const HINT_CSS = `
 	display: flex;
 	flex-direction: column;
 	box-sizing: border-box;
+	flex: 1 1 0%;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 .${ACE_FRAME_CLASS} > .ace_editor {
 	position: relative;
 	flex: 1 1 auto;
 	min-height: 0;
+	min-width: 0;
 	width: 100%;
 }
 .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
@@ -71,6 +74,9 @@ const HINT_CSS = `
 	flex: 0 0 auto;
 	position: static;
 	box-sizing: border-box;
+	min-width: 0;
+	/* The sentence must not widen a side-by-side editor flex item. */
+	contain: inline-size;
 	margin: 0;
 	padding: 4px 8px;
 	pointer-events: none;
@@ -90,13 +96,13 @@ const HINT_CSS = `
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
 }
-/* Ace's own inset shadow sits under the text layer. Draw the ring above it. */
+/* Ace's own inset shadow sits under the text layer. ::before keeps ::after for the scroll-left shadow. */
 .ace_scroller.ace_keyboard-focus:focus,
 .ace_gutter.ace_keyboard-focus:focus {
 	outline: none;
 }
-.ace_scroller.ace_keyboard-focus:focus::after,
-.ace_gutter.ace_keyboard-focus:focus::after {
+.ace_scroller.ace_keyboard-focus:focus::before,
+.ace_gutter.ace_keyboard-focus:focus::before {
 	content: "";
 	position: absolute;
 	inset: 0;
@@ -142,6 +148,20 @@ function createHintId() {
 function editorAutosizes(editor: AceKeyboardEditor) {
 	const maxLines = editor.getOption('maxLines');
 	return typeof maxLines === 'number' && maxLines > 0;
+}
+
+/** True when the Ace node is shorter than its parent, so a caller set an explicit height. */
+function keepsCallerHeight(previousHeight: number, parent: HTMLElement, view: Window | null | undefined) {
+	if (!(previousHeight > 24) || !view) {
+		return false;
+	}
+	const style = view.getComputedStyle(parent);
+	if (style.display === 'contents') {
+		return false;
+	}
+	const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+	const parentHeight = parent.clientHeight - padding;
+	return parentHeight > previousHeight + 1;
 }
 
 function ensureHintStyles(doc: Document) {
@@ -197,43 +217,45 @@ function ensureEditorFrame(editor: AceKeyboardEditor): HTMLElement | null {
 	if (parent.classList.contains(ACE_FRAME_CLASS)) {
 		return parent;
 	}
+	ensureHintStyles(container.ownerDocument);
 	const view = container.ownerDocument.defaultView;
 	const position = view?.getComputedStyle(container).position;
 	const wasAbsolute = position === 'absolute' || position === 'fixed';
 	const previousHeight = container.getBoundingClientRect().height;
+	const explicitHeight = !editorAutosizes(editor) && keepsCallerHeight(previousHeight, parent, view);
 	const frame = container.ownerDocument.createElement('div');
 	frame.className = ACE_FRAME_CLASS;
 	parent.insertBefore(frame, container);
 	frame.appendChild(container);
 
-	frame.style.display = 'flex';
-	frame.style.flexDirection = 'column';
-	frame.style.boxSizing = 'border-box';
-	frame.style.minHeight = '0';
-	frame.style.width = '100%';
-	if (wasAbsolute) {
+	if (explicitHeight) {
+		// Keep a caller pixel height (for example sxs.editorRoot height: 300px). The hint sits under it.
+		frame.style.flex = '0 0 auto';
+		frame.style.height = 'auto';
+	} else if (wasAbsolute) {
 		frame.style.position = 'absolute';
 		frame.style.top = '0';
 		frame.style.right = '0';
 		frame.style.bottom = '0';
 		frame.style.left = '0';
 	} else {
-		frame.style.position = 'relative';
-		frame.style.flex = '1 1 auto';
 		frame.style.height = '100%';
 	}
 
 	container.style.position = 'relative';
-	container.style.flex = '1 1 auto';
 	container.style.minHeight = '0';
+	container.style.minWidth = '0';
 	container.style.width = '100%';
 	container.style.top = 'auto';
 	container.style.right = 'auto';
 	container.style.bottom = 'auto';
 	container.style.left = 'auto';
-	// Autosize (min/max lines) writes its own pixel height. Everyone else must
-	// give the remaining frame space to the editor instead of height:100% plus a hint.
-	if (!editorAutosizes(editor)) {
+	if (explicitHeight) {
+		container.style.flex = '0 0 auto';
+		container.style.height = `${Math.round(previousHeight)}px`;
+	} else if (!editorAutosizes(editor)) {
+		// Fill the frame. height:auto beats a stylesheet height:100% that would stack with the hint.
+		container.style.flex = '1 1 auto';
 		container.style.height = 'auto';
 	}
 
@@ -289,7 +311,6 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 		return;
 	}
 	const frame = ensureEditorFrame(aceEditor) ?? container;
-	ensureHintStyles(container.ownerDocument);
 	let hint = frame.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
 	if (!hint) {
 		hint = container.ownerDocument.createElement('div');
@@ -333,12 +354,14 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 				event.stopPropagation();
 			}
 		});
-		// Esc keydown focuses the scroller before keyup. Only drop the flag when focus leaves the editor.
-		container.addEventListener('focusout', (event) => {
-			const next = event.relatedTarget;
-			if (!(next instanceof Node) || !container.contains(next)) {
-				resetEscFlag();
-			}
+		// Ace blurs the textarea before focusing the scroller, and that focusout has a null
+		// relatedTarget. Wait until the focus move finishes, then drop the flag only if focus left.
+		container.addEventListener('focusout', () => {
+			container.ownerDocument.defaultView?.setTimeout(() => {
+				if (!container.contains(container.ownerDocument.activeElement)) {
+					resetEscFlag();
+				}
+			}, 0);
 		});
 	}
 	// Flush the flex layout so the first resize sees the editor height above the hint.
