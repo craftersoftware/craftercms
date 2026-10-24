@@ -14,9 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import Box from '@mui/material/Box';
+import { useIntl } from 'react-intl';
 import Asterisk from '../../../icons/Asterisk';
 import SvgIcon from '@mui/material/SvgIcon';
 
@@ -32,31 +33,40 @@ export type FieldStateIndicatorProps = {
 };
 
 export function FieldStateIndicator({ isRequired, hasValidator, isValid, isEmpty }: FieldStateIndicatorProps) {
-	let IndicatorComponent: SvgIconComponent | null = null;
-	let message: ReactNode = null;
+	const { formatMessage } = useIntl();
+	let IndicatorComponent: SvgIconComponent;
+	let label: string;
 
 	// If there is no requirement and no validator, and the field is empty, do not show any indicator
 	if (!isRequired && !hasValidator && isEmpty) return undefined;
 
-	// If required, or if not required but has a validator and is invalid, show asterisk (color depends on isValid)
+	// If required, or if not required but has a validator and is invalid, show asterisk (color depends on isValid).
+	// An invalid marker also includes the word Required or Invalid so the cue is not colour alone.
 	if (isRequired || (!isRequired && hasValidator && !isValid)) {
 		IndicatorComponent = Asterisk;
 		if (isValid) {
-			message = <FormattedMessage defaultMessage="Complete" />;
+			label = formatMessage({ defaultMessage: 'Complete' });
 		} else if (isRequired && isEmpty) {
-			message = <FormattedMessage defaultMessage="Required" />;
+			label = formatMessage({ defaultMessage: 'Required' });
 		} else {
-			message = <FormattedMessage defaultMessage="Invalid" />;
+			label = formatMessage({ defaultMessage: 'Invalid' });
 		}
 	} else {
 		// Otherwise, show check mark
 		IndicatorComponent = CheckRounded;
-		message = <FormattedMessage defaultMessage="Complete" />;
+		label = formatMessage({ defaultMessage: 'Complete' });
 	}
 
 	return (
-		<Tooltip title={message}>
-			<IndicatorComponent fontSize="small" color={isValid ? 'success' : 'error'} />
+		<Tooltip title={label}>
+			<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', columnGap: 0.5 }}>
+				<IndicatorComponent aria-hidden fontSize="small" color={isValid ? 'success' : 'error'} />
+				{!isValid && (
+					<Box component="span" sx={{ color: 'error.main', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1 }}>
+						{label}
+					</Box>
+				)}
+			</Box>
 		</Tooltip>
 	);
 }

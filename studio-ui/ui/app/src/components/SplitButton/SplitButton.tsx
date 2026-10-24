@@ -32,7 +32,8 @@ export function SplitButton(props: SplitButtonProps) {
 		disabled,
 		loading,
 		storageKey,
-		fullWidth
+		fullWidth,
+		describedBy
 	} = props;
 	const [open, setOpen] = React.useState(false);
 	const user = useActiveUser();
@@ -99,6 +100,7 @@ export function SplitButton(props: SplitButtonProps) {
 			handleClose={handleClose}
 			handleMenuItemClick={handleMenuItemClick}
 			fullWidth={fullWidth}
+			describedBy={describedBy}
 		/>
 	);
 }

@@ -39,7 +39,8 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 		handleClose,
 		handleMenuItemClick,
 		loading,
-		fullWidth
+		fullWidth,
+		describedBy
 	} = props;
 
 	// Store the width of the anchor element (ButtonGroup) if fullWidth is true
@@ -63,7 +64,13 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 				aria-label="split button"
 				fullWidth={fullWidth}
 			>
-				<Button color="primary" variant="contained" loading={loading} onClick={handleClick}>
+				<Button
+					color="primary"
+					variant="contained"
+					loading={loading}
+					onClick={handleClick}
+					aria-describedby={describedBy}
+				>
 					{options[selectedIndex].label}
 				</Button>
 				{options.length > 1 && (

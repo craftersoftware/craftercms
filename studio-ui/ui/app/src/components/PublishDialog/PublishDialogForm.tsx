@@ -154,7 +154,14 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				onChange={onInputChange}
 				label={<FormattedMessage defaultMessage="Package Title" />}
 				helperText={
-					<FormattedMessage defaultMessage="Dashboard and other places will use this title to display this package." />
+					formState.packageTitle.trim()
+						? formatMessage({
+								defaultMessage: 'Dashboard and other places will use this title to display this package.'
+							})
+						: formatMessage({
+								defaultMessage:
+									'Enter a package title to publish. Dashboard and other places will use this title to display this package.'
+							})
 				}
 				required
 			/>

@@ -15,7 +15,7 @@
  */
 
 import { useSpreadState } from '../../hooks/useSpreadState';
-import React, { SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import React, { SyntheticEvent, useEffect, useId, useMemo, useState } from 'react';
 import { PublishingTarget, PublishParams } from '../../models/Publishing';
 import LookupTable from '../../models/LookupTable';
 import { InternalDialogState, itemsArrayChanged, PublishDialogContainerProps, usePublishState } from './utils';
@@ -379,6 +379,45 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
+	const publishSubmitReasonId = useId();
+	// Visible reason for a disabled Publish/Schedule/Request Publish button. One object-literal
+	// formatMessage per branch so the formatjs babel plugin can inject message ids.
+	let publishSubmitReason = '';
+	if (!isSubmitting) {
+		if (isFetchingItems || state.fetchingItems || !contentItems) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for the items to finish loading before publishing.'
+			});
+		} else if (isBlank(state.packageTitle)) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a package title to publish.' });
+		} else if (isBlank(state.submissionComment)) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a submission comment to publish.' });
+		} else if (!publishingTargets?.length) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
+		} else if (selectedDependenciesPaths?.length) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Apply or discard the dependency changes before publishing.'
+			});
+		} else if (!state.publishingTarget) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Select a publishing target to publish.' });
+		} else if (state.error) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Resolve the error shown in this dialog before publishing.'
+			});
+		} else if (state.scheduledDateTime < new Date()) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Choose a schedule time in the future.' });
+		} else if (arePublishingItemsFolders) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Select items that are not empty folders to publish.' });
+		} else if (dependencyValidationIncomplete) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for dependency validation to finish before publishing.'
+			});
+		} else if (hardDependenciesWithoutPublishPermission) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'This package has required references you do not have permission to publish.'
+			});
+		}
+	}
 
 	const onDependencyCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
@@ -575,11 +614,26 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 					</Typography>
 				)}
 			</DialogBody>
-			<DialogFooter>
+			<DialogFooter sx={{ flexWrap: 'wrap' }}>
+				{publishSubmitReason && (
+					<Typography
+						id={publishSubmitReasonId}
+						variant="body2"
+						color="text.secondary"
+						sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}
+					>
+						{publishSubmitReason}
+					</Typography>
+				)}
 				<SecondaryButton onClick={onCloseButtonClick} disabled={isSubmitting}>
 					<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
 				</SecondaryButton>
-				<PrimaryButton onClick={handleSubmit} disabled={submitDisabled} loading={isSubmitting}>
+				<PrimaryButton
+					onClick={handleSubmit}
+					disabled={submitDisabled}
+					loading={isSubmitting}
+					aria-describedby={publishSubmitReason ? publishSubmitReasonId : undefined}
+				>
 					{submitLabel}
 				</PrimaryButton>
 			</DialogFooter>

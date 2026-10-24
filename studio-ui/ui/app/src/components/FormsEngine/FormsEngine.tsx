@@ -111,6 +111,7 @@ import {
 	useValidateFormProps
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
+import { focusFirstInvalidField, FormValidationAnnouncerContext, readInvalidMessage } from './lib/fieldA11y';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -907,6 +908,36 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const [collapseHeader, setCollapseHeader] = useState(false);
 	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
 	const [invalidForm, setInvalidForm] = useState(false);
+	const [validationStatusMessage, setValidationStatusMessage] = useState('');
+	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const announceValidation = useCallback((message: string) => {
+		setValidationStatusMessage('');
+		if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		// Clear first so a repeated message still changes the live region's text.
+		validationStatusTimer.current = setTimeout(() => setValidationStatusMessage(message), 40);
+	}, []);
+	useEffect(
+		() => () => {
+			if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		},
+		[]
+	);
+	const handleInvalidSave = useCallback(() => {
+		const control = focusFirstInvalidField(containerRef.current);
+		if (control) {
+			// A collapsed section expands synchronously; focus again after that commit.
+			requestAnimationFrame(() => control.focus());
+		}
+		const fieldName =
+			control?.closest('[data-field-id]')?.querySelector('label')?.textContent?.trim() ||
+			formatMessage({ defaultMessage: 'Field' });
+		const errorText = control ? readInvalidMessage(control) : '';
+		announceValidation(
+			errorText
+				? formatMessage({ defaultMessage: 'Cannot save yet. {field}: {error}' }, { field: fieldName, error: errorText })
+				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
+		);
+	}, [announceValidation, formatMessage]);
 	const jotai = useJotaiStore();
 
 	useMount(() => {
@@ -1368,6 +1399,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 										setSaveAsDraft={setSaveAsDraftAction}
 										invalidForm={invalidForm}
 										onSave={(e, draft) => saveFn(draft)}
+										onInvalidSave={handleInvalidSave}
 									/>
 									{!isCreateMode && // There's no locking on create mode
 										(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
@@ -1490,7 +1522,27 @@ function FormOrchestrator(props: FormsEngineProps) {
 	return (
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
-		isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment
+		<FormValidationAnnouncerContext.Provider value={announceValidation}>
+			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+			<Box
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				sx={{
+					border: 0,
+					clip: 'rect(0 0 0 0)',
+					height: '1px',
+					margin: '-1px',
+					overflow: 'hidden',
+					padding: 0,
+					position: 'absolute',
+					whiteSpace: 'nowrap',
+					width: '1px'
+				}}
+			>
+				{validationStatusMessage}
+			</Box>
+		</FormValidationAnnouncerContext.Provider>
 	);
 }
 
