@@ -51,6 +51,8 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 	const localeConf = useLocale();
 	const isLargeContainer = useAtomValue(atoms.isLargeContainer);
 	const { formatMessage } = useIntl();
+	const copyPathLabel = formatMessage({ defaultMessage: 'Copy path to clipboard' });
+	const copyIdLabel = formatMessage({ defaultMessage: 'Copy ID to clipboard' });
 	const itemLabel = isEmbedded
 		? (getFieldAtomValue(atoms.valueByFieldId[XmlKeys.internalName], store) as string)
 		: item.label;
@@ -102,8 +104,13 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 						/>
 					)}
 					{collapse && (
-						<Tooltip title={<FormattedMessage defaultMessage="Copy path to clipboard" />}>
-							<IconButton size="small" onClick={handleCopyToClipboard} sx={{ padding: '1px', ml: 1 }}>
+						<Tooltip title={copyPathLabel}>
+							<IconButton
+								size="small"
+								onClick={handleCopyToClipboard}
+								sx={{ padding: '1px', ml: 1 }}
+								aria-label={copyPathLabel}
+							>
 								<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 							</IconButton>
 						</Tooltip>
@@ -240,8 +247,13 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 									{item.path}
 									{/* Super-long test path: /Lorem/Ipsum/is/simply/dummy/text/of/the/printing/and/typesetting/industry/Lorem/Ipsum/has/been/the/industrys/standard/dummy/text/ever/since/the/1500s/when/an/unknown/printer/took/a/galley/of/type/and/scrambled/it/to/make/a/type/specimen/book.xml */}
 								</Box>
-								<Tooltip title={<FormattedMessage defaultMessage="Copy path to clipboard" />}>
-									<IconButton size="small" onClick={handleCopyToClipboard} sx={{ padding: '1px', ml: 1 }}>
+								<Tooltip title={copyPathLabel}>
+									<IconButton
+										size="small"
+										onClick={handleCopyToClipboard}
+										sx={{ padding: '1px', ml: 1 }}
+										aria-label={copyPathLabel}
+									>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>
@@ -264,8 +276,13 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 								>
 									{objectId}
 								</Box>
-								<Tooltip title={<FormattedMessage defaultMessage="Copy ID to clipboard" />}>
-									<IconButton size="small" sx={{ padding: '1px', ml: 1 }} onClick={() => copyToClipboard(objectId)}>
+								<Tooltip title={copyIdLabel}>
+									<IconButton
+										size="small"
+										sx={{ padding: '1px', ml: 1 }}
+										onClick={() => copyToClipboard(objectId)}
+										aria-label={copyIdLabel}
+									>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>
@@ -297,15 +314,20 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 
 function CollapseToCButton() {
 	const theme = useTheme();
+	const { formatMessage } = useIntl();
 	const { atoms } = useContext(StableFormContext);
 	const [collapseToC, setCollapseToC] = useAtom(atoms.collapseToC);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
+	const tocLabel = useCollapsedToC
+		? formatMessage({ defaultMessage: 'Expand table of contents' })
+		: formatMessage({ defaultMessage: 'Collapse table of contents' });
 
 	return (
-		<Tooltip title={<FormattedMessage defaultMessage="Collapse table of contents" />}>
+		<Tooltip title={tocLabel}>
 			<IconButton
 				size="small"
 				onClick={() => setCollapseToC(!collapseToC)}
+				aria-label={tocLabel}
 				sx={{
 					// TODO: Tabs will be done at a later phase.
 					// visibility: activeTab === 0 ? undefined : 'hidden',
