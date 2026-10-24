@@ -181,7 +181,14 @@ function measureZones(active: boolean, getState: () => GuestState): ZoneControl[
 		});
 	});
 	next.sort((a, b) => a.top - b.top || a.left - b.left);
-	const key = next.map((zone) => `${zone.id}:${zone.top}:${zone.left}:${zone.label}`).join('|');
+	// Index is part of the key so a re-render that keeps element ids still publishes the new address
+	// and the pending-focus effect can run. Position-only updates must not be the only signal.
+	const key = next
+		.map(
+			(zone) =>
+				`${zone.id}:${zone.iceId}:${zone.modelId}:${zone.fieldId}:${zone.index}:${zone.top}:${zone.left}:${zone.label}`
+		)
+		.join('|');
 	if (key === cachedKey) {
 		return cachedZones;
 	}
@@ -305,10 +312,11 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 						}}
 						onBlur={() => {
 							const record = get(zone.id);
-							if (!record) {
-								return;
-							}
-							dispatch({ type: 'mouseleave', payload: { record, event: syntheticPointer(record) } });
+							// The record may already have been removed. Still clear the hover highlight.
+							dispatch({
+								type: 'mouseleave',
+								payload: record ? { record, event: syntheticPointer(record) } : {}
+							});
 						}}
 						onClick={(event) => {
 							event.preventDefault();

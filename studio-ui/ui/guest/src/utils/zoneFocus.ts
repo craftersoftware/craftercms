@@ -24,14 +24,28 @@ export interface ZoneAddress {
 const STALE_FOCUS_MS = 5000;
 const STALE_IDENTITY_CHANGES = 4;
 
+interface ButtonSnap {
+	modelId: string;
+	fieldId: string;
+	index: string;
+}
+
 interface PendingZoneFocus {
 	iceId?: number;
-	address?: ZoneAddress;
+	/** Tried in order. The first is the preferred index; later entries are fallbacks. */
+	addresses: ZoneAddress[];
 	/** Wait for the element registry to change before preferring the post-move address. */
 	afterRegistryChange: boolean;
 	requestedAt: number;
+	/**
+	 * Zone buttons present when focus was requested. An unchanged button at the
+	 * target index is the pre-move neighbour, not the item that just moved.
+	 */
+	staleById: Map<string, ButtonSnap>;
 	seenIdentity?: string;
 	identityChanges: number;
+	/** False when the current button is about to be removed (trash). */
+	focusCurrent: boolean;
 }
 
 let pending: PendingZoneFocus | null = null;
@@ -45,18 +59,81 @@ function buttonByIceId(iceId: number): HTMLElement | null {
 	return button instanceof HTMLElement ? button : null;
 }
 
-function buttonByAddress(address: ZoneAddress): HTMLElement | null {
+function buttonSnap(button: Element): ButtonSnap & { id: string } {
+	return {
+		id: button.getAttribute('data-craftercms-zone-button') ?? '',
+		modelId: button.getAttribute('data-craftercms-model-id') ?? '',
+		fieldId: button.getAttribute('data-craftercms-field-id') ?? '',
+		index: button.getAttribute('data-craftercms-index') ?? ''
+	};
+}
+
+function snapshotButtons(): Map<string, ButtonSnap> {
+	const snaps = new Map<string, ButtonSnap>();
+	document.querySelectorAll('[data-craftercms-zone-button]').forEach((button) => {
+		const snap = buttonSnap(button);
+		snaps.set(snap.id, { modelId: snap.modelId, fieldId: snap.fieldId, index: snap.index });
+	});
+	return snaps;
+}
+
+function isUnchanged(button: Element, staleById: Map<string, ButtonSnap>): boolean {
+	const current = buttonSnap(button);
+	const previous = staleById.get(current.id);
+	if (!previous) {
+		return false;
+	}
+	return (
+		previous.modelId === current.modelId && previous.fieldId === current.fieldId && previous.index === current.index
+	);
+}
+
+function buttonByAddress(address: ZoneAddress, accept?: (button: Element) => boolean): HTMLElement | null {
 	const buttons = document.querySelectorAll('[data-craftercms-zone-button]');
 	for (const button of buttons) {
 		if (
 			button.getAttribute('data-craftercms-model-id') === address.modelId &&
 			button.getAttribute('data-craftercms-field-id') === address.fieldId &&
-			button.getAttribute('data-craftercms-index') === address.index
+			button.getAttribute('data-craftercms-index') === address.index &&
+			(!accept || accept(button)) &&
+			button instanceof HTMLElement
 		) {
-			return button instanceof HTMLElement ? button : null;
+			return button;
 		}
 	}
 	return null;
+}
+
+/** The moved or deleted item's button is no longer in the document. */
+function originButtonGone(): boolean {
+	if (pending?.iceId == null) {
+		return false;
+	}
+	return buttonByIceId(pending.iceId) == null;
+}
+
+/**
+ * Reject the neighbour that still occupies the target index. Accept the moved item's
+ * own button once its address matches (including when the re-render keeps that button's
+ * id), a newly created button, or a pre-existing button whose address was rewritten.
+ * An unchanged pre-move button is accepted only after the origin button is gone
+ * (trash successor, or a move-to destination that kept its id).
+ */
+function acceptAfterMove(button: Element): boolean {
+	if (!pending) {
+		return false;
+	}
+	const id = button.getAttribute('data-craftercms-zone-button') ?? '';
+	const ownButton = pending.iceId != null && id === String(pending.iceId);
+	if (ownButton) {
+		// Same element id: the index attribute has to show the target. An unchanged own button is still
+		// the pre-move item, or the item being deleted.
+		return !isUnchanged(button, pending.staleById);
+	}
+	if (!pending.staleById.has(id) || !isUnchanged(button, pending.staleById)) {
+		return true;
+	}
+	return originButtonGone();
 }
 
 function dropIfStale(): boolean {
@@ -73,17 +150,19 @@ export function tryFocusPendingZone(): boolean {
 		return false;
 	}
 	if (pending.afterRegistryChange) {
-		const moved = pending.address ? buttonByAddress(pending.address) : null;
-		if (moved) {
-			focusElement(moved);
-			pending = null;
-			return true;
+		for (const address of pending.addresses) {
+			const moved = buttonByAddress(address, (button) => acceptAfterMove(button));
+			if (moved) {
+				focusElement(moved);
+				pending = null;
+				return true;
+			}
 		}
 		return false;
 	}
 	const button =
 		(pending.iceId != null ? buttonByIceId(pending.iceId) : null) ??
-		(pending.address ? buttonByAddress(pending.address) : null);
+		(pending.addresses[0] ? buttonByAddress(pending.addresses[0]) : null);
 	if (!button) {
 		return false;
 	}
@@ -97,15 +176,25 @@ export function tryFocusPendingZone(): boolean {
  * `afterRegistryChange` keeps the current ice button focused immediately (so focus
  * does not fall to the body) and moves to the new address once the registry updates.
  */
-export function requestZoneFocus(target: { iceId?: number; address?: ZoneAddress; afterRegistryChange?: boolean }) {
+export function requestZoneFocus(target: {
+	iceId?: number;
+	address?: ZoneAddress;
+	addresses?: ZoneAddress[];
+	afterRegistryChange?: boolean;
+	/** Focus the current ice button immediately. Skip when that button is about to be removed. */
+	focusCurrent?: boolean;
+}) {
+	const addresses = target.addresses ?? (target.address ? [target.address] : []);
 	pending = {
 		iceId: target.iceId,
-		address: target.address,
+		addresses,
 		afterRegistryChange: Boolean(target.afterRegistryChange),
 		requestedAt: Date.now(),
-		identityChanges: 0
+		staleById: snapshotButtons(),
+		identityChanges: 0,
+		focusCurrent: target.focusCurrent !== false
 	};
-	if (pending.afterRegistryChange && pending.iceId != null) {
+	if (pending.afterRegistryChange && pending.focusCurrent && pending.iceId != null) {
 		const current = buttonByIceId(pending.iceId);
 		if (current) {
 			focusElement(current);
@@ -148,6 +237,24 @@ export function notifyZoneRegistryChange() {
 	if (tryFocusPendingZone()) {
 		return;
 	}
+}
+
+/** Same index, then the previous item, then the next. Used after the current item is removed. */
+export function focusAddressesAfterRemoval(modelId: string, fieldId: string, index: number | string): ZoneAddress[] {
+	const parts = String(index).split('.');
+	const last = parseInt(parts[parts.length - 1], 10);
+	const at = Number.isNaN(last) ? 0 : last;
+	const atIndex = (value: number) => {
+		const copy = parts.slice();
+		copy[copy.length - 1] = String(value);
+		return copy.join('.');
+	};
+	const addresses: ZoneAddress[] = [{ modelId, fieldId, index: atIndex(at) }];
+	if (at > 0) {
+		addresses.push({ modelId, fieldId, index: atIndex(at - 1) });
+	}
+	addresses.push({ modelId, fieldId, index: atIndex(at + 1) });
+	return addresses;
 }
 
 export function shiftedCollectionIndex(index: number | string, delta: number): string {

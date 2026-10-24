@@ -43,7 +43,6 @@
   "zoneMenu.trashName": "Entfernen",
   "zoneMenu.cancelName": "Abbrechen",
   "zoneMenu.moveRefused": "Verschieben in diese Zone ist nicht möglich.",
-  "zoneMenu.moveLockFailed": "Das Element konnte zum Verschieben nicht gesperrt werden.",
   "keyboardPlacement.duplicate": "Diese Zone enthält {contentType} bereits.",
   "ice.inserted": "{contentType} wurde in {zone} eingefügt.",
   "ice.moved": "{label} wurde verschoben.",

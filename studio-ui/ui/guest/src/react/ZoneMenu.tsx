@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { Dispatch, useEffect, useMemo, useState } from 'react';
+import { Dispatch, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
 import PencilIcon from '@mui/icons-material/EditOutlined';
 import UnlockIcon from '@craftercms/studio-ui/icons/Unlock';
@@ -52,7 +52,6 @@ import { ElementRecord, ICERecord } from '../models/InContextEditing';
 import { extractCollection, extractCollectionItem, findParentModelId } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
-import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
 import {
 	exists,
 	findContainerRecord,
@@ -76,7 +75,7 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
-import { defineMessages, FormattedMessage, MessageDescriptor, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import {
 	appendIndexForDropZone,
 	contentPathForIceRecord,
@@ -85,25 +84,12 @@ import {
 	zoneContainsInstance
 } from '../utils/keyboardPlacement';
 import { announceGuestStatus } from '../utils/guestAnnounce';
-import { requestZoneFocus, shiftedCollectionIndex } from '../utils/zoneFocus';
+import { focusAddressesAfterRemoval, requestZoneFocus, shiftedCollectionIndex } from '../utils/zoneFocus';
 import { GuestState } from '../store/models/GuestStore';
 
 const zoneMenuMessages = defineMessages({
 	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
-	moveUpName: { id: 'zoneMenu.moveUpName', defaultMessage: 'Move up' },
-	moveDownName: { id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' },
-	trashName: { id: 'zoneMenu.trashName', defaultMessage: 'Trash' },
-	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' },
 	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: 'That zone cannot be moved to.' },
-	moveLockFailed: { id: 'zoneMenu.moveLockFailed', defaultMessage: 'The item could not be locked for moving.' },
-	edit: { id: 'words.edit', defaultMessage: 'Edit' },
-	unlock: { id: 'zoneMenu.unlock', defaultMessage: 'Unlock' },
-	editTemplate: { id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' },
-	editController: { id: 'zoneMenu.editController', defaultMessage: 'Edit controller' },
-	addItem: { id: 'zoneMenu.addItem', defaultMessage: 'Add new item' },
-	duplicateItem: { id: 'zoneMenu.duplicateItem', defaultMessage: 'Duplicate item' },
-	moveTo: { id: 'zoneMenu.moveTo', defaultMessage: 'Move to another zone' },
-	options: { id: 'words.options', defaultMessage: 'Options' },
 	movedTo: { id: 'ice.movedTo', defaultMessage: 'Moved {label} to {zone}.' },
 	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' }
 });
@@ -344,8 +330,61 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const zoneLabel = record.label || field?.name || contentType?.name || '';
 	const store = useStore();
 	const moveTargets = collectMoveTargets(isMovable, nodeSelectorItemRecord, store.getState());
-	const named = (action: MessageDescriptor): string => {
-		const actionText = formatMessage(action) as string;
+	const named = (
+		action:
+			| 'edit'
+			| 'unlock'
+			| 'editTemplate'
+			| 'editController'
+			| 'addItem'
+			| 'duplicateItem'
+			| 'moveUpName'
+			| 'moveDownName'
+			| 'moveTo'
+			| 'trashName'
+			| 'options'
+			| 'cancelName'
+	): string => {
+		// One literal descriptor per branch so the extractor can see an id. A variable descriptor cannot.
+		let actionText = '';
+		switch (action) {
+			case 'edit':
+				actionText = formatMessage({ id: 'words.edit', defaultMessage: 'Edit' }) as string;
+				break;
+			case 'unlock':
+				actionText = formatMessage({ id: 'zoneMenu.unlock', defaultMessage: 'Unlock' }) as string;
+				break;
+			case 'editTemplate':
+				actionText = formatMessage({ id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' }) as string;
+				break;
+			case 'editController':
+				actionText = formatMessage({ id: 'zoneMenu.editController', defaultMessage: 'Edit controller' }) as string;
+				break;
+			case 'addItem':
+				actionText = formatMessage({ id: 'zoneMenu.addItem', defaultMessage: 'Add new item' }) as string;
+				break;
+			case 'duplicateItem':
+				actionText = formatMessage({ id: 'zoneMenu.duplicateItem', defaultMessage: 'Duplicate item' }) as string;
+				break;
+			case 'moveUpName':
+				actionText = formatMessage({ id: 'zoneMenu.moveUpName', defaultMessage: 'Move up' }) as string;
+				break;
+			case 'moveDownName':
+				actionText = formatMessage({ id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' }) as string;
+				break;
+			case 'moveTo':
+				actionText = formatMessage({ id: 'zoneMenu.moveTo', defaultMessage: 'Move to another zone' }) as string;
+				break;
+			case 'trashName':
+				actionText = formatMessage({ id: 'zoneMenu.trashName', defaultMessage: 'Trash' }) as string;
+				break;
+			case 'options':
+				actionText = formatMessage({ id: 'words.options', defaultMessage: 'Options' }) as string;
+				break;
+			case 'cancelName':
+				actionText = formatMessage({ id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' }) as string;
+				break;
+		}
 		if (!zoneLabel) {
 			return actionText;
 		}
@@ -522,16 +561,27 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		]);
 		if (minCount) {
 			post(snackGuestMessage(minCount));
-		} else {
-			execOperation(() => {
-				if (recordType === 'component' && nodeSelectorItemRecord) {
-					deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-				} else {
-					deleteItem(modelId, fieldId, index);
-				}
-			});
-			onCancel();
+			return;
 		}
+		const source = nodeSelectorItemRecord ?? { modelId, fieldId, index };
+		const originIceId = record.iceIds[0];
+		// If the lock fails, the item is still here. After a successful delete, focus the same index,
+		// otherwise the previous item, otherwise the next — never the button that was just removed.
+		requestZoneFocus({ iceId: originIceId });
+		execOperation(() => {
+			if (recordType === 'component' && nodeSelectorItemRecord) {
+				deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+			} else {
+				deleteItem(modelId, fieldId, index);
+			}
+			requestZoneFocus({
+				iceId: originIceId,
+				addresses: focusAddressesAfterRemoval(source.modelId, String(source.fieldId), source.index),
+				afterRegistryChange: true,
+				focusCurrent: false
+			});
+		});
+		closeMenu();
 	};
 
 	const onTrash = (e) => {
@@ -638,13 +688,9 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			},
 			complete: () => {
 				if (!moved) {
+					// beforeWrite$ already reported the lock failure. A second snack is wrong when the
+					// write was cancelled rather than rejected with a lock conflict.
 					requestZoneFocus({ iceId: originIceId });
-					post(
-						snackGuestMessage({
-							level: 'suggestion',
-							message: formatMessage(zoneMenuMessages.moveLockFailed) as string
-						})
-					);
 				}
 			}
 		});
@@ -665,7 +711,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		dismissEvent.nativeEvent?.stopPropagation?.();
 	};
 
-	const refs = useRef({
+	const refs = React.useRef({
 		onMoveUp,
 		onMoveDown,
 		onTrash,
@@ -680,6 +726,24 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		closeSubmenus,
 		iceId: record.iceIds[0]
 	});
+	// The keydown listener is mounted once. Refresh the values it reads before paint.
+	useLayoutEffect(() => {
+		refs.current = {
+			onMoveUp,
+			onMoveDown,
+			onTrash,
+			doTrash,
+			onCancel,
+			isFirstItem,
+			isLastItem,
+			isMovable,
+			isTrashable,
+			moveToAnchor,
+			showTrashConfirmation,
+			closeSubmenus,
+			iceId: record.iceIds[0]
+		};
+	});
 
 	// Listen for key input to sort/delete and for clicking outside the zone to dismiss selection.
 	useEffect(() => {
@@ -687,6 +751,8 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			const keyTarget = e.target instanceof Element ? e.target : null;
 			const inZoneChrome = Boolean(keyTarget?.closest('[data-craftercms-zone-menu],[data-craftercms-ice-control]'));
 			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
+			// A click can leave focus on the document while this menu is still open.
+			const looseFocus = e.target === document.body || e.target === document.documentElement || e.target === document;
 			const submenuOpen = Boolean(refs.current.moveToAnchor) || refs.current.showTrashConfirmation;
 			// Escape inside the submenu closes only that submenu. Other widgets keep their keys.
 			if (e.key === 'Escape' && submenuOpen && (inOurSubmenu || inZoneChrome)) {
@@ -695,7 +761,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				refs.current.closeSubmenus();
 				return;
 			}
-			if (!inZoneChrome) {
+			if (!inZoneChrome && !looseFocus) {
 				return;
 			}
 			if (e.key === 'Escape') {
@@ -758,14 +824,14 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Box sx={{ display: 'flex' }}>
 				{hasEditAction && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />} key="edit">
-						<UltraStyledIconButton size="small" aria-label={named(zoneMenuMessages.edit)} onClick={onEdit}>
+						<UltraStyledIconButton size="small" aria-label={named('edit')} onClick={onEdit}>
 							<PencilIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isLockedByCurrentUser && (
 					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.unlock" defaultMessage="Unlock" />} key="unlock">
-						<UltraStyledIconButton size="small" aria-label={named(zoneMenuMessages.unlock)} onClick={onUnlock}>
+						<UltraStyledIconButton size="small" aria-label={named('unlock')} onClick={onUnlock}>
 							<UnlockIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -777,11 +843,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editTemplate" defaultMessage="Edit template" />}
 								key="editTemplate"
 							>
-								<UltraStyledIconButton
-									size="small"
-									aria-label={named(zoneMenuMessages.editTemplate)}
-									onClick={onEditTemplate}
-								>
+								<UltraStyledIconButton size="small" aria-label={named('editTemplate')} onClick={onEditTemplate}>
 									<FreemarkerIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -791,11 +853,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editController" defaultMessage="Edit controller" />}
 								key="editController"
 							>
-								<UltraStyledIconButton
-									size="small"
-									aria-label={named(zoneMenuMessages.editController)}
-									onClick={onEditController}
-								>
+								<UltraStyledIconButton size="small" aria-label={named('editController')} onClick={onEditController}>
 									<GroovyIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -807,7 +865,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.addItem" defaultMessage="Add new item" />}
 						key="addNewItem"
 					>
-						<UltraStyledIconButton size="small" aria-label={named(zoneMenuMessages.addItem)} onClick={onAddRepeatItem}>
+						<UltraStyledIconButton size="small" aria-label={named('addItem')} onClick={onAddRepeatItem}>
 							<AddCircleOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -817,11 +875,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.duplicateItem" defaultMessage="Duplicate item" />}
 						key="duplicateItem"
 					>
-						<UltraStyledIconButton
-							size="small"
-							aria-label={named(zoneMenuMessages.duplicateItem)}
-							onClick={onDuplicateItem}
-						>
+						<UltraStyledIconButton size="small" aria-label={named('duplicateItem')} onClick={onDuplicateItem}>
 							<ContentCopyRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -834,7 +888,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveUp" defaultMessage="Move up/left (← or ↑)" />}
 								key="moveUp"
 							>
-								<UltraStyledIconButton size="small" aria-label={named(zoneMenuMessages.moveUpName)} onClick={onMoveUp}>
+								<UltraStyledIconButton size="small" aria-label={named('moveUpName')} onClick={onMoveUp}>
 									<ArrowUpwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -844,11 +898,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveDown" defaultMessage="Move down/right (→ or ↓)" />}
 								key="moveDown"
 							>
-								<UltraStyledIconButton
-									size="small"
-									aria-label={named(zoneMenuMessages.moveDownName)}
-									onClick={onMoveDown}
-								>
+								<UltraStyledIconButton size="small" aria-label={named('moveDownName')} onClick={onMoveDown}>
 									<ArrowDownwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -863,7 +913,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 							size="small"
 							aria-haspopup="menu"
 							aria-expanded={Boolean(moveToAnchor)}
-							aria-label={named(zoneMenuMessages.moveTo)}
+							aria-label={named('moveTo')}
 							onClick={(event) => {
 								event.stopPropagation();
 								setMoveToAnchor(event.currentTarget);
@@ -875,12 +925,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				)}
 				{isTrashable && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />} key="trash">
-						<UltraStyledIconButton
-							size="small"
-							aria-label={named(zoneMenuMessages.trashName)}
-							onClick={onTrash}
-							ref={trashButtonRef}
-						>
+						<UltraStyledIconButton size="small" aria-label={named('trashName')} onClick={onTrash} ref={trashButtonRef}>
 							<DeleteOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -904,17 +949,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				<Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 				{showItemMenuButton && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
-						<UltraStyledIconButton
-							size="small"
-							aria-label={named(zoneMenuMessages.options)}
-							onClick={handleRequestItemMenu}
-						>
+						<UltraStyledIconButton size="small" aria-label={named('options')} onClick={handleRequestItemMenu}>
 							<MoreRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}>
-					<UltraStyledIconButton size="small" aria-label={named(zoneMenuMessages.cancelName)} onClick={onCancel}>
+					<UltraStyledIconButton size="small" aria-label={named('cancelName')} onClick={onCancel}>
 						<CloseRoundedIcon />
 					</UltraStyledIconButton>
 				</UltraStyledTooltip>
