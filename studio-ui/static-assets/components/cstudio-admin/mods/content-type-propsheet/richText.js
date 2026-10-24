@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -158,6 +158,75 @@ YAHOO.extend(
 			YDom.addClass(inputEl, 'cstudio-form-control-input');
 			richTextDialogEl.inputEl = inputEl;
 
+			// This dialog runs in the Studio shell, which does not load form.ftl.
+			// Keep the body in sync with static-assets/js/editor-keyboard-a11y.js.
+			var installTinyMceKeyboard =
+				window.craftercmsEditorKeyboard && window.craftercmsEditorKeyboard.installTinyMceKeyboard;
+			if (!installTinyMceKeyboard) {
+				installTinyMceKeyboard = function (editor) {
+					if (!editor || editor.__craftercmsKeyboardInstalled) {
+						return;
+					}
+					editor.__craftercmsKeyboardInstalled = true;
+					var styleId = 'craftercms-tinymce-target-size';
+					var doc = (editor.getElement() && editor.getElement().ownerDocument) || document;
+					if (!doc.getElementById(styleId)) {
+						var style = doc.createElement('style');
+						style.id = styleId;
+						style.textContent =
+							'.tox .tox-split-button__chevron,.tox.tox-platform-touch .tox-split-button__chevron,' +
+							'.tox .tox-tbtn__select-chevron,.tox .tox-listbox__select-chevron{' +
+							'width:24px !important;min-width:24px !important;}';
+						(doc.head || doc.documentElement).appendChild(style);
+					}
+					var focusingContent = false;
+					function collapseClassicTabStop() {
+						if (editor.inline || !editor.iframeElement || !editor.getBody()) {
+							return;
+						}
+						editor.iframeElement.tabIndex = 0;
+						if (editor.getBody().getAttribute('contenteditable') === 'true') {
+							editor.getBody().tabIndex = -1;
+						}
+					}
+					function onIframeFocus() {
+						if (focusingContent) {
+							return;
+						}
+						focusingContent = true;
+						try {
+							collapseClassicTabStop();
+							editor.focus();
+						} finally {
+							focusingContent = false;
+						}
+					}
+					function onChromeKeyDown(event) {
+						if (event.key !== 'Escape') {
+							return;
+						}
+						var body = editor.getBody && editor.getBody();
+						if (body && (event.target === body || body.contains(event.target))) {
+							return;
+						}
+						event.stopPropagation();
+					}
+					editor.on('init', function () {
+						collapseClassicTabStop();
+						if (editor.iframeElement) {
+							editor.iframeElement.addEventListener('focus', onIframeFocus);
+						}
+						var container = editor.getContainer && editor.getContainer();
+						if (container) {
+							container.addEventListener('keydown', onChromeKeyDown);
+						}
+						if (editor.editorContainer && editor.editorContainer !== container) {
+							editor.editorContainer.addEventListener('keydown', onChromeKeyDown);
+						}
+					});
+				};
+			}
+
 			tinymce.init({
 				target: inputEl,
 				promotion: false,
@@ -174,6 +243,7 @@ YAHOO.extend(
 					'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent | removeformat',
 				valid_elements: 'ul,ol,li,img[src,style,class],p,br,strong/b,a[href|target=_blank],em,s,h1,h2,h3,h4,h5,h6,pre',
 				setup: function (editor) {
+					installTinyMceKeyboard(editor);
 					editor.on('init', function (e) {
 						_self.editor = editor;
 						editor.setContent(value);

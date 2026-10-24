@@ -1,5 +1,5 @@
 /*!
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -312,4 +312,64 @@
 			border-color: #e3e3e3;
 		}
 	}
+}
+
+// Oxide draws split-button carets at 16px (20px on touch). 24px meets WCAG 2.5.8.
+// !important wins over the skin TinyMCE injects when an editor is created.
+// The same rules are injected at runtime by editorKeyboard/tinyMceKeyboard.ts for
+// documents that do not load this stylesheet.
+.tox .tox-split-button__chevron,
+.tox.tox-platform-touch .tox-split-button__chevron,
+.tox .tox-tbtn__select-chevron,
+.tox .tox-listbox__select-chevron {
+	width: 24px !important;
+	min-width: 24px !important;
+}
+
+.ace_editor > .craftercms-code-editor-hint {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 6;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 4px 8px;
+	pointer-events: none;
+	overflow: hidden;
+	max-height: 48px;
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400 !important;
+	line-height: 20px !important;
+	white-space: normal !important;
+	background: #f4f4f5;
+	color: #333333;
+	border-top: 1px solid #d0d0d0;
+}
+
+.ace_editor.ace_dark > .craftercms-code-editor-hint,
+.ace_editor.ace-tomorrow-night > .craftercms-code-editor-hint,
+.ace_editor.ace-nord-dark > .craftercms-code-editor-hint {
+	background: #252526;
+	color: #e6e6e6;
+	border-top-color: #3c3c3c;
+}
+
+// Beats `.tox-dialog .ace_editor * { font: ... !important; white-space: pre }`.
+.tox-dialog .ace_editor > .craftercms-code-editor-hint,
+.acecode-inline .ace_editor > .craftercms-code-editor-hint {
+	white-space: normal !important;
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400 !important;
+	line-height: 20px !important;
 }

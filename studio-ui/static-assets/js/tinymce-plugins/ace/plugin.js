@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -21,26 +21,138 @@
 		'code-editor': 'Code Editor',
 		'toggle-code-view': 'Toggle code view mode',
 		fullscreen: 'Fullscreen',
-		'exit-fullscreen': 'Exit fullscreen'
+		'exit-fullscreen': 'Exit fullscreen',
+		'code-editor-instructions':
+			'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
+		'code-editor-gutter': 'Editor gutter. Press Enter to use the controls. Press Esc to leave the gutter.'
 	});
 	tinymce.addI18n('es', {
 		'code-editor': 'Editor de Código',
 		'toggle-code-view': 'Alternar el modo de vista de código',
 		fullscreen: 'Pantalla completa',
-		'exit-fullscreen': 'Salir de pantalla completa'
+		'exit-fullscreen': 'Salir de pantalla completa',
+		'code-editor-instructions':
+			'Pulse Esc y después Tab para salir del editor. Pulse Enter para editar. Tab sangra mientras edita.',
+		'code-editor-gutter': 'Canal del editor. Pulse Enter para usar los controles. Pulse Esc para salir del canal.'
 	});
 	tinymce.addI18n('de', {
 		'code-editor': 'Code-Editor',
 		'toggle-code-view': 'Codeansichtsmodus umschalten',
 		fullscreen: 'Vollbild',
-		'exit-fullscreen': 'Vollbildmodus beenden'
+		'exit-fullscreen': 'Vollbildmodus beenden',
+		'code-editor-instructions':
+			'Drücken Sie Esc und dann Tab, um den Editor zu verlassen. Drücken Sie die Eingabetaste zum Bearbeiten. Tab rückt beim Bearbeiten ein.',
+		'code-editor-gutter':
+			'Editor-Randleiste. Drücken Sie die Eingabetaste, um die Steuerelemente zu verwenden. Drücken Sie Esc, um die Randleiste zu verlassen.'
 	});
 	tinymce.addI18n('ko_KR', {
 		'code-editor': '코드 편집기',
 		'toggle-code-view': '코드 보기 모드 전환',
 		fullscreen: '전체 화면',
-		'exit-fullscreen': '전체 화면 종료'
+		'exit-fullscreen': '전체 화면 종료',
+		'code-editor-instructions':
+			'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집하려면 Enter를 누르세요. 편집 중 Tab은 들여쓰기입니다.',
+		'code-editor-gutter': '편집기 여백입니다. 컨트롤을 사용하려면 Enter를 누르세요. 여백을 나가려면 Esc를 누르세요.'
 	});
+
+	// Keep in sync with studio-ui/ui/app/src/components/editorKeyboard/aceKeyboard.ts.
+	// This plugin is loaded as a classic script and cannot import that module.
+	const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
+	const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
+	const ACE_HINT_SCROLL_MARGIN = 48;
+	const ACE_HINT_CSS = `
+.${ACE_HINT_CLASS}{position:absolute;left:0;right:0;bottom:0;z-index:6;box-sizing:border-box;margin:0;padding:4px 8px;pointer-events:none;overflow:hidden;max-height:${ACE_HINT_SCROLL_MARGIN}px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif !important;font-size:12px !important;font-weight:400 !important;line-height:20px !important;white-space:normal !important;background:#f4f4f5;color:#333;border-top:1px solid #d0d0d0}
+.ace_editor.ace_dark > .${ACE_HINT_CLASS},.ace_editor.ace-tomorrow-night > .${ACE_HINT_CLASS},.ace_editor.ace-nord-dark > .${ACE_HINT_CLASS}{background:#252526;color:#e6e6e6;border-top-color:#3c3c3c}
+`;
+
+	function applyAceKeyboardAccessibility(aceEditor, translate) {
+		if (!aceEditor) {
+			return;
+		}
+		const instructions = translate('code-editor-instructions');
+		const gutterLabel = translate('code-editor-gutter');
+		const scroller = aceEditor.renderer && aceEditor.renderer.scroller;
+		const gutter = aceEditor.renderer && aceEditor.renderer.$gutter;
+		const container = aceEditor.container;
+		let keyboardMode = false;
+		try {
+			keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
+			if (!keyboardMode) {
+				aceEditor.setOption('textInputAriaLabel', instructions);
+				aceEditor.setOption('enableKeyboardAccessibility', true);
+				keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
+			}
+		} catch (e) {
+			keyboardMode = false;
+		}
+		if (!keyboardMode && !aceEditor.__craftercmsLegacyExit) {
+			aceEditor.__craftercmsLegacyExit = true;
+			const textInput = aceEditor.textInput && aceEditor.textInput.getElement();
+			if (textInput) {
+				textInput.tabIndex = -1;
+			}
+			if (scroller) {
+				scroller.tabIndex = 0;
+				scroller.setAttribute('role', 'group');
+				scroller.addEventListener('keyup', (event) => {
+					if (event.key === 'Enter') {
+						aceEditor.focus();
+					}
+				});
+			}
+			aceEditor.commands.addCommand({
+				name: 'crafterExitEditor',
+				bindKey: { win: 'Esc', mac: 'Esc' },
+				readOnly: true,
+				exec(ed) {
+					ed.blur();
+					if (scroller) {
+						scroller.focus();
+					}
+				}
+			});
+		}
+		if (scroller) {
+			scroller.setAttribute('aria-label', instructions);
+		}
+		if (gutter) {
+			gutter.setAttribute('aria-label', gutterLabel);
+		}
+		const textInput = aceEditor.textInput && aceEditor.textInput.getElement();
+		if (textInput) {
+			textInput.setAttribute('aria-label', instructions);
+		}
+		if (aceEditor.renderer && aceEditor.renderer.setScrollMargin) {
+			aceEditor.renderer.setScrollMargin(0, ACE_HINT_SCROLL_MARGIN, 0, 0);
+		}
+		if (!container) {
+			return;
+		}
+		const doc = container.ownerDocument;
+		if (!doc.getElementById(ACE_HINT_STYLE_ID)) {
+			const style = doc.createElement('style');
+			style.id = ACE_HINT_STYLE_ID;
+			style.textContent = ACE_HINT_CSS;
+			(doc.head || doc.documentElement).appendChild(style);
+		}
+		let hint = container.querySelector(':scope > .' + ACE_HINT_CLASS);
+		if (!hint) {
+			hint = doc.createElement('div');
+			hint.className = ACE_HINT_CLASS;
+			hint.setAttribute('aria-hidden', 'true');
+			container.appendChild(hint);
+		}
+		hint.textContent = instructions;
+		hint.title = instructions;
+		if (!container.dataset.craftercmsEsc) {
+			container.dataset.craftercmsEsc = 'true';
+			container.addEventListener('keydown', (event) => {
+				if (event.key === 'Escape' && event.target !== scroller) {
+					event.stopPropagation();
+				}
+			});
+		}
+	}
 
 	tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {
 		const aceModes = {
@@ -157,6 +269,7 @@
 						editor.setContent(value);
 						editor.dispatch('external_change');
 					});
+					applyAceKeyboardAccessibility(aceEditor, (key) => editor.translate(key));
 
 					editor.container.classList.add('hidden');
 				}
@@ -219,6 +332,7 @@
 			aceEditor.getSession().setMode(aceConfig.mode);
 			aceEditor.setOptions(aceConfig.options);
 			aceEditor.getSession().setValue(getContent(editor));
+			applyAceKeyboardAccessibility(aceEditor, (key) => editor.translate(key));
 
 			const editorTextareaEl = document.querySelector(`#${CSS.escape(editor.id)}`);
 			aceEditor.on('change', function () {
