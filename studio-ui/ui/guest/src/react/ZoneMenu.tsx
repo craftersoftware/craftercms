@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { Dispatch, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Dispatch, useEffect, useMemo, useState } from 'react';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
 import PencilIcon from '@mui/icons-material/EditOutlined';
 import UnlockIcon from '@craftercms/studio-ui/icons/Unlock';
@@ -52,6 +52,7 @@ import { ElementRecord, ICERecord } from '../models/InContextEditing';
 import { extractCollection, extractCollectionItem, findParentModelId } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
+import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
 import {
 	exists,
 	findContainerRecord,
@@ -402,15 +403,22 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	// region Callbacks
 
-	const execOperation = (subscriber: () => void) => {
+	const execOperation = (subscriber: () => void, onSkipped?: () => void) => {
 		const { username, activeSite } = store.getState();
 		const { path } = getItemData();
+		let ran = false;
 		beforeWrite$({
 			path,
 			site: activeSite,
 			username,
 			localItem: getCachedContentItem(path)
-		}).subscribe(subscriber);
+		}).subscribe({
+			next: () => {
+				ran = true;
+				subscriber();
+			},
+			complete: () => !ran && onSkipped?.()
+		});
 	};
 
 	const closeMenu = () => {
@@ -566,21 +574,26 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		const source = nodeSelectorItemRecord ?? { modelId, fieldId, index };
 		const originIceId = record.iceIds[0];
 		// If the lock fails, the item is still here. After a successful delete, focus the same index,
-		// otherwise the previous item, otherwise the next — never the button that was just removed.
+		// otherwise the previous item, otherwise the next, otherwise the collection zone.
 		requestZoneFocus({ iceId: originIceId });
-		execOperation(() => {
-			if (recordType === 'component' && nodeSelectorItemRecord) {
-				deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-			} else {
-				deleteItem(modelId, fieldId, index);
-			}
-			requestZoneFocus({
-				iceId: originIceId,
-				addresses: focusAddressesAfterRemoval(source.modelId, String(source.fieldId), source.index),
-				afterRegistryChange: true,
-				focusCurrent: false
-			});
-		});
+		execOperation(
+			() => {
+				if (recordType === 'component' && nodeSelectorItemRecord) {
+					deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+				} else {
+					deleteItem(modelId, fieldId, index);
+				}
+				requestZoneFocus({
+					iceId: originIceId,
+					addresses: focusAddressesAfterRemoval(source.modelId, String(source.fieldId), source.index),
+					afterRegistryChange: true,
+					focusCurrent: false
+				});
+			},
+			// Lock refused or cancelled: the item is still here. The confirm menu's own focus restore
+			// ran after the request above, so ask again once it has closed.
+			() => requestAnimationFrame(() => requestZoneFocus({ iceId: originIceId }))
+		);
 		closeMenu();
 	};
 
@@ -711,7 +724,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		dismissEvent.nativeEvent?.stopPropagation?.();
 	};
 
-	const refs = React.useRef({
+	const refs = useRef({
 		onMoveUp,
 		onMoveDown,
 		onTrash,
@@ -725,24 +738,6 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		showTrashConfirmation,
 		closeSubmenus,
 		iceId: record.iceIds[0]
-	});
-	// The keydown listener is mounted once. Refresh the values it reads before paint.
-	useLayoutEffect(() => {
-		refs.current = {
-			onMoveUp,
-			onMoveDown,
-			onTrash,
-			doTrash,
-			onCancel,
-			isFirstItem,
-			isLastItem,
-			isMovable,
-			isTrashable,
-			moveToAnchor,
-			showTrashConfirmation,
-			closeSubmenus,
-			iceId: record.iceIds[0]
-		};
 	});
 
 	// Listen for key input to sort/delete and for clicking outside the zone to dismiss selection.

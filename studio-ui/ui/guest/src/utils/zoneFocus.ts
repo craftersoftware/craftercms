@@ -42,6 +42,8 @@ interface PendingZoneFocus {
 	 * target index is the pre-move neighbour, not the item that just moved.
 	 */
 	staleById: Map<string, ButtonSnap>;
+	/** The origin button when focus was requested, or null for a stale record. */
+	originEl: HTMLElement | null;
 	seenIdentity?: string;
 	identityChanges: number;
 	/** False when the current button is about to be removed (trash). */
@@ -106,7 +108,7 @@ function buttonByAddress(address: ZoneAddress, accept?: (button: Element) => boo
 
 /** The moved or deleted item's button is no longer in the document. */
 function originButtonGone(): boolean {
-	if (pending?.iceId == null) {
+	if (pending?.iceId == null || !pending.originEl) {
 		return false;
 	}
 	return buttonByIceId(pending.iceId) == null;
@@ -144,6 +146,12 @@ function dropIfStale(): boolean {
 	return false;
 }
 
+/** Focus is still where the request left it: on the document (the origin button was removed) or on the origin button. */
+function focusIsParked(): boolean {
+	const active = document.activeElement;
+	return !active || active === document.body || active === pending?.originEl;
+}
+
 /** Focus a pending zone button. Returns true when a button was focused. */
 export function tryFocusPendingZone(): boolean {
 	if (!pending || dropIfStale()) {
@@ -153,6 +161,11 @@ export function tryFocusPendingZone(): boolean {
 		for (const address of pending.addresses) {
 			const moved = buttonByAddress(address, (button) => acceptAfterMove(button));
 			if (moved) {
+				if (!focusIsParked()) {
+					// The user moved on while the customer re-rendered. Do not pull focus back.
+					pending = null;
+					return false;
+				}
 				focusElement(moved);
 				pending = null;
 				return true;
@@ -191,6 +204,7 @@ export function requestZoneFocus(target: {
 		afterRegistryChange: Boolean(target.afterRegistryChange),
 		requestedAt: Date.now(),
 		staleById: snapshotButtons(),
+		originEl: target.iceId != null ? buttonByIceId(target.iceId) : null,
 		identityChanges: 0,
 		focusCurrent: target.focusCurrent !== false
 	};
@@ -254,6 +268,8 @@ export function focusAddressesAfterRemoval(modelId: string, fieldId: string, ind
 		addresses.push({ modelId, fieldId, index: atIndex(at - 1) });
 	}
 	addresses.push({ modelId, fieldId, index: atIndex(at + 1) });
+	// Last resort: the collection's own zone button (an emptied collection has no items).
+	addresses.push({ modelId, fieldId, index: '' });
 	return addresses;
 }
 
