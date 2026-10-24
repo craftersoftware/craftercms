@@ -788,9 +788,13 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
-								const itemLabel = item.value || item.include || String(item.key);
+								const itemLabel =
+									(isEmbedded ? item.value : itemsByPath[item.include]?.label || item.value) ||
+									item.include ||
+									String(item.key);
 								const editLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel });
 								const viewLabel = formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
+								const openLabel = readonly ? viewLabel : editLabel;
 								const removeLabel = isEmbedded
 									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
 									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
@@ -803,10 +807,10 @@ function NodeSelector(props: NodeSelectorProps) {
 										secondaryAction={
 											<Box sx={{ display: 'flex' }}>
 												{canBeEdited ? (
-													<Tooltip title={editLabel}>
+													<Tooltip title={openLabel}>
 														<IconButton
 															size="small"
-															aria-label={editLabel}
+															aria-label={openLabel}
 															onClick={(e) => handleEditItem(e, index, !readonly)}
 														>
 															<EditOutlined fontSize="small" />

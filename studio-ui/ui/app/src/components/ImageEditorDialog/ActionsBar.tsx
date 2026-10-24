@@ -96,13 +96,13 @@ export function ActionsBar(props: ActionsBarProps) {
 			)}
 			{shouldRenderFlip(tools) && (
 				<>
-					<Tooltip title={flipVerticalLabel}>
-						<IconButton onClick={() => onFlip(true, false)} aria-label={flipVerticalLabel}>
+					<Tooltip title={flipHorizontalLabel}>
+						<IconButton onClick={() => onFlip(true, false)} aria-label={flipHorizontalLabel}>
 							<FlipIcon />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title={flipHorizontalLabel}>
-						<IconButton onClick={() => onFlip(false, true)} aria-label={flipHorizontalLabel}>
+					<Tooltip title={flipVerticalLabel}>
+						<IconButton onClick={() => onFlip(false, true)} aria-label={flipVerticalLabel}>
 							<FlipIcon sx={{ transform: 'rotate(90deg)' }} />
 						</IconButton>
 					</Tooltip>

@@ -174,6 +174,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				{showRequestApproval && (
 					<Box sx={{ display: 'flex', alignItems: 'center' }}>
 						<FormControlLabel
+							sx={{ mr: 0 }}
 							control={
 								<Checkbox
 									size="small"

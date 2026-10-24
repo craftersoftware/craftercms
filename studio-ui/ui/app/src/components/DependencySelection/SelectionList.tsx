@@ -324,6 +324,7 @@ export function SelectionList(props: SelectionListProps) {
 													e.stopPropagation();
 													onEditClick(e, path);
 												}}
+												aria-label={formatMessage({ defaultMessage: 'Edit {item}' }, { item: path })}
 												size="small"
 												sx={{
 													marginLeft: 'auto',
