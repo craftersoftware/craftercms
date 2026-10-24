@@ -54,6 +54,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 	const [over, setOver] = useState(false);
 	return (
 		<ListItemButton
+			role="option"
 			component={ListItem}
 			disableRipple
 			key={secondaryText}

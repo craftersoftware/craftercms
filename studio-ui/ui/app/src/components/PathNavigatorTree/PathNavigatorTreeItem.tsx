@@ -72,6 +72,7 @@ const translations = defineMessages({
 });
 
 export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
+	const labelId = useId();
 	const {
 		path,
 		itemsByPath,
@@ -97,7 +98,6 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	const [keyword, setKeyword] = useState(keywordByPath[path] ?? '');
 	const { formatMessage } = useIntl();
 	const loadingLabelId = useId();
-	const labelId = useId();
 	const item = lookupItemByPath(path, itemsByPath);
 	const children = lookupItemByPath(path, childrenByParentPath) ?? [];
 
