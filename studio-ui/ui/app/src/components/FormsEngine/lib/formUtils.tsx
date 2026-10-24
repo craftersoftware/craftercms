@@ -764,7 +764,7 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 	const siteId = useActiveSiteId();
 	const previousProps = usePreviousValue(props);
 	const propsChangedRef = useRef(false);
-	const { create, update, repeat, fieldsToRender, readonly } = props;
+	const { create, update, repeat, fieldsToRender, fieldIds, iceGroupId, repeatIndex, readonly } = props;
 	if (!siteId) {
 		throw NoSiteIdError;
 	} else if (
@@ -785,6 +785,9 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 			!areAllPairsEqual([
 				[create, previousProps.create],
 				[fieldsToRender, previousProps.fieldsToRender],
+				[fieldIds, previousProps.fieldIds],
+				[iceGroupId, previousProps.iceGroupId],
+				[repeatIndex, previousProps.repeatIndex],
 				[readonly, previousProps.readonly],
 				[repeat?.fieldId, previousProps.repeat?.fieldId],
 				[repeat?.values, previousProps.repeat?.values],

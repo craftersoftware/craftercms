@@ -94,6 +94,8 @@ export const showCreateFolderSuccessNotification = /*#__PURE__*/ createAction(
 
 export const showEditItemSuccessNotification = /*#__PURE__*/ createAction<{
 	action: CommonSaveOptions;
+	/** FE2 sets this. FE1 omits it and `action === 'save'` means the draft button. */
+	draft?: boolean;
 }>('SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION');
 
 export const showCopyItemSuccessNotification = /*#__PURE__*/ createAction<

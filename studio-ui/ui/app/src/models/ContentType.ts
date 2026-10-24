@@ -136,6 +136,8 @@ export interface ContentTypeField {
 	fields?: LookupTable<ContentTypeField>;
 	values?: { label: string; value: string }[];
 	helpText?: string;
+	/** In-context editing group. Fields that share an id open together from a preview pencil. */
+	iceId?: string;
 	// localized: boolean;
 	// disabled: boolean;
 	// readOnly: boolean;

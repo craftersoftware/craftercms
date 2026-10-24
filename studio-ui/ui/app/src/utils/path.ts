@@ -22,6 +22,7 @@ import ContentType from '../models/ContentType';
 import { SystemType } from '../models';
 import { v4 as uuid } from 'uuid';
 import { ensureSingleSlash } from './string';
+export { getPreviewURLFromPath, isPagePath } from './sitePath';
 
 // Originally from ComponentPanel.getPreviewPagePath
 export function getPathFromPreviewURL(previewURL: string): string {
@@ -47,25 +48,6 @@ export function getPathFromPreviewURL(previewURL: string): string {
 	}
 
 	return `/site/website${pagePath}`;
-}
-
-/**
- * Computes and returns the preview URL from a path. Notice non-previewable paths will not be transformed.
- * @param path {string} The path to compute the preview URL from
- * @returns {string} The preview URL
- */
-export function getPreviewURLFromPath(path: string): string {
-	// Transform only paths that start with `/site/website`. Preview url and path for static assets is the same.
-	// Non-previewable paths are not transformed by this function.
-	// It is known that for some existing platform users, paths do not end with `/index.xml`. For example in
-	// `/site/website/folder/article.xml` previewUrl should be `/folder/article`. In these cases, the file
-	// name cannot be striped off.
-	return /^\/site\/website/.test(path)
-		? path
-				.replace(/^\/site\/website/, '')
-				.replace(/\/(index|default).xml$/, '')
-				.replace(/(.xml|\/)$/, '') || '/'
-		: path;
 }
 
 export function getFileNameFromPath(path: string): string {
@@ -365,15 +347,4 @@ export const getFileNameWithExtensionForItemType = (type: string, name: string, 
 	const pickedExtension = pickExtensionForItemType(type, name, extension);
 	const normalizedName = name.replace(new RegExp(`\\.${pickedExtension}$`), '');
 	return `${normalizedName}.${pickedExtension}`.replace(/\.{2,}/g, '.');
-};
-
-/**
- * Determines if the given path corresponds to a page path.
- *
- * @param {string} path - The path to check.
- * @returns {boolean} - Returns `true` if the path matches the pattern for a page path; otherwise, `false`.
- *
- */
-export const isPagePath = (path: string): boolean => {
-	return /^\/site\/website(\/.*)?\/index.*\.xml$/.test(path);
 };

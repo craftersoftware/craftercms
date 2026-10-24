@@ -508,10 +508,10 @@ export const itemActionDispatcher = ({
 						site,
 						path,
 						authoringBase,
-						onSaveSuccess: ({ action }) =>
+						onSaveSuccess: ({ action, draft }) =>
 							dispatch(
 								batchActions([
-									showEditItemSuccessNotification({ action }),
+									showEditItemSuccessNotification({ action, draft }),
 									...(onActionSuccess ? [onActionSuccess] : [])
 								])
 							),

@@ -217,9 +217,16 @@ const systemEpics: CrafterCMSEpic[] = [
 	(action$, state$, { getIntl }) =>
 		action$.pipe(
 			ofType(showEditItemSuccessNotification.type),
-			tap(({ payload: { action } }) => {
+			tap(({ payload: { action, draft } }) => {
+				// FE2 already shows its own draft snack from the form save. Skip that case so one
+				// draft save does not raise a second warning. FE1 omits `draft`; its Save button
+				// was the draft and reported `action === 'save'`.
+				if (draft === true) {
+					return;
+				}
+				const savedAsDraft = draft ?? action === 'save';
 				let message;
-				if (action === 'save') {
+				if (savedAsDraft) {
 					message = getIntl().formatMessage(itemSuccessMessages.itemSavedAsDraft);
 				} else {
 					message = getIntl().formatMessage(itemSuccessMessages.itemEdited);
@@ -228,7 +235,7 @@ const systemEpics: CrafterCMSEpic[] = [
 				hostToHost$.next(
 					showSystemNotification({
 						message,
-						options: { variant: action === 'save' ? 'warning' : 'default' }
+						options: { variant: savedAsDraft ? 'warning' : 'default' }
 					})
 				);
 			}),

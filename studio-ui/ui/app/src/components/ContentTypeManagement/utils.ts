@@ -704,7 +704,8 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		defaultValue: field.defaultValue,
 		type: field.type,
 		help: field.helpText,
-		iceId: undefined, // TODO: drop?
+		// Keep the group id so a later type save does not strip in-context editing targets.
+		iceId: field.iceId || undefined,
 		// region Repeat Groups
 		maxOccurs,
 		minOccurs,

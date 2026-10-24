@@ -32,10 +32,10 @@ import {
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
-	getValidationAtomsExcludingIrrelevant,
 	showAlert
 } from './formUtils';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
+import { baseFieldId, contentFormSaveAction, hiddenInvalidFieldLabels } from '../../../utils/contentFormLaunch';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
 import {
@@ -65,7 +65,7 @@ import {
 	collectAffectedPluginControlFields,
 	preloadControlPluginsForFields
 } from './controlPluginLoader';
-import { runFormControllerBeforeSave } from '../formControllers/runtime';
+import { isFieldPathIrrelevant, runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 export interface UseSaveFormProps {
 	createPath?: string;
@@ -76,6 +76,13 @@ export interface UseSaveFormProps {
 	isStackedForm?: boolean;
 	/** Repeat stacked forms: sub-fields of the repeat group (same set as bootstrap). */
 	fieldsToRender?: ContentTypeField[];
+	/**
+	 * Field ids on screen for a targeted ICE or selected-field launch. Omitted when the
+	 * whole form is showing, including a stacked repeat item (that form validates only its subfields).
+	 */
+	visibleFieldIds?: string[];
+	/** Called when a non-draft save fails on fields outside `visibleFieldIds`. The write is skipped. */
+	onHiddenInvalidFields?: () => void;
 	onBeforeSave?: FormsEngineProps['onSave'];
 	onSave?: FormsEngineProps['onSave'];
 	onClose?(): void;
@@ -99,7 +106,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 		onClose,
 		onMinimize,
 		createPath,
-		fieldsToRender
+		fieldsToRender,
+		visibleFieldIds,
+		onHiddenInvalidFields
 	} = props;
 	const { id, contentType, contentObject, path: itemPath } = useContext(ItemMetaContext);
 	const isPage = contentType.type === 'page';
@@ -115,7 +124,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
-	return async (draft?: boolean) => {
+	return async (draft?: boolean, options?: { closeOnSuccess?: boolean }) => {
 		// Get before the first await so a second call cannot re-enter preload or onBeforeSave.
 		if (jotai.get(stableFormContext.atoms.isSubmitting)) {
 			return;
@@ -185,16 +194,23 @@ export function useSaveForm(props: UseSaveFormProps) {
 			stableFormContext.affectedPluginControlFields = [];
 			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 			const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
-			let validityStates = await Promise.all(
-				getValidationAtomsExcludingIrrelevant(
-					stableFormContext.atoms.validationByFieldId,
-					stableFormContext.formControllerState?.irrelevantFieldPaths,
-					repeatFieldId
-				).map((validityDataAtom) => jotai.get(validityDataAtom))
-			);
+			const readValidity = async () => {
+				const irrelevant = stableFormContext.formControllerState?.irrelevantFieldPaths;
+				const entries = Object.entries(stableFormContext.atoms.validationByFieldId).filter(
+					([fieldId]) => !isFieldPathIrrelevant(irrelevant, fieldId, repeatFieldId)
+				);
+				const states = await Promise.all(entries.map(([, validityAtom]) => jotai.get(validityAtom)));
+				const invalidFieldIds = entries.flatMap(([fieldId], index) => (states[index]?.isValid ? [] : [fieldId]));
+				return { isFormInvalid: invalidFieldIds.length > 0, invalidFieldIds };
+			};
 			// Put system properties in before creating the XML
-			let isFormInvalid = validityStates.some((state) => !state.isValid);
+			let { isFormInvalid, invalidFieldIds } = await readValidity();
 			let saveAsDraft = draft || isFormInvalid;
+			// Close wins over minimize. An in-context repeat Done (`closeOnSuccess`) also closes
+			// a completed save, which is what FE1 did by unstacking the dialog. A draft stays open.
+			// Invalid fields outside a targeted subset do not take this path: the save is skipped
+			// and the full form is shown so the author can see what is missing.
+			const closesDialog = () => closeAfterSave || (Boolean(options?.closeOnSuccess) && !saveAsDraft);
 
 			const onSavePromiseHandler = ({ close }: FormSavePromiseResult) => {
 				if (saveAsDraft) {
@@ -215,7 +231,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 					// TODO: What would `setValuesCheckpoint` do if called on a repeat group form?
 					!isRepeatMode && formContextApi.setValuesCheckpoint(values);
 				});
-				if (close || closeAfterSave) {
+				if (close || closesDialog()) {
 					onClose?.();
 				} else if (minimizeAfterSave) {
 					setVersionComment('');
@@ -285,15 +301,35 @@ export function useSaveForm(props: UseSaveFormProps) {
 				if (!(await preloadPluginsOrBlock(values))) {
 					return;
 				}
-				validityStates = await Promise.all(
-					getValidationAtomsExcludingIrrelevant(
-						stableFormContext.atoms.validationByFieldId,
-						stableFormContext.formControllerState?.irrelevantFieldPaths,
-						repeatFieldId
-					).map((validityDataAtom) => jotai.get(validityDataAtom))
-				);
-				isFormInvalid = validityStates.some((state) => !state.isValid);
+				({ isFormInvalid, invalidFieldIds } = await readValidity());
 				saveAsDraft = draft || isFormInvalid;
+			}
+
+			// Done/Save on a targeted launch still validates the whole document. Writing that as a
+			// draft would leave the dialog on the subset, hiding the fields that failed. Name them
+			// and reveal the form instead. An explicit draft save is left alone.
+			if (!draft && saveAsDraft && visibleFieldIds?.length) {
+				const hiddenLabels = hiddenInvalidFieldLabels(invalidFieldIds, visibleFieldIds, (fieldId) => {
+					const field = contentType.fields[fieldId] ?? contentType.fields[baseFieldId(fieldId)];
+					return field?.name;
+				});
+				if (hiddenLabels) {
+					setIsSubmitting(false);
+					dispatch(
+						showSystemNotification({
+							options: { variant: 'warning' },
+							message: formatMessage(
+								{
+									defaultMessage:
+										'These fields still need attention: {fields}. The rest of the form is shown so you can complete them. Nothing was saved.'
+								},
+								{ fields: hiddenLabels.join(', ') }
+							)
+						})
+					);
+					onHiddenInvalidFields?.();
+					return;
+				}
 			}
 
 			// `onBeforeSave` may have changed `file-name`; the render-time snapshot is stale from here on.
@@ -307,6 +343,19 @@ export function useSaveForm(props: UseSaveFormProps) {
 				);
 				return;
 			}
+
+			// Repository writes (root create/update and root embedded) tell the launcher which
+			// dialog action this was, plus enough of the content type to build redirect flags.
+			const repositorySaveArgs = (savedPath: string, dom: Document | Element, xml: string) => ({
+				dom,
+				xml,
+				values,
+				versionComment,
+				path: savedPath,
+				action: contentFormSaveAction({ close: closesDialog(), minimize: minimizeAfterSave }),
+				draft: saveAsDraft,
+				contentType: { id: contentType.id, type: contentType.type, previewable: contentType.previewable }
+			});
 
 			complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
 			const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
@@ -344,6 +393,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 				}
 
 				// Root embedded: merge the component into the parent document and write the parent.
+				// The callback path is that parent (so a component inside a page reports the page's
+				// preview URL). FE1 did the same: it looked up the item that was written.
 				const path = itemPath;
 				const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 					const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
@@ -358,14 +409,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 						async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
 							try {
 								const isAmended = ajaxResponse.response?.items?.[0]?.amended;
-								const result = (await onSave?.({
-									dom,
-									xml,
-									values,
-									versionComment,
-									path
-								})) as FormSavePromiseResult;
-								const shouldClose = result.close || closeAfterSave;
+								const result = (await onSave?.(repositorySaveArgs(path, dom, xml))) as FormSavePromiseResult;
+								const shouldClose = result.close || closesDialog();
 								if (!shouldClose && isAmended) {
 									triggerReload();
 								}
@@ -426,8 +471,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 					try {
 						const isAmended = ajaxResponse.response?.items?.[0]?.amended;
 						const dom = fromString(xml);
-						const result = (await onSave?.({ dom, xml, values, versionComment, path })) as FormSavePromiseResult;
-						const shouldClose = result.close || closeAfterSave;
+						const result = (await onSave?.(repositorySaveArgs(path, dom, xml))) as FormSavePromiseResult;
+						const shouldClose = result.close || closesDialog();
 						if (!shouldClose) {
 							if (isCreateMode) {
 								setSavedCreatePath(path);

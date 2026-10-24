@@ -203,8 +203,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					| PrimitiveAtom<unknown>
-					| undefined;
+					PrimitiveAtom<unknown> | undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
@@ -1752,7 +1751,7 @@ export default EditTypeView;
 //  - Can we move display-template, no-template-required and merge-strategy to the root of the type def? If so, update BE, UI and UM
 //    - If not moved, drop `label` & `type`?
 //  - Should we rename the root tag on form-def.xml from `form` to something like `type`, `contentType` or so?
-//  - Can we drop iceId?
+//  - iceId is kept: Forms Engine uses it to open an in-context field group.
 // 	- Should we use UM to remove from maxlength property and move into constraints? Also fix spelling to `maxLength`
 // 	- Can we add created, modified, createdBy and modifiedBy to the XML?
 //  - Assess removal of internalName/disabled controls.

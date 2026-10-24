@@ -77,8 +77,11 @@ const dialogEpics: CrafterCMSEpic[] = [
 	(action$) =>
 		action$.pipe(
 			ofType(newContentCreationComplete.type),
-			filter(({ payload }) => payload.item?.isPage && payload.item.isPreviewable),
-			map(({ payload }) => changeCurrentUrl(payload.redirectUrl))
+			switchMap(({ payload }) =>
+				payload.item?.isPage && payload.item.isPreviewable && payload.redirectUrl
+					? of(changeCurrentUrl(payload.redirectUrl))
+					: EMPTY
+			)
 		),
 	// endregion
 	// region showEditDialog, showCodeEditorDialog

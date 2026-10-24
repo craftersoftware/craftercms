@@ -266,7 +266,8 @@ function parseLegacyFormDefinitionFields(
 			sortable: legacyField.type === 'node-selector' || legacyField.type === 'repeat',
 			validations: {},
 			properties: {},
-			defaultValue: legacyField.defaultValue
+			defaultValue: legacyField.defaultValue,
+			...(legacyField.iceId ? { iceId: legacyField.iceId } : {})
 		};
 
 		if (legacyField.plugin) {
