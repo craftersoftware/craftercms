@@ -20,7 +20,8 @@ import { FormattedMessage } from 'react-intl';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import Button from '@mui/material/Button';
 import { USER_PASSWORD_MAX_LENGTH, USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
-import type { PartialSxRecord } from '../../models';
+import { PartialSxRecord } from '../../models';
+import palette from '../../styles/palette';
 
 export type LogInFormClassKey = 'username' | 'password' | 'submit' | 'recover';
 
@@ -39,7 +40,7 @@ export type LogInFormProps = PropsWithChildren<{
 	onRecover?: Function;
 	xsrfParamName?: string;
 	xsrfToken?: string;
-	/** Credential failure: both fields are invalid and point at the alert via `credentialsErrorId`. */
+	/** Bad credentials. Marks the password field, and the username field when that field is editable. */
 	invalidCredentials?: boolean;
 	credentialsErrorId?: string;
 }>;
@@ -64,8 +65,27 @@ export function LogInForm(props: LogInFormProps) {
 		invalidCredentials = false,
 		credentialsErrorId
 	} = props;
-	const credentialsDescribedBy =
-		invalidCredentials && credentialsErrorId ? { 'aria-describedby': credentialsErrorId } : undefined;
+	// A disabled username (session re-login) is not an editable credential, so it stays out of the error.
+	const usernameInvalid = invalidCredentials && enableUsernameInput;
+	const describedBy = (invalid: boolean) =>
+		invalid && credentialsErrorId ? { 'aria-describedby': credentialsErrorId } : undefined;
+	// Theme error.main is #FF3B30 in light mode (3.55:1 on white; text needs 4.5:1).
+	// Light labels and outlines use #D70015 (5.38:1 on #fff). Dark paper is #121212, where
+	// #D70015 is only 3.48:1, so dark mode keeps #FF6961 (6.64:1 on #121212).
+	const credentialErrorColor = (theme: { palette: { mode: string } }) =>
+		theme.palette.mode === 'dark' ? palette.red.tint : palette.red.shade;
+	const credentialErrorSx = (invalid: boolean) =>
+		invalid
+			? {
+					'& .MuiInputLabel-root.Mui-error, & .MuiInputLabel-root.Mui-error.Mui-focused': {
+						color: credentialErrorColor
+					},
+					'& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline':
+						{
+							borderColor: credentialErrorColor
+						}
+				}
+			: undefined;
 	return (
 		<form action={action} method={method} onSubmit={onSubmit}>
 			{children}
@@ -75,14 +95,15 @@ export function LogInForm(props: LogInFormProps) {
 				fullWidth
 				autoFocus={enableUsernameInput && !Boolean(username)}
 				disabled={!enableUsernameInput}
-				error={invalidCredentials}
+				error={usernameInvalid}
 				type="text"
 				value={username}
 				onChange={(e: any) => onSetUsername?.(e.target.value)}
 				className={classes?.username}
 				sx={{
 					marginBottom: (theme) => theme.spacing(1.5),
-					...sxs?.username
+					...sxs?.username,
+					...credentialErrorSx(usernameInvalid)
 				}}
 				label={<FormattedMessage id="loginView.usernameTextFieldLabel" defaultMessage="Username" />}
 				slotProps={{
@@ -99,7 +120,7 @@ export function LogInForm(props: LogInFormProps) {
 					htmlInput: {
 						maxLength: USER_USERNAME_MAX_LENGTH,
 						autoComplete: 'username',
-						...credentialsDescribedBy
+						...describedBy(usernameInvalid)
 					}
 				}}
 			/>
@@ -115,7 +136,8 @@ export function LogInForm(props: LogInFormProps) {
 				sxs={{
 					root: {
 						marginBottom: (theme) => theme.spacing(1.5),
-						...sxs?.password
+						...sxs?.password,
+						...credentialErrorSx(invalidCredentials)
 					}
 				}}
 				label={<FormattedMessage id="authMonitor.passwordTextFieldLabel" defaultMessage="Password" />}
@@ -133,7 +155,7 @@ export function LogInForm(props: LogInFormProps) {
 					htmlInput: {
 						maxLength: USER_PASSWORD_MAX_LENGTH,
 						autoComplete: 'current-password',
-						...credentialsDescribedBy
+						...describedBy(invalidCredentials)
 					}
 				}}
 			/>

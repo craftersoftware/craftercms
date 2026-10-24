@@ -161,6 +161,9 @@ function LoginView(props: SubViewProps) {
 	const [username, setUsername] = useState(() => localStorage.getItem('username') ?? '');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
+	const [errorDetail, setErrorDetail] = useState('');
+	// Only a rejected login marks the fields invalid. The locked-account message is not a field error.
+	const [credentialsFailed, setCredentialsFailed] = useState(false);
 	const lockedTimer = useTimer(lockedTimeSeconds);
 	const username$ = useDebouncedInput(
 		useCallback(
@@ -182,16 +185,23 @@ function LoginView(props: SubViewProps) {
 		if (lockedErrorMessage && nnou(lockedTimer)) {
 			if (lockedTimer === 0) {
 				setError(null);
+				setErrorDetail('');
+				setCredentialsFailed(false);
 			} else {
-				setError(
-					`${unescapeHTML(lockedErrorMessage)}. ${formatMessage(translations.lockedAccountTryAgain, {
+				// The alert text stays fixed. The countdown is a sibling timer so it is not re-announced every second.
+				setError(`${unescapeHTML(lockedErrorMessage)}.`);
+				setErrorDetail(
+					formatMessage(translations.lockedAccountTryAgain, {
 						fullTime: lockedTimer > 60,
 						time: lockedTimer > 60 ? moment().add(lockedTimer, 'seconds').fromNow() : lockedTimer
-					})}`
+					})
 				);
+				setCredentialsFailed(false);
 			}
 		} else if (qsError) {
 			setError(formatMessage(translations.incorrectCredentialsMessage));
+			setErrorDetail('');
+			setCredentialsFailed(true);
 			// This avoids keeping a stored language for a username that is incorrect.
 			// e.g. wrong username submitted.
 			localStorage.removeItem(buildStoredLanguageKey(username));
@@ -206,13 +216,15 @@ function LoginView(props: SubViewProps) {
 			localStorage.setItem('username', username);
 			setStoredLanguage(language, username);
 			setError('');
+			setErrorDetail('');
+			setCredentialsFailed(false);
 			onSubmit(true);
 		}
 	};
 	return (
 		<>
 			<DialogContent>
-				<HeaderView error={error} introMessage="" classes={classes} />
+				<HeaderView error={error} errorDetail={errorDetail} introMessage="" classes={classes} />
 				<LogInForm
 					children={children}
 					classes={classes}
@@ -221,7 +233,7 @@ function LoginView(props: SubViewProps) {
 					password={password}
 					isFetching={isFetching}
 					enableUsernameInput={true}
-					invalidCredentials={Boolean(error)}
+					invalidCredentials={credentialsFailed}
 					credentialsErrorId={loginFormErrorId}
 					onSetPassword={setPassword}
 					onRecover={onRecover}
@@ -441,38 +453,65 @@ function ResetView(props: SubViewProps) {
 	);
 }
 
-function HeaderView({ error, introMessage, classes }: any) {
-	// Mount the alert only while an error is showing so role="alert" is announced on insert.
+function HeaderView({
+	error,
+	errorDetail,
+	introMessage,
+	classes
+}: {
+	error?: string | null;
+	errorDetail?: string;
+	introMessage?: React.ReactNode;
+	classes?: { errorMessage?: string; recoverInfoMessage?: string };
+}) {
+	// `key` replaces the node when this switches between the intro and the alert. The same
+	// element type without a key reuses the <p> and only updates attributes, which is not an
+	// insertion. The countdown is a sibling of the alert: role="alert" is assertive and atomic,
+	// so a once-a-second text change inside it would be re-announced.
 	// #000 on #FF6961 is 7.45:1. #fff on #FF6961 is 2.82:1 (below the 4.5:1 text minimum).
 	if (error) {
 		return (
-			<Typography
-				id={loginFormErrorId}
-				role="alert"
-				variant="body2"
-				className={classes?.errorMessage}
-				sx={(theme) => ({
-					backgroundColor: palette.red.tint,
-					color: palette.black,
-					marginBottom: theme.spacing(1),
-					padding: theme.spacing(1),
-					borderRadius: theme.spacing(1),
-					border: `1px solid ${palette.red.main}`,
-					display: 'flex',
-					placeContent: 'center',
-					lineHeight: 1.7,
-					'& .MuiSvgIcon-root': {
-						marginRight: theme.spacing(0.5),
-						color: palette.black
-					}
-				})}
-			>
-				<WarningRounded /> {error}
-			</Typography>
+			<>
+				<Typography
+					key="error"
+					id={loginFormErrorId}
+					role="alert"
+					variant="body2"
+					className={classes?.errorMessage}
+					sx={(theme) => ({
+						backgroundColor: palette.red.tint,
+						color: palette.black,
+						marginBottom: theme.spacing(1),
+						padding: theme.spacing(1),
+						borderRadius: theme.spacing(1),
+						border: `1px solid ${palette.red.main}`,
+						display: 'flex',
+						placeContent: 'center',
+						lineHeight: 1.7,
+						'& .MuiSvgIcon-root': {
+							marginRight: theme.spacing(0.5),
+							color: palette.black
+						}
+					})}
+				>
+					<WarningRounded /> {error}
+				</Typography>
+				{errorDetail ? (
+					<Typography
+						component="span"
+						role="timer"
+						variant="body2"
+						sx={{ display: 'block', textAlign: 'center', mb: 1 }}
+					>
+						{errorDetail}
+					</Typography>
+				) : null}
+			</>
 		);
 	}
 	return (
 		<Typography
+			key="info"
 			variant="body2"
 			className={classes?.recoverInfoMessage}
 			sx={{

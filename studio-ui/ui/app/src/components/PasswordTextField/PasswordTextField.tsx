@@ -15,13 +15,13 @@
  */
 
 import TextField, { TextFieldProps } from '@mui/material/TextField';
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { defineMessages, useIntl } from 'react-intl';
-import type { PartialSxRecord } from '../../models';
+import { PartialSxRecord } from '../../models';
 
 type PasswordTextFieldProps = TextFieldProps & {
 	visibilitySwitch?: boolean;
@@ -30,13 +30,9 @@ type PasswordTextFieldProps = TextFieldProps & {
 };
 
 const translations = defineMessages({
-	showPassword: {
-		id: 'passwordTextField.showPassword',
-		defaultMessage: 'Show password'
-	},
-	hidePassword: {
-		id: 'passwordTextField.hidePassword',
-		defaultMessage: 'Hide password'
+	toggleVisibilityButtonText: {
+		id: 'passwordTextField.toggleVisibilityButtonText',
+		defaultMessage: 'toggle password visibility'
 	}
 });
 
@@ -44,23 +40,18 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 	const { visibilitySwitch = true, initialVisible = false, sxs, slotProps, ...textFieldProps } = props;
 	const { formatMessage } = useIntl();
 	const [showPassword, setShowPassword] = useState(initialVisible);
-	const inputRef = useRef<HTMLInputElement>(undefined);
+	// Keep focus on the toggle. Moving it to the input (the previous behaviour) meant the
+	// pressed-state change was never the focused control, so it was not announced from the button.
 	const handleClickShowPassword = () => {
-		setShowPassword(!showPassword);
-		inputRef.current.focus();
-		setTimeout(() => {
-			const inputLength = inputRef.current.value.length;
-			inputRef.current.setSelectionRange(inputLength, inputLength);
-		}, 0);
+		setShowPassword((visible) => !visible);
 	};
 
 	const visibilityAdornment = (
 		<InputAdornment position="end">
 			<IconButton
-				type="button"
 				edge="end"
 				aria-pressed={showPassword}
-				aria-label={showPassword ? formatMessage(translations.hidePassword) : formatMessage(translations.showPassword)}
+				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
 				onClick={handleClickShowPassword}
 				size="large"
 			>
@@ -77,10 +68,6 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 			type={showPassword ? 'text' : 'password'}
 			slotProps={{
 				...slotProps,
-				htmlInput: {
-					...slotProps?.htmlInput,
-					ref: inputRef
-				},
 				input: visibilitySwitch
 					? {
 							...slotProps?.input,
