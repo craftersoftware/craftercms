@@ -26,6 +26,7 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState
@@ -112,6 +113,7 @@ import {
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
 import { focusFirstInvalidField, FormValidationAnnouncerContext, readInvalidMessage } from './lib/fieldA11y';
+import { SkipToActionsLink } from '../SkipToActionsLink';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -826,6 +828,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const formActionsId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
@@ -1227,7 +1230,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box id="header" sx={{ minHeight: 50 }}>
+				<Box id="header" sx={{ minHeight: 50, position: 'relative' }}>
+					<SkipToActionsLink targetId={formActionsId} scopeRef={containerRef} />
 					<Box
 						component={Container}
 						sx={{
@@ -1375,7 +1379,14 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
 					</Grid>
 					<Grid size="grow">
-						<StickyBox className="space-y" sx={{ height: 'auto' }}>
+						<StickyBox
+							id={formActionsId}
+							role="region"
+							tabIndex={-1}
+							aria-label={formatMessage({ defaultMessage: 'Form actions' })}
+							className="space-y"
+							sx={{ height: 'auto', scrollMarginTop: 8 }}
+						>
 							{readonly ? (
 								<>
 									<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>

@@ -38,6 +38,7 @@ import { EmptyState } from '../EmptyState';
 import DialogFooter from '../DialogFooter';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
+import { SkipToActionsLink } from '../SkipToActionsLink';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
@@ -380,6 +381,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 	const publishSubmitReasonId = useId();
+	const publishActionsId = useId();
 	// Visible reason for a disabled Publish/Schedule/Request Publish button. One object-literal
 	// formatMessage per branch so the formatjs babel plugin can inject message ids.
 	let publishSubmitReason = '';
@@ -472,6 +474,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	return (
 		<>
+			<SkipToActionsLink targetId={publishActionsId} />
 			<DialogBody sx={{ px: 4, minHeight: 'calc(100vh * 0.5)' }}>
 				{state.error ? (
 					<ApiResponseErrorState error={state.error} />
@@ -614,7 +617,13 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 					</Typography>
 				)}
 			</DialogBody>
-			<DialogFooter sx={{ flexWrap: 'wrap' }}>
+			<DialogFooter
+				id={publishActionsId}
+				tabIndex={-1}
+				role="group"
+				aria-label={formatMessage({ defaultMessage: 'Publish actions' })}
+				sx={{ flexWrap: 'wrap' }}
+			>
 				{publishSubmitReason && (
 					<Typography
 						id={publishSubmitReasonId}

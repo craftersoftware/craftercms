@@ -146,7 +146,6 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 	return (
 		<Box component="form" sx={{ width: 'auto', ...sxs?.root }} onSubmit={onSubmit}>
 			<TextField
-				autoFocus
 				fullWidth
 				sx={{ mb: 1 }}
 				name="packageTitle"
