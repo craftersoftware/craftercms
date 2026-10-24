@@ -65,19 +65,29 @@ const operations$ = new Subject<Operation>();
 
 const operationsObs$ = operations$.asObservable();
 
-export const modelHierarchyMap: ModelHierarchyMap = {/* [id]: [id, id, id] */};
+export const modelHierarchyMap: ModelHierarchyMap = {
+	/* [id]: [id, id, id] */
+};
 
 let requestedPaths = {};
 
-const paths$ = new BehaviorSubject<LookupTable<string>>({/* 'path': 'modelId' */});
+const paths$ = new BehaviorSubject<LookupTable<string>>({
+	/* 'path': 'modelId' */
+});
 
-const models$ = new BehaviorSubject<LookupTable<ContentInstance>>({/* 'modelId': { ...modelData } */});
+const models$ = new BehaviorSubject<LookupTable<ContentInstance>>({
+	/* 'modelId': { ...modelData } */
+});
 
-const items$ = new BehaviorSubject<LookupTable<ContentItem>>({/* 'path': { ...contentItem } */});
+const items$ = new BehaviorSubject<LookupTable<ContentItem>>({
+	/* 'path': { ...contentItem } */
+});
 
 const permissions$ = new BehaviorSubject<string[]>([]);
 
-const contentTypes$ = new BehaviorSubject<LookupTable<ContentType>>({/* 'contentTypeId': { ...contentTypeData } */});
+const contentTypes$ = new BehaviorSubject<LookupTable<ContentType>>({
+	/* 'contentTypeId': { ...contentTypeData } */
+});
 
 // Share operator makes the behaviour subject's behaviour go away. New subscribers
 // don't receive the latest value as soon as they subscribe. Would need to multicast

@@ -43,6 +43,7 @@
   "zoneMenu.trashName": "삭제",
   "zoneMenu.cancelName": "취소",
   "zoneMenu.moveRefused": "해당 영역으로 이동할 수 없습니다.",
+  "zoneMenu.moveLockFailed": "항목을 이동하도록 잠글 수 없습니다.",
   "keyboardPlacement.duplicate": "이 영역에 이미 {contentType}이(가) 있습니다.",
   "ice.inserted": "{contentType}을(를) {zone}에 삽입했습니다.",
   "ice.moved": "{label}을(를) 이동했습니다.",

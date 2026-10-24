@@ -20,11 +20,18 @@ export interface ZoneAddress {
 	index: string;
 }
 
+/** Drop a pending focus that the moved zone button never satisfied. */
+const STALE_FOCUS_MS = 5000;
+const STALE_IDENTITY_CHANGES = 4;
+
 interface PendingZoneFocus {
 	iceId?: number;
 	address?: ZoneAddress;
 	/** Wait for the element registry to change before preferring the post-move address. */
 	afterRegistryChange: boolean;
+	requestedAt: number;
+	seenIdentity?: string;
+	identityChanges: number;
 }
 
 let pending: PendingZoneFocus | null = null;
@@ -52,9 +59,17 @@ function buttonByAddress(address: ZoneAddress): HTMLElement | null {
 	return null;
 }
 
+function dropIfStale(): boolean {
+	if (pending && Date.now() - pending.requestedAt > STALE_FOCUS_MS) {
+		pending = null;
+		return true;
+	}
+	return false;
+}
+
 /** Focus a pending zone button. Returns true when a button was focused. */
 export function tryFocusPendingZone(): boolean {
-	if (!pending) {
+	if (!pending || dropIfStale()) {
 		return false;
 	}
 	if (pending.afterRegistryChange) {
@@ -86,7 +101,9 @@ export function requestZoneFocus(target: { iceId?: number; address?: ZoneAddress
 	pending = {
 		iceId: target.iceId,
 		address: target.address,
-		afterRegistryChange: Boolean(target.afterRegistryChange)
+		afterRegistryChange: Boolean(target.afterRegistryChange),
+		requestedAt: Date.now(),
+		identityChanges: 0
 	};
 	if (pending.afterRegistryChange && pending.iceId != null) {
 		const current = buttonByIceId(pending.iceId);
@@ -97,6 +114,28 @@ export function requestZoneFocus(target: { iceId?: number; address?: ZoneAddress
 	}
 	if (!tryFocusPendingZone()) {
 		requestAnimationFrame(() => tryFocusPendingZone());
+	}
+}
+
+/**
+ * Called when the zone-button list's identity changes and the pending address was not found.
+ * Position-only updates must not count, or scrolling would expire the request.
+ */
+export function noteZoneFocusIdentity(identity: string) {
+	if (!pending?.afterRegistryChange || dropIfStale()) {
+		return;
+	}
+	if (pending.seenIdentity === undefined) {
+		pending.seenIdentity = identity;
+		return;
+	}
+	if (pending.seenIdentity === identity) {
+		return;
+	}
+	pending.seenIdentity = identity;
+	pending.identityChanges += 1;
+	if (pending.identityChanges >= STALE_IDENTITY_CHANGES) {
+		pending = null;
 	}
 }
 

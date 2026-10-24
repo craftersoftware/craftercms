@@ -95,6 +95,7 @@ const zoneMenuMessages = defineMessages({
 	trashName: { id: 'zoneMenu.trashName', defaultMessage: 'Trash' },
 	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' },
 	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: 'That zone cannot be moved to.' },
+	moveLockFailed: { id: 'zoneMenu.moveLockFailed', defaultMessage: 'The item could not be locked for moving.' },
 	edit: { id: 'words.edit', defaultMessage: 'Edit' },
 	unlock: { id: 'zoneMenu.unlock', defaultMessage: 'Unlock' },
 	editTemplate: { id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' },
@@ -606,21 +607,46 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			refuseMove();
 			return;
 		}
-		requestZoneFocus({ iceId: record.iceIds[0] });
-		lockPaths$(paths, store.getState()).subscribe(() => {
-			moveItem(source.modelId, source.fieldId, source.index, target.modelId, target.fieldId, targetIndex);
-			announceGuestStatus(
-				formatMessage(zoneMenuMessages.movedTo, { label: zoneLabel || zoneName, zone: zoneName }) as string
-			);
-			requestZoneFocus({
-				iceId: record.iceIds[0],
-				address: {
-					modelId: target.modelId,
-					fieldId: target.fieldId,
-					index: String(targetIndex)
-				},
-				afterRegistryChange: true
-			});
+		const sourceContainer = findContainerRecord(source.modelId, source.fieldId, source.index);
+		const sourceCollection = extractCollection(getCachedModel(source.modelId), source.fieldId, source.index);
+		const sourceLength = Array.isArray(sourceCollection) ? sourceCollection.length : numOfItemsInContainerCollection;
+		if (sourceContainer && sourceLength != null) {
+			const minCount = runValidation(sourceContainer.id, 'minCount', [sourceLength - 1]);
+			if (minCount) {
+				post(snackGuestMessage(minCount));
+				return;
+			}
+		}
+		const originIceId = record.iceIds[0];
+		let moved = false;
+		lockPaths$(paths, store.getState()).subscribe({
+			next: () => {
+				moved = true;
+				moveItem(source.modelId, source.fieldId, source.index, target.modelId, target.fieldId, targetIndex);
+				announceGuestStatus(
+					formatMessage(zoneMenuMessages.movedTo, { label: zoneLabel || zoneName, zone: zoneName }) as string
+				);
+				requestZoneFocus({
+					iceId: originIceId,
+					address: {
+						modelId: target.modelId,
+						fieldId: target.fieldId,
+						index: String(targetIndex)
+					},
+					afterRegistryChange: true
+				});
+			},
+			complete: () => {
+				if (!moved) {
+					requestZoneFocus({ iceId: originIceId });
+					post(
+						snackGuestMessage({
+							level: 'suggestion',
+							message: formatMessage(zoneMenuMessages.moveLockFailed) as string
+						})
+					);
+				}
+			}
 		});
 		closeMenu();
 	};
@@ -630,6 +656,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const closeSubmenus = () => {
 		setMoveToAnchor(null);
 		setShowTrashConfirmation(false);
+	};
+
+	// MUI types the menu onClose event as {}. The backdrop click is a real mouse event.
+	const stopSubmenuDismiss = (event: object) => {
+		const dismissEvent = event as { stopPropagation?: () => void; nativeEvent?: { stopPropagation?: () => void } };
+		dismissEvent.stopPropagation?.();
+		dismissEvent.nativeEvent?.stopPropagation?.();
 	};
 
 	const refs = useRef({
@@ -651,23 +684,25 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	// Listen for key input to sort/delete and for clicking outside the zone to dismiss selection.
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
+			const keyTarget = e.target instanceof Element ? e.target : null;
+			const inZoneChrome = Boolean(keyTarget?.closest('[data-craftercms-zone-menu],[data-craftercms-ice-control]'));
+			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
 			const submenuOpen = Boolean(refs.current.moveToAnchor) || refs.current.showTrashConfirmation;
-			if (e.key === 'Escape' && submenuOpen) {
+			// Escape inside the submenu closes only that submenu. Other widgets keep their keys.
+			if (e.key === 'Escape' && submenuOpen && (inOurSubmenu || inZoneChrome)) {
 				e.preventDefault();
 				e.stopPropagation();
 				refs.current.closeSubmenus();
+				return;
+			}
+			if (!inZoneChrome) {
 				return;
 			}
 			if (e.key === 'Escape') {
 				requestZoneFocus({ iceId: refs.current.iceId });
 				return;
 			}
-			const keyTarget = e.target as Element | null;
-			if (
-				e.defaultPrevented ||
-				submenuOpen ||
-				keyTarget?.closest?.('[role="menu"],[role="dialog"],input,textarea,select,[contenteditable]')
-			) {
+			if (e.defaultPrevented || submenuOpen || keyTarget?.closest('input,textarea,select,[contenteditable]')) {
 				return;
 			}
 			switch (e.key) {
@@ -887,7 +922,18 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Menu
 				anchorEl={moveToAnchor}
 				open={Boolean(moveToAnchor)}
-				onClose={() => setMoveToAnchor(null)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setMoveToAnchor(null);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
 				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
 				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
 				sx={{ zIndex: 1501 }}
@@ -914,7 +960,18 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Menu
 				anchorEl={trashButtonRef.current}
 				open={showTrashConfirmation}
-				onClose={() => setShowTrashConfirmation(false)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setShowTrashConfirmation(false);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
 				anchorOrigin={{
 					vertical: 'bottom',
 					horizontal: 'right'

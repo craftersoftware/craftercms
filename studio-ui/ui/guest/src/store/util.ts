@@ -17,7 +17,7 @@
 import { SyntheticEvent } from 'react';
 import { EditingStatus } from '../constants';
 import { fetchContentItem, lock } from '@craftercms/studio-ui/services/content';
-import { catchError, concatMap, defaultIfEmpty, filter, map, switchMap, take, tap, toArray } from 'rxjs/operators';
+import { catchError, concatMap, defaultIfEmpty, filter, map, switchMap, take, takeWhile, tap } from 'rxjs/operators';
 import { message$, post } from '../utils/communicator';
 import {
 	requestWorkflowCancellationDialog,
@@ -105,8 +105,8 @@ export function beforeWrite$<T extends any = 'continue', S extends any = never>(
 }
 
 /**
- * Locks each distinct path in order. If a later lock fails, paths locked earlier in this
- * call are unlocked. An empty list does not lock and does not continue.
+ * Locks each distinct path in order and stops on the first failure. Paths locked earlier
+ * in this call are unlocked. An empty list does not lock and does not continue.
  */
 export function lockPaths$(
 	paths: Array<string | null | undefined>,
@@ -116,6 +116,7 @@ export function lockPaths$(
 	if (unique.length === 0) {
 		return EMPTY;
 	}
+	const locked: string[] = [];
 	return from(unique).pipe(
 		concatMap((path) =>
 			beforeWrite$({
@@ -124,18 +125,21 @@ export function lockPaths$(
 				username: state.username,
 				localItem: getCachedContentItem(path)
 			}).pipe(
-				map(() => ({ path, ok: true as const })),
-				defaultIfEmpty({ path, ok: false as const })
+				map(() => path),
+				defaultIfEmpty(null)
 			)
 		),
-		toArray(),
-		switchMap((results) => {
-			if (results.every((result) => result.ok)) {
-				return of('continue' as const);
+		// A null path means that lock failed. takeWhile unsubscribes before the next path starts.
+		takeWhile((path): path is string => {
+			if (path) {
+				locked.push(path);
+				return true;
 			}
-			results.filter((result) => result.ok).forEach((result) => post(unlockItem({ path: result.path })));
-			return EMPTY;
-		})
+			locked.forEach((held) => post(unlockItem({ path: held })));
+			return false;
+		}),
+		filter((path) => locked.length === unique.length && path === unique[unique.length - 1]),
+		map(() => 'continue' as const)
 	);
 }
 

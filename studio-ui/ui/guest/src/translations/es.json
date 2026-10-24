@@ -43,6 +43,7 @@
   "zoneMenu.trashName": "Eliminar",
   "zoneMenu.cancelName": "Cancelar",
   "zoneMenu.moveRefused": "No se puede mover a esa zona.",
+  "zoneMenu.moveLockFailed": "No se pudo bloquear el elemento para moverlo.",
   "keyboardPlacement.duplicate": "Esta zona ya contiene {contentType}.",
   "ice.inserted": "Se insertó {contentType} en {zone}.",
   "ice.moved": "Se movió {label}.",

@@ -35,7 +35,7 @@ import { getParentModelId } from '../utils/ice';
 import { isEditActionAvailable } from '../utils/util';
 import { getCachedContentItems, getCachedModels, modelHierarchyMap } from '../contentController';
 import { subscribeGuestStatus } from '../utils/guestAnnounce';
-import { notifyZoneRegistryChange, tryFocusPendingZone } from '../utils/zoneFocus';
+import { noteZoneFocusIdentity, notifyZoneRegistryChange, tryFocusPendingZone } from '../utils/zoneFocus';
 import { useDispatch, useStore } from './GuestContext';
 import UltraStyledIconButton from './UltraStyledIconButton';
 import UltraStyledTooltip from './UltraStyledTooltip';
@@ -264,6 +264,13 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 		() => measureZones(active, () => store.getState()),
 		() => noZones
 	);
+	const zoneIdentity = zones.map((zone) => `${zone.iceId}:${zone.modelId}:${zone.fieldId}:${zone.index}`).join('|');
+	// The moved item's button is created on a later commit. Retry after that render, then drop the request.
+	useEffect(() => {
+		if (!tryFocusPendingZone()) {
+			noteZoneFocusIdentity(zoneIdentity);
+		}
+	}, [zones, zoneIdentity]);
 
 	if (!active || zones.length === 0) {
 		return null;
@@ -297,7 +304,11 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 							}
 						}}
 						onBlur={() => {
-							dispatch({ type: 'mouseleave', payload: {} });
+							const record = get(zone.id);
+							if (!record) {
+								return;
+							}
+							dispatch({ type: 'mouseleave', payload: { record, event: syntheticPointer(record) } });
 						}}
 						onClick={(event) => {
 							event.preventDefault();

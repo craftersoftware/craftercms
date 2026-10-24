@@ -224,10 +224,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 													/>
 												}
 											>
-												<Box
-													component="span"
-													sx={{ display: 'inline-flex', alignItems: 'center', mr: 0.5, pointerEvents: 'none' }}
-												>
+												<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', mr: 0.5 }}>
 													<AllowedTypeCircle
 														aria-hidden
 														sx={{

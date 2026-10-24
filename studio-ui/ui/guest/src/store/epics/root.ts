@@ -137,7 +137,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			withLatestFrom(state$),
 			tap(
 				([action, state]: [action: GuestStandardAction, state: GuestState]) =>
-					state.status === EditingStatus.LISTENING && action.payload.event.stopPropagation()
+					state.status === EditingStatus.LISTENING && action.payload?.event?.stopPropagation?.()
 			),
 			ignoreElements()
 		),
