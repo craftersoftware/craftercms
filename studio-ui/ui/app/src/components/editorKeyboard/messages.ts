@@ -19,12 +19,17 @@ import { defineMessages } from 'react-intl';
 /**
  * Shared copy for the Ace/Monaco keyboard exit.
  * Keep the default messages aligned with the TinyMCE Ace plugin strings
- * (`code-editor-instructions`, `code-editor-gutter`) and the es/de/ko catalogues.
+ * (`code-editor-name`, `code-editor-instructions`, `code-editor-instructions-readonly`,
+ * `code-editor-gutter`) and the es/de/ko catalogues.
  */
 export const codeEditorKeyboardMessages = defineMessages({
 	instructions: {
 		id: 'codeEditor.instructions',
 		defaultMessage: 'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.'
+	},
+	instructionsReadOnly: {
+		id: 'codeEditor.instructionsReadOnly',
+		defaultMessage: 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.'
 	},
 	groupLabel: {
 		id: 'codeEditor.groupLabel',

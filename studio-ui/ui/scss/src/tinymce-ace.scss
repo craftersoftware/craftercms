@@ -326,7 +326,9 @@
 	min-width: 24px !important;
 }
 
-.ace_editor > .craftercms-code-editor-hint {
+.ace_editor > .craftercms-code-editor-hint,
+.tox-dialog .ace_editor > .craftercms-code-editor-hint,
+.acecode-inline .ace_editor > .craftercms-code-editor-hint {
 	position: absolute;
 	left: 0;
 	right: 0;
@@ -336,8 +338,6 @@
 	margin: 0;
 	padding: 4px 8px;
 	pointer-events: none;
-	overflow: hidden;
-	max-height: 48px;
 	font-family:
 		system-ui,
 		-apple-system,
@@ -358,18 +358,4 @@
 	background: #252526;
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
-}
-
-// Beats `.tox-dialog .ace_editor * { font: ... !important; white-space: pre }`.
-.tox-dialog .ace_editor > .craftercms-code-editor-hint,
-.acecode-inline .ace_editor > .craftercms-code-editor-hint {
-	white-space: normal !important;
-	font-family:
-		system-ui,
-		-apple-system,
-		'Segoe UI',
-		sans-serif !important;
-	font-size: 12px !important;
-	font-weight: 400 !important;
-	line-height: 20px !important;
 }

@@ -15,18 +15,21 @@
  */
 
 /**
- * TinyMCE keyboard and target-size adjustments (WCAG 2.1.1 / 2.5.8).
+ * TinyMCE chrome keyboard and caret target-size adjustments.
  *
- * Alt+F10 (focus toolbar) and toolbar Esc (back to the content) are implemented
- * by the bundled TinyMCE 8 silver theme. This helper does not rebind them.
- * It does stop Escape that originates in the editor chrome from also closing a
- * surrounding dialog, collapses the classic-mode iframe/body pair toward a
- * single tab stop, and widens split-button carets that the oxide skin draws at
- * 16px.
+ * Classic editors are left on TinyMCE's own tab stop. Forcing the content body
+ * to tabindex -1 stops keyboard users from typing in Chrome: Tab focuses the
+ * iframe's content window and never fires `focus` on the `<iframe>`, so a
+ * follow-up `editor.focus()` never runs.
+ *
+ * Alt+F10 / Alt+F9 are TinyMCE shortcuts. In 8.9.2, menubar Esc calls
+ * `editor.focus()` and toolbar Esc does not. This helper focuses the content
+ * on toolbar Esc and stops menubar and toolbar Esc from also dismissing a
+ * parent dialog. Content Esc is left alone (the guest inline editor uses it
+ * to cancel editing).
  *
  * Keep in sync with `studio-ui/static-assets/js/editor-keyboard-a11y.js` and the
- * copy in `content-type-propsheet/richText.js`. Those legacy scripts cannot
- * import this module.
+ * fallback in `content-type-propsheet/richText.js`.
  */
 
 export const TINYMCE_TARGET_SIZE_STYLE_ID = 'craftercms-tinymce-target-size';
@@ -48,12 +51,13 @@ export const TINYMCE_TARGET_SIZE_CSS = `
 }
 `;
 
+const MENUBAR_SELECTOR = '.tox-menubar';
+const TOOLBAR_SELECTOR = '.tox-toolbar, .tox-toolbar-overlord, .tox-toolbar__overflow';
+
 export interface TinyMceKeyboardEditor {
 	inline?: boolean;
-	iframeElement?: HTMLIFrameElement | null;
 	editorContainer?: HTMLElement | null;
 	on(name: string, callback: () => void): void;
-	off?(name: string, callback: () => void): void;
 	getElement(): HTMLElement | null;
 	getBody(): HTMLElement | null;
 	getContainer(): HTMLElement | null;
@@ -72,28 +76,13 @@ export function ensureTinyMceTargetSizeStyles(doc: Document | null | undefined) 
 	(doc.head || doc.documentElement).appendChild(style);
 }
 
-function collapseClassicTabStop(editor: TinyMceKeyboardEditor) {
-	if (editor.inline) {
-		return;
-	}
-	const iframe = editor.iframeElement;
-	const body = editor.getBody?.();
-	if (!iframe || !body) {
-		return;
-	}
-	// One tab stop on the iframe. The content body stays out of the tab order;
-	// focusing the iframe moves the caret into the body. Setting the iframe to
-	// tabindex -1 would remove the editor from the page tab order entirely.
-	iframe.tabIndex = 0;
-	if (body.getAttribute('contenteditable') === 'true') {
-		body.tabIndex = -1;
-	}
+function isIn(target: EventTarget | null, selector: string) {
+	return target instanceof Element && Boolean(target.closest(selector));
 }
 
 /**
- * Idempotent. Call from a TinyMCE `setup` function, before the editor UI is shown.
- * Inline editors (Experience Builder) have no iframe pair; only the caret size
- * and chrome Escape handling apply there.
+ * Idempotent. Call from a TinyMCE `setup` function. Does not change the iframe
+ * or body tabindex.
  */
 export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
 	if (installed.has(editor)) {
@@ -104,21 +93,7 @@ export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
 	const doc = editor.getElement()?.ownerDocument ?? document;
 	ensureTinyMceTargetSizeStyles(doc);
 
-	let focusingContent = false;
-	const onIframeFocus = () => {
-		if (focusingContent) {
-			return;
-		}
-		focusingContent = true;
-		try {
-			collapseClassicTabStop(editor);
-			editor.focus();
-		} finally {
-			focusingContent = false;
-		}
-	};
-
-	const onChromeKeyDown = (event: KeyboardEvent) => {
+	const onChromeKey = (event: KeyboardEvent) => {
 		if (event.key !== 'Escape') {
 			return;
 		}
@@ -126,6 +101,15 @@ export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
 		const target = event.target;
 		if (body && target instanceof Node && (target === body || body.contains(target))) {
 			return;
+		}
+		const inMenubar = isIn(target, MENUBAR_SELECTOR);
+		const inToolbar = isIn(target, TOOLBAR_SELECTOR);
+		if (!inMenubar && !inToolbar) {
+			return;
+		}
+		// Toolbar Esc does not return to the content in TinyMCE 8.9.2. Menubar Esc does.
+		if (event.type === 'keydown' && inToolbar && !inMenubar) {
+			editor.focus();
 		}
 		event.stopPropagation();
 	};
@@ -136,19 +120,20 @@ export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
 			return;
 		}
 		roots.add(root);
-		root.addEventListener('keydown', onChromeKeyDown);
+		root.addEventListener('keydown', onChromeKey);
+		root.addEventListener('keyup', onChromeKey);
 	};
 
 	const onInit = () => {
-		collapseClassicTabStop(editor);
-		editor.iframeElement?.addEventListener('focus', onIframeFocus);
 		addRoot(editor.getContainer());
 		addRoot(editor.editorContainer);
 	};
 
 	const onRemove = () => {
-		editor.iframeElement?.removeEventListener('focus', onIframeFocus);
-		roots.forEach((root) => root.removeEventListener('keydown', onChromeKeyDown));
+		roots.forEach((root) => {
+			root.removeEventListener('keydown', onChromeKey);
+			root.removeEventListener('keyup', onChromeKey);
+		});
 		roots.clear();
 	};
 

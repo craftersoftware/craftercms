@@ -22,8 +22,10 @@
 		'toggle-code-view': 'Toggle code view mode',
 		fullscreen: 'Fullscreen',
 		'exit-fullscreen': 'Exit fullscreen',
+		'code-editor-name': 'Code editor',
 		'code-editor-instructions':
 			'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
+		'code-editor-instructions-readonly': 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.',
 		'code-editor-gutter': 'Editor gutter. Press Enter to use the controls. Press Esc to leave the gutter.'
 	});
 	tinymce.addI18n('es', {
@@ -31,17 +33,23 @@
 		'toggle-code-view': 'Alternar el modo de vista de código',
 		fullscreen: 'Pantalla completa',
 		'exit-fullscreen': 'Salir de pantalla completa',
+		'code-editor-name': 'Editor de código',
 		'code-editor-instructions':
 			'Pulse Esc y después Tab para salir del editor. Pulse Enter para editar. Tab sangra mientras edita.',
-		'code-editor-gutter': 'Canal del editor. Pulse Enter para usar los controles. Pulse Esc para salir del canal.'
+		'code-editor-instructions-readonly':
+			'Pulse Esc y después Tab para salir del editor. Pulse Enter para entrar en el editor.',
+		'code-editor-gutter': 'Margen del editor. Pulse Enter para usar los controles. Pulse Esc para salir del margen.'
 	});
 	tinymce.addI18n('de', {
 		'code-editor': 'Code-Editor',
 		'toggle-code-view': 'Codeansichtsmodus umschalten',
 		fullscreen: 'Vollbild',
 		'exit-fullscreen': 'Vollbildmodus beenden',
+		'code-editor-name': 'Code-Editor',
 		'code-editor-instructions':
 			'Drücken Sie Esc und dann Tab, um den Editor zu verlassen. Drücken Sie die Eingabetaste zum Bearbeiten. Tab rückt beim Bearbeiten ein.',
+		'code-editor-instructions-readonly':
+			'Drücken Sie Esc und dann Tab, um den Editor zu verlassen. Drücken Sie die Eingabetaste, um in den Editor zu wechseln.',
 		'code-editor-gutter':
 			'Editor-Randleiste. Drücken Sie die Eingabetaste, um die Steuerelemente zu verwenden. Drücken Sie Esc, um die Randleiste zu verlassen.'
 	});
@@ -50,8 +58,11 @@
 		'toggle-code-view': '코드 보기 모드 전환',
 		fullscreen: '전체 화면',
 		'exit-fullscreen': '전체 화면 종료',
+		'code-editor-name': '코드 편집기',
 		'code-editor-instructions':
 			'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집하려면 Enter를 누르세요. 편집 중 Tab은 들여쓰기입니다.',
+		'code-editor-instructions-readonly':
+			'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집기로 들어가려면 Enter를 누르세요.',
 		'code-editor-gutter': '편집기 여백입니다. 컨트롤을 사용하려면 Enter를 누르세요. 여백을 나가려면 Esc를 누르세요.'
 	});
 
@@ -59,26 +70,90 @@
 	// This plugin is loaded as a classic script and cannot import that module.
 	const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
 	const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
-	const ACE_HINT_SCROLL_MARGIN = 48;
+	let aceHintSequence = 0;
+	// Specificity beats `.tox-dialog .ace_editor * { font: ... !important }`.
 	const ACE_HINT_CSS = `
-.${ACE_HINT_CLASS}{position:absolute;left:0;right:0;bottom:0;z-index:6;box-sizing:border-box;margin:0;padding:4px 8px;pointer-events:none;overflow:hidden;max-height:${ACE_HINT_SCROLL_MARGIN}px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif !important;font-size:12px !important;font-weight:400 !important;line-height:20px !important;white-space:normal !important;background:#f4f4f5;color:#333;border-top:1px solid #d0d0d0}
-.ace_editor.ace_dark > .${ACE_HINT_CLASS},.ace_editor.ace-tomorrow-night > .${ACE_HINT_CLASS},.ace_editor.ace-nord-dark > .${ACE_HINT_CLASS}{background:#252526;color:#e6e6e6;border-top-color:#3c3c3c}
+.ace_editor > .${ACE_HINT_CLASS},
+.tox-dialog .ace_editor > .${ACE_HINT_CLASS},
+.acecode-inline .ace_editor > .${ACE_HINT_CLASS} {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 6;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 4px 8px;
+	pointer-events: none;
+	font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400 !important;
+	line-height: 20px !important;
+	white-space: normal !important;
+	background: #f4f4f5;
+	color: #333;
+	border-top: 1px solid #d0d0d0;
+}
+.ace_editor.ace_dark > .${ACE_HINT_CLASS},
+.ace_editor.ace-tomorrow-night > .${ACE_HINT_CLASS},
+.ace_editor.ace-nord-dark > .${ACE_HINT_CLASS} {
+	background: #252526;
+	color: #e6e6e6;
+	border-top-color: #3c3c3c;
+}
 `;
+
+	function pinAceHintInset(renderer, hintHeight) {
+		const bar = renderer.scrollBarH && renderer.scrollBarH.getHeight ? renderer.scrollBarH.getHeight() : 0;
+		const bottom = hintHeight + bar + 'px';
+		if (renderer.scroller) {
+			renderer.scroller.style.bottom = bottom;
+		}
+		if (renderer.$gutter) {
+			renderer.$gutter.style.bottom = hintHeight + 'px';
+		}
+		if (renderer.scrollBarH && renderer.scrollBarH.element) {
+			renderer.scrollBarH.element.style.bottom = hintHeight + 'px';
+		}
+		if (renderer.scrollBarV && renderer.scrollBarV.element) {
+			renderer.scrollBarV.element.style.bottom = bottom;
+		}
+	}
+
+	function syncAceHintInset(aceEditor, hint) {
+		const renderer = aceEditor.renderer;
+		if (!renderer) {
+			return;
+		}
+		const hintHeight = Math.ceil(hint.getBoundingClientRect().height);
+		if (!hintHeight) {
+			return;
+		}
+		if (renderer.$extraHeight !== hintHeight) {
+			renderer.$extraHeight = hintHeight;
+			if (typeof aceEditor.resize === 'function') {
+				aceEditor.resize(true);
+			}
+		}
+		pinAceHintInset(renderer, hintHeight);
+	}
 
 	function applyAceKeyboardAccessibility(aceEditor, translate) {
 		if (!aceEditor) {
 			return;
 		}
-		const instructions = translate('code-editor-instructions');
+		const readOnly = aceEditor.getOption('readOnly') === true;
+		const editorName = translate('code-editor-name');
+		const instructions = translate(readOnly ? 'code-editor-instructions-readonly' : 'code-editor-instructions');
 		const gutterLabel = translate('code-editor-gutter');
 		const scroller = aceEditor.renderer && aceEditor.renderer.scroller;
 		const gutter = aceEditor.renderer && aceEditor.renderer.$gutter;
 		const container = aceEditor.container;
 		let keyboardMode = false;
 		try {
+			aceEditor.setOption('textInputAriaLabel', editorName);
 			keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
 			if (!keyboardMode) {
-				aceEditor.setOption('textInputAriaLabel', instructions);
 				aceEditor.setOption('enableKeyboardAccessibility', true);
 				keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
 			}
@@ -113,17 +188,17 @@
 			});
 		}
 		if (scroller) {
-			scroller.setAttribute('aria-label', instructions);
+			scroller.setAttribute('aria-label', editorName);
 		}
 		if (gutter) {
 			gutter.setAttribute('aria-label', gutterLabel);
 		}
 		const textInput = aceEditor.textInput && aceEditor.textInput.getElement();
 		if (textInput) {
-			textInput.setAttribute('aria-label', instructions);
+			textInput.setAttribute('aria-label', editorName);
 		}
 		if (aceEditor.renderer && aceEditor.renderer.setScrollMargin) {
-			aceEditor.renderer.setScrollMargin(0, ACE_HINT_SCROLL_MARGIN, 0, 0);
+			aceEditor.renderer.setScrollMargin(0, 0, 0, 0);
 		}
 		if (!container) {
 			return;
@@ -139,19 +214,58 @@
 		if (!hint) {
 			hint = doc.createElement('div');
 			hint.className = ACE_HINT_CLASS;
-			hint.setAttribute('aria-hidden', 'true');
+			hint.id = ACE_HINT_CLASS + '-' + ++aceHintSequence;
 			container.appendChild(hint);
 		}
 		hint.textContent = instructions;
-		hint.title = instructions;
+		hint.removeAttribute('title');
+		hint.removeAttribute('aria-hidden');
+		if (scroller) {
+			scroller.setAttribute('aria-describedby', hint.id);
+		}
+		if (textInput) {
+			textInput.setAttribute('aria-describedby', hint.id);
+		}
 		if (!container.dataset.craftercmsEsc) {
 			container.dataset.craftercmsEsc = 'true';
+			let escFromEditor = false;
+			container.addEventListener(
+				'keydown',
+				(event) => {
+					if (event.key === 'Escape' && event.target !== scroller) {
+						escFromEditor = true;
+					}
+				},
+				true
+			);
 			container.addEventListener('keydown', (event) => {
 				if (event.key === 'Escape' && event.target !== scroller) {
 					event.stopPropagation();
 				}
 			});
+			container.addEventListener('keyup', (event) => {
+				if (event.key === 'Escape' && escFromEditor) {
+					escFromEditor = false;
+					event.stopPropagation();
+				}
+			});
 		}
+		if (!container.dataset.craftercmsHintInset) {
+			container.dataset.craftercmsHintInset = 'true';
+			if (aceEditor.renderer && aceEditor.renderer.on) {
+				aceEditor.renderer.on('resize', () => {
+					const current = container.querySelector(':scope > .' + ACE_HINT_CLASS);
+					if (current) {
+						pinAceHintInset(aceEditor.renderer, Math.ceil(current.getBoundingClientRect().height));
+					}
+				});
+			}
+			if (typeof ResizeObserver !== 'undefined') {
+				const observer = new ResizeObserver(() => syncAceHintInset(aceEditor, hint));
+				observer.observe(hint);
+			}
+		}
+		syncAceHintInset(aceEditor, hint);
 	}
 
 	tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {

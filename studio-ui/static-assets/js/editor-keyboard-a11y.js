@@ -20,9 +20,12 @@
  *
  * Keep in sync with studio-ui/ui/app/src/components/editorKeyboard/tinyMceKeyboard.ts
  * and the fallback in content-type-propsheet/richText.js.
+ * Does not change iframe or body tabindex (that blocked typing in Chrome).
  */
 (function () {
 	var STYLE_ID = 'craftercms-tinymce-target-size';
+	var MENUBAR_SELECTOR = '.tox-menubar';
+	var TOOLBAR_SELECTOR = '.tox-toolbar, .tox-toolbar-overlord, .tox-toolbar__overflow';
 	var TARGET_SIZE_CSS =
 		'.tox .tox-split-button__chevron,' +
 		'.tox.tox-platform-touch .tox-split-button__chevron,' +
@@ -40,19 +43,8 @@
 		(doc.head || doc.documentElement).appendChild(style);
 	}
 
-	function collapseClassicTabStop(editor) {
-		if (editor.inline) {
-			return;
-		}
-		var iframe = editor.iframeElement;
-		var body = editor.getBody && editor.getBody();
-		if (!iframe || !body) {
-			return;
-		}
-		iframe.tabIndex = 0;
-		if (body.getAttribute('contenteditable') === 'true') {
-			body.tabIndex = -1;
-		}
+	function isIn(target, selector) {
+		return target && target.closest && target.closest(selector);
 	}
 
 	function installTinyMceKeyboard(editor) {
@@ -63,30 +55,8 @@
 		var element = editor.getElement && editor.getElement();
 		ensureTinyMceTargetSizeStyles((element && element.ownerDocument) || document);
 
-		var focusingContent = false;
-		function onIframeFocus() {
-			if (focusingContent) {
-				return;
-			}
-			focusingContent = true;
-			try {
-				collapseClassicTabStop(editor);
-				editor.focus();
-			} finally {
-				focusingContent = false;
-			}
-		}
-
 		var roots = [];
-		function addRoot(root) {
-			if (!root || roots.indexOf(root) !== -1) {
-				return;
-			}
-			roots.push(root);
-			root.addEventListener('keydown', onChromeKeyDown);
-		}
-
-		function onChromeKeyDown(event) {
+		function onChromeKey(event) {
 			if (event.key !== 'Escape') {
 				return;
 			}
@@ -95,24 +65,35 @@
 			if (body && (target === body || (body.contains && body.contains(target)))) {
 				return;
 			}
+			var inMenubar = isIn(target, MENUBAR_SELECTOR);
+			var inToolbar = isIn(target, TOOLBAR_SELECTOR);
+			if (!inMenubar && !inToolbar) {
+				return;
+			}
+			if (event.type === 'keydown' && inToolbar && !inMenubar) {
+				editor.focus();
+			}
 			event.stopPropagation();
 		}
 
-		function onInit() {
-			collapseClassicTabStop(editor);
-			if (editor.iframeElement) {
-				editor.iframeElement.addEventListener('focus', onIframeFocus);
+		function addRoot(root) {
+			if (!root || roots.indexOf(root) !== -1) {
+				return;
 			}
+			roots.push(root);
+			root.addEventListener('keydown', onChromeKey);
+			root.addEventListener('keyup', onChromeKey);
+		}
+
+		function onInit() {
 			addRoot(editor.getContainer && editor.getContainer());
 			addRoot(editor.editorContainer);
 		}
 
 		function onRemove() {
-			if (editor.iframeElement) {
-				editor.iframeElement.removeEventListener('focus', onIframeFocus);
-			}
 			roots.forEach(function (root) {
-				root.removeEventListener('keydown', onChromeKeyDown);
+				root.removeEventListener('keydown', onChromeKey);
+				root.removeEventListener('keyup', onChromeKey);
 			});
 			roots = [];
 		}

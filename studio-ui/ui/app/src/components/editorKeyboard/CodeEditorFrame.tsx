@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useId } from 'react';
+import { useId, type ReactNode, type Ref } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { SxProps } from '@mui/system';
@@ -22,22 +22,26 @@ import { Theme } from '@mui/material';
 import { useIntl } from 'react-intl';
 import { consolidateSx } from '../../utils/system';
 import { codeEditorKeyboardMessages } from './messages';
-import { CODE_EDITOR_BOTTOM_PADDING } from './monacoKeyboard';
 
 export interface CodeEditorFrameProps {
-	frameRef: React.Ref<HTMLDivElement>;
+	frameRef: Ref<HTMLDivElement>;
 	height?: string | number;
 	className?: string;
 	sx?: SxProps<Theme>;
-	children: React.ReactNode;
-	onActivate(): void;
+	children: ReactNode;
+	/**
+	 * Enter on the frame. Return false when the editor is not ready yet; the
+	 * frame remembers the key so the caller can focus once the editor exists.
+	 */
+	onActivate(): boolean;
 }
 
 /**
  * Single tab stop around a Monaco editor. The textarea itself is taken out of
  * the tab order by `enforceMonacoKeyboardOptions`. Enter edits; Esc (handled on
  * the editor) returns here; Tab from this frame moves to the next control.
- * The hint is referenced by `aria-describedby` and must stay visible to AT.
+ * The hint sits in normal flow under the editor so it can wrap without covering
+ * the scrollbar. It is the `aria-describedby` target for the short frame name.
  */
 export function CodeEditorFrame(props: CodeEditorFrameProps) {
 	const { frameRef, height = '100%', className, sx, children, onActivate } = props;
@@ -60,15 +64,22 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 				}
 				if (event.key === 'Enter' && event.target === event.currentTarget) {
 					event.preventDefault();
-					onActivate();
+					const activated = onActivate();
+					if (activated === false) {
+						event.currentTarget.dataset.craftercmsPendingEnter = 'true';
+					} else {
+						delete event.currentTarget.dataset.craftercmsPendingEnter;
+					}
 				}
 			}}
 			sx={consolidateSx(
 				{
-					position: 'relative',
+					display: 'flex',
+					flexDirection: 'column',
 					height,
 					width: '100%',
-					outlineOffset: 2,
+					minHeight: 0,
+					outlineOffset: '-2px',
 					'&:focus-visible': {
 						outline: (theme) => `2px solid ${theme.palette.primary.main}`
 					}
@@ -76,20 +87,12 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 				sx
 			)}
 		>
-			{children}
+			<Box sx={{ flex: '1 1 auto', minHeight: 0, width: '100%', overflow: 'hidden' }}>{children}</Box>
 			<Typography
 				id={hintId}
 				component="div"
-				title={instructions}
 				sx={{
-					position: 'absolute',
-					left: 0,
-					right: 0,
-					bottom: 0,
-					zIndex: 6,
-					boxSizing: 'border-box',
-					maxHeight: CODE_EDITOR_BOTTOM_PADDING,
-					overflow: 'hidden',
+					flex: '0 0 auto',
 					px: 1,
 					py: 0.5,
 					pointerEvents: 'none',

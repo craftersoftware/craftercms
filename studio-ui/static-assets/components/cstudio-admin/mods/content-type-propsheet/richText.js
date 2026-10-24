@@ -159,7 +159,9 @@ YAHOO.extend(
 			richTextDialogEl.inputEl = inputEl;
 
 			// This dialog runs in the Studio shell, which does not load form.ftl.
-			// Keep the body in sync with static-assets/js/editor-keyboard-a11y.js.
+			// A dynamic script insert would race tinymce.init, so the fallback below
+			// matches static-assets/js/editor-keyboard-a11y.js. It does not change
+			// iframe or body tabindex.
 			var installTinyMceKeyboard =
 				window.craftercmsEditorKeyboard && window.craftercmsEditorKeyboard.installTinyMceKeyboard;
 			if (!installTinyMceKeyboard) {
@@ -169,6 +171,8 @@ YAHOO.extend(
 					}
 					editor.__craftercmsKeyboardInstalled = true;
 					var styleId = 'craftercms-tinymce-target-size';
+					var menubarSelector = '.tox-menubar';
+					var toolbarSelector = '.tox-toolbar, .tox-toolbar-overlord, .tox-toolbar__overflow';
 					var doc = (editor.getElement() && editor.getElement().ownerDocument) || document;
 					if (!doc.getElementById(styleId)) {
 						var style = doc.createElement('style');
@@ -179,51 +183,46 @@ YAHOO.extend(
 							'width:24px !important;min-width:24px !important;}';
 						(doc.head || doc.documentElement).appendChild(style);
 					}
-					var focusingContent = false;
-					function collapseClassicTabStop() {
-						if (editor.inline || !editor.iframeElement || !editor.getBody()) {
-							return;
-						}
-						editor.iframeElement.tabIndex = 0;
-						if (editor.getBody().getAttribute('contenteditable') === 'true') {
-							editor.getBody().tabIndex = -1;
-						}
-					}
-					function onIframeFocus() {
-						if (focusingContent) {
-							return;
-						}
-						focusingContent = true;
-						try {
-							collapseClassicTabStop();
-							editor.focus();
-						} finally {
-							focusingContent = false;
-						}
-					}
-					function onChromeKeyDown(event) {
+					var roots = [];
+					function onChromeKey(event) {
 						if (event.key !== 'Escape') {
 							return;
 						}
 						var body = editor.getBody && editor.getBody();
-						if (body && (event.target === body || body.contains(event.target))) {
+						var target = event.target;
+						if (body && (target === body || (body.contains && body.contains(target)))) {
 							return;
+						}
+						var inMenubar = target && target.closest && target.closest(menubarSelector);
+						var inToolbar = target && target.closest && target.closest(toolbarSelector);
+						if (!inMenubar && !inToolbar) {
+							return;
+						}
+						if (event.type === 'keydown' && inToolbar && !inMenubar) {
+							editor.focus();
 						}
 						event.stopPropagation();
 					}
+					function addRoot(root) {
+						if (!root || roots.indexOf(root) !== -1) {
+							return;
+						}
+						roots.push(root);
+						root.addEventListener('keydown', onChromeKey);
+						root.addEventListener('keyup', onChromeKey);
+					}
+					function onRemove() {
+						roots.forEach(function (root) {
+							root.removeEventListener('keydown', onChromeKey);
+							root.removeEventListener('keyup', onChromeKey);
+						});
+						roots = [];
+					}
 					editor.on('init', function () {
-						collapseClassicTabStop();
-						if (editor.iframeElement) {
-							editor.iframeElement.addEventListener('focus', onIframeFocus);
-						}
-						var container = editor.getContainer && editor.getContainer();
-						if (container) {
-							container.addEventListener('keydown', onChromeKeyDown);
-						}
-						if (editor.editorContainer && editor.editorContainer !== container) {
-							editor.editorContainer.addEventListener('keydown', onChromeKeyDown);
-						}
+						addRoot(editor.getContainer && editor.getContainer());
+						addRoot(editor.editorContainer);
 					});
+					editor.on('remove', onRemove);
 				};
 			}
 

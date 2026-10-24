@@ -211,10 +211,12 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 		palette: { mode }
 	} = useTheme();
 	const { formatMessage } = useIntl();
+	const editorName = formatMessage(codeEditorKeyboardMessages.groupLabel);
 	const instructions = formatMessage(codeEditorKeyboardMessages.instructions);
+	const instructionsReadOnly = formatMessage(codeEditorKeyboardMessages.instructionsReadOnly);
 	const gutterLabel = formatMessage(codeEditorKeyboardMessages.gutterLabel);
-	const labelsRef = useRef({ instructions, gutterLabel });
-	labelsRef.current = { instructions, gutterLabel };
+	const labelsRef = useRef({ name: editorName, instructions, instructionsReadOnly, gutterLabel });
+	labelsRef.current = { name: editorName, instructions, instructionsReadOnly, gutterLabel };
 
 	options.theme = options.theme ?? `ace/theme/${mode === 'light' ? 'chrome' : 'tomorrow_night'}`;
 
@@ -325,9 +327,9 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 	// caller option refresh cannot drop the localized labels.
 	useEffect(() => {
 		if (initialized) {
-			applyAceKeyboardAccessibility(refs.current.ace, { instructions, gutterLabel });
+			applyAceKeyboardAccessibility(refs.current.ace, labelsRef.current);
 		}
-	}, [initialized, instructions, gutterLabel]);
+	}, [initialized, editorName, instructions, instructionsReadOnly, gutterLabel, options?.readOnly]);
 
 	// If the Editor is inside a dialog, resize when fullscreen changes
 	const isFullScreen = useEnhancedDialogContext()?.isFullScreen;

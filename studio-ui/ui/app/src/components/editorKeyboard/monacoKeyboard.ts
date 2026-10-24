@@ -23,16 +23,13 @@ import type Monaco from '../../models/Monaco';
  * (`tabFocusMode` stays off). Ctrl+M remains Monaco's own tab-focus toggle and
  * is not the documented way out.
  *
- * Widget Esc bindings (suggest, find) use a higher keybinding weight than
- * `addCommand`, and the `when` clause skips those contexts anyway.
+ * `addCommand` registers at keybinding weight 1000, above Monaco's own Esc
+ * handlers. The `when` clause is false while those widgets or a selection are
+ * active so Esc dismisses them first. Names were checked against monaco-editor
+ * 0.54. `postPasteWidgetVisible` and `hasMultipleSelections` are not keys in
+ * that build (`pasteWidgetVisible` and `editorHasMultipleSelections` are).
  */
 
-export const CODE_EDITOR_BOTTOM_PADDING = 48;
-
-// addCommand registers at keybinding weight 1000, above Monaco's own Esc handlers
-// (find is EditorContrib+5, suggest is EditorContrib+90). The clause must be false
-// while those widgets are open or Esc leaves the editor instead of closing them.
-// Names are the RawContextKey strings in monaco-editor 0.54.
 const ESCAPE_WHEN = [
 	'!suggestWidgetVisible',
 	'!findWidgetVisible',
@@ -43,7 +40,18 @@ const ESCAPE_WHEN = [
 	'!parameterHintsVisible',
 	'!renameInputVisible',
 	'!inlineSuggestionVisible',
-	'!inlineEditIsVisible'
+	'!inlineEditIsVisible',
+	'!markersNavigationVisible',
+	'!referenceSearchVisible',
+	'!dropWidgetVisible',
+	'!pasteWidgetVisible',
+	'!stickyScrollFocused',
+	'!selectionAnchorSet',
+	'!LinkedEditingInputVisible',
+	'!standaloneColorPickerVisible',
+	'!codeActionMenuVisible',
+	'!editorHasSelection',
+	'!editorHasMultipleSelections'
 ].join(' && ');
 
 const ESC_BOUND = '__craftercmsEscBound';
@@ -51,7 +59,7 @@ const ESC_BOUND = '__craftercmsEscBound';
 interface MonacoCodeEditorLike {
 	focus(): void;
 	addCommand(keybinding: number, handler: () => void, context?: string): string | null;
-	updateOptions(newOptions: { tabIndex?: number; padding?: { bottom?: number } }): void;
+	updateOptions(newOptions: { tabIndex?: number }): void;
 	[ESC_BOUND]?: boolean;
 }
 
@@ -71,15 +79,11 @@ function codeEditorsOf(editor: object): MonacoCodeEditorLike[] {
 	return [editor as MonacoCodeEditorLike];
 }
 
+/** Takes the textarea out of the tab order. Does not touch caller padding; the hint is outside the editor. */
 export function withEditorKeyboardOptions<T extends object>(options?: T) {
-	const current = (options ?? {}) as T & { padding?: { top?: number; bottom?: number } };
 	return {
-		...current,
-		tabIndex: -1 as const,
-		padding: {
-			...current.padding,
-			bottom: Math.max(current.padding?.bottom ?? 0, CODE_EDITOR_BOTTOM_PADDING)
-		}
+		...options,
+		tabIndex: -1 as const
 	};
 }
 
@@ -96,15 +100,22 @@ export function enforceMonacoKeyboardOptions(
 		return;
 	}
 	codeEditorsOf(editor).forEach((codeEditor) => {
-		codeEditor.updateOptions({
-			tabIndex: -1,
-			padding: { bottom: CODE_EDITOR_BOTTOM_PADDING }
-		});
+		codeEditor.updateOptions({ tabIndex: -1 });
 		if (monaco && getFrame && !codeEditor[ESC_BOUND]) {
 			codeEditor[ESC_BOUND] = true;
 			codeEditor.addCommand(monaco.KeyCode.Escape, () => getFrame()?.focus(), ESCAPE_WHEN);
 		}
 	});
+}
+
+/** True when Enter was pressed on the frame before the editor existed. Clears the flag. */
+export function takePendingCodeEditorEnter(frame: HTMLElement | null): boolean {
+	if (!frame) {
+		return false;
+	}
+	const pending = frame.dataset.craftercmsPendingEnter === 'true';
+	delete frame.dataset.craftercmsPendingEnter;
+	return pending;
 }
 
 export function focusMonacoEditor(editor: object | null | undefined) {

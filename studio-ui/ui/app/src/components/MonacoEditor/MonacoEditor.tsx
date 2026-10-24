@@ -25,6 +25,7 @@ import { CodeEditorFrame } from '../editorKeyboard/CodeEditorFrame';
 import {
 	enforceMonacoKeyboardOptions,
 	focusMonacoEditor,
+	takePendingCodeEditorEnter,
 	withEditorKeyboardOptions
 } from '../editorKeyboard/monacoKeyboard';
 
@@ -67,6 +68,9 @@ export function MonacoEditor(props: MonacoEditorProps) {
 		onReady(editor, monaco) {
 			editorRef.current = editor;
 			enforceMonacoKeyboardOptions(editor, monaco, () => frameRef.current);
+			if (takePendingCodeEditorEnter(frameRef.current)) {
+				focusMonacoEditor(editor);
+			}
 		}
 	});
 
@@ -76,7 +80,13 @@ export function MonacoEditor(props: MonacoEditorProps) {
 			height={height}
 			className={className}
 			sx={sx}
-			onActivate={() => focusMonacoEditor(editorRef.current)}
+			onActivate={() => {
+				if (!editorRef.current) {
+					return false;
+				}
+				focusMonacoEditor(editorRef.current);
+				return true;
+			}}
 		>
 			<Box ref={containerRef} sx={{ height: '100%', width: '100%' }} />
 		</CodeEditorFrame>

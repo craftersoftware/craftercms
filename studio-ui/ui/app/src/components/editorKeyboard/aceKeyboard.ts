@@ -20,24 +20,33 @@
  * Bundled Ace (ace-builds 1.44) implements this as `enableKeyboardAccessibility`:
  * the scroller is the tab stop, Enter moves into the textarea, Esc returns to the
  * scroller, and Tab still indents while the textarea is focused. This helper turns
- * that mode on once, then overlays localized labels and a visible hint.
+ * that mode on once, then overlays a short accessible name, a described-by hint,
+ * and localized gutter text.
+ *
+ * TinyMCE dialogs close on Escape keyup. Ace moves focus to the scroller on
+ * keydown, so the keyup lands on the scroller and would close the code dialog.
+ * A capture keydown flag plus a keyup stopPropagation keeps that dialog open.
+ * Keydown from the textarea is also stopped in the bubble phase so an MUI
+ * dialog does not close. Escape on the scroller itself still bubbles.
  *
  * Keep in sync with `studio-ui/static-assets/js/tinymce-plugins/ace/plugin.js`.
- * The plugin cannot import this module; it carries its own copy.
  */
 
 export const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
 export const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
-/** Room for a wrapped two-line hint so the last code line stays visible. */
-export const ACE_HINT_SCROLL_MARGIN = 48;
 
 export interface AceKeyboardLabels {
+	/** Short accessible name. Not the instruction sentence. */
+	name: string;
 	instructions: string;
+	instructionsReadOnly: string;
 	gutterLabel: string;
 }
 
 const HINT_CSS = `
-.${ACE_HINT_CLASS} {
+.ace_editor > .${ACE_HINT_CLASS},
+.tox-dialog .ace_editor > .${ACE_HINT_CLASS},
+.acecode-inline .ace_editor > .${ACE_HINT_CLASS} {
 	position: absolute;
 	left: 0;
 	right: 0;
@@ -47,8 +56,6 @@ const HINT_CSS = `
 	margin: 0;
 	padding: 4px 8px;
 	pointer-events: none;
-	overflow: hidden;
-	max-height: ${ACE_HINT_SCROLL_MARGIN}px;
 	font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;
 	font-size: 12px !important;
 	font-weight: 400 !important;
@@ -69,6 +76,7 @@ const HINT_CSS = `
 
 interface AceKeyboardEditor {
 	container: HTMLElement;
+	resize?(force?: boolean): void;
 	setOption(name: string, value: unknown): void;
 	getOption(name: string): unknown;
 	focus(): void;
@@ -76,7 +84,11 @@ interface AceKeyboardEditor {
 	renderer: {
 		scroller?: HTMLElement;
 		$gutter?: HTMLElement;
+		$extraHeight?: number;
+		scrollBarH?: { getHeight(): number; element?: HTMLElement };
+		scrollBarV?: { element?: HTMLElement };
 		setScrollMargin?(top: number, bottom: number, left: number, right: number): void;
+		on?(name: string, callback: () => void): void;
 	};
 	textInput?: { getElement(): HTMLTextAreaElement };
 	commands: {
@@ -90,6 +102,7 @@ interface AceKeyboardEditor {
 }
 
 const applied = new WeakSet<object>();
+let hintSequence = 0;
 
 function ensureHintStyles(doc: Document) {
 	if (doc.getElementById(ACE_HINT_STYLE_ID)) {
@@ -130,24 +143,59 @@ function installLegacyExit(editor: AceKeyboardEditor, scroller: HTMLElement | un
 	});
 }
 
+function pinAceHintInset(renderer: AceKeyboardEditor['renderer'], hintHeight: number) {
+	const bar = renderer.scrollBarH?.getHeight?.() ?? 0;
+	const bottom = `${hintHeight + bar}px`;
+	if (renderer.scroller) {
+		renderer.scroller.style.bottom = bottom;
+	}
+	if (renderer.$gutter) {
+		renderer.$gutter.style.bottom = `${hintHeight}px`;
+	}
+	if (renderer.scrollBarH?.element) {
+		renderer.scrollBarH.element.style.bottom = `${hintHeight}px`;
+	}
+	if (renderer.scrollBarV?.element) {
+		renderer.scrollBarV.element.style.bottom = bottom;
+	}
+}
+
+/** Shrinks the Ace scroller to the measured hint so the hint is not clipped and does not cover the scrollbar. */
+function syncAceHintInset(editor: AceKeyboardEditor, hint: HTMLElement) {
+	const renderer = editor.renderer;
+	if (!renderer) {
+		return;
+	}
+	const hintHeight = Math.ceil(hint.getBoundingClientRect().height);
+	if (!hintHeight) {
+		return;
+	}
+	if (renderer.$extraHeight !== hintHeight) {
+		renderer.$extraHeight = hintHeight;
+		editor.resize?.(true);
+	}
+	pinAceHintInset(renderer, hintHeight);
+}
+
 /**
  * Enables Ace's tab-stop mode when the bundled build supports it, labels the
- * scroller and gutter, reserves space for a persistent hint, and stops Escape
- * from the textarea from bubbling into a surrounding dialog. Escape on the
- * scroller itself is left alone so the next Tab can leave the editor.
+ * scroller with a short name plus the hint, and keeps Escape from the textarea
+ * from closing a surrounding dialog (including TinyMCE, which listens on keyup).
  */
 export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: AceKeyboardLabels) {
 	const aceEditor = editor as unknown as AceKeyboardEditor;
 	const scroller = aceEditor.renderer?.scroller;
 	const gutter = aceEditor.renderer?.$gutter;
 	const container = aceEditor.container;
+	const readOnly = aceEditor.getOption('readOnly') === true;
+	const instructions = readOnly ? labels.instructionsReadOnly : labels.instructions;
 
 	let keyboardMode = false;
 	try {
+		// Refresh on every apply so a locale change updates the textarea label Ace rebuilds on focus.
+		aceEditor.setOption('textInputAriaLabel', labels.name);
 		keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
 		if (!keyboardMode) {
-			// Set before enabling so Ace copies it onto the textarea when the mode turns on.
-			aceEditor.setOption('textInputAriaLabel', labels.instructions);
 			aceEditor.setOption('enableKeyboardAccessibility', true);
 			keyboardMode = aceEditor.getOption('enableKeyboardAccessibility') === true;
 		}
@@ -158,32 +206,68 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 		installLegacyExit(aceEditor, scroller);
 	}
 
-	scroller?.setAttribute('aria-label', labels.instructions);
+	scroller?.setAttribute('aria-label', labels.name);
 	gutter?.setAttribute('aria-label', labels.gutterLabel);
 	const textInput = aceEditor.textInput?.getElement();
-	textInput?.setAttribute('aria-label', labels.instructions);
-	aceEditor.renderer?.setScrollMargin?.(0, ACE_HINT_SCROLL_MARGIN, 0, 0);
+	textInput?.setAttribute('aria-label', labels.name);
+	// Drop a fixed scroll margin; the measured hint inset reserves the space instead.
+	aceEditor.renderer?.setScrollMargin?.(0, 0, 0, 0);
 
-	if (container) {
-		ensureHintStyles(container.ownerDocument);
-		let hint = container.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
-		if (!hint) {
-			hint = container.ownerDocument.createElement('div');
-			hint.className = ACE_HINT_CLASS;
-			// The scroller and textarea already expose the same instructions.
-			hint.setAttribute('aria-hidden', 'true');
-			container.appendChild(hint);
-		}
-		hint.textContent = labels.instructions;
-		hint.title = labels.instructions;
+	if (!container) {
+		return;
+	}
+	ensureHintStyles(container.ownerDocument);
+	let hint = container.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
+	if (!hint) {
+		hint = container.ownerDocument.createElement('div');
+		hint.className = ACE_HINT_CLASS;
+		hint.id = `${ACE_HINT_CLASS}-${++hintSequence}`;
+		container.appendChild(hint);
+	}
+	hint.textContent = instructions;
+	hint.removeAttribute('title');
+	hint.removeAttribute('aria-hidden');
+	scroller?.setAttribute('aria-describedby', hint.id);
+	textInput?.setAttribute('aria-describedby', hint.id);
 
-		if (!container.dataset.craftercmsEsc) {
-			container.dataset.craftercmsEsc = 'true';
-			container.addEventListener('keydown', (event) => {
+	if (!container.dataset.craftercmsEsc) {
+		container.dataset.craftercmsEsc = 'true';
+		let escFromEditor = false;
+		// Capture only records the key. Stopping it here would run before Ace's own Esc command.
+		container.addEventListener(
+			'keydown',
+			(event) => {
 				if (event.key === 'Escape' && event.target !== scroller) {
-					event.stopPropagation();
+					escFromEditor = true;
 				}
-			});
+			},
+			true
+		);
+		container.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && event.target !== scroller) {
+				event.stopPropagation();
+			}
+		});
+		container.addEventListener('keyup', (event) => {
+			if (event.key === 'Escape' && escFromEditor) {
+				escFromEditor = false;
+				event.stopPropagation();
+			}
+		});
+	}
+
+	if (!container.dataset.craftercmsHintInset) {
+		container.dataset.craftercmsHintInset = 'true';
+		aceEditor.renderer?.on?.('resize', () => {
+			const current = container.querySelector<HTMLElement>(`:scope > .${ACE_HINT_CLASS}`);
+			if (current) {
+				pinAceHintInset(aceEditor.renderer, Math.ceil(current.getBoundingClientRect().height));
+			}
+		});
+		if (typeof ResizeObserver !== 'undefined') {
+			const observer = new ResizeObserver(() => syncAceHintInset(aceEditor, hint));
+			observer.observe(hint);
 		}
 	}
+	syncAceHintInset(aceEditor, hint);
 }
