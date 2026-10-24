@@ -96,6 +96,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	const [showFilter, setShowFilter] = useState(Boolean(keywordByPath[path]));
 	const [keyword, setKeyword] = useState(keywordByPath[path] ?? '');
 	const { formatMessage } = useIntl();
+	const loadingLabelId = useId();
 	const labelId = useId();
 	const item = lookupItemByPath(path, itemsByPath);
 	const children = lookupItemByPath(path, childrenByParentPath) ?? [];
@@ -263,8 +264,8 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}
 					}}
 				>
-					<CircularProgress size={14} />
-					<Typography variant="caption" color="textSecondary">
+					<CircularProgress size={14} aria-labelledby={loadingLabelId} />
+					<Typography id={loadingLabelId} variant="caption" color="textSecondary">
 						<FormattedMessage id="words.loading" defaultMessage="Loading" />
 					</Typography>
 				</Box>
