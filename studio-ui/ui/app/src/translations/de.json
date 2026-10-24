@@ -835,6 +835,8 @@
 	"passwordStrengthDisplay.tooGuessable": "Zu erraten",
 	"passwordStrengthDisplay.veryGuessable": "Sehr erraten",
 	"passwordStrengthDisplay.veryUnguessable": "Sehr unvorhersehbar",
+	"passwordTextField.hidePassword": "Passwort verbergen",
+	"passwordTextField.showPassword": "Passwort anzeigen",
 	"passwordTextField.toggleVisibilityButtonText": "Passwortsichtbarkeit umschalten",
 	"pastePolicy.confirm": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis. • Ursprünglicher Pfad: „{path}“, • Vorgeschlagener Pfad ist: „{modifiedPath}“. Möchten Sie den vorgeschlagenen Pfad verwenden?",
 	"pastePolicy.error": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis.",

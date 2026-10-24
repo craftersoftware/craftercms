@@ -835,6 +835,8 @@
 	"passwordStrengthDisplay.tooGuessable": "너무 추측 가능",
 	"passwordStrengthDisplay.veryGuessable": "매우 추측 가능",
 	"passwordStrengthDisplay.veryUnguessable": "매우 추측할 수 없음",
+	"passwordTextField.hidePassword": "비밀번호 숨기기",
+	"passwordTextField.showPassword": "비밀번호 표시",
 	"passwordTextField.toggleVisibilityButtonText": "비밀번호 표시 전환",
 	"pastePolicy.confirm": "선택한 {action} 대상은 대상 디렉터리에 대한 프로젝트 정책에 위배됩니다. • 원래 경로: \"{path}\", • 제안 경로: \"{modifiedPath}\". 제안된 경로를 사용하시겠습니까?",
 	"pastePolicy.error": "선택한 {action} 대상은 대상 디렉터리에 대한 프로젝트 정책에 위배됩니다.",

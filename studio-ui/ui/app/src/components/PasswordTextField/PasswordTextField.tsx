@@ -21,7 +21,7 @@ import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { defineMessages, useIntl } from 'react-intl';
-import { PartialSxRecord } from '../../models';
+import type { PartialSxRecord } from '../../models';
 
 type PasswordTextFieldProps = TextFieldProps & {
 	visibilitySwitch?: boolean;
@@ -30,9 +30,13 @@ type PasswordTextFieldProps = TextFieldProps & {
 };
 
 const translations = defineMessages({
-	toggleVisibilityButtonText: {
-		id: 'passwordTextField.toggleVisibilityButtonText',
-		defaultMessage: 'toggle password visibility'
+	showPassword: {
+		id: 'passwordTextField.showPassword',
+		defaultMessage: 'Show password'
+	},
+	hidePassword: {
+		id: 'passwordTextField.hidePassword',
+		defaultMessage: 'Hide password'
 	}
 });
 
@@ -53,8 +57,10 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 	const visibilityAdornment = (
 		<InputAdornment position="end">
 			<IconButton
+				type="button"
 				edge="end"
-				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
+				aria-pressed={showPassword}
+				aria-label={showPassword ? formatMessage(translations.hidePassword) : formatMessage(translations.showPassword)}
 				onClick={handleClickShowPassword}
 				size="large"
 			>

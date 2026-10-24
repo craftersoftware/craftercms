@@ -141,6 +141,8 @@ const translations = defineMessages({
 const retrieveStoredLangPreferences = () =>
 	Object.keys(window.localStorage).filter((key) => key.includes('_crafterStudioLanguage'));
 
+const loginFormErrorId = 'loginFormError';
+
 function LoginView(props: SubViewProps) {
 	const {
 		children,
@@ -219,6 +221,8 @@ function LoginView(props: SubViewProps) {
 					password={password}
 					isFetching={isFetching}
 					enableUsernameInput={true}
+					invalidCredentials={Boolean(error)}
+					credentialsErrorId={loginFormErrorId}
 					onSetPassword={setPassword}
 					onRecover={onRecover}
 					onSetUsername={(user) => {
@@ -272,16 +276,22 @@ function RecoverView(props: SubViewProps) {
 				{children}
 				<TextField
 					id="recoverFormUsernameField"
+					name="username"
 					fullWidth
 					autoFocus
 					disabled={isFetching}
+					error={Boolean(error)}
 					type="text"
 					value={username}
 					onChange={(e: any) => setUsername(e.target.value)}
 					className={classes?.username}
 					label={<FormattedMessage id="loginView.usernameTextFieldLabel" defaultMessage="Username" />}
 					slotProps={{
-						htmlInput: { maxLength: USER_USERNAME_MAX_LENGTH }
+						htmlInput: {
+							maxLength: USER_USERNAME_MAX_LENGTH,
+							autoComplete: 'username',
+							...(error ? { 'aria-describedby': loginFormErrorId } : {})
+						}
 					}}
 				/>
 				<Button
@@ -432,41 +442,46 @@ function ResetView(props: SubViewProps) {
 }
 
 function HeaderView({ error, introMessage, classes }: any) {
+	// Mount the alert only while an error is showing so role="alert" is announced on insert.
+	// #000 on #FF6961 is 7.45:1. #fff on #FF6961 is 2.82:1 (below the 4.5:1 text minimum).
+	if (error) {
+		return (
+			<Typography
+				id={loginFormErrorId}
+				role="alert"
+				variant="body2"
+				className={classes?.errorMessage}
+				sx={(theme) => ({
+					backgroundColor: palette.red.tint,
+					color: palette.black,
+					marginBottom: theme.spacing(1),
+					padding: theme.spacing(1),
+					borderRadius: theme.spacing(1),
+					border: `1px solid ${palette.red.main}`,
+					display: 'flex',
+					placeContent: 'center',
+					lineHeight: 1.7,
+					'& .MuiSvgIcon-root': {
+						marginRight: theme.spacing(0.5),
+						color: palette.black
+					}
+				})}
+			>
+				<WarningRounded /> {error}
+			</Typography>
+		);
+	}
 	return (
 		<Typography
 			variant="body2"
-			className={classes?.[error ? 'errorMessage' : 'recoverInfoMessage']}
-			sx={
-				error
-					? (theme) => ({
-							backgroundColor: palette.red.tint,
-							color: palette.white,
-							marginBottom: theme.spacing(1),
-							padding: theme.spacing(1),
-							borderRadius: theme.spacing(1),
-							border: `1px solid ${palette.red.main}`,
-							display: 'flex',
-							placeContent: 'center',
-							lineHeight: 1.7,
-							'& .MuiSvgIcon-root': {
-								marginRight: theme.spacing(0.5),
-								color: palette.white
-							}
-						})
-					: {
-							maxWidth: 300,
-							textAlign: 'center',
-							margin: (theme) => `0 auto ${theme.spacing(1.5)}`
-						}
-			}
+			className={classes?.recoverInfoMessage}
+			sx={{
+				maxWidth: 300,
+				textAlign: 'center',
+				margin: (theme) => `0 auto ${theme.spacing(1.5)}`
+			}}
 		>
-			{error ? (
-				<>
-					<WarningRounded /> {error}
-				</>
-			) : (
-				introMessage
-			)}
+			{introMessage}
 		</Typography>
 	);
 }
