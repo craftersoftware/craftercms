@@ -914,6 +914,8 @@
 	"previewDialog.toggleBackgroundColor": "Alternar contraste de fondo",
 	"previewDropTargetsPanel.chooseContentType": "Elija un tipo de contenido.",
 	"previewDropTargetsPanel.noResults": "No se han encontrado resultados.",
+	"previewDropTargetsPanel.insertHere": "Insertar aquí",
+	"previewDropTargetsPanel.insertHereLabel": "Insertar {contentType} en {zone}",
 	"previewDropTargetsPanelTitle": "Objetivos de caída",
 	"previewEditFormTool.editController": "Editar controlador",
 	"previewEditFormTool.editTemplate": "Editar plantilla",

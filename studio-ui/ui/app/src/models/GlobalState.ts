@@ -197,6 +197,11 @@ export interface GlobalState {
 		dropTargets: {
 			selectedContentType: string;
 			byId: LookupTable<ContentTypeDropTarget>;
+			/** Component the Drop Targets panel will insert without dragging. */
+			placement: {
+				contentType: ContentType;
+				instance?: ContentInstance;
+			} | null;
 		};
 		toolsPanel: {
 			widgets: WidgetDescriptor[];

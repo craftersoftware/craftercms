@@ -17,7 +17,7 @@
 import { SyntheticEvent } from 'react';
 import { EditingStatus } from '../constants';
 import { fetchContentItem, lock } from '@craftercms/studio-ui/services/content';
-import { catchError, filter, switchMap, take, tap } from 'rxjs/operators';
+import { catchError, concatMap, defaultIfEmpty, filter, map, switchMap, take, takeWhile, tap } from 'rxjs/operators';
 import { message$, post } from '../utils/communicator';
 import {
 	requestWorkflowCancellationDialog,
@@ -25,11 +25,11 @@ import {
 	snackGuestMessage
 } from '@craftercms/studio-ui/state/actions/preview';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
-import { EMPTY, forkJoin, Observable, of } from 'rxjs';
+import { EMPTY, forkJoin, from, Observable, of } from 'rxjs';
 import { ContentItem } from '@craftercms/studio-ui/models';
 import { GuestState } from './models/GuestStore';
 import { ElementRecord, ICERecord } from '../models/InContextEditing';
-import { getCachedModel, getCachedModels, modelHierarchyMap } from '../contentController';
+import { getCachedContentItem, getCachedModel, getCachedModels, modelHierarchyMap } from '../contentController';
 import { getParentModelId } from '../utils/ice';
 import { getReferentialEntries } from '../iceRegistry';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
@@ -101,6 +101,45 @@ export function beforeWrite$<T extends any = 'continue', S extends any = never>(
 			}
 			return stop$;
 		})
+	);
+}
+
+/**
+ * Locks each distinct path in order and stops on the first failure. Paths locked earlier
+ * in this call are unlocked. An empty list does not lock and does not continue.
+ */
+export function lockPaths$(
+	paths: Array<string | null | undefined>,
+	state: Pick<GuestState, 'activeSite' | 'username'>
+): Observable<'continue'> {
+	const unique = [...new Set(paths.filter((path): path is string => Boolean(path)))];
+	if (unique.length === 0) {
+		return EMPTY;
+	}
+	const locked: string[] = [];
+	return from(unique).pipe(
+		concatMap((path) =>
+			beforeWrite$({
+				path,
+				site: state.activeSite,
+				username: state.username,
+				localItem: getCachedContentItem(path)
+			}).pipe(
+				map(() => path),
+				defaultIfEmpty(null)
+			)
+		),
+		// A null path means that lock failed. takeWhile unsubscribes before the next path starts.
+		takeWhile((path): path is string => {
+			if (path) {
+				locked.push(path);
+				return true;
+			}
+			locked.forEach((held) => post(unlockItem({ path: held })));
+			return false;
+		}),
+		filter((path) => locked.length === unique.length && path === unique[unique.length - 1]),
+		map(() => 'continue' as const)
 	);
 }
 
