@@ -61,7 +61,10 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 					main: prefersDarkMode ? palette.orange.tint : palette.orange.main
 				},
 				error: {
-					main: prefersDarkMode ? palette.red.tint : palette.red.main
+					// Light #FF3B30 (palette.red.main) is 3.55:1 on white and 3.40:1 on #FAFAFA.
+					// #D93229 is 4.73:1 on #fff and 4.53:1 on #FAFAFA (background.default).
+					// Dark mode stays palette.red.tint (#FF6961), 6.64:1 on #121212.
+					main: prefersDarkMode ? palette.red.tint : '#D93229'
 				},
 				success: {
 					main: prefersDarkMode ? palette.green.tint : palette.green.main
