@@ -14,9 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { Suspense, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import ViewToolbar from '../ViewToolbar';
 import LauncherOpenerButton from '../LauncherOpenerButton';
+import ToolbarOverflow from '../ToolbarOverflow';
+import { PREVIEW_REFLOW_NARROW_QUERY } from '../ToolbarOverflow/previewReflow';
 import { closeToolsPanel, initToolbarConfig, openToolsPanel } from '../../state/actions/preview';
 import { useDispatch } from 'react-redux';
 import { defineMessages, useIntl } from 'react-intl';
@@ -67,7 +69,27 @@ export function ToolBar() {
 			sxs={{
 				appBar: {
 					borderBottom: '5px',
-					background: theme.palette.background.default
+					background: theme.palette.background.default,
+					minWidth: 0,
+					[PREVIEW_REFLOW_NARROW_QUERY]: {
+						position: 'sticky',
+						top: 0,
+						zIndex: theme.zIndex.appBar
+					}
+				},
+				toolbar: {
+					minWidth: 0,
+					maxWidth: '100%',
+					overflowX: 'clip',
+					// Repeat the section flex rules. Passing this key replaces ViewToolbar's own '& > section'.
+					'& > section': {
+						display: 'flex',
+						alignItems: 'center',
+						minWidth: 0
+					},
+					'& > section:nth-of-type(2)': {
+						overflow: 'hidden'
+					}
 				}
 			}}
 		>
@@ -78,20 +100,16 @@ export function ToolBar() {
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
 					/>
 				</Tooltip>
-				<Suspense fallback="">
+				<ToolbarOverflow>
 					{renderWidgets(toolbar.leftSection?.widgets, { userRoles, overrideProps: { site, item } })}
-				</Suspense>
+				</ToolbarOverflow>
 			</section>
+			<section>{renderWidgets(toolbar.middleSection?.widgets, { userRoles, overrideProps: { site, item } })}</section>
 			<section>
-				<Suspense fallback="">
-					{renderWidgets(toolbar.middleSection?.widgets, { userRoles, overrideProps: { site, item } })}
-				</Suspense>
-			</section>
-			<section>
-				<Suspense fallback="">
+				<ToolbarOverflow align="end">
 					{renderWidgets(toolbar.rightSection?.widgets, { userRoles, overrideProps: { site, item } })}
-				</Suspense>
-				<LauncherOpenerButton />
+					<LauncherOpenerButton />
+				</ToolbarOverflow>
 			</section>
 		</ViewToolbar>
 	);

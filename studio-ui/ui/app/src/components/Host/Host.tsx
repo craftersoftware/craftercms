@@ -26,6 +26,7 @@ import { filter, map } from 'rxjs/operators';
 import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { PREVIEW_REFLOW_NARROW_QUERY } from '../ToolbarOverflow/previewReflow';
 
 export function Host() {
 	const site = useActiveSiteId();
@@ -111,6 +112,18 @@ export function Host() {
 				// Want to leave 5px margin on the sides where the sidebar is hidden for the shadows to show appreciably.
 				marginLeft: leftSideBarOpen ? `${leftSideBarWidth}px` : '5px',
 				marginRight: rightSideBarOpen ? `${rightSideBarWidth}px` : '5px',
+				minWidth: 0,
+				maxWidth: '100%',
+				[PREVIEW_REFLOW_NARROW_QUERY]: {
+					// Drawers already overlay the shell. Dropping the push-margins keeps the preview
+					// inside the viewport instead of forcing a horizontal scrollbar.
+					marginLeft: '5px',
+					marginRight: '5px',
+					width: '100%',
+					height: 'auto',
+					maxHeight: 'none',
+					minHeight: '50vh'
+				},
 				transition: eitherSideBarOpen
 					? theme.transitions.create('margin', {
 							easing: theme.transitions.easing.easeOut,
@@ -136,7 +149,12 @@ export function Host() {
 					border: 'none',
 					margin: 'auto',
 					boxShadow: 3,
-					borderRadius: 3
+					borderRadius: 3,
+					[PREVIEW_REFLOW_NARROW_QUERY]: {
+						width: '100%',
+						height: '50vh',
+						maxWidth: '100%'
+					}
 				}}
 			/>
 		</Box>
