@@ -119,7 +119,10 @@ export function Host() {
 					// inside the viewport instead of forcing a horizontal scrollbar.
 					marginLeft: '5px',
 					marginRight: '5px',
-					width: '100%',
+					// Do not set width: 100% here. With the 5px margins it makes the box 10px wider than the shell.
+					// The host box is raised above the drawers (zIndex.drawer + 1) so its shadow shows beside an open
+					// sidebar. Once the margins are gone it would sit on top of the drawer and hide the open tools panel.
+					zIndex: 'auto',
 					height: 'auto',
 					maxHeight: 'none',
 					minHeight: '50vh'

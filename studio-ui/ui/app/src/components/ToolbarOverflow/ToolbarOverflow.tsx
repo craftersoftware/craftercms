@@ -32,6 +32,11 @@ const messages = defineMessages({
 });
 
 const MORE_BUTTON_FALLBACK_WIDTH = 48;
+/**
+ * The bar clips its overflow, which would also clip the 2px focus outline (plus 2px offset) of a control at its
+ * edge. The bar pads itself by this much on every side and cancels it with a negative margin.
+ */
+const FOCUS_RING_ROOM = 4;
 
 export interface ToolbarOverflowProps {
 	children: React.ReactNode;
@@ -53,17 +58,34 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	const moreRef = useRef<HTMLButtonElement>(null);
 	const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 	const widthsRef = useRef<number[]>([]);
-	const previousCountRef = useRef<number | null>(null);
 	const [visibleCount, setVisibleCount] = useState(items.length);
 	const visibleCountRef = useRef(visibleCount);
 	const [menuAnchor, setMenuAnchor] = useState<HTMLButtonElement | null>(null);
+	// Width every item needs side by side. It is the bar's flex basis, so the room the bar gets does
+	// not depend on how many items are currently packed (a packed bar would otherwise shrink to its
+	// content and never grow back).
+	const [naturalWidth, setNaturalWidth] = useState(0);
+	const [moreWidth, setMoreWidth] = useState(MORE_BUTTON_FALLBACK_WIDTH);
+	const lastItemCountRef = useRef(items.length);
 	const itemCount = items.length;
+	// The item list changed (e.g. the toolbar configuration arrived): render every item again so each one
+	// can be measured. State is adjusted while rendering, which React applies before painting.
+	const [seenItemCount, setSeenItemCount] = useState(itemCount);
+	if (seenItemCount !== itemCount) {
+		setSeenItemCount(itemCount);
+		setVisibleCount(itemCount);
+	}
 
 	useLayoutEffect(() => {
 		visibleCountRef.current = visibleCount;
 		const bar = barRef.current;
 		if (!bar) {
 			return undefined;
+		}
+		if (lastItemCountRef.current !== itemCount) {
+			// Cached widths belong to other items.
+			lastItemCountRef.current = itemCount;
+			widthsRef.current = [];
 		}
 		const measure = () => {
 			const nextWidths = widthsRef.current.slice(0, itemCount);
@@ -74,16 +96,19 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			});
 			widthsRef.current = nextWidths;
 			const widths = Array.from({ length: itemCount }, (_, index) => nextWidths[index] ?? 0);
-			const moreWidth = moreRef.current?.offsetWidth || MORE_BUTTON_FALLBACK_WIDTH;
-			const next = countVisibleToolbarItems(widths, bar.clientWidth, moreWidth);
-			const current = visibleCountRef.current;
-			let resolved = next;
-			if (next !== current && previousCountRef.current === next && next > current) {
-				// Keep the tighter count if the button appearing would immediately reveal an item again.
-				resolved = current;
-			} else if (next !== current) {
-				previousCountRef.current = current;
+			const currentMoreWidth = moreRef.current?.offsetWidth || MORE_BUTTON_FALLBACK_WIDTH;
+			if (moreRef.current?.offsetWidth) {
+				setMoreWidth(moreRef.current.offsetWidth);
 			}
+			if (widths.length > 0 && widths.every((width) => width > 0)) {
+				setNaturalWidth(widths.reduce((sum, width) => sum + width, 0));
+			}
+			const next = countVisibleToolbarItems(widths, bar.clientWidth - FOCUS_RING_ROOM * 2, currentMoreWidth);
+			// The bar's room does not depend on the packed count, so the result is stable and needs no
+			// hysteresis. (A guard against "button appearing reveals an item again" kept a collapsed bar
+			// collapsed after the window grew back.)
+			const current = visibleCountRef.current;
+			const resolved = next;
 			if (resolved !== current) {
 				visibleCountRef.current = resolved;
 				setVisibleCount(resolved);
@@ -115,9 +140,12 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: align === 'end' ? 'flex-end' : 'flex-start',
-					minWidth: 0,
-					flex: '1 1 auto',
-					overflow: 'hidden'
+					// Never narrower than the More button, so it cannot be clipped away.
+					minWidth: (hasOverflow ? moreWidth : 0) + FOCUS_RING_ROOM * 2,
+					flex: naturalWidth > 0 ? `1 1 ${naturalWidth + FOCUS_RING_ROOM * 2}px` : '1 1 auto',
+					overflow: 'hidden',
+					padding: `${FOCUS_RING_ROOM}px`,
+					margin: `-${FOCUS_RING_ROOM}px`
 				}}
 			>
 				{items.slice(0, visibleCount).map((child, index) => (
@@ -137,7 +165,7 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 							ref={moreRef}
 							aria-expanded={Boolean(menuAnchor)}
 							aria-controls={menuAnchor ? menuId : undefined}
-							aria-haspopup="true"
+							aria-haspopup="dialog"
 							onClick={(event) => setMenuAnchor((current) => (current ? null : event.currentTarget))}
 							sx={{
 								flex: '0 0 auto',
@@ -158,16 +186,20 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				)}
 			</Box>
 			<Popover
-				id={menuId}
 				open={Boolean(menuAnchor) && hasOverflow}
 				anchorEl={menuAnchor}
 				onClose={() => setMenuAnchor(null)}
 				anchorOrigin={{ vertical: 'bottom', horizontal: align === 'end' ? 'right' : 'left' }}
 				transformOrigin={{ vertical: 'top', horizontal: align === 'end' ? 'right' : 'left' }}
+				slotProps={{
+					paper: {
+						id: menuId,
+						role: 'dialog',
+						'aria-label': moreLabel
+					}
+				}}
 			>
 				<Box
-					role="group"
-					aria-label={moreLabel}
 					sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', p: 1, gap: 0.5, maxWidth: '100vw' }}
 				>
 					{overflowItems.map((child, index) => (
