@@ -25,14 +25,25 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
+import Box from '@mui/material/Box';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
+import {
+	destinationIndex,
+	isTouchDevice,
+	sortableListActionProcessor,
+	sortableListKeyDownHandler,
+	type SortAction,
+	useReorderFocus,
+	useRestoreFocusWhenEmpty
+} from '../lib/sortableListUtil';
+import { ReorderMoveButton } from '../components/ReorderMoveButton';
 import Tooltip from '@mui/material/Tooltip';
-import { lazy, MouseEvent as ReactMouseEvent, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
 import { StackedButton } from '../components/StackedButton';
-import { isTouchDevice } from '../lib/sortableListUtil';
 import { DialogHeader } from '../../DialogHeader';
 import Dialog from '@mui/material/Dialog';
 import SortableListSkeleton from '../components/SortableListSkeleton';
@@ -58,7 +69,6 @@ import {
 const repeatMessages = defineMessages({
 	addItems: { defaultMessage: 'Add items' },
 	maxReached: { defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached' },
-	deleteItem: { defaultMessage: 'Delete' },
 	minRequired: { defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required' }
 });
 
@@ -132,13 +142,12 @@ export function Repeat(props: RepeatProps) {
 		: isAddDisabled
 			? formatMessage(repeatMessages.maxReached, { max: maxCount ?? 0 })
 			: formatMessage(repeatMessages.addItems);
-	const deleteTooltip = readonly
-		? ''
-		: isRemoveDisabled
-			? formatMessage(repeatMessages.minRequired, { min: minimum })
-			: formatMessage(repeatMessages.deleteItem);
+	// Delete's tooltip is its name, or this reason while delete is disabled.
+	const minimumTooltip = formatMessage(repeatMessages.minRequired, { min: minimum });
+	const { rootRef, remember } = useReorderFocus(value);
+	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
 	/** Removes one item unless the repeat is already at its minimum. */
-	const handleRemoveItem = (event: ReactMouseEvent, item: RepeatItem) => {
+	const handleRemoveItem = (event: { stopPropagation(): void }, item: RepeatItem) => {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
 		const stored = getStoredItems();
@@ -147,10 +156,25 @@ export function Repeat(props: RepeatProps) {
 		// The row's item, found in the stored array. Its position may have moved since the render.
 		const index = findRepeatItemIndex(stored, item, itemKeys);
 		if (index === -1) return;
+		if (stored.length > 1) {
+			remember(Math.min(index, stored.length - 2), 'row');
+		} else {
+			rememberEmpty();
+		}
 		setValue(removeRepeatItem(stored, index));
 	};
+	/** Moves the row's item one step, or to the edge, in the stored array. Nothing moves past either end. */
+	const handleMoveItem = (item: RepeatItem, action: SortAction, moveToEdge: boolean, control: string) => {
+		const stored = getStoredItems();
+		const index = findRepeatItemIndex(stored, item, itemKeys);
+		if (index === -1) return;
+		const next = destinationIndex(action, moveToEdge, index, stored.length);
+		if (next == null) return;
+		remember(next, control);
+		sortableListActionProcessor(action, moveToEdge, stored, index, setValue);
+	};
 	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
-	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem) => {
+	const handleEditItem = (item: RepeatItem) => {
 		const stored = getStoredItems();
 		const index = findRepeatItemIndex(stored, item, itemKeys);
 		if (index === -1) return;
@@ -196,6 +220,7 @@ export function Repeat(props: RepeatProps) {
 						<Tooltip title={addTooltip}>
 							<span>
 								<IconButton
+									ref={addButtonRef}
 									size="small"
 									color="primary"
 									onClick={handleAddItem}
@@ -216,51 +241,117 @@ export function Repeat(props: RepeatProps) {
 					closeMenu();
 				}}
 			>
-				<FieldBox dashed={!hasContent}>
+				<FieldBox ref={fallbackRef} tabIndex={-1} dashed={!hasContent}>
 					{hasContent ? (
-						<List dense>
-							{visibleItems.map(({ item, index }, position) => (
-								<ListItemButton
-									key={rowKey(itemKeys, item, index)}
-									divider={position !== visibleItems.length - 1}
-									onClick={(e) => handleEditItem(e, item)}
-								>
-									<ListItemText
-										primary={getRepeatItemTitle(item, displayFieldIds)}
-										secondary={getRepeatItemSummary(item, displayFieldIds)}
-										slotProps={{
-											primary: {
-												noWrap: true
-											},
-											secondary: {
-												noWrap: true
-											}
+						<List dense ref={rootRef}>
+							{visibleItems.map(({ item, index }, position) => {
+								const itemLabel = getRepeatItemTitle(item, displayFieldIds);
+								const editLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel });
+								const deleteLabel = formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel });
+								// A scoped list shows one item, so there is nothing to reorder it against.
+								const canMove = !readonly && !itemScoped && count > 1;
+								return (
+									<Box
+										component="li"
+										key={rowKey(itemKeys, item, index)}
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											borderBottom: position !== visibleItems.length - 1 ? 1 : 0,
+											borderColor: 'divider'
 										}}
-									/>
-									{!readonly && (
-										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
-											<Tooltip title="Edit">
-												<IconButton size="small">
-													<EditOutlined fontSize="small" />
-												</IconButton>
-											</Tooltip>
-											{!itemScoped && (
-												<Tooltip title={deleteTooltip}>
-													<span onClick={(event) => event.stopPropagation()}>
-														<IconButton
-															size="small"
-															disabled={isRemoveDisabled}
-															onClick={(e) => handleRemoveItem(e, item)}
+									>
+										<ListItemButton
+											component="div"
+											data-reorder-index={index}
+											data-reorder-control="row"
+											sx={{ flex: 1, minWidth: 0 }}
+											onClick={() => handleEditItem(item)}
+											onKeyDown={
+												canMove
+													? (event) => {
+															const stored = getStoredItems();
+															const storedIndex = findRepeatItemIndex(stored, item, itemKeys);
+															if (storedIndex === -1) return;
+															sortableListKeyDownHandler(
+																event,
+																stored,
+																storedIndex,
+																setValue,
+																() => handleEditItem(item),
+																(nextIndex) => remember(nextIndex, 'row')
+															);
+														}
+													: undefined
+											}
+										>
+											<ListItemText
+												primary={itemLabel}
+												secondary={getRepeatItemSummary(item, displayFieldIds)}
+												slotProps={{
+													primary: {
+														noWrap: true
+													},
+													secondary: {
+														noWrap: true
+													}
+												}}
+											/>
+										</ListItemButton>
+										{!readonly && (
+											<Box sx={{ display: 'flex', flexShrink: 0 }}>
+												{canMove && (
+													<>
+														<ReorderMoveButton
+															name={itemLabel}
+															control="up"
+															index={index}
+															disabled={index === 0}
+															onClick={() => handleMoveItem(item, 'up', false, 'up')}
 														>
-															<DeleteOutlined fontSize="small" />
-														</IconButton>
-													</span>
+															<ArrowUpwardRounded fontSize="small" />
+														</ReorderMoveButton>
+														<ReorderMoveButton
+															name={itemLabel}
+															control="down"
+															index={index}
+															disabled={index === count - 1}
+															onClick={() => handleMoveItem(item, 'down', false, 'down')}
+														>
+															<ArrowDownwardRounded fontSize="small" />
+														</ReorderMoveButton>
+													</>
+												)}
+												<Tooltip describeChild title={editLabel}>
+													{/* The row performs the same edit, so this control is not a second tab stop. */}
+													<IconButton
+														size="small"
+														aria-label={editLabel}
+														tabIndex={-1}
+														onClick={() => handleEditItem(item)}
+													>
+														<EditOutlined fontSize="small" />
+													</IconButton>
 												</Tooltip>
-											)}
-										</ListItemSecondaryAction>
-									)}
-								</ListItemButton>
-							))}
+												{!itemScoped && (
+													<Tooltip describeChild title={isRemoveDisabled ? minimumTooltip : deleteLabel}>
+														<span>
+															<IconButton
+																size="small"
+																aria-label={deleteLabel}
+																disabled={isRemoveDisabled}
+																onClick={(e) => handleRemoveItem(e, item)}
+															>
+																<DeleteOutlined fontSize="small" />
+															</IconButton>
+														</span>
+													</Tooltip>
+												)}
+											</Box>
+										)}
+									</Box>
+								);
+							})}
 						</List>
 					) : (
 						<Tooltip title={addTooltip}>

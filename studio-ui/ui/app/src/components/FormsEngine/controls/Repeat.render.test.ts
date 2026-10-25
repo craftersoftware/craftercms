@@ -76,8 +76,9 @@ const rowFor = (host: HTMLElement, title: string) =>
 	Array.from(host.querySelectorAll('.MuiListItemButton-root')).find(
 		(row) => row.querySelector('.MuiListItemText-primary')?.textContent === title
 	) as HTMLElement;
+// The row's actions sit beside the row button, in the same list item.
 const deleteButton = (row: HTMLElement) =>
-	row.querySelector('[data-testid="DeleteOutlinedIcon"]').closest('button') as HTMLButtonElement;
+	row.closest('li').querySelector('[data-testid="DeleteOutlinedIcon"]').closest('button') as HTMLButtonElement;
 
 interface Mounted {
 	host: HTMLElement;
