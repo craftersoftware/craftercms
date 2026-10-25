@@ -102,10 +102,11 @@ export function PathSelector(props: PathSelectorProps) {
 			<ButtonBase
 				disabled={disabled}
 				onClick={onOpenPathSelectionDialog}
-				aria-label={formatMessage(
-					{ id: 'pathSelector.searchInPath', defaultMessage: 'Search in path: {path}' },
-					{ path: path || formatMessage(messages.searchIn) }
-				)}
+				aria-label={
+					path
+						? formatMessage({ id: 'pathSelector.searchInPath', defaultMessage: 'Search in path: {path}' }, { path })
+						: formatMessage({ id: 'pathSelector.searchIn', defaultMessage: 'Search in path' })
+				}
 				sx={{
 					flex: 1,
 					minHeight: 40,
