@@ -158,74 +158,6 @@ YAHOO.extend(
 			YDom.addClass(inputEl, 'cstudio-form-control-input');
 			richTextDialogEl.inputEl = inputEl;
 
-			// This dialog runs in the Studio shell, which does not load form.ftl.
-			// A dynamic script insert would race tinymce.init, so the fallback below
-			// matches static-assets/js/editor-keyboard-a11y.js. It does not change
-			// iframe or body tabindex.
-			var installTinyMceKeyboard =
-				window.craftercmsEditorKeyboard && window.craftercmsEditorKeyboard.installTinyMceKeyboard;
-			if (!installTinyMceKeyboard) {
-				installTinyMceKeyboard = function (editor) {
-					if (!editor || editor.__craftercmsKeyboardInstalled) {
-						return;
-					}
-					editor.__craftercmsKeyboardInstalled = true;
-					var styleId = 'craftercms-tinymce-target-size';
-					var menubarSelector = '.tox-menubar';
-					var toolbarSelector = '.tox-toolbar, .tox-toolbar-overlord, .tox-toolbar__overflow';
-					var doc = (editor.getElement() && editor.getElement().ownerDocument) || document;
-					if (!doc.getElementById(styleId)) {
-						var style = doc.createElement('style');
-						style.id = styleId;
-						style.textContent =
-							'.tox .tox-split-button__chevron,.tox.tox-platform-touch .tox-split-button__chevron,' +
-							'.tox .tox-tbtn__select-chevron,.tox .tox-listbox__select-chevron{' +
-							'width:24px !important;min-width:24px !important;}';
-						(doc.head || doc.documentElement).appendChild(style);
-					}
-					var roots = [];
-					function onChromeKey(event) {
-						if (event.key !== 'Escape') {
-							return;
-						}
-						var body = editor.getBody && editor.getBody();
-						var target = event.target;
-						if (body && (target === body || (body.contains && body.contains(target)))) {
-							return;
-						}
-						var inMenubar = target && target.closest && target.closest(menubarSelector);
-						var inToolbar = target && target.closest && target.closest(toolbarSelector);
-						if (!inMenubar && !inToolbar) {
-							return;
-						}
-						if (event.type === 'keydown' && inToolbar && !inMenubar) {
-							editor.focus();
-						}
-						event.stopPropagation();
-					}
-					function addRoot(root) {
-						if (!root || roots.indexOf(root) !== -1) {
-							return;
-						}
-						roots.push(root);
-						root.addEventListener('keydown', onChromeKey);
-						root.addEventListener('keyup', onChromeKey);
-					}
-					function onRemove() {
-						roots.forEach(function (root) {
-							root.removeEventListener('keydown', onChromeKey);
-							root.removeEventListener('keyup', onChromeKey);
-						});
-						roots = [];
-					}
-					editor.on('init', function () {
-						addRoot(editor.getContainer && editor.getContainer());
-						addRoot(editor.editorContainer);
-					});
-					editor.on('remove', onRemove);
-				};
-			}
-
 			tinymce.init({
 				target: inputEl,
 				promotion: false,
@@ -242,7 +174,8 @@ YAHOO.extend(
 					'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent | removeformat',
 				valid_elements: 'ul,ol,li,img[src,style,class],p,br,strong/b,a[href|target=_blank],em,s,h1,h2,h3,h4,h5,h6,pre',
 				setup: function (editor) {
-					installTinyMceKeyboard(editor);
+					// Loaded by templates/web/legacy-site-config.ftl before this module runs.
+					window.craftercmsEditorKeyboard?.installTinyMceKeyboard(editor);
 					editor.on('init', function (e) {
 						_self.editor = editor;
 						editor.setContent(value);

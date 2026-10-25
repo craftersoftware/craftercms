@@ -34,14 +34,16 @@
  * height every time the horizontal scrollbar appears or disappears, and the
  * editor collapses.
  *
- * Keep in sync with `studio-ui/static-assets/js/tinymce-plugins/ace/plugin.js`.
+ * The TinyMCE Ace plugin bundles this module (`yarn build:editor-keyboard`).
+ * Do not copy the frame, hint, or Escape logic into plugin.js.
  */
+
+import { ensureEditorKeyboardStyles } from './editorKeyboardStyles';
 
 export const ACE_HINT_CLASS = 'craftercms-code-editor-hint';
 export const ACE_FRAME_CLASS = 'craftercms-code-editor-frame';
-export const ACE_HINT_STYLE_ID = 'craftercms-code-editor-hint-styles';
 /** Id prefix so a React editor and the TinyMCE plugin cannot share a hint id. */
-const HINT_ID_PREFIX = 'craftercms-code-editor-hint-react';
+const HINT_ID_PREFIX = 'craftercms-code-editor-hint';
 
 export interface AceKeyboardLabels {
 	/** Short accessible name. Not the instruction sentence. */
@@ -49,69 +51,9 @@ export interface AceKeyboardLabels {
 	instructions: string;
 	instructionsReadOnly: string;
 	gutterLabel: string;
+	/** Defaults to `craftercms-code-editor-hint`. The plugin uses its own prefix. */
+	hintIdPrefix?: string;
 }
-
-const HINT_CSS = `
-.${ACE_FRAME_CLASS} {
-	display: flex;
-	flex-direction: column;
-	box-sizing: border-box;
-	flex: 1 1 0%;
-	min-height: 0;
-	min-width: 0;
-	width: 100%;
-}
-.${ACE_FRAME_CLASS} > .ace_editor {
-	position: relative;
-	flex: 1 1 auto;
-	min-height: 0;
-	min-width: 0;
-	width: 100%;
-}
-.${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
-.tox-dialog .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS},
-.acecode-inline .${ACE_FRAME_CLASS} > .${ACE_HINT_CLASS} {
-	flex: 0 0 auto;
-	position: static;
-	box-sizing: border-box;
-	min-width: 0;
-	/* The sentence must not widen a side-by-side editor flex item. */
-	contain: inline-size;
-	margin: 0;
-	padding: 4px 8px;
-	pointer-events: none;
-	font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;
-	font-size: 12px !important;
-	font-weight: 400 !important;
-	line-height: 20px !important;
-	white-space: normal !important;
-	background: #f4f4f5;
-	color: #333333;
-	border-top: 1px solid #d0d0d0;
-}
-.${ACE_FRAME_CLASS}:has(> .ace_editor.ace_dark) > .${ACE_HINT_CLASS},
-.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-tomorrow-night) > .${ACE_HINT_CLASS},
-.${ACE_FRAME_CLASS}:has(> .ace_editor.ace-nord-dark) > .${ACE_HINT_CLASS} {
-	background: #252526;
-	color: #e6e6e6;
-	border-top-color: #3c3c3c;
-}
-/* Ace's own inset shadow sits under the text layer. ::before keeps ::after for the scroll-left shadow. */
-.ace_scroller.ace_keyboard-focus:focus,
-.ace_gutter.ace_keyboard-focus:focus {
-	outline: none;
-}
-.ace_scroller.ace_keyboard-focus:focus::before,
-.ace_gutter.ace_keyboard-focus:focus::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	box-sizing: border-box;
-	pointer-events: none;
-	z-index: 20;
-	box-shadow: inset 0 0 0 2px #5E9ED6;
-}
-`;
 
 interface AceKeyboardEditor {
 	container: HTMLElement;
@@ -137,12 +79,12 @@ interface AceKeyboardEditor {
 
 const applied = new WeakSet<object>();
 
-function createHintId() {
+function createHintId(prefix: string) {
 	const random =
 		typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
 			? crypto.randomUUID()
 			: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-	return `${HINT_ID_PREFIX}-${random}`;
+	return `${prefix}-${random}`;
 }
 
 function editorAutosizes(editor: AceKeyboardEditor) {
@@ -167,16 +109,6 @@ function keepsCallerHeight(previousHeight: number, parent: HTMLElement, view: Wi
 	const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
 	const parentHeight = box.clientHeight - padding;
 	return parentHeight > previousHeight + 1;
-}
-
-function ensureHintStyles(doc: Document) {
-	if (doc.getElementById(ACE_HINT_STYLE_ID)) {
-		return;
-	}
-	const style = doc.createElement('style');
-	style.id = ACE_HINT_STYLE_ID;
-	style.textContent = HINT_CSS;
-	(doc.head || doc.documentElement).appendChild(style);
 }
 
 function installLegacyExit(editor: AceKeyboardEditor, scroller: HTMLElement | undefined) {
@@ -212,6 +144,7 @@ function installLegacyExit(editor: AceKeyboardEditor, scroller: HTMLElement | un
  * Puts a column frame around the Ace node and returns it. The hint is appended
  * to the frame, under the editor, so Ace's own height math is left alone.
  * An absolutely positioned editor (Studio dialogs) keeps that fill on the frame.
+ * React renders the frame itself; this still sizes that frame on the first call.
  */
 function ensureEditorFrame(editor: AceKeyboardEditor): HTMLElement | null {
 	const container = editor.container;
@@ -219,19 +152,31 @@ function ensureEditorFrame(editor: AceKeyboardEditor): HTMLElement | null {
 	if (!container || !parent) {
 		return container ?? null;
 	}
-	if (parent.classList.contains(ACE_FRAME_CLASS)) {
+	ensureEditorKeyboardStyles(container.ownerDocument);
+	const alreadyFramed = parent.classList.contains(ACE_FRAME_CLASS);
+	if (alreadyFramed && parent.dataset.craftercmsFrameSized === 'true') {
 		return parent;
 	}
-	ensureHintStyles(container.ownerDocument);
 	const view = container.ownerDocument.defaultView;
 	const position = view?.getComputedStyle(container).position;
 	const wasAbsolute = position === 'absolute' || position === 'fixed';
+	// A frame that is already in the document can flex-grow the editor before we
+	// read the caller height. Pin flex so the used height is the caller's.
+	if (alreadyFramed) {
+		container.style.flex = '0 0 auto';
+	}
 	const previousHeight = container.getBoundingClientRect().height;
-	const explicitHeight = !editorAutosizes(editor) && keepsCallerHeight(previousHeight, parent, view);
-	const frame = container.ownerDocument.createElement('div');
-	frame.className = ACE_FRAME_CLASS;
-	parent.insertBefore(frame, container);
-	frame.appendChild(container);
+	const layoutParent = alreadyFramed ? (parent.parentElement ?? parent) : parent;
+	const explicitHeight = !editorAutosizes(editor) && keepsCallerHeight(previousHeight, layoutParent, view);
+	let frame: HTMLElement;
+	if (alreadyFramed) {
+		frame = parent;
+	} else {
+		frame = container.ownerDocument.createElement('div');
+		frame.className = ACE_FRAME_CLASS;
+		parent.insertBefore(frame, container);
+		frame.appendChild(container);
+	}
 
 	if (explicitHeight) {
 		// Keep a caller pixel height (for example sxs.editorRoot height: 300px). The hint sits under it.
@@ -275,6 +220,7 @@ function ensureEditorFrame(editor: AceKeyboardEditor): HTMLElement | null {
 		}
 		editor.resize?.(true);
 	});
+	frame.dataset.craftercmsFrameSized = 'true';
 	return frame;
 }
 
@@ -291,7 +237,7 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	const readOnly = aceEditor.getOption('readOnly') === true;
 	const instructions = readOnly ? labels.instructionsReadOnly : labels.instructions;
 
-	let keyboardMode = false;
+	let keyboardMode: boolean;
 	try {
 		// Refresh on every apply so a locale change updates the textarea label Ace rebuilds on focus.
 		aceEditor.setOption('textInputAriaLabel', labels.name);
@@ -320,8 +266,10 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	if (!hint) {
 		hint = container.ownerDocument.createElement('div');
 		hint.className = ACE_HINT_CLASS;
-		hint.id = createHintId();
+		hint.id = createHintId(labels.hintIdPrefix || HINT_ID_PREFIX);
 		frame.appendChild(hint);
+	} else if (!hint.id) {
+		hint.id = createHintId(labels.hintIdPrefix || HINT_ID_PREFIX);
 	}
 	hint.textContent = instructions;
 	hint.removeAttribute('title');
@@ -352,7 +300,12 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 			true
 		);
 		container.addEventListener('keydown', (event) => {
-			if (event.key === 'Escape' && event.target !== scroller) {
+			if (event.key !== 'Escape') {
+				return;
+			}
+			// Repeats follow the first Esc onto the scroller and would reach a dialog
+			// that closes on keydown before keyup. A later non-repeat Esc on the scroller still bubbles.
+			if (event.target !== scroller || (event.repeat && escFromEditor)) {
 				event.stopPropagation();
 			}
 		});

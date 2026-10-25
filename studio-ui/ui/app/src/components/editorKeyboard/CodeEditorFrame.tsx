@@ -34,6 +34,8 @@ export interface CodeEditorFrameProps {
 	 * frame remembers the key so the caller can focus once the editor exists.
 	 */
 	onActivate(): boolean;
+	/** Read-only editors tell the user Enter moves in, and that Tab does not indent. */
+	readOnly?: boolean;
 }
 
 /**
@@ -44,10 +46,12 @@ export interface CodeEditorFrameProps {
  * the scrollbar. It is the `aria-describedby` target for the short frame name.
  */
 export function CodeEditorFrame(props: CodeEditorFrameProps) {
-	const { frameRef, height = '100%', className, sx, children, onActivate } = props;
+	const { frameRef, height = '100%', className, sx, children, onActivate, readOnly = false } = props;
 	const { formatMessage } = useIntl();
 	const hintId = useId();
-	const instructions = formatMessage(codeEditorKeyboardMessages.instructions);
+	const instructions = formatMessage(
+		readOnly ? codeEditorKeyboardMessages.instructionsReadOnly : codeEditorKeyboardMessages.instructions
+	);
 	const groupLabel = formatMessage(codeEditorKeyboardMessages.groupLabel);
 
 	return (
@@ -90,14 +94,16 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 					'&:focus-visible': {
 						outline: 'none'
 					},
+					// Outer #0b4f8a is 8.4:1 on white. Inner white is 15:1 on #252526.
+					// The pair meets 3:1 on both light and dark editor and frame backgrounds.
 					'&:focus-visible::after': {
 						content: '""',
 						position: 'absolute',
 						inset: 0,
 						boxSizing: 'border-box',
-						border: (theme) => `2px solid ${theme.palette.primary.main}`,
 						pointerEvents: 'none',
-						zIndex: 20
+						zIndex: 20,
+						boxShadow: 'inset 0 0 0 2px #0b4f8a, inset 0 0 0 4px #ffffff'
 					}
 				},
 				sx

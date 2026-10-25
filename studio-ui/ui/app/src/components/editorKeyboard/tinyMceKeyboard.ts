@@ -17,6 +17,12 @@
 /**
  * TinyMCE chrome keyboard and caret target-size adjustments.
  *
+ * This is the only implementation. The React forms engine imports it. Legacy
+ * pages cannot import the app bundle, so `yarn build:editor-keyboard` writes
+ * `static-assets/js/editor-keyboard-a11y.js` as a classic script that assigns
+ * `window.craftercmsEditorKeyboard.installTinyMceKeyboard`. Do not copy this
+ * function into another file.
+ *
  * Classic editors are left on TinyMCE's own tab stop. Forcing the content body
  * to tabindex -1 stops keyboard users from typing in Chrome: Tab focuses the
  * iframe's content window and never fires `focus` on the `<iframe>`, so a
@@ -28,34 +34,18 @@
  * parent dialog. Content Esc is left alone (the guest inline editor uses it
  * to cancel editing).
  *
- * Keep in sync with `studio-ui/static-assets/js/editor-keyboard-a11y.js` and the
- * fallback in `content-type-propsheet/richText.js`.
+ * Target-size rules live in `ui/scss/src/_editor-keyboard.scss` and are injected
+ * here only when that stylesheet is not linked.
  */
 
-export const TINYMCE_TARGET_SIZE_STYLE_ID = 'craftercms-tinymce-target-size';
-
-/**
- * Oxide skin (tinymce 8.9): `.tox-tbtn` is 34×28. `.tox-split-button__chevron`
- * is its own 16×28 button (20px in the touch rule). Select/listbox chevrons are
- * 16px wide inside a larger control; they are widened with the split caret so
- * the visible target matches. `!important` beats the skin stylesheet TinyMCE
- * injects when the editor loads, including `.tox.tox-platform-touch`.
- */
-export const TINYMCE_TARGET_SIZE_CSS = `
-.tox .tox-split-button__chevron,
-.tox.tox-platform-touch .tox-split-button__chevron,
-.tox .tox-tbtn__select-chevron,
-.tox .tox-listbox__select-chevron {
-	width: 24px !important;
-	min-width: 24px !important;
-}
-`;
+import { ensureEditorKeyboardStyles } from './editorKeyboardStyles';
 
 const MENUBAR_SELECTOR = '.tox-menubar';
 const TOOLBAR_SELECTOR = '.tox-toolbar, .tox-toolbar-overlord, .tox-toolbar__overflow';
 
 export interface TinyMceKeyboardEditor {
 	inline?: boolean;
+	initialized?: boolean;
 	editorContainer?: HTMLElement | null;
 	on(name: string, callback: () => void): void;
 	getElement(): HTMLElement | null;
@@ -64,17 +54,15 @@ export interface TinyMceKeyboardEditor {
 	focus(): void;
 }
 
-const installed = new WeakSet<object>();
-
-export function ensureTinyMceTargetSizeStyles(doc: Document | null | undefined) {
-	if (!doc || doc.getElementById(TINYMCE_TARGET_SIZE_STYLE_ID)) {
-		return;
+declare global {
+	interface Window {
+		craftercmsEditorKeyboard?: {
+			installTinyMceKeyboard: (editor: TinyMceKeyboardEditor) => void;
+		};
 	}
-	const style = doc.createElement('style');
-	style.id = TINYMCE_TARGET_SIZE_STYLE_ID;
-	style.textContent = TINYMCE_TARGET_SIZE_CSS;
-	(doc.head || doc.documentElement).appendChild(style);
 }
+
+const installed = new WeakSet<object>();
 
 function isIn(target: EventTarget | null, selector: string) {
 	return target instanceof Element && Boolean(target.closest(selector));
@@ -85,13 +73,13 @@ function isIn(target: EventTarget | null, selector: string) {
  * or body tabindex.
  */
 export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
-	if (installed.has(editor)) {
+	if (!editor || installed.has(editor)) {
 		return;
 	}
 	installed.add(editor);
 
 	const doc = editor.getElement()?.ownerDocument ?? document;
-	ensureTinyMceTargetSizeStyles(doc);
+	ensureEditorKeyboardStyles(doc);
 
 	const onChromeKey = (event: KeyboardEvent) => {
 		if (event.key !== 'Escape') {
@@ -139,4 +127,15 @@ export function installTinyMceKeyboard(editor: TinyMceKeyboardEditor) {
 
 	editor.on('init', onInit);
 	editor.on('remove', onRemove);
+	// A late call (script loaded after init) still has to attach the chrome listeners.
+	if (editor.initialized) {
+		onInit();
+	}
+}
+
+if (typeof window !== 'undefined') {
+	window.craftercmsEditorKeyboard = window.craftercmsEditorKeyboard || {
+		installTinyMceKeyboard
+	};
+	window.craftercmsEditorKeyboard.installTinyMceKeyboard = installTinyMceKeyboard;
 }

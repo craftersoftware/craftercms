@@ -99,6 +99,7 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 			height={height}
 			className={className}
 			sx={sx}
+			readOnly={Boolean(options?.readOnly)}
 			onActivate={() => {
 				if (!editorRef.current) {
 					return false;
