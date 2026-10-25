@@ -148,6 +148,7 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 				<form noValidate autoComplete="off">
 					<TextField
 						label={<FormattedMessage defaultMessage="Title" />}
+						autoFocus
 						fullWidth
 						sx={{ mb: 2 }}
 						value={title}

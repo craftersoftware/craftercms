@@ -39,7 +39,9 @@ export function SkipToActionsLink({
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
-			if (event.key.toLowerCase() !== 's') return;
+			// event.code is layout-independent. On macOS, Option+Shift+S sets event.key to "Í".
+			const keyIsS = event.code === 'KeyS' || event.key.toLowerCase() === 's';
+			if (!keyIsS) return;
 			const target = document.getElementById(targetId);
 			if (!(target instanceof HTMLElement)) return;
 			const eventTarget = event.target;
@@ -67,29 +69,37 @@ export function SkipToActionsLink({
 	return (
 		<Button
 			type="button"
+			disableRipple
 			onClick={() => {
 				const target = document.getElementById(targetId);
 				if (target instanceof HTMLElement) target.focus();
 			}}
 			sx={{
 				position: 'absolute',
+				top: 8,
+				left: 8,
+				zIndex: 2,
 				width: '1px',
 				height: '1px',
 				padding: 0,
-				margin: '-1px',
+				margin: 0,
 				overflow: 'hidden',
 				clip: 'rect(0, 0, 0, 0)',
 				whiteSpace: 'nowrap',
 				border: 0,
-				'&:focus': {
-					position: 'static',
+				// Stay absolutely positioned when focused so the header does not shift.
+				'&:focus, &:focus-visible': {
 					width: 'auto',
 					height: 'auto',
-					margin: 0,
+					padding: '6px 12px',
 					overflow: 'visible',
 					clip: 'auto',
 					whiteSpace: 'normal',
-					zIndex: 2
+					backgroundColor: 'background.paper',
+					color: 'primary.main',
+					outline: '2px solid',
+					outlineColor: 'primary.main',
+					outlineOffset: '2px'
 				}
 			}}
 		>
