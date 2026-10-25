@@ -23,6 +23,7 @@ import { DrawerClasses } from '@mui/material/Drawer';
 import { SxProps } from '@mui/system';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Box from '@mui/material/Box';
+import { PREVIEW_TOOLBAR_HEIGHT_FALLBACK, PREVIEW_TOOLBAR_HEIGHT_PROPERTY } from '../ToolbarOverflow/previewReflow';
 
 export type ResizeableDrawerClassKey =
 	| 'root'
@@ -115,8 +116,10 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 			...sxs?.drawerPaper
 		},
 		belowToolbar && {
-			// TODO: make the toolbar height a global const
-			top: 57,
+			// bottom: 0 (above) and height: auto stretch the paper from this top to the viewport bottom,
+			// so a taller toolbar shortens the drawer instead of pushing it past the screen.
+			// The fallback keeps other screens on the historical offset when the variable is unset.
+			top: `var(${PREVIEW_TOOLBAR_HEIGHT_PROPERTY}, ${PREVIEW_TOOLBAR_HEIGHT_FALLBACK})`,
 			height: 'auto',
 			zIndex: (theme) => theme.zIndex.appBar - 1,
 			...sxs?.drawerPaperBelowToolbar
