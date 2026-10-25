@@ -161,6 +161,12 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 					style: { width },
 					className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
 					sx: drawerPaperSxProp as SxProps<Theme>
+				},
+				// A closed persistent drawer is only translated off-screen; without `inert` its
+				// controls stay in the tab order (WCAG 2.4.3 / 1.3.2).
+				docked: {
+					...(typeof slotProps?.docked === 'object' ? slotProps.docked : {}),
+					inert: !open
 				}
 			}}
 			{...rest}

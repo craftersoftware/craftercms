@@ -161,6 +161,39 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
 		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
+			<Box
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${width}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
+					})
+				]}
+			>
+				<Suspense
+					fallback={
+						<>
+							<GlobalAppToolbar title={<Skeleton width="140px" />} />
+							<Box
+								sx={{
+									display: 'flex',
+									height: '100%'
+								}}
+							>
+								<LoadingState />
+							</Box>
+						</>
+					}
+				>
+					<Outlet />
+				</Suspense>
+			</Box>
 			<ResizeableDrawer
 				sxs={{
 					drawerPaper: {
@@ -220,39 +253,6 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					/>
 				</Box>
 			</ResizeableDrawer>
-			<Box
-				sx={[
-					{
-						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${width}px` : 0
-					},
-					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
-							easing: theme.transitions.easing.easeOut,
-							duration: theme.transitions.duration.enteringScreen
-						})
-					})
-				]}
-			>
-				<Suspense
-					fallback={
-						<>
-							<GlobalAppToolbar title={<Skeleton width="140px" />} />
-							<Box
-								sx={{
-									display: 'flex',
-									height: '100%'
-								}}
-							>
-								<LoadingState />
-							</Box>
-						</>
-					}
-				>
-					<Outlet />
-				</Suspense>
-			</Box>
 		</Paper>
 	);
 }

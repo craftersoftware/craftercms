@@ -103,6 +103,61 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
+			<Box
+				sx={[
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
+					})
+				]}
+			>
+				{activeToolId ? (
+					tool ? (
+						<Suspencified>
+							<Widget
+								{...tool}
+								overrideProps={{
+									embedded: false,
+									mountMode,
+									showAppsButton,
+									onSubmittingAndOrPendingChange,
+									onMinimize
+								}}
+							/>
+						</Suspencified>
+					) : (
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
+							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+								<LauncherOpenerButton />
+							</Box>
+							<EmptyState
+								sxs={{ root: { height: '100%', margin: 0 } }}
+								title="404"
+								subtitle={<FormattedMessage id="siteTools.toolNotFound" defaultMessage="Tool not found" />}
+							/>
+						</Box>
+					)
+				) : (
+					<EmptyState
+						sxs={{ root: { height: '100%', margin: 0 } }}
+						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
+						image={`${baseUrl}/static-assets/images/choose_option.svg`}
+					/>
+				)}
+			</Box>
 			<ResizeableDrawer
 				sxs={{
 					drawerPaper: {
@@ -193,61 +248,6 @@ export function SiteTools(props: SiteToolsProps) {
 					)}
 				</Box>
 			</ResizeableDrawer>
-			<Box
-				sx={[
-					{
-						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
-					},
-					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
-							easing: theme.transitions.easing.easeOut,
-							duration: theme.transitions.duration.enteringScreen
-						})
-					})
-				]}
-			>
-				{activeToolId ? (
-					tool ? (
-						<Suspencified>
-							<Widget
-								{...tool}
-								overrideProps={{
-									embedded: false,
-									mountMode,
-									showAppsButton,
-									onSubmittingAndOrPendingChange,
-									onMinimize
-								}}
-							/>
-						</Suspencified>
-					) : (
-						<Box
-							sx={{
-								display: 'flex',
-								flexDirection: 'column',
-								height: '100%'
-							}}
-						>
-							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
-								<LauncherOpenerButton />
-							</Box>
-							<EmptyState
-								sxs={{ root: { height: '100%', margin: 0 } }}
-								title="404"
-								subtitle={<FormattedMessage id="siteTools.toolNotFound" defaultMessage="Tool not found" />}
-							/>
-						</Box>
-					)
-				) : (
-					<EmptyState
-						sxs={{ root: { height: '100%', margin: 0 } }}
-						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						image={`${baseUrl}/static-assets/images/choose_option.svg`}
-					/>
-				)}
-			</Box>
 		</Paper>
 	);
 }
