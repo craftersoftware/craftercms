@@ -75,9 +75,12 @@ export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 						maxHeight: 'calc(100% - 64px - var(--studio-connection-banner-height, 0px))',
 						marginBottom: 'calc(32px + var(--studio-connection-banner-height, 0px))'
 					},
-					'.MuiDialog-paperFullScreen': {
+					// Same specificity as MUI's own full-screen rule (a single emotion class) loses to it, so qualify the selector.
+					'.MuiDialog-paper.MuiDialog-paperFullScreen': {
 						maxHeight: 'calc(100% - var(--studio-connection-banner-height, 0px))',
-						height: 'calc(100% - var(--studio-connection-banner-height, 0px))'
+						height: 'calc(100% - var(--studio-connection-banner-height, 0px))',
+						// The container centres the paper. This keeps the shortened paper at the top.
+						marginBottom: 'var(--studio-connection-banner-height, 0px)'
 					}
 				}}
 			/>
