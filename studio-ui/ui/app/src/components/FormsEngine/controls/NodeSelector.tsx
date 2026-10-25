@@ -808,28 +808,24 @@ function NodeSelector(props: NodeSelectorProps) {
 											<Box sx={{ display: 'flex' }}>
 												{canBeEdited ? (
 													<Tooltip title={openLabel}>
-														<IconButton
-															size="small"
-															aria-label={openLabel}
-															onClick={(e) => handleEditItem(e, index, !readonly)}
-														>
-															<EditOutlined fontSize="small" />
+														<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
+															{readonly ? (
+																<VisibilityOutlinedIcon fontSize="small" />
+															) : (
+																<EditOutlined fontSize="small" />
+															)}
 														</IconButton>
 													</Tooltip>
 												) : (
 													<Tooltip title={viewLabel}>
-														<IconButton size="small" aria-label={viewLabel} onClick={(e) => handleViewItem(e, index)}>
+														<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
 															<VisibilityOutlinedIcon fontSize="small" />
 														</IconButton>
 													</Tooltip>
 												)}
 												{!readonly && (
 													<Tooltip title={removeLabel}>
-														<IconButton
-															size="small"
-															aria-label={removeLabel}
-															onClick={(e) => handleRemoveItem(e, index)}
-														>
+														<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
 															<Icon fontSize="small" />
 														</IconButton>
 													</Tooltip>

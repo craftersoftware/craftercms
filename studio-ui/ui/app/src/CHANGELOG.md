@@ -9,6 +9,8 @@
 * [utils/path]:
   * Removed `getPasteItemFromPath` and `addToPasteItem`.
 * [components]
+  * [SelectionList] `onItemClicked` is now `(event: MouseEvent | null, path: string)`. Checkbox changes pass `null`; row clicks still pass the event.
+  * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
   * Removed `resource` prop from StoreProvider

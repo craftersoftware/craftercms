@@ -163,11 +163,11 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label={
-							passwordFields && passwordFields[parameter.name]
-								? formatMessage({ defaultMessage: 'Hide {field}' }, { field: parameter.label })
-								: formatMessage({ defaultMessage: 'Show {field}' }, { field: parameter.label })
-						}
+						aria-pressed={Boolean(passwordFields?.[parameter.name])}
+						aria-label={formatMessage({
+							id: 'passwordTextField.toggleVisibilityButtonText',
+							defaultMessage: 'Show password'
+						})}
 						onClick={() => {
 							showPassword(parameter);
 						}}

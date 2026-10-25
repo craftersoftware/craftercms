@@ -208,12 +208,7 @@ export function PreviewDropTargetsPanel() {
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
 								<Tooltip title={cancelSelectionLabel}>
-									<IconButton
-										edge="end"
-										sx={{ ml: 0.625 }}
-										onClick={() => resetState()}
-										aria-label={cancelSelectionLabel}
-									>
+									<IconButton edge="end" sx={{ ml: 0.625 }} onClick={() => resetState()}>
 										<CloseRoundedIcon />
 									</IconButton>
 								</Tooltip>

@@ -105,12 +105,7 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 					)}
 					{collapse && (
 						<Tooltip title={copyPathLabel}>
-							<IconButton
-								size="small"
-								onClick={handleCopyToClipboard}
-								sx={{ padding: '1px', ml: 1 }}
-								aria-label={copyPathLabel}
-							>
+							<IconButton size="small" onClick={handleCopyToClipboard} sx={{ padding: '1px', ml: 1 }}>
 								<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 							</IconButton>
 						</Tooltip>
@@ -248,12 +243,7 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 									{/* Super-long test path: /Lorem/Ipsum/is/simply/dummy/text/of/the/printing/and/typesetting/industry/Lorem/Ipsum/has/been/the/industrys/standard/dummy/text/ever/since/the/1500s/when/an/unknown/printer/took/a/galley/of/type/and/scrambled/it/to/make/a/type/specimen/book.xml */}
 								</Box>
 								<Tooltip title={copyPathLabel}>
-									<IconButton
-										size="small"
-										onClick={handleCopyToClipboard}
-										sx={{ padding: '1px', ml: 1 }}
-										aria-label={copyPathLabel}
-									>
+									<IconButton size="small" onClick={handleCopyToClipboard} sx={{ padding: '1px', ml: 1 }}>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>
@@ -277,12 +267,7 @@ export function EditModeHeader({ isEmbedded, collapse = false }: { isEmbedded: b
 									{objectId}
 								</Box>
 								<Tooltip title={copyIdLabel}>
-									<IconButton
-										size="small"
-										sx={{ padding: '1px', ml: 1 }}
-										onClick={() => copyToClipboard(objectId)}
-										aria-label={copyIdLabel}
-									>
+									<IconButton size="small" sx={{ padding: '1px', ml: 1 }} onClick={() => copyToClipboard(objectId)}>
 										<ContentCopyRounded fontSize="inherit" sx={{ color: 'text.secondary' }} />
 									</IconButton>
 								</Tooltip>
@@ -327,7 +312,6 @@ function CollapseToCButton() {
 			<IconButton
 				size="small"
 				onClick={() => setCollapseToC(!collapseToC)}
-				aria-label={tocLabel}
 				sx={{
 					// TODO: Tabs will be done at a later phase.
 					// visibility: activeTab === 0 ? undefined : 'hidden',

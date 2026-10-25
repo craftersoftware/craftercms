@@ -24,6 +24,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
 import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import ItemStateIcon from '../ItemStateIcon';
 import { getDateScheduled, isEditableAsset } from '../../utils/content';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -104,21 +105,7 @@ export function SelectionList(props: SelectionListProps) {
 				<ListItemText
 					primary={
 						<>
-							<Box
-								component="span"
-								id={selectAllLabelId}
-								sx={{
-									border: 0,
-									clip: 'rect(0 0 0 0)',
-									height: '1px',
-									margin: '-1px',
-									overflow: 'hidden',
-									padding: 0,
-									position: 'absolute',
-									width: '1px',
-									whiteSpace: 'nowrap'
-								}}
-							>
+							<Box component="span" id={selectAllLabelId} sx={visuallyHidden}>
 								{formatMessage({ defaultMessage: 'Select all' })}
 							</Box>
 							<Typography id={titleId} variant="subtitle1" component="h2">
@@ -155,7 +142,6 @@ export function SelectionList(props: SelectionListProps) {
 											color="primary"
 											edge="start"
 											checked={!!selectedItems[item.path]}
-											disableRipple
 											slotProps={{
 												input: {
 													'aria-labelledby': labelId
@@ -294,7 +280,6 @@ export function SelectionList(props: SelectionListProps) {
 												color="primary"
 												edge="start"
 												checked={Boolean(selectedItems[path])}
-												disableRipple
 												slotProps={{
 													input: {
 														'aria-labelledby': labelId

@@ -187,6 +187,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 							label={<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request approval" />}
 						/>
 						<Tooltip
+							describeChild
 							title={
 								<FormattedMessage
 									id="publishDialog.requestPublishHint"

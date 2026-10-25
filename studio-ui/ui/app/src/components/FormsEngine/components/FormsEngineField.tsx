@@ -169,6 +169,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						<IconButton
 							size="small"
 							onClick={() => setShowHelp(!showHelp)}
+							aria-expanded={showHelp}
 							aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
 						>
 							<HelpOutlineRounded fontSize="small" />

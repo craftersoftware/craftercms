@@ -1189,7 +1189,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const closeLabel = formatMessage({ defaultMessage: 'Close' });
 	const fullscreenLabel = isFullScreen
 		? formatMessage({ defaultMessage: 'Exit full screen' })
-		: formatMessage({ defaultMessage: 'Maximize' });
+		: formatMessage({ defaultMessage: 'Enter full screen' });
 
 	const bodyFragment = (
 		<FormLayout
@@ -1218,25 +1218,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
 								<Tooltip title={minimizeLabel}>
-									<IconButton size="small" onClick={props.onMinimize} aria-label={minimizeLabel}>
+									<IconButton size="small" onClick={props.onMinimize}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
 								<Tooltip title={fullscreenLabel}>
-									<IconButton
-										size="small"
-										onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}
-										aria-label={fullscreenLabel}
-									>
+									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
 								<Tooltip title={closeLabel}>
-									<IconButton size="small" onClick={handleClose} aria-label={closeLabel}>
+									<IconButton size="small" onClick={handleClose}>
 										<Close />
 									</IconButton>
 								</Tooltip>

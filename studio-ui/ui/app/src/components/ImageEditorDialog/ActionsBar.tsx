@@ -71,7 +71,6 @@ export function ActionsBar(props: ActionsBarProps) {
 					<IconButton
 						color={currentMode === 'crop' ? 'primary' : 'default'}
 						onClick={() => setEditorMode(currentMode !== 'crop' ? 'crop' : null)}
-						aria-label={cropLabel}
 					>
 						<CropIcon />
 					</IconButton>
@@ -83,12 +82,12 @@ export function ActionsBar(props: ActionsBarProps) {
 						<Divider orientation="vertical" flexItem sx={{ height: 30, alignSelf: 'center' }} />
 					)}
 					<Tooltip title={rotateLeftLabel}>
-						<IconButton onClick={() => onRotate(-90)} aria-label={rotateLeftLabel}>
+						<IconButton onClick={() => onRotate(-90)}>
 							<RotateLeftIcon />
 						</IconButton>
 					</Tooltip>
 					<Tooltip title={rotateRightLabel}>
-						<IconButton onClick={() => onRotate(90)} aria-label={rotateRightLabel}>
+						<IconButton onClick={() => onRotate(90)}>
 							<RotateRightIcon />
 						</IconButton>
 					</Tooltip>
@@ -97,12 +96,12 @@ export function ActionsBar(props: ActionsBarProps) {
 			{shouldRenderFlip(tools) && (
 				<>
 					<Tooltip title={flipHorizontalLabel}>
-						<IconButton onClick={() => onFlip(true, false)} aria-label={flipHorizontalLabel}>
+						<IconButton onClick={() => onFlip(true, false)}>
 							<FlipIcon />
 						</IconButton>
 					</Tooltip>
 					<Tooltip title={flipVerticalLabel}>
-						<IconButton onClick={() => onFlip(false, true)} aria-label={flipVerticalLabel}>
+						<IconButton onClick={() => onFlip(false, true)}>
 							<FlipIcon sx={{ transform: 'rotate(90deg)' }} />
 						</IconButton>
 					</Tooltip>
@@ -117,7 +116,6 @@ export function ActionsBar(props: ActionsBarProps) {
 						<IconButton
 							color={currentMode === 'saturation' ? 'primary' : 'default'}
 							onClick={() => setEditorMode(currentMode !== 'saturation' ? 'saturation' : null)}
-							aria-label={saturationLabel}
 						>
 							<SaturationIcon />
 						</IconButton>
@@ -126,7 +124,6 @@ export function ActionsBar(props: ActionsBarProps) {
 						<IconButton
 							color={currentMode === 'brightness' ? 'primary' : 'default'}
 							onClick={() => setEditorMode(currentMode !== 'brightness' ? 'brightness' : null)}
-							aria-label={brightnessLabel}
 						>
 							<BrightnessIcon />
 						</IconButton>
@@ -135,7 +132,6 @@ export function ActionsBar(props: ActionsBarProps) {
 						<IconButton
 							color={currentMode === 'contrast' ? 'primary' : 'default'}
 							onClick={() => setEditorMode(currentMode !== 'contrast' ? 'contrast' : null)}
-							aria-label={contrastLabel}
 						>
 							<ContrastIcon />
 						</IconButton>
