@@ -16,7 +16,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
-import Box from '@mui/material/Box';
 import DialogTitle from '@mui/material/DialogTitle';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
@@ -29,6 +28,8 @@ import {
 } from '../../services/auth';
 import { isBlank, unescapeHTML } from '../../utils/string';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import LogInForm from '../LoginForm/LoginForm';
 import MenuItem from '@mui/material/MenuItem';
 import { fetchProductLanguages } from '../../services/configuration';
@@ -53,7 +54,6 @@ import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
 import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
-import { visuallyHidden } from '@mui/utils';
 
 export interface SystemLang {
 	id: string;
