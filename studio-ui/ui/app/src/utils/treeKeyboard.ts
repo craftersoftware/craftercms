@@ -31,3 +31,16 @@ export function cancelTreeItemKey(event: React.KeyboardEvent<Element>): void {
 export function isTreeContextMenuKey(event: React.KeyboardEvent<Element>): boolean {
 	return event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
 }
+
+/**
+ * Nested treeitems are `li` elements inside an ancestor `li`, so click, contextmenu and
+ * keydown bubble. A handler on the TreeItem root must ignore events whose closest treeitem
+ * is a descendant.
+ */
+export function isOwnTreeItemEvent(event: React.SyntheticEvent<Element>): boolean {
+	const target = event.target as Element | null;
+	if (!target || typeof target.closest !== 'function') {
+		return true;
+	}
+	return target.closest('[role="treeitem"]') === event.currentTarget;
+}

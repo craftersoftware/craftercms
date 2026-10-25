@@ -163,9 +163,33 @@ export const MobileStepper = styled(UnstyledMobileStepper, { name: mobileStepper
 		padding: 0,
 		display: 'block'
 	},
+	/* Clickable dots keep an 8px mark and a 24px hit target (WCAG 2.5.8). */
+	[`& button.${mobileStepperClasses.dot}`]: {
+		backgroundColor: 'transparent',
+		width: 24,
+		height: 24,
+		margin: 0,
+		cursor: 'pointer',
+		display: 'inline-flex',
+		alignItems: 'center',
+		justifyContent: 'center',
+		'&::before': {
+			content: '""',
+			width: 8,
+			height: 8,
+			borderRadius: '50%',
+			backgroundColor: theme.palette.text.secondary
+		}
+	},
 	/* Styles applied to a dot if `variant="dots"` and this is the active step. */
 	[`& .${mobileStepperClasses.dotActive}`]: {
 		backgroundColor: RedColor
+	},
+	[`& button.${mobileStepperClasses.dotActive}`]: {
+		backgroundColor: 'transparent',
+		'&::before': {
+			backgroundColor: RedColor
+		}
 	},
 	/* Styles applied to the Linear Progress component if `variant="progress"`. */
 	[`& .${mobileStepperClasses.progress}`]: {

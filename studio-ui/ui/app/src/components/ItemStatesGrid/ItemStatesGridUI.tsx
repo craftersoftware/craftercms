@@ -100,9 +100,24 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 						{itemStates.map((item) => (
 							<GlobalAppGridRow
 								key={item.id}
+								tabIndex={0}
 								onClick={() => onRowSelected(item)}
+								onKeyDown={(event) => {
+									if (event.target !== event.currentTarget) {
+										return;
+									}
+									if (event.key === 'Enter' || event.key === ' ') {
+										event.preventDefault();
+										onRowSelected(item);
+									}
+								}}
 								sx={{
-									backgroundColor: Boolean(selectedItems[item.path]) || allItemsSelected ? 'action.selected' : 'inherit'
+									backgroundColor:
+										Boolean(selectedItems[item.path]) || allItemsSelected ? 'action.selected' : 'inherit',
+									'&:focus-visible': {
+										outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+										outlineOffset: '-2px'
+									}
 								}}
 							>
 								<GlobalAppGridCell align="center">

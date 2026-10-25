@@ -65,7 +65,26 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 					<TableBody>
 						{groups?.length ? (
 							groups.map((group, i) => (
-								<GlobalAppGridRow key={group.id} onClick={() => onRowClicked(group)}>
+								<GlobalAppGridRow
+									key={group.id}
+									tabIndex={0}
+									onClick={() => onRowClicked(group)}
+									onKeyDown={(event) => {
+										if (event.target !== event.currentTarget) {
+											return;
+										}
+										if (event.key === 'Enter' || event.key === ' ') {
+											event.preventDefault();
+											onRowClicked(group);
+										}
+									}}
+									sx={{
+										'&:focus-visible': {
+											outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+											outlineOffset: '-2px'
+										}
+									}}
+								>
 									<GlobalAppGridCell align="left" className="width25">
 										<Typography variant="body2" noWrap title={group.name}>
 											{group.name}

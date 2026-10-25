@@ -30,6 +30,7 @@ import Typography from '@mui/material/Typography';
 import HighlightOffIcon from '@mui/icons-material/HighlightOffRounded';
 import RefreshIcon from '@mui/icons-material/RefreshRounded';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import ApiResponseErrorState from '../ApiResponseErrorState';
 import { useSpreadState } from '../../hooks/useSpreadState';
 import {
@@ -378,7 +379,14 @@ function PublishingQueue(props: PublishingQueueProps) {
 						color="textSecondary"
 					>
 						{formatMessage(messages.packagesSelected, { count: count })}
-						<HighlightOffIcon sx={{ marginLeft: '5px', cursor: 'pointer' }} onClick={clearSelected} />
+						<IconButton
+							size="small"
+							aria-label={formatMessage({ defaultMessage: 'Clear selection' })}
+							onClick={clearSelected}
+							sx={{ marginLeft: '5px' }}
+						>
+							<HighlightOffIcon fontSize="small" />
+						</IconButton>
 					</Typography>
 				)}
 				<Button variant="outlined" sx={{ m: 1 }} onClick={() => getPackages(siteId)}>

@@ -95,7 +95,26 @@ export function UsersGridUI(props: UsersGridUIProps) {
 					<TableBody>
 						{users?.length ? (
 							users.map((user) => (
-								<GlobalAppGridRow key={user.id} onClick={() => onRowClicked(user)}>
+								<GlobalAppGridRow
+									key={user.id}
+									tabIndex={0}
+									onClick={() => onRowClicked(user)}
+									onKeyDown={(event) => {
+										if (event.target !== event.currentTarget) {
+											return;
+										}
+										if (event.key === 'Enter' || event.key === ' ') {
+											event.preventDefault();
+											onRowClicked(user);
+										}
+									}}
+									sx={{
+										'&:focus-visible': {
+											outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+											outlineOffset: '-2px'
+										}
+									}}
+								>
 									<GlobalAppGridCell align="center" className="avatar">
 										<Avatar sx={{ margin: '0 auto' }}>
 											{user.firstName.charAt(0)}

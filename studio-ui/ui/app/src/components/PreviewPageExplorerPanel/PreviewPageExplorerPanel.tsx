@@ -59,7 +59,7 @@ import { LoadingState } from '../LoadingState';
 import { svgIconClasses, typographyClasses } from '@mui/material';
 import Box from '@mui/material/Box';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
-import { cancelTreeItemKey, isTreeContextMenuKey } from '../../utils/treeKeyboard';
+import { cancelTreeItemKey, isOwnTreeItemEvent, isTreeContextMenuKey } from '../../utils/treeKeyboard';
 
 const rootPrefix = '{root}_';
 
@@ -323,6 +323,11 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 			onMouseOver={(e) => setOverState(e, true)}
 			onMouseOut={(e) => setOverState(e, false)}
 			onClick={(event) => {
+				// Clicks bubble through nested treeitem roots. Only the clicked item may select.
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
+				event.stopPropagation();
 				const target = event.target as HTMLElement;
 				if (target.closest('button, .MuiTreeItem-iconContainer')) {
 					return;
@@ -330,9 +335,22 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 				handleScroll?.(node);
 			}}
 			onKeyDown={(event) => {
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
+				// Page and component nodes drill in from the chevron. Enter does the same.
+				// Right does it when the node is a leaf (Right otherwise expands inline children).
+				const drillable = isPageOrComponent(node.type) && !node.id.includes(rootPrefix);
 				if (event.key === 'Enter') {
 					cancelTreeItemKey(event);
-					handleScroll?.(node);
+					if (drillable) {
+						handleClick?.(node);
+					} else {
+						handleScroll?.(node);
+					}
+				} else if (event.key === 'ArrowRight' && drillable && !node.children?.length) {
+					cancelTreeItemKey(event);
+					handleClick?.(node);
 				} else if (isTreeContextMenuKey(event) && node.path) {
 					cancelTreeItemKey(event);
 					handleOptions?.(event, node);
@@ -654,30 +672,15 @@ export function PreviewPageExplorerPanel() {
 		const left = anchorRect.left + getOffsetLeft(anchorRect, 'left');
 
 		if (path) {
-			// The treeitem stays mounted, so anchor to it and let the menu restore focus there.
-			// The hover options button unmounts, so that path keeps a coordinate anchor.
-			if (element?.getAttribute?.('role') === 'treeitem') {
-				dispatch(
-					showItemMegaMenu(
-						Object.assign(
-							{
-								path,
-								anchorReference: 'anchorEl' as const,
-								anchorOrigin: { vertical: 'bottom' as const, horizontal: 'right' as const }
-							},
-							{ anchorEl: element as HTMLElement }
-						)
-					)
-				);
-			} else {
-				dispatch(
-					showItemMegaMenu({
-						path: path,
-						anchorReference: 'anchorPosition',
-						anchorPosition: { top, left }
-					})
-				);
-			}
+			// Coordinate anchor: the options button unmounts on mouse-leave, and a DOM node
+			// must not go into the Redux action. MUI restores focus to the previously focused element.
+			dispatch(
+				showItemMegaMenu({
+					path: path,
+					anchorReference: 'anchorPosition',
+					anchorPosition: { top, left }
+				})
+			);
 		}
 	};
 
@@ -740,7 +743,7 @@ interface PageExplorerUIProps {
 	rootChildren: string[];
 }
 
-function PageExplorerUI(props: PageExplorerUIProps) {
+export function PageExplorerUI(props: PageExplorerUIProps) {
 	const {
 		handleScroll,
 		handleClick,
