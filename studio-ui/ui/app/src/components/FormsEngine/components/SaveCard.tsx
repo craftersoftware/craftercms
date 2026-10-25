@@ -159,7 +159,7 @@ export function SaveCard(props: SaveCardProps) {
 				</FormHelperText>
 			)}
 			<Grow in={!hasPendingChanges} appear unmountOnExit>
-				<Alert severity="info" variant="outlined" sx={{ p: 0, border: 'none', placeContent: 'center' }}>
+				<Alert role="note" severity="info" variant="outlined" sx={{ p: 0, border: 'none', placeContent: 'center' }}>
 					<FormattedMessage defaultMessage="No changes detected" />
 				</Alert>
 			</Grow>
