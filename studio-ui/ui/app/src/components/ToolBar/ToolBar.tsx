@@ -64,6 +64,8 @@ export function ToolBar() {
 
 	return (
 		<ViewToolbar
+			component="nav"
+			ariaLabel={formatMessage({ defaultMessage: 'Preview toolbar' })}
 			sxs={{
 				appBar: {
 					borderBottom: '5px',
@@ -72,7 +74,7 @@ export function ToolBar() {
 			}}
 		>
 			<section>
-				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
+				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)} describeChild>
 					<LogoAndMenuBundleButton
 						aria-label={formatMessage(translations.openToolsPanel)}
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}

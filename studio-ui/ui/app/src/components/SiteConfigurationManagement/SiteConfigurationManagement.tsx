@@ -582,6 +582,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
+	const hideConfigurationFilesLabel = formatMessage({ defaultMessage: 'Hide configuration files' });
+	const showConfigurationFilesLabel = formatMessage({ defaultMessage: 'Show configuration files' });
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -631,7 +633,11 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
 								startContent={
-									<IconButton onClick={onToggleDrawer} size="large">
+									<IconButton
+										onClick={onToggleDrawer}
+										size="large"
+										aria-label={openDrawer ? hideConfigurationFilesLabel : showConfigurationFilesLabel}
+									>
 										{openDrawer ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
 									</IconButton>
 								}
@@ -794,6 +800,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						height: '100%'
 					}}
 					component="nav"
+					aria-label={formatMessage({ defaultMessage: 'Configuration files' })}
 					dense
 					subheader={
 						<ListSubheader

@@ -48,6 +48,9 @@ interface ResizeableDrawerProps extends DrawerProps {
 	onWidthChange?(width: number): void;
 	onResizeStart?(): void;
 	onResizeStop?(): void;
+	/** Landmark exposed by the drawer body while the drawer is open. */
+	landmark?: 'nav' | 'complementary';
+	landmarkLabel?: string;
 }
 
 export function ResizeableDrawer(props: ResizeableDrawerProps) {
@@ -70,6 +73,8 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		anchor = 'left',
 		belowToolbar = false,
 		sxs = {},
+		landmark,
+		landmarkLabel,
 		...rest
 	} = props;
 
@@ -206,7 +211,8 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 				/>
 			)}
 			<Box
-				component="section"
+				component={landmark === 'nav' ? 'nav' : landmark === 'complementary' ? 'aside' : 'section'}
+				aria-label={landmarkLabel || undefined}
 				className={classes?.drawerBody}
 				sx={{
 					width: '100%',

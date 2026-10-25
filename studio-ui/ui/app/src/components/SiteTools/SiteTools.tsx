@@ -39,6 +39,7 @@ import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDial
 import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface Tool {
 	title: TranslationOrText;
@@ -103,8 +104,13 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
+			<SkipToMainContent />
 			<Box
+				component="main"
+				id={STUDIO_MAIN_CONTENT_ID}
+				tabIndex={-1}
 				sx={[
+					mainLandmarkSx,
 					{
 						height: '100%',
 						width: '100%',
@@ -159,6 +165,8 @@ export function SiteTools(props: SiteToolsProps) {
 				)}
 			</Box>
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={formatMessage({ defaultMessage: 'Project tools' })}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute'

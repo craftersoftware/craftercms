@@ -29,7 +29,8 @@ import {
 	useLocation
 } from 'react-router';
 import SiteManagement from '../SiteManagement';
-import { getLauncherSectionLink, urlMapping } from '../LauncherSection/utils';
+import { getLauncherSectionLink, messages as launcherMessages, urlMapping } from '../LauncherSection/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import EmptyState from '../EmptyState/EmptyState';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useGlobalAppState } from './GlobalAppContext';
@@ -161,8 +162,13 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
 		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
+			<SkipToMainContent />
 			<Box
+				component="main"
+				id={STUDIO_MAIN_CONTENT_ID}
+				tabIndex={-1}
 				sx={[
+					mainLandmarkSx,
 					{
 						height: '100%',
 						width: '100%',
@@ -195,6 +201,8 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				</Suspense>
 			</Box>
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={formatMessage(launcherMessages.global)}
 				sxs={{
 					drawerPaper: {
 						top: '0',

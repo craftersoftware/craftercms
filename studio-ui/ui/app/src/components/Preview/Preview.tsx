@@ -34,6 +34,7 @@ import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -188,6 +189,7 @@ function Preview() {
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
 				 meantime, we'll show a loading state. */}
+				<SkipToMainContent />
 				{site ? (
 					<>
 						<ToolBar />
@@ -196,7 +198,9 @@ function Preview() {
 						<ICEToolsPanel />
 					</>
 				) : (
-					<LoadingState />
+					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
+						<LoadingState />
+					</Box>
 				)}
 			</Box>
 		</PreviewConcierge>

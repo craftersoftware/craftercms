@@ -40,6 +40,8 @@ export type LauncherSectionUIProps = PropsWithChildren<{
 export function LauncherSectionUI(props: LauncherSectionUIProps) {
 	const title = usePossibleTranslation(props.title, props.translationValues);
 	const { children, sxs } = props;
+	const navLabel = typeof title === 'string' && title ? title : undefined;
+	const landmark = (navLabel ? 'nav' : 'div') as 'nav' | 'div';
 	return (
 		<>
 			{title && (
@@ -63,7 +65,8 @@ export function LauncherSectionUI(props: LauncherSectionUIProps) {
 				</Typography>
 			)}
 			<Box
-				component="nav"
+				component={landmark}
+				aria-label={navLabel}
 				className={props.classes?.nav}
 				sx={{
 					display: 'flex',

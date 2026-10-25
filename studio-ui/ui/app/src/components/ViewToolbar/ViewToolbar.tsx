@@ -29,16 +29,22 @@ export type ViewToolbarProps = PropsWithChildren<{
 	classes?: Partial<Record<ViewToolbarClassKey, string>>;
 	sxs?: PartialSxRecord<ViewToolbarClassKey>;
 	slotProps?: Partial<{ toolbar: Partial<ToolbarProps> }>;
+	/** Landmark element. Defaults to the AppBar header. */
+	component?: React.ElementType;
+	/** Accessible name when `component` is a landmark such as `nav`. */
+	ariaLabel?: string;
 }>;
 
 const ViewToolbar = forwardRef<HTMLDivElement, ViewToolbarProps>(function (props, ref) {
-	const { children, elevation = 0, sxs, slotProps } = props;
+	const { children, elevation = 0, sxs, slotProps, component, ariaLabel } = props;
 	return (
 		<AppBar
 			ref={ref}
 			color="inherit"
 			position="relative"
 			elevation={elevation}
+			{...(component ? { component } : {})}
+			{...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
 			className={props.classes?.appBar}
 			sx={(theme) => ({
 				borderBottom: `1px solid ${theme.palette.divider}`,

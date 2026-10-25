@@ -26,6 +26,7 @@ import { filter, map } from 'rxjs/operators';
 import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export function Host() {
 	const site = useActiveSiteId();
@@ -99,7 +100,11 @@ export function Host() {
 
 	return (
 		<Box
+			component="main"
+			id={STUDIO_MAIN_CONTENT_ID}
+			tabIndex={-1}
 			sx={(theme) => ({
+				...mainLandmarkSx,
 				flexGrow: 1,
 				display: 'flex',
 				justifyContent: 'center',

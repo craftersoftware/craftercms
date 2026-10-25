@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { defineMessages, FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { initToolsPanelConfig, updateToolsPanelWidth } from '../../state/actions/preview';
 import { useDispatch } from 'react-redux';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
@@ -43,6 +43,7 @@ defineMessages({
 
 export function ToolsPanel() {
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const { id: siteId, uuid } = useActiveSite();
 	const { showToolsPanel, toolsPanel, toolsPanelWidth, windowSize } = usePreviewState();
 	const toolsPanelPageStack = useSelection<WidgetDescriptor[]>((state) => state.preview.toolsPanelPageStack);
@@ -66,6 +67,8 @@ export function ToolsPanel() {
 		<ResizeableDrawer
 			belowToolbar
 			open={showToolsPanel}
+			landmark="complementary"
+			landmarkLabel={formatMessage({ defaultMessage: 'Tools' })}
 			width={toolsPanelWidth}
 			maxWidth={windowSize}
 			sxs={{

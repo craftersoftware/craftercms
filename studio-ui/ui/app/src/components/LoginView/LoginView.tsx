@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
+import Box from '@mui/material/Box';
 import DialogTitle from '@mui/material/DialogTitle';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
@@ -51,6 +52,7 @@ import useTimer from '../../hooks/useTimer';
 import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SystemLang {
 	id: string;
@@ -628,21 +630,24 @@ export function LoginViewContainer(props: LoginViewProps) {
 				}}
 				aria-labelledby="loginDialog"
 			>
-				<DialogTitle id="loginDialog">
-					<CrafterCMSLogo
-						sxs={{
-							root: {
-								maxWidth: 250,
-								display: 'block',
-								margin: (theme) => `${theme.spacing(2)} auto ${theme.spacing(1)}`
-							}
-						}}
-						width="auto"
-						alt={formatMessage(translations.loginDialogTitle)}
-					/>
-				</DialogTitle>
-				<CurrentView {...currentViewProps} />
-				<LanguageDropDown language={language} languages={languages} onChange={setLanguage} />
+				<SkipToMainContent />
+				<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
+					<DialogTitle id="loginDialog">
+						<CrafterCMSLogo
+							sxs={{
+								root: {
+									maxWidth: 250,
+									display: 'block',
+									margin: (theme) => `${theme.spacing(2)} auto ${theme.spacing(1)}`
+								}
+							}}
+							width="auto"
+							alt={formatMessage(translations.loginDialogTitle)}
+						/>
+					</DialogTitle>
+					<CurrentView {...currentViewProps} />
+					<LanguageDropDown language={language} languages={languages} onChange={setLanguage} />
+				</Box>
 			</Dialog>
 			<Snackbar
 				open={snack.open}
