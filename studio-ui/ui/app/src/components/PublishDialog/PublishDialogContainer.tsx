@@ -98,6 +98,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const [childrenItems, setChildrenItems] = useState<LightItem[]>([]);
 	const [published, setPublished] = useState<boolean>(null);
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
+	const [publishingTargetsFailed, setPublishingTargetsFailed] = useState(false);
 	const {
 		itemsDataSummary,
 		dependencyData,
@@ -394,6 +395,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			publishSubmitReason = formatMessage({
 				defaultMessage: 'Wait for the items to finish loading before publishing.'
 			});
+		} else if (publishingTargetsFailed) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Publishing targets could not be loaded. Retry before publishing.'
+			});
 		} else if (publishingTargets && publishingTargets.length === 0) {
 			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
 		} else if (!state.publishingTarget && publishingTargets == null) {
@@ -420,6 +425,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			publishSubmitReason = formatMessage({ defaultMessage: 'Choose a schedule time in the future.' });
 		} else if (arePublishingItemsFolders) {
 			publishSubmitReason = formatMessage({ defaultMessage: 'Select items that are not empty folders to publish.' });
+		} else if (packageDependenciesFetchFailed) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Dependency validation could not complete. Try again before publishing.'
+			});
 		} else if (dependencyValidationIncomplete) {
 			publishSubmitReason = formatMessage({
 				defaultMessage: 'Wait for dependency validation to finish before publishing.'
@@ -503,9 +512,11 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 									isRequestPublish={isRequestPublish}
 									disabled={disabled}
 									onFetchedPublishedTargets={({ targets, published }) => {
+										setPublishingTargetsFailed(false);
 										setPublished(published);
 										setPublishingTargets(targets);
 									}}
+									onPublishingTargetsError={() => setPublishingTargetsFailed(true)}
 								/>
 								<Divider />
 								<PublishReferencesLegend />
