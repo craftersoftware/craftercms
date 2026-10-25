@@ -40,8 +40,9 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 	const { visibilitySwitch = true, initialVisible = false, sxs, slotProps, ...textFieldProps } = props;
 	const { formatMessage } = useIntl();
 	const [showPassword, setShowPassword] = useState(initialVisible);
-	// Keep focus on the toggle. Moving it to the input (the previous behaviour) meant the
-	// pressed-state change was never the focused control, so it was not announced from the button.
+	// A mouse press focuses the button and blurs the field, which closes a caller's strength
+	// popper. Cancelling mousedown leaves focus in the field, so that popper stays open.
+	// Keyboard activation still leaves focus on this button, where aria-pressed is exposed.
 	const handleClickShowPassword = () => {
 		setShowPassword((visible) => !visible);
 	};
@@ -53,6 +54,7 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 				aria-pressed={showPassword}
 				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
 				onClick={handleClickShowPassword}
+				onMouseDown={(event) => event.preventDefault()}
 				size="large"
 			>
 				{showPassword ? <VisibilityOff /> : <Visibility />}
