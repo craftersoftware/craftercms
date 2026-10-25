@@ -133,7 +133,10 @@ export function SearchUI(props: SearchUIProps) {
 	const resultsFrom = searchResults == null || resultsTotal === 0 ? 0 : searchParameters.offset + 1;
 	const resultsTo =
 		searchResults == null ? 0 : Math.min(searchParameters.offset + searchParameters.limit, resultsTotal);
-	const keywordForStatus = keyword.length > 18 ? `${keyword.substring(0, 15).trim()}...` : keyword;
+	// Use the keyword the results were fetched for. `keyword` is the live input and changes on every keystroke,
+	// ahead of (debounced) results, so it would announce stale counts with a half-typed keyword.
+	const resultsKeyword = searchParameters.keywords ?? '';
+	const keywordForStatus = resultsKeyword.length > 18 ? `${resultsKeyword.substring(0, 15).trim()}...` : resultsKeyword;
 	const resultsStatus =
 		searchResults == null
 			? ''
@@ -142,7 +145,7 @@ export function SearchUI(props: SearchUIProps) {
 					to: resultsTo,
 					count: resultsTotal,
 					keyword: keywordForStatus,
-					keywordLength: keyword.length
+					keywordLength: resultsKeyword.length
 				});
 
 	const container = useRef(undefined);
