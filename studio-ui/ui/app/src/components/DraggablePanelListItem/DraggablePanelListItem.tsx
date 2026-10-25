@@ -16,6 +16,7 @@
 
 import React, { useState } from 'react';
 import { useIntl } from 'react-intl';
+import Box from '@mui/material/Box';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Avatar from '@mui/material/Avatar';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
@@ -25,7 +26,14 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { darken, useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import { getAvatarWithIconColors } from '../../utils/contentType';
-import ListItem from '@mui/material/ListItem';
+
+/** Keyboard ring that stays visible when the theme turns ripples off. */
+const focusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: 2
+	}
+};
 
 interface PanelListItemProps {
 	primaryText: string;
@@ -55,23 +63,13 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 	const { backgroundColor, textColor } = getAvatarWithIconColors(avatarColorBase ?? primaryText, theme, darken);
 	const [over, setOver] = useState(false);
 	return (
-		<ListItem
-			disablePadding
+		<Box
+			component="li"
 			onMouseEnter={() => setOver(true)}
 			onMouseLeave={() => setOver(false)}
-			secondaryAction={
-				hasMenu ? (
-					<IconButton
-						edge="end"
-						onClick={onMenu}
-						size="small"
-						aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
-					>
-						<MoreVertRounded />
-					</IconButton>
-				) : null
-			}
 			sx={{
+				display: 'flex',
+				alignItems: 'center',
 				border: `1px solid ${isBeingDragged ? backgroundColor : 'transparent'}`,
 				borderRadius: isBeingDragged ? 2 : 0
 			}}
@@ -82,9 +80,11 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 				onDragStart={onDragStart}
 				onDragEnd={onDragEnd}
 				sx={{
+					flex: 1,
+					minWidth: 0,
 					pl: 1.5,
-					pr: hasMenu ? 6 : undefined,
-					cursor: isBeingDragged ? 'grabbing' : 'grab'
+					cursor: isBeingDragged ? 'grabbing' : 'grab',
+					...focusVisibleSx
 				}}
 			>
 				<ListItemAvatar sx={{ minWidth: 0 }}>
@@ -110,7 +110,19 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 				</ListItemAvatar>
 				<ListItemText primary={primaryText} secondary={secondaryText} />
 			</ListItemButton>
-		</ListItem>
+			{hasMenu && (
+				<Box sx={{ display: 'flex', flexShrink: 0 }}>
+					<IconButton
+						onClick={onMenu}
+						size="small"
+						aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
+						sx={focusVisibleSx}
+					>
+						<MoreVertRounded />
+					</IconButton>
+				</Box>
+			)}
+		</Box>
 	);
 }
 

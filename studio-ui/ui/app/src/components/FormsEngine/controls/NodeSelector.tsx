@@ -26,9 +26,9 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemButton, { listItemButtonClasses } from '@mui/material/ListItemButton';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
+import ListItemButton from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -186,6 +186,7 @@ function getInitialCreatePickerValue(
 
 function NodeSelector(props: NodeSelectorProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -211,7 +212,6 @@ function NodeSelector(props: NodeSelectorProps) {
 	const [pickerDialogOpen, setPickerDialogOpen] = useState(false);
 	const [createPickerChoice, setCreatePickerChoice] = useState<CreateDataSourcePickerData>(null);
 	const dispatch = useDispatch();
-	const { formatMessage } = useIntl();
 	const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const contentTypes = useContentTypes();
 	const siteId = useActiveSiteId();
@@ -774,6 +774,11 @@ function NodeSelector(props: NodeSelectorProps) {
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
 								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
+								const iconTooltip = isEmbedded ? (
+									<FormattedMessage defaultMessage="Delete" />
+								) : (
+									<FormattedMessage defaultMessage="Unlink" />
+								);
 								const isComponent = isItemComponent(item);
 								const canBeEdited =
 									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
@@ -788,85 +793,64 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
-								const itemLabel =
-									(isEmbedded ? item.value : itemsByPath[item.include]?.label || item.value) ||
-									item.include ||
-									String(item.key);
-								const editLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel });
-								const viewLabel = formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
-								const openLabel = readonly ? viewLabel : editLabel;
-								const removeLabel = isEmbedded
-									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
-									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
 								return (
-									<ListItem
+									<ListItemButton
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
 										divider={index !== value.length - 1}
-										disablePadding
-										sx={{ [`& > .${listItemButtonClasses.root}`]: { pr: '112px' } }}
-										secondaryAction={
-											<Box sx={{ display: 'flex' }}>
-												{canBeEdited ? (
-													<Tooltip title={openLabel}>
-														<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
-															{readonly ? (
-																<VisibilityOutlinedIcon fontSize="small" />
-															) : (
-																<EditOutlined fontSize="small" />
-															)}
-														</IconButton>
-													</Tooltip>
-												) : (
-													<Tooltip title={viewLabel}>
-														<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
-															<VisibilityOutlinedIcon fontSize="small" />
-														</IconButton>
-													</Tooltip>
-												)}
-												{!readonly && (
-													<Tooltip title={removeLabel}>
-														<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
-															<Icon fontSize="small" />
-														</IconButton>
-													</Tooltip>
-												)}
-											</Box>
-										}
+										onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
+										onKeyDown={(e) => handleItemKeyDown(e, index)}
 									>
-										<ListItemButton
-											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
-											onKeyDown={(e) => handleItemKeyDown(e, index)}
-										>
-											<ListItemText
-												primary={
-													isEmbedded ? (
-														<ItemDisplay
-															item={{
-																...contextItem,
-																label: item.value,
-																systemType: 'component'
-															}}
-															showWorkflowState={!isEmbedded}
-															showNavigableAsLinks={false}
-														/>
-													) : itemsByPath[item.include] ? (
-														<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
-													) : (
-														item.value
-													)
-												}
-												secondary={
-													isEmbedded ? (
-														<em>
-															<FormattedMessage defaultMessage="Embedded" />
-														</em>
-													) : (
-														(item.include ?? item.key)
-													)
-												}
-											/>
-										</ListItemButton>
-									</ListItem>
+										<ListItemText
+											primary={
+												isEmbedded ? (
+													<ItemDisplay
+														item={{
+															...contextItem,
+															label: item.value,
+															systemType: 'component'
+														}}
+														showWorkflowState={!isEmbedded}
+														showNavigableAsLinks={false}
+													/>
+												) : itemsByPath[item.include] ? (
+													<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
+												) : (
+													item.value
+												)
+											}
+											secondary={
+												isEmbedded ? (
+													<em>
+														<FormattedMessage defaultMessage="Embedded" />
+													</em>
+												) : (
+													(item.include ?? item.key)
+												)
+											}
+										/>
+										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
+											{canBeEdited ? (
+												<Tooltip title="Edit">
+													<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
+														<EditOutlined fontSize="small" />
+													</IconButton>
+												</Tooltip>
+											) : (
+												<Tooltip title="View">
+													<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
+														<VisibilityOutlinedIcon fontSize="small" />
+													</IconButton>
+												</Tooltip>
+											)}
+											{!readonly && (
+												<Tooltip title={iconTooltip}>
+													<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
+														<Icon fontSize="small" />
+													</IconButton>
+												</Tooltip>
+											)}
+										</ListItemSecondaryAction>
+									</ListItemButton>
 								);
 							})}
 						</List>
