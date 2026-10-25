@@ -90,6 +90,7 @@ export function ToolsPanel() {
 				<EmptyState
 					sxs={{ title: { textAlign: 'center' } }}
 					title={<FormattedMessage defaultMessage="No widgets configured" />}
+					titleComponent="h2"
 					subtitle={
 						<FormattedMessage defaultMessage="Add configuration > widgets to `craftercms.components.ToolsPanel` on `ui.xml`" />
 					}

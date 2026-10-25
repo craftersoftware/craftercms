@@ -98,6 +98,7 @@ export function ICEToolsPanel() {
 					) : (
 						<EmptyState
 							title={<FormattedMessage id="icePanel.noWidgetsMessage" defaultMessage="No tools have been configured" />}
+							titleComponent="h2"
 						/>
 					)}
 				</ConditionalLoadingState>

@@ -167,8 +167,9 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 					className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
 					sx: drawerPaperSxProp as SxProps<Theme>
 				},
-				// A closed persistent drawer is only translated off-screen; without `inert` its
-				// controls stay in the tab order (WCAG 2.4.3 / 1.3.2).
+				// Slide sets visibility:hidden once the close transition has exited, which
+				// drops the controls from the tab order. `inert` covers the transition
+				// itself, while the paper is still translated and visible (WCAG 2.4.3 / 1.3.2).
 				docked: {
 					...(typeof slotProps?.docked === 'object' ? slotProps.docked : {}),
 					inert: !open

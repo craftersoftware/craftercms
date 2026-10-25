@@ -18,7 +18,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 import { useIntl } from 'react-intl';
-import { focusStudioMainContent, STUDIO_MAIN_CONTENT_ID } from './studioMainContent';
+import { focusStudioMainContent } from './studioMainContent';
 
 /**
  * First-focusable bypass for repeated shell chrome. Hidden until focused.
@@ -28,15 +28,23 @@ export function SkipToMainContent() {
 	const { formatMessage } = useIntl();
 	return (
 		<Box
-			component="a"
-			href={`#${STUDIO_MAIN_CONTENT_ID}`}
-			onClick={(event) => {
-				if (focusStudioMainContent()) {
-					event.preventDefault();
-				}
+			component="button"
+			type="button"
+			onClick={() => {
+				focusStudioMainContent();
 			}}
 			sx={{
 				...visuallyHidden,
+				// A button, not an anchor: the hash router would treat href="#studioMainContent"
+				// as a route, including on middle-click and "Open in new tab".
+				border: 0,
+				padding: 0,
+				margin: 0,
+				background: 'transparent',
+				font: 'inherit',
+				color: 'inherit',
+				textAlign: 'left',
+				cursor: 'pointer',
 				zIndex: (theme) => theme.zIndex.tooltip,
 				'&:focus, &:focus-visible': {
 					clipPath: 'none',
