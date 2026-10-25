@@ -34,6 +34,10 @@ interface BlueprintReviewProps {
 	onGoTo(step: number): any;
 }
 
+function blueprintParameterLabelId(name: string) {
+	return `blueprint-parameter-${name.replace(/\s+/g, '-')}`;
+}
+
 const messages = defineMessages({
 	siteInfo: {
 		id: 'createSiteDialog.siteInfo',
@@ -164,6 +168,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							}
 						}}
 						aria-pressed={Boolean(passwordFields?.[parameter.name])}
+						aria-describedby={blueprintParameterLabelId(parameter.name)}
 						aria-label={formatMessage({
 							id: 'passwordTextField.toggleVisibilityButtonText',
 							defaultMessage: 'Show password'
@@ -186,7 +191,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		return blueprint.parameters.map((parameter, index) => {
 			return (
 				<Typography variant="body2" gutterBottom key={index}>
-					<Box component="span" sx={{ fontWeight: 'bold' }}>
+					<Box component="span" id={blueprintParameterLabelId(parameter.name)} sx={{ fontWeight: 'bold' }}>
 						{parameter.label}:{' '}
 					</Box>
 					{renderSingleParameter(parameter)}

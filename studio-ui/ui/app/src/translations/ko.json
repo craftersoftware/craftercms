@@ -871,7 +871,7 @@
 	"plugin.licenseTooltip": " {license} 라이센스",
 	"plugin.more": "더...",
 	"plugin.noDev": "개발자를 지정하지 않았습니다.",
-	"plugin.use": "용도",
+	"plugin.use": "사용",
 	"plugin.version": "번역",
 	"pluginConfigDialog.title": "플러그인 구성",
 	"pluginDetails.markdownError": "문서를 렌더링할 수 없습니다. 보려면 <a>{link}</a> 을(를) 방문하세요.",
@@ -1659,7 +1659,7 @@
 	"G65XME": "{name} 선택",
 	"HLprRI": "목차 열기",
 	"HsQXYw": "{fieldName}의 필드 순서 변경",
-	"OHzR26": "{path} 편집",
+	"OHzR26": "{path} 편집하다",
 	"PwSxBm": "{fieldName}에 항목 추가",
 	"QqavBC": "전체 화면 시작",
 	"RNRpjD": "자르기",
@@ -1683,6 +1683,6 @@
 	"rdK9AW": "{item} 삭제",
 	"sLLTbJ": "대비",
 	"t4hwRC": "{fieldName}의 최대 항목 수에 도달함",
-	"xeB1YM": "{item} 편집",
+	"xeB1YM": "{item} 편집하다",
 	"y3ckvk": "왼쪽으로 회전"
 }

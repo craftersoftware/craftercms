@@ -37,6 +37,14 @@ import InfoIcon from '@mui/icons-material/InfoOutlined';
 
 import LookupTable from '../../models/LookupTable';
 
+/** Keyboard ring that stays visible when the theme turns ripples off. */
+const checkboxFocusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: 2
+	}
+};
+
 export interface SelectionListProps {
 	title: ReactNode;
 	subtitle?: ReactNode;
@@ -95,6 +103,7 @@ export function SelectionList(props: SelectionListProps) {
 						indeterminate={isIndeterminate}
 						checked={isAllChecked || isIndeterminate || !onSelectAllClicked}
 						onChange={onSelectAllClicked}
+						sx={checkboxFocusVisibleSx}
 						slotProps={{
 							input: {
 								'aria-labelledby': `${selectAllLabelId} ${titleId}`
@@ -142,6 +151,7 @@ export function SelectionList(props: SelectionListProps) {
 											color="primary"
 											edge="start"
 											checked={!!selectedItems[item.path]}
+											sx={checkboxFocusVisibleSx}
 											slotProps={{
 												input: {
 													'aria-labelledby': labelId
@@ -280,6 +290,7 @@ export function SelectionList(props: SelectionListProps) {
 												color="primary"
 												edge="start"
 												checked={Boolean(selectedItems[path])}
+												sx={checkboxFocusVisibleSx}
 												slotProps={{
 													input: {
 														'aria-labelledby': labelId
