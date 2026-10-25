@@ -37,11 +37,13 @@ class ClassList {
 
 function node(
 	className: string,
-	parent: TooltipEscapeNode | null = null
+	parent: TooltipEscapeNode | null = null,
+	inlineOpacity?: string
 ): TooltipEscapeNode & { parent: TooltipEscapeNode | null } {
 	const element = {
 		parent,
 		classList: new ClassList(className),
+		style: inlineOpacity === undefined ? {} : { opacity: inlineOpacity },
 		closest(selector: string) {
 			let current: (TooltipEscapeNode & { parent?: TooltipEscapeNode | null }) | null = element;
 			while (current) {
@@ -54,14 +56,14 @@ function node(
 	return element;
 }
 
+/** Real MUI 9.4 shape: popper (no popperClose class) > .MuiTooltip-tooltip, which is the faded node. */
 function root(
-	tooltips: Array<{ classes: string; display?: string; visibility?: string; opacity?: string }>,
-	closed = false
+	tooltips: Array<{ display?: string; visibility?: string; opacity?: string; inlineOpacity?: string }>
 ): TooltipEscapeRoot {
 	const tips = tooltips.map((tooltip) => {
-		const popper = node(`MuiTooltip-popper${closed ? ' MuiTooltip-popperClose' : ''}`);
-		const tip = node('MuiTooltip-tooltip', popper);
-		return { tip, popper, tooltip };
+		const popper = node('MuiTooltip-popper MuiTooltip-popperInteractive');
+		const tip = node('MuiTooltip-tooltip', popper, tooltip.inlineOpacity);
+		return { tip, tooltip };
 	});
 	return {
 		querySelectorAll(selector: string) {
@@ -70,7 +72,7 @@ function root(
 		},
 		defaultView: {
 			getComputedStyle(element: TooltipEscapeNode) {
-				const match = tips.find((entry) => entry.popper === element);
+				const match = tips.find((entry) => entry.tip === element);
 				return {
 					display: match?.tooltip.display ?? 'block',
 					visibility: match?.tooltip.visibility ?? 'visible',
@@ -81,17 +83,17 @@ function root(
 	};
 }
 
-test('findShownTooltip ignores closed, hidden, and fully transparent poppers', () => {
-	assert.equal(findShownTooltip(root([{ classes: 'open' }]))?.classList.contains('MuiTooltip-tooltip'), true);
-	assert.equal(findShownTooltip(root([{ classes: 'open' }], true)), null);
-	assert.equal(findShownTooltip(root([{ classes: 'open', display: 'none' }])), null);
-	assert.equal(findShownTooltip(root([{ classes: 'open', visibility: 'hidden' }])), null);
-	assert.equal(findShownTooltip(root([{ classes: 'open', opacity: '0' }])), null);
+test('findShownTooltip uses the inner tooltip, including a fade that has not reached opacity 0', () => {
+	assert.equal(findShownTooltip(root([{}]))?.classList.contains('MuiTooltip-tooltip'), true);
+	assert.equal(findShownTooltip(root([{ display: 'none' }])), null);
+	assert.equal(findShownTooltip(root([{ visibility: 'hidden' }])), null);
+	assert.equal(findShownTooltip(root([{ opacity: '0' }])), null);
+	assert.equal(findShownTooltip(root([{ inlineOpacity: '0', opacity: '1' }])), null);
 });
 
 test('Escape is intercepted only while a tooltip is shown', () => {
-	const shown = root([{ classes: 'open' }]);
-	const hidden = root([{ classes: 'open', opacity: '0' }]);
+	const shown = root([{}]);
+	const hidden = root([{ opacity: '0' }]);
 	assert.equal(shouldInterceptTooltipEscape({ key: 'Escape' }, shown), true);
 	assert.equal(shouldInterceptTooltipEscape({ key: 'Enter' }, shown), false);
 	assert.equal(shouldInterceptTooltipEscape({ key: 'Escape' }, hidden), false);

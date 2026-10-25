@@ -25,6 +25,8 @@ export const TOOLTIP_ESCAPE_REDISPATCH = 'crafterTooltipEscapeRedispatch';
 export interface TooltipEscapeNode {
 	closest(selector: string): TooltipEscapeNode | null;
 	classList: { contains(token: string): boolean };
+	/** Inline style. MUI Grow sets this opacity to 0 when the tooltip starts leaving. */
+	style?: { opacity?: string };
 }
 
 export interface TooltipEscapeRoot {
@@ -36,17 +38,29 @@ export interface TooltipEscapeRoot {
 	dispatchEvent?(event: Event): boolean;
 }
 
+/**
+ * MUI 9.4 fades `.MuiTooltip-tooltip`, not the popper. `MuiTooltip-popperClose` is not
+ * applied: the popper slot classes are `popper` and, when interactive, `popperInteractive`.
+ * Grow writes inline opacity 0 as soon as the tooltip leaves, while computed opacity
+ * stays above 0 for the fade. Escape during that fade must reach the parent dialog.
+ */
+function isTooltipElementShown(
+	node: TooltipEscapeNode,
+	style: { display: string; visibility: string; opacity: string }
+): boolean {
+	if (style.display === 'none' || style.visibility === 'hidden') return false;
+	if (node.style?.opacity === '0') return false;
+	return Number(style.opacity) !== 0;
+}
+
 export function findShownTooltip(root: TooltipEscapeRoot): TooltipEscapeNode | null {
 	const nodes = root.querySelectorAll('.MuiTooltip-tooltip');
 	for (let index = 0; index < nodes.length; index += 1) {
 		const node = nodes[index];
-		const popper = node.closest('.MuiTooltip-popper');
-		if (!popper) continue;
-		if (popper.classList.contains('MuiTooltip-popperClose')) continue;
+		if (!node.closest('.MuiTooltip-popper')) continue;
 		const view = root.defaultView;
 		if (!view) continue;
-		const style = view.getComputedStyle(popper);
-		if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) continue;
+		if (!isTooltipElementShown(node, view.getComputedStyle(node))) continue;
 		return node;
 	}
 	return null;
