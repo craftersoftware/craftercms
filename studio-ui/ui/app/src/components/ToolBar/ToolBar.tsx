@@ -81,21 +81,6 @@ export function ToolBar() {
 					minWidth: 0,
 					maxWidth: '100%',
 					overflowX: 'clip',
-					[PREVIEW_TOOLBAR_WRAP_QUERY]: {
-						// 320px cannot hold the logo, both overflow buttons, three navigation buttons and the
-						// address field on one line: wrap instead of crushing the address field or clipping.
-						flexWrap: 'wrap',
-						rowGap: 0,
-						'& > section:nth-of-type(1)': { order: 1, flex: '1 1 auto' },
-						'& > section:nth-of-type(3)': { order: 2, flex: '0 0 auto' },
-						'& > section:nth-of-type(2)': {
-							order: 3,
-							flex: '1 1 100%',
-							flexWrap: 'wrap',
-							overflow: 'visible',
-							'& > .MuiPaper-root': { order: 1, flex: '1 1 100%', marginBottom: 1 }
-						}
-					},
 					// Repeat the section flex rules. Passing this key replaces ViewToolbar's own '& > section'.
 					'& > section': {
 						display: 'flex',
@@ -110,6 +95,21 @@ export function ToolBar() {
 					'& > section:nth-of-type(2)': {
 						flex: '0 1 auto',
 						overflow: 'hidden'
+					},
+					[PREVIEW_TOOLBAR_WRAP_QUERY]: {
+						// 320px cannot hold the logo, both overflow buttons, three navigation buttons and the
+						// address field on one line: wrap instead of crushing the address field or clipping.
+						flexWrap: 'wrap',
+						rowGap: 0,
+						'& > section:nth-of-type(1)': { order: 1, flex: '1 1 auto' },
+						'& > section:nth-of-type(3)': { order: 2, flex: '1 1 100%' },
+						'& > section:nth-of-type(2)': {
+							order: 3,
+							flex: '1 1 100%',
+							flexWrap: 'wrap',
+							overflow: 'visible',
+							'& > .MuiPaper-root': { order: 1, flex: '1 1 100%', marginBottom: 1 }
+						}
 					}
 				}
 			}}
