@@ -21,6 +21,12 @@ import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 
+// Explicit keyboard focus indicator. MUI shows only a faint ripple on focus-visible (about 1.5:1 on a light surface),
+// and none at all when the user turns "animations" off (CrafterThemeProvider then sets disableRipple globally).
+const focusVisibleSx = {
+	'&.Mui-focusVisible': { outline: '2px solid', outlineColor: (theme) => theme.palette.primary.main }
+} as const;
+
 export type ReorderControl = 'up' | 'down' | 'top' | 'bottom';
 
 export interface ReorderMoveButtonProps {
@@ -74,6 +80,7 @@ export function ReorderMoveButton({
 			size={size}
 			color={color}
 			disabled={disabled}
+			sx={focusVisibleSx}
 			aria-label={label}
 			data-reorder-index={index}
 			data-reorder-control={control}
