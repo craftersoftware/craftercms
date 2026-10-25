@@ -67,15 +67,20 @@ function setAttributeIfChanged(element: HTMLElement, name: string, value: string
 	if (element.getAttribute(name) !== value) element.setAttribute(name, value);
 }
 
-/** Hidden from assistive tech or not shown. TinyMCE hides its textarea this way. */
-export function isHiddenFieldControl(element: HTMLElement): boolean {
+/**
+ * Hidden from assistive tech or not shown. TinyMCE hides its textarea this way.
+ * `allowCollapsed` treats a control that is hidden only because its accordion section is
+ * collapsed (`visibility: hidden` from MUI Collapse) as present, so it can still be linked and counted.
+ */
+export function isHiddenFieldControl(element: HTMLElement, allowCollapsed = false): boolean {
 	if (element.getAttribute('aria-hidden') === 'true') return true;
 	if (element.closest('[aria-hidden="true"]')) return true;
 	if (element instanceof HTMLInputElement && element.type === 'hidden') return true;
 	const view = element.ownerDocument.defaultView;
 	if (!view) return false;
 	const style = view.getComputedStyle(element);
-	if (style.display === 'none' || style.visibility === 'hidden') return true;
+	if (style.display === 'none') return true;
+	if (style.visibility === 'hidden') return !(allowCollapsed && collapsedAccordionOf(element));
 	return false;
 }
 
@@ -120,7 +125,7 @@ export function resolveFieldControl(root: ParentNode, htmlFor?: string): HTMLEle
 		}
 	}
 	candidates.push(...collectControls(root));
-	const visible = candidates.find((element) => !isHiddenFieldControl(element));
+	const visible = candidates.find((element) => !isHiddenFieldControl(element, true));
 	if (visible) return visible;
 	const iframe = root.querySelector(TINYMCE_IFRAME_SELECTOR);
 	if (iframe instanceof HTMLElement) return iframe;
@@ -241,7 +246,10 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 		focusAndReveal(target);
 		return;
 	}
-	const view = target.ownerDocument.defaultView;
+	const doc = target.ownerDocument;
+	const view = doc.defaultView;
+	const origin = doc.activeElement;
+	const startedAt = Date.now();
 	let finished = false;
 	let timer = 0;
 	const finish = () => {
@@ -249,6 +257,9 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 		finished = true;
 		collapse.removeEventListener('transitionend', onTransitionEnd);
 		if (view) view.clearTimeout(timer);
+		// The user may have moved on while the section opened. Do not take focus back from them.
+		const active = doc.activeElement;
+		if (active && active !== target && active !== origin && active !== doc.body) return;
 		focusAndReveal(target);
 	};
 	const onTransitionEnd = (event: Event) => {
@@ -257,9 +268,16 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 		if (transition.propertyName && transition.propertyName !== 'height') return;
 		finish();
 	};
+	// MUI sizes the Collapse duration from the content height, so a tall section takes longer than
+	// a fixed delay. After the first 400 ms keep waiting until MUI marks the Collapse as entered
+	// (it does so even when there is no CSS transition), with a hard cap.
+	const check = () => {
+		if (finished) return;
+		if (collapse.classList.contains('MuiCollapse-entered') || Date.now() - startedAt >= 2000) finish();
+		else timer = view?.setTimeout(check, 50) ?? 0;
+	};
 	collapse.addEventListener('transitionend', onTransitionEnd);
-	// Collapse can finish without a height transition (reduced motion, already open).
-	timer = view?.setTimeout(finish, 400) ?? 0;
+	timer = view?.setTimeout(check, 400) ?? 0;
 }
 
 /**
@@ -298,7 +316,7 @@ export function countInvalidFields(root: ParentNode | null): number {
 	const fields = new Set<Element>();
 	root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]').forEach((node) => {
 		if (!(node instanceof HTMLElement)) return;
-		if (isHiddenFieldControl(node) && !collapsedAccordionOf(node)) return;
+		if (isHiddenFieldControl(node, true)) return;
 		fields.add(node.closest('[data-field-id]') ?? node);
 	});
 	return fields.size;
