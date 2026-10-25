@@ -41,6 +41,7 @@ import {
 import { createLookupTable, nnou, nou } from '@craftercms/studio-ui/utils/object';
 import { isSimple, popPiece, removeLastPiece } from '@craftercms/studio-ui/utils/string';
 import { getCollection, getCollectionWithoutItemAtIndex, getParentModelId, setCollection } from './utils/ice';
+import { resolveInsertIndex } from './utils/resolveInsertIndex';
 import { createQuery, search } from '@craftercms/search';
 import { parseDescriptor, preParseSearchResults } from '@craftercms/content';
 import { crafterConf } from '@craftercms/classes';
@@ -453,8 +454,19 @@ export function insertComponent(
 	const models = getCachedModels();
 	const result = getCollection(models[modelId], fieldId, targetIndex)?.concat() ?? [];
 
+	// Dotted indexes address a nested collection that getCollection already resolved.
+	// Only the last segment is the slot in that collection. splice("2.5") truncates to 2.
+	// Null means the index is not a usable position; do not append or insert at 0.
+	const insertAt = resolveInsertIndex(targetIndex, result);
+	if (insertAt === null) {
+		console.error(
+			`[ContentController/insertComponent] Refusing to insert: "${String(targetIndex)}" is not a non-negative integer position for field "${fieldId}" on model "${modelId}".`
+		);
+		return;
+	}
+
 	// Insert in desired position
-	result.splice(targetIndex as number, 0, instance.craftercms.id);
+	result.splice(insertAt, 0, instance.craftercms.id);
 
 	const model = setCollection(
 		models[modelId],
