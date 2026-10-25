@@ -62,9 +62,9 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				},
 				error: {
 					// Light #FF3B30 (palette.red.main) is 3.55:1 on white and 3.40:1 on #FAFAFA.
-					// #D93229 is 4.73:1 on #fff and 4.53:1 on #FAFAFA (background.default).
+					// #D12E25 is 5.09:1 on #fff, 4.87:1 on #FAFAFA (background.default), and 4.58:1 on #F3F3F3.
 					// Dark mode stays palette.red.tint (#FF6961), 6.64:1 on #121212.
-					main: prefersDarkMode ? palette.red.tint : '#D93229'
+					main: prefersDarkMode ? palette.red.tint : '#D12E25'
 				},
 				success: {
 					main: prefersDarkMode ? palette.green.tint : palette.green.main
