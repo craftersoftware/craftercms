@@ -93,7 +93,9 @@ describe('resolveInsertIndex', () => {
 	});
 
 	it('rejects invalid indexes instead of inserting', () => {
-		const invalid: Array<string | number> = [NaN, 'x', '', '2.x', -1, '-1', '2.-1', 2.5, Infinity, -Infinity];
+		const invalid = [NaN, 'x', '', '2.x', -1, '-1', '2.-1', 2.5, Infinity, -Infinity, null, undefined] as Array<
+			string | number
+		>;
 		for (const targetIndex of invalid) {
 			assert.equal(resolveInsertIndex(targetIndex, nestedAtItem2), null, `expected null for ${String(targetIndex)}`);
 			assert.equal(inserted(targetIndex, nestedAtItem2), null, `expected no insert for ${String(targetIndex)}`);

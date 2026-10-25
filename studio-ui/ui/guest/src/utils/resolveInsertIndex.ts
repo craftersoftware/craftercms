@@ -34,11 +34,11 @@ const NON_NEGATIVE_INTEGER = /^(0|[1-9]\d*)$/;
  * such as `"2.5"` or `"1.2.3"` addresses that nested list; only its last
  * segment is the position inside it.
  *
- * Returns null when the position is not a non-negative integer (`NaN`, `""`,
- * `"x"`, `"2.x"`, a negative, or a non-integer number). Callers must not insert
- * in that case. An integer past the end is clamped to `collection.length`,
- * which is what `Array.prototype.splice` already did for a too-large finite
- * integer. `collection.length` itself is a valid "insert at end".
+ * Returns null when the position is not a non-negative integer (`NaN`, `null`,
+ * `undefined`, `""`, `"x"`, `"2.x"`, a negative, or a non-integer number).
+ * Callers must not insert in that case. An integer past the end is clamped to
+ * `collection.length`, which is what `Array.prototype.splice` already did for a
+ * too-large finite integer. `collection.length` itself is a valid "insert at end".
  */
 export function resolveInsertIndex(targetIndex: string | number, collection: readonly unknown[]): number | null {
 	let index: number;
@@ -48,12 +48,15 @@ export function resolveInsertIndex(targetIndex: string | number, collection: rea
 			return null;
 		}
 		index = targetIndex;
-	} else {
+	} else if (typeof targetIndex === 'string') {
 		const segment = lastIndexSegment(targetIndex);
 		if (!NON_NEGATIVE_INTEGER.test(segment)) {
 			return null;
 		}
 		index = Number(segment);
+	} else {
+		// null, undefined, and any other runtime value. Do not call string methods on them.
+		return null;
 	}
 
 	return index > collection.length ? collection.length : index;
