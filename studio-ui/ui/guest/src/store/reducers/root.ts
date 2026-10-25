@@ -75,6 +75,8 @@ import {
 	exitComponentInlineEdit,
 	iceZoneSelected,
 	scrolling,
+	zoneHoverClearedViaKeyboard,
+	zoneHoveredViaKeyboard,
 	scrollingStopped,
 	setDropPosition,
 	setEditingStatus,
@@ -205,6 +207,52 @@ const reducerForAssetDragStarted: CaseReducer<
 //  Return statements and not mutating the state object is necessary.
 //  Is it because createReducer from redux-toolkit is not used?
 
+function highlightZone(state: GuestState, record: ElementRecord): GuestState {
+	if (state.status !== EditingStatus.LISTENING) {
+		return state;
+	}
+	const { highlightMode } = state;
+	const iceId = record.iceIds[0];
+	const movableRecordId = getMovableParentRecord(iceId, record.element);
+	if (highlightMode === HighlightMode.ALL) {
+		const highlight = getHoverData(record.id);
+		if (notNullOrUndefined(movableRecordId)) {
+			const elementId = iceId === movableRecordId ? record.id : fromICEId(movableRecordId).id;
+			const draggable = getDraggable(elementId);
+			return {
+				...state,
+				highlighted: { [record.id]: highlight },
+				draggable: draggable ? { [elementId]: draggable } : state.draggable
+			};
+		}
+		return { ...state, highlighted: { [record.id]: highlight } };
+	} else if (highlightMode === HighlightMode.MOVE_TARGETS && notNullOrUndefined(movableRecordId)) {
+		const elementId = iceId === movableRecordId ? record.id : fromICEId(movableRecordId).id;
+		const draggable = getDraggable(elementId);
+		const highlight = getHoverData(
+			// If (iceId == movableRecordId) the current record is already
+			// the one to show the highlight on.
+			elementId
+		);
+		return {
+			...state,
+			highlighted: { [movableRecordId]: highlight },
+			draggable: draggable ? { [elementId]: draggable } : state.draggable
+		};
+	}
+	return state;
+}
+
+function clearZoneHover(state: GuestState): GuestState {
+	return state.status === EditingStatus.LISTENING
+		? {
+				...state,
+				highlighted: {},
+				draggable: {}
+			}
+		: state;
+}
+
 const reducer = createReducer(initialState, {
 	// region dblclick
 	dblclick: (state, { payload: { record } }) =>
@@ -219,52 +267,13 @@ const reducer = createReducer(initialState, {
 			: state,
 	// endregion
 	// region mouseover
-	// TODO: Not pure.
-	mouseover: (state, action) => {
-		const { record } = action.payload as { record: ElementRecord };
-		if (state.status === EditingStatus.LISTENING) {
-			const { highlightMode } = state;
-			const iceId = record.iceIds[0];
-			const movableRecordId = getMovableParentRecord(iceId, record.element);
-			if (highlightMode === HighlightMode.ALL) {
-				const highlight = getHoverData(record.id);
-				if (notNullOrUndefined(movableRecordId)) {
-					const elementId = iceId === movableRecordId ? record.id : fromICEId(movableRecordId).id;
-					const draggable = getDraggable(elementId);
-					return {
-						...state,
-						highlighted: { [record.id]: highlight },
-						draggable: draggable ? { [elementId]: draggable } : state.draggable
-					};
-				}
-				return { ...state, highlighted: { [record.id]: highlight } };
-			} else if (highlightMode === HighlightMode.MOVE_TARGETS && notNullOrUndefined(movableRecordId)) {
-				const elementId = iceId === movableRecordId ? record.id : fromICEId(movableRecordId).id;
-				const draggable = getDraggable(elementId);
-				const highlight = getHoverData(
-					// If (iceId == movableRecordId) the current record is already
-					// the one to show the highlight on.
-					elementId
-				);
-				return {
-					...state,
-					highlighted: { [movableRecordId]: highlight },
-					draggable: draggable ? { [elementId]: draggable } : state.draggable
-				};
-			}
-		}
-		return state;
-	},
+	// TODO: Not pure. Keyboard hover shares this so it does not fake a pointer event.
+	mouseover: (state, action) => highlightZone(state, (action.payload as { record: ElementRecord }).record),
+	[zoneHoveredViaKeyboard.type]: (state, action) => highlightZone(state, action.payload.record),
 	// endregion
 	// region mouseleave
-	mouseleave: (state) =>
-		state.status === EditingStatus.LISTENING
-			? {
-					...state,
-					highlighted: {},
-					draggable: {}
-				}
-			: state,
+	mouseleave: (state) => clearZoneHover(state),
+	[zoneHoverClearedViaKeyboard.type]: (state) => clearZoneHover(state),
 	// endregion
 	// region dragstart
 	// TODO: Not pure.
