@@ -50,7 +50,12 @@ export function SaveCard(props: SaveCardProps) {
 	const versionCommentMissing = versionCommentRequired && !versionComment.trim();
 	const disableSave = versionCommentRequired && (isSubmitting || versionCommentMissing);
 	const versionCommentFieldId = useId();
+	const invalidFormHelpId = useId();
 	const { formatMessage } = useIntl();
+	const describedBy =
+		[versionCommentMissing ? `${versionCommentFieldId}-helper-text` : '', invalidForm ? invalidFormHelpId : '']
+			.filter(Boolean)
+			.join(' ') || undefined;
 
 	const handleSetCloseAfterSave = (checked: boolean) => {
 		if (checked) {
@@ -119,7 +124,7 @@ export function SaveCard(props: SaveCardProps) {
 				fullWidth
 				loading={isSubmitting}
 				disabled={disableSave}
-				describedBy={versionCommentMissing ? `${versionCommentFieldId}-helper-text` : undefined}
+				describedBy={describedBy}
 				options={[
 					{
 						id: 'save',
@@ -145,6 +150,14 @@ export function SaveCard(props: SaveCardProps) {
 					}
 				]}
 			/>
+			{invalidForm && (
+				<FormHelperText id={invalidFormHelpId}>
+					{formatMessage({
+						defaultMessage:
+							'You cannot save until all form requirements are satisfied. If you still want to save, you can use the Save as draft option, but required fields left blank may cause errors when previewed or deployed.'
+					})}
+				</FormHelperText>
+			)}
 			{isStackedForm && isEmbedded && (
 				<FormHelperText sx={{ textAlign: 'center' }}>
 					<FormattedMessage defaultMessage="Changes are saved with the main item." />

@@ -25,7 +25,6 @@ import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
 import React, {
-	Children,
 	forwardRef,
 	PropsWithChildren,
 	ReactNode,
@@ -40,7 +39,7 @@ import React, {
 import { type FieldValidityMessage, isEmptyValue, isFieldRequired } from '../lib/validators';
 import {
 	applyFieldControlA11y,
-	enhanceFieldControl,
+	FormSaveAttemptedContext,
 	FormValidationAnnouncerContext,
 	resolveFieldControl
 } from '../lib/fieldA11y';
@@ -143,6 +142,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
 	const dispatch = useDispatch();
 	const announceValidation = useContext(FormValidationAnnouncerContext);
+	const saveAttempted = useContext(FormSaveAttemptedContext);
+	const editedRef = useRef(false);
 	const generatedId = useId();
 	const controlId = htmlFor || generatedId;
 	const descriptionId = hasDescription ? `${controlId}-description` : undefined;
@@ -171,8 +172,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		if (!control) return;
 		applyFieldControlA11y(control, current);
 	};
-	// Re-apply after every commit. MUI inputs also receive these props via enhanceFieldControl;
-	// this covers controls that are not MUI inputs and repairs a focus re-render that clears the attribute.
+	// Re-apply after every commit. Attributes are written on the visible control (the TinyMCE
+	// iframe, not its hidden textarea). Same-value writes are skipped inside applyFieldControlA11y.
 	useLayoutEffect(() => {
 		linkControl();
 	});
@@ -189,6 +190,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		const next = event.relatedTarget;
 		if (next instanceof Node && event.currentTarget.contains(next)) return;
 		if (!errorText) return;
+		// Tabbing through a pristine required field should not announce. Announce after the
+		// user edits the field, or after Save has already been attempted.
+		if (!editedRef.current && !saveAttempted) return;
 		announceValidation(formatMessage({ defaultMessage: '{field}: {error}' }, { field: field.name, error: errorText }));
 	};
 	useEffect(() => {
@@ -197,9 +201,6 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			labelRef.current?.focus();
 		}
 	}, [autoFocus]);
-	const enhancedChildren = Children.map(children, (child) =>
-		enhanceFieldControl(child, { describedBy, required: isRequired, invalid: !isValid })
-	);
 	return (
 		<FormControl
 			ref={setFormControlRef}
@@ -208,6 +209,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			variant="standard"
 			data-field-id={fieldId}
 			required={isRequired}
+			onInput={() => {
+				editedRef.current = true;
+			}}
 			onBlur={handleFieldBlur}
 			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
 		>
@@ -369,7 +373,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					)}
 				</Alert>
 			)}
-			{enhancedChildren}
+			{children}
 			{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
 			{errorText && <FormHelperText id={errorId}>{errorText}</FormHelperText>}
 		</FormControl>

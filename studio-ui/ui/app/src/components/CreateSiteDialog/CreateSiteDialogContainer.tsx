@@ -617,6 +617,7 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 		<>
 			<ConfirmDialog
 				open={dialog.inProgress}
+				defaultFocus="cancel"
 				onOk={onConfirmOk}
 				onCancel={onConfirmCancel}
 				body={formatMessage(messages.dialogCloseMessage)}

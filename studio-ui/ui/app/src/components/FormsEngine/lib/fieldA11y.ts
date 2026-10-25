@@ -14,18 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {
-	Children,
-	cloneElement,
-	createContext,
-	Fragment,
-	isValidElement,
-	type ReactElement,
-	type ReactNode
-} from 'react';
+import { createContext } from 'react';
 
 /** Form-level polite live region. The default is a no-op so fields can render outside a form shell. */
 export const FormValidationAnnouncerContext = createContext<(message: string) => void>(() => {});
+
+/** True after Save was pressed on an invalid form, so later blurs may announce an error. */
+export const FormSaveAttemptedContext = createContext(false);
 
 /** Ids this module writes onto a control, so a later pass can replace them. */
 const MANAGED_DESCRIBED_BY_ATTR = 'data-field-a11y-describedby';
@@ -42,9 +37,7 @@ const FIELD_CONTROL_SELECTOR = [
 	'[contenteditable="true"]'
 ].join(', ');
 
-const INPUT_MUI_NAMES = new Set(['MuiInputBase', 'MuiInput', 'MuiOutlinedInput', 'MuiFilledInput', 'MuiTextField']);
-
-const TOGGLE_MUI_NAMES = new Set(['MuiSwitch', 'MuiCheckbox', 'MuiRadio']);
+const TINYMCE_IFRAME_SELECTOR = 'iframe.tox-edit-area__iframe';
 
 export interface FieldControlA11yOptions {
 	/** Space-separated ids of the description and error text. */
@@ -53,13 +46,45 @@ export interface FieldControlA11yOptions {
 	invalid: boolean;
 }
 
-type MuiComponentType = { muiName?: string };
-
 function elementIdSelector(id: string): string {
 	if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
 		return `#${CSS.escape(id)}`;
 	}
 	return `[id="${id.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+}
+
+function setAttributeIfChanged(element: HTMLElement, name: string, value: string | null): void {
+	if (value == null) {
+		if (element.hasAttribute(name)) element.removeAttribute(name);
+		return;
+	}
+	if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+}
+
+/** Hidden from assistive tech or not shown. TinyMCE hides its textarea this way. */
+export function isHiddenFieldControl(element: HTMLElement): boolean {
+	if (element.getAttribute('aria-hidden') === 'true') return true;
+	if (element.closest('[aria-hidden="true"]')) return true;
+	if (element instanceof HTMLInputElement && element.type === 'hidden') return true;
+	const view = element.ownerDocument.defaultView;
+	if (!view) return false;
+	const style = view.getComputedStyle(element);
+	if (style.display === 'none' || style.visibility === 'hidden') return true;
+	// getClientRects is empty for display:none. In jsdom it is also empty for unlaid-out
+	// elements, so only treat that as hidden when the computed style already hides the box.
+	return false;
+}
+
+/** `aria-required` is not allowed on role=switch. Native `required` on a checkbox input is. */
+function supportsAriaRequired(element: HTMLElement): boolean {
+	if (element.getAttribute('role') === 'switch') return false;
+	const role = element.getAttribute('role');
+	if (role === 'textbox' || role === 'combobox' || role === 'checkbox' || role === 'radio' || role === 'searchbox') {
+		return true;
+	}
+	if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) return true;
+	if (element instanceof HTMLInputElement) return true;
+	return element.getAttribute('contenteditable') === 'true';
 }
 
 export function mergeDescribedByIds(...values: Array<string | null | undefined>): string | undefined {
@@ -68,29 +93,62 @@ export function mergeDescribedByIds(...values: Array<string | null | undefined>)
 	return unique.length ? unique.join(' ') : undefined;
 }
 
-/**
- * The focusable control for a form field. `htmlFor` wins when it points at an element inside `root`
- * (MUI inputs put that id on the native control; Switch forwards `id` to its input).
- */
-export function resolveFieldControl(root: ParentNode, htmlFor?: string): HTMLElement | null {
-	if (htmlFor) {
-		const byId = root.querySelector(elementIdSelector(htmlFor));
-		if (byId instanceof HTMLElement) {
-			if (byId.matches(FIELD_CONTROL_SELECTOR)) return byId;
-			const inner = byId.querySelector(FIELD_CONTROL_SELECTOR);
-			if (inner instanceof HTMLElement) return inner;
-			return byId;
-		}
-	}
-	const found = root.querySelector(FIELD_CONTROL_SELECTOR);
-	return found instanceof HTMLElement ? found : null;
+function collectControls(root: ParentNode): HTMLElement[] {
+	return [...root.querySelectorAll(FIELD_CONTROL_SELECTOR)].filter(
+		(node): node is HTMLElement => node instanceof HTMLElement
+	);
 }
 
 /**
- * Links the control to helper/error text and exposes required + invalid.
- * Safe to call again after a child re-render: managed description ids are replaced, not duplicated.
+ * The visible control for a form field. A hidden TinyMCE textarea is skipped in favour of
+ * `iframe.tox-edit-area__iframe`, which is the surface that can take focus.
+ */
+export function resolveFieldControl(root: ParentNode, htmlFor?: string): HTMLElement | null {
+	const candidates: HTMLElement[] = [];
+	if (htmlFor) {
+		const byId = root.querySelector(elementIdSelector(htmlFor));
+		if (byId instanceof HTMLElement) {
+			if (byId.matches(FIELD_CONTROL_SELECTOR)) candidates.push(byId);
+			else {
+				const inner = byId.querySelector(FIELD_CONTROL_SELECTOR);
+				if (inner instanceof HTMLElement) candidates.push(inner);
+			}
+		}
+	}
+	candidates.push(...collectControls(root));
+	const visible = candidates.find((element) => !isHiddenFieldControl(element));
+	if (visible) return visible;
+	const iframe = root.querySelector(TINYMCE_IFRAME_SELECTOR);
+	if (iframe instanceof HTMLElement) return iframe;
+	return null;
+}
+
+function clearManagedA11y(element: HTMLElement): void {
+	const previousManaged = element.getAttribute(MANAGED_DESCRIBED_BY_ATTR);
+	const previousManagedIds = new Set(previousManaged ? previousManaged.split(/\s+/).filter(Boolean) : []);
+	if (!previousManagedIds.size && !element.hasAttribute(MANAGED_DESCRIBED_BY_ATTR)) return;
+	const kept = (element.getAttribute('aria-describedby') ?? '')
+		.split(/\s+/)
+		.filter((id) => id && !previousManagedIds.has(id));
+	setAttributeIfChanged(element, 'aria-describedby', kept.join(' ') || null);
+	setAttributeIfChanged(element, MANAGED_DESCRIBED_BY_ATTR, null);
+	setAttributeIfChanged(element, 'aria-invalid', null);
+	setAttributeIfChanged(element, 'aria-required', null);
+}
+
+/**
+ * Links the visible control to helper/error text and exposes required + invalid.
+ * Writes are skipped when the attribute already has the same value.
+ * A previous hidden target (the TinyMCE textarea) has the managed attributes removed.
  */
 export function applyFieldControlA11y(control: HTMLElement, options: FieldControlA11yOptions): void {
+	const fieldRoot = control.closest('[data-field-id]') ?? control.parentElement;
+	if (fieldRoot) {
+		fieldRoot.querySelectorAll(`[${MANAGED_DESCRIBED_BY_ATTR}]`).forEach((node) => {
+			if (node instanceof HTMLElement && node !== control) clearManagedA11y(node);
+		});
+	}
+
 	const { describedBy, required, invalid } = options;
 	const previousManaged = control.getAttribute(MANAGED_DESCRIBED_BY_ATTR);
 	const previousManagedIds = new Set(previousManaged ? previousManaged.split(/\s+/).filter(Boolean) : []);
@@ -98,19 +156,27 @@ export function applyFieldControlA11y(control: HTMLElement, options: FieldContro
 		.split(/\s+/)
 		.filter((id) => id && !previousManagedIds.has(id));
 	const next = mergeDescribedByIds(kept.join(' '), describedBy);
-	if (next) control.setAttribute('aria-describedby', next);
-	else control.removeAttribute('aria-describedby');
-	if (describedBy) control.setAttribute(MANAGED_DESCRIBED_BY_ATTR, describedBy);
-	else control.removeAttribute(MANAGED_DESCRIBED_BY_ATTR);
+	setAttributeIfChanged(control, 'aria-describedby', next ?? null);
+	setAttributeIfChanged(control, MANAGED_DESCRIBED_BY_ATTR, describedBy ?? null);
 
-	if (required) {
-		control.setAttribute('aria-required', 'true');
-		if ('required' in control) {
-			(control as HTMLInputElement).required = true;
-		}
+	if (required && supportsAriaRequired(control)) {
+		setAttributeIfChanged(control, 'aria-required', 'true');
+	} else if (!supportsAriaRequired(control)) {
+		setAttributeIfChanged(control, 'aria-required', null);
 	}
 
-	control.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+	if (
+		required &&
+		'required' in control &&
+		(control instanceof HTMLInputElement ||
+			control instanceof HTMLTextAreaElement ||
+			control instanceof HTMLSelectElement) &&
+		!control.required
+	) {
+		control.required = true;
+	}
+
+	setAttributeIfChanged(control, 'aria-invalid', invalid ? 'true' : 'false');
 }
 
 export function readDescribedText(control: HTMLElement): string {
@@ -129,81 +195,88 @@ export function readInvalidMessage(control: HTMLElement): string {
 	return control.ownerDocument.getElementById(errorId)?.textContent?.trim() ?? '';
 }
 
-/** Moves focus to the first invalid control in the form body, expanding a collapsed section when needed. */
-export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | null {
-	if (!root) return null;
-	const invalid = root.querySelector('[data-area-id="formBody"] [aria-invalid="true"]');
-	if (!(invalid instanceof HTMLElement)) return null;
-	const summary = invalid.closest('.MuiAccordion-root')?.querySelector('.MuiAccordionSummary-root');
-	if (summary instanceof HTMLElement && summary.getAttribute('aria-expanded') === 'false') {
-		summary.click();
+function focusSurface(invalid: HTMLElement): HTMLElement | null {
+	if (!isHiddenFieldControl(invalid)) return invalid;
+	const field = invalid.closest('[data-field-id]');
+	const iframe = field?.querySelector(TINYMCE_IFRAME_SELECTOR);
+	if (iframe instanceof HTMLIFrameElement) return iframe;
+	const label = field?.querySelector('label');
+	if (label instanceof HTMLElement) {
+		if (!label.hasAttribute('tabindex')) label.tabIndex = -1;
+		return label;
 	}
-	const target = invalid.matches(FIELD_CONTROL_SELECTOR) ? invalid : invalid.querySelector(FIELD_CONTROL_SELECTOR);
-	const focusTarget = target instanceof HTMLElement ? target : invalid;
-	focusTarget.focus();
-	return focusTarget;
+	return null;
 }
 
-function a11yInputProps(
-	existing: Record<string, unknown> | undefined,
-	options: FieldControlA11yOptions
-): Record<string, unknown> {
-	const describedBy = mergeDescribedByIds(
-		typeof existing?.['aria-describedby'] === 'string' ? (existing['aria-describedby'] as string) : undefined,
-		options.describedBy
-	);
-	return {
-		...existing,
-		'aria-describedby': describedBy,
-		'aria-invalid': options.invalid,
-		...(options.required ? { required: true, 'aria-required': true } : {})
+function focusAndReveal(target: HTMLElement): boolean {
+	target.focus();
+	const active = target.ownerDocument.activeElement;
+	if (active !== target) return false;
+	if (typeof target.scrollIntoView === 'function') {
+		target.scrollIntoView({ block: 'center', inline: 'nearest' });
+	}
+	return true;
+}
+
+function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement): void {
+	const collapse = accordion.querySelector('.MuiCollapse-root');
+	if (!(collapse instanceof HTMLElement)) {
+		focusAndReveal(target);
+		return;
+	}
+	const view = target.ownerDocument.defaultView;
+	let finished = false;
+	let timer = 0;
+	const finish = () => {
+		if (finished) return;
+		finished = true;
+		collapse.removeEventListener('transitionend', onTransitionEnd);
+		if (view) view.clearTimeout(timer);
+		focusAndReveal(target);
 	};
+	const onTransitionEnd = (event: Event) => {
+		const transition = event as TransitionEvent;
+		if (transition.target !== collapse) return;
+		if (transition.propertyName && transition.propertyName !== 'height') return;
+		finish();
+	};
+	collapse.addEventListener('transitionend', onTransitionEnd);
+	// Collapse can finish without a height transition (reduced motion, already open).
+	timer = view?.setTimeout(finish, 400) ?? 0;
 }
 
 /**
- * Copies error/required association onto MUI inputs and switches so a later render does not drop it.
- * `InputBase` writes `aria-describedby` from `inputProps` (spread after its own prop). `Switch` forwards
- * `slotProps.input` and `required` to the native input; `inputProps` would land on the root instead.
- * Other controls are linked from the DOM in `FormsEngineField`.
+ * Moves focus to the first visible invalid control in the form body.
+ * Hidden targets (TinyMCE's textarea) are skipped. A collapsed section is expanded and
+ * focus waits until the Collapse height transition ends, then scrolls the field into view.
  */
-export function enhanceFieldControl(child: ReactNode, options: FieldControlA11yOptions): ReactNode {
-	if (!isValidElement(child)) return child;
-	if (child.type === Fragment) {
-		return cloneElement(
-			child,
-			{},
-			Children.map((child.props as { children?: ReactNode }).children, (nested) => enhanceFieldControl(nested, options))
-		);
+export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | null {
+	if (!root) return null;
+	const invalids = root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]');
+	for (const invalid of invalids) {
+		if (!(invalid instanceof HTMLElement)) continue;
+		const target = focusSurface(invalid);
+		if (!target || isHiddenFieldControl(target)) continue;
+		const accordion = invalid.closest('.MuiAccordion-root');
+		const summary = accordion?.querySelector('.MuiAccordionSummary-root');
+		const collapsed = summary instanceof HTMLElement && summary.getAttribute('aria-expanded') === 'false';
+		if (collapsed && accordion instanceof HTMLElement) {
+			summary.click();
+			focusAfterAccordionExpand(accordion, target);
+			return target;
+		}
+		if (focusAndReveal(target)) return target;
 	}
-	const muiName = (child.type as MuiComponentType)?.muiName;
-	const props = child.props as Record<string, unknown>;
-	if (muiName && INPUT_MUI_NAMES.has(muiName)) {
-		const describedBy = mergeDescribedByIds(
-			typeof props['aria-describedby'] === 'string' ? (props['aria-describedby'] as string) : undefined,
-			options.describedBy
-		);
-		return cloneElement(child as ReactElement<Record<string, unknown>>, {
-			'aria-describedby': describedBy,
-			...(options.required ? { required: true } : {}),
-			inputProps: a11yInputProps(props.inputProps as Record<string, unknown> | undefined, options)
-		});
-	}
-	if (muiName && TOGGLE_MUI_NAMES.has(muiName)) {
-		const slotProps = (props.slotProps ?? {}) as {
-			input?: Record<string, unknown> | ((ownerState: unknown) => Record<string, unknown>);
-		};
-		const inputSlot = slotProps.input;
-		const input =
-			typeof inputSlot === 'function'
-				? (ownerState: unknown) => a11yInputProps(inputSlot(ownerState) ?? {}, options)
-				: a11yInputProps(inputSlot, options);
-		return cloneElement(child as ReactElement<Record<string, unknown>>, {
-			...(options.required ? { required: true } : {}),
-			slotProps: {
-				...slotProps,
-				input
-			}
-		});
-	}
-	return child;
+	return null;
+}
+
+/** Visible invalid fields. A hidden textarea and its editor iframe count as one field. */
+export function countInvalidFields(root: ParentNode | null): number {
+	if (!root) return 0;
+	const fields = new Set<Element>();
+	root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]').forEach((node) => {
+		if (!(node instanceof HTMLElement) || isHiddenFieldControl(node)) return;
+		fields.add(node.closest('[data-field-id]') ?? node);
+	});
+	return fields.size;
 }

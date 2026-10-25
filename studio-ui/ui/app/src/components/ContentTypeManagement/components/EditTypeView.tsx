@@ -203,8 +203,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					| PrimitiveAtom<unknown>
-					| undefined;
+					PrimitiveAtom<unknown> | undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
@@ -554,6 +553,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							component: 'craftercms.components.ConfirmDialog',
 							props: {
 								title: <FormattedMessage defaultMessage="Discard changes?" />,
+								defaultFocus: 'cancel',
 								onOk: () => {
 									onClose?.();
 									onUpdateHasPendingChanges(false);
@@ -650,6 +650,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							body: (
 								<FormattedMessage defaultMessage="Are you sure you want to revert all changes made during this session?" />
 							),
+							defaultFocus: 'cancel',
 							onOk: () => {
 								resetSelection();
 								setType(withPersistedJsController(props.type));

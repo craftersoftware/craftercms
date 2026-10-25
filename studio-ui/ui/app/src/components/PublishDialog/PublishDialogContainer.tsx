@@ -242,55 +242,59 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		hardDependenciesWithoutPublishPermission;
 
 	useEffect(() => {
-		setState({ fetchingItems: true });
-		if (state.publishingTarget) {
-			const sub = calculatePackage(siteId, {
-				publishingTarget: state.publishingTarget,
-				paths: itemsDataSummary.itemPaths.map((path) => ({
-					path,
-					includeChildren,
-					includeSoftDeps: false
-				}))
-			}).subscribe({
-				next(dependenciesByType) {
-					const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
-					const depMap: DependencyMap = {};
-					const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
-					dependenciesByType.hardDependencies.forEach(({ path }) => {
-						depMap[path] = 'hard';
-					});
-					dependenciesByType.softDependencies.forEach(({ path }) => {
-						depMap[path] = 'soft';
-					});
-					setState({ fetchingItems: false });
-					setPackageDependenciesFetchFailed(false);
-					if (includeChildren && dependenciesByType.items) {
-						if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
-							setChildrenItems(dependenciesByType.items);
-						}
-					} else {
-						if (effectRefs.current.childrenItems.length !== 0) {
-							setChildrenItems([]);
-						}
-					}
-					setSelectedDependenciesMap({});
-					setDependencyData({
-						typeByPath: depMap,
-						paths: Object.keys(depMap),
-						itemsByPath: depLookup,
-						items: itemsList
-					});
-				},
-				error() {
-					setState({ fetchingItems: false });
-					setIsFetchingItems(false);
-					setSelectedDependenciesMap({});
-					setDependencyData(null);
-					setPackageDependenciesFetchFailed(true);
-				}
-			});
-			return () => sub.unsubscribe();
+		// Package calculation only runs once a target exists. Leaving fetchingItems true with no
+		// target made the disabled-button reason stay on "items are loading" and hid the real cause.
+		if (!state.publishingTarget) {
+			setState({ fetchingItems: false });
+			return;
 		}
+		setState({ fetchingItems: true });
+		const sub = calculatePackage(siteId, {
+			publishingTarget: state.publishingTarget,
+			paths: itemsDataSummary.itemPaths.map((path) => ({
+				path,
+				includeChildren,
+				includeSoftDeps: false
+			}))
+		}).subscribe({
+			next(dependenciesByType) {
+				const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
+				const depMap: DependencyMap = {};
+				const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
+				dependenciesByType.hardDependencies.forEach(({ path }) => {
+					depMap[path] = 'hard';
+				});
+				dependenciesByType.softDependencies.forEach(({ path }) => {
+					depMap[path] = 'soft';
+				});
+				setState({ fetchingItems: false });
+				setPackageDependenciesFetchFailed(false);
+				if (includeChildren && dependenciesByType.items) {
+					if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
+						setChildrenItems(dependenciesByType.items);
+					}
+				} else {
+					if (effectRefs.current.childrenItems.length !== 0) {
+						setChildrenItems([]);
+					}
+				}
+				setSelectedDependenciesMap({});
+				setDependencyData({
+					typeByPath: depMap,
+					paths: Object.keys(depMap),
+					itemsByPath: depLookup,
+					items: itemsList
+				});
+			},
+			error() {
+				setState({ fetchingItems: false });
+				setIsFetchingItems(false);
+				setSelectedDependenciesMap({});
+				setDependencyData(null);
+				setPackageDependenciesFetchFailed(true);
+			}
+		});
+		return () => sub.unsubscribe();
 	}, [
 		itemsDataSummary.itemPaths,
 		setState,
@@ -386,7 +390,17 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	// formatMessage per branch so the formatjs babel plugin can inject message ids.
 	let publishSubmitReason = '';
 	if (!isSubmitting) {
-		if (isFetchingItems || state.fetchingItems || !contentItems) {
+		if (isFetchingItems || !contentItems) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for the items to finish loading before publishing.'
+			});
+		} else if (publishingTargets && publishingTargets.length === 0) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
+		} else if (!state.publishingTarget && publishingTargets == null) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
+		} else if (!state.publishingTarget) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Select a publishing target to publish.' });
+		} else if (state.fetchingItems) {
 			publishSubmitReason = formatMessage({
 				defaultMessage: 'Wait for the items to finish loading before publishing.'
 			});
@@ -394,14 +408,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a package title to publish.' });
 		} else if (isBlank(state.submissionComment)) {
 			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a submission comment to publish.' });
-		} else if (!publishingTargets?.length) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
 		} else if (selectedDependenciesPaths?.length) {
 			publishSubmitReason = formatMessage({
 				defaultMessage: 'Apply or discard the dependency changes before publishing.'
 			});
-		} else if (!state.publishingTarget) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Select a publishing target to publish.' });
 		} else if (state.error) {
 			publishSubmitReason = formatMessage({
 				defaultMessage: 'Resolve the error shown in this dialog before publishing.'

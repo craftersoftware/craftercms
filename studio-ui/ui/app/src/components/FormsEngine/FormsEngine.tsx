@@ -112,7 +112,12 @@ import {
 	useValidateFormProps
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
-import { focusFirstInvalidField, FormValidationAnnouncerContext, readInvalidMessage } from './lib/fieldA11y';
+import {
+	countInvalidFields,
+	focusFirstInvalidField,
+	FormSaveAttemptedContext,
+	FormValidationAnnouncerContext
+} from './lib/fieldA11y';
 import { SkipToActionsLink } from '../SkipToActionsLink';
 import {
 	ContentTypeNotFoundError,
@@ -912,6 +917,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
 	const [invalidForm, setInvalidForm] = useState(false);
 	const [validationStatusMessage, setValidationStatusMessage] = useState('');
+	const [saveAttempted, setSaveAttempted] = useState(false);
 	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const announceValidation = useCallback((message: string) => {
 		setValidationStatusMessage('');
@@ -926,18 +932,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 		[]
 	);
 	const handleInvalidSave = useCallback(() => {
-		const control = focusFirstInvalidField(containerRef.current);
-		if (control) {
-			// A collapsed section expands synchronously; focus again after that commit.
-			requestAnimationFrame(() => control.focus());
-		}
-		const fieldName =
-			control?.closest('[data-field-id]')?.querySelector('label')?.textContent?.trim() ||
-			formatMessage({ defaultMessage: 'Field' });
-		const errorText = control ? readInvalidMessage(control) : '';
+		setSaveAttempted(true);
+		const root = containerRef.current;
+		// Focus is moved onto the field, which exposes its own error. The live region only
+		// reports how many fields need attention so the error is not spoken twice.
+		const count = countInvalidFields(root);
+		focusFirstInvalidField(root);
 		announceValidation(
-			errorText
-				? formatMessage({ defaultMessage: 'Cannot save yet. {field}: {error}' }, { field: fieldName, error: errorText })
+			count > 0
+				? formatMessage(
+						{
+							defaultMessage:
+								'Cannot save yet. {count, plural, one {# field needs attention} other {# fields need attention}}'
+						},
+						{ count }
+					)
 				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
 		);
 	}, [announceValidation, formatMessage]);
@@ -1534,25 +1543,27 @@ function FormOrchestrator(props: FormsEngineProps) {
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
 		<FormValidationAnnouncerContext.Provider value={announceValidation}>
-			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
-			<Box
-				role="status"
-				aria-live="polite"
-				aria-atomic="true"
-				sx={{
-					border: 0,
-					clip: 'rect(0 0 0 0)',
-					height: '1px',
-					margin: '-1px',
-					overflow: 'hidden',
-					padding: 0,
-					position: 'absolute',
-					whiteSpace: 'nowrap',
-					width: '1px'
-				}}
-			>
-				{validationStatusMessage}
-			</Box>
+			<FormSaveAttemptedContext.Provider value={saveAttempted}>
+				{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+				<Box
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					sx={{
+						border: 0,
+						clip: 'rect(0 0 0 0)',
+						height: '1px',
+						margin: '-1px',
+						overflow: 'hidden',
+						padding: 0,
+						position: 'absolute',
+						whiteSpace: 'nowrap',
+						width: '1px'
+					}}
+				>
+					{validationStatusMessage}
+				</Box>
+			</FormSaveAttemptedContext.Provider>
 		</FormValidationAnnouncerContext.Provider>
 	);
 }
