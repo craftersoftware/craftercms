@@ -35,6 +35,14 @@ const focusVisibleSx = {
 	}
 };
 
+/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
+const rowFocusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: -2
+	}
+};
+
 interface PanelListItemProps {
 	primaryText: string;
 	secondaryText?: string;
@@ -84,7 +92,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 					minWidth: 0,
 					pl: 1.5,
 					cursor: isBeingDragged ? 'grabbing' : 'grab',
-					...focusVisibleSx
+					...rowFocusVisibleSx
 				}}
 			>
 				<ListItemAvatar sx={{ minWidth: 0 }}>
@@ -111,7 +119,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 				<ListItemText primary={primaryText} secondary={secondaryText} />
 			</ListItemButton>
 			{hasMenu && (
-				<Box sx={{ display: 'flex', flexShrink: 0 }}>
+				<Box sx={{ display: 'flex', flexShrink: 0, mr: 0.5 }}>
 					<IconButton
 						onClick={onMenu}
 						size="small"

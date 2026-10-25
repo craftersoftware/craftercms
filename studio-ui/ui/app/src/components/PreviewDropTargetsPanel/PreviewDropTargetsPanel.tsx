@@ -60,6 +60,14 @@ const focusVisibleSx = {
 	}
 };
 
+/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
+const rowFocusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: -2
+	}
+};
+
 const translations = defineMessages({
 	dropTargetsPanel: {
 		// Translation not used in code but powers i18n for `ui.xml`
@@ -294,7 +302,7 @@ function DropTargetsList(props: DropTargetsListProps) {
 		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
 			<ListItemButton
 				onClick={() => props.onSelectedDropZone(dropTarget)}
-				sx={{ flex: 1, minWidth: 0, ...focusVisibleSx }}
+				sx={{ flex: 1, minWidth: 0, ...rowFocusVisibleSx }}
 			>
 				<ListItemIcon>
 					<ContentTypeField />
