@@ -20,6 +20,8 @@
  * Source of truth:
  * - TinyMCE chrome helper: ui/app/src/components/editorKeyboard/tinyMceKeyboard.ts
  * - Ace keyboard helper: ui/app/src/components/editorKeyboard/aceKeyboard.ts
+ * - TinyMCE Ace plugin glue: ui/app/src/components/editorKeyboard/tinymceAcePlugin.ignore.js
+ *   (the .ignore.js suffix keeps tsconfig.build.json from emitting it)
  * - Hint, frame, focus ring, and target-size CSS: ui/scss/src/_editor-keyboard.scss
  *   (imported by ui/scss/src/tinymce-ace.scss)
  *
@@ -109,7 +111,7 @@ async function main() {
 		path.join(studioUi, 'static-assets/js/editor-keyboard-a11y.js')
 	);
 	const pluginJs = path.join(pluginDir, 'plugin.js');
-	await bundle(path.join(keyboardDir, 'tinymceAcePlugin.js'), pluginJs);
+	await bundle(path.join(keyboardDir, 'tinymceAcePlugin.ignore.js'), pluginJs);
 	prettier([
 		path.join(keyboardDir, 'editorKeyboardFallbackCss.ts'),
 		path.join(studioUi, 'static-assets/js/editor-keyboard-a11y.js'),

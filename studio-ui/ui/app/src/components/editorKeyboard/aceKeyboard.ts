@@ -79,6 +79,24 @@ interface AceKeyboardEditor {
 
 const applied = new WeakSet<object>();
 
+const hintState = new WeakMap<
+	HTMLElement,
+	{ editor: AceKeyboardEditor; labels: AceKeyboardLabels; hint: HTMLElement }
+>();
+
+/** Ace emits no option event, so a direct setReadOnly() is picked up on the next focus. */
+function refreshHintText(container: HTMLElement) {
+	const state = hintState.get(container);
+	if (!state) {
+		return;
+	}
+	const text =
+		state.editor.getOption('readOnly') === true ? state.labels.instructionsReadOnly : state.labels.instructions;
+	if (state.hint.textContent !== text) {
+		state.hint.textContent = text;
+	}
+}
+
 function createHintId(prefix: string) {
 	const random =
 		typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -277,8 +295,11 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	scroller?.setAttribute('aria-describedby', hint.id);
 	textInput?.setAttribute('aria-describedby', hint.id);
 
+	hintState.set(container, { editor: aceEditor, labels, hint });
+
 	if (!container.dataset.craftercmsEsc) {
 		container.dataset.craftercmsEsc = 'true';
+		container.addEventListener('focusin', () => refreshHintText(container));
 		let escFromEditor = false;
 		const resetEscFlag = () => {
 			escFromEditor = false;

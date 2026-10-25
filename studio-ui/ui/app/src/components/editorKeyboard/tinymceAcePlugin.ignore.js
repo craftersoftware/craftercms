@@ -17,12 +17,14 @@
 /**
  * TinyMCE Ace plugin glue. Keyboard behaviour is applyAceKeyboardAccessibility
  * from aceKeyboard.ts, bundled into plugin.js by yarn build:editor-keyboard.
- * Do not copy that function here.
+ * Do not copy that function here. This file is tinymceAcePlugin.ignore.js so
+ * tsconfig.build.json does not emit it into the npm package.
  *
  * The four translated sentences are also in editorKeyboard/messages.ts and the
  * es/de/ko catalogues. TinyMCE i18n cannot import react-intl, so this is the
- * remaining copy. This plugin does not toggle Ace readOnly; callers that do
- * should call applyAceKeyboardAccessibility again (the React editor does).
+ * remaining copy. This plugin does not toggle Ace readOnly. The React editor
+ * re-applies when its readOnly prop changes. A direct setReadOnly() refreshes
+ * the hint on the next focusin.
  */
 import { applyAceKeyboardAccessibility } from './aceKeyboard';
 

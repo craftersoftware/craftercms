@@ -48,6 +48,18 @@
 	var ACE_FRAME_CLASS = 'craftercms-code-editor-frame';
 	var HINT_ID_PREFIX = 'craftercms-code-editor-hint';
 	var applied = /* @__PURE__ */ new WeakSet();
+	var hintState = /* @__PURE__ */ new WeakMap();
+	function refreshHintText(container) {
+		const state = hintState.get(container);
+		if (!state) {
+			return;
+		}
+		const text =
+			state.editor.getOption('readOnly') === true ? state.labels.instructionsReadOnly : state.labels.instructions;
+		if (state.hint.textContent !== text) {
+			state.hint.textContent = text;
+		}
+	}
 	function createHintId(prefix) {
 		const random =
 			typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -214,8 +226,10 @@
 		hint.removeAttribute('aria-hidden');
 		scroller?.setAttribute('aria-describedby', hint.id);
 		textInput?.setAttribute('aria-describedby', hint.id);
+		hintState.set(container, { editor: aceEditor, labels, hint });
 		if (!container.dataset.craftercmsEsc) {
 			container.dataset.craftercmsEsc = 'true';
+			container.addEventListener('focusin', () => refreshHintText(container));
 			let escFromEditor = false;
 			const resetEscFlag = () => {
 				escFromEditor = false;
@@ -259,7 +273,7 @@
 		aceEditor.resize?.(true);
 	}
 
-	// ui/app/src/components/editorKeyboard/tinymceAcePlugin.js
+	// ui/app/src/components/editorKeyboard/tinymceAcePlugin.ignore.js
 	var PLUGIN_NAME = 'acecode';
 	tinymce.addI18n('en', {
 		'code-editor': 'Code Editor',
