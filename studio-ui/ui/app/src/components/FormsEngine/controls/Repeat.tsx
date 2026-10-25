@@ -252,7 +252,7 @@ export function Repeat(props: RepeatProps) {
 														</ReorderMoveButton>
 													</>
 												)}
-												<Tooltip describeChild title={editLabel}>
+												<Tooltip title={editLabel}>
 													{/* The row performs the same edit, so this control is not a second tab stop. */}
 													<IconButton
 														size="small"
@@ -263,7 +263,7 @@ export function Repeat(props: RepeatProps) {
 														<EditOutlined fontSize="small" />
 													</IconButton>
 												</Tooltip>
-												<Tooltip describeChild title={deleteLabel}>
+												<Tooltip title={deleteLabel}>
 													<IconButton size="small" aria-label={deleteLabel} onClick={(e) => handleRemoveItem(e, index)}>
 														<DeleteOutlined fontSize="small" />
 													</IconButton>

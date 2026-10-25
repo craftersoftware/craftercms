@@ -915,7 +915,7 @@ function NodeSelector(props: NodeSelectorProps) {
 													</ReorderMoveButton>
 												</>
 											)}
-											<Tooltip describeChild title={openLabel}>
+											<Tooltip title={openLabel}>
 												<IconButton
 													size="small"
 													aria-label={openLabel}
@@ -936,7 +936,7 @@ function NodeSelector(props: NodeSelectorProps) {
 												</IconButton>
 											</Tooltip>
 											{!readonly && (
-												<Tooltip describeChild title={removeLabel}>
+												<Tooltip title={removeLabel}>
 													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
 														<Icon fontSize="small" />
 													</IconButton>
