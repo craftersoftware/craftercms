@@ -21,7 +21,6 @@ import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import Button from '@mui/material/Button';
 import { USER_PASSWORD_MAX_LENGTH, USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
 import { PartialSxRecord } from '../../models';
-import palette from '../../styles/palette';
 
 export type LogInFormClassKey = 'username' | 'password' | 'submit' | 'recover';
 
@@ -69,23 +68,6 @@ export function LogInForm(props: LogInFormProps) {
 	const usernameInvalid = invalidCredentials && enableUsernameInput;
 	const describedBy = (invalid: boolean) =>
 		invalid && credentialsErrorId ? { 'aria-describedby': credentialsErrorId } : undefined;
-	// Theme error.main is #FF3B30 in light mode (3.55:1 on white; text needs 4.5:1).
-	// Light labels and outlines use #D70015 (5.38:1 on #fff). Dark paper is #121212, where
-	// #D70015 is only 3.48:1, so dark mode keeps #FF6961 (6.64:1 on #121212).
-	const credentialErrorColor = (theme: { palette: { mode: string } }) =>
-		theme.palette.mode === 'dark' ? palette.red.tint : palette.red.shade;
-	const credentialErrorSx = (invalid: boolean) =>
-		invalid
-			? {
-					'& .MuiInputLabel-root.Mui-error, & .MuiInputLabel-root.Mui-error.Mui-focused': {
-						color: credentialErrorColor
-					},
-					'& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline':
-						{
-							borderColor: credentialErrorColor
-						}
-				}
-			: undefined;
 	return (
 		<form action={action} method={method} onSubmit={onSubmit}>
 			{children}
@@ -102,8 +84,7 @@ export function LogInForm(props: LogInFormProps) {
 				className={classes?.username}
 				sx={{
 					marginBottom: (theme) => theme.spacing(1.5),
-					...sxs?.username,
-					...credentialErrorSx(usernameInvalid)
+					...sxs?.username
 				}}
 				label={<FormattedMessage id="loginView.usernameTextFieldLabel" defaultMessage="Username" />}
 				slotProps={{
@@ -136,8 +117,7 @@ export function LogInForm(props: LogInFormProps) {
 				sxs={{
 					root: {
 						marginBottom: (theme) => theme.spacing(1.5),
-						...sxs?.password,
-						...credentialErrorSx(invalidCredentials)
+						...sxs?.password
 					}
 				}}
 				label={<FormattedMessage id="authMonitor.passwordTextFieldLabel" defaultMessage="Password" />}

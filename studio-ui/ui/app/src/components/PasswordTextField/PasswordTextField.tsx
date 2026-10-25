@@ -32,7 +32,7 @@ type PasswordTextFieldProps = TextFieldProps & {
 const translations = defineMessages({
 	toggleVisibilityButtonText: {
 		id: 'passwordTextField.toggleVisibilityButtonText',
-		defaultMessage: 'toggle password visibility'
+		defaultMessage: 'Show password'
 	}
 });
 
