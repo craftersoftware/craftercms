@@ -1150,7 +1150,7 @@
 	"search.noResults": "Es wurden keine Ergebnisse gefunden.",
 	"search.resultsCaption": "{from}-{to} von {count} Ergebnissen {keywordLength, plural, =0 {} other{ für <b>„{keyword}“</b>}} ",
 	"search.resultsSelected": "{count, plural, one {{count} ausgewähltes Element} other {{count} ausgewählte Elemente}}",
-	"search.resultsStatus": "{from}-{to} von {count} Ergebnissen {keywordLength, plural, =0 {} other{ für „{keyword}“}}",
+	"search.resultsStatus": "{from}-{to} von {count} Ergebnissen{keywordLength, plural, =0 {} other{ für „{keyword}“}}",
 	"search.selectAll": "Alles auf dieser Seite auswählen",
 	"search.videoProcessed": "Video wird verarbeitet, Vorschau ist verfügbar, wenn die Verarbeitung abgeschlossen ist",
 	"searchAhead.noResults": "Keine Ergebnisse.",

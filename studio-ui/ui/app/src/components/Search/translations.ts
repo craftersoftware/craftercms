@@ -35,7 +35,7 @@ export const translations = defineMessages({
 	},
 	resultsStatus: {
 		id: 'search.resultsStatus',
-		defaultMessage: '{from}-{to} of {count} results {keywordLength, plural, =0 {}other{ for “{keyword}”}}'
+		defaultMessage: '{from}-{to} of {count} results{keywordLength, plural, =0 {}other{ for “{keyword}”}}'
 	},
 	itemsPerPage: {
 		id: 'search.itemsPerPage',

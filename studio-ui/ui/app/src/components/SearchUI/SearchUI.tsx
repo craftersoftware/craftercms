@@ -135,7 +135,9 @@ export function SearchUI(props: SearchUIProps) {
 		searchResults == null ? 0 : Math.min(searchParameters.offset + searchParameters.limit, resultsTotal);
 	// Use the keyword the results were fetched for. `keyword` is the live input and changes on every keystroke,
 	// ahead of (debounced) results, so it would announce stale counts with a half-typed keyword.
-	const resultsKeyword = searchParameters.keywords ?? '';
+	// URLDrivenSearch passes the parsed query string through, so a repeated `keywords` param arrives as an array.
+	const keywordsParam: string | string[] = searchParameters.keywords ?? '';
+	const resultsKeyword = Array.isArray(keywordsParam) ? keywordsParam.join(' ') : keywordsParam;
 	const keywordForStatus = resultsKeyword.length > 18 ? `${resultsKeyword.substring(0, 15).trim()}...` : resultsKeyword;
 	const resultsStatus =
 		searchResults == null
