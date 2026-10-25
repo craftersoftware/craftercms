@@ -195,6 +195,7 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 					paper: {
 						id: menuId,
 						role: 'dialog',
+						'aria-modal': true,
 						'aria-label': moreLabel
 					}
 				}}
