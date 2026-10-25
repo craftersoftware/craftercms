@@ -41,6 +41,11 @@ const translations = defineMessages({
 	}
 });
 
+/** #1428 wraps this bar at max-width 480px. The marker lets the narrow-width tooltip modifier find it. */
+function markPreviewToolbar(node: HTMLDivElement | null) {
+	node?.setAttribute('data-preview-toolbar', 'true');
+}
+
 export function ToolBar() {
 	const { formatMessage } = useIntl();
 	const dispatch = useDispatch();
@@ -60,6 +65,7 @@ export function ToolBar() {
 
 	return (
 		<ViewToolbar
+			ref={markPreviewToolbar}
 			sxs={{
 				appBar: {
 					borderBottom: '5px',

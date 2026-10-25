@@ -16,6 +16,7 @@
 
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 import palette from './palette';
+import { previewToolbarNarrowTooltip } from '../utils/a11y/previewToolbarTooltip';
 
 export const backgroundColor = palette.gray.light1;
 export const RedColor = palette.red.main;
@@ -112,7 +113,14 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 					// MUI 9 defaults this to false; the previous override forced it closed.
 					disableInteractive: false,
 					// The tooltip is offset from its trigger. This delay lets the pointer cross that gap.
-					leaveDelay: 200
+					leaveDelay: 200,
+					slotProps: {
+						popper: {
+							popperOptions: {
+								modifiers: [previewToolbarNarrowTooltip]
+							}
+						}
+					}
 				}
 			}
 		}
