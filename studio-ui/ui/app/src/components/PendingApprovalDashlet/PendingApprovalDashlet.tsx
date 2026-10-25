@@ -62,6 +62,7 @@ import IconButton from '@mui/material/IconButton';
 import PackageDetailsDialog from '../PackageDetailsDialog';
 import { generatePackageOptions, packageActionDispatcher } from '../../utils/packageActions';
 import { PublishPackage } from '../../models';
+import { formatPendingApprovalTotal } from './formatPendingApprovalTotal';
 
 interface PendingApprovalDashletProps extends CommonDashletProps {}
 
@@ -75,11 +76,6 @@ interface PendingApprovalDashletState extends WithSelectedState<FetchPackagesRes
 }
 
 const pendingApprovalState: PackageApprovalState[] = ['SUBMITTED'];
-
-/** Count in the dashlet title. `null` (not loaded) renders nothing; `0` renders "(0)". */
-export function formatPendingApprovalTotal(total: number | null): string {
-	return typeof total === 'number' ? `(${total})` : '';
-}
 
 export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 	const { borderLeftColor = palette.purple.tint } = props;
