@@ -273,6 +273,12 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 	// (it does so even when there is no CSS transition), with a hard cap.
 	const check = () => {
 		if (finished) return;
+		if (!collapse.isConnected) {
+			// The form was unmounted or the section removed while waiting. Nothing left to focus.
+			finished = true;
+			collapse.removeEventListener('transitionend', onTransitionEnd);
+			return;
+		}
 		if (collapse.classList.contains('MuiCollapse-entered') || Date.now() - startedAt >= 2000) finish();
 		else timer = view?.setTimeout(check, 50) ?? 0;
 	};
@@ -280,18 +286,58 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 	timer = view?.setTimeout(check, 400) ?? 0;
 }
 
+/** Helper text FormsEngineField renders as a direct child of the field while the field is invalid. */
+const FIELD_ERROR_SELECTOR = '[data-field-id] > [id$="-error"]';
+const INVALID_ENTRY_SELECTOR = `[data-area-id="formBody"] [aria-invalid="true"], [data-area-id="formBody"] ${FIELD_ERROR_SELECTOR}`;
+
+/**
+ * Controls that have no native input (repeat, node selector, image and video pickers) never
+ * get `aria-invalid`, but their field still shows an error. Returns that field, or null when the
+ * node is a linked control or the field has one.
+ */
+function unlinkedInvalidField(node: Element): HTMLElement | null {
+	if (!node.matches(FIELD_ERROR_SELECTOR)) return null;
+	const field = node.parentElement;
+	if (!(field instanceof HTMLElement) || field.querySelector('[aria-invalid="true"]')) return null;
+	return field;
+}
+
+/** First tabbable control in the body of a field (not its label row, help or inheritance alert), else its label. */
+function unlinkedFieldTarget(field: HTMLElement, errorId: string): HTMLElement | null {
+	const header = field.firstElementChild;
+	const candidates = field.querySelectorAll('button, a[href], [tabindex="0"]');
+	for (const candidate of candidates) {
+		if (!(candidate instanceof HTMLElement) || candidate.hasAttribute('disabled')) continue;
+		if (candidate.tabIndex < 0 || header?.contains(candidate)) continue;
+		const skipped = candidate.closest('.MuiAlert-root, .MuiCollapse-root, [role="menu"]');
+		if (skipped && field.contains(skipped)) continue;
+		const ids = (candidate.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
+		if (!ids.includes(errorId)) candidate.setAttribute('aria-describedby', [...ids, errorId].join(' '));
+		return candidate;
+	}
+	const label = field.querySelector('label');
+	if (label instanceof HTMLElement) {
+		if (!label.hasAttribute('tabindex')) label.tabIndex = -1;
+		return label;
+	}
+	return null;
+}
+
 /**
  * Moves focus to the first invalid control in the form body.
  * A collapsed section is expanded first: its fields are visibility:hidden, so they must not be
  * skipped before the summary is opened. Focus waits until the Collapse height transition ends,
- * then scrolls the field into view. A hidden TinyMCE textarea is focused via its iframe.
+ * then scrolls the field into view. A hidden TinyMCE textarea is focused via its iframe. A field
+ * with an error but no linked control is focused on its first tabbable control, or its label.
  */
 export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | null {
 	if (!root) return null;
-	const invalids = root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]');
-	for (const invalid of invalids) {
+	const entries = root.querySelectorAll(INVALID_ENTRY_SELECTOR);
+	for (const invalid of entries) {
 		if (!(invalid instanceof HTMLElement)) continue;
-		const target = focusSurface(invalid);
+		const unlinked = unlinkedInvalidField(invalid);
+		if (invalid.matches(FIELD_ERROR_SELECTOR) && !unlinked) continue;
+		const target = unlinked ? unlinkedFieldTarget(unlinked, invalid.id) : focusSurface(invalid);
 		if (!target) continue;
 		const accordion = collapsedAccordionOf(invalid) ?? collapsedAccordionOf(target);
 		if (accordion) {
@@ -307,17 +353,19 @@ export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | n
 }
 
 /**
- * Invalid fields, including ones inside a collapsed section.
- * A hidden TinyMCE textarea and its editor iframe count as one field. A textarea that TinyMCE
- * has hidden, with the section open, is not counted on its own.
+ * Invalid fields, including ones inside a collapsed section and ones whose control has no native
+ * input. A hidden TinyMCE textarea and its editor iframe count as one field. A textarea that
+ * TinyMCE has hidden, with the section open, is not counted on its own.
  */
 export function countInvalidFields(root: ParentNode | null): number {
 	if (!root) return 0;
 	const fields = new Set<Element>();
-	root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]').forEach((node) => {
+	root.querySelectorAll(INVALID_ENTRY_SELECTOR).forEach((node) => {
 		if (!(node instanceof HTMLElement)) return;
-		if (isHiddenFieldControl(node, true)) return;
-		fields.add(node.closest('[data-field-id]') ?? node);
+		const unlinked = unlinkedInvalidField(node);
+		if (node.matches(FIELD_ERROR_SELECTOR) && !unlinked) return;
+		if (!unlinked && isHiddenFieldControl(node, true)) return;
+		fields.add(unlinked ?? node.closest('[data-field-id]') ?? node);
 	});
 	return fields.size;
 }
