@@ -66,7 +66,8 @@ const jsxA11yErrorRules = new Set([
 function jsxA11yRules() {
 	return Object.fromEntries(
 		Object.entries(jsxA11y.flatConfigs.recommended.rules).map(([name, setting]) => {
-			if (setting === 'off' || setting === 0) {
+			const level = Array.isArray(setting) ? setting[0] : setting;
+			if (level === 'off' || level === 0) {
 				return [name, setting];
 			}
 			const severity = jsxA11yErrorRules.has(name) ? 'error' : 'warn';
