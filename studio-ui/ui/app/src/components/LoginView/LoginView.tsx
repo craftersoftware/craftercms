@@ -31,14 +31,13 @@ import Typography from '@mui/material/Typography';
 import LogInForm from '../LoginForm/LoginForm';
 import MenuItem from '@mui/material/MenuItem';
 import { fetchProductLanguages } from '../../services/configuration';
-import WarningRounded from '@mui/icons-material/WarningRounded';
 import queryString from 'query-string';
 import TextField from '@mui/material/TextField';
 import Snackbar from '@mui/material/Snackbar';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import { passwordRequirementMessages } from '../../env/i18n-legacy';
 import { filter } from 'rxjs/operators';
-import palette from '../../styles/palette';
+import CredentialsErrorBanner from '../CredentialsErrorBanner/CredentialsErrorBanner';
 import { buildStoredLanguageKey, dispatchLanguageChange, getCurrentLocale, setStoredLanguage } from '../../utils/i18n';
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LanguageRounded from '@mui/icons-material/LanguageRounded';
@@ -142,6 +141,9 @@ const retrieveStoredLangPreferences = () =>
 	Object.keys(window.localStorage).filter((key) => key.includes('_crafterStudioLanguage'));
 
 const loginFormErrorId = 'loginFormError';
+// Forgot-password marks the field only for an input failure. 1001 is invalid parameters,
+// 6000 is user not found. The API returns success for an unknown user; other codes are not input errors.
+const recoverInputErrorCodes = [1001, 6000];
 
 function LoginView(props: SubViewProps) {
 	const {
@@ -164,6 +166,8 @@ function LoginView(props: SubViewProps) {
 	const [errorDetail, setErrorDetail] = useState('');
 	// Only a rejected login marks the fields invalid. The locked-account message is not a field error.
 	const [credentialsFailed, setCredentialsFailed] = useState(false);
+	// Initial lock text, including the starting duration. Captured once so the alert does not change every second.
+	const initialLockText = useRef<string | null>(null);
 	const lockedTimer = useTimer(lockedTimeSeconds);
 	const username$ = useDebouncedInput(
 		useCallback(
@@ -184,12 +188,22 @@ function LoginView(props: SubViewProps) {
 	useEffect(() => {
 		if (lockedErrorMessage && nnou(lockedTimer)) {
 			if (lockedTimer === 0) {
+				initialLockText.current = null;
 				setError(null);
 				setErrorDetail('');
 				setCredentialsFailed(false);
 			} else {
-				// The alert text stays fixed. The countdown is a sibling timer so it is not re-announced every second.
-				setError(`${unescapeHTML(lockedErrorMessage)}.`);
+				if (initialLockText.current == null && nnou(lockedTimeSeconds)) {
+					const seconds = lockedTimeSeconds;
+					initialLockText.current = `${unescapeHTML(lockedErrorMessage)}. ${formatMessage(
+						translations.lockedAccountTryAgain,
+						{
+							fullTime: seconds > 60,
+							time: seconds > 60 ? moment().add(seconds, 'seconds').fromNow() : seconds
+						}
+					)}`;
+					setError(initialLockText.current);
+				}
 				setErrorDetail(
 					formatMessage(translations.lockedAccountTryAgain, {
 						fullTime: lockedTimer > 60,
@@ -199,6 +213,7 @@ function LoginView(props: SubViewProps) {
 				setCredentialsFailed(false);
 			}
 		} else if (qsError) {
+			initialLockText.current = null;
 			setError(formatMessage(translations.incorrectCredentialsMessage));
 			setErrorDetail('');
 			setCredentialsFailed(true);
@@ -215,6 +230,7 @@ function LoginView(props: SubViewProps) {
 		} else {
 			localStorage.setItem('username', username);
 			setStoredLanguage(language, username);
+			initialLockText.current = null;
 			setError('');
 			setErrorDetail('');
 			setCredentialsFailed(false);
@@ -253,10 +269,12 @@ function RecoverView(props: SubViewProps) {
 	const { children, isFetching, onSubmit, classes, formatMessage, onSnack, setMode } = props;
 	const [username, setUsername] = useState(() => localStorage.getItem('username') ?? '');
 	const [error, setError] = useState('');
+	const [usernameInvalid, setUsernameInvalid] = useState(false);
 	const onSubmitRecover = (e: any) => {
 		e.preventDefault();
 		e.stopPropagation();
 		setError('');
+		setUsernameInvalid(false);
 		onSubmit(true);
 		if (isBlank(username)) {
 			onSubmit(false);
@@ -270,9 +288,13 @@ function RecoverView(props: SubViewProps) {
 						message: formatMessage(translations.recoverYourPasswordSuccessMessage)
 					});
 				},
-				error(error) {
+				error(failure) {
 					onSubmit(false);
-					setError(error.message);
+					const payload = failure?.response?.response ?? failure?.response ?? failure;
+					const code = typeof payload === 'object' ? payload?.code : undefined;
+					const message = typeof payload === 'string' ? payload : (payload?.message ?? failure?.message ?? '');
+					setUsernameInvalid(recoverInputErrorCodes.includes(code));
+					setError(message);
 				}
 			});
 		}
@@ -292,7 +314,7 @@ function RecoverView(props: SubViewProps) {
 					fullWidth
 					autoFocus
 					disabled={isFetching}
-					error={Boolean(error)}
+					error={usernameInvalid}
 					type="text"
 					value={username}
 					onChange={(e: any) => setUsername(e.target.value)}
@@ -302,7 +324,7 @@ function RecoverView(props: SubViewProps) {
 						htmlInput: {
 							maxLength: USER_USERNAME_MAX_LENGTH,
 							autoComplete: 'username',
-							...(error ? { 'aria-describedby': loginFormErrorId } : {})
+							...(usernameInvalid ? { 'aria-describedby': loginFormErrorId } : {})
 						}
 					}}
 				/>
@@ -465,44 +487,22 @@ function HeaderView({
 	classes?: { errorMessage?: string; recoverInfoMessage?: string };
 }) {
 	// `key` replaces the node when this switches between the intro and the alert. The same
-	// element type without a key reuses the <p> and only updates attributes, which is not an
-	// insertion. The countdown is a sibling of the alert: role="alert" is assertive and atomic,
-	// so a once-a-second text change inside it would be re-announced.
-	// #000 on #FF6961 is 7.45:1. #fff on #FF6961 is 2.82:1 (below the 4.5:1 text minimum).
+	// element type without a key reuses the node and only updates attributes, which is not an
+	// insertion. A lock alert includes the starting duration once. The sibling is the visual
+	// countdown and is not a live region, so later ticks are not announced again.
 	if (error) {
 		return (
 			<>
-				<Typography
+				<CredentialsErrorBanner
 					key="error"
 					id={loginFormErrorId}
-					role="alert"
-					variant="body2"
 					className={classes?.errorMessage}
-					sx={(theme) => ({
-						backgroundColor: palette.red.tint,
-						color: palette.black,
-						marginBottom: theme.spacing(1),
-						padding: theme.spacing(1),
-						borderRadius: theme.spacing(1),
-						border: `1px solid ${palette.red.main}`,
-						display: 'flex',
-						placeContent: 'center',
-						lineHeight: 1.7,
-						'& .MuiSvgIcon-root': {
-							marginRight: theme.spacing(0.5),
-							color: palette.black
-						}
-					})}
+					sx={{ marginBottom: (theme) => theme.spacing(1) }}
 				>
-					<WarningRounded /> {error}
-				</Typography>
+					{error}
+				</CredentialsErrorBanner>
 				{errorDetail ? (
-					<Typography
-						component="span"
-						role="timer"
-						variant="body2"
-						sx={{ display: 'block', textAlign: 'center', mb: 1 }}
-					>
+					<Typography component="span" variant="body2" sx={{ display: 'block', textAlign: 'center', mb: 1 }}>
 						{errorDetail}
 					</Typography>
 				) : null}
