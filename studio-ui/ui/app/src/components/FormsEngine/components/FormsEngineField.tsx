@@ -39,6 +39,7 @@ import React, {
 import { type FieldValidityMessage, isEmptyValue, isFieldRequired } from '../lib/validators';
 import {
 	applyFieldControlA11y,
+	FIELD_CONTROL_READY_EVENT,
 	FormSaveAttemptedContext,
 	FormValidationAnnouncerContext,
 	resolveFieldControl
@@ -183,8 +184,13 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		const onFocusIn = () => {
 			queueMicrotask(linkControl);
 		};
+		const onControlReady = () => linkControl();
 		root.addEventListener('focusin', onFocusIn);
-		return () => root.removeEventListener('focusin', onFocusIn);
+		root.addEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
+		return () => {
+			root.removeEventListener('focusin', onFocusIn);
+			root.removeEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
+		};
 	}, []);
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;

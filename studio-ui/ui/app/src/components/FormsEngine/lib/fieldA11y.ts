@@ -19,6 +19,12 @@ import { createContext } from 'react';
 /** Form-level polite live region. The default is a no-op so fields can render outside a form shell. */
 export const FormValidationAnnouncerContext = createContext<(message: string) => void>(() => {});
 
+/**
+ * Bubbled from a control that mounts its visible surface after the field's layout effect
+ * (TinyMCE's iframe). The field listens and links aria attributes onto that surface.
+ */
+export const FIELD_CONTROL_READY_EVENT = 'craftercms-field-control-ready';
+
 /** True after Save was pressed on an invalid form, so later blurs may announce an error. */
 export const FormSaveAttemptedContext = createContext(false);
 
@@ -70,8 +76,6 @@ export function isHiddenFieldControl(element: HTMLElement): boolean {
 	if (!view) return false;
 	const style = view.getComputedStyle(element);
 	if (style.display === 'none' || style.visibility === 'hidden') return true;
-	// getClientRects is empty for display:none. In jsdom it is also empty for unlaid-out
-	// elements, so only treat that as hidden when the computed style already hides the box.
 	return false;
 }
 
@@ -195,11 +199,24 @@ export function readInvalidMessage(control: HTMLElement): string {
 	return control.ownerDocument.getElementById(errorId)?.textContent?.trim() ?? '';
 }
 
+/** Accordion whose summary is collapsed. MUI then hides the section with visibility:hidden. */
+function collapsedAccordionOf(element: HTMLElement): HTMLElement | null {
+	const accordion = element.closest('.MuiAccordion-root');
+	if (!(accordion instanceof HTMLElement)) return null;
+	const summary = accordion.querySelector('.MuiAccordionSummary-root');
+	if (summary instanceof HTMLElement && summary.getAttribute('aria-expanded') === 'false') return accordion;
+	return null;
+}
+
 function focusSurface(invalid: HTMLElement): HTMLElement | null {
 	if (!isHiddenFieldControl(invalid)) return invalid;
 	const field = invalid.closest('[data-field-id]');
 	const iframe = field?.querySelector(TINYMCE_IFRAME_SELECTOR);
+	// TinyMCE's textarea stays in the DOM and keeps aria-invalid until the iframe is linked.
 	if (iframe instanceof HTMLIFrameElement) return iframe;
+	// A collapsed section hides the real control. Keep that control; the caller expands first.
+	// Substituting the label would move focus off the field the error belongs to.
+	if (collapsedAccordionOf(invalid)) return invalid;
 	const label = field?.querySelector('label');
 	if (label instanceof HTMLElement) {
 		if (!label.hasAttribute('tabindex')) label.tabIndex = -1;
@@ -246,9 +263,10 @@ function focusAfterAccordionExpand(accordion: HTMLElement, target: HTMLElement):
 }
 
 /**
- * Moves focus to the first visible invalid control in the form body.
- * Hidden targets (TinyMCE's textarea) are skipped. A collapsed section is expanded and
- * focus waits until the Collapse height transition ends, then scrolls the field into view.
+ * Moves focus to the first invalid control in the form body.
+ * A collapsed section is expanded first: its fields are visibility:hidden, so they must not be
+ * skipped before the summary is opened. Focus waits until the Collapse height transition ends,
+ * then scrolls the field into view. A hidden TinyMCE textarea is focused via its iframe.
  */
 export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | null {
 	if (!root) return null;
@@ -256,26 +274,31 @@ export function focusFirstInvalidField(root: ParentNode | null): HTMLElement | n
 	for (const invalid of invalids) {
 		if (!(invalid instanceof HTMLElement)) continue;
 		const target = focusSurface(invalid);
-		if (!target || isHiddenFieldControl(target)) continue;
-		const accordion = invalid.closest('.MuiAccordion-root');
-		const summary = accordion?.querySelector('.MuiAccordionSummary-root');
-		const collapsed = summary instanceof HTMLElement && summary.getAttribute('aria-expanded') === 'false';
-		if (collapsed && accordion instanceof HTMLElement) {
-			summary.click();
+		if (!target) continue;
+		const accordion = collapsedAccordionOf(invalid) ?? collapsedAccordionOf(target);
+		if (accordion) {
+			const summary = accordion.querySelector('.MuiAccordionSummary-root');
+			if (summary instanceof HTMLElement) summary.click();
 			focusAfterAccordionExpand(accordion, target);
 			return target;
 		}
+		if (isHiddenFieldControl(target)) continue;
 		if (focusAndReveal(target)) return target;
 	}
 	return null;
 }
 
-/** Visible invalid fields. A hidden textarea and its editor iframe count as one field. */
+/**
+ * Invalid fields, including ones inside a collapsed section.
+ * A hidden TinyMCE textarea and its editor iframe count as one field. A textarea that TinyMCE
+ * has hidden, with the section open, is not counted on its own.
+ */
 export function countInvalidFields(root: ParentNode | null): number {
 	if (!root) return 0;
 	const fields = new Set<Element>();
 	root.querySelectorAll('[data-area-id="formBody"] [aria-invalid="true"]').forEach((node) => {
-		if (!(node instanceof HTMLElement) || isHiddenFieldControl(node)) return;
+		if (!(node instanceof HTMLElement)) return;
+		if (isHiddenFieldControl(node) && !collapsedAccordionOf(node)) return;
 		fields.add(node.closest('[data-field-id]') ?? node);
 	});
 	return fields.size;
