@@ -71,7 +71,7 @@ export const GlobalAppToolbar = React.memo<GlobalAppToolbarProps>(function (prop
 	return (
 		<ViewToolbar
 			component="nav"
-			ariaLabel={formatMessage({ defaultMessage: 'Toolbar' })}
+			ariaLabel={formatMessage({ id: 'globalAppToolbar.ariaLabel', defaultMessage: 'Toolbar' })}
 			elevation={props.elevation}
 			classes={props.classes}
 			sxs={{

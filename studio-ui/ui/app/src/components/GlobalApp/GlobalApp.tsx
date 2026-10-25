@@ -107,7 +107,7 @@ export function GlobalApp(props: GlobalAppProps) {
 function RouteNotFound() {
 	const { pathname } = useLocation();
 	const { formatMessage } = useIntl();
-	const pageNotFound = formatMessage({ defaultMessage: 'Page not found' });
+	const pageNotFound = formatMessage({ id: 'globalApp.pageNotFound', defaultMessage: 'Page not found' });
 	useEffect(() => {
 		document.title = studioDocumentTitle(pageNotFound);
 	}, [pageNotFound]);

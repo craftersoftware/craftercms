@@ -67,7 +67,7 @@ export function ICEToolsPanel() {
 			belowToolbar
 			anchor="right"
 			landmark="complementary"
-			landmarkLabel={formatMessage({ defaultMessage: 'Editing tools' })}
+			landmarkLabel={formatMessage({ id: 'iceToolsPanel.landmark', defaultMessage: 'Editing tools' })}
 			width={width}
 			maxWidth={windowSize}
 			onWidthChange={onWidthChange}

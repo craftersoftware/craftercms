@@ -582,8 +582,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
-	const hideConfigurationFilesLabel = formatMessage({ defaultMessage: 'Hide configuration files' });
-	const showConfigurationFilesLabel = formatMessage({ defaultMessage: 'Show configuration files' });
+	const hideConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.hideConfigurationFiles',
+		defaultMessage: 'Hide configuration files'
+	});
+	const showConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.showConfigurationFiles',
+		defaultMessage: 'Show configuration files'
+	});
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -803,7 +809,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						height: '100%'
 					}}
 					component="nav"
-					aria-label={formatMessage({ defaultMessage: 'Configuration files' })}
+					aria-label={formatMessage({
+						id: 'siteConfigurationManagement.configurationFiles',
+						defaultMessage: 'Configuration files'
+					})}
 					dense
 					subheader={
 						<ListSubheader

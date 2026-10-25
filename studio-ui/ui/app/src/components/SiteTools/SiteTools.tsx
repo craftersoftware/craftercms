@@ -95,7 +95,7 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const projectToolsLabel = formatMessage({ defaultMessage: 'Project tools' });
+	const projectToolsLabel = formatMessage({ id: 'siteTools.title', defaultMessage: 'Project Tools' });
 	const toolNotFoundLabel = formatMessage({ id: 'siteTools.toolNotFound', defaultMessage: 'Tool not found' });
 	const matchedTool = tools?.find((item) => item.url.replace(/^\//, '') === activeToolId.replace(/^\//, ''));
 	const tool = matchedTool?.widget;

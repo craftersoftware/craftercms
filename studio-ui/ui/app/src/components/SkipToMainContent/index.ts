@@ -16,3 +16,4 @@
 
 export { default } from './SkipToMainContent';
 export * from './SkipToMainContent';
+export * from './studioMainContent';

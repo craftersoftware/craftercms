@@ -68,7 +68,7 @@ export function ToolsPanel() {
 			belowToolbar
 			open={showToolsPanel}
 			landmark="complementary"
-			landmarkLabel={formatMessage({ defaultMessage: 'Tools' })}
+			landmarkLabel={formatMessage({ id: 'toolsPanel.landmark', defaultMessage: 'Tools' })}
 			width={toolsPanelWidth}
 			maxWidth={windowSize}
 			sxs={{

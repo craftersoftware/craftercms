@@ -18,29 +18,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 import { useIntl } from 'react-intl';
-import { SystemStyleObject } from '@mui/system';
-import { Theme } from '@mui/material/styles';
-
-/** Target for the shell skip link. One per document (each Studio screen is its own page). */
-export const STUDIO_MAIN_CONTENT_ID = 'studioMainContent';
-
-export const mainLandmarkSx: SystemStyleObject<Theme> = {
-	outline: 'none',
-	'&:focus-visible': {
-		outline: '2px solid',
-		outlineColor: 'primary.main',
-		outlineOffset: -2
-	}
-};
-
-export function focusStudioMainContent(): boolean {
-	const main = document.getElementById(STUDIO_MAIN_CONTENT_ID);
-	if (!(main instanceof HTMLElement)) {
-		return false;
-	}
-	main.focus();
-	return true;
-}
+import { focusStudioMainContent, STUDIO_MAIN_CONTENT_ID } from './studioMainContent';
 
 /**
  * First-focusable bypass for repeated shell chrome. Hidden until focused.
@@ -79,7 +57,7 @@ export function SkipToMainContent() {
 				}
 			}}
 		>
-			{formatMessage({ defaultMessage: 'Skip to main content' })}
+			{formatMessage({ id: 'skipToMainContent.label', defaultMessage: 'Skip to main content' })}
 		</Box>
 	);
 }

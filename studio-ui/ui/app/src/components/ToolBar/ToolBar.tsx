@@ -66,7 +66,7 @@ export function ToolBar() {
 	return (
 		<ViewToolbar
 			component="nav"
-			ariaLabel={formatMessage({ defaultMessage: 'Preview toolbar' })}
+			ariaLabel={formatMessage({ id: 'preview.toolbarLabel', defaultMessage: 'Preview toolbar' })}
 			sxs={{
 				appBar: {
 					borderBottom: '5px',
