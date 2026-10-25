@@ -55,10 +55,12 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	const widthsRef = useRef<number[]>([]);
 	const previousCountRef = useRef<number | null>(null);
 	const [visibleCount, setVisibleCount] = useState(items.length);
-	const [menuOpen, setMenuOpen] = useState(false);
+	const visibleCountRef = useRef(visibleCount);
+	const [menuAnchor, setMenuAnchor] = useState<HTMLButtonElement | null>(null);
 	const itemCount = items.length;
 
 	useLayoutEffect(() => {
+		visibleCountRef.current = visibleCount;
 		const bar = barRef.current;
 		if (!bar) {
 			return undefined;
@@ -74,17 +76,21 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			const widths = Array.from({ length: itemCount }, (_, index) => nextWidths[index] ?? 0);
 			const moreWidth = moreRef.current?.offsetWidth || MORE_BUTTON_FALLBACK_WIDTH;
 			const next = countVisibleToolbarItems(widths, bar.clientWidth, moreWidth);
-			setVisibleCount((current) => {
-				if (next === current) {
-					return current;
-				}
+			const current = visibleCountRef.current;
+			let resolved = next;
+			if (next !== current && previousCountRef.current === next && next > current) {
 				// Keep the tighter count if the button appearing would immediately reveal an item again.
-				if (previousCountRef.current === next && next > current) {
-					return current;
-				}
+				resolved = current;
+			} else if (next !== current) {
 				previousCountRef.current = current;
-				return next;
-			});
+			}
+			if (resolved !== current) {
+				visibleCountRef.current = resolved;
+				setVisibleCount(resolved);
+			}
+			if (resolved >= itemCount) {
+				setMenuAnchor(null);
+			}
 		};
 		measure();
 		const observer = new ResizeObserver(() => measure());
@@ -96,12 +102,6 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 		});
 		return () => observer.disconnect();
 	}, [itemCount, visibleCount]);
-
-	useLayoutEffect(() => {
-		if (visibleCount >= itemCount && menuOpen) {
-			setMenuOpen(false);
-		}
-	}, [itemCount, menuOpen, visibleCount]);
 
 	const overflowItems = items.slice(visibleCount);
 	const hasOverflow = overflowItems.length > 0;
@@ -135,10 +135,10 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 					<Tooltip title={moreLabel} describeChild>
 						<IconButton
 							ref={moreRef}
-							aria-expanded={menuOpen}
-							aria-controls={menuOpen ? menuId : undefined}
+							aria-expanded={Boolean(menuAnchor)}
+							aria-controls={menuAnchor ? menuId : undefined}
 							aria-haspopup="true"
-							onClick={() => setMenuOpen((open) => !open)}
+							onClick={(event) => setMenuAnchor((current) => (current ? null : event.currentTarget))}
 							sx={{
 								flex: '0 0 auto',
 								position: 'relative',
@@ -159,9 +159,9 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			</Box>
 			<Popover
 				id={menuId}
-				open={menuOpen && hasOverflow}
-				anchorEl={moreRef.current}
-				onClose={() => setMenuOpen(false)}
+				open={Boolean(menuAnchor) && hasOverflow}
+				anchorEl={menuAnchor}
+				onClose={() => setMenuAnchor(null)}
 				anchorOrigin={{ vertical: 'bottom', horizontal: align === 'end' ? 'right' : 'left' }}
 				transformOrigin={{ vertical: 'top', horizontal: align === 'end' ? 'right' : 'left' }}
 			>
