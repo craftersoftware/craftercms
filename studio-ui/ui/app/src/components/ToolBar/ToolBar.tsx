@@ -65,13 +65,13 @@ export function ToolBar() {
 
 	return (
 		<ViewToolbar
-			ref={markPreviewToolbar}
 			sxs={{
 				appBar: {
 					borderBottom: '5px',
 					background: theme.palette.background.default
 				}
 			}}
+			ref={markPreviewToolbar}
 		>
 			<section>
 				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
