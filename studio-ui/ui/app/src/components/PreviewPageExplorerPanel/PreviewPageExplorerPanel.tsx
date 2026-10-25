@@ -750,10 +750,10 @@ interface PageExplorerUIProps {
 export function PageExplorerUI(props: PageExplorerUIProps) {
 	const {
 		handleScroll,
-		handleClick,
+		handleClick: onClickNode,
 		handleOptions,
 		handleClose,
-		handleBreadCrumbClick,
+		handleBreadCrumbClick: onBreadCrumbClick,
 		optionsMenu,
 		rootPrefix,
 		nodeLookup,
@@ -767,12 +767,27 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 	const { formatMessage } = useIntl();
 	const treeHostRef = useRef<HTMLDivElement>(null);
 	const skipTreeFocus = useRef(true);
+	// The `selected` value the user just navigated to (drill or breadcrumb). `selected` also changes for reasons that
+	// aren't user navigation (e.g. the preview navigated to another page), and those must not move focus.
+	const focusTargetRef = useRef<string | null>(null);
+	const handleClick = (node: RenderTree) => {
+		focusTargetRef.current = node.id;
+		onClickNode(node);
+	};
+	const handleBreadCrumbClick = (event, node?: RenderTree) => {
+		// The root crumb is `{ id: 'root' }`, so this is `'root'`, the same value `selected` becomes.
+		// `node?.id` is undefined only when no node is passed; store null so it cannot match a later `selected`.
+		focusTargetRef.current = node?.id ?? null;
+		onBreadCrumbClick(event, node);
+	};
 	// Drill and breadcrumb navigation unmount the focused item. Move focus to the new tree.
 	useEffect(() => {
 		if (skipTreeFocus.current) {
 			skipTreeFocus.current = false;
 			return;
 		}
+		if (focusTargetRef.current !== selected) return;
+		focusTargetRef.current = null;
 		const item = treeHostRef.current?.querySelector<HTMLElement>('[role="treeitem"]');
 		item?.focus();
 	}, [selected]);
