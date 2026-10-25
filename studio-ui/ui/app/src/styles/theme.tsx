@@ -153,9 +153,11 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 						width: '24px !important'
 					},
 					'.tox .tox-tbtn__select-chevron': {
+						display: 'flex',
 						width: '24px !important'
 					},
 					'.tox .tox-listbox__select-chevron': {
+						display: 'flex',
 						width: '24px !important'
 					}
 				}
