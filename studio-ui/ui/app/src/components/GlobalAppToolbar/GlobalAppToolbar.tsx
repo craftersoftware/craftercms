@@ -39,6 +39,9 @@ export interface GlobalAppToolbarProps {
 	startContent?: React.ReactNode;
 	showHamburgerMenuButton?: boolean;
 	showAppsButton?: boolean;
+	/** Page title heading. Nested toolbars pass `h2` so the view keeps a single h1. */
+	titleComponent?: 'h1' | 'h2';
+	subtitleComponent?: 'h2' | 'h3' | 'p';
 }
 
 const translations = defineMessages({
@@ -57,7 +60,9 @@ export const GlobalAppToolbar = React.memo<GlobalAppToolbarProps>(function (prop
 		showHamburgerMenuButton = true,
 		showAppsButton = true,
 		startContent,
-		sxs
+		sxs,
+		titleComponent = 'h1',
+		subtitleComponent = 'h2'
 	} = props;
 	const { formatMessage } = useIntl();
 	const [{ openSidebar }, setState] = useGlobalAppState();
@@ -102,7 +107,7 @@ export const GlobalAppToolbar = React.memo<GlobalAppToolbarProps>(function (prop
 					{title && (
 						<Typography
 							variant="h5"
-							component="h1"
+							component={titleComponent}
 							className={props.classes?.ellipsis}
 							sx={{
 								overflow: 'hidden',
@@ -117,7 +122,7 @@ export const GlobalAppToolbar = React.memo<GlobalAppToolbarProps>(function (prop
 					{subtitle && (
 						<Typography
 							variant="body2"
-							component="h2"
+							component={subtitleComponent}
 							color="textSecondary"
 							className={props.classes?.subtitle}
 							sx={sxs?.subtitle}

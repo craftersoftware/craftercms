@@ -53,6 +53,7 @@ import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
 import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { visuallyHidden } from '@mui/utils';
 
 export interface SystemLang {
 	id: string;
@@ -603,6 +604,12 @@ export function LoginViewContainer(props: LoginViewProps) {
 		}
 	}, [language]);
 
+	// The message already names the product. Do not prefix "CrafterCMS - " again.
+	const loginTitle = formatMessage(translations.loginDialogTitle);
+	useEffect(() => {
+		document.title = loginTitle;
+	}, [loginTitle]);
+
 	return (
 		<>
 			<Dialog
@@ -632,7 +639,10 @@ export function LoginViewContainer(props: LoginViewProps) {
 			>
 				<SkipToMainContent />
 				<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
-					<DialogTitle id="loginDialog">
+					<DialogTitle id="loginDialog" component="h1">
+						<Box component="span" sx={visuallyHidden}>
+							{formatMessage(translations.loginDialogTitle)}
+						</Box>
 						<CrafterCMSLogo
 							sxs={{
 								root: {
@@ -642,7 +652,7 @@ export function LoginViewContainer(props: LoginViewProps) {
 								}
 							}}
 							width="auto"
-							alt={formatMessage(translations.loginDialogTitle)}
+							alt=""
 						/>
 					</DialogTitle>
 					<CurrentView {...currentViewProps} />

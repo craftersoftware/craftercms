@@ -27,8 +27,15 @@ import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import Typography from '@mui/material/Typography';
+import { visuallyHidden } from '@mui/utils';
 
-export function Host() {
+export interface HostProps {
+	heading?: string;
+}
+
+export function Host(props: HostProps) {
+	const { heading } = props;
 	const site = useActiveSiteId();
 	const { guestBase, previewLandingBase } = useEnv();
 	const {
@@ -127,12 +134,17 @@ export function Host() {
 						})
 			})}
 		>
+			{heading ? (
+				<Typography component="h1" sx={visuallyHidden}>
+					{heading}
+				</Typography>
+			) : null}
 			<Box
 				key={`${site}_${iframeKeyAppend}`}
 				ref={iframeRef}
 				component="iframe"
 				id="crafterCMSPreviewIframe"
-				title="Preview Frame"
+				title={heading || 'Preview'}
 				sx={{
 					width: hostSize.width ?? '100%',
 					height: hostSize.height ?? '100%',

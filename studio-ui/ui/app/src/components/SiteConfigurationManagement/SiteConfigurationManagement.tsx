@@ -632,6 +632,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
+								titleComponent={embedded ? 'h1' : 'h2'}
+								subtitleComponent="h3"
 								startContent={
 									<IconButton
 										onClick={onToggleDrawer}
@@ -777,6 +779,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="Please choose a config file from the left."
 							/>
 						}
+						titleComponent={embedded ? 'h1' : 'p'}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				</Box>

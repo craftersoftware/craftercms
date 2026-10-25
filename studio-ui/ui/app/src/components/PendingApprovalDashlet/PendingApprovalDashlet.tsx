@@ -76,6 +76,11 @@ interface PendingApprovalDashletState extends WithSelectedState<FetchPackagesRes
 
 const pendingApprovalState: PackageApprovalState[] = ['SUBMITTED'];
 
+/** Count in the dashlet title. `null` (not loaded) renders nothing; `0` renders "(0)". */
+export function formatPendingApprovalTotal(total: number | null): string {
+	return typeof total === 'number' ? `(${total})` : '';
+}
+
 export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 	const { borderLeftColor = palette.purple.tint } = props;
 	const [
@@ -228,8 +233,8 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 					defaultMessage="Pending Approval <render_total>{total}</render_total>"
 					values={{
 						total,
-						render_total(total) {
-							return total ? `(${total})` : '';
+						render_total() {
+							return formatPendingApprovalTotal(total);
 						}
 					}}
 				/>

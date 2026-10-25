@@ -15,7 +15,7 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
-import React from 'react';
+import React, { useEffect } from 'react';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
@@ -40,6 +40,7 @@ import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
 import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 
 export interface Tool {
 	title: TranslationOrText;
@@ -93,7 +94,26 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
+	const projectToolsLabel = formatMessage({ defaultMessage: 'Project tools' });
+	const toolNotFoundLabel = formatMessage({ id: 'siteTools.toolNotFound', defaultMessage: 'Tool not found' });
+	const matchedTool = tools?.find((item) => item.url.replace(/^\//, '') === activeToolId.replace(/^\//, ''));
+	const tool = matchedTool?.widget;
+	useEffect(() => {
+		if (mountMode !== 'page') {
+			return;
+		}
+		// The tools reference arrives after the first paint. Don't flash "Tool not found" in the meantime.
+		if (activeToolId && !tools) {
+			return;
+		}
+		const translatedTitle = matchedTool ? getPossibleTranslation(matchedTool.title, formatMessage) : '';
+		const pageTitle = !activeToolId
+			? projectToolsLabel
+			: typeof translatedTitle === 'string' && translatedTitle
+				? translatedTitle
+				: toolNotFoundLabel;
+		document.title = studioDocumentTitle(pageTitle);
+	}, [activeToolId, formatMessage, matchedTool, mountMode, projectToolsLabel, toolNotFoundLabel, tools]);
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -149,24 +169,21 @@ export function SiteTools(props: SiteToolsProps) {
 							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 								<LauncherOpenerButton />
 							</Box>
-							<EmptyState
-								sxs={{ root: { height: '100%', margin: 0 } }}
-								title="404"
-								subtitle={<FormattedMessage id="siteTools.toolNotFound" defaultMessage="Tool not found" />}
-							/>
+							<EmptyState sxs={{ root: { height: '100%', margin: 0 } }} title={toolNotFoundLabel} titleComponent="h1" />
 						</Box>
 					)
 				) : (
 					<EmptyState
 						sxs={{ root: { height: '100%', margin: 0 } }}
 						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
+						titleComponent="h1"
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				)}
 			</Box>
 			<ResizeableDrawer
 				landmark="nav"
-				landmarkLabel={formatMessage({ defaultMessage: 'Project tools' })}
+				landmarkLabel={projectToolsLabel}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute'
@@ -222,6 +239,7 @@ export function SiteTools(props: SiteToolsProps) {
 							))
 						) : (
 							<EmptyState
+								titleComponent="p"
 								title={
 									<FormattedMessage
 										id="siteTools.toolListingNotConfigured"

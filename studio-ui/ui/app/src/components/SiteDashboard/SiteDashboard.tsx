@@ -25,7 +25,11 @@ import { useDispatch } from 'react-redux';
 import { initDashboardConfig } from '../../state/actions/dashboard';
 import { renderWidgets } from '../Widget/renderWidgets';
 import EmptyState from '../EmptyState';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import Typography from '@mui/material/Typography';
+import { visuallyHidden } from '@mui/utils';
+import { messages as launcherMessages } from '../LauncherSection/utils';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 import Skeleton from '@mui/material/Skeleton';
 import { useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
@@ -70,14 +74,27 @@ export function Dashboard(props: DashboardProps) {
 		[]
 	);
 
+	const { formatMessage } = useIntl();
+	const dashboardLabel = formatMessage(launcherMessages.dashboard);
 	useEffect(() => {
 		if (uiConfig.xml && !dashboard) {
 			dispatch(initDashboardConfig({ configXml: uiConfig.xml }));
 		}
 	}, [uiConfig.xml, dashboard, dispatch]);
+	useEffect(() => {
+		if (mountMode === 'dialog') {
+			return;
+		}
+		document.title = studioDocumentTitle(dashboardLabel);
+	}, [dashboardLabel, mountMode]);
 	const height = 400;
 	return (
 		<SiteDashboardContext.Provider value={context}>
+			{mountMode !== 'dialog' && (
+				<Typography component="h1" sx={visuallyHidden}>
+					{dashboardLabel}
+				</Typography>
+			)}
 			<Box
 				sx={{
 					position: 'relative',
@@ -143,6 +160,7 @@ export function Dashboard(props: DashboardProps) {
 							) : (
 								<Grid size={12}>
 									<EmptyState
+										titleComponent="h2"
 										title={
 											<FormattedMessage
 												id="siteDashboard.emptyStateMessageTitle"
