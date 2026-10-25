@@ -21,7 +21,7 @@ import OpenWithRounded from '@mui/icons-material/OpenWithRounded';
 import { defineMessages, useIntl } from 'react-intl';
 import { HighlightMode } from '../constants';
 import { elementRegistryChanges$, get, getElementRecords } from '../elementRegistry';
-import { getById } from '../iceRegistry';
+import { getById, getMovableParentRecord } from '../iceRegistry';
 import { ElementRecord } from '../models/InContextEditing';
 import { clearAndListen$ } from '../store/subjects';
 import {
@@ -161,7 +161,7 @@ function isElementShown(element: HTMLElement): boolean {
 }
 
 /** Identity only. Geometry is measured for the focused button, not for every zone. */
-function collectZones(active: boolean, getState: () => GuestState): ZoneControl[] {
+function collectZones(active: boolean, getState: () => GuestState, moveMode: boolean): ZoneControl[] {
 	if (!active) {
 		return noZones;
 	}
@@ -169,6 +169,11 @@ function collectZones(active: boolean, getState: () => GuestState): ZoneControl[
 	const next: ZoneControl[] = [];
 	getElementRecords().forEach((record) => {
 		if (!record.element || !isElementShown(record.element) || clickWouldDoNothing(record, state)) {
+			return;
+		}
+		// In move mode the click epic ignores a zone that has no movable item, so a button for it would
+		// be a tab stop that does nothing.
+		if (moveMode && getMovableParentRecord(record.iceIds[0], record.element) == null) {
 			return;
 		}
 		const rect = record.element.getBoundingClientRect();
@@ -186,12 +191,12 @@ function collectZones(active: boolean, getState: () => GuestState): ZoneControl[
 	});
 	next.sort((a, b) => a.top - b.top || a.left - b.left);
 	// Rounded positions keep a 1px scroll jitter from rebuilding the list.
-	const key = next
+	const key = `${moveMode}#${next
 		.map(
 			(zone) =>
 				`${zone.id}:${zone.iceId}:${zone.modelId}:${zone.fieldId}:${zone.index}:${zone.label}:${Math.round(zone.top)}:${Math.round(zone.left)}`
 		)
-		.join('|');
+		.join('|')}`;
 	if (key === cachedKey) {
 		return cachedZones;
 	}
@@ -200,10 +205,36 @@ function collectZones(active: boolean, getState: () => GuestState): ZoneControl[
 	return next;
 }
 
+const PILL_VIEWPORT_MARGIN = 4;
+
+/**
+ * Anchors the focused pill to the zone's top-right corner, then nudges it back inside the viewport. A zone at
+ * the top of the page, or narrower than its pill and close to the left edge, would otherwise put the focus
+ * indicator off-screen where the page cannot scroll to it. Only the focused button is measured.
+ */
 function placeButton(button: HTMLElement, element: HTMLElement) {
 	const rect = element.getBoundingClientRect();
-	button.style.top = `${rect.top + window.scrollY}px`;
-	button.style.left = `${rect.left + window.scrollX + rect.width}px`;
+	let top = rect.top + window.scrollY;
+	let left = rect.left + window.scrollX + rect.width;
+	button.style.top = `${top}px`;
+	button.style.left = `${left}px`;
+	const pill = button.getBoundingClientRect();
+	if (pill.width > 1 || pill.height > 1) {
+		const viewportWidth = document.documentElement.clientWidth;
+		const dy = pill.top < PILL_VIEWPORT_MARGIN ? PILL_VIEWPORT_MARGIN - pill.top : 0;
+		let dx = 0;
+		if (pill.left < PILL_VIEWPORT_MARGIN) {
+			dx = PILL_VIEWPORT_MARGIN - pill.left;
+		} else if (pill.right > viewportWidth - PILL_VIEWPORT_MARGIN) {
+			dx = Math.min(0, viewportWidth - PILL_VIEWPORT_MARGIN - pill.right);
+		}
+		if (dx || dy) {
+			top += dy;
+			left += dx;
+			button.style.top = `${top}px`;
+			button.style.left = `${left}px`;
+		}
+	}
 }
 
 function repositionFocusedZoneButton() {
@@ -306,7 +337,7 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 	);
 	const zones = useSyncExternalStore(
 		subscribe,
-		() => collectZones(active, () => store.getState()),
+		() => collectZones(active, () => store.getState(), moveMode),
 		() => noZones
 	);
 	const zoneIdentity = zones.map((zone) => `${zone.iceId}:${zone.modelId}:${zone.fieldId}:${zone.index}`).join('|');
