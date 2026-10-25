@@ -15,6 +15,7 @@
  */
 
 import { createTheme, ThemeOptions } from '@mui/material/styles';
+import type {} from '@mui/x-tree-view/themeAugmentation';
 import palette from './palette';
 
 export const backgroundColor = palette.gray.light1;
@@ -109,6 +110,54 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 			MuiTooltip: {
 				defaultProps: {
 					disableInteractive: true
+				}
+			},
+			// WCAG 2.2 SC 2.5.8. Default IconButton sizes are already at least 24px;
+			// this floor only lifts controls that opt into smaller padding (edit-dialog copy icons are 20px).
+			MuiIconButton: {
+				styleOverrides: {
+					root: {
+						minWidth: 24,
+						minHeight: 24
+					}
+				}
+			},
+			// Tree rows and the expand glyph are hardcoded to 23.5px in the navigator.
+			// These selectors outrank that sx, including its !important font size.
+			MuiTreeItem: {
+				styleOverrides: {
+					root: {
+						'& > .MuiTreeItem-content': {
+							minHeight: 24
+						},
+						'& .MuiTreeItem-label > section': {
+							minHeight: 24
+						},
+						'& .MuiTreeItem-iconContainer': {
+							minWidth: 24,
+							minHeight: 24
+						},
+						'& .MuiTreeItem-iconContainer svg.MuiSvgIcon-root': {
+							fontSize: '24px !important',
+							width: 24,
+							height: 24
+						}
+					}
+				}
+			},
+			// TinyMCE injects its skin after the app CSS. Split-button carets are 16x28 and
+			// flush against the neighbouring control, so widen the caret itself to 24px.
+			MuiCssBaseline: {
+				styleOverrides: {
+					'.tox .tox-split-button__chevron': {
+						width: '24px !important'
+					},
+					'.tox .tox-tbtn__select-chevron': {
+						width: '24px !important'
+					},
+					'.tox .tox-listbox__select-chevron': {
+						width: '24px !important'
+					}
 				}
 			}
 		}
