@@ -128,6 +128,11 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		if (!isOwnTreeItemEvent(event)) {
 			return;
 		}
+		// The filter field lives inside the treeitem. Leave the browser's edit menu alone.
+		const target = event.target as Element | null;
+		if (target?.closest?.('input, textarea, [contenteditable]')) {
+			return;
+		}
 		event.stopPropagation();
 		if (onOpenItemMenu) {
 			event.preventDefault();

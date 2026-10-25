@@ -102,6 +102,10 @@ export function PathSelector(props: PathSelectorProps) {
 			<ButtonBase
 				disabled={disabled}
 				onClick={onOpenPathSelectionDialog}
+				aria-label={formatMessage(
+					{ id: 'pathSelector.searchInPath', defaultMessage: 'Search in path: {path}' },
+					{ path: path || formatMessage(messages.searchIn) }
+				)}
 				sx={{
 					flex: 1,
 					minHeight: 40,
@@ -110,7 +114,11 @@ export function PathSelector(props: PathSelectorProps) {
 					alignItems: 'center',
 					gap: '5px',
 					textAlign: 'left',
-					cursor: disabled ? 'default' : 'pointer'
+					cursor: disabled ? 'default' : 'pointer',
+					'&:focus-visible, &.Mui-focusVisible': {
+						outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+						outlineOffset: '-2px'
+					}
 				}}
 			>
 				{disabled ? null : <SiteExplorer sx={{ color: 'text.secondary' }} />}

@@ -37,8 +37,12 @@ export function FieldInstanceSwitcher(props: FieldInstanceSwitcherProps) {
 			</span>
 			<button
 				type="button"
-				onClick={onPrev}
-				disabled={atStart}
+				onClick={() => {
+					if (!atStart) {
+						onPrev();
+					}
+				}}
+				aria-disabled={atStart || undefined}
 				className={atStart ? 'disable' : ''}
 				aria-label={formatMessage({ defaultMessage: 'Previous' })}
 			>
@@ -48,8 +52,12 @@ export function FieldInstanceSwitcher(props: FieldInstanceSwitcherProps) {
 			</button>
 			<button
 				type="button"
-				onClick={onNext}
-				disabled={atEnd}
+				onClick={() => {
+					if (!atEnd) {
+						onNext();
+					}
+				}}
+				aria-disabled={atEnd || undefined}
 				className={atEnd ? 'disable' : ''}
 				aria-label={formatMessage({ defaultMessage: 'Next' })}
 			>

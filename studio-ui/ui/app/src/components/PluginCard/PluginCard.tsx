@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
@@ -99,6 +99,7 @@ function PluginCard(props: PluginCardProps) {
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
+	const titleId = useId();
 	const sliderRef = useRef<{ moveToItem: (itemIndex: number) => void } | null>(null);
 
 	function handleChangeIndex(value: number) {
@@ -208,8 +209,7 @@ function PluginCard(props: PluginCardProps) {
 					height: isGitOrDuplicateCard ? 'unset' : '180px',
 					overflow: 'hidden'
 				};
-				// Git and duplicate cards have nothing to open. A button there would be a dead control,
-				// and a button inside CardActionArea is a nested interactive.
+				// Git and duplicate images are not buttons. The card action area is the only control.
 				if (isGitOrDuplicateCard) {
 					return (
 						<Box key={index} sx={frameSx}>
@@ -312,24 +312,38 @@ function PluginCard(props: PluginCardProps) {
 					/>
 				</CardActionArea>
 			)}
-			<Box sx={isGitOrDuplicateCard ? { display: 'flex', justifyContent: 'start' } : undefined}>
-				<PluginMediaCarousel
-					ref={sliderRef}
-					items={renderMedias(id)}
-					onChangeItem={handleChangeIndex}
-					sx={{ width: isGitOrDuplicateCard ? 'unset' : '100%' }}
-				/>
-				{isGitOrDuplicateCard && (
+			{isGitOrDuplicateCard ? (
+				<CardActionArea
+					disabled={disableCardActionClick}
+					onClick={() => onPluginSelected(plugin, 1)}
+					aria-labelledby={titleId}
+					sx={{ display: 'flex', justifyContent: 'start' }}
+				>
+					<PluginMediaCarousel
+						ref={sliderRef}
+						items={renderMedias(id)}
+						onChangeItem={handleChangeIndex}
+						sx={{ width: 'unset' }}
+					/>
 					<CardContent sx={{ height: 'unset !important' }} className="cardContent">
-						<Typography gutterBottom variant="subtitle2" component="h2" className="cardTitle">
+						<Typography id={titleId} gutterBottom variant="subtitle2" component="h2" className="cardTitle">
 							{name}
 						</Typography>
 						<Typography gutterBottom variant="subtitle2" component="h2" color="textSecondary">
 							{plugin.description}
 						</Typography>
 					</CardContent>
-				)}
-			</Box>
+				</CardActionArea>
+			) : (
+				<Box>
+					<PluginMediaCarousel
+						ref={sliderRef}
+						items={renderMedias(id)}
+						onChangeItem={handleChangeIndex}
+						sx={{ width: '100%' }}
+					/>
+				</Box>
+			)}
 			{steps > 0 && !isGitOrDuplicateCard && (
 				<MobileStepper
 					variant="dots"

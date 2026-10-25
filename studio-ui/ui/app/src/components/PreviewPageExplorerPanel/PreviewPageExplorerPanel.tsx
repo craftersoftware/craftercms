@@ -341,7 +341,11 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 				// Page and component nodes drill in from the chevron. Enter does the same.
 				// Right does it when the node is a leaf (Right otherwise expands inline children).
 				const drillable = isPageOrComponent(node.type) && !node.id.includes(rootPrefix);
-				if (event.key === 'Enter') {
+				if (event.key === ' ') {
+					// Space selects, the same action as a mouse click on the label. Enter drills.
+					cancelTreeItemKey(event);
+					handleScroll?.(node);
+				} else if (event.key === 'Enter') {
 					cancelTreeItemKey(event);
 					if (drillable) {
 						handleClick?.(node);
@@ -761,6 +765,17 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 		rootChildren
 	} = props;
 	const { formatMessage } = useIntl();
+	const treeHostRef = useRef<HTMLDivElement>(null);
+	const skipTreeFocus = useRef(true);
+	// Drill and breadcrumb navigation unmount the focused item. Move focus to the new tree.
+	useEffect(() => {
+		if (skipTreeFocus.current) {
+			skipTreeFocus.current = false;
+			return;
+		}
+		const item = treeHostRef.current?.querySelector<HTMLElement>('[role="treeitem"]');
+		item?.focus();
+	}, [selected]);
 
 	let node: any = null;
 
@@ -816,6 +831,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 									}
 								}}
 								onClick={(e) => handleBreadCrumbClick(e, id === 'root' ? { id: 'root' } : nodeLookup[id])}
+								aria-label={id === 'root' ? formatMessage(translations.onThisPage) : undefined}
 								children={
 									id === 'root' ? (
 										<Root
@@ -833,96 +849,98 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 					)}
 				</MuiBreadcrumbs>
 			)}
-			{node.id === 'root' ? (
-				<>
-					<Typography
-						variant="subtitle1"
-						sx={{
-							fontWeight: 600,
-							color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7),
-							padding: '0 12px 2px 12px'
-						}}
-					>
-						<FormattedMessage id="pageExplorerPanel.currentContentItems" defaultMessage="Current Content Items" />
-					</Typography>
-					<SimpleTreeView
-						aria-label={formatMessage(translations.onThisPage)}
-						sx={{
-							'& > li > ul': {
-								marginLeft: '0'
-							},
-							[`& .${treeItemClasses.iconContainer}`]: {
-								[`& .${svgIconClasses.root}`]: {
-									color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
-									fontSize: '1.4rem'
+			<div ref={treeHostRef}>
+				{node.id === 'root' ? (
+					<>
+						<Typography
+							variant="subtitle1"
+							sx={{
+								fontWeight: 600,
+								color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7),
+								padding: '0 12px 2px 12px'
+							}}
+						>
+							<FormattedMessage id="pageExplorerPanel.currentContentItems" defaultMessage="Current Content Items" />
+						</Typography>
+						<SimpleTreeView
+							aria-label={formatMessage(translations.onThisPage)}
+							sx={{
+								'& > li > ul': {
+									marginLeft: '0'
+								},
+								[`& .${treeItemClasses.iconContainer}`]: {
+									[`& .${svgIconClasses.root}`]: {
+										color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
+										fontSize: '1.4rem'
+									}
 								}
-							}
-						}}
+							}}
+							slots={{
+								collapseIcon: ExpandMoreIcon,
+								expandIcon: ChevronRightIcon
+							}}
+							slotProps={{
+								collapseIcon: {
+									className: 'toggle'
+								},
+								expandIcon: {
+									className: 'toggle'
+								}
+							}}
+							disableSelection
+							expansionTrigger="iconContainer"
+							expandedItems={expanded}
+							onExpandedItemsChange={onExpandedItemsChange}
+						>
+							{node.children
+								?.filter((childNodeId) =>
+									nodeLookup[String(childNodeId)].name.toLowerCase().includes(keyword.toLowerCase())
+								)
+								.map((childNodeId, i) => (
+									<TreeItemCustom
+										key={String(childNodeId) + i}
+										node={nodeLookup[String(childNodeId)]}
+										nodeLookup={nodeLookup}
+										keyword={keyword}
+										selectedId={selected}
+										level={1}
+										isRootChild={node.type === 'root'}
+										handleScroll={handleScroll}
+										handleClick={handleClick}
+										handleOptions={handleOptions}
+									/>
+								))}
+						</SimpleTreeView>
+					</>
+				) : (
+					<SimpleTreeView
+						aria-label={node?.name}
+						disableSelection
+						expansionTrigger="iconContainer"
+						expandedItems={expanded}
+						onExpandedItemsChange={onExpandedItemsChange}
 						slots={{
 							collapseIcon: ExpandMoreIcon,
 							expandIcon: ChevronRightIcon
 						}}
 						slotProps={{
-							collapseIcon: {
-								className: 'toggle'
-							},
-							expandIcon: {
-								className: 'toggle'
-							}
+							collapseIcon: { className: 'toggle' },
+							expandIcon: { className: 'toggle' }
 						}}
-						disableSelection
-						expansionTrigger="iconContainer"
-						expandedItems={expanded}
-						onExpandedItemsChange={onExpandedItemsChange}
 					>
-						{node.children
-							?.filter((childNodeId) =>
-								nodeLookup[String(childNodeId)].name.toLowerCase().includes(keyword.toLowerCase())
-							)
-							.map((childNodeId, i) => (
-								<TreeItemCustom
-									key={String(childNodeId) + i}
-									node={nodeLookup[String(childNodeId)]}
-									nodeLookup={nodeLookup}
-									keyword={keyword}
-									selectedId={selected}
-									level={1}
-									isRootChild={node.type === 'root'}
-									handleScroll={handleScroll}
-									handleClick={handleClick}
-									handleOptions={handleOptions}
-								/>
-							))}
+						<TreeItemCustom
+							node={node}
+							keyword={keyword}
+							nodeLookup={nodeLookup}
+							selectedId={selected}
+							level={1}
+							handleScroll={handleScroll}
+							handleClick={handleClick}
+							handleOptions={handleOptions}
+						/>
 					</SimpleTreeView>
-				</>
-			) : (
-				<SimpleTreeView
-					aria-label={node?.name}
-					disableSelection
-					expansionTrigger="iconContainer"
-					expandedItems={expanded}
-					onExpandedItemsChange={onExpandedItemsChange}
-					slots={{
-						collapseIcon: ExpandMoreIcon,
-						expandIcon: ChevronRightIcon
-					}}
-					slotProps={{
-						collapseIcon: { className: 'toggle' },
-						expandIcon: { className: 'toggle' }
-					}}
-				>
-					<TreeItemCustom
-						node={node}
-						keyword={keyword}
-						nodeLookup={nodeLookup}
-						selectedId={selected}
-						level={1}
-						handleScroll={handleScroll}
-						handleClick={handleClick}
-						handleOptions={handleOptions}
-					/>
-				</SimpleTreeView>
-			)}
+				)}
+			</div>
 			{Boolean(optionsMenu.anchorEl) && (
 				<ItemActionsMenu
 					path={optionsMenu.path}
