@@ -71,6 +71,7 @@ export * from './DialogFooter';
 export * from './DialogHeader';
 export * from './DialogHeaderAction';
 export * from './DialogTitle';
+export * from './DocumentationLink';
 export * from './DraggablePanelListItem';
 export * from './DropDownMenuButton';
 export * from './DuplicateSiteDialog';

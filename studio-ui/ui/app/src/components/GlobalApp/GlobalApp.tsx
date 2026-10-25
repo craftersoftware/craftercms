@@ -38,6 +38,7 @@ import Typography from '@mui/material/Typography';
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LoadingState from '../LoadingState/LoadingState';
 import LauncherOpenerButton from '../LauncherOpenerButton';
+import DocumentationLink from '../DocumentationLink';
 import { useGlobalNavigation } from '../../hooks/useGlobalNavigation';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
@@ -118,7 +119,8 @@ function RouteNotFound() {
 				height: '100%'
 			}}
 		>
-			<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+			<Box component="section" sx={{ margin: '10px 12px 0 auto', display: 'flex' }}>
+				<DocumentationLink />
 				<LauncherOpenerButton />
 			</Box>
 			<EmptyState

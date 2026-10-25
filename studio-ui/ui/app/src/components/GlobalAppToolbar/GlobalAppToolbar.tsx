@@ -17,6 +17,7 @@
 import React from 'react';
 import Typography from '@mui/material/Typography';
 import LauncherOpenerButton from '../LauncherOpenerButton';
+import DocumentationLink from '../DocumentationLink';
 import LogoAndMenuBundleButton from '../LogoAndMenuBundleButton';
 import { defineMessages, useIntl } from 'react-intl';
 import ViewToolbar, { ViewToolbarClassKey } from '../ViewToolbar/ViewToolbar';
@@ -158,6 +159,7 @@ export const GlobalAppToolbar = React.memo<GlobalAppToolbarProps>(function (prop
 			>
 				{rightContent}
 			</Box>
+			{showAppsButton && <DocumentationLink />}
 			{showAppsButton && <LauncherOpenerButton />}
 		</ViewToolbar>
 	);

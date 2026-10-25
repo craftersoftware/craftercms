@@ -39,14 +39,17 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { IconGuideDashlet } from '../IconGuideDashlet';
 import { SiteDashboardContext } from './useSiteDashboardContext';
 import { ErrorBoundary } from '../ErrorBoundary';
+import DocumentationLink from '../DocumentationLink';
 
 export interface DashboardProps {
 	mountMode?: string;
 	onMinimize?(): void;
+	/** The legacy dashboard page already places help in its toolbar. */
+	showHelpLink?: boolean;
 }
 
 export function Dashboard(props: DashboardProps) {
-	const { mountMode, onMinimize } = props;
+	const { mountMode, onMinimize, showHelpLink = true } = props;
 
 	const {
 		palette: { mode }
@@ -95,13 +98,18 @@ export function Dashboard(props: DashboardProps) {
 					{dashboardLabel}
 				</Typography>
 			)}
+			{showHelpLink && mountMode !== 'dialog' && (
+				<Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+					<DocumentationLink />
+				</Box>
+			)}
 			<Box
 				sx={{
 					position: 'relative',
 					bgcolor: 'background.default',
 					...(desktopScreen
 						? {
-								height: mountMode === 'dialog' ? '100%' : 'calc(100% - 65px)',
+								height: mountMode === 'dialog' ? '100%' : showHelpLink ? 'calc(100% - 48px)' : 'calc(100% - 65px)',
 								overflow: 'hidden'
 							}
 						: {

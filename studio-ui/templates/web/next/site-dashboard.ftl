@@ -30,7 +30,7 @@
 	document.addEventListener("CrafterCMS.CodebaseBridgeReady", () => {
 		const { createElement, Fragment } = craftercms.libs.React;
 		const { Typography, Box } = craftercms.libs.MaterialUI;
-		const { ViewToolbar, LauncherOpenerButton, SiteDashboard } = CrafterCMSNext.components;
+		const { ViewToolbar, LauncherOpenerButton, SiteDashboard, DocumentationLink } = CrafterCMSNext.components;
 		const CrafterCMSIcon = craftercms.icons.CrafterCMSIcon;
 		function Root() {
 			return createElement(
@@ -43,9 +43,10 @@
 						createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
 						createElement(Typography, { variant: 'h5' }, 'Site Dashboard')
 					),
+					createElement(DocumentationLink),
 					createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
 				),
-				createElement(SiteDashboard)
+				createElement(SiteDashboard, { showHelpLink: false })
 			);
 		}
 		CrafterCMSNext.render('#root', Root, {}, false);

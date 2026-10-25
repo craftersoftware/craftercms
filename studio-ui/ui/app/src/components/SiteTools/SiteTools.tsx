@@ -35,6 +35,7 @@ import Paper from '@mui/material/Paper';
 import TranslationOrText from '../../models/TranslationOrText';
 import Suspencified from '../Suspencified/Suspencified';
 import LauncherOpenerButton from '../LauncherOpenerButton';
+import DocumentationLink from '../DocumentationLink';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
@@ -166,19 +167,33 @@ export function SiteTools(props: SiteToolsProps) {
 								height: '100%'
 							}}
 						>
-							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+							<Box component="section" sx={{ margin: '10px 12px 0 auto', display: 'flex' }}>
+								<DocumentationLink />
 								<LauncherOpenerButton />
 							</Box>
 							<EmptyState sxs={{ root: { height: '100%', margin: 0 } }} title={toolNotFoundLabel} titleComponent="h1" />
 						</Box>
 					)
 				) : (
-					<EmptyState
-						sxs={{ root: { height: '100%', margin: 0 } }}
-						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						titleComponent="h1"
-						image={`${baseUrl}/static-assets/images/choose_option.svg`}
-					/>
+					<Box
+						sx={{
+							display: 'flex',
+							flexDirection: 'column',
+							height: '100%'
+						}}
+					>
+						<Box component="section" sx={{ margin: '10px 12px 0 auto', display: 'flex' }}>
+							<DocumentationLink />
+						</Box>
+						<EmptyState
+							sxs={{ root: { height: '100%', margin: 0 } }}
+							title={
+								<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />
+							}
+							titleComponent="h1"
+							image={`${baseUrl}/static-assets/images/choose_option.svg`}
+						/>
+					</Box>
 				)}
 			</Box>
 			<ResizeableDrawer
