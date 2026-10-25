@@ -616,6 +616,162 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 					showAppsButton={showAppsButton}
 				/>
 			)}
+			<ResizeableDrawer
+				belowToolbar
+				open={openDrawer}
+				width={width}
+				sxs={{
+					drawerPaper: {
+						position: 'absolute',
+						...(embedded ? { top: 0 } : {})
+					}
+				}}
+				onWidthChange={setWidth}
+			>
+				<List
+					sx={{
+						width: '100%',
+						overflow: 'auto',
+						height: '100%'
+					}}
+					component="nav"
+					aria-label={formatMessage({
+						id: 'siteConfigurationManagement.configurationFiles',
+						defaultMessage: 'Configuration files'
+					})}
+					dense
+					subheader={
+						<ListSubheader
+							sx={(theme) => ({
+								background: theme.palette.background.paper,
+								padding: 0,
+								borderBottom: `1px solid ${theme.palette.divider}`
+							})}
+						>
+							{environment ? (
+								<>
+									<Tooltip
+										placement="top"
+										title={
+											<FormattedMessage
+												id="siteConfigurationManagement.environment"
+												defaultMessage='The active environment is "{environment}"'
+												values={{ environment }}
+											/>
+										}
+									>
+										<Alert
+											severity="info"
+											sx={{
+												borderRadius: 0,
+												[`& .${alertClasses.message}`]: {
+													overflow: 'hidden',
+													textOverflow: 'ellipsis',
+													whiteSpace: 'nowrap'
+												}
+											}}
+										>
+											<FormattedMessage
+												id="siteConfigurationManagement.activeEnvironment"
+												defaultMessage="{environment} Environment"
+												values={{ environment: capitalize(environment) }}
+											/>
+										</Alert>
+									</Tooltip>
+									<SearchBar
+										sxs={{
+											root: {
+												borderRadius: '0 !important',
+												border: 0,
+												'&.focus': {
+													border: '0 !important',
+													boxShadow: 'none'
+												}
+											}
+										}}
+										keyword={keyword}
+										onChange={setKeyword}
+										showActionButton={Boolean(keyword)}
+										autoFocus
+									/>
+								</>
+							) : (
+								<Box
+									component="section"
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										flexDirection: 'column',
+										padding: '10px'
+									}}
+								>
+									<Skeleton height={34} width="100%" />
+									<Skeleton height={34} width="100%" />
+								</Box>
+							)}
+						</ListSubheader>
+					}
+				>
+					{files
+						? files
+								.filter(
+									(file) =>
+										file.path.toLowerCase().includes(keyword) ||
+										getTranslation(file.title, translations, formatMessage).toLowerCase().includes(keyword) ||
+										getTranslation(file.description, translations, formatMessage).toLowerCase().includes(keyword)
+								)
+								.map((file, i) => (
+									<ListItemButton
+										selected={file.id === selectedConfigFile?.id}
+										onClick={() => {
+											if (!disabledSaveButton && file.id !== selectedConfigFile?.id) {
+												showUnsavedChangesConfirm(file);
+											} else {
+												onListItemClick(file);
+											}
+										}}
+										key={i}
+										dense
+										divider={i < files.length - 1}
+									>
+										<ListItemText
+											sx={{
+												[`& .${listItemTextClasses.primary}, & .${listItemTextClasses.secondary}`]: {
+													overflow: 'hidden',
+													textOverflow: 'ellipsis',
+													whiteSpace: 'nowrap'
+												}
+											}}
+											slotProps={{
+												primary: {
+													title: getTranslation(file.title, translations, formatMessage)
+												},
+												secondary: {
+													title: getTranslation(file.description, translations, formatMessage)
+												}
+											}}
+											primary={getTranslation(file.title, translations, formatMessage)}
+											secondary={getTranslation(file.description, translations, formatMessage)}
+										/>
+									</ListItemButton>
+								))
+						: Array(15)
+								.fill(null)
+								.map((x, i) => (
+									<ListItemButton key={i} dense divider={i < Array.length - 1}>
+										<ListItemText
+											primary={<Skeleton height={15} width="80%" />}
+											secondary={<Skeleton height={15} width="60%" />}
+											sx={{
+												[`& .${listItemTextClasses.primary}, & .${listItemTextClasses.secondary}`]: {
+													height: '20px'
+												}
+											}}
+										/>
+									</ListItemButton>
+								))}
+				</List>
+			</ResizeableDrawer>
 			{selectedConfigFile ? (
 				<Box
 					sx={{
@@ -790,162 +946,6 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 					/>
 				</Box>
 			)}
-			<ResizeableDrawer
-				belowToolbar
-				open={openDrawer}
-				width={width}
-				sxs={{
-					drawerPaper: {
-						position: 'absolute',
-						...(embedded ? { top: 0 } : {})
-					}
-				}}
-				onWidthChange={setWidth}
-			>
-				<List
-					sx={{
-						width: '100%',
-						overflow: 'auto',
-						height: '100%'
-					}}
-					component="nav"
-					aria-label={formatMessage({
-						id: 'siteConfigurationManagement.configurationFiles',
-						defaultMessage: 'Configuration files'
-					})}
-					dense
-					subheader={
-						<ListSubheader
-							sx={(theme) => ({
-								background: theme.palette.background.paper,
-								padding: 0,
-								borderBottom: `1px solid ${theme.palette.divider}`
-							})}
-						>
-							{environment ? (
-								<>
-									<Tooltip
-										placement="top"
-										title={
-											<FormattedMessage
-												id="siteConfigurationManagement.environment"
-												defaultMessage='The active environment is "{environment}"'
-												values={{ environment }}
-											/>
-										}
-									>
-										<Alert
-											severity="info"
-											sx={{
-												borderRadius: 0,
-												[`& .${alertClasses.message}`]: {
-													overflow: 'hidden',
-													textOverflow: 'ellipsis',
-													whiteSpace: 'nowrap'
-												}
-											}}
-										>
-											<FormattedMessage
-												id="siteConfigurationManagement.activeEnvironment"
-												defaultMessage="{environment} Environment"
-												values={{ environment: capitalize(environment) }}
-											/>
-										</Alert>
-									</Tooltip>
-									<SearchBar
-										sxs={{
-											root: {
-												borderRadius: '0 !important',
-												border: 0,
-												'&.focus': {
-													border: '0 !important',
-													boxShadow: 'none'
-												}
-											}
-										}}
-										keyword={keyword}
-										onChange={setKeyword}
-										showActionButton={Boolean(keyword)}
-										autoFocus
-									/>
-								</>
-							) : (
-								<Box
-									component="section"
-									sx={{
-										display: 'flex',
-										alignItems: 'center',
-										flexDirection: 'column',
-										padding: '10px'
-									}}
-								>
-									<Skeleton height={34} width="100%" />
-									<Skeleton height={34} width="100%" />
-								</Box>
-							)}
-						</ListSubheader>
-					}
-				>
-					{files
-						? files
-								.filter(
-									(file) =>
-										file.path.toLowerCase().includes(keyword) ||
-										getTranslation(file.title, translations, formatMessage).toLowerCase().includes(keyword) ||
-										getTranslation(file.description, translations, formatMessage).toLowerCase().includes(keyword)
-								)
-								.map((file, i) => (
-									<ListItemButton
-										selected={file.id === selectedConfigFile?.id}
-										onClick={() => {
-											if (!disabledSaveButton && file.id !== selectedConfigFile?.id) {
-												showUnsavedChangesConfirm(file);
-											} else {
-												onListItemClick(file);
-											}
-										}}
-										key={i}
-										dense
-										divider={i < files.length - 1}
-									>
-										<ListItemText
-											sx={{
-												[`& .${listItemTextClasses.primary}, & .${listItemTextClasses.secondary}`]: {
-													overflow: 'hidden',
-													textOverflow: 'ellipsis',
-													whiteSpace: 'nowrap'
-												}
-											}}
-											slotProps={{
-												primary: {
-													title: getTranslation(file.title, translations, formatMessage)
-												},
-												secondary: {
-													title: getTranslation(file.description, translations, formatMessage)
-												}
-											}}
-											primary={getTranslation(file.title, translations, formatMessage)}
-											secondary={getTranslation(file.description, translations, formatMessage)}
-										/>
-									</ListItemButton>
-								))
-						: Array(15)
-								.fill(null)
-								.map((x, i) => (
-									<ListItemButton key={i} dense divider={i < Array.length - 1}>
-										<ListItemText
-											primary={<Skeleton height={15} width="80%" />}
-											secondary={<Skeleton height={15} width="60%" />}
-											sx={{
-												[`& .${listItemTextClasses.primary}, & .${listItemTextClasses.secondary}`]: {
-													height: '20px'
-												}
-											}}
-										/>
-									</ListItemButton>
-								))}
-				</List>
-			</ResizeableDrawer>
 			<ConfirmDialog open={false} {...confirmDialogProps} />
 		</Box>
 	);
