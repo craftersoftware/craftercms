@@ -18,6 +18,24 @@
 export const PREVIEW_REFLOW_NARROW_QUERY = '@media (max-width: 320px)';
 
 /**
+ * Border-box height of the preview toolbar, published on the preview shell.
+ * Drawers that sit below the toolbar read it. Screens that never publish it keep the fallback.
+ */
+export const PREVIEW_TOOLBAR_HEIGHT_PROPERTY = '--craftercms-preview-toolbar-height';
+
+/** Historical below-toolbar offset, used when the preview toolbar has not published a height. */
+export const PREVIEW_TOOLBAR_HEIGHT_FALLBACK = '57px';
+
+/** CSS length for a measured toolbar, or null when there is nothing to publish. */
+export function previewToolbarHeightCss(height: number): string | null {
+	if (!(height > 0) || !Number.isFinite(height)) {
+		return null;
+	}
+	// Round up so a fractional pixel cannot leave the drawer covering the toolbar's last row.
+	return `${Math.ceil(height)}px`;
+}
+
+/**
  * At 320px wide the wrapped toolbar is about 190px tall. Pinning it on a 256px tall viewport (400% zoom of
  * a 1280x1024 window) would leave almost no room for the page, so it only sticks on taller viewports.
  */
