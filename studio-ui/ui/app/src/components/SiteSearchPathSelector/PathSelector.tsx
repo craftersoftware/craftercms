@@ -102,10 +102,11 @@ export function PathSelector(props: PathSelectorProps) {
 			<ButtonBase
 				disabled={disabled}
 				onClick={onOpenPathSelectionDialog}
+				// With no path the visible text is the name. A label that left it out would fail 2.5.3.
 				aria-label={
 					path
 						? formatMessage({ id: 'pathSelector.searchInPath', defaultMessage: 'Search in path: {path}' }, { path })
-						: formatMessage({ id: 'pathSelector.searchIn', defaultMessage: 'Search in path' })
+						: undefined
 				}
 				sx={{
 					flex: 1,
