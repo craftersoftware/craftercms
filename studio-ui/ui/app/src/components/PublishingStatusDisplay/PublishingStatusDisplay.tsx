@@ -144,7 +144,12 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 										}}
 									/>
 								</Typography>
-								<Link onClick={() => setShowTaskDetails(!showTaskDetails)} sx={{ cursor: 'pointer' }}>
+								<Link
+									component="button"
+									type="button"
+									onClick={() => setShowTaskDetails(!showTaskDetails)}
+									sx={{ cursor: 'pointer' }}
+								>
 									{showTaskDetails ? (
 										<FormattedMessage defaultMessage="Hide details" />
 									) : (

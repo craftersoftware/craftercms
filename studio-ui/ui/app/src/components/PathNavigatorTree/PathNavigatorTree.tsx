@@ -268,37 +268,17 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 	};
 
 	const onOpenItemMenu = (element: Element, path: string) => {
-		const loaderItems = getNumOfMenuOptionsForItem(getItemByPath(path));
-		// Anchoring to the treeitem lets the menu restore focus to it on close.
-		// The hover options button unmounts on mouse-leave, so that path keeps a position anchor.
-		if (element?.getAttribute('role') === 'treeitem') {
-			// anchorEl is a component prop, not part of the Redux action type (a DOM node
-			// makes that payload non-inferrable). Object.assign keeps it on the payload
-			// object so the dialog spread still receives it and the menu can restore focus.
-			dispatch(
-				showItemMegaMenu(
-					Object.assign(
-						{
-							path,
-							anchorReference: 'anchorEl' as const,
-							anchorOrigin: { vertical: 'bottom' as const, horizontal: 'right' as const },
-							numOfLoaderItems: loaderItems
-						},
-						{ anchorEl: element as HTMLElement }
-					)
-				)
-			);
-			return;
-		}
 		const anchorRect = element.getBoundingClientRect();
 		const top = anchorRect.top + getOffsetTop(anchorRect, 'top');
 		const left = anchorRect.left + getOffsetLeft(anchorRect, 'left');
+		// A coordinate anchor keeps the DOM node out of the Redux action. MUI still restores
+		// focus to the element that was focused when the menu opened.
 		dispatch(
 			showItemMegaMenu({
 				path,
 				anchorReference: 'anchorPosition',
 				anchorPosition: { top, left },
-				loaderItems
+				numOfLoaderItems: getNumOfMenuOptionsForItem(getItemByPath(path))
 			})
 		);
 	};

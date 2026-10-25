@@ -46,7 +46,7 @@ import useActiveUser from '../../hooks/useActiveUser';
 import { viewModes } from '../BrowseFilesDialog';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
-import { cancelTreeItemKey } from '../../utils/treeKeyboard';
+import { cancelTreeItemKey, isOwnTreeItemEvent } from '../../utils/treeKeyboard';
 import BrowseFilesDialogContainerSkeleton from '../BrowseFilesDialog/BrowseFilesDialogContainerSkeleton';
 import Checkbox from '@mui/material/Checkbox';
 import useEnv from '../../hooks/useEnv';
@@ -412,18 +412,31 @@ function ExternalAssetFoldersTreeView({
 			aria-selected={path === currentPath}
 			aria-labelledby={labelId}
 			onClick={(event) => {
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
+				event.stopPropagation();
 				if ((event.target as HTMLElement).closest('.MuiTreeItem-iconContainer')) {
 					return;
 				}
 				onFolderClick(event, path);
 			}}
 			onKeyDown={(event) => {
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
 				if (event.key === 'Enter') {
 					cancelTreeItemKey(event);
 					onFolderClick(event, path);
 				}
 			}}
 			label={<Box id={labelId}>{label}</Box>}
+			sx={{
+				'&:focus-visible > .MuiTreeItem-content': {
+					outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+					outlineOffset: '-2px'
+				}
+			}}
 		>
 			{foldersByPath[path]?.map((child) => (
 				<ExternalAssetFoldersTreeView

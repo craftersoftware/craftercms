@@ -187,6 +187,36 @@ function PluginCard(props: PluginCardProps) {
 		const merged = [...videos, ...screenshots];
 		return merged.map((item, index) => {
 			if (item.type !== 'video') {
+				const image = item.icon ? (
+					<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
+				) : (
+					<Box
+						component="img"
+						sx={{
+							width: isGitOrDuplicateCard ? '120px' : '100%',
+							height: isGitOrDuplicateCard ? 'unset' : '180px',
+							objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
+						}}
+						src={item.url}
+						alt={item.description ?? ''}
+					/>
+				);
+				const frameSx = {
+					display: 'block',
+					width: '100%',
+					background: isGitOrDuplicateCard ? 'none' : backgroundColor,
+					height: isGitOrDuplicateCard ? 'unset' : '180px',
+					overflow: 'hidden'
+				};
+				// Git and duplicate cards have nothing to open. A button there would be a dead control,
+				// and a button inside CardActionArea is a nested interactive.
+				if (isGitOrDuplicateCard) {
+					return (
+						<Box key={index} sx={frameSx}>
+							{image}
+						</Box>
+					);
+				}
 				return (
 					<ButtonBase
 						key={index}
@@ -195,29 +225,10 @@ function PluginCard(props: PluginCardProps) {
 								? formatMessage({ defaultMessage: 'View {description}' }, { description: item.description })
 								: formatMessage({ defaultMessage: 'View image {number}' }, { number: index + 1 })
 						}
-						sx={{
-							display: 'block',
-							width: '100%',
-							background: isGitOrDuplicateCard ? 'none' : backgroundColor,
-							height: isGitOrDuplicateCard ? 'unset' : '180px',
-							overflow: 'hidden'
-						}}
+						sx={frameSx}
 						onClick={(event) => onImageClick(event, index)}
 					>
-						{item.icon ? (
-							<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
-						) : (
-							<Box
-								component="img"
-								sx={{
-									width: isGitOrDuplicateCard ? '120px' : '100%',
-									height: isGitOrDuplicateCard ? 'unset' : '180px',
-									objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
-								}}
-								src={item.url}
-								alt={item.description}
-							/>
-						)}
+						{image}
 					</ButtonBase>
 				);
 			} else {
@@ -301,13 +312,7 @@ function PluginCard(props: PluginCardProps) {
 					/>
 				</CardActionArea>
 			)}
-			<CardActionArea
-				disabled={disableCardActionClick}
-				onClick={() => {
-					onPluginSelected(plugin, 1);
-				}}
-				sx={isGitOrDuplicateCard ? { display: 'flex', justifyContent: 'start' } : null}
-			>
+			<Box sx={isGitOrDuplicateCard ? { display: 'flex', justifyContent: 'start' } : undefined}>
 				<PluginMediaCarousel
 					ref={sliderRef}
 					items={renderMedias(id)}
@@ -315,7 +320,7 @@ function PluginCard(props: PluginCardProps) {
 					sx={{ width: isGitOrDuplicateCard ? 'unset' : '100%' }}
 				/>
 				{isGitOrDuplicateCard && (
-					<CardContent sx={isGitOrDuplicateCard ? { height: 'unset !important' } : null} className="cardContent">
+					<CardContent sx={{ height: 'unset !important' }} className="cardContent">
 						<Typography gutterBottom variant="subtitle2" component="h2" className="cardTitle">
 							{name}
 						</Typography>
@@ -324,7 +329,7 @@ function PluginCard(props: PluginCardProps) {
 						</Typography>
 					</CardContent>
 				)}
-			</CardActionArea>
+			</Box>
 			{steps > 0 && !isGitOrDuplicateCard && (
 				<MobileStepper
 					variant="dots"

@@ -99,10 +99,13 @@ export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 									pointerEvents: 'none',
 									opacity: '0.5'
 								},
-								'& i': {
+								'& button': {
 									display: 'inherit',
 									padding: '2px',
-									cursor: 'pointer'
+									cursor: 'pointer',
+									border: 0,
+									background: 'transparent',
+									color: 'inherit'
 								},
 								'& svg': {
 									fill: 'currentColor',

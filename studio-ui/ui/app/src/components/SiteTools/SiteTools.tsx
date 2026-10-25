@@ -149,7 +149,11 @@ export function SiteTools(props: SiteToolsProps) {
 							<List disablePadding sx={{ overflow: 'auto' }}>
 								{tools.map((tool) => (
 									<ListItem key={tool.url} disablePadding>
-										<ListItemButton selected={`/${tool.url}` === activeToolId} onClick={() => onNavItemClick(tool.url)}>
+										<ListItemButton
+											selected={`/${tool.url}` === activeToolId}
+											aria-current={`/${tool.url}` === activeToolId ? 'page' : undefined}
+											onClick={() => onNavItemClick(tool.url)}
+										>
 											<ListItemIcon sx={{ minWidth: 36 }}>
 												<SystemIcon icon={tool.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
 											</ListItemIcon>

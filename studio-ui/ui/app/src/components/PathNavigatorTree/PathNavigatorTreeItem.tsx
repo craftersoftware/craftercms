@@ -37,7 +37,7 @@ import { lookupItemByPath } from '../../utils/content';
 import { PathNavigatorTreeStateProps } from './PathNavigatorTree';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { cancelTreeItemKey, isTreeContextMenuKey } from '../../utils/treeKeyboard';
+import { cancelTreeItemKey, isOwnTreeItemEvent, isTreeContextMenuKey } from '../../utils/treeKeyboard';
 
 export interface PathNavigatorTreeItemProps extends Pick<
 	PathNavigatorTreeStateProps,
@@ -73,6 +73,7 @@ const translations = defineMessages({
 
 export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	const labelId = useId();
+	const descriptionId = useId();
 	const {
 		path,
 		itemsByPath,
@@ -123,14 +124,22 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	};
 
 	const onContextMenu = (event: React.MouseEvent<HTMLElement>) => {
+		// The handler sits on the treeitem root. A right-click on a nested item bubbles here.
+		if (!isOwnTreeItemEvent(event)) {
+			return;
+		}
+		event.stopPropagation();
 		if (onOpenItemMenu) {
 			event.preventDefault();
-			const menuButton = event.currentTarget.querySelector('[data-item-menu]');
+			const menuButton = event.currentTarget.querySelector(':scope > .MuiTreeItem-content [data-item-menu]');
 			onOpenItemMenu(menuButton ?? event.currentTarget, path);
 		}
 	};
 
 	const onItemKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+		if (!isOwnTreeItemEvent(event)) {
+			return;
+		}
 		// Enter activates the item. MUI's default Enter expands a parent instead.
 		if (event.key === 'Enter') {
 			cancelTreeItemKey(event);
@@ -176,8 +185,10 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 					key="more"
 					itemId={`${path}::__more__`}
 					aria-level={level + 1}
-					aria-selected={false}
 					onKeyDown={(event) => {
+						if (!isOwnTreeItemEvent(event)) {
+							return;
+						}
 						if (event.key === 'Enter' || event.key === ' ') {
 							cancelTreeItemKey(event);
 							onMoreClick(path);
@@ -200,26 +211,34 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							/>
 						</Button>
 					}
-					sx={{
-						[`& > .${treeItemClasses.content}`]: {
-							pt: 0,
-							pb: 0,
-							pr: 0,
-							alignItems: 'center',
-							minHeight: '23.5px',
-							cursor: 'default',
-							'&:hover': {
-								background: 'none'
+					sx={[
+						{
+							[`& > .${treeItemClasses.content}`]: {
+								pt: 0,
+								pb: 0,
+								pr: 0,
+								alignItems: 'center',
+								minHeight: '23.5px',
+								cursor: 'default',
+								'&:hover': {
+									background: 'none'
+								}
+							},
+							[`& .${treeItemClasses.label}`]: {
+								paddingLeft: 0
+							},
+							[`& .${treeItemClasses.iconContainer}`]: {
+								width: '26px',
+								marginRight: 0
 							}
 						},
-						[`& .${treeItemClasses.label}`]: {
-							paddingLeft: 0
-						},
-						[`& .${treeItemClasses.iconContainer}`]: {
-							width: '26px',
-							marginRight: 0
+						{
+							'&:focus-visible > .MuiTreeItem-content': {
+								outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+								outlineOffset: '-2px'
+							}
 						}
-					}}
+					]}
 				/>
 			);
 	} else if (totalByPath[path] > 0 && !childrenByParentPath[path]?.length) {
@@ -303,6 +322,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 			aria-level={level}
 			aria-selected={Boolean(active[path])}
 			aria-labelledby={labelId}
+			aria-describedby={item ? descriptionId : undefined}
 			onKeyDown={onItemKeyDown}
 			onContextMenu={onContextMenu}
 			slots={{
@@ -336,6 +356,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 								}
 							}}
 							item={item}
+							descriptionId={descriptionId}
 							labelTypographyProps={{ id: labelId, variant: 'body2' }}
 							showNavigableAsLinks={showNavigableAsLinks}
 							showPublishingTarget={showPublishingTarget}
