@@ -29,6 +29,7 @@ export type CredentialsErrorBannerProps = PropsWithChildren<{
  * Credential-failure banner shared by the login dialog and the session re-login dialog.
  * The fill is `theme.palette.error.main`. Text is black when that is at least 4.5:1, otherwise white.
  * `getContrastText` only requires 3:1, which would pick black on a red that fails 4.5:1.
+ * There is no border. A border in the text colour is white in light mode and disappears on the fill.
  */
 export function CredentialsErrorBanner(props: CredentialsErrorBannerProps) {
 	const { id, className, sx, children } = props;
@@ -47,7 +48,6 @@ export function CredentialsErrorBanner(props: CredentialsErrorBannerProps) {
 						color,
 						padding: theme.spacing(1),
 						borderRadius: theme.spacing(1),
-						border: `1px solid ${color}`,
 						display: 'flex',
 						placeContent: 'center',
 						lineHeight: 1.7,

@@ -28,6 +28,8 @@ import {
 } from '../../services/auth';
 import { isBlank, unescapeHTML } from '../../utils/string';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import LogInForm from '../LoginForm/LoginForm';
 import MenuItem from '@mui/material/MenuItem';
 import { fetchProductLanguages } from '../../services/configuration';
@@ -164,10 +166,11 @@ function LoginView(props: SubViewProps) {
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
 	const [errorDetail, setErrorDetail] = useState('');
+	// Starting lock duration, announced once from visually hidden text. It does not change every second.
+	const [errorAnnouncement, setErrorAnnouncement] = useState('');
 	// Only a rejected login marks the fields invalid. The locked-account message is not a field error.
 	const [credentialsFailed, setCredentialsFailed] = useState(false);
-	// Initial lock text, including the starting duration. Captured once so the alert does not change every second.
-	const initialLockText = useRef<string | null>(null);
+	const initialLockAnnouncement = useRef<string | null>(null);
 	const lockedTimer = useTimer(lockedTimeSeconds);
 	const username$ = useDebouncedInput(
 		useCallback(
@@ -188,21 +191,20 @@ function LoginView(props: SubViewProps) {
 	useEffect(() => {
 		if (lockedErrorMessage && nnou(lockedTimer)) {
 			if (lockedTimer === 0) {
-				initialLockText.current = null;
+				initialLockAnnouncement.current = null;
 				setError(null);
 				setErrorDetail('');
+				setErrorAnnouncement('');
 				setCredentialsFailed(false);
 			} else {
-				if (initialLockText.current == null && nnou(lockedTimeSeconds)) {
+				if (initialLockAnnouncement.current == null && nnou(lockedTimeSeconds)) {
 					const seconds = lockedTimeSeconds;
-					initialLockText.current = `${unescapeHTML(lockedErrorMessage)}. ${formatMessage(
-						translations.lockedAccountTryAgain,
-						{
-							fullTime: seconds > 60,
-							time: seconds > 60 ? moment().add(seconds, 'seconds').fromNow() : seconds
-						}
-					)}`;
-					setError(initialLockText.current);
+					initialLockAnnouncement.current = formatMessage(translations.lockedAccountTryAgain, {
+						fullTime: seconds > 60,
+						time: seconds > 60 ? moment().add(seconds, 'seconds').fromNow() : seconds
+					});
+					setError(`${unescapeHTML(lockedErrorMessage)}.`);
+					setErrorAnnouncement(initialLockAnnouncement.current);
 				}
 				setErrorDetail(
 					formatMessage(translations.lockedAccountTryAgain, {
@@ -213,9 +215,10 @@ function LoginView(props: SubViewProps) {
 				setCredentialsFailed(false);
 			}
 		} else if (qsError) {
-			initialLockText.current = null;
+			initialLockAnnouncement.current = null;
 			setError(formatMessage(translations.incorrectCredentialsMessage));
 			setErrorDetail('');
+			setErrorAnnouncement('');
 			setCredentialsFailed(true);
 			// This avoids keeping a stored language for a username that is incorrect.
 			// e.g. wrong username submitted.
@@ -230,9 +233,10 @@ function LoginView(props: SubViewProps) {
 		} else {
 			localStorage.setItem('username', username);
 			setStoredLanguage(language, username);
-			initialLockText.current = null;
+			initialLockAnnouncement.current = null;
 			setError('');
 			setErrorDetail('');
+			setErrorAnnouncement('');
 			setCredentialsFailed(false);
 			onSubmit(true);
 		}
@@ -240,7 +244,13 @@ function LoginView(props: SubViewProps) {
 	return (
 		<>
 			<DialogContent>
-				<HeaderView error={error} errorDetail={errorDetail} introMessage="" classes={classes} />
+				<HeaderView
+					error={error}
+					errorDetail={errorDetail}
+					errorAnnouncement={errorAnnouncement}
+					introMessage=""
+					classes={classes}
+				/>
 				<LogInForm
 					children={children}
 					classes={classes}
@@ -478,18 +488,21 @@ function ResetView(props: SubViewProps) {
 function HeaderView({
 	error,
 	errorDetail,
+	errorAnnouncement,
 	introMessage,
 	classes
 }: {
 	error?: string | null;
 	errorDetail?: string;
+	errorAnnouncement?: string;
 	introMessage?: React.ReactNode;
 	classes?: { errorMessage?: string; recoverInfoMessage?: string };
 }) {
 	// `key` replaces the node when this switches between the intro and the alert. The same
 	// element type without a key reuses the node and only updates attributes, which is not an
-	// insertion. A lock alert includes the starting duration once. The sibling is the visual
-	// countdown and is not a live region, so later ticks are not announced again.
+	// insertion. A lock alert's visible text is the message. The starting duration is visually
+	// hidden inside the alert so it is announced once. The sibling is the visual countdown and
+	// is not a live region, so later ticks are not announced again.
 	if (error) {
 		return (
 			<>
@@ -500,6 +513,12 @@ function HeaderView({
 					sx={{ marginBottom: (theme) => theme.spacing(1) }}
 				>
 					{error}
+					{errorAnnouncement ? (
+						<Box component="span" sx={visuallyHidden}>
+							{'\u00A0'}
+							{errorAnnouncement}
+						</Box>
+					) : null}
 				</CredentialsErrorBanner>
 				{errorDetail ? (
 					<Typography component="span" variant="body2" sx={{ display: 'block', textAlign: 'center', mb: 1 }}>
