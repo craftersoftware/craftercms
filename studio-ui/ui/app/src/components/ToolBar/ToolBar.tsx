@@ -31,10 +31,6 @@ import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
 import { useTheme } from '@mui/material';
 
 const translations = defineMessages({
-	openToolsPanel: {
-		id: 'openToolsPanel.label',
-		defaultMessage: 'Open tools panel'
-	},
 	toggleSidebarTooltip: {
 		id: 'common.toggleSidebarTooltip',
 		defaultMessage: 'Toggle sidebar'
@@ -74,7 +70,7 @@ export function ToolBar() {
 			<section>
 				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
 					<LogoAndMenuBundleButton
-						aria-label={formatMessage(translations.openToolsPanel)}
+						aria-label={formatMessage(translations.toggleSidebarTooltip)}
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
 					/>
 				</Tooltip>

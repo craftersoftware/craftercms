@@ -108,7 +108,11 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 			},
 			MuiTooltip: {
 				defaultProps: {
-					disableInteractive: true
+					// WCAG 1.4.13: the pointer must be able to rest on the tooltip.
+					// MUI 9 defaults this to false; the previous override forced it closed.
+					disableInteractive: false,
+					// The tooltip is offset from its trigger. This delay lets the pointer cross that gap.
+					leaveDelay: 200
 				}
 			}
 		}
