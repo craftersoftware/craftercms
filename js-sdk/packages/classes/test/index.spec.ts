@@ -146,7 +146,7 @@ describe('CrafterCMS Classes', () => {
 			it('Should return a response from the GET request', (done) => {
 				nock('http://localhost:8080').get('/api/1/test/getItem').query({ id: 1 }).reply(200, { id: 1, name: 'test' });
 
-				httpGet('http://localhost:8080/api/1/test/getItem?id=1').subscribe((response) => {
+				httpGet('http://localhost:8080/api/1/test/getItem', { id: 1 }).subscribe((response) => {
 					expect(response).to.not.be.null;
 					expect(response).to.be.an('object');
 					expect(response).to.deep.equal({ id: 1, name: 'test' });
