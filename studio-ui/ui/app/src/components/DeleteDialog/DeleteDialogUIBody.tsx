@@ -32,11 +32,7 @@ import Box from '@mui/material/Box';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 import TextField from '@mui/material/TextField';
 
-const sectionWarningAlertSx = {
-	borderRadius: 0,
-	borderLeft: 'none',
-	borderRight: 'none'
-};
+const sectionWarningAlertSx = { borderRadius: 0 };
 
 export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 	const {
@@ -73,7 +69,7 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						selectedItems={selectedItems}
 						disabled={isDisabled}
 					/>
-					<ListItem divider dense>
+					<ListItem divider dense sx={{ borderTop: 1, borderColor: 'divider' }}>
 						<ListItemText
 							primary={
 								<Typography variant="subtitle1" component="h2">
@@ -85,7 +81,11 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 					{dependentItems.length ? (
 						<>
 							<Alert severity="warning" sx={sectionWarningAlertSx}>
-								<FormattedMessage id="deleteDialog.brokenItems" defaultMessage="Will have broken references" />
+								<FormattedMessage
+									id="deleteDialog.brokenItems"
+									defaultMessage="Deleting the selected items will break references in {count, plural, one {the item} other {the # items}} below."
+									values={{ count: dependentItems.length }}
+								/>
 							</Alert>
 							<List>
 								{dependentItems.map(({ path }) => {
@@ -148,7 +148,11 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						banner={
 							childItems.length ? (
 								<Alert severity="warning" sx={sectionWarningAlertSx}>
-									<FormattedMessage id="deleteDialog.willGetDeleted" defaultMessage="Will get deleted" />
+									<FormattedMessage
+										id="deleteDialog.childItemsWillBeDeletedWarning"
+										defaultMessage="{count, plural, one {This child item} other {These # child items}} will also be deleted."
+										values={{ count: childItems.length }}
+									/>
 								</Alert>
 							) : undefined
 						}
