@@ -142,7 +142,7 @@
 		"build-if-changed": "^1.5.5",
 		"esbuild": "^0.28.2",
 		"eslint": "^10.13.0",
-		"eslint-plugin-formatjs": "^6.6.3",
+		"eslint-plugin-formatjs": "^8.1.2",
 		"eslint-plugin-react-hooks": "^7.1.1",
 		"eslint-plugin-react-refresh": "^0.5.7",
 		"globals": "^17.13.0",
