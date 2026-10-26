@@ -29,6 +29,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MoreRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
+import DriveFileMoveOutlinedIcon from '@mui/icons-material/DriveFileMoveOutlined';
 import {
 	deleteItem,
 	duplicateItem,
@@ -41,24 +42,33 @@ import {
 	insertItem,
 	isInheritedField,
 	modelHierarchyMap,
+	moveItem,
 	sortDownItem,
 	sortUpItem
 } from '../contentController';
 import { clearAndListen$ } from '../store/subjects';
 import { startListening } from '../store/actions';
-import { ElementRecord } from '../models/InContextEditing';
-import { extractCollection, findParentModelId } from '@craftercms/studio-ui/utils/model';
+import { ElementRecord, ICERecord } from '../models/InContextEditing';
+import { extractCollection, extractCollectionItem, findParentModelId } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
 import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
-import { exists, findContainerRecord, getById, getReferentialEntries, runValidation } from '../iceRegistry';
+import {
+	exists,
+	findContainerRecord,
+	getById,
+	getRecordDropTargets,
+	getReferentialEntries,
+	isTypeAcceptedAsByField,
+	runValidation
+} from '../iceRegistry';
 import { post } from '../utils/communicator';
 import { requestEdit, snackGuestMessage } from '@craftercms/studio-ui/state/actions/preview';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { getParentModelId, resolvePlacementForZone } from '../utils/ice';
 import { fromICEId, get } from '../elementRegistry';
-import { beforeWrite$ } from '../store/util';
+import { beforeWrite$, checkIfLockedOrModified, lockPaths$ } from '../store/util';
 import { useStore } from './GuestContext';
 import UltraStyledTypography from './UltraStyledTypography';
 import UltraStyledTooltip from './UltraStyledTooltip';
@@ -67,7 +77,16 @@ import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import {
+	appendIndexForDropZone,
+	contentPathForIceRecord,
+	dropZoneBlocker,
+	isSymmetricIndex,
+	moveTargetRefusal,
+	zoneContainsInstance
+} from '../utils/keyboardPlacement';
 import { announceGuestStatus } from '../utils/guestAnnounce';
+import { GuestState } from '../store/models/GuestStore';
 import {
 	clearZoneOpenedFromKeyboard,
 	focusAddressesAfterRemoval,
@@ -86,6 +105,7 @@ const zoneActionLabels = defineMessages({
 	moveUpName: { id: 'zoneMenu.moveUpName', defaultMessage: 'Move up' },
 	moveDownName: { id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' },
 	trashName: { id: 'zoneMenu.trashName', defaultMessage: 'Trash' },
+	moveTo: { id: 'zoneMenu.moveTo', defaultMessage: 'Move to another zone' },
 	options: { id: 'words.options', defaultMessage: 'Options' },
 	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' },
 	drag: { id: 'zoneMenu.drag', defaultMessage: 'Drag {label}' }
@@ -93,9 +113,58 @@ const zoneActionLabels = defineMessages({
 
 const zoneMenuMessages = defineMessages({
 	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
+	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: 'That zone cannot be moved to.' },
+	movedTo: { id: 'ice.movedTo', defaultMessage: 'Moved {label} to {zone}.' },
 	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' },
 	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
 });
+
+function collectMoveTargets(
+	isMovable: boolean,
+	nodeSelectorItemRecord: ICERecord | null,
+	state: GuestState
+): Array<{ iceId: number; label: string }> {
+	if (!isMovable || !nodeSelectorItemRecord?.fieldId) {
+		return [];
+	}
+	const origin = findContainerRecord(
+		nodeSelectorItemRecord.modelId,
+		nodeSelectorItemRecord.fieldId,
+		nodeSelectorItemRecord.index
+	);
+	const models = getCachedModels();
+	const draggedModelId = extractCollectionItem(
+		models[nodeSelectorItemRecord.modelId],
+		nodeSelectorItemRecord.fieldId,
+		nodeSelectorItemRecord.index
+	);
+	const draggedModel = typeof draggedModelId === 'string' ? models[draggedModelId] : null;
+	const contentTypeId = draggedModel?.craftercms.contentTypeId;
+	const acceptedMode = draggedModel?.craftercms.path ? 'sharedExisting' : 'embedded';
+	return getRecordDropTargets(nodeSelectorItemRecord.id).flatMap((target) => {
+		const targetIndex = appendIndexForDropZone(target);
+		const entry = fromICEId(target.id);
+		const element = entry ? get(entry.id) : null;
+		const lock = element ? checkIfLockedOrModified(state, element) : null;
+		const field = getReferentialEntries(target).field;
+		const typeAccepted = contentTypeId ? isTypeAcceptedAsByField(field, contentTypeId, acceptedMode) : true;
+		const refusal = moveTargetRefusal({
+			sameZone: target.id === origin?.id,
+			symmetric: isSymmetricIndex(target.fieldId, targetIndex),
+			blocked: dropZoneBlocker(target) != null,
+			duplicate: typeof draggedModelId === 'string' && zoneContainsInstance(target, draggedModelId),
+			hasElement: element != null,
+			externallyModified: Boolean(lock?.isExternallyModified),
+			lockedByOther: Boolean(lock?.isLocked && !lock.isLockedByCurrentUser),
+			typeAccepted
+		});
+		if (refusal || !element) {
+			return [];
+		}
+		const labeled = get(element.id);
+		return [{ iceId: target.id, label: labeled?.label || element.label || target.fieldId }];
+	});
+}
 
 type ZoneAction = keyof Omit<typeof zoneActionLabels, 'drag'>;
 
@@ -124,6 +193,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	const menuRef = React.useRef<HTMLDivElement>(null);
 	const [trashAnchor, setTrashAnchor] = useState<HTMLElement | null>(null);
+	const [moveToAnchor, setMoveToAnchor] = useState<HTMLElement | null>(null);
 	const [showTrashConfirmation, setShowTrashConfirmation] = useState<boolean>(false);
 	const { formatMessage } = useIntl();
 
@@ -280,6 +350,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const zoneLabel = record.label || field?.name || contentType?.name || '';
 
 	const store = useStore();
+	const moveTargets = collectMoveTargets(Boolean(isMovable), nodeSelectorItemRecord, store.getState());
 	const named = (action: ZoneAction): string => {
 		const actionText = formatMessage(zoneActionLabels[action]) as string;
 		if (!zoneLabel) {
@@ -508,6 +579,79 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		setShowTrashConfirmation(true);
 	};
 
+	const refuseMove = () => {
+		post(
+			snackGuestMessage({
+				level: 'suggestion',
+				message: formatMessage(zoneMenuMessages.moveRefused) as string
+			})
+		);
+	};
+
+	const onMoveTo = (targetIceId: number) => {
+		setMoveToAnchor(null);
+		const source = nodeSelectorItemRecord;
+		const target = getById(targetIceId);
+		const targetIndex = target ? appendIndexForDropZone(target) : null;
+		const allowed = moveTargets.some((candidate) => candidate.iceId === targetIceId);
+		// Min-count, symmetry and path checks run before lockPaths$. A refused move never locks.
+		if (
+			!source ||
+			!target ||
+			targetIndex == null ||
+			!allowed ||
+			!isSymmetricIndex(source.fieldId, source.index) ||
+			!isSymmetricIndex(target.fieldId, targetIndex)
+		) {
+			refuseMove();
+			return;
+		}
+		const zoneName = moveTargets.find((candidate) => candidate.iceId === targetIceId)?.label ?? '';
+		const paths = [contentPathForIceRecord(source), contentPathForIceRecord(target)];
+		if (paths.some((path) => !path)) {
+			refuseMove();
+			return;
+		}
+		const sourceContainer = findContainerRecord(source.modelId, source.fieldId, source.index);
+		const sourceCollection = extractCollection(getCachedModel(source.modelId), source.fieldId, source.index);
+		const sourceLength = Array.isArray(sourceCollection) ? sourceCollection.length : numOfItemsInContainerCollection;
+		if (sourceContainer && sourceLength != null) {
+			const minCount = runValidation(sourceContainer.id, 'minCount', [sourceLength - 1]);
+			if (minCount) {
+				post(snackGuestMessage(minCount));
+				return;
+			}
+		}
+		const originIceId = record.iceIds[0];
+		let moved = false;
+		lockPaths$(paths, store.getState()).subscribe({
+			next: () => {
+				moved = true;
+				moveItem(source.modelId, source.fieldId, source.index, target.modelId, target.fieldId, targetIndex);
+				announceGuestStatus(
+					formatMessage(zoneMenuMessages.movedTo, { label: zoneLabel || zoneName, zone: zoneName }) as string
+				);
+				requestZoneFocus({
+					iceId: originIceId,
+					address: {
+						modelId: target.modelId,
+						fieldId: target.fieldId,
+						index: String(targetIndex)
+					},
+					afterRegistryChange: true
+				});
+			},
+			complete: () => {
+				if (!moved) {
+					// beforeWrite$ already reported the lock failure. A second snack is wrong when the
+					// write was cancelled rather than rejected with a lock conflict.
+					requestZoneFocus({ iceId: originIceId });
+				}
+			}
+		});
+		closeMenu();
+	};
+
 	const onDragStart = (e) => {
 		let _record = record;
 		if (recordType === 'component' && nodeSelectorItemRecord) {
@@ -552,6 +696,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	// endregion
 
 	const closeSubmenus = () => {
+		setMoveToAnchor(null);
 		setShowTrashConfirmation(false);
 	};
 
@@ -572,6 +717,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		isLastItem,
 		isMovable,
 		isTrashable,
+		moveToAnchor,
 		showTrashConfirmation,
 		closeSubmenus,
 		iceId: record.iceIds[0]
@@ -585,7 +731,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
 			// A click can leave focus on the document while this menu is still open.
 			const looseFocus = e.target === document.body || e.target === document.documentElement || e.target === document;
-			const submenuOpen = refs.current.showTrashConfirmation;
+			const submenuOpen = Boolean(refs.current.moveToAnchor) || refs.current.showTrashConfirmation;
 			// Escape inside the confirm menu closes only that menu. Other widgets keep their keys.
 			if (e.key === 'Escape' && submenuOpen && (inOurSubmenu || inZoneChrome)) {
 				e.preventDefault();
@@ -640,7 +786,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			}
 			e.stopPropagation();
 			e.preventDefault();
-			if (refs.current.showTrashConfirmation) {
+			if (refs.current.moveToAnchor || refs.current.showTrashConfirmation) {
 				refs.current.closeSubmenus();
 				return;
 			}
@@ -743,6 +889,23 @@ export function ZoneMenu(props: ZoneMenuProps) {
 							</UltraStyledTooltip>
 						)
 					]}
+				{moveTargets.length > 0 && (!isLockedItem || !isEmbedded) && (
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.moveTo)} key="moveTo">
+						<UltraStyledIconButton
+							size="small"
+							aria-haspopup="menu"
+							aria-expanded={Boolean(moveToAnchor)}
+							aria-label={named('moveTo')}
+							sx={{ minWidth: 24, minHeight: 24 }}
+							onClick={(event) => {
+								event.stopPropagation();
+								setMoveToAnchor(event.currentTarget);
+							}}
+						>
+							<DriveFileMoveOutlinedIcon />
+						</UltraStyledIconButton>
+					</UltraStyledTooltip>
+				)}
 				{isTrashable && !isLockedItem && (
 					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.trashName)} key="trash">
 						<UltraStyledIconButton
@@ -790,6 +953,44 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledIconButton>
 				</UltraStyledTooltip>
 			</Box>
+			<Menu
+				anchorEl={moveToAnchor}
+				open={Boolean(moveToAnchor)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setMoveToAnchor(null);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				sx={{ zIndex: 1501 }}
+			>
+				{moveTargets.map((target) => (
+					<MenuItem
+						key={target.iceId}
+						onClick={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+							onMoveTo(target.iceId);
+						}}
+					>
+						<UltraStyledTypography>
+							<FormattedMessage
+								id="zoneMenu.moveToZone"
+								defaultMessage="Move to {zone}"
+								values={{ zone: target.label }}
+							/>
+						</UltraStyledTypography>
+					</MenuItem>
+				))}
+			</Menu>
 			<Menu
 				anchorEl={trashAnchor}
 				open={showTrashConfirmation}

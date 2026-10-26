@@ -36,5 +36,15 @@
 	"zoneMenu.moveDownName": "Nach unten verschieben",
 	"zoneMenu.trashName": "Entfernen",
 	"zoneMenu.cancelName": "Abbrechen",
-	"ice.moved": "{label} wurde verschoben."
+	"ice.moved": "{label} wurde verschoben.",
+	"ice.insertHereNamed": "{contentType} in {zone} einfügen",
+	"ice.inserted": "{contentType} wurde in {zone} eingefügt.",
+	"ice.movedTo": "{label} wurde nach {zone} verschoben.",
+	"zoneMenu.moveTo": "In eine andere Zone verschieben",
+	"zoneMenu.moveToZone": "Nach {zone} verschieben",
+	"zoneMenu.moveRefused": "Verschieben in diese Zone ist nicht möglich.",
+	"keyboardPlacement.notAccepted": "Diese Zone akzeptiert {contentType} nicht.",
+	"keyboardPlacement.notEditable": "Diese Zone kann nicht bearbeitet werden.",
+	"keyboardPlacement.missingZone": "Die Zielzone ist nicht mehr verfügbar.",
+	"keyboardPlacement.duplicate": "Diese Zone enthält {contentType} bereits."
 }

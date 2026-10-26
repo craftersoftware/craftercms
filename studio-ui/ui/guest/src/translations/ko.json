@@ -36,5 +36,15 @@
 	"zoneMenu.moveDownName": "아래로 이동",
 	"zoneMenu.trashName": "삭제",
 	"zoneMenu.cancelName": "취소",
-	"ice.moved": "{label}을(를) 이동했습니다."
+	"ice.moved": "{label}을(를) 이동했습니다.",
+	"ice.insertHereNamed": "{contentType}을(를) {zone}에 삽입",
+	"ice.inserted": "{contentType}을(를) {zone}에 삽입했습니다.",
+	"ice.movedTo": "{label}을(를) {zone}(으)로 이동했습니다.",
+	"zoneMenu.moveTo": "다른 영역으로 이동",
+	"zoneMenu.moveToZone": "{zone}(으)로 이동",
+	"zoneMenu.moveRefused": "해당 영역으로 이동할 수 없습니다.",
+	"keyboardPlacement.notAccepted": "이 영역은 {contentType}을(를) 허용하지 않습니다.",
+	"keyboardPlacement.notEditable": "이 영역은 편집할 수 없습니다.",
+	"keyboardPlacement.missingZone": "대상 영역을 더 이상 사용할 수 없습니다.",
+	"keyboardPlacement.duplicate": "이 영역에 이미 {contentType}이(가) 있습니다."
 }

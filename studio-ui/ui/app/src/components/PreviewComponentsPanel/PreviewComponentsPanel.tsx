@@ -27,6 +27,7 @@ import {
 	contentTypeDropTargetsRequest,
 	pushIcePanelPage,
 	setContentTypeFilter,
+	setDropTargetPlacement,
 	setPreviewEditMode
 } from '../../state/actions/preview';
 import { DraggablePanelListItem } from '../DraggablePanelListItem/DraggablePanelListItem';
@@ -181,16 +182,26 @@ export function PreviewComponentsPanel() {
 		);
 	};
 	const onListDropTargetsClick = () => {
+		const contentType = menuContext.contentType;
 		dispatch(
-			pushIcePanelPage(
-				createToolsPanelPage(
-					formatMessage({ defaultMessage: 'Drop Targets for {name}' }, { name: menuContext.contentType.name }),
-					[createWidgetDescriptor({ id: 'craftercms.components.PreviewDropTargetsPanel' })],
-					'icePanel'
+			batchActions([
+				setDropTargetPlacement({ contentType }),
+				pushIcePanelPage(
+					createToolsPanelPage(
+						formatMessage({ defaultMessage: 'Drop Targets for {name}' }, { name: contentType.name }),
+						[createWidgetDescriptor({ id: 'craftercms.components.PreviewDropTargetsPanel' })],
+						'icePanel'
+					)
 				)
-			)
+			])
 		);
-		getHostToGuestBus().next(contentTypeDropTargetsRequest({ contentTypeId: menuContext.contentType.id }));
+		getHostToGuestBus().next(
+			contentTypeDropTargetsRequest({
+				contentTypeId: contentType.id,
+				createMode: ['embedded', 'shared'],
+				contentType
+			})
+		);
 	};
 	const onMenuButtonClickHandler = (e: React.MouseEvent<HTMLButtonElement>, contentType: ContentType) => {
 		const { backgroundColor, textColor } = getAvatarWithIconColors(contentType.name, theme, darken);

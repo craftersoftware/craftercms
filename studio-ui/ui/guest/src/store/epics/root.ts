@@ -62,6 +62,7 @@ import {
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
 	contentTypeDropTargetsResponse,
+	insertComponentAtDropZone,
 	instanceDragBegun,
 	instanceDragEnded,
 	snackGuestMessage,
@@ -69,10 +70,12 @@ import {
 } from '@craftercms/studio-ui/state/actions/preview';
 import { MouseEventActionObservable } from '../models/Actions';
 import { GuestState } from '../models/GuestStore';
+import ContentType from '@craftercms/studio-ui/models/ContentType';
+import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
 import { notNullOrUndefined, nullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { ElementRecord, ICEProps } from '../../models/InContextEditing';
 import * as ElementRegistry from '../../elementRegistry';
-import { compileAllDropZones, get, getElementFromICEProps } from '../../elementRegistry';
+import { compileAllDropZones, fromICEId, get, getElementFromICEProps } from '../../elementRegistry';
 import { scrollToElement } from '../../utils/dom';
 import {
 	computedDragEnd,
@@ -96,6 +99,13 @@ import {
 } from '../actions';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 import { getParentModelId } from '../../utils/ice';
+import {
+	applyComponentPlacement,
+	mayLockForPlacement,
+	validateComponentPlacement
+} from '../../utils/keyboardPlacement';
+import { announceGuestStatus } from '../../utils/guestAnnounce';
+import { requestZoneFocus } from '../../utils/zoneFocus';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
@@ -909,6 +919,104 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			ignoreElements()
 		);
 	},
+	// endregion
+	// region insertComponentAtDropZone
+	(
+		action$: Observable<GuestStandardAction<{ contentType: ContentType; iceId: number; instance?: ContentInstance }>>,
+		state$,
+		{ getIntl }
+	) =>
+		action$.pipe(
+			ofType(insertComponentAtDropZone.type),
+			withLatestFrom(state$),
+			switchMap(([action, state]) => {
+				const { contentType, iceId, instance } = action.payload;
+				const intl = getIntl();
+				// validateComponentPlacement runs before beforeWrite$. mayLockForPlacement is false
+				// for every rejection, and that branch returns EMPTY, so lock() inside beforeWrite$
+				// is never called for a rejected insert.
+				const result = validateComponentPlacement(iceId, contentType, instance);
+				if (!mayLockForPlacement(result)) {
+					if (result.reason === 'max' && result.validation) {
+						post(snackGuestMessage(result.validation));
+					} else if (result.reason === 'notEditable') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.notEditable',
+									defaultMessage: 'This zone cannot be edited.'
+								})
+							})
+						);
+					} else if (result.reason === 'notAccepted') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.notAccepted',
+										defaultMessage: 'This zone does not accept {contentType}.'
+									},
+									{ contentType: contentType?.name ?? '' }
+								)
+							})
+						);
+					} else if (result.reason === 'duplicate') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.duplicate',
+										defaultMessage: 'This zone already contains {contentType}.'
+									},
+									{ contentType: instance?.craftercms.label || contentType?.name || '' }
+								)
+							})
+						);
+					} else {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.missingZone',
+									defaultMessage: 'The drop zone is no longer available.'
+								})
+							})
+						);
+					}
+					return EMPTY;
+				}
+				const cachedContentItem = getCachedContentItem(result.path);
+				return beforeWrite$({
+					path: result.path,
+					site: state.activeSite,
+					username: state.username,
+					localItem: cachedContentItem
+				}).pipe(
+					switchMap(() => {
+						applyComponentPlacement(result);
+						const element = fromICEId(iceId);
+						const zone = element?.label || '';
+						announceGuestStatus(
+							intl.formatMessage(
+								{
+									id: 'ice.inserted',
+									defaultMessage: 'Inserted {contentType} into {zone}.'
+								},
+								{
+									contentType: instance?.craftercms.label || contentType?.name || '',
+									zone
+								}
+							) as string
+						);
+						requestZoneFocus({ iceId });
+						return of(startListening());
+					})
+				);
+			})
+		),
 	// endregion
 	// region startListening
 	(action$: MouseEventActionObservable) => {

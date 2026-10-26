@@ -28,7 +28,9 @@ import {
 	clearDropTargets,
 	clearHighlightedDropTargets,
 	contentTypeDropTargetsRequest,
+	insertComponentAtDropZone,
 	scrollToDropTarget,
+	setDropTargetPlacement,
 	setPreviewEditMode
 } from '../../state/actions/preview';
 import { useSelection } from '../../hooks/useSelection';
@@ -51,6 +53,7 @@ import Alert from '@mui/material/Alert';
 import { EmptyState } from '../EmptyState';
 import FormHelperText from '@mui/material/FormHelperText';
 import { LoadingState } from '../LoadingState';
+import Button from '@mui/material/Button';
 
 /** Keyboard ring that stays visible when the theme turns ripples off. */
 const focusVisibleSx = {
@@ -84,6 +87,14 @@ const translations = defineMessages({
 	chooseContentType: {
 		id: 'previewDropTargetsPanel.chooseContentType',
 		defaultMessage: 'Please choose a content type.'
+	},
+	insertHere: {
+		id: 'previewDropTargetsPanel.insertHere',
+		defaultMessage: 'Insert here'
+	},
+	insertHereLabel: {
+		id: 'previewDropTargetsPanel.insertHereLabel',
+		defaultMessage: 'Insert here: {contentType} into {zone}'
 	}
 });
 
@@ -99,7 +110,8 @@ export function PreviewDropTargetsPanel() {
 	const { formatMessage } = useIntl();
 	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
-	const [listMode, setListMode] = useState(true);
+	// Skip the type picker when a caller already chose what to insert (Create Content menu or Browse existing).
+	const [listMode, setListMode] = useState(() => !dropTargetsBranch?.placement);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
 	const awaitingGuestCheckIn = nou(allowedTypesData);
 	const allowedContentTypes = useMemo(() => {
@@ -140,8 +152,35 @@ export function PreviewDropTargetsPanel() {
 	};
 
 	function handleSelectChange(contentTypeId: string) {
-		hostToGuest$.next(contentTypeDropTargetsRequest({ contentTypeId }));
+		const contentType = allowedContentTypes.find((type) => type.id === contentTypeId);
+		if (contentType) {
+			dispatch(setDropTargetPlacement({ contentType }));
+		}
+		hostToGuest$.next(
+			contentTypeDropTargetsRequest({
+				contentTypeId,
+				createMode: ['embedded', 'shared'],
+				contentType
+			})
+		);
 	}
+
+	const placement = dropTargetsBranch?.placement;
+	const onInsert = (dropTarget: ContentTypeDropTarget) => {
+		if (!placement) {
+			return;
+		}
+		if (!editMode) {
+			dispatch(setPreviewEditMode({ editMode: true }));
+		}
+		hostToGuest$.next(
+			insertComponentAtDropZone({
+				contentType: placement.contentType,
+				iceId: dropTarget.id,
+				instance: placement.instance
+			})
+		);
+	};
 
 	const resetState = () => {
 		setListMode(true);
@@ -164,7 +203,10 @@ export function PreviewDropTargetsPanel() {
 				listMode ? (
 					<>
 						<FormHelperText sx={{ p: 2 }}>
-							<FormattedMessage defaultMessage="Select content type to view the available drop targets for it" />
+							<FormattedMessage
+								id="previewDropTargetsPanel.selectTypeHelp"
+								defaultMessage="Select a content type to list its drop targets. Each target can be scrolled into view or used to insert the component without dragging."
+							/>
 						</FormHelperText>
 						<ListSubheader>
 							<FormattedMessage defaultMessage="Compatible types" />
@@ -235,7 +277,12 @@ export function PreviewDropTargetsPanel() {
 								<LoadingState />
 							) : filteredDropTargets ? (
 								filteredDropTargets.length > 0 ? (
-									<DropTargetsList dropTargets={filteredDropTargets} onSelectedDropZone={onSelectedDropZone} />
+									<DropTargetsList
+										dropTargets={filteredDropTargets}
+										onSelectedDropZone={onSelectedDropZone}
+										placementLabel={placement?.instance?.craftercms.label || placement?.contentType.name}
+										onInsert={placement ? onInsert : undefined}
+									/>
 								) : (
 									<EmptyState
 										title={
@@ -293,24 +340,47 @@ function ContentTypeItem(props: ContentTypeItemContentProps) {
 
 interface DropTargetsListProps {
 	dropTargets: ContentTypeDropTarget[];
+	placementLabel?: string;
 	onSelectedDropZone(dropTarget: ContentTypeDropTarget): void;
+	onInsert?(dropTarget: ContentTypeDropTarget): void;
 }
 
 function DropTargetsList(props: DropTargetsListProps) {
-	const { dropTargets } = props;
-	return dropTargets?.map((dropTarget: ContentTypeDropTarget) => (
-		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
-			<ListItemButton
-				onClick={() => props.onSelectedDropZone(dropTarget)}
-				sx={{ flex: 1, minWidth: 0, ...rowFocusVisibleSx }}
-			>
-				<ListItemIcon>
-					<ContentTypeField />
-				</ListItemIcon>
-				<ListItemText primary={dropTarget.label} />
-			</ListItemButton>
-		</Box>
-	));
+	const { dropTargets, onInsert, placementLabel } = props;
+	const { formatMessage } = useIntl();
+	return dropTargets?.map((dropTarget: ContentTypeDropTarget) => {
+		const insertLabel = formatMessage(translations.insertHereLabel, {
+			contentType: placementLabel ?? '',
+			zone: dropTarget.label
+		});
+		return (
+			<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
+				<ListItemButton
+					onClick={() => props.onSelectedDropZone(dropTarget)}
+					sx={{ flex: 1, minWidth: 0, ...rowFocusVisibleSx }}
+				>
+					<ListItemIcon>
+						<ContentTypeField />
+					</ListItemIcon>
+					<ListItemText primary={dropTarget.label} />
+				</ListItemButton>
+				{onInsert && (
+					<Button
+						size="small"
+						variant="outlined"
+						aria-label={insertLabel}
+						sx={{ flexShrink: 0, mr: 0.5, minWidth: 24, minHeight: 24, ...focusVisibleSx }}
+						onClick={(event) => {
+							event.stopPropagation();
+							onInsert(dropTarget);
+						}}
+					>
+						{formatMessage(translations.insertHere)}
+					</Button>
+				)}
+			</Box>
+		);
+	});
 }
 
 export default PreviewDropTargetsPanel;

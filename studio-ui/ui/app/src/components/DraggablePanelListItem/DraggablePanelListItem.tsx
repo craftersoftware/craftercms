@@ -20,9 +20,11 @@ import Box from '@mui/material/Box';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Avatar from '@mui/material/Avatar';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded';
 import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
+import Tooltip from '@mui/material/Tooltip';
 import { darken, useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import { getAvatarWithIconColors } from '../../utils/contentType';
@@ -51,6 +53,8 @@ interface PanelListItemProps {
 	onDragStart?: (...args: any) => any;
 	onDragEnd?: (...args: any) => any;
 	onMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+	/** Non-drag equivalent of dragging this item onto a drop zone. */
+	onInsert?: () => void;
 	isBeingDragged?: boolean;
 }
 
@@ -63,11 +67,14 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 		secondaryText,
 		onDragStart,
 		onDragEnd,
+		onInsert,
 		isBeingDragged = false
 	} = props;
 	const hasMenu = Boolean(onMenu);
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const insertHint = formatMessage({ defaultMessage: 'Insert into drop target' });
+	const insertLabel = formatMessage({ defaultMessage: 'Insert into drop target, {name}' }, { name: primaryText });
 	const { backgroundColor, textColor } = getAvatarWithIconColors(avatarColorBase ?? primaryText, theme, darken);
 	const [over, setOver] = useState(false);
 	return (
@@ -118,16 +125,36 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 				</ListItemAvatar>
 				<ListItemText primary={primaryText} secondary={secondaryText} />
 			</ListItemButton>
-			{hasMenu && (
+			{(hasMenu || onInsert) && (
 				<Box sx={{ display: 'flex', flexShrink: 0, mr: 0.5 }}>
-					<IconButton
-						onClick={onMenu}
-						size="small"
-						aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
-						sx={focusVisibleSx}
-					>
-						<MoreVertRounded />
-					</IconButton>
+					{onInsert && (
+						<Tooltip describeChild title={insertHint}>
+							<IconButton
+								size="small"
+								aria-label={insertLabel}
+								sx={{ minWidth: 24, minHeight: 24, ...focusVisibleSx }}
+								onMouseDown={(event) => event.stopPropagation()}
+								onClick={(event) => {
+									event.stopPropagation();
+									onInsert();
+								}}
+							>
+								<AddCircleOutlineRounded />
+							</IconButton>
+						</Tooltip>
+					)}
+					{hasMenu && (
+						<Tooltip describeChild title={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}>
+							<IconButton
+								onClick={onMenu}
+								size="small"
+								aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
+								sx={{ minWidth: 24, minHeight: 24, ...focusVisibleSx }}
+							>
+								<MoreVertRounded />
+							</IconButton>
+						</Tooltip>
+					)}
 				</Box>
 			)}
 		</Box>

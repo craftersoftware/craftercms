@@ -30,6 +30,7 @@ import {
 	contentTreeFieldSelected,
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
+	insertComponentAtDropZone,
 	highlightModeChanged,
 	hostCheckIn,
 	setPreviewEditMode,
@@ -116,6 +117,7 @@ export type GuestActionTypes =
 	| typeof highlightModeChanged.type
 	| typeof clearHighlightedDropTargets.type
 	| typeof contentTypeDropTargetsRequest.type
+	| typeof insertComponentAtDropZone.type
 	| typeof hostCheckIn.type
 	| typeof contentTreeFieldSelected.type
 	| typeof clearContentTreeFieldSelected.type

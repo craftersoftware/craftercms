@@ -44,6 +44,7 @@ import { ElementRecord, ICERecord } from '../../models/InContextEditing';
 import { GuestState } from '../models/GuestStore';
 import { notNullOrUndefined, nullOrUndefined, reversePluckProps } from '@craftercms/studio-ui/utils/object';
 import { updateDropZoneValidations } from '../../utils/dom';
+import { isAvailableKeyboardDropZone } from '../../utils/keyboardPlacement';
 import { EditingStatus, HighlightMode } from '../../constants';
 import {
 	assetDragStarted,
@@ -125,7 +126,8 @@ const initialState: GuestState = {
 	rteConfig: {},
 	activeSite: '',
 	editModePadding: false,
-	username: null
+	username: null,
+	keyboardPlacement: null
 };
 
 function createReducer<S extends NotFunction<any>, CR extends CaseReducers<S, any> = CaseReducers<S, any>>(
@@ -145,7 +147,8 @@ const resetState: (state: GuestState) => GuestState = (state: GuestState) => ({
 	status: EditingStatus.LISTENING,
 	draggable: {},
 	highlighted: {},
-	dragContext: null
+	dragContext: null,
+	keyboardPlacement: null
 });
 
 // Reducers for `desktopAssetDragStarted` & `assetDragStarted` are nearly identical. Refactored as one here.
@@ -532,10 +535,16 @@ const reducer = createReducer(initialState, {
 	// region contentTypeDropTargetsRequest
 	// TODO: Not pure
 	[contentTypeDropTargetsRequest.type]: (state, action) => {
-		const { contentTypeId } = action.payload;
+		const { contentTypeId, createMode, contentType, instance } = action.payload;
 		const highlighted = {};
-
-		getContentTypeDropTargets(contentTypeId).forEach((item) => {
+		let targets = getContentTypeDropTargets(contentTypeId, undefined, createMode);
+		// Keyboard insert only offers zones that can be edited, are under maxCount, and do not
+		// already contain this instance when duplicates are disallowed. Legacy list-only
+		// requests omit createMode and keep the previous, unfiltered behaviour.
+		if (createMode) {
+			targets = targets.filter((item) => isAvailableKeyboardDropZone(item, instance));
+		}
+		targets.forEach((item) => {
 			let { elementRecordId } = compileDropZone(item.id);
 			highlighted[elementRecordId] = getHoverData(elementRecordId);
 		});
@@ -546,6 +555,7 @@ const reducer = createReducer(initialState, {
 				...state.dragContext,
 				inZone: false
 			},
+			keyboardPlacement: contentType ? { contentType, instance } : state.keyboardPlacement,
 			status: EditingStatus.SHOW_DROP_TARGETS,
 			highlighted
 		};
@@ -555,7 +565,8 @@ const reducer = createReducer(initialState, {
 	[clearHighlightedDropTargets.type]: (state) => ({
 		...state,
 		status: EditingStatus.LISTENING,
-		highlighted: {}
+		highlighted: {},
+		keyboardPlacement: null
 	}),
 	// endregion
 	// region desktopAssetUploadStarted

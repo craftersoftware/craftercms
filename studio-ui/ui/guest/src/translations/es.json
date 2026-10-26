@@ -36,5 +36,15 @@
 	"zoneMenu.moveDownName": "Mover hacia abajo",
 	"zoneMenu.trashName": "Eliminar",
 	"zoneMenu.cancelName": "Cancelar",
-	"ice.moved": "Se movió {label}."
+	"ice.moved": "Se movió {label}.",
+	"ice.insertHereNamed": "Insertar {contentType} en {zone}",
+	"ice.inserted": "Se insertó {contentType} en {zone}.",
+	"ice.movedTo": "Se movió {label} a {zone}.",
+	"zoneMenu.moveTo": "Mover a otra zona",
+	"zoneMenu.moveToZone": "Mover a {zone}",
+	"zoneMenu.moveRefused": "No se puede mover a esa zona.",
+	"keyboardPlacement.notAccepted": "Esta zona no acepta {contentType}.",
+	"keyboardPlacement.notEditable": "Esta zona no se puede editar.",
+	"keyboardPlacement.missingZone": "La zona de destino ya no está disponible.",
+	"keyboardPlacement.duplicate": "Esta zona ya contiene {contentType}."
 }

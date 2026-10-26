@@ -18,7 +18,11 @@ import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'r
 import { styled } from '@mui/material/styles';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import OpenWithRounded from '@mui/icons-material/OpenWithRounded';
+import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import { defineMessages, useIntl } from 'react-intl';
+import ContentType from '@craftercms/studio-ui/models/ContentType';
+import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
+import { insertComponentAtDropZone } from '@craftercms/studio-ui/state/actions/preview';
 import { HighlightMode } from '../constants';
 import { elementRegistryChanges$, get, getElementRecords } from '../elementRegistry';
 import { getById, getMovableParentRecord } from '../iceRegistry';
@@ -43,10 +47,13 @@ import {
 	notifyZoneRegistryChange
 } from '../utils/zoneFocus';
 import { useDispatch, useStore } from './GuestContext';
+import UltraStyledIconButton from './UltraStyledIconButton';
+import UltraStyledTooltip from './UltraStyledTooltip';
 
 const iceMessages = defineMessages({
 	editZone: { id: 'ice.editZone', defaultMessage: 'Edit {label}' },
 	selectToMove: { id: 'ice.selectToMove', defaultMessage: 'Select {label} to move' },
+	insertHereNamed: { id: 'ice.insertHereNamed', defaultMessage: 'Insert {contentType} into {zone}' },
 	zoneControls: { id: 'ice.zoneControls', defaultMessage: 'In-context editing' },
 	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
 });
@@ -401,6 +408,39 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 				);
 			})}
 		</div>
+	);
+}
+
+export function InsertHereButton(props: {
+	contentType: ContentType;
+	instance?: ContentInstance;
+	zoneLabel: string;
+	iceId: number;
+}) {
+	const { contentType, instance, zoneLabel, iceId } = props;
+	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
+	const contentTypeName = instance?.craftercms.label || contentType.name;
+	const label = formatMessage(iceMessages.insertHereNamed, {
+		contentType: contentTypeName,
+		zone: zoneLabel
+	}) as string;
+	return (
+		<UltraStyledTooltip title={label}>
+			<UltraStyledIconButton
+				size="small"
+				aria-label={label}
+				sx={{ minWidth: 24, minHeight: 24 }}
+				onMouseDown={(event) => event.stopPropagation()}
+				onClick={(event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					dispatch(insertComponentAtDropZone({ contentType, iceId, instance }));
+				}}
+			>
+				<AddCircleOutlineRoundedIcon />
+			</UltraStyledIconButton>
+		</UltraStyledTooltip>
 	);
 }
 

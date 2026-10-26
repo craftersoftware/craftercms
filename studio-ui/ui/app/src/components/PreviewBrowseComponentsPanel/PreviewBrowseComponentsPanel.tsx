@@ -23,10 +23,15 @@ import ContentInstance from '../../models/ContentInstance';
 import {
 	componentInstanceDragEnded,
 	componentInstanceDragStarted,
+	contentTypeDropTargetsRequest,
 	fetchComponentsByContentType,
+	pushIcePanelPage,
 	setContentTypeFilter,
+	setDropTargetPlacement,
 	setPreviewEditMode
 } from '../../state/actions/preview';
+import { batchActions } from '../../state/actions/misc';
+import { createToolsPanelPage, createWidgetDescriptor } from '../../utils/state';
 import { useDispatch } from 'react-redux';
 import SearchBar from '../SearchBar/SearchBar';
 import { getHostToGuestBus } from '../../utils/subjects';
@@ -109,6 +114,36 @@ export function PreviewBrowseComponentsPanel() {
 	};
 
 	const onDragEnd = () => hostToGuest$.next({ type: componentInstanceDragEnded.type });
+
+	const onInsert = (item: ContentInstance) => {
+		const contentType = contentTypesBranch.byId?.[item.craftercms.contentTypeId];
+		if (!contentType) {
+			return;
+		}
+		if (!editMode) {
+			dispatch(setPreviewEditMode({ editMode: true }));
+		}
+		dispatch(
+			batchActions([
+				setDropTargetPlacement({ contentType, instance: item }),
+				pushIcePanelPage(
+					createToolsPanelPage(
+						formatMessage({ defaultMessage: 'Drop Targets for {name}' }, { name: item.craftercms.label }),
+						[createWidgetDescriptor({ id: 'craftercms.components.PreviewDropTargetsPanel' })],
+						'icePanel'
+					)
+				)
+			])
+		);
+		hostToGuest$.next(
+			contentTypeDropTargetsRequest({
+				contentTypeId: contentType.id,
+				createMode: 'sharedExisting',
+				contentType,
+				instance: item
+			})
+		);
+	};
 
 	const onSearch = useCallback(
 		(keywords: string) =>
@@ -209,6 +244,7 @@ export function PreviewBrowseComponentsPanel() {
 							onRowsPerPageChange={onRowsPerPageChange}
 							onDragStart={onDragStart}
 							onDragEnd={onDragEnd}
+							onInsert={onInsert}
 						/>
 					)
 				)}
