@@ -219,7 +219,7 @@ export function PackageItems(props: PackageItemsProps) {
 				anchorPosition={contextMenu.anchorPosition}
 				onClose={onContextMenuClose}
 			>
-				<MenuList>
+				<MenuList autoFocusItem>
 					{contextMenu.options?.map((option) => (
 						<MenuItem key={option.id} onClick={() => onMenuItemClicked(option.id)}>
 							{option.label}
