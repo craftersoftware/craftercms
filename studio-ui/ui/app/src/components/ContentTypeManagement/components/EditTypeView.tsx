@@ -203,7 +203,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					PrimitiveAtom<unknown> | undefined;
+					| PrimitiveAtom<unknown>
+					| undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
