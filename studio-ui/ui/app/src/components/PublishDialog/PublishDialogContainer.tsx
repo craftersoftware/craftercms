@@ -152,15 +152,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
-		if (published === false && isBlank(state.submissionComment)) {
+		if (!nnou(published) || !isBlank(state.submissionComment)) return;
+		if (!published) {
 			setState({ submissionComment: formatMessage({ defaultMessage: 'Initial publish' }) });
-		} else if (
-			published !== null &&
-			state &&
-			mainItems &&
-			Array.isArray(mainItems) &&
-			isBlank(state.submissionComment)
-		) {
+		} else if (Array.isArray(mainItems)) {
 			const labels = mainItems.map((item) => item.label).filter(Boolean);
 			const base = `${formatMessage({ defaultMessage: 'Publishing' })}: `;
 
