@@ -22,13 +22,14 @@ import { PREVIEW_TOOLBAR_NARROW_QUERY, withPreviewToolbarTooltipDelays } from '.
 
 /**
  * At max-width 480px, tooltips rendered under this node use the longer hover delays.
- * Wider widths render children with the app theme unchanged.
+ * Wider widths render children with the same app theme, so the tree shape does not change at 480/481px.
  * Mount it only around the preview toolbar so other tooltips keep today's delays.
  */
 export function PreviewToolbarTooltipTiming({ children }: PropsWithChildren) {
 	const theme = useTheme();
 	const narrow = useMediaQuery(PREVIEW_TOOLBAR_NARROW_QUERY);
 	const tooltipTheme = useMemo(() => withPreviewToolbarTooltipDelays(theme, narrow), [theme, narrow]);
-	if (!narrow) return children;
+	// Always render the provider. Swapping `children` for `<ThemeProvider>{children}</ThemeProvider>` at 480/481px
+	// changes the element type above ToolBar, so React remounts the whole toolbar (focus and typed text are lost).
 	return <ThemeProvider theme={tooltipTheme}>{children}</ThemeProvider>;
 }

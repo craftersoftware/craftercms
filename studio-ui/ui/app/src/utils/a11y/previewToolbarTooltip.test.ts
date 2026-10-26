@@ -42,7 +42,7 @@ test('tooltipShiftFitsViewport is false when the shifted tooltip would leave the
 	assert.equal(tooltipShiftFitsViewport(140, 48, 32, 180), false);
 });
 
-test('withPreviewToolbarTooltipDelays changes only the preview toolbar tooltip delays', () => {
+test('withPreviewToolbarTooltipDelays keeps 200/0 above 480px and sets 600/400 only when narrow', () => {
 	const theme = {
 		palette: { mode: 'light' },
 		components: {
@@ -53,7 +53,19 @@ test('withPreviewToolbarTooltipDelays changes only the preview toolbar tooltip d
 			}
 		}
 	};
-	assert.equal(withPreviewToolbarTooltipDelays(theme, false), theme);
+	const wide = withPreviewToolbarTooltipDelays(theme, false);
+	assert.notEqual(wide, theme);
+	assert.equal(wide.palette, theme.palette);
+	assert.equal(wide.components.MuiButton, theme.components.MuiButton);
+	assert.deepEqual(wide.components.MuiTooltip.styleOverrides, theme.components.MuiTooltip.styleOverrides);
+	assert.deepEqual(wide.components.MuiTooltip.defaultProps, {
+		disableInteractive: false,
+		leaveDelay: 200,
+		enterNextDelay: 0,
+		slotProps: { popper: { keepMounted: true } }
+	});
+	assert.equal(theme.components.MuiTooltip.defaultProps.leaveDelay, 200);
+	assert.equal(theme.components.MuiTooltip.defaultProps.enterNextDelay, undefined);
 	const narrow = withPreviewToolbarTooltipDelays(theme, true);
 	assert.equal(narrow.palette, theme.palette);
 	assert.equal(narrow.components.MuiButton, theme.components.MuiButton);
@@ -65,4 +77,5 @@ test('withPreviewToolbarTooltipDelays changes only the preview toolbar tooltip d
 		slotProps: { popper: { keepMounted: true } }
 	});
 	assert.equal(theme.components.MuiTooltip.defaultProps.leaveDelay, 200);
+	assert.equal(theme.components.MuiTooltip.defaultProps.enterNextDelay, undefined);
 });

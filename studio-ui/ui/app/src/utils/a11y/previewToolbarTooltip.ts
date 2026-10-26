@@ -45,11 +45,11 @@ export function previewToolbarTooltipDelays(narrow: boolean): { leaveDelay: numb
 /**
  * Copy of the theme with preview-toolbar tooltip delays applied.
  * Only `MuiTooltip` `leaveDelay` and `enterNextDelay` change; every other default stays.
- * Callers should use the result only for the preview toolbar, and only when `narrow` is true.
+ * Wide viewports get the app theme's delays (leaveDelay 200, enterNextDelay 0).
+ * Callers should use the result only for the preview toolbar.
  */
 export function withPreviewToolbarTooltipDelays<T extends PreviewToolbarTooltipTheme>(theme: T, narrow: boolean): T {
-	if (!narrow) return theme;
-	const delays = previewToolbarTooltipDelays(true);
+	const delays = previewToolbarTooltipDelays(narrow);
 	const components = theme.components ?? {};
 	const tooltip = components.MuiTooltip ?? {};
 	return {
