@@ -29,6 +29,8 @@ import { useActiveUser } from '../../hooks/useActiveUser';
 import { useSiteUIConfig } from '../../hooks/useSiteUIConfig';
 import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
 import { useTheme } from '@mui/material';
+import { PREVIEW_TOOLBAR_CLASS } from '../../utils/a11y/previewToolbarTooltip';
+import { PreviewToolbarTooltipTiming } from '../../utils/a11y/previewToolbarTooltipTiming';
 
 const translations = defineMessages({
 	toggleSidebarTooltip: {
@@ -40,11 +42,6 @@ const translations = defineMessages({
 		defaultMessage: 'Item menu'
 	}
 });
-
-/** #1428 wraps this bar at max-width 480px. The marker lets the narrow-width tooltip modifier find it. */
-function markPreviewToolbar(node: HTMLDivElement | null) {
-	node?.setAttribute('data-preview-toolbar', 'true');
-}
 
 export function ToolBar() {
 	const { formatMessage } = useIntl();
@@ -71,7 +68,7 @@ export function ToolBar() {
 					background: theme.palette.background.default
 				}
 			}}
-			ref={markPreviewToolbar}
+			classes={{ appBar: PREVIEW_TOOLBAR_CLASS }}
 		>
 			<section>
 				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
@@ -99,4 +96,13 @@ export function ToolBar() {
 	);
 }
 
-export default ToolBar;
+/** Default mount used by Preview. Keeps the longer delays on this bar without editing the bar's own JSX. */
+function PreviewToolbarWithNarrowTooltipDelays() {
+	return (
+		<PreviewToolbarTooltipTiming>
+			<ToolBar />
+		</PreviewToolbarTooltipTiming>
+	);
+}
+
+export default PreviewToolbarWithNarrowTooltipDelays;
