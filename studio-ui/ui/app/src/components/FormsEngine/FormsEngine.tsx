@@ -1117,9 +1117,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
 	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
-	const mainContentRefCallback: RefCallback<HTMLDivElement> = (element) => {
-		setMainContent(element);
-	};
+	const mainContentRefCallback: RefCallback<HTMLDivElement> = setMainContent;
 
 	const beginSettledFieldScroll = useCallback((fieldId: string) => {
 		cancelFieldScrollRef.current?.();
@@ -1138,7 +1136,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 			([entry]) => {
 				const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
 				const overflow = mainContent.scrollHeight - mainContent.clientHeight;
-				if (!entry.isIntersecting && overflow > (header?.offsetHeight ?? 0)) {
+				// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
+				const sentinelOffset = (entry.target as HTMLElement).offsetTop;
+				if (!entry.isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset) {
 					setCollapseHeader(true);
 				} else if (entry.isIntersecting) {
 					setCollapseHeader(false);
