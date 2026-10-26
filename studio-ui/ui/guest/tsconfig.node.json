@@ -27,5 +27,5 @@
 		}
 	],
 	"include": ["./src", "src/**/*.json"],
-	"exclude": ["./src/hooks.bak.ts", "node_modules", "./src/jquery"]
+	"exclude": ["./src/hooks.bak.ts", "node_modules", "./src/jquery", "**/*.spec.ts"]
 }
