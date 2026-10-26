@@ -31,6 +31,7 @@
 		<result property="publishingStatus" column="publishing_status" jdbcType="VARCHAR" javaType="String"/>
 		<result property="sandboxBranch" column="sandbox_branch"/>
 		<result property="publishedRepoCreated" column="published_repo_created" javaType="Boolean" jdbcType="INTEGER"/>
+		<result property="stagingEnabled" column="staging_enabled" javaType="Boolean" jdbcType="INTEGER"/>
 		<result property="state" column="state"/>
 	</resultMap>
 
@@ -111,8 +112,8 @@
 	</select>
 
 	<insert id="createSite" parameterType="org.craftercms.studio.api.v2.dal.Site" flushCache="true" useGeneratedKeys="true" keyProperty="id">
-		INSERT INTO site (site_uuid, site_id, name, description, publishing_status, sandbox_branch)
-		VALUES (#{siteUuid}, #{siteId}, #{name}, #{description}, #{publishingStatus}, #{sandboxBranch})
+		INSERT INTO site (site_uuid, site_id, name, description, publishing_status, sandbox_branch, staging_enabled)
+		VALUES (#{siteUuid}, #{siteId}, #{name}, #{description}, #{publishingStatus}, #{sandboxBranch}, #{stagingEnabled})
 	</insert>
 
 	<update id="setSiteState">
@@ -134,6 +135,14 @@
 		SET published_repo_created = 1
 		WHERE site_id = #{siteId}
 		  AND deleted = 0
+	</update>
+
+	<update id="setStagingEnabled">
+		UPDATE site
+		SET staging_enabled = 1
+		WHERE site_id = #{siteId}
+		  AND deleted = 0
+		  AND staging_enabled = 0
 	</update>
 
 	<update id="updatePublishingStatus">

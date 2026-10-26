@@ -96,6 +96,7 @@
 		<property name="studioConfiguration" ref="studioConfiguration"/>
 		<property name="configurationService" ref="configurationServiceInternal"/>
 		<property name="configurationCache" ref="configurationCache"/>
+		<property name="siteDao" ref="siteDao"/>
 	</bean>
 
 	<bean id="cstudioGeneralLockService" class="org.craftercms.studio.impl.v1.service.GeneralLockServiceImpl"/>

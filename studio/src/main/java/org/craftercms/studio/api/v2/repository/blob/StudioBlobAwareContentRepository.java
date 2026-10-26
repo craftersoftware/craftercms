@@ -38,6 +38,17 @@ public interface StudioBlobAwareContentRepository extends GitContentRepository, 
 	void duplicateBlobs(String sourceSiteId, String siteId) throws ServiceLayerException;
 
 	/**
+	 * Copy published blob-store assets from one publishing target to another in the same site.
+	 * Sites with no blob stores are skipped.
+	 *
+	 * @param siteId            the site id
+	 * @param sourceEnvironment the publishing target to copy from
+	 * @param targetEnvironment the publishing target to copy to
+	 * @throws ServiceLayerException if an error occurs during the operation
+	 */
+	void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment) throws ServiceLayerException;
+
+	/**
 	 * Execute initial publish for given site
 	 *
 	 * @param publishPackage the package to publish

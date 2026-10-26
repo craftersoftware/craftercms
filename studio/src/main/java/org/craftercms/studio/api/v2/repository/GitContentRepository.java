@@ -354,6 +354,25 @@ public interface GitContentRepository extends ContentRepository {
 	boolean isTargetPublished(String siteId, String target) throws RepositoryException, IOException;
 
 	/**
+	 * Create the staging branch in the published repository from the live branch.
+	 *
+	 * @param siteId        the site id
+	 * @param liveBranch    the live branch name
+	 * @param stagingBranch the staging branch name
+	 * @return true if this call created the branch
+	 */
+	boolean createStagingBranchFromLive(String siteId, String liveBranch, String stagingBranch) throws RepositoryException, IOException;
+
+	/**
+	 * Delete a branch from the published repository when it exists.
+	 *
+	 * @param siteId the site id
+	 * @param branch the branch name
+	 * @return true if the branch was deleted
+	 */
+	boolean deletePublishedBranch(String siteId, String branch) throws RepositoryException, IOException;
+
+	/**
 	 * Delete a list of items from the site repository
 	 *
 	 * @param siteId   site id

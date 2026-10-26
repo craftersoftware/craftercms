@@ -24,11 +24,16 @@ import org.craftercms.commons.plugin.model.Plugin;
 import org.craftercms.commons.plugin.model.PluginDescriptor;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteAlreadyExistsException;
+import org.craftercms.studio.api.v1.service.GeneralLockService;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryCredentialsException;
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
+import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
+import org.craftercms.studio.api.v2.exception.StagingAlreadyEnabledException;
+import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.exception.CompositeException;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -105,11 +110,23 @@ public class SitesServiceInternalImplTest {
 	protected SiteDAO siteDAO;
 	@Mock
 	protected AuditService auditService;
+	@Mock
+	protected ServicesConfig servicesConfig;
+	@Mock
+	protected ItemTargetDAO itemTargetDao;
+	@Mock
+	protected GeneralLockService generalLockService;
+	@Mock
+	protected GitRepositoryHelper gitRepositoryHelper;
 
 	@Before
 	public void setUp() throws IOException, ServiceLayerException {
 		sitesServiceInternal.setApplicationContext(applicationContext);
 		sitesServiceInternal.setBlobAwareRepository(contentRepository);
+		sitesServiceInternal.setServicesConfig(servicesConfig);
+		sitesServiceInternal.setItemTargetDao(itemTargetDao);
+		sitesServiceInternal.setGeneralLockService(generalLockService);
+		sitesServiceInternal.setGitRepositoryHelper(gitRepositoryHelper);
 		sitesServiceInternal.setConfigurationService(configurationService);
 		sitesServiceInternal.setUpgradeManager(upgradeManager);
 		sitesServiceInternal.setContentService(contentService);
@@ -222,27 +239,27 @@ public class SitesServiceInternalImplTest {
 	@Test
 	public void duplicateAlreadyTakenNameTest() {
 		assertThrows(SiteAlreadyExistsException.class, () ->
-				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, USED_SITE_NAME, "The new site", "main_branch", false));
+				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, USED_SITE_NAME, "The new site", "main_branch", false, false));
 	}
 
 	@Test
 	public void readOnlyOnBlobStoresTest() throws ServiceLayerException {
 		when(studioConfiguration.getProperty(SERVERLESS_DELIVERY_ENABLED, Boolean.class, false)).thenReturn(false);
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", true);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", true, false);
 
 		verify(configurationService).makeBlobStoresReadOnly(NEW_SITE_ID);
 	}
 
 	@Test
 	public void readOnlyOffBlobStoresTest() throws ServiceLayerException {
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, false);
 
 		verify(configurationService, never()).makeBlobStoresReadOnly(NEW_SITE_ID);
 	}
 
 	@Test
 	public void duplicateSiteTest() throws ServiceLayerException, IOException {
-		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false);
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, false);
 
 		verify(contentRepository).duplicateSite(SOURCE_SITE_ID, NEW_SITE_ID, SOURCE_SANDBOX_BRANCH, DUPLICATE_SANDBOX_BRANCH);
 		verify(sitesServiceInternal).addSiteUuidFile(eq(NEW_SITE_ID), any());
@@ -260,7 +277,7 @@ public class SitesServiceInternalImplTest {
 		doThrow(new RestClientException("test")).when(deployer).duplicateTargets(SOURCE_SITE_ID, NEW_SITE_ID);
 
 		assertThrows(ServiceLayerException.class, () ->
-				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false));
+				sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false, false));
 		verify(sitesServiceInternal).deleteSite(NEW_SITE_ID);
 	}
 
@@ -310,6 +327,129 @@ public class SitesServiceInternalImplTest {
 					nullable(String.class), eq(true), eq(AuthenticationType.none), nullable(String.class), nullable(String.class),
 					nullable(String.class), nullable(String.class), argThat(m -> m == null || m.isEmpty()), eq(false), eq("user123"));
 		}
+	}
+
+	@Test
+	public void enableStagingAlreadyEnabledTest() {
+		Site site = new Site();
+		site.setSiteId(SITE_ID);
+		site.setStagingEnabled(true);
+		when(siteDAO.getSite(SITE_ID)).thenReturn(site);
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+
+		assertThrows(StagingAlreadyEnabledException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(deployer, never()).createStagingTarget(SITE_ID);
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+	}
+
+	@Test
+	public void enableStagingUnpublishedSiteTest() throws Exception {
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+	}
+
+	@Test
+	public void enableStagingPublishedSiteTest() throws Exception {
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
+		verify(itemTargetDao).initStaging(0L, "staging", "live");
+		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging");
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+	}
+
+	@Test
+	public void enableStagingFailureRollsBackTest() throws Exception {
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		doThrow(new RestClientException("deployer down")).when(deployer).createStagingTarget(SITE_ID);
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void duplicateEnableStagingFromLiveTest() throws Exception {
+		when(servicesConfig.getLiveEnvironment(NEW_SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(NEW_SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(NEW_SITE_ID, "live")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(contentRepository).createStagingBranchFromLive(NEW_SITE_ID, "live", "staging");
+		verify(itemTargetDao).initStaging(0L, "staging", "live");
+		verify(deployer).createStagingTarget(NEW_SITE_ID);
+		verify(deployer, never()).duplicateStagingTarget(anyString(), anyString());
+		verify(contentRepository).copyBlobs(NEW_SITE_ID, "live", "staging");
+	}
+
+	@Test
+	public void duplicateDisableStagingFromSourceTest() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, false);
+
+		verify(contentRepository).deletePublishedBranch(NEW_SITE_ID, "staging");
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(siteDAO, never()).setStagingEnabled(NEW_SITE_ID);
+		verify(deployer, never()).createStagingTarget(anyString());
+		verify(deployer, never()).duplicateStagingTarget(anyString(), anyString());
+	}
+
+	@Test
+	public void duplicateKeepSourceStagingTest() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+		verify(deployer, never()).createStagingTarget(anyString());
 	}
 
 	@Test

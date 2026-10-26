@@ -390,6 +390,13 @@ public class ExceptionHandlers {
 		return handleExceptionInternal(request, e, response);
 	}
 
+	@ExceptionHandler(StagingAlreadyEnabledException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	public Result handleStagingAlreadyEnabledException(HttpServletRequest request, StagingAlreadyEnabledException e) {
+		ApiResponse response = new ApiResponse(ApiResponse.STAGING_ALREADY_ENABLED);
+		return handleExceptionInternal(request, e, response);
+	}
+
 	@ExceptionHandler(SiteAlreadyExistsException.class)
 	@ResponseStatus(HttpStatus.CONFLICT)
 	public Result handleSiteAlreadyExistsException(HttpServletRequest request, SiteAlreadyExistsException e) {
