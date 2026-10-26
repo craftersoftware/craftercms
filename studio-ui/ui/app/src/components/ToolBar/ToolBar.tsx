@@ -105,7 +105,11 @@ export function ToolBar() {
 					},
 					'& > section:nth-of-type(2)': {
 						flex: '0 1 auto',
-						overflow: 'hidden'
+						overflow: 'hidden',
+						// The section clips its overflow, which also clips the 4px focus ring (2px outline + 2px offset)
+						// of Reload and Navigation. Pad by the ring width and cancel it with a negative margin.
+						padding: '4px',
+						margin: '-4px'
 					},
 					[PREVIEW_TOOLBAR_WRAP_QUERY]: {
 						// 320px cannot hold the logo, both overflow buttons, three navigation buttons and the
@@ -119,6 +123,8 @@ export function ToolBar() {
 							flex: '1 1 100%',
 							flexWrap: 'wrap',
 							overflow: 'visible',
+							padding: 0,
+							margin: 0,
 							'& > .MuiPaper-root': { order: 1, flex: '1 1 100%', marginBottom: 1 }
 						}
 					}
