@@ -2069,7 +2069,7 @@ __metadata:
     uppy: "npm:^6.0.5"
     uuid: "npm:^14.0.3"
     video.js: "npm:8.24.1"
-    vite: "npm:^8.3.2"
+    vite: "npm:^8.3.5"
     vite-plugin-monaco-editor: "npm:^1.1.0"
     zxcvbn: "npm:^4.4.2"
   languageName: unknown
@@ -15575,7 +15575,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^8.3.2":
+"vite@npm:^8.3.5":
   version: 8.3.5
   resolution: "vite@npm:8.3.5"
   dependencies:
