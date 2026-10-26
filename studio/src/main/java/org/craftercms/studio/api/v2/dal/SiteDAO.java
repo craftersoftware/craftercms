@@ -123,6 +123,14 @@ public interface SiteDAO {
 	void setPublishedRepoCreated(@Param(SITE_ID) String siteId);
 
 	/**
+	 * Enable staging for the given site. Staging cannot be disabled once enabled.
+	 *
+	 * @param siteId the site id
+	 * @return the number of rows updated. {@code 0} when staging was already enabled
+	 */
+	int setStagingEnabled(@Param(SITE_ID) String siteId);
+
+	/**
 	 * Update publishing status
 	 *
 	 * @param siteId the site id

@@ -33,6 +33,7 @@ public class Site {
 	protected String publishingStatus;
 	protected String sandboxBranch;
 	protected boolean publishedRepoCreated;
+	protected boolean stagingEnabled;
 	protected String state;
 
 	public long getId() {
@@ -129,6 +130,14 @@ public class Site {
 
 	public void setPublishedRepoCreated(boolean publishedRepoCreated) {
 		this.publishedRepoCreated = publishedRepoCreated;
+	}
+
+	public boolean isStagingEnabled() {
+		return stagingEnabled;
+	}
+
+	public void setStagingEnabled(boolean stagingEnabled) {
+		this.stagingEnabled = stagingEnabled;
 	}
 
 	public String getState() {

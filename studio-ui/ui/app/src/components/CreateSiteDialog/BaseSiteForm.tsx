@@ -16,6 +16,9 @@
 
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import FormHelperText from '@mui/material/FormHelperText';
 import { siteIdMaxLength, siteInputMaxLength, siteNameMaxLength } from './utils';
 import React from 'react';
 import { renderSiteFormHelperText } from './BlueprintForm';
@@ -66,6 +69,15 @@ const messages = defineMessages({
 	gitBranchDescription: {
 		id: 'createSiteDialog.gitBranchDescription',
 		defaultMessage: 'Name of the branch this project will track. Pull operations will be done against this branch.'
+	},
+	enableStaging: {
+		id: 'createSiteDialog.enableStaging',
+		defaultMessage: 'Enable staging'
+	},
+	enableStagingHelp: {
+		id: 'createSiteDialog.enableStagingHelp',
+		defaultMessage:
+			'The new project uses this setting, not the source project. Staging cannot be turned off later. Removing it means recreating the project.'
 	}
 });
 
@@ -166,6 +178,21 @@ export function BaseSiteForm(props: BaseSiteFormProps) {
 					value={inputs.gitBranch}
 					helperText={formatMessage(messages.gitBranchDescription)}
 				/>
+			</Grid>
+			<Grid size={12} data-field-id="enableStaging">
+				<FormControlLabel
+					control={
+						<Checkbox
+							id="enableStaging"
+							name="enableStaging"
+							color="primary"
+							checked={inputs.enableStaging}
+							onChange={(event) => handleInputChange(event)}
+						/>
+					}
+					label={formatMessage(messages.enableStaging)}
+				/>
+				<FormHelperText>{formatMessage(messages.enableStagingHelp)}</FormHelperText>
 			</Grid>
 		</>
 	);

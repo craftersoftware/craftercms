@@ -57,6 +57,8 @@ import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepository
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
+import org.craftercms.studio.api.v1.service.GeneralLockService;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.content.ContentMonitor;
 import org.craftercms.studio.api.v2.dal.AuditLog;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
@@ -77,12 +79,14 @@ import org.craftercms.studio.api.v2.dal.Site;
 import static org.craftercms.studio.api.v2.dal.Site.State.LOCKED;
 import static org.craftercms.studio.api.v2.dal.Site.State.READY;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
+import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.site.SiteDeletedEvent;
 import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.event.site.SiteReadyEvent;
 import org.craftercms.studio.api.v2.exception.CompositeException;
 import org.craftercms.studio.api.v2.exception.InvalidSiteStateException;
+import org.craftercms.studio.api.v2.exception.StagingAlreadyEnabledException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.repository.RepositoryItem;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -96,6 +100,7 @@ import org.craftercms.studio.api.v2.service.site.SitesService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.upgrade.StudioUpgradeManager;
+import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLOB_STORES_CONFIG_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLOB_STORES_SERVERLESS_DEFAULT_CONFIG_PATH;
@@ -158,6 +163,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	private ContentMonitor contentMonitor;
 	private final SiteBootstrapStateProvider siteBootstrapStateProvider;
 	private ApplicationContext applicationContext;
+	private ServicesConfig servicesConfig;
+	private ItemTargetDAO itemTargetDao;
+	private GeneralLockService generalLockService;
+	private GitRepositoryHelper gitRepositoryHelper;
 
 	@ConstructorProperties({"descriptorReader",
 			"studioConfiguration", "siteDao",
@@ -565,7 +574,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	}
 
 	@Override
-	public void duplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores)
+	public void duplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores, boolean enableStaging)
 		throws ServiceLayerException {
 		if (isNotEmpty(siteName) && siteDao.isNameUsed(siteId, siteName)) {
 			throw new SiteAlreadyExistsException(format("A site with name '%s' already exists", siteName));
@@ -574,10 +583,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		if (isEmpty(sandboxBranch)) {
 			sandboxBranch = studioConfiguration.getProperty(REPO_SANDBOX_BRANCH);
 		}
-		doDuplicate(sourceSiteId, siteId, siteName, description, sandboxBranch, readOnlyBlobStores);
+		doDuplicate(sourceSiteId, siteId, siteName, description, sandboxBranch, readOnlyBlobStores, enableStaging);
 	}
 
-	protected void doDuplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores)
+	protected void doDuplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores, boolean enableStaging)
 		throws ServiceLayerException {
 		logger.info("Site duplicate from '{}' to '{}' - START", sourceSiteId, siteId);
 
@@ -600,10 +609,21 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 			// Create site in db (site state is INITIALIZING) and copy all db data
 			logger.debug("Duplicate site DB data from '{}' to '{}'", sourceSiteId, siteId);
 			retryingDatabaseOperationFacade.retry(() -> siteDao.duplicate(sourceSiteId, siteId, siteName, description, sandboxBranch, siteUuid));
+			if (enableStaging) {
+				retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingEnabled(siteId));
+			}
+			prepareDuplicatedStaging(sourceSite, siteId, enableStaging);
 
 			// Duplicate site in deployer
 			logger.debug("Duplicate site deployer targets from '{}' to '{}'", sourceSiteId, siteId);
 			deployer.duplicateTargets(sourceSiteId, siteId);
+			if (enableStaging) {
+				if (sourceSite.isStagingEnabled()) {
+					deployer.duplicateStagingTarget(sourceSiteId, siteId);
+				} else {
+					deployer.createStagingTarget(siteId);
+				}
+			}
 
 			// read-only blobstores
 			if (readOnlyBlobStores) {
@@ -612,6 +632,13 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 			} else {
 				logger.debug("Duplicating blobstores content from site '{}' to '{}'", sourceSiteId, siteId);
 				blobAwareRepository.duplicateBlobs(sourceSiteId, siteId);
+				if (enableStaging && !sourceSite.isStagingEnabled() && blobAwareRepository.publishedRepositoryExists(siteId)) {
+					String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+					String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+					if (blobAwareRepository.isTargetPublished(siteId, liveBranch)) {
+						blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+					}
+				}
 			}
 
 			auditSiteDuplicate(sourceSiteId, siteId, siteName);
@@ -912,6 +939,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		site.setDescription(request.getDescription());
 		site.setPublishingStatus(PublishStatus.READY);
 		site.setSandboxBranch(request.getSandboxBranch());
+		site.setStagingEnabled(request.isEnableStaging());
 		siteDao.createSite(site);
 		return site;
 	}
@@ -938,6 +966,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		logger.info("Create the deployer targets for site '{}'", siteId);
 		try {
 			deployer.createTargets(siteId);
+			Site site = siteDao.getSite(siteId);
+			if (site != null && site.isStagingEnabled()) {
+				deployer.createStagingTarget(siteId);
+			}
 		} catch (Exception e) {
 			logger.error("Failed to create deployer targets for site '{}'", siteId, e);
 			throw new DeployerTargetException(format("Failed to create site '%s' deployer targets", siteId), e);
@@ -1045,5 +1077,142 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	@Lazy
 	public void setContentMonitor(ContentMonitor contentMonitor) {
 		this.contentMonitor = contentMonitor;
+	}
+
+	@Autowired
+	public void setServicesConfig(ServicesConfig servicesConfig) {
+		this.servicesConfig = servicesConfig;
+	}
+
+	@Autowired
+	public void setItemTargetDao(ItemTargetDAO itemTargetDao) {
+		this.itemTargetDao = itemTargetDao;
+	}
+
+	@Autowired
+	public void setGeneralLockService(GeneralLockService generalLockService) {
+		this.generalLockService = generalLockService;
+	}
+
+	@Autowired
+	public void setGitRepositoryHelper(GitRepositoryHelper gitRepositoryHelper) {
+		this.gitRepositoryHelper = gitRepositoryHelper;
+	}
+
+	@Override
+	public void enableStaging(String siteId) throws ServiceLayerException {
+		String lockKey = gitRepositoryHelper.getPublishedRepoLockKey(siteId);
+		generalLockService.lock(lockKey);
+		try {
+			doEnableStaging(siteId);
+		} finally {
+			generalLockService.unlock(lockKey);
+		}
+	}
+
+	/**
+	 * Initialize staging for an existing site and set the one-way flag only after initialization succeeds.
+	 */
+	protected void doEnableStaging(String siteId) throws ServiceLayerException {
+		Site site = siteDao.getSite(siteId);
+		if (site == null) {
+			throw new SiteNotFoundException(format("Site '%s' not found.", siteId));
+		}
+		if (site.isStagingEnabled()) {
+			throw new StagingAlreadyEnabledException(siteId);
+		}
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		boolean createdBranch = false;
+		boolean insertedTargets = false;
+		boolean createdDeployerTarget = false;
+		try {
+			if (publishedToLive(siteId, liveBranch)) {
+				createdBranch = blobAwareRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+				if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
+					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch));
+					insertedTargets = true;
+				}
+				blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+			}
+			deployer.createStagingTarget(siteId);
+			createdDeployerTarget = true;
+			int updated = retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingEnabled(siteId));
+			if (updated == 0) {
+				throw new StagingAlreadyEnabledException(siteId);
+			}
+			logger.info("Enabled staging for site '{}'", siteId);
+		} catch (Exception e) {
+			compensateEnableStaging(siteId, site.getId(), stagingBranch, createdBranch, insertedTargets, createdDeployerTarget);
+			if (e instanceof ServiceLayerException serviceLayerException) {
+				throw serviceLayerException;
+			}
+			throw new ServiceLayerException(format("Failed to enable staging for site '%s'", siteId), e);
+		}
+	}
+
+	/**
+	 * Align the duplicated site's staging branch, item targets, and later blob copy with {@code enableStaging}.
+	 * The database flag is already stored before this runs.
+	 */
+	protected void prepareDuplicatedStaging(Site sourceSite, String siteId, boolean enableStaging) throws ServiceLayerException, IOException {
+		if (!enableStaging && !sourceSite.isStagingEnabled()) {
+			return;
+		}
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		Site newSite = siteDao.getSite(siteId);
+		if (!enableStaging) {
+			if (sourceSite.isStagingEnabled()) {
+				blobAwareRepository.deletePublishedBranch(siteId, stagingBranch);
+				if (newSite != null) {
+					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.deleteForTarget(newSite.getId(), stagingBranch));
+				}
+			}
+			return;
+		}
+		if (sourceSite.isStagingEnabled() || newSite == null) {
+			return;
+		}
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		if (!publishedToLive(siteId, liveBranch)) {
+			return;
+		}
+		blobAwareRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+		if (!itemTargetDao.targetExists(newSite.getId(), stagingBranch)) {
+			retryingDatabaseOperationFacade.retry(() -> itemTargetDao.initStaging(newSite.getId(), stagingBranch, liveBranch));
+		}
+	}
+
+	protected boolean publishedToLive(String siteId, String liveBranch) throws ServiceLayerException, IOException {
+		return blobAwareRepository.publishedRepositoryExists(siteId) && blobAwareRepository.isTargetPublished(siteId, liveBranch);
+	}
+
+	/**
+	 * Remove the staging deployer target, item targets, and branch created by a failed enable so the flag stays off
+	 * and the call can be retried. Only resources this call created are removed.
+	 */
+	protected void compensateEnableStaging(String siteId, long siteNumericId, String stagingBranch, boolean createdBranch,
+										   boolean insertedTargets, boolean createdDeployerTarget) {
+		if (createdDeployerTarget) {
+			try {
+				deployer.deleteStagingTarget(siteId);
+			} catch (Exception e) {
+				logger.error("Failed to delete the staging deployer target for site '{}' after a failed enable", siteId, e);
+			}
+		}
+		if (insertedTargets) {
+			try {
+				retryingDatabaseOperationFacade.retry(() -> itemTargetDao.deleteForTarget(siteNumericId, stagingBranch));
+			} catch (Exception e) {
+				logger.error("Failed to delete staging item targets for site '{}' after a failed enable", siteId, e);
+			}
+		}
+		if (createdBranch) {
+			try {
+				blobAwareRepository.deletePublishedBranch(siteId, stagingBranch);
+			} catch (Exception e) {
+				logger.error("Failed to delete staging branch '{}' for site '{}' after a failed enable", stagingBranch, siteId, e);
+			}
+		}
 	}
 }

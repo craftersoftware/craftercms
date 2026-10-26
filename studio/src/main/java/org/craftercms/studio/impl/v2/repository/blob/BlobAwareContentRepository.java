@@ -500,17 +500,24 @@ public class BlobAwareContentRepository implements StudioBlobAwareContentReposit
 		}
 	}
 
-	/**
-	 * Duplicates the blobs from the source site to the target site
-	 *
-	 * @param sourceSiteId the source site
-	 * @param siteId       the target site
-	 * @param repoType     the repository type
-	 * @param environment  the environment
-	 * @param revstr       A git object references expression (e.g.: HEAD, branch name, commit id)
-	 * @throws ServiceLayerException if an error occurs during the operation
-	 */
+	@Override
+	public void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment) throws ServiceLayerException {
+		if (blobStoreResolver.getAll(siteId).isEmpty()) {
+			logger.debug("No blob stores configured for site '{}', skipping blob sync from '{}' to '{}'", siteId, sourceEnvironment, targetEnvironment);
+			return;
+		}
+		logger.info("Copy blobs for site '{}' from '{}' to '{}'", siteId, sourceEnvironment, targetEnvironment);
+		copyBlobItems(siteId, siteId, GitRepositories.PUBLISHED, sourceEnvironment, targetEnvironment, sourceEnvironment);
+	}
+
 	private void duplicateBlobs(String sourceSiteId, String siteId, GitRepositories repoType, String environment, String revstr) throws ServiceLayerException {
+		copyBlobItems(sourceSiteId, siteId, repoType, environment, environment, revstr);
+	}
+
+	/**
+	 * Copy blob items from a source site revision into a target site publishing environment.
+	 */
+	private void copyBlobItems(String sourceSiteId, String siteId, GitRepositories repoType, String sourceEnvironment, String targetEnvironment, String revstr) throws ServiceLayerException {
 		List<String> siteItemPaths = localRepository.getItemPaths(sourceSiteId, repoType, revstr)
 				.stream().filter(this::isBlobPath).toList();
 		MultiKeyMap<StudioBlobStore, List<String>> copyItems = new MultiKeyMap<>();
@@ -533,7 +540,7 @@ public class BlobAwareContentRepository implements StudioBlobAwareContentReposit
 			StudioBlobStore targetBlobStore = copyItem.getKey().getKey(1);
 			List<String> paths = copyItem.getValue();
 			try {
-				targetBlobStore.copyBlobs(sourceBlobStore, environment, paths);
+				targetBlobStore.copyBlobs(sourceBlobStore, sourceEnvironment, targetEnvironment, paths);
 			} catch (Exception e) {
 				logger.error("Failed to copy blob from source site '{}' to target site '{}'", sourceSiteId, siteId, e);
 				throw e;
@@ -632,6 +639,16 @@ public class BlobAwareContentRepository implements StudioBlobAwareContentReposit
 	@Override
 	public boolean isTargetPublished(final String siteId, final String target) throws RepositoryException, IOException {
 		return localRepository.isTargetPublished(siteId, target);
+	}
+
+	@Override
+	public boolean createStagingBranchFromLive(String siteId, String liveBranch, String stagingBranch) throws RepositoryException, IOException {
+		return localRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+	}
+
+	@Override
+	public boolean deletePublishedBranch(String siteId, String branch) throws RepositoryException, IOException {
+		return localRepository.deletePublishedBranch(siteId, branch);
 	}
 
 	@Override

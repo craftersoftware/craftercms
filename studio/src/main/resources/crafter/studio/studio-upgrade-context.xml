@@ -192,6 +192,15 @@
 		<constructor-arg name="sitesService" ref="sitesServiceInternal"/>
 	</bean>
 
+	<bean id="stagingEnabledBackfillUpgrader" scope="prototype" parent="upgradeOperation"
+	      class="org.craftercms.studio.impl.v2.upgrade.operations.db.StagingEnabledBackfillUpgradeOperation">
+		<constructor-arg name="sitesService" ref="sitesServiceInternal"/>
+		<constructor-arg name="gitRepositoryHelper" ref="studio.gitRepositoryHelper"/>
+		<constructor-arg name="servicesConfig" ref="cstudioServicesConfig"/>
+		<constructor-arg name="contentRepository" ref="contentRepository"/>
+		<constructor-arg name="itemTargetDao" ref="itemTargetDao"/>
+	</bean>
+
 	<bean id="checkContentTypeControllerUpgrader" scope="prototype" parent="upgradeOperation"
 	      class="org.craftercms.studio.impl.v2.upgrade.operations.site.ContentTypeControllerUpgradeOperation">
 	</bean>

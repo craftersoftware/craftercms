@@ -23,6 +23,7 @@ public class Site {
 	private final String name;
 	private final String desc;
 	private final String state;
+	private final boolean stagingEnabled;
 
 	public Site(org.craftercms.studio.api.v2.dal.Site site) {
 		siteId = site.getSiteId();
@@ -30,6 +31,7 @@ public class Site {
 		name = site.getName();
 		desc = site.getDescription();
 		state = site.getState();
+		stagingEnabled = site.isStagingEnabled();
 	}
 
 	public String getDesc() {
@@ -50,5 +52,9 @@ public class Site {
 
 	public String getUuid() {
 		return uuid;
+	}
+
+	public boolean isStagingEnabled() {
+		return stagingEnabled;
 	}
 }
