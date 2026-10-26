@@ -136,7 +136,7 @@
 		"@types/zxcvbn": "^4.4.5",
 		"@typescript-eslint/eslint-plugin": "^8.72.1",
 		"@typescript-eslint/parser": "^8.72.1",
-		"@vitejs/plugin-react": "^5.2.0",
+		"@vitejs/plugin-react": "^6.1.2",
 		"@vitejs/plugin-react-swc": "^4.3.3",
 		"babel-plugin-formatjs": "^11.2.4",
 		"build-if-changed": "^1.5.5",
