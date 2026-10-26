@@ -30,7 +30,7 @@ import LookupTable from '../../../models/LookupTable';
 import Asterisk from '../../../icons/Asterisk';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
-import { applyTranslations, NEW_FIELD_ID } from '../utils';
+import { applyTranslations } from '../utils';
 import Button from '@mui/material/Button';
 import AdditionalFieldChip from './AdditionalFieldChip';
 
@@ -40,6 +40,8 @@ function composeFieldPath(fieldPath: string, fieldId: string): string {
 
 export interface FieldChipProps {
 	field: ContentTypeField | NewContentTypeField;
+	/** Lookup key this chip is rendered under (may be `{NEW}` for drafts). */
+	fieldKey: string;
 	fieldPath?: string;
 	fieldPathsWithErrors: LookupTable<boolean>;
 	selectedFieldIdPath?: string;
@@ -54,12 +56,13 @@ export interface FieldChipProps {
 const descriptors = { ...controlDescriptors, ...dataSourceDescriptors };
 
 export function FieldChip(props: FieldChipProps) {
-	const { field, fieldPathsWithErrors, fieldPath, selectedFieldIdPath, onFieldSelected, onInsertField } = props;
+	const { field, fieldKey, fieldPathsWithErrors, fieldPath, selectedFieldIdPath, onFieldSelected, onInsertField } =
+		props;
 	const theme = useTheme();
 	const isDark = useIsDarkModeTheme();
 	const isRepeat = field.type === 'repeat';
-	// Drafts are keyed as `{NEW}` while `field.id` is still null/empty — match selectedFieldIdPath.
-	const currentFieldPath = composeFieldPath(fieldPath, field.id || NEW_FIELD_ID);
+	// Use the map key (not field.id) so preset-id drafts match selectedFieldIdPath.
+	const currentFieldPath = composeFieldPath(fieldPath, fieldKey);
 	const isSelected = currentFieldPath === selectedFieldIdPath;
 	const error = Boolean(fieldPathsWithErrors[currentFieldPath]); // TODO: make this into an atom
 	const Root: ElementType<BoxProps> = (isRepeat ? Box : ButtonBase) as ElementType<BoxProps>;
@@ -163,6 +166,7 @@ export function FieldChip(props: FieldChipProps) {
 							<FieldChip
 								key={fieldId}
 								field={subField}
+								fieldKey={fieldId}
 								fieldPathsWithErrors={fieldPathsWithErrors}
 								selectedFieldIdPath={selectedFieldIdPath}
 								fieldPath={currentFieldPath}

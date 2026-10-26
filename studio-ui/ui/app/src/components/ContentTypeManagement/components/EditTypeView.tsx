@@ -701,7 +701,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			return;
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
-		const newFieldPath = fieldPath ? `${fieldPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
+		// Root drafts are keyed `{NEW}`; nested (addSubField) uses field.id when preset (e.g. file-name).
+		const leafId = fieldPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
+		const newFieldPath = fieldPath ? `${fieldPath}.${leafId}` : leafId;
 		setType(addField(type, newField, newFieldPath, sectionId, position));
 		onUpdateHasPendingChanges(true);
 		handleFieldSelected(newFieldPath, newField, sectionId);

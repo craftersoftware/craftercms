@@ -187,6 +187,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 								<FieldChip
 									key={fieldId}
 									field={type.fields[fieldId]}
+									fieldKey={fieldId}
 									fieldPathsWithErrors={fieldPathsWithErrors}
 									onFieldSelected={(fieldIdPath, field) => onFieldSelected(fieldIdPath, field, section.id)}
 									selectedFieldIdPath={selectedFieldIdPath}
@@ -229,6 +230,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 							<FieldChip
 								key={fieldId}
 								field={dataSourceFields[fieldId]}
+								fieldKey={fieldId}
 								fieldPathsWithErrors={fieldPathsWithErrors}
 								onFieldSelected={handleDataSourceSelected}
 								selectedFieldIdPath={selectedFieldIdPath}
