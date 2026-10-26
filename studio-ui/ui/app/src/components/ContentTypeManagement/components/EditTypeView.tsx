@@ -701,28 +701,27 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
 		const baseType = commitOpenFormChanges() ?? typeRef.current;
-		// Parent path was captured pre-commit; if the open form renamed the root, rewrite it.
+		// Parent path was captured pre-commit; if the open form renamed the parent (or an ancestor), rewrite that segment.
 		let resolvedParentPath = fieldPath;
-		if (fieldPath) {
+		const committedId = stateRef.current.selectedField?.id;
+		if (
+			fieldPath &&
+			selectedFieldIdPath &&
+			committedId &&
+			(fieldPath === selectedFieldIdPath || fieldPath.startsWith(`${selectedFieldIdPath}.`))
+		) {
 			const segments = fieldPath.split('.');
-			const rootId = segments[0];
-			if (!baseType.fields[rootId]) {
-				const committedRootId = stateRef.current.selectedField?.id;
-				if (!committedRootId || !baseType.fields[committedRootId]) {
-					showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
-					return;
-				}
-				segments[0] = committedRootId;
-				resolvedParentPath = segments.join('.');
-			} else if (
-				selectedFieldIdPath &&
-				stateRef.current.selectedField?.id &&
-				(fieldPath === selectedFieldIdPath || fieldPath.startsWith(`${selectedFieldIdPath}.`))
-			) {
-				const selectedPathSegments = selectedFieldIdPath.split('.');
-				segments[selectedPathSegments.length - 1] = stateRef.current.selectedField.id;
-				resolvedParentPath = segments.join('.');
-			}
+			segments[selectedFieldIdPath.split('.').length - 1] = committedId;
+			resolvedParentPath = segments.join('.');
+		}
+		if (
+			resolvedParentPath &&
+			!resolvedParentPath
+				.split('.')
+				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], { fields: baseType.fields })
+		) {
+			showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
+			return;
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
 		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
