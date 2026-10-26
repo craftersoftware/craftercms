@@ -113,7 +113,7 @@ const zoneActionLabels = defineMessages({
 
 const zoneMenuMessages = defineMessages({
 	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
-	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: 'That zone cannot be moved to.' },
+	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: "That zone can't accept this item." },
 	movedTo: { id: 'ice.movedTo', defaultMessage: 'Moved {label} to {zone}.' },
 	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' },
 	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
@@ -961,7 +961,10 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					setMoveToAnchor(null);
 				}}
 				slotProps={{
-					list: { 'data-craftercms-zone-submenu': '' },
+					list: {
+						'data-craftercms-zone-submenu': '',
+						'aria-label': formatMessage(zoneActionLabels.moveTo)
+					},
 					backdrop: {
 						onClick: (event) => {
 							event.stopPropagation();

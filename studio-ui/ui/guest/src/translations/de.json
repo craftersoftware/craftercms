@@ -42,7 +42,7 @@
 	"ice.movedTo": "{label} wurde nach {zone} verschoben.",
 	"zoneMenu.moveTo": "In eine andere Zone verschieben",
 	"zoneMenu.moveToZone": "Nach {zone} verschieben",
-	"zoneMenu.moveRefused": "Verschieben in diese Zone ist nicht möglich.",
+	"zoneMenu.moveRefused": "Diese Zone kann dieses Element nicht aufnehmen.",
 	"keyboardPlacement.notAccepted": "Diese Zone akzeptiert {contentType} nicht.",
 	"keyboardPlacement.notEditable": "Diese Zone kann nicht bearbeitet werden.",
 	"keyboardPlacement.missingZone": "Die Zielzone ist nicht mehr verfügbar.",

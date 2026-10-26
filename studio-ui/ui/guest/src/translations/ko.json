@@ -42,7 +42,7 @@
 	"ice.movedTo": "{label}을(를) {zone}(으)로 이동했습니다.",
 	"zoneMenu.moveTo": "다른 영역으로 이동",
 	"zoneMenu.moveToZone": "{zone}(으)로 이동",
-	"zoneMenu.moveRefused": "해당 영역으로 이동할 수 없습니다.",
+	"zoneMenu.moveRefused": "해당 영역은 이 항목을 받아들일 수 없습니다.",
 	"keyboardPlacement.notAccepted": "이 영역은 {contentType}을(를) 허용하지 않습니다.",
 	"keyboardPlacement.notEditable": "이 영역은 편집할 수 없습니다.",
 	"keyboardPlacement.missingZone": "대상 영역을 더 이상 사용할 수 없습니다.",
