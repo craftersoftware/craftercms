@@ -45,7 +45,7 @@ import {
 	isInheritedField,
 	modelHierarchyMap
 } from '../../contentController';
-import { EMPTY, from, interval, merge, Observable, of, Subscriber } from 'rxjs';
+import { concat, defer, EMPTY, from, interval, merge, Observable, of, Subscriber } from 'rxjs';
 import { clearAndListen$, destroyDragSubjects, dragover$, escape$, initializeDragSubjects } from '../subjects';
 import { initTinyMCE } from '../../controls/rte';
 import { dragAndDropActiveClass, EditingStatus, HighlightMode } from '../../constants';
@@ -1011,8 +1011,15 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 								}
 							) as string
 						);
-						requestZoneFocus({ iceId });
-						return of(startListening());
+						// Zone buttons are unmounted while the drop targets show. Ask for focus only after
+						// startListening has put them back, otherwise focus sits on <body> until the 1.5s fallback.
+						return concat(
+							of(startListening()),
+							defer(() => {
+								requestAnimationFrame(() => requestZoneFocus({ iceId }));
+								return EMPTY;
+							})
+						);
 					})
 				);
 			})
