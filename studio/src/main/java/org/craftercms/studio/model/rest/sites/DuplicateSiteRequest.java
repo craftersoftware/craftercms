@@ -40,6 +40,11 @@ public class DuplicateSiteRequest {
 	 * If false, the blob stores will retain the same configuration as the source site
 	 */
 	private boolean readOnlyBlobStores = false;
+	/**
+	 * When true, staging is enabled on the new site regardless of the source site.
+	 * Staging cannot be disabled afterwards.
+	 */
+	private boolean enableStaging = false;
 
 	public String getSiteName() {
 		return siteName;
@@ -79,5 +84,13 @@ public class DuplicateSiteRequest {
 
 	public void setReadOnlyBlobStores(boolean readOnlyBlobStores) {
 		this.readOnlyBlobStores = readOnlyBlobStores;
+	}
+
+	public boolean isEnableStaging() {
+		return enableStaging;
+	}
+
+	public void setEnableStaging(boolean enableStaging) {
+		this.enableStaging = enableStaging;
 	}
 }

@@ -109,6 +109,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 			siteName: site.siteName,
 			description: site.description,
 			sandboxBranch: site.gitBranch,
+			enableStaging: site.enableStaging,
 			...(sourceSiteHasBlobStores && { readOnlyBlobStores: site.readOnlyBlobStores })
 		}).subscribe({
 			next: () => {

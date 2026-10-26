@@ -18,7 +18,11 @@ package org.craftercms.studio.impl.v2.deployment;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.craftercms.commons.rest.RestTemplate;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
@@ -35,8 +39,21 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
  */
 public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
+	public static final String STAGING_TARGET_SUFFIX = "-staging";
+
+	private ServicesConfig servicesConfig;
+
 	public ServerlessDeliveryDeployer(final StudioConfiguration studioConfiguration, final RestTemplate restTemplate) {
 		super(studioConfiguration, restTemplate);
+	}
+
+	/**
+	 * Injected lazily. {@code sitesServiceInternal} constructs the deployer graph, and
+	 * {@code ServicesConfig} eventually needs that same bean, so eager injection loops.
+	 */
+	@Autowired
+	public void setServicesConfig(@Lazy ServicesConfig servicesConfig) {
+		this.servicesConfig = servicesConfig;
 	}
 
 	@Override
@@ -58,7 +75,63 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 	@Override
 	public void deleteTargets(String site) throws RestClientException {
 		if (isServerlessDeliveryEnabled()) {
-			doDeleteTarget(site, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV));
+			String environment = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV);
+			doDeleteTarget(site, environment);
+			doDeleteTarget(stagingSiteName(site), environment);
+		}
+	}
+
+	@Override
+	public void createStagingTarget(String site) throws RestClientException {
+		if (!isServerlessDeliveryEnabled()) {
+			return;
+		}
+		String stagingSiteName = stagingSiteName(site);
+		String localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH, stagingSiteName);
+		String repoUrl = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REMOTE_REPO_URL, site);
+		String template = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE);
+		boolean replace = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE,
+			Boolean.class, false);
+		HierarchicalConfiguration<ImmutableNode> templateParams =
+			studioConfiguration.getSubConfig(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE_PARAMS);
+
+		doCreateTarget(stagingSiteName, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV),
+			template, replace, false, localRepoPath, repoUrl, stagingBranch(site), templateParams);
+	}
+
+	@Override
+	public void deleteStagingTarget(String site) throws RestClientException {
+		if (isServerlessDeliveryEnabled()) {
+			doDeleteTarget(stagingSiteName(site), studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV));
+		}
+	}
+
+	@Override
+	public void duplicateStagingTarget(String sourceSiteId, String siteId) {
+		if (!isServerlessDeliveryEnabled()) {
+			return;
+		}
+		String stagingSiteName = stagingSiteName(siteId);
+		String localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH, stagingSiteName);
+		String repoUrl = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REMOTE_REPO_URL, siteId);
+		String template = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE);
+		boolean replace = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE,
+			Boolean.class, false);
+		HierarchicalConfiguration<ImmutableNode> templateParams =
+			studioConfiguration.getSubConfig(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE_PARAMS);
+		doDuplicateTarget(stagingSiteName(sourceSiteId), stagingSiteName, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV),
+			template, replace, false, localRepoPath, repoUrl, stagingBranch(siteId), templateParams);
+	}
+
+	protected String stagingSiteName(String site) {
+		return site + STAGING_TARGET_SUFFIX;
+	}
+
+	protected String stagingBranch(String site) {
+		try {
+			return servicesConfig.getStagingEnvironment(site);
+		} catch (SiteNotFoundException e) {
+			throw new IllegalStateException("Failed to resolve the staging branch for site '" + site + "'", e);
 		}
 	}
 

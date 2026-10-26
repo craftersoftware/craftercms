@@ -79,4 +79,31 @@ public class CompositeDeployer implements Deployer {
 			}
 		}
 	}
+
+	@Override
+	public void createStagingTarget(String site) throws RestClientException {
+		if (CollectionUtils.isNotEmpty(deployers)) {
+			for (Deployer deployer : deployers) {
+				deployer.createStagingTarget(site);
+			}
+		}
+	}
+
+	@Override
+	public void deleteStagingTarget(String site) throws RestClientException {
+		if (CollectionUtils.isNotEmpty(deployers)) {
+			for (Deployer deployer : deployers) {
+				deployer.deleteStagingTarget(site);
+			}
+		}
+	}
+
+	@Override
+	public void duplicateStagingTarget(String sourceSiteId, String siteId) throws RestClientException {
+		if (CollectionUtils.isNotEmpty(deployers)) {
+			for (Deployer deployer : deployers) {
+				deployer.duplicateStagingTarget(sourceSiteId, siteId);
+			}
+		}
+	}
 }
