@@ -34,6 +34,10 @@ interface BlueprintReviewProps {
 	onGoTo(step: number): any;
 }
 
+function blueprintParameterLabelId(name: string) {
+	return `blueprint-parameter-${name.replace(/\s+/g, '-')}`;
+}
+
 const messages = defineMessages({
 	siteInfo: {
 		id: 'createSiteDialog.siteInfo',
@@ -163,7 +167,12 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label="toggle password visibility"
+						aria-pressed={Boolean(passwordFields?.[parameter.name])}
+						aria-describedby={blueprintParameterLabelId(parameter.name)}
+						aria-label={formatMessage({
+							id: 'passwordTextField.toggleVisibilityButtonText',
+							defaultMessage: 'Show password'
+						})}
 						onClick={() => {
 							showPassword(parameter);
 						}}
@@ -182,7 +191,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		return blueprint.parameters.map((parameter, index) => {
 			return (
 				<Typography variant="body2" gutterBottom key={index}>
-					<Box component="span" sx={{ fontWeight: 'bold' }}>
+					<Box component="span" id={blueprintParameterLabelId(parameter.name)} sx={{ fontWeight: 'bold' }}>
 						{parameter.label}:{' '}
 					</Box>
 					{renderSingleParameter(parameter)}
@@ -224,10 +233,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		<Box sx={{ maxWidth: '600px', margin: 'auto' }}>
 			<Grid container spacing={3}>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.creationStrategy)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.creationStrategy)}
+						</Typography>
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.creationStrategy) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -239,7 +253,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					{blueprint.id !== 'GIT' ? (
 						<div>
 							<Typography variant="body2" gutterBottom>
@@ -261,10 +275,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 					)}
 				</Grid>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.siteInfo)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.siteInfo)}
+						</Typography>
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.siteInfo) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -276,7 +295,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					<Typography variant="body2" gutterBottom noWrap>
 						<Box component="span" sx={{ fontWeight: 'bold' }}>
 							{formatMessage(messages.siteName)}:{' '}
@@ -312,10 +331,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 				</Grid>
 				{blueprint.parameters && !!blueprint.parameters.length && (
 					<Grid size={12}>
-						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-							{formatMessage(messages.blueprintParameters)}
+						<Box sx={{ display: 'flex', alignItems: 'center' }}>
+							<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+								{formatMessage(messages.blueprintParameters)}
+							</Typography>
 							<IconButton
-								aria-label="goto"
+								aria-label={formatMessage(
+									{ defaultMessage: 'Edit {section}' },
+									{ section: formatMessage(messages.blueprintParameters) }
+								)}
 								sx={{
 									color: (theme) => theme.palette.primary.main,
 									'& svg': {
@@ -327,7 +351,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							>
 								<EditIcon />
 							</IconButton>
-						</Typography>
+						</Box>
 						{renderBlueprintParameters()}
 					</Grid>
 				)}

@@ -32,7 +32,7 @@ type PasswordTextFieldProps = TextFieldProps & {
 const translations = defineMessages({
 	toggleVisibilityButtonText: {
 		id: 'passwordTextField.toggleVisibilityButtonText',
-		defaultMessage: 'toggle password visibility'
+		defaultMessage: 'Show password'
 	}
 });
 
@@ -54,6 +54,7 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 		<InputAdornment position="end">
 			<IconButton
 				edge="end"
+				aria-pressed={showPassword}
 				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
 				onClick={handleClickShowPassword}
 				size="large"

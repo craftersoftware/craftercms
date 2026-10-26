@@ -15,7 +15,7 @@
  */
 
 import { TreeItem, treeItemClasses } from '@mui/x-tree-view/TreeItem';
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { ContentItem } from '../../models/Item';
 import LookupTable from '../../models/LookupTable';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -100,6 +100,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	const [showFilter, setShowFilter] = useState(Boolean(keywordByPath[path]));
 	const [keyword, setKeyword] = useState(keywordByPath[path] ?? '');
 	const { formatMessage } = useIntl();
+	const loadingLabelId = useId();
 	const item = lookupItemByPath(path, itemsByPath);
 	const children = lookupItemByPath(path, childrenByParentPath) ?? [];
 
@@ -242,8 +243,8 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}
 					}}
 				>
-					<CircularProgress size={14} />
-					<Typography variant="caption" color="textSecondary">
+					<CircularProgress size={14} aria-labelledby={loadingLabelId} />
+					<Typography id={loadingLabelId} variant="caption" color="textSecondary">
 						<FormattedMessage id="words.loading" defaultMessage="Loading" />
 					</Typography>
 				</Box>
