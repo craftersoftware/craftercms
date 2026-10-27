@@ -22,25 +22,33 @@ import { LookupTable } from '@craftercms/models';
 import qs from 'query-string';
 import { crafterConf } from './config';
 
-export function httpGet<T extends any = any>(requestURL: string, params: Record<string, any> = {}, headers?: LookupTable): Observable<T> {
-  const fetchConfig = crafterConf.getConfig().fetchConfig ?? {};
-  return fromFetch(`${requestURL}?${qs.stringify(params)}`, {
-    ...fetchConfig,
-    method: 'GET',
-    headers: { ...fetchConfig.headers, ...headers },
-    selector: response => response.json()
-  });
+export function httpGet<T extends any = any>(
+	requestURL: string,
+	params: Record<string, any> = {},
+	headers?: LookupTable
+): Observable<T> {
+	const fetchConfig = crafterConf.getConfig().fetchConfig ?? {};
+	return fromFetch(`${requestURL}?${qs.stringify(params)}`, {
+		...fetchConfig,
+		method: 'GET',
+		headers: { ...fetchConfig.headers, ...headers },
+		selector: (response) => response.json()
+	});
 }
 
-export function httpPost<T extends any = any>(requestURL: string, body: Object = {}, headers?: LookupTable): Observable<T> {
-  return ajax.post(requestURL, body, { 'Content-Type': 'application/json', ...headers }).pipe(
-    pluck('response')
-  ) as Observable<T>;
+export function httpPost<T extends any = any>(
+	requestURL: string,
+	body: Object = {},
+	headers?: LookupTable
+): Observable<T> {
+	return ajax
+		.post(requestURL, body, { 'Content-Type': 'application/json', ...headers })
+		.pipe(pluck('response')) as Observable<T>;
 }
 
 export const SDKService = {
-  httpGet,
-  httpPost
+	httpGet,
+	httpPost
 };
 
 export default SDKService;

@@ -15,10 +15,10 @@
  */
 
 import { Query } from '@craftercms/search';
-import { createAction } from "@reduxjs/toolkit";
+import { createAction } from '@reduxjs/toolkit';
 
 export const SEARCH_COMPLETE = 'CRAFTERCMS_SEARCH_COMPLETE';
 
 export const search = /*#__PURE__*/ createAction<Query>('GET_ITEM');
 
-export const searchComplete = /*#__PURE__*/ createAction<{ queryId: string, response? }>(SEARCH_COMPLETE);
+export const searchComplete = /*#__PURE__*/ createAction<{ queryId: string; response? }>(SEARCH_COMPLETE);

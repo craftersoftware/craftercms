@@ -21,7 +21,7 @@ export { item, descriptor, children, navBreadcrumb };
 export const tree = { ...item, children: [] };
 
 export const navItem = {
-  url: '/',
-  active: true,
-  subItems: []
+	url: '/',
+	active: true,
+	subItems: []
 };

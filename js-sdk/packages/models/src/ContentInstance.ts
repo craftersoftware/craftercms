@@ -15,20 +15,20 @@
  */
 
 export interface ContentInstanceSystemProps {
-  id: string;
-  path: string | null;
-  label: string; // Internal name
-  dateCreated: string;
-  dateModified: string;
-  contentTypeId: string;
-  sourceMap?: Record<string, string>; // { fieldId: path }
-  disabled: boolean;
-  orderInNav?: number;
-  placeInNav?: boolean;
+	id: string;
+	path: string | null;
+	label: string; // Internal name
+	dateCreated: string;
+	dateModified: string;
+	contentTypeId: string;
+	sourceMap?: Record<string, string>; // { fieldId: path }
+	disabled: boolean;
+	orderInNav?: number;
+	placeInNav?: boolean;
 }
 
 export interface ContentInstanceBase {
-  craftercms: ContentInstanceSystemProps;
+	craftercms: ContentInstanceSystemProps;
 }
 
 export type ContentInstance<T extends Record<string, any> = Record<string, any>> = T & ContentInstanceBase;

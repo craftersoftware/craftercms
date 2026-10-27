@@ -21,9 +21,9 @@ import { GraphQLResponse } from './GraphQLResponse';
  * @deprecated see and use getItem instead of getDescriptor
  **/
 export interface Descriptor {
-  page?: any;
-  component?: any;
-  [prop: string]: any;
+	page?: any;
+	component?: any;
+	[prop: string]: any;
 }
 
 export type DescriptorResponse = Descriptor | Item | GraphQLResponse;
