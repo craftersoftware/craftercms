@@ -183,7 +183,9 @@ const noop = (): void => {};
  */
 export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (value: T) => void, boolean] {
 	const { atoms } = useStableFormContext();
-	const fieldAtom = atoms.valueByFieldId[fieldId] as PrimitiveAtom<T> | undefined;
+	const fieldAtom = Object.prototype.hasOwnProperty.call(atoms.valueByFieldId, fieldId)
+		? (atoms.valueByFieldId[fieldId] as PrimitiveAtom<T>)
+		: undefined;
 	const [value, setValue] = useAtom(fieldAtom ?? (missingFieldAtom as PrimitiveAtom<T>));
 	return [fieldAtom ? value : undefined, fieldAtom ? setValue : noop, Boolean(fieldAtom)];
 }
