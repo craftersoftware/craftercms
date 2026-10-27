@@ -33,6 +33,7 @@ import PackageItemsTree from './PackageItemsTree';
 import Paper from '@mui/material/Paper';
 import { fetchContentItem } from '../../services/content';
 import { generateSingleItemOptions, itemActionDispatcher } from '../../utils/itemActions';
+import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import useEnv from '../../hooks/useEnv';
 import PackageItemsActions from './PackageItemsActions';
@@ -218,11 +219,13 @@ export function PackageItems(props: PackageItemsProps) {
 				anchorPosition={contextMenu.anchorPosition}
 				onClose={onContextMenuClose}
 			>
-				{contextMenu.options?.map((option) => (
-					<MenuItem key={option.id} onClick={() => onMenuItemClicked(option.id)}>
-						{option.label}
-					</MenuItem>
-				))}
+				<MenuList autoFocusItem>
+					{contextMenu.options?.map((option) => (
+						<MenuItem key={option.id} onClick={() => onMenuItemClicked(option.id)}>
+							{option.label}
+						</MenuItem>
+					))}
+				</MenuList>
 			</Popover>
 		</>
 	);

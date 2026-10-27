@@ -794,7 +794,7 @@ export function fetchContentTypePreviewImageUrl(
 	if (thumbnailFileName) {
 		const path = ensureSingleSlash(`/config/studio/content-types/${contentTypeId}/${thumbnailFileName}`);
 		return getBinary(
-			`/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId: 'HEAD' })}`,
+			`/studio/api/2/content/${site}/get_content_by_commit_id${toQueryString({ path, commitId: 'HEAD' })}`,
 			void 0,
 			'blob'
 		).pipe(

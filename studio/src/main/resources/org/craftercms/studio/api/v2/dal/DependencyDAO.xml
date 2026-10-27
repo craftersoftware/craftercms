@@ -56,7 +56,7 @@
 		AND (i.state &amp; #{newMask}) = 0
 		AND
 		<foreach item="pattern" index="index" collection="regex"
-			 open="(" separator=" OR " close=")">
+			 open="(" separator=" AND " close=")">
 			cte.target_path NOT RLIKE #{pattern}
 		</foreach>
 	</select>
@@ -82,7 +82,7 @@
 		AND d.valid = 1
 		AND
 		<foreach item="pattern" index="index" collection="regex"
-			 open="(" separator=" OR " close=")">
+			 open="(" separator=" AND " close=")">
 			d.target_path NOT RLIKE #{pattern}
 		</foreach>
 		AND i.site_id = s.id
@@ -145,9 +145,8 @@
 			AND (targetItem.state &amp; #{newInTargetMaskOff}) = 0)
 			OR
 			(
-				<!-- Modified item-specific dependency -->
-				(targetItem.state &amp; #{modifiedMask} > 0)
-				AND <foreach item="pattern" index="index" collection="regex"
+				<!-- item-specific dependencies, include them all and later filter out the ones that are not modified -->
+				<foreach item="pattern" index="index" collection="regex"
 					    open="(" separator=" OR " close=")">
 					targetItem.path RLIKE #{pattern}
 				</foreach>
@@ -210,6 +209,10 @@
 			 open="(" separator="," close=")">
 			#{path}
 		</foreach>
+		<!-- Remove items that are not modified or new in target -->
+		AND ((state &amp; #{modifiedMask}) > 0
+			OR ((state &amp; #{newInTargetMaskOn}) = #{newInTargetMaskOn}
+				AND (state &amp; #{newInTargetMaskOff}) = 0))
 	</select>
 
 	<select id="getDependentItemsInternal" resultMap="org.craftercms.studio.api.v2.dal.ItemDAO.LightItemMap">
