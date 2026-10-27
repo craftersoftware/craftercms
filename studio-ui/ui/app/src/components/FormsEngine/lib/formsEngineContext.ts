@@ -173,18 +173,19 @@ export const useStableFormContext = /*#__PURE__*/ createUseContextHook('useStabl
 
 // Shared stand-in so `useFieldValue` can call `useAtom` unconditionally when a field has no atom.
 const missingFieldAtom = atom<unknown>(undefined);
+const noop = (): void => {};
 
 /**
  * Purpose-built access to a sibling field's value (e.g. a descriptor-declared companion
  * field such as `{id}_tz`) without exposing the atom map or Jotai to plugin controls.
  * Returns `[value, setValue, exists]`; when the field wasn't initialized, `value` is
- * `undefined`, `exists` is `false` and `setValue` writes to the discarded stand-in atom.
+ * `undefined`, `exists` is `false` and `setValue` is a no-op.
  */
 export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (value: T) => void, boolean] {
 	const { atoms } = useStableFormContext();
 	const fieldAtom = atoms.valueByFieldId[fieldId] as PrimitiveAtom<T> | undefined;
 	const [value, setValue] = useAtom(fieldAtom ?? (missingFieldAtom as PrimitiveAtom<T>));
-	return [fieldAtom ? value : undefined, setValue, Boolean(fieldAtom)];
+	return [fieldAtom ? value : undefined, fieldAtom ? setValue : noop, Boolean(fieldAtom)];
 }
 
 export const useItemContext = /*#__PURE__*/ createUseContextHook('useItemContext', ItemContext);
