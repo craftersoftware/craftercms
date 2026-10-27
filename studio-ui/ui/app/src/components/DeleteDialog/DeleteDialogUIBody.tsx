@@ -82,7 +82,7 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						<>
 							<Alert severity="warning" sx={sectionWarningAlertSx}>
 								<FormattedMessage
-									id="deleteDialog.brokenItems"
+									id="deleteDialog.brokenReferencesWarning"
 									defaultMessage="Deleting the selected items will break references in {count, plural, one {the item} other {the # items}} below."
 									values={{ count: dependentItems.length }}
 								/>
