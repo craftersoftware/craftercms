@@ -40,6 +40,7 @@ export interface PreviewBrowseComponentsPanelUIProps {
 	onRowsPerPageChange(e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>): void;
 	onDragStart(item: ContentInstance): void;
 	onDragEnd(): void;
+	onInsert?(item: ContentInstance): void;
 }
 
 export function PreviewBrowseComponentsPanelUI(props: PreviewBrowseComponentsPanelUIProps) {
@@ -49,6 +50,7 @@ export function PreviewBrowseComponentsPanelUI(props: PreviewBrowseComponentsPan
 		onPageChanged,
 		onDragStart,
 		onDragEnd,
+		onInsert,
 		onRowsPerPageChange,
 		count,
 		pageNumber,
@@ -77,6 +79,7 @@ export function PreviewBrowseComponentsPanelUI(props: PreviewBrowseComponentsPan
 							avatarColorBase={item.craftercms.contentTypeId}
 							onDragStart={() => onDragStart(item)}
 							onDragEnd={onDragEnd}
+							onInsert={onInsert ? () => onInsert(item) : undefined}
 						/>
 					))}
 				</List>

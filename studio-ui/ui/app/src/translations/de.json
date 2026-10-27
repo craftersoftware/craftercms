@@ -914,6 +914,8 @@
 	"previewDialog.toggleBackgroundColor": "Hintergrundfarbe umschalten",
 	"previewDropTargetsPanel.chooseContentType": "Bitte wählen Sie einen Inhaltstyp aus.",
 	"previewDropTargetsPanel.noResults": "Keine Ergebnisse gefunden.",
+	"previewDropTargetsPanel.insertHere": "Hier einfügen",
+	"previewDropTargetsPanel.insertHereLabel": "{contentType} in {zone} einfügen",
 	"previewDropTargetsPanelTitle": "Zielbereiche",
 	"previewEditFormTool.editController": "Controller bearbeiten",
 	"previewEditFormTool.editTemplate": "Vorlage bearbeiten",

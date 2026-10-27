@@ -15,7 +15,8 @@
  */
 
 import type { TItem } from './SortableList';
-import { sortableListActionProcessor, SortAction } from '../lib/sortableListUtil';
+import { destinationIndex, sortableListActionProcessor, SortAction, useReorderFocus } from '../lib/sortableListUtil';
+import { useIntl } from 'react-intl';
 import List from '@mui/material/List';
 import { ListItem } from '@mui/material';
 import ListItemText from '@mui/material/ListItemText';
@@ -35,10 +36,18 @@ export interface TouchSortableListProps<T = unknown> {
 }
 
 export function TouchSortableList({ items, onChange, selectedItemId }: TouchSortableListProps) {
-	const handleMove = (action: SortAction, moveToEdge: boolean, index: number) =>
+	const { formatMessage } = useIntl();
+	const { rootRef, remember } = useReorderFocus(items);
+	const handleMove = (action: SortAction, moveToEdge: boolean, index: number, control: string) => {
+		const next = destinationIndex(action, moveToEdge, index, items.length);
+		if (next == null) {
+			return;
+		}
+		remember(next, control);
 		sortableListActionProcessor(action, moveToEdge, items, index, onChange);
+	};
 	return (
-		<List>
+		<List ref={rootRef}>
 			{items.map((item, index) => (
 				<ListItem key={index} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
 					<ListItemText
@@ -53,24 +62,44 @@ export function TouchSortableList({ items, onChange, selectedItemId }: TouchSort
 							>
 								<Typography>{item.value}</Typography>
 								<Box sx={{ display: 'flex' }}>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', false, index)}>
+									<IconButton
+										color="primary"
+										disabled={index === 0}
+										data-reorder-index={index}
+										data-reorder-control="up"
+										aria-label={formatMessage({ defaultMessage: 'Move {name} up' }, { name: item.value })}
+										onClick={() => handleMove('up', false, index, 'up')}
+									>
 										<KeyboardArrowUpRounded />
 									</IconButton>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', true, index)}>
+									<IconButton
+										color="primary"
+										disabled={index === 0}
+										data-reorder-index={index}
+										data-reorder-control="top"
+										aria-label={formatMessage({ defaultMessage: 'Move {name} to top' }, { name: item.value })}
+										onClick={() => handleMove('up', true, index, 'top')}
+									>
 										<KeyboardDoubleArrowUpRounded />
 									</IconButton>
 									<Divider orientation="vertical" flexItem sx={{ height: 15, alignSelf: 'center' }} />
 									<IconButton
 										color="primary"
 										disabled={index === items.length - 1}
-										onClick={() => handleMove('down', false, index)}
+										data-reorder-index={index}
+										data-reorder-control="down"
+										aria-label={formatMessage({ defaultMessage: 'Move {name} down' }, { name: item.value })}
+										onClick={() => handleMove('down', false, index, 'down')}
 									>
 										<KeyboardArrowDownRounded />
 									</IconButton>
 									<IconButton
 										color="primary"
 										disabled={index === items.length - 1}
-										onClick={() => handleMove('down', true, index)}
+										data-reorder-index={index}
+										data-reorder-control="bottom"
+										aria-label={formatMessage({ defaultMessage: 'Move {name} to bottom' }, { name: item.value })}
+										onClick={() => handleMove('down', true, index, 'bottom')}
 									>
 										<KeyboardDoubleArrowDownRounded />
 									</IconButton>

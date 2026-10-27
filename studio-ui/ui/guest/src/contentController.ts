@@ -453,8 +453,12 @@ export function insertComponent(
 	const models = getCachedModels();
 	const result = getCollection(models[modelId], fieldId, targetIndex)?.concat() ?? [];
 
+	// Dotted indexes (nested repeat/node-selector) must use the last segment.
+	// splice("2.5") would truncate to 2 and insert in the wrong collection slot.
+	const insertAt = typeof targetIndex === 'number' ? targetIndex : parseInt(popPiece(`${targetIndex}`), 10);
+
 	// Insert in desired position
-	result.splice(targetIndex as number, 0, instance.craftercms.id);
+	result.splice(Number.isNaN(insertAt) ? result.length : insertAt, 0, instance.craftercms.id);
 
 	const model = setCollection(
 		models[modelId],

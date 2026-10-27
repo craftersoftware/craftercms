@@ -29,6 +29,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MoreRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
+import DriveFileMoveOutlinedIcon from '@mui/icons-material/DriveFileMoveOutlined';
 import {
 	deleteItem,
 	duplicateItem,
@@ -41,24 +42,33 @@ import {
 	insertItem,
 	isInheritedField,
 	modelHierarchyMap,
+	moveItem,
 	sortDownItem,
 	sortUpItem
 } from '../contentController';
 import { clearAndListen$ } from '../store/subjects';
 import { startListening } from '../store/actions';
-import { ElementRecord } from '../models/InContextEditing';
-import { extractCollection, findParentModelId } from '@craftercms/studio-ui/utils/model';
+import { ElementRecord, ICERecord } from '../models/InContextEditing';
+import { extractCollection, extractCollectionItem, findParentModelId } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
 import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
-import { exists, findContainerRecord, getById, getReferentialEntries, runValidation } from '../iceRegistry';
+import {
+	exists,
+	findContainerRecord,
+	getById,
+	getRecordDropTargets,
+	getReferentialEntries,
+	isTypeAcceptedAsByField,
+	runValidation
+} from '../iceRegistry';
 import { post } from '../utils/communicator';
 import { requestEdit, snackGuestMessage } from '@craftercms/studio-ui/state/actions/preview';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { getParentModelId, resolvePlacementForZone } from '../utils/ice';
 import { fromICEId, get } from '../elementRegistry';
-import { beforeWrite$ } from '../store/util';
+import { beforeWrite$, checkIfLockedOrModified, lockPaths$ } from '../store/util';
 import { useStore } from './GuestContext';
 import UltraStyledTypography from './UltraStyledTypography';
 import UltraStyledTooltip from './UltraStyledTooltip';
@@ -66,7 +76,78 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
-import { FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import {
+	appendIndexForDropZone,
+	contentPathForIceRecord,
+	dropZoneBlocker,
+	isSymmetricIndex,
+	zoneContainsInstance
+} from '../utils/keyboardPlacement';
+import { announceGuestStatus } from '../utils/guestAnnounce';
+import { focusAddressesAfterRemoval, requestZoneFocus, shiftedCollectionIndex } from '../utils/zoneFocus';
+import { GuestState } from '../store/models/GuestStore';
+
+const zoneMenuMessages = defineMessages({
+	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
+	moveRefused: { id: 'zoneMenu.moveRefused', defaultMessage: 'That zone cannot be moved to.' },
+	movedTo: { id: 'ice.movedTo', defaultMessage: 'Moved {label} to {zone}.' },
+	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' }
+});
+
+function collectMoveTargets(
+	isMovable: boolean,
+	nodeSelectorItemRecord: ICERecord | null,
+	state: GuestState
+): Array<{ iceId: number; label: string }> {
+	if (!isMovable || !nodeSelectorItemRecord?.fieldId) {
+		return [];
+	}
+	const origin = findContainerRecord(
+		nodeSelectorItemRecord.modelId,
+		nodeSelectorItemRecord.fieldId,
+		nodeSelectorItemRecord.index
+	);
+	const models = getCachedModels();
+	const draggedModelId = extractCollectionItem(
+		models[nodeSelectorItemRecord.modelId],
+		nodeSelectorItemRecord.fieldId,
+		nodeSelectorItemRecord.index
+	);
+	const draggedModel = typeof draggedModelId === 'string' ? models[draggedModelId] : null;
+	const contentTypeId = draggedModel?.craftercms.contentTypeId;
+	const acceptedMode = draggedModel?.craftercms.path ? 'sharedExisting' : 'embedded';
+	return getRecordDropTargets(nodeSelectorItemRecord.id).flatMap((target) => {
+		if (target.id === origin?.id) {
+			return [];
+		}
+		const targetIndex = appendIndexForDropZone(target);
+		if (!isSymmetricIndex(target.fieldId, targetIndex)) {
+			return [];
+		}
+		if (dropZoneBlocker(target)) {
+			return [];
+		}
+		if (typeof draggedModelId === 'string' && zoneContainsInstance(target, draggedModelId)) {
+			return [];
+		}
+		const entry = fromICEId(target.id);
+		const element = entry ? get(entry.id) : null;
+		if (!element) {
+			return [];
+		}
+		const { isLocked, isExternallyModified, isLockedByCurrentUser } = checkIfLockedOrModified(state, element);
+		if (isExternallyModified || (isLocked && !isLockedByCurrentUser)) {
+			return [];
+		}
+		const field = getReferentialEntries(target).field;
+		if (contentTypeId && !isTypeAcceptedAsByField(field, contentTypeId, acceptedMode)) {
+			return [];
+		}
+		const labeled = get(element.id);
+		return [{ iceId: target.id, label: labeled?.label || element.label || target.fieldId }];
+	});
+}
 
 export interface ZoneMenuProps {
 	record: ElementRecord;
@@ -92,7 +173,10 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		: (models[modelId].craftercms.path ?? models[parentModelId].craftercms.path);
 
 	const trashButtonRef = React.useRef(undefined);
+	const menuRef = React.useRef<HTMLDivElement>(null);
 	const [showTrashConfirmation, setShowTrashConfirmation] = useState<boolean>(false);
+	const [moveToAnchor, setMoveToAnchor] = useState<HTMLElement | null>(null);
+	const { formatMessage } = useIntl();
 
 	const iceRecord = getById(record.iceIds[0]);
 	const recordType = iceRecord.recordType;
@@ -244,8 +328,69 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		isItemFile
 	]);
 	const showItemMenuButton = ['node-selector-item', 'component', 'page'].includes(recordType);
-
+	const zoneLabel = record.label || field?.name || contentType?.name || '';
 	const store = useStore();
+	const moveTargets = collectMoveTargets(isMovable, nodeSelectorItemRecord, store.getState());
+	const named = (
+		action:
+			| 'edit'
+			| 'unlock'
+			| 'editTemplate'
+			| 'editController'
+			| 'addItem'
+			| 'duplicateItem'
+			| 'moveUpName'
+			| 'moveDownName'
+			| 'moveTo'
+			| 'trashName'
+			| 'options'
+			| 'cancelName'
+	): string => {
+		// One literal descriptor per branch so the extractor can see an id. A variable descriptor cannot.
+		let actionText = '';
+		switch (action) {
+			case 'edit':
+				actionText = formatMessage({ id: 'words.edit', defaultMessage: 'Edit' }) as string;
+				break;
+			case 'unlock':
+				actionText = formatMessage({ id: 'zoneMenu.unlock', defaultMessage: 'Unlock' }) as string;
+				break;
+			case 'editTemplate':
+				actionText = formatMessage({ id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' }) as string;
+				break;
+			case 'editController':
+				actionText = formatMessage({ id: 'zoneMenu.editController', defaultMessage: 'Edit controller' }) as string;
+				break;
+			case 'addItem':
+				actionText = formatMessage({ id: 'zoneMenu.addItem', defaultMessage: 'Add new item' }) as string;
+				break;
+			case 'duplicateItem':
+				actionText = formatMessage({ id: 'zoneMenu.duplicateItem', defaultMessage: 'Duplicate item' }) as string;
+				break;
+			case 'moveUpName':
+				actionText = formatMessage({ id: 'zoneMenu.moveUpName', defaultMessage: 'Move up' }) as string;
+				break;
+			case 'moveDownName':
+				actionText = formatMessage({ id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' }) as string;
+				break;
+			case 'moveTo':
+				actionText = formatMessage({ id: 'zoneMenu.moveTo', defaultMessage: 'Move to another zone' }) as string;
+				break;
+			case 'trashName':
+				actionText = formatMessage({ id: 'zoneMenu.trashName', defaultMessage: 'Trash' }) as string;
+				break;
+			case 'options':
+				actionText = formatMessage({ id: 'words.options', defaultMessage: 'Options' }) as string;
+				break;
+			case 'cancelName':
+				actionText = formatMessage({ id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' }) as string;
+				break;
+		}
+		if (!zoneLabel) {
+			return actionText;
+		}
+		return formatMessage(zoneMenuMessages.actionForZone, { action: actionText, zone: zoneLabel }) as string;
+	};
 	const getItemData = () => {
 		const models = getCachedModels();
 		const isNodeSelectorItem = recordType === 'component' && Boolean(nodeSelectorItemRecord);
@@ -258,20 +403,53 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	// region Callbacks
 
-	const execOperation = (subscriber: () => void) => {
+	const execOperation = (subscriber: () => void, onSkipped?: () => void) => {
 		const { username, activeSite } = store.getState();
 		const { path } = getItemData();
+		let ran = false;
 		beforeWrite$({
 			path,
 			site: activeSite,
 			username,
 			localItem: getCachedContentItem(path)
-		}).subscribe(subscriber);
+		}).subscribe({
+			next: () => {
+				ran = true;
+				subscriber();
+			},
+			complete: () => !ran && onSkipped?.()
+		});
+	};
+
+	const closeMenu = () => {
+		clearAndListen$.next();
+		dispatch(startListening());
 	};
 
 	const onCancel = () => {
-		clearAndListen$.next();
-		dispatch(startListening());
+		closeMenu();
+		requestZoneFocus({ iceId: record.iceIds[0] });
+	};
+
+	const focusAfterMove = (delta: number) => {
+		const source = nodeSelectorItemRecord ?? { modelId, fieldId, index };
+		requestZoneFocus({
+			iceId: record.iceIds[0],
+			address: {
+				modelId: source.modelId,
+				fieldId: String(source.fieldId),
+				index: shiftedCollectionIndex(source.index, delta)
+			},
+			afterRegistryChange: true
+		});
+	};
+
+	const announceMove = () => {
+		announceGuestStatus(
+			formatMessage(zoneMenuMessages.moved, {
+				label: zoneLabel || (formatMessage({ id: 'ice.untitledZone', defaultMessage: 'Content zone' }) as string)
+			}) as string
+		);
 	};
 
 	const commonEdit = (e, typeOfEdit) => {
@@ -354,27 +532,34 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const onMoveUp = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		// Keep a zone button focused while the menu unmounts. The new index is focused only after the move.
+		requestZoneFocus({ iceId: record.iceIds[0] });
 		execOperation(() => {
 			if (recordType === 'component' && nodeSelectorItemRecord) {
 				sortUpItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 			} else {
 				sortUpItem(modelId, fieldId, index);
 			}
+			announceMove();
+			focusAfterMove(-1);
 		});
-		onCancel();
+		closeMenu();
 	};
 
 	const onMoveDown = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		requestZoneFocus({ iceId: record.iceIds[0] });
 		execOperation(() => {
 			if (recordType === 'component' && nodeSelectorItemRecord) {
 				sortDownItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 			} else {
 				sortDownItem(modelId, fieldId, index);
 			}
+			announceMove();
+			focusAfterMove(1);
 		});
-		onCancel();
+		closeMenu();
 	};
 
 	const doTrash = () => {
@@ -384,16 +569,32 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		]);
 		if (minCount) {
 			post(snackGuestMessage(minCount));
-		} else {
-			execOperation(() => {
+			return;
+		}
+		const source = nodeSelectorItemRecord ?? { modelId, fieldId, index };
+		const originIceId = record.iceIds[0];
+		// If the lock fails, the item is still here. After a successful delete, focus the same index,
+		// otherwise the previous item, otherwise the next, otherwise the collection zone.
+		requestZoneFocus({ iceId: originIceId });
+		execOperation(
+			() => {
 				if (recordType === 'component' && nodeSelectorItemRecord) {
 					deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 				} else {
 					deleteItem(modelId, fieldId, index);
 				}
-			});
-			onCancel();
-		}
+				requestZoneFocus({
+					iceId: originIceId,
+					addresses: focusAddressesAfterRemoval(source.modelId, String(source.fieldId), source.index),
+					afterRegistryChange: true,
+					focusCurrent: false
+				});
+			},
+			// Lock refused or cancelled: the item is still here. The confirm menu's own focus restore
+			// ran after the request above, so ask again once it has closed.
+			() => requestAnimationFrame(() => requestZoneFocus({ iceId: originIceId }))
+		);
+		closeMenu();
 	};
 
 	const onTrash = (e) => {
@@ -437,30 +638,151 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		post(unlockItem({ path }));
 	};
 
+	const refuseMove = () => {
+		post(
+			snackGuestMessage({
+				level: 'suggestion',
+				message: formatMessage(zoneMenuMessages.moveRefused) as string
+			})
+		);
+	};
+
+	const onMoveTo = (targetIceId: number) => {
+		setMoveToAnchor(null);
+		const source = nodeSelectorItemRecord;
+		const target = getById(targetIceId);
+		const targetIndex = target ? appendIndexForDropZone(target) : null;
+		const allowed = moveTargets.some((candidate) => candidate.iceId === targetIceId);
+		if (
+			!source ||
+			!target ||
+			targetIndex == null ||
+			!allowed ||
+			!isSymmetricIndex(source.fieldId, source.index) ||
+			!isSymmetricIndex(target.fieldId, targetIndex)
+		) {
+			refuseMove();
+			return;
+		}
+		const zoneName = moveTargets.find((candidate) => candidate.iceId === targetIceId)?.label ?? '';
+		const paths = [contentPathForIceRecord(source), contentPathForIceRecord(target)];
+		if (paths.some((path) => !path)) {
+			refuseMove();
+			return;
+		}
+		const sourceContainer = findContainerRecord(source.modelId, source.fieldId, source.index);
+		const sourceCollection = extractCollection(getCachedModel(source.modelId), source.fieldId, source.index);
+		const sourceLength = Array.isArray(sourceCollection) ? sourceCollection.length : numOfItemsInContainerCollection;
+		if (sourceContainer && sourceLength != null) {
+			const minCount = runValidation(sourceContainer.id, 'minCount', [sourceLength - 1]);
+			if (minCount) {
+				post(snackGuestMessage(minCount));
+				return;
+			}
+		}
+		const originIceId = record.iceIds[0];
+		let moved = false;
+		lockPaths$(paths, store.getState()).subscribe({
+			next: () => {
+				moved = true;
+				moveItem(source.modelId, source.fieldId, source.index, target.modelId, target.fieldId, targetIndex);
+				announceGuestStatus(
+					formatMessage(zoneMenuMessages.movedTo, { label: zoneLabel || zoneName, zone: zoneName }) as string
+				);
+				requestZoneFocus({
+					iceId: originIceId,
+					address: {
+						modelId: target.modelId,
+						fieldId: target.fieldId,
+						index: String(targetIndex)
+					},
+					afterRegistryChange: true
+				});
+			},
+			complete: () => {
+				if (!moved) {
+					// beforeWrite$ already reported the lock failure. A second snack is wrong when the
+					// write was cancelled rather than rejected with a lock conflict.
+					requestZoneFocus({ iceId: originIceId });
+				}
+			}
+		});
+		closeMenu();
+	};
+
 	// endregion
 
-	const refs = useRef({ onMoveUp, onMoveDown, onTrash, doTrash, onCancel, isFirstItem, isLastItem });
+	const closeSubmenus = () => {
+		setMoveToAnchor(null);
+		setShowTrashConfirmation(false);
+	};
+
+	// MUI types the menu onClose event as {}. The backdrop click is a real mouse event.
+	const stopSubmenuDismiss = (event: object) => {
+		const dismissEvent = event as { stopPropagation?: () => void; nativeEvent?: { stopPropagation?: () => void } };
+		dismissEvent.stopPropagation?.();
+		dismissEvent.nativeEvent?.stopPropagation?.();
+	};
+
+	const refs = useRef({
+		onMoveUp,
+		onMoveDown,
+		onTrash,
+		doTrash,
+		onCancel,
+		isFirstItem,
+		isLastItem,
+		isMovable,
+		isTrashable,
+		moveToAnchor,
+		showTrashConfirmation,
+		closeSubmenus,
+		iceId: record.iceIds[0]
+	});
 
 	// Listen for key input to sort/delete and for clicking outside the zone to dismiss selection.
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
+			const keyTarget = e.target instanceof Element ? e.target : null;
+			const inZoneChrome = Boolean(keyTarget?.closest('[data-craftercms-zone-menu],[data-craftercms-ice-control]'));
+			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
+			// A click can leave focus on the document while this menu is still open.
+			const looseFocus = e.target === document.body || e.target === document.documentElement || e.target === document;
+			const submenuOpen = Boolean(refs.current.moveToAnchor) || refs.current.showTrashConfirmation;
+			// Escape inside the submenu closes only that submenu. Other widgets keep their keys.
+			if (e.key === 'Escape' && submenuOpen && (inOurSubmenu || inZoneChrome)) {
+				e.preventDefault();
+				e.stopPropagation();
+				refs.current.closeSubmenus();
+				return;
+			}
+			if (!inZoneChrome && !looseFocus) {
+				return;
+			}
+			if (e.key === 'Escape') {
+				requestZoneFocus({ iceId: refs.current.iceId });
+				return;
+			}
+			if (e.defaultPrevented || submenuOpen || keyTarget?.closest('input,textarea,select,[contenteditable]')) {
+				return;
+			}
 			switch (e.key) {
 				case 'ArrowLeft':
 				case 'ArrowUp': {
-					if (isMovable && !refs.current.isFirstItem) {
+					if (refs.current.isMovable && !refs.current.isFirstItem) {
 						refs.current.onMoveUp(e);
 					}
 					break;
 				}
 				case 'ArrowRight':
 				case 'ArrowDown': {
-					if (isMovable && !refs.current.isLastItem) {
+					if (refs.current.isMovable && !refs.current.isLastItem) {
 						refs.current.onMoveDown(e);
 					}
 					break;
 				}
 				case 'Backspace': {
-					if (isTrashable) {
+					if (refs.current.isTrashable) {
 						e.preventDefault();
 						setShowTrashConfirmation(true);
 					}
@@ -469,31 +791,42 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			}
 		};
 		const onClickOut = (e: MouseEvent) => {
+			const target = e.target as Element | null;
+			// Zone keyboard buttons dispatch their own click. The zone menu and an open submenu
+			// must not be treated as an outside click.
+			if (target?.closest?.('[data-craftercms-ice-control],[data-craftercms-zone-menu],[role="menu"]')) {
+				return;
+			}
 			e.stopPropagation();
 			e.preventDefault();
+			if (refs.current.moveToAnchor || refs.current.showTrashConfirmation) {
+				refs.current.closeSubmenus();
+				return;
+			}
 			refs.current.onCancel();
 		};
-		document.addEventListener('keydown', onKeyDown, false);
+		document.addEventListener('keydown', onKeyDown, true);
 		document.addEventListener('click', onClickOut, false);
+		menuRef.current?.querySelector<HTMLButtonElement>('button:not([tabindex="-1"])')?.focus({ preventScroll: true });
 		return () => {
-			document.removeEventListener('keydown', onKeyDown, false);
+			document.removeEventListener('keydown', onKeyDown, true);
 			document.removeEventListener('click', onClickOut, false);
 		};
 	}, []);
 
 	return (
-		<>
+		<Box ref={menuRef} data-craftercms-zone-menu="" sx={{ display: 'contents' }}>
 			<Box sx={{ display: 'flex' }}>
 				{hasEditAction && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />} key="edit">
-						<UltraStyledIconButton size="small" onClick={onEdit}>
+						<UltraStyledIconButton size="small" aria-label={named('edit')} onClick={onEdit}>
 							<PencilIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isLockedByCurrentUser && (
-					<UltraStyledTooltip title="Unlock" key="unlock">
-						<UltraStyledIconButton size="small" onClick={onUnlock}>
+					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.unlock" defaultMessage="Unlock" />} key="unlock">
+						<UltraStyledIconButton size="small" aria-label={named('unlock')} onClick={onUnlock}>
 							<UnlockIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -505,7 +838,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editTemplate" defaultMessage="Edit template" />}
 								key="editTemplate"
 							>
-								<UltraStyledIconButton size="small" onClick={onEditTemplate}>
+								<UltraStyledIconButton size="small" aria-label={named('editTemplate')} onClick={onEditTemplate}>
 									<FreemarkerIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -515,7 +848,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.editController" defaultMessage="Edit controller" />}
 								key="editController"
 							>
-								<UltraStyledIconButton size="small" onClick={onEditController}>
+								<UltraStyledIconButton size="small" aria-label={named('editController')} onClick={onEditController}>
 									<GroovyIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -527,7 +860,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.addItem" defaultMessage="Add new item" />}
 						key="addNewItem"
 					>
-						<UltraStyledIconButton size="small" onClick={onAddRepeatItem}>
+						<UltraStyledIconButton size="small" aria-label={named('addItem')} onClick={onAddRepeatItem}>
 							<AddCircleOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -537,7 +870,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						title={<FormattedMessage id="zoneMenu.duplicateItem" defaultMessage="Duplicate item" />}
 						key="duplicateItem"
 					>
-						<UltraStyledIconButton size="small" onClick={onDuplicateItem}>
+						<UltraStyledIconButton size="small" aria-label={named('duplicateItem')} onClick={onDuplicateItem}>
 							<ContentCopyRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -550,7 +883,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveUp" defaultMessage="Move up/left (← or ↑)" />}
 								key="moveUp"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveUp}>
+								<UltraStyledIconButton size="small" aria-label={named('moveUpName')} onClick={onMoveUp}>
 									<ArrowUpwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -560,22 +893,48 @@ export function ZoneMenu(props: ZoneMenuProps) {
 								title={<FormattedMessage id="zoneMenu.moveDown" defaultMessage="Move down/right (→ or ↓)" />}
 								key="moveDown"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveDown}>
+								<UltraStyledIconButton size="small" aria-label={named('moveDownName')} onClick={onMoveDown}>
 									<ArrowDownwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
 						)
 					]}
+				{moveTargets.length > 0 && (!isLockedItem || !isEmbedded) && (
+					<UltraStyledTooltip
+						title={<FormattedMessage id="zoneMenu.moveTo" defaultMessage="Move to another zone" />}
+						key="moveTo"
+					>
+						<UltraStyledIconButton
+							size="small"
+							aria-haspopup="menu"
+							aria-expanded={Boolean(moveToAnchor)}
+							aria-label={named('moveTo')}
+							onClick={(event) => {
+								event.stopPropagation();
+								setMoveToAnchor(event.currentTarget);
+							}}
+						>
+							<DriveFileMoveOutlinedIcon />
+						</UltraStyledIconButton>
+					</UltraStyledTooltip>
+				)}
 				{isTrashable && !isLockedItem && (
 					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />} key="trash">
-						<UltraStyledIconButton size="small" onClick={onTrash} ref={trashButtonRef}>
+						<UltraStyledIconButton size="small" aria-label={named('trashName')} onClick={onTrash} ref={trashButtonRef}>
 							<DeleteOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isMovable && (!isLockedItem || !isEmbedded) && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.move" defaultMessage="Move" />} key="move">
-						<UltraStyledIconButton size="small" draggable sx={{ cursor: 'grab' }} onDragStart={onDragStart}>
+						<UltraStyledIconButton
+							size="small"
+							draggable
+							tabIndex={-1}
+							aria-hidden
+							sx={{ cursor: 'grab' }}
+							onDragStart={onDragStart}
+						>
 							<DragIndicatorRounded />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -584,25 +943,71 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Box sx={{ display: 'flex' }}>
 				<Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 				{showItemMenuButton && (
-					<UltraStyledTooltip
-						title={<FormattedMessage id="words.options" defaultMessage="Options" />}
-						onClick={handleRequestItemMenu}
-					>
-						<UltraStyledIconButton size="small">
+					<UltraStyledTooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
+						<UltraStyledIconButton size="small" aria-label={named('options')} onClick={handleRequestItemMenu}>
 							<MoreRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}>
-					<UltraStyledIconButton size="small" onClick={onCancel}>
+					<UltraStyledIconButton size="small" aria-label={named('cancelName')} onClick={onCancel}>
 						<CloseRoundedIcon />
 					</UltraStyledIconButton>
 				</UltraStyledTooltip>
 			</Box>
 			<Menu
+				anchorEl={moveToAnchor}
+				open={Boolean(moveToAnchor)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setMoveToAnchor(null);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				sx={{ zIndex: 1501 }}
+			>
+				{moveTargets.map((target) => (
+					<MenuItem
+						key={target.iceId}
+						onClick={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+							onMoveTo(target.iceId);
+						}}
+					>
+						<UltraStyledTypography>
+							<FormattedMessage
+								id="zoneMenu.moveToZone"
+								defaultMessage="Move to {zone}"
+								values={{ zone: target.label }}
+							/>
+						</UltraStyledTypography>
+					</MenuItem>
+				))}
+			</Menu>
+			<Menu
 				anchorEl={trashButtonRef.current}
 				open={showTrashConfirmation}
-				onClose={() => setShowTrashConfirmation(false)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setShowTrashConfirmation(false);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
 				anchorOrigin={{
 					vertical: 'bottom',
 					horizontal: 'right'
@@ -636,7 +1041,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledTypography>
 				</MenuItem>
 			</Menu>
-		</>
+		</Box>
 	);
 }
 

@@ -160,9 +160,30 @@ export const componentInstanceDragStarted = /*#__PURE__*/ createAction<{
 	contentType: ContentType;
 }>('COMPONENT_INSTANCE_DRAG_STARTED');
 export const componentInstanceDragEnded = /*#__PURE__*/ createAction('COMPONENT_INSTANCE_DRAG_ENDED');
-export const contentTypeDropTargetsRequest = /*#__PURE__*/ createAction<{ contentTypeId: string }>(
-	'CONTENT_TYPE_DROP_TARGETS_REQUEST'
-);
+export type DropTargetCreateMode = 'embedded' | 'shared' | 'sharedExisting';
+
+export const contentTypeDropTargetsRequest = /*#__PURE__*/ createAction<{
+	contentTypeId: string;
+	/** When set, guest filters drop zones to this storage mode (used by non-drag insert). */
+	createMode?: DropTargetCreateMode | DropTargetCreateMode[];
+	/** Full type, so guest can render Insert here without another round trip. */
+	contentType?: ContentType;
+	/** Existing shared component to insert instead of creating a new one. */
+	instance?: ContentInstance;
+}>('CONTENT_TYPE_DROP_TARGETS_REQUEST');
+
+/** Insert a new or existing component at the end of a drop zone. No drag required. */
+export const insertComponentAtDropZone = /*#__PURE__*/ createAction<{
+	contentType: ContentType;
+	iceId: number;
+	instance?: ContentInstance;
+}>('INSERT_COMPONENT_AT_DROP_ZONE');
+
+/** Host-side record of what the Drop Targets panel will insert. */
+export const setDropTargetPlacement = /*#__PURE__*/ createAction<{
+	contentType: ContentType;
+	instance?: ContentInstance;
+} | null>('SET_DROP_TARGET_PLACEMENT');
 export const contentTypeDropTargetsResponse = /*#__PURE__*/ createAction<{
 	contentTypeId: string;
 	dropTargets: ContentTypeDropTarget[];
