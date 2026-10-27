@@ -80,7 +80,6 @@
 	},
 	"devDependencies": {
 		"@formatjs/cli": "^6.16.35",
-		"@rolldown/plugin-babel": "^0.2.4",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-swc": "^0.4.1",
 		"@swc/core": "^1.16.20",

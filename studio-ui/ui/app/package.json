@@ -124,10 +124,12 @@
 		"zxcvbn": "^4.4.2"
 	},
 	"devDependencies": {
+		"@babel/core": "^7.29.0",
 		"@eslint/compat": "^2.1.1",
 		"@eslint/eslintrc": "^3.3.7",
 		"@eslint/js": "^10.0.1",
 		"@formatjs/cli": "^6.16.35",
+		"@rolldown/plugin-babel": "^0.2.4",
 		"@rollup/plugin-swc": "^0.4.1",
 		"@types/diff": "^8.0.0",
 		"@types/js-cookie": "^3.0.6",
