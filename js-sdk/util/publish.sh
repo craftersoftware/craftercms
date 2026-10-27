@@ -23,7 +23,7 @@ for P in ${PACKAGES[@]}; do
   cd $P
   echo ""
   echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-  echo "Publihsing '$P' package"
+  echo "Publishing '$P' package"
   echo "--------------------------------------------"
   echo "Running command: 'npm publish --access public'"
   npm publish --access public
