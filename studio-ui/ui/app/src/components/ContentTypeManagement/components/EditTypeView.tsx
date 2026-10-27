@@ -718,7 +718,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			resolvedParentPath &&
 			!resolvedParentPath
 				.split('.')
-				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], { fields: baseType.fields })
+				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
+					fields: baseType.fields
+				})
 		) {
 			showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
 			return;
