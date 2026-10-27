@@ -726,14 +726,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			return;
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
-		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
-		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
-		setType(nextType);
-
 		// Root drafts are keyed `{NEW}`; nested (addSubField) uses field.id when preset (e.g. file-name).
-		const leafId = fieldPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
-		const newFieldPath = fieldPath ? `${fieldPath}.${leafId}` : leafId;
-		setType(addField(type, newField, newFieldPath, sectionId, position));
+		const leafId = resolvedParentPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
+		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${leafId}` : leafId;
+		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
+		setType(nextType);		
 		onUpdateHasPendingChanges(true);
 		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
