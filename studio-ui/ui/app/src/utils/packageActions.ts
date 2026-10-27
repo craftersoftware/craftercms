@@ -25,6 +25,7 @@ import { hasApproveAction, hasCancelAction, hasEditPackageAction, hasRejectActio
 import { popDialog, pushDialog } from '../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { createComponentId } from './system';
+import { PACKAGE_REJECTED } from './constants';
 
 const translations = defineMessages({
 	view: {
@@ -95,6 +96,7 @@ export const generatePackageOptions = (
 				packageOptions.push(unparsedOptions.view);
 			}
 			if (
+				pkg.approvalState !== PACKAGE_REJECTED &&
 				(hasApproveAction(pkg.availableActions) || hasRejectAction(pkg.availableActions)) &&
 				actionsToInclude.review
 			) {
