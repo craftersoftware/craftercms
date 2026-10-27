@@ -203,8 +203,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
 				if (selectedField || selectedSection || selectedDataSource) return;
 				const flagAtom = activeFormContext?.atoms?.valueByFieldId?.hasJsController as
-					| PrimitiveAtom<unknown>
-					| undefined;
+					PrimitiveAtom<unknown> | undefined;
 				if (flagAtom && jotai.get(flagAtom) !== enabled) {
 					jotai.set(flagAtom, enabled);
 				}
@@ -700,13 +699,43 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			showAlert(`No control descriptor found for field type "${fieldType}"`);
 			return;
 		}
+		// Commit open form first so a prior draft is no longer keyed as `{NEW}` before we add another.
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
+		// Parent path was captured pre-commit; if the open form renamed the parent (or an ancestor), rewrite that segment.
+		let resolvedParentPath = fieldPath;
+		const committedId = stateRef.current.selectedField?.id;
+		if (
+			fieldPath &&
+			selectedFieldIdPath &&
+			committedId &&
+			(fieldPath === selectedFieldIdPath || fieldPath.startsWith(`${selectedFieldIdPath}.`))
+		) {
+			const segments = fieldPath.split('.');
+			segments[selectedFieldIdPath.split('.').length - 1] = committedId;
+			resolvedParentPath = segments.join('.');
+		}
+		if (
+			resolvedParentPath &&
+			!resolvedParentPath
+				.split('.')
+				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
+					fields: baseType.fields
+				})
+		) {
+			showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
+			return;
+		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
+		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
+		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
+		setType(nextType);
+
 		// Root drafts are keyed `{NEW}`; nested (addSubField) uses field.id when preset (e.g. file-name).
 		const leafId = fieldPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
 		const newFieldPath = fieldPath ? `${fieldPath}.${leafId}` : leafId;
 		setType(addField(type, newField, newFieldPath, sectionId, position));
 		onUpdateHasPendingChanges(true);
-		handleFieldSelected(newFieldPath, newField, sectionId);
+		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
 		const configEntry = config.dataSources?.[dataSourceType];

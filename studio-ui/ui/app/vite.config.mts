@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 // import reactSwc from '@vitejs/plugin-react-swc';
 import react from '@vitejs/plugin-react';
 import $monacoEditorPlugin from 'vite-plugin-monaco-editor'
+import babel from '@rolldown/plugin-babel';
 
 // @ts-expect-error - TS2339: Property default does not exist on type (options: IMonacoEditorOpts) => Plugin<any>
 const monacoEditorPlugin = $monacoEditorPlugin.default ?? $monacoEditorPlugin
@@ -18,19 +19,18 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     // TODO: SWC is faster, but can't use the formatjs transformer with it.
     // mode === 'development' ? react({ ... }) : reactSwc()
-    react({
-      babel: {
-        plugins: [
-          [
-            'formatjs',
-            {
-              removeDefaultMessage: false,
-              idInterpolationPattern: '[sha512:contenthash:base64:6]',
-              ast: true
-            }
-          ]
+    react(),
+    babel({
+      plugins: [
+        [
+          'formatjs',
+          {
+            removeDefaultMessage: false,
+            idInterpolationPattern: '[sha512:contenthash:base64:6]',
+            ast: true
+          }
         ]
-      }
+      ]
     }),
     monacoEditorPlugin({
        languageWorkers: ['editorWorkerService', 'json'],
