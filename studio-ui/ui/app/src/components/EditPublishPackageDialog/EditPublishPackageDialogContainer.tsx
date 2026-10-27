@@ -62,9 +62,9 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const canApprovePackage = hasApproveAction(pkg.availableActions);
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: pkg.title ?? '',
-		// Default approved packages to request approval: on peer-review sites the backend rejects
-		// `requestApproval: false` for them, so saving with the old default always failed. Since
-		// APPROVED packages never carry the APPROVE action, this is forced for them (checkbox hidden).
+		// Approved packages default to requesting approval again; the user can uncheck it only when they
+		// can approve (no peer review). With peer review, `!canApprovePackage` forces it, since the backend
+		// rejects `requestApproval: false` from the submitter of an approved package.
 		requestApproval: !hasPublishPermission || !canApprovePackage || pkg.approvalState === PACKAGE_APPROVED,
 		publishingTarget: pkg.target ?? '',
 		submissionComment: pkg.submitterComment ?? '',
