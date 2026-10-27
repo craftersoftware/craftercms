@@ -26,10 +26,6 @@ import {
 	getItemComplete,
 	itemsReducer,
 	getItemEpic,
-	getDescriptor,
-	getDescriptorComplete,
-	descriptorsReducer,
-	getDescriptorEpic,
 	getChildren,
 	getChildrenComplete,
 	childrenReducer,
@@ -52,7 +48,7 @@ import {
 
 import { item, descriptor, children, navItem, navBreadcrumb, tree } from './mock-responses';
 
-import * as nock from 'nock';
+import nock from 'nock';
 import { of } from 'rxjs';
 
 // https://github.com/nock/nock/issues/2397
@@ -90,9 +86,9 @@ describe('Crafter CMS Redux', () => {
 				let url = '/site/website/index.xml',
 					expectedAction = {
 						type: 'GET_ITEM',
-						payload: url
+						payload: { url }
 					};
-				const action = getItem(url);
+				const action = getItem({ url });
 				expect(action).to.deep.equal(expectedAction);
 				done();
 			});
@@ -235,7 +231,7 @@ describe('Crafter CMS Redux', () => {
 				let url = '/site/website/index.xml',
 					action = {
 						type: 'GET_ITEM',
-						payload: url
+						payload: { url }
 					},
 					expectedState = {
 						loading: {
@@ -462,14 +458,15 @@ describe('Crafter CMS Redux', () => {
 					.get('/api/1/site/content_store/item.json')
 					.query({
 						crafterSite: 'editorial',
-						url: '/site/website/index.xml'
+						url: '/site/website/index.xml',
+						flatten: false
 					})
 					.reply(200, item);
 
 				let url = '/site/website/index.xml',
 					actionObs = of({
 						type: 'GET_ITEM',
-						payload: url
+						payload: { url }
 					}),
 					expectedResponse = {
 						payload: {
@@ -495,7 +492,8 @@ describe('Crafter CMS Redux', () => {
 					.get('/api/1/site/content_store/children.json')
 					.query({
 						crafterSite: 'editorial',
-						url: '/site/website'
+						url: '/site/website',
+						flatten: false
 					})
 					.reply(200, children);
 
@@ -523,7 +521,8 @@ describe('Crafter CMS Redux', () => {
 					.query({
 						crafterSite: 'editorial',
 						depth: 1,
-						url: '/site/website'
+						url: '/site/website',
+						flatten: false
 					})
 					.reply(200, tree);
 

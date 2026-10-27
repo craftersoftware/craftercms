@@ -38,5 +38,5 @@ type DeprecatedCrafterNamespacedState = CrafterNamespacedState;
 export {
 	DeprecatedStateContainer as StateContainer,
 	DeprecatedCrafterState as CrafterState,
-	DeprecatedCrafterNamespacedState as CrafterNamespacedStatepero
+	DeprecatedCrafterNamespacedState as CrafterNamespacedState
 };

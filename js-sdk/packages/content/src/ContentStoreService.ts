@@ -41,35 +41,30 @@ export interface GetDescriptorConfig extends CrafterConfig {
 }
 
 /**
- * @deprecated Use getItem instead. Method will be removed in an upcoming release.
- * Returns the descriptor data of an Item in the content store.
- * @param {string} path - The item’s path
- */
-export function getDescriptor(path: string): Observable<Descriptor>;
-/**
- * @deprecated Use getItem instead. Method will be removed in an upcoming release.
+ * @deprecated Use getItem instead.
  * Returns the descriptor data of an Item in the content store.
  * @param {string} path - The item’s path
  * @param {CrafterConfig & GetDescriptorConfig} config? - The config override options to use
  */
-export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor>;
-export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor> {
+export function getDescriptor(path: string): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config: Partial<GetDescriptorConfig>): Observable<Descriptor | null>;
+export function getDescriptor(path: string, config?: Partial<GetDescriptorConfig>): Observable<Descriptor | null> {
+	console.warn('Warning: getDescriptor is deprecated. Use getItem instead.');
+
 	let cfg = crafterConf.mix(config);
-	return SDKService.httpGet<Descriptor>(
-		composeUrl(cfg, cfg.endpoints.GET_DESCRIPTOR),
-		{
-			url: path,
-			crafterSite: cfg.site,
-			flatten: Boolean(config?.flatten)
-		},
-		cfg.headers
-	).pipe(
-		// Manually introduce the path into the response as descriptor endpoint does not return it.
-		map((descriptor: Descriptor) => {
-			let prop = typeof descriptor.page === 'undefined' ? 'component' : 'page';
+
+	return getItem(path, cfg).pipe(
+		map((item: Item) => {
+			// GET_ITEM_URL returns null descriptorDom for folders (and other items) without a descriptor.
+			// Match the former descriptor.json endpoint, which returned item.getDescriptorDom() as-is.
+			if (item.descriptorDom == null) {
+				return null;
+			}
+			// Extract the root key and value from the descriptorDom object (page/component/etc.), then we set the localId property that the getDescriptor API used to return to the descriptorDom object.
+			const [rootKey, rootValue] = Object.entries(item.descriptorDom)[0];
 			return {
-				[prop]: {
-					...descriptor[prop],
+				[rootKey]: {
+					...(rootValue as object),
 					localId: path
 				}
 			};

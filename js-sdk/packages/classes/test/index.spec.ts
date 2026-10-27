@@ -18,11 +18,7 @@ import 'mocha';
 import { crafterConf, httpGet, httpPost } from '@craftercms/classes';
 import { expect } from 'chai';
 import { beforeEach } from 'mocha';
-import * as nock from 'nock';
-import * as xhr2 from 'xhr2';
-
-// @ts-ignore - Setting global XMLHttpRequest for testing (not available on node)
-global.XMLHttpRequest = xhr2.XMLHttpRequest;
+import nock from 'nock';
 
 // https://github.com/nock/nock/issues/2397
 import fetch, { Headers, Request, Response } from 'node-fetch';
@@ -32,6 +28,54 @@ if (!globalThis.fetch) {
 	(globalThis as any).Headers = Headers;
 	(globalThis as any).Request = Request;
 	(globalThis as any).Response = Response;
+}
+
+/**
+ * Minimal XHR mock for rxjs/ajax (used by httpPost).
+ * nock 14 no longer reliably drives xhr2 responses, so XHR is mocked in-test.
+ */
+function mockXHRResponse(body: unknown) {
+	const OriginalXHR = globalThis.XMLHttpRequest;
+
+	globalThis.XMLHttpRequest = class MockXHR {
+		status = 0;
+		readyState = 0;
+		response: unknown = null;
+		responseText = '';
+		responseType = '';
+		upload = { addEventListener() {} };
+		private listeners = new Map<string, Array<(event?: ProgressEvent) => void>>();
+
+		open() {}
+		setRequestHeader() {}
+		abort() {}
+		getAllResponseHeaders() {
+			return 'content-type: application/json';
+		}
+		getResponseHeader(name: string) {
+			return name.toLowerCase() === 'content-type' ? 'application/json' : null;
+		}
+		addEventListener(type: string, handler: (event?: ProgressEvent) => void) {
+			const existing = this.listeners.get(type) ?? [];
+			existing.push(handler);
+			this.listeners.set(type, existing);
+		}
+		send() {
+			queueMicrotask(() => {
+				this.status = 200;
+				this.readyState = 4;
+				this.responseText = JSON.stringify(body);
+				this.response = body;
+				for (const handler of this.listeners.get('load') ?? []) {
+					handler({ type: 'load' } as ProgressEvent);
+				}
+			});
+		}
+	} as unknown as typeof XMLHttpRequest;
+
+	return () => {
+		globalThis.XMLHttpRequest = OriginalXHR;
+	};
 }
 
 describe('CrafterCMS Classes', () => {
@@ -112,14 +156,22 @@ describe('CrafterCMS Classes', () => {
 		});
 
 		describe('httpPost', () => {
-			// Test the httpPost method with a mocked POST request.
+			// Test the httpPost method with a mocked XHR response (rxjs/ajax).
 			it('Should return a response from the POST request', (done) => {
-				nock('http://localhost:8080').post('/api/1/test/addItem').reply(200, { result: 'success', id: 1 });
+				const expected = { result: 'success', id: 1 };
+				const restoreXHR = mockXHRResponse(expected);
 
-				httpPost('http://localhost:8080/api/1/test/addItem', { id: 1, name: 'test' }).subscribe((response) => {
-					expect(response).to.be.an('object');
-					expect(response).to.deep.equal({ result: 'success', id: 1 });
-					done();
+				httpPost('http://localhost:8080/api/1/test/addItem', { id: 1, name: 'test' }).subscribe({
+					next: (response) => {
+						expect(response).to.be.an('object');
+						expect(response).to.deep.equal(expected);
+						restoreXHR();
+						done();
+					},
+					error: (err) => {
+						restoreXHR();
+						done(err);
+					}
 				});
 			});
 		});

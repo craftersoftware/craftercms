@@ -20,7 +20,7 @@ import { crafterConf } from '@craftercms/classes';
 import { fetchIsAuthoring, getICEAttributes, getDropZoneAttributes } from '@craftercms/ice';
 import { useDropZone, useICE } from '@craftercms/ice/react';
 import { iCEAttributes, model } from './mock-responses';
-import * as nock from 'nock';
+import nock from 'nock';
 import { renderHook } from '@testing-library/react';
 import { JSDOM } from 'jsdom';
 

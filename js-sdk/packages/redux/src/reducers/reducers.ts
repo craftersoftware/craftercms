@@ -16,9 +16,9 @@
 
 import {
 	itemsReducer,
+	descriptorsReducer,
 	navigationReducer,
 	breadcrumbsReducer,
-	descriptorsReducer,
 	childrenReducer,
 	treeReducer
 } from './content';
