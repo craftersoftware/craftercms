@@ -403,7 +403,7 @@ Studio:
 - `ui/app/src/components/FormsEngine/dataSourceHooks/*`
 - `ui/app/src/components/ContentTypeManagement/components/EditTypeView.tsx`
 - `ui/app/src/components/ContentTypeManagement/proposal.xml`
-- `static-assets/components/cstudio-common/common-api.js` — shared `getPluginInfo` / `Module` protocol
+- `static-assets/components/cstudio-common/common-api.js` — shared `Module` protocol
 - Legacy FE/TB sources (removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)): see [`type-builder-forms-engine.md`](type-builder-forms-engine.md) §2 / §5.2 / §5.3 — last commit with the files is [`4a6b57d9`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) (`forms-engine.js`, `content-types.js`, `cstudio-forms/{controls,data-sources}/*`)
 
 Examples:
