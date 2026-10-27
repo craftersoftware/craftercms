@@ -29,7 +29,8 @@ export function httpGet<T extends any = any>(
 ): Observable<T> {
 	const fetchConfig = crafterConf.getConfig().fetchConfig ?? {};
 	const query = qs.stringify(params);
-	return fromFetch(query ? `${requestURL}?${query}` : requestURL, {
+	const url = query ? `${requestURL}${requestURL.includes('?') ? '&' : '?'}${query}` : requestURL;
+	return fromFetch(url, {
 		...fetchConfig,
 		method: 'GET',
 		headers: { ...fetchConfig.headers, ...headers },
