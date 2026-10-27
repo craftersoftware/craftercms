@@ -56,9 +56,9 @@ export function EditPublishPackageDialogContainer(props: EditPublishPackageDialo
 	const { permissionsBySite } = useActiveUser();
 	const dispatch = useDispatch();
 	const hasPublishPermission = permissionsBySite[siteId].includes('publish_review');
-	// Gate on APPROVE only (not REJECT): peer review strips APPROVE for the submitter — while
-	// leaving REJECT — and APPROVED packages never carry APPROVE, so without it the package
-	// can't be kept (self-)approved and must always (re)request approval.
+	// Gate on APPROVE only (not REJECT): with peer review on, the backend strips APPROVE from the
+	// submitter (who is the only one with UPDATE) but leaves REJECT. Without APPROVE the package
+	// can't be kept (self-)approved, so the update must (re)request approval.
 	const canApprovePackage = hasApproveAction(pkg.availableActions);
 	const [state, setState] = useSpreadState<InternalDialogState>({
 		packageTitle: pkg.title ?? '',
