@@ -62,6 +62,7 @@ import {
 	contentTreeFieldSelected,
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
+	insertComponentAtDropZone,
 	fetchGuestModelComplete,
 	guestCheckIn,
 	guestCheckOut,
@@ -89,6 +90,7 @@ import LookupTable from '@craftercms/studio-ui/models/LookupTable';
 import { Snackbar, SnackbarProps, Theme, ThemeOptions, ThemeProvider } from '@mui/material';
 import { deepmerge } from '@mui/utils';
 import ZoneMenu from './ZoneMenu';
+import { GuestStatusAnnouncer, IceKeyboardControls, InsertHereButton } from './IceKeyboardControls';
 import {
 	contentReady,
 	desktopAssetDragStarted,
@@ -409,6 +411,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 					break;
 				// region actions whitelisted
 				case contentTypeDropTargetsRequest.type:
+				case insertComponentAtDropZone.type:
 				case fetchGuestModelComplete.type:
 				case componentInstanceDragStarted.type:
 				case clearHighlightedDropTargets.type:
@@ -595,6 +598,8 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 
 	const isMoveMode = HighlightMode.MOVE_TARGETS === highlightMode;
 	const isFieldSelectedMode = status === EditingStatus.FIELD_SELECTED;
+	const isShowingDropTargets = status === EditingStatus.SHOW_DROP_TARGETS;
+	const showKeyboardZones = status === EditingStatus.LISTENING || isFieldSelectedMode;
 
 	return (
 		<GuestContextProvider value={context}>
@@ -602,6 +607,8 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 			<ThemeProvider theme={theme}>
 				{editMode && (
 					<CrafterCMSPortal>
+						<GuestStatusAnnouncer />
+						<IceKeyboardControls active={showKeyboardZones} highlightMode={highlightMode} />
 						{/* region DraggedElementGhost */}
 						{draggableItemElemRecId && (
 							<DragGhostElement
@@ -696,6 +703,13 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 												isHeadlessMode={isHeadlessMode}
 												isLockedItem={isLocked}
 												isLockedByCurrentUser={isLockedByCurrentUser}
+											/>
+										) : isShowingDropTargets && state.keyboardPlacement ? (
+											<InsertHereButton
+												contentType={state.keyboardPlacement.contentType}
+												instance={state.keyboardPlacement.instance}
+												zoneLabel={highlight.label}
+												iceId={iceRecord.id}
 											/>
 										) : (
 											void 0

@@ -30,6 +30,7 @@ import {
 	contentTreeFieldSelected,
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
+	insertComponentAtDropZone,
 	highlightModeChanged,
 	hostCheckIn,
 	setPreviewEditMode,
@@ -54,6 +55,9 @@ import {
 	exitComponentInlineEdit,
 	iceZoneSelected,
 	insertComponent,
+	zoneHoverClearedViaKeyboard,
+	zoneHoveredViaKeyboard,
+	zoneSelectedViaKeyboard,
 	insertInstance,
 	moveComponent,
 	scrolling,
@@ -86,6 +90,9 @@ export type GuestActionTypes =
 	| typeof computedDragEnd.type
 	| typeof computedDragOver.type
 	| typeof iceZoneSelected.type
+	| typeof zoneHoveredViaKeyboard.type
+	| typeof zoneHoverClearedViaKeyboard.type
+	| typeof zoneSelectedViaKeyboard.type
 	| typeof editComponentInline.type
 	| typeof exitComponentInlineEdit.type
 	| typeof setEditMode.type
@@ -110,6 +117,7 @@ export type GuestActionTypes =
 	| typeof highlightModeChanged.type
 	| typeof clearHighlightedDropTargets.type
 	| typeof contentTypeDropTargetsRequest.type
+	| typeof insertComponentAtDropZone.type
 	| typeof hostCheckIn.type
 	| typeof contentTreeFieldSelected.type
 	| typeof clearContentTreeFieldSelected.type

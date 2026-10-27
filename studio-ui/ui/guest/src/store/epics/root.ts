@@ -45,7 +45,7 @@ import {
 	isInheritedField,
 	modelHierarchyMap
 } from '../../contentController';
-import { EMPTY, from, interval, merge, Observable, of, Subscriber } from 'rxjs';
+import { concat, defer, EMPTY, from, interval, merge, Observable, of, Subscriber } from 'rxjs';
 import { clearAndListen$, destroyDragSubjects, dragover$, escape$, initializeDragSubjects } from '../subjects';
 import { initTinyMCE } from '../../controls/rte';
 import { dragAndDropActiveClass, EditingStatus, HighlightMode } from '../../constants';
@@ -62,6 +62,7 @@ import {
 	contentTreeSwitchFieldInstance,
 	contentTypeDropTargetsRequest,
 	contentTypeDropTargetsResponse,
+	insertComponentAtDropZone,
 	instanceDragBegun,
 	instanceDragEnded,
 	snackGuestMessage,
@@ -69,10 +70,12 @@ import {
 } from '@craftercms/studio-ui/state/actions/preview';
 import { MouseEventActionObservable } from '../models/Actions';
 import { GuestState } from '../models/GuestStore';
+import ContentType from '@craftercms/studio-ui/models/ContentType';
+import { ContentInstance } from '@craftercms/studio-ui/models/ContentInstance';
 import { notNullOrUndefined, nullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { ElementRecord, ICEProps } from '../../models/InContextEditing';
 import * as ElementRegistry from '../../elementRegistry';
-import { compileAllDropZones, get, getElementFromICEProps } from '../../elementRegistry';
+import { compileAllDropZones, fromICEId, get, getElementFromICEProps } from '../../elementRegistry';
 import { scrollToElement } from '../../utils/dom';
 import {
 	computedDragEnd,
@@ -90,10 +93,19 @@ import {
 	dropzoneLeave,
 	exitComponentInlineEdit,
 	setEditingStatus,
-	startListening
+	startListening,
+	zoneHoveredViaKeyboard,
+	zoneSelectedViaKeyboard
 } from '../actions';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 import { getParentModelId } from '../../utils/ice';
+import {
+	applyComponentPlacement,
+	mayLockForPlacement,
+	validateComponentPlacement
+} from '../../utils/keyboardPlacement';
+import { announceGuestStatus } from '../../utils/guestAnnounce';
+import { requestZoneFocus } from '../../utils/zoneFocus';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import StandardAction from '@craftercms/studio-ui/models/StandardAction';
 import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
@@ -131,7 +143,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			withLatestFrom(state$),
 			tap(
 				([action, state]: [action: GuestStandardAction, state: GuestState]) =>
-					state.status === EditingStatus.LISTENING && action.payload.event.stopPropagation()
+					state.status === EditingStatus.LISTENING && action.payload?.event?.stopPropagation?.()
 			),
 			ignoreElements()
 		),
@@ -694,11 +706,10 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 	(action$: MouseEventActionObservable, state$) =>
 		action$.pipe(
 			// Note: when action is `triggered_click`, the event is the edit button click event.
-			ofType('click', 'triggered_click'),
+			ofType('click', 'triggered_click', zoneSelectedViaKeyboard.type),
 			withLatestFrom(state$),
 			filter(
 				([action, state]) =>
-					// @ts-expect-error: Unsure why typescript doesn't correctly detect the action type. Complains about action not having a `type` as it perceives it to be never.
 					action.type === 'triggered_click' ||
 					(state.highlightMode === HighlightMode.ALL && state.status === EditingStatus.LISTENING) ||
 					(state.highlightMode === HighlightMode.MOVE_TARGETS && state.status === EditingStatus.LISTENING) ||
@@ -710,7 +721,9 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 					state: GuestState
 				]) => {
 					const actionType = action.type;
-					const { record, event } = action.payload;
+					const { record } = action.payload;
+					// Keyboard selection has no DOM event. Mouse clicks still pass one through.
+					const event = action.payload.event as { clientX?: number; clientY?: number } | undefined;
 					const { isLocked, isExternallyModified, isLockedByCurrentUser } = checkIfLockedOrModified(state, record);
 					const isEditable = isEditActionAvailable({
 						record,
@@ -736,7 +749,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							modelId: null,
 							fieldId: [],
 							index: null,
-							coordinates: { x: event.clientX, y: event.clientY }
+							coordinates: { x: event?.clientX ?? 0, y: event?.clientY ?? 0 }
 						};
 						if (getById(record.iceIds[0]).recordType === 'node-selector-item') {
 							// When selecting the item on a node-selector the desired edit will be the item itself.
@@ -815,7 +828,13 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							// Rapid clicking (double-clicking) outside an RTE will cause the normal
 							// FIELD_SELECTED status but without a previous mouseover setting the highlight.
 							if (Object.values(state.highlighted).length === 0) {
-								sources.unshift(of({ type: 'mouseover', payload: { record, event } }));
+								sources.unshift(
+									of(
+										actionType === zoneSelectedViaKeyboard.type
+											? zoneHoveredViaKeyboard({ record })
+											: { type: 'mouseover', payload: { record, event } }
+									)
+								);
 							}
 							return merge(...sources);
 						}
@@ -900,6 +919,111 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			ignoreElements()
 		);
 	},
+	// endregion
+	// region insertComponentAtDropZone
+	(
+		action$: Observable<GuestStandardAction<{ contentType: ContentType; iceId: number; instance?: ContentInstance }>>,
+		state$,
+		{ getIntl }
+	) =>
+		action$.pipe(
+			ofType(insertComponentAtDropZone.type),
+			withLatestFrom(state$),
+			switchMap(([action, state]) => {
+				const { contentType, iceId, instance } = action.payload;
+				const intl = getIntl();
+				// validateComponentPlacement runs before beforeWrite$. mayLockForPlacement is false
+				// for every rejection, and that branch returns EMPTY, so lock() inside beforeWrite$
+				// is never called for a rejected insert.
+				const result = validateComponentPlacement(iceId, contentType, instance);
+				if (!mayLockForPlacement(result)) {
+					if (result.reason === 'max' && result.validation) {
+						post(snackGuestMessage(result.validation));
+					} else if (result.reason === 'notEditable') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.notEditable',
+									defaultMessage: 'This zone cannot be edited.'
+								})
+							})
+						);
+					} else if (result.reason === 'notAccepted') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.notAccepted',
+										defaultMessage: 'This zone does not accept {contentType}.'
+									},
+									{ contentType: contentType?.name ?? '' }
+								)
+							})
+						);
+					} else if (result.reason === 'duplicate') {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage(
+									{
+										id: 'keyboardPlacement.duplicate',
+										defaultMessage: 'This zone already contains {contentType}.'
+									},
+									{ contentType: instance?.craftercms.label || contentType?.name || '' }
+								)
+							})
+						);
+					} else {
+						post(
+							snackGuestMessage({
+								level: 'suggestion',
+								message: intl.formatMessage({
+									id: 'keyboardPlacement.missingZone',
+									defaultMessage: 'The drop zone is no longer available.'
+								})
+							})
+						);
+					}
+					return EMPTY;
+				}
+				const cachedContentItem = getCachedContentItem(result.path);
+				return beforeWrite$({
+					path: result.path,
+					site: state.activeSite,
+					username: state.username,
+					localItem: cachedContentItem
+				}).pipe(
+					switchMap(() => {
+						applyComponentPlacement(result);
+						const element = fromICEId(iceId);
+						const zone = element?.label || '';
+						announceGuestStatus(
+							intl.formatMessage(
+								{
+									id: 'ice.inserted',
+									defaultMessage: 'Inserted {contentType} into {zone}.'
+								},
+								{
+									contentType: instance?.craftercms.label || contentType?.name || '',
+									zone
+								}
+							) as string
+						);
+						// Zone buttons are unmounted while the drop targets show. Ask for focus only after
+						// startListening has put them back, otherwise focus sits on <body> until the 1.5s fallback.
+						return concat(
+							of(startListening()),
+							defer(() => {
+								requestAnimationFrame(() => requestZoneFocus({ iceId }));
+								return EMPTY;
+							})
+						);
+					})
+				);
+			})
+		),
 	// endregion
 	// region startListening
 	(action$: MouseEventActionObservable) => {

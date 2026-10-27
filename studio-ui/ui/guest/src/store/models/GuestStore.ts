@@ -76,6 +76,11 @@ export interface GuestState {
 	rteConfig: RteConfig;
 	activeSite: string;
 	username: string;
+	/** Set while drop targets are listed so Insert here can run without a drag. */
+	keyboardPlacement: {
+		contentType: ContentType;
+		instance?: ContentInstance;
+	} | null;
 }
 
 export type GuestStateObservable = StateObservable<GuestState>;

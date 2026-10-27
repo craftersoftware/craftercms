@@ -44,6 +44,9 @@ import { isSimple, isSymmetricCombination, popPiece } from '@craftercms/studio-u
 import { Subject } from 'rxjs';
 
 let seq = 0;
+// Notifies React overlays when zones are registered or removed so keyboard controls stay current.
+const elementRegistryChangesSubject = new Subject<void>();
+export const elementRegistryChanges$ = elementRegistryChangesSubject.asObservable();
 // Element record registry
 let db: LookupTable<ElementRecord> = {};
 // Lookup table of element record id arrays, indexed by iceId
@@ -226,6 +229,13 @@ export function completeDeferredRegistration(id: number, inheritanceParentModelI
 	}
 
 	db[id].complete = true;
+	elementRegistryChangesSubject.next();
+}
+
+export function getElementRecords(): ElementRecord[] {
+	return Object.values(db).filter(
+		(record) => record.complete && record.element && record.element.isConnected !== false
+	);
 }
 
 export function deregister(id: string | number): ElementRecord {
@@ -243,6 +253,7 @@ export function deregister(id: string | number): ElementRecord {
 			iceRegistry.deregister(iceId);
 		});
 		delete db[id];
+		elementRegistryChangesSubject.next();
 	}
 	return record;
 }

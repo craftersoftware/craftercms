@@ -109,6 +109,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 
 	const siteId = useActiveSiteId();
 	const { formatMessage } = useIntl();
+	const requestApprovalHelpLabel = formatMessage({ defaultMessage: 'More information about request approval' });
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const [publishingTargetsStatus, setPublishingTargetsStatus] = useState('Loading');
 	const [published, setPublished] = useState<boolean>(null);
@@ -171,52 +172,46 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 			/>
 			<Box sx={{ mb: 1.25 }}>
 				{showRequestApproval && (
-					<FormControlLabel
-						sx={{ display: 'block' }}
-						control={
-							<Checkbox
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<FormControlLabel
+							sx={{ mr: 0 }}
+							control={
+								<Checkbox
+									size="small"
+									checked={formState.requestApproval}
+									onChange={onInputChange}
+									disabled={disabled}
+									name="requestApproval"
+								/>
+							}
+							label={<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request approval" />}
+						/>
+						<Tooltip
+							describeChild
+							title={
+								<FormattedMessage
+									id="publishDialog.requestPublishHint"
+									defaultMessage="Items will be submitted for review and published upon approval"
+								/>
+							}
+						>
+							<IconButton
+								aria-label={requestApprovalHelpLabel}
 								size="small"
-								checked={formState.requestApproval}
-								onChange={onInputChange}
-								disabled={disabled}
-								name="requestApproval"
-							/>
-						}
-						label={
-							<Box
-								sx={{
-									display: 'inline-flex',
-									alignItems: 'center'
-								}}
+								sx={{ ml: 1 }}
+								color={isRequestPublish ? 'warning' : undefined}
 							>
-								<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request approval" />
-								<Tooltip
-									title={
-										<FormattedMessage
-											id="publishDialog.requestPublishHint"
-											defaultMessage="Items will be submitted for review and published upon approval"
-										/>
-									}
-								>
-									<IconButton
-										aria-label="help"
-										size="small"
-										sx={{ ml: 1 }}
-										color={isRequestPublish ? 'warning' : undefined}
-									>
-										{isRequestPublish ? (
-											<ErrorOutlineRounded fontSize="small" />
-										) : (
-											<HelpOutlineOutlined fontSize="small" />
-										)}
-									</IconButton>
-								</Tooltip>
-							</Box>
-						}
-					/>
+								{isRequestPublish ? <ErrorOutlineRounded fontSize="small" /> : <HelpOutlineOutlined fontSize="small" />}
+							</IconButton>
+						</Tooltip>
+					</Box>
 				)}
 			</Box>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
 				<FormLabel component="legend">
 					<FormattedMessage defaultMessage="Scheduling" />
 				</FormLabel>
@@ -296,7 +291,11 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				</Collapse>
 			</FormControl>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
 				<FormLabel component="legend">
 					<FormattedMessage defaultMessage="Publishing Target" />
 				</FormLabel>

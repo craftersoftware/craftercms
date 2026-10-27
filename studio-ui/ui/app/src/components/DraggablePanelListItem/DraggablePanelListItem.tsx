@@ -15,16 +15,35 @@
  */
 
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
+import Box from '@mui/material/Box';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import Avatar from '@mui/material/Avatar';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded';
 import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
+import Tooltip from '@mui/material/Tooltip';
 import { darken, useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import { getAvatarWithIconColors } from '../../utils/contentType';
-import ListItem from '@mui/material/ListItem';
+
+/** Keyboard ring that stays visible when the theme turns ripples off. */
+const focusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: 2
+	}
+};
+
+/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
+const rowFocusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: -2
+	}
+};
 
 interface PanelListItemProps {
 	primaryText: string;
@@ -34,6 +53,8 @@ interface PanelListItemProps {
 	onDragStart?: (...args: any) => any;
 	onDragEnd?: (...args: any) => any;
 	onMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+	/** Non-drag equivalent of dragging this item onto a drop zone. */
+	onInsert?: () => void;
 	isBeingDragged?: boolean;
 }
 
@@ -46,61 +67,97 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 		secondaryText,
 		onDragStart,
 		onDragEnd,
+		onInsert,
 		isBeingDragged = false
 	} = props;
 	const hasMenu = Boolean(onMenu);
 	const theme = useTheme();
+	const { formatMessage } = useIntl();
+	const insertHint = formatMessage({ defaultMessage: 'Insert into drop target' });
+	const insertLabel = formatMessage({ defaultMessage: 'Insert into drop target, {name}' }, { name: primaryText });
 	const { backgroundColor, textColor } = getAvatarWithIconColors(avatarColorBase ?? primaryText, theme, darken);
 	const [over, setOver] = useState(false);
 	return (
-		<ListItemButton
-			role="option"
-			component={ListItem}
-			disableRipple
-			key={secondaryText}
-			draggable
-			onDragStart={onDragStart}
-			onDragEnd={onDragEnd}
+		<Box
+			component="li"
 			onMouseEnter={() => setOver(true)}
 			onMouseLeave={() => setOver(false)}
 			sx={{
-				pl: 1.5,
-				pr: hasMenu ? 6 : undefined,
+				display: 'flex',
+				alignItems: 'center',
 				border: `1px solid ${isBeingDragged ? backgroundColor : 'transparent'}`,
-				borderRadius: isBeingDragged ? 2 : 0,
-				cursor: isBeingDragged ? 'grabbing' : 'grab'
+				borderRadius: isBeingDragged ? 2 : 0
 			}}
-			secondaryAction={
-				hasMenu ? (
-					<IconButton edge="end" onClick={onMenu} size="small">
-						<MoreVertRounded />
-					</IconButton>
-				) : null
-			}
 		>
-			<ListItemAvatar sx={{ minWidth: 0 }}>
-				<Avatar
-					alt=""
-					src={avatarSrc}
-					sx={{
-						mr: 1.5,
-						width: 30,
-						height: 30,
-						backgroundColor: over || avatarSrc ? 'transparent' : backgroundColor,
-						transition: 'background-color 0.25s ease-in-out'
-					}}
-				>
-					<DragIndicatorRounded
-						fontSize="small"
+			<ListItemButton
+				disableRipple
+				draggable
+				onDragStart={onDragStart}
+				onDragEnd={onDragEnd}
+				sx={{
+					flex: 1,
+					minWidth: 0,
+					pl: 1.5,
+					cursor: isBeingDragged ? 'grabbing' : 'grab',
+					...rowFocusVisibleSx
+				}}
+			>
+				<ListItemAvatar sx={{ minWidth: 0 }}>
+					<Avatar
+						alt=""
+						src={avatarSrc}
 						sx={{
-							color: over ? backgroundColor : textColor,
-							transition: 'color 0.25s ease-in-out'
+							mr: 1.5,
+							width: 30,
+							height: 30,
+							backgroundColor: over || avatarSrc ? 'transparent' : backgroundColor,
+							transition: 'background-color 0.25s ease-in-out'
 						}}
-					/>
-				</Avatar>
-			</ListItemAvatar>
-			<ListItemText primary={primaryText} secondary={secondaryText} />
-		</ListItemButton>
+					>
+						<DragIndicatorRounded
+							fontSize="small"
+							sx={{
+								color: over ? backgroundColor : textColor,
+								transition: 'color 0.25s ease-in-out'
+							}}
+						/>
+					</Avatar>
+				</ListItemAvatar>
+				<ListItemText primary={primaryText} secondary={secondaryText} />
+			</ListItemButton>
+			{(hasMenu || onInsert) && (
+				<Box sx={{ display: 'flex', flexShrink: 0, mr: 0.5 }}>
+					{onInsert && (
+						<Tooltip describeChild title={insertHint}>
+							<IconButton
+								size="small"
+								aria-label={insertLabel}
+								sx={{ minWidth: 24, minHeight: 24, ...focusVisibleSx }}
+								onMouseDown={(event) => event.stopPropagation()}
+								onClick={(event) => {
+									event.stopPropagation();
+									onInsert();
+								}}
+							>
+								<AddCircleOutlineRounded />
+							</IconButton>
+						</Tooltip>
+					)}
+					{hasMenu && (
+						<Tooltip describeChild title={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}>
+							<IconButton
+								onClick={onMenu}
+								size="small"
+								aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
+								sx={{ minWidth: 24, minHeight: 24, ...focusVisibleSx }}
+							>
+								<MoreVertRounded />
+							</IconButton>
+						</Tooltip>
+					)}
+				</Box>
+			)}
+		</Box>
 	);
 }
 

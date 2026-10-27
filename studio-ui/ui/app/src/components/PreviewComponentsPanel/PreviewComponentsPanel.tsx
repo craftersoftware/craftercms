@@ -27,6 +27,7 @@ import {
 	contentTypeDropTargetsRequest,
 	pushIcePanelPage,
 	setContentTypeFilter,
+	setDropTargetPlacement,
 	setPreviewEditMode
 } from '../../state/actions/preview';
 import { DraggablePanelListItem } from '../DraggablePanelListItem/DraggablePanelListItem';
@@ -43,7 +44,6 @@ import Typography from '@mui/material/Typography';
 import ListItemText, { listItemTextClasses } from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
-import ListItem, { listItemClasses } from '@mui/material/ListItem';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -59,6 +59,14 @@ import { ContentItem } from '../../models';
 import Avatar from '@mui/material/Avatar';
 import { getAvatarWithIconColors } from '../../utils/contentType';
 import { darken, useTheme } from '@mui/material/styles';
+
+/** Keyboard ring that stays visible when the theme turns ripples off. */
+const focusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: 2
+	}
+};
 
 const translations = defineMessages({
 	previewComponentsPanelTitle: {
@@ -174,16 +182,26 @@ export function PreviewComponentsPanel() {
 		);
 	};
 	const onListDropTargetsClick = () => {
+		const contentType = menuContext.contentType;
 		dispatch(
-			pushIcePanelPage(
-				createToolsPanelPage(
-					formatMessage({ defaultMessage: 'Drop Targets for {name}' }, { name: menuContext.contentType.name }),
-					[createWidgetDescriptor({ id: 'craftercms.components.PreviewDropTargetsPanel' })],
-					'icePanel'
+			batchActions([
+				setDropTargetPlacement({ contentType }),
+				pushIcePanelPage(
+					createToolsPanelPage(
+						formatMessage({ defaultMessage: 'Drop Targets for {name}' }, { name: contentType.name }),
+						[createWidgetDescriptor({ id: 'craftercms.components.PreviewDropTargetsPanel' })],
+						'icePanel'
+					)
 				)
-			)
+			])
 		);
-		getHostToGuestBus().next(contentTypeDropTargetsRequest({ contentTypeId: menuContext.contentType.id }));
+		getHostToGuestBus().next(
+			contentTypeDropTargetsRequest({
+				contentTypeId: contentType.id,
+				createMode: ['embedded', 'shared'],
+				contentType
+			})
+		);
 	};
 	const onMenuButtonClickHandler = (e: React.MouseEvent<HTMLButtonElement>, contentType: ContentType) => {
 		const { backgroundColor, textColor } = getAvatarWithIconColors(contentType.name, theme, darken);
@@ -257,6 +275,7 @@ export function PreviewComponentsPanel() {
 											aria-label={formatMessage({
 												defaultMessage: 'Compatible types are configured in the content model.'
 											})}
+											sx={focusVisibleSx}
 										>
 											<InfoRounded fontSize="small" />
 										</IconButton>
@@ -321,24 +340,20 @@ export function PreviewComponentsPanel() {
 											darken
 										);
 										return (
-											<ListItem
+											<Box
+												component="li"
 												key={type.id}
 												sx={{
-													[`& .${listItemClasses.secondaryAction}`]: { right: '10px' }
+													display: 'flex',
+													alignItems: 'center',
+													px: 2,
+													py: 0.5
 												}}
-												secondaryAction={
-													<IconButton
-														edge="end"
-														aria-label="delete"
-														size="small"
-														onClick={(e) => onMenuButtonClickHandler(e, type)}
-													>
-														<MoreVertRounded />
-													</IconButton>
-												}
 											>
 												<ListItemText
 													sx={{
+														flex: 1,
+														minWidth: 0,
 														[`.${listItemTextClasses.primary}`]: {
 															display: 'flex',
 															flexDirection: 'row',
@@ -378,7 +393,17 @@ export function PreviewComponentsPanel() {
 														</>
 													}
 												/>
-											</ListItem>
+												<Box sx={{ display: 'flex', flexShrink: 0 }}>
+													<IconButton
+														aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: type.name })}
+														size="small"
+														onClick={(e) => onMenuButtonClickHandler(e, type)}
+														sx={focusVisibleSx}
+													>
+														<MoreVertRounded />
+													</IconButton>
+												</Box>
+											</Box>
 										);
 									})}
 								</List>
