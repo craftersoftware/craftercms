@@ -54,6 +54,9 @@ import {
 	exitComponentInlineEdit,
 	iceZoneSelected,
 	insertComponent,
+	zoneHoverClearedViaKeyboard,
+	zoneHoveredViaKeyboard,
+	zoneSelectedViaKeyboard,
 	insertInstance,
 	moveComponent,
 	scrolling,
@@ -86,6 +89,9 @@ export type GuestActionTypes =
 	| typeof computedDragEnd.type
 	| typeof computedDragOver.type
 	| typeof iceZoneSelected.type
+	| typeof zoneHoveredViaKeyboard.type
+	| typeof zoneHoverClearedViaKeyboard.type
+	| typeof zoneSelectedViaKeyboard.type
 	| typeof editComponentInline.type
 	| typeof exitComponentInlineEdit.type
 	| typeof setEditMode.type

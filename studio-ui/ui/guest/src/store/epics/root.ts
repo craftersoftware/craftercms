@@ -90,7 +90,9 @@ import {
 	dropzoneLeave,
 	exitComponentInlineEdit,
 	setEditingStatus,
-	startListening
+	startListening,
+	zoneHoveredViaKeyboard,
+	zoneSelectedViaKeyboard
 } from '../actions';
 import { extractCollectionItem } from '@craftercms/studio-ui/utils/model';
 import { getParentModelId } from '../../utils/ice';
@@ -131,7 +133,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 			withLatestFrom(state$),
 			tap(
 				([action, state]: [action: GuestStandardAction, state: GuestState]) =>
-					state.status === EditingStatus.LISTENING && action.payload.event.stopPropagation()
+					state.status === EditingStatus.LISTENING && action.payload?.event?.stopPropagation?.()
 			),
 			ignoreElements()
 		),
@@ -694,11 +696,10 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 	(action$: MouseEventActionObservable, state$) =>
 		action$.pipe(
 			// Note: when action is `triggered_click`, the event is the edit button click event.
-			ofType('click', 'triggered_click'),
+			ofType('click', 'triggered_click', zoneSelectedViaKeyboard.type),
 			withLatestFrom(state$),
 			filter(
 				([action, state]) =>
-					// @ts-expect-error: Unsure why typescript doesn't correctly detect the action type. Complains about action not having a `type` as it perceives it to be never.
 					action.type === 'triggered_click' ||
 					(state.highlightMode === HighlightMode.ALL && state.status === EditingStatus.LISTENING) ||
 					(state.highlightMode === HighlightMode.MOVE_TARGETS && state.status === EditingStatus.LISTENING) ||
@@ -710,7 +711,9 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 					state: GuestState
 				]) => {
 					const actionType = action.type;
-					const { record, event } = action.payload;
+					const { record } = action.payload;
+					// Keyboard selection has no DOM event. Mouse clicks still pass one through.
+					const event = action.payload.event as { clientX?: number; clientY?: number } | undefined;
 					const { isLocked, isExternallyModified, isLockedByCurrentUser } = checkIfLockedOrModified(state, record);
 					const isEditable = isEditActionAvailable({
 						record,
@@ -736,7 +739,7 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							modelId: null,
 							fieldId: [],
 							index: null,
-							coordinates: { x: event.clientX, y: event.clientY }
+							coordinates: { x: event?.clientX ?? 0, y: event?.clientY ?? 0 }
 						};
 						if (getById(record.iceIds[0]).recordType === 'node-selector-item') {
 							// When selecting the item on a node-selector the desired edit will be the item itself.
@@ -815,7 +818,13 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							// Rapid clicking (double-clicking) outside an RTE will cause the normal
 							// FIELD_SELECTED status but without a previous mouseover setting the highlight.
 							if (Object.values(state.highlighted).length === 0) {
-								sources.unshift(of({ type: 'mouseover', payload: { record, event } }));
+								sources.unshift(
+									of(
+										actionType === zoneSelectedViaKeyboard.type
+											? zoneHoveredViaKeyboard({ record })
+											: { type: 'mouseover', payload: { record, event } }
+									)
+								);
 							}
 							return merge(...sources);
 						}
