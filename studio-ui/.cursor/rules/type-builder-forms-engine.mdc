@@ -1,6 +1,6 @@
 ---
 description: Type Builder / Forms Engine modernization — read shared context before changing TB/FE code
-globs: ui/app/src/components/FormsEngine/**/*,ui/app/src/components/ContentTypeManagement/**/*,ui/app/src/models/ContentType.ts,ui/app/src/models/PluginDescriptor.ts,ui/app/src/services/plugin.ts,static-assets/components/cstudio-forms/**/*,static-assets/components/cstudio-admin/mods/content-types.js,samples/*.mjs,docs/type-builder-forms-engine.md,docs/type-builder-forms-engine-plugins.md,docs/fe2-control-plugin-single-model-implementation.md
+globs: ui/app/src/components/FormsEngine/**/*,ui/app/src/components/ContentTypeManagement/**/*,ui/app/src/models/ContentType.ts,ui/app/src/models/PluginDescriptor.ts,ui/app/src/services/plugin.ts,samples/*.mjs,docs/type-builder-forms-engine.md,docs/type-builder-forms-engine-plugins.md,docs/fe2-control-plugin-single-model-implementation.md
 alwaysApply: false
 ---
 
