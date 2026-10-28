@@ -52,6 +52,22 @@ import { EmptyState } from '../EmptyState';
 import FormHelperText from '@mui/material/FormHelperText';
 import { LoadingState } from '../LoadingState';
 
+/** Keyboard ring that stays visible when the theme turns ripples off. */
+const focusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: 2
+	}
+};
+
+/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
+const rowFocusVisibleSx = {
+	'&.Mui-focusVisible': {
+		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: -2
+	}
+};
+
 const translations = defineMessages({
 	dropTargetsPanel: {
 		// Translation not used in code but powers i18n for `ui.xml`
@@ -81,6 +97,7 @@ export function PreviewDropTargetsPanel() {
 		? Object.values(contentTypesBranch.byId).filter((contentType) => contentType.type === 'component')
 		: null;
 	const { formatMessage } = useIntl();
+	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
 	const [listMode, setListMode] = useState(true);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
@@ -206,8 +223,8 @@ export function PreviewDropTargetsPanel() {
 								</Select>
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
-								<Tooltip title={<FormattedMessage defaultMessage="Cancel selection" />}>
-									<IconButton edge="end" sx={{ ml: 0.625 }} onClick={() => resetState()}>
+								<Tooltip title={cancelSelectionLabel}>
+									<IconButton edge="end" sx={{ ml: 0.625, ...focusVisibleSx }} onClick={() => resetState()}>
 										<CloseRoundedIcon />
 									</IconButton>
 								</Tooltip>
@@ -282,12 +299,17 @@ interface DropTargetsListProps {
 function DropTargetsList(props: DropTargetsListProps) {
 	const { dropTargets } = props;
 	return dropTargets?.map((dropTarget: ContentTypeDropTarget) => (
-		<ListItemButton key={dropTarget.id} onClick={() => props.onSelectedDropZone(dropTarget)}>
-			<ListItemIcon>
-				<ContentTypeField />
-			</ListItemIcon>
-			<ListItemText primary={dropTarget.label} />
-		</ListItemButton>
+		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
+			<ListItemButton
+				onClick={() => props.onSelectedDropZone(dropTarget)}
+				sx={{ flex: 1, minWidth: 0, ...rowFocusVisibleSx }}
+			>
+				<ListItemIcon>
+					<ContentTypeField />
+				</ListItemIcon>
+				<ListItemText primary={dropTarget.label} />
+			</ListItemButton>
+		</Box>
 	));
 }
 

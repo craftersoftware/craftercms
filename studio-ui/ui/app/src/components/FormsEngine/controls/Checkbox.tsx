@@ -35,7 +35,7 @@ export function Checkbox(props: CheckboxProps) {
 	const handleChange = (e: ChangeEvent<HTMLInputElement>) => setValue(e.target.checked);
 	return (
 		<FormsEngineField htmlFor={htmlId} field={field}>
-			<Switch checked={value} onChange={handleChange} disabled={readonly} autoFocus={autoFocus} />
+			<Switch id={htmlId} checked={value} onChange={handleChange} disabled={readonly} autoFocus={autoFocus} />
 		</FormsEngineField>
 	);
 }

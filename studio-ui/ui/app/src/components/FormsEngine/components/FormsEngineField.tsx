@@ -166,7 +166,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					</FormLabel>
 					{isRequired && <FieldRequiredStateIndicator isValid={isValid} />}
 					{hasHelpText && (
-						<IconButton size="small" onClick={() => setShowHelp(!showHelp)}>
+						<IconButton
+							size="small"
+							onClick={() => setShowHelp(!showHelp)}
+							aria-expanded={showHelp}
+							aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
+						>
 							<HelpOutlineRounded fontSize="small" />
 						</IconButton>
 					)}
@@ -182,7 +187,13 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					{menu && (
 						<>
 							{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
-							<IconButton size="small" tabIndex={-1} ref={menuButtonRef} onClick={() => setOpenMenu(true)}>
+							<IconButton
+								size="small"
+								tabIndex={-1}
+								ref={menuButtonRef}
+								onClick={() => setOpenMenu(true)}
+								aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+							>
 								<MoreVertRounded fontSize="small" />
 							</IconButton>
 							<Menu
