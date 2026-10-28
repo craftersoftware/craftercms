@@ -69,7 +69,6 @@ jsoup = "1.23.2"
 opensearch = "3.9.0"
 opensearch-runner = "3.9.0.0"
 tika = "4.1.0"
-poi-scratchpad = "6.0.0"
 metadata-extractor = "2.22.0"
 commons-compress = "1.28.0"
 protobuf-java = "4.36.2"
@@ -215,7 +214,6 @@ opensearch-java = { module = "org.opensearch.client:opensearch-java", version.re
 opensearch-runner = { module = "org.codelibs.opensearch:opensearch-runner", version.ref = "opensearch-runner" }
 tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
 tika-parsers-standard-package = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
-poi-scratchpad = { module = "org.apache.poi:poi-scratchpad", version.ref = "poi-scratchpad" }
 metadata-extractor = { module = "com.drewnoakes:metadata-extractor", version.ref = "metadata-extractor" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf-java" }
