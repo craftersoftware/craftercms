@@ -16,7 +16,7 @@ Please visit the link below to determine the version of this package you should 
 | Topic | Link |
 |---|---|
 | CrafterCMS Community Slack | https://craftercms.com/slack |
-| CrafterCMS documentation | https://docs.craftercms.org |
+| CrafterCMS documentation | https://craftercms.com/docs |
 | Crafter Studio UI Source Code | https://github.com/craftercms/studio-ui |
 | Authoring UI Plugin Examples |  https://github.com/craftercms/authoring-ui-plugin-examples |
 | Crafter Studio API | https://craftercms.com/docs/current/_static/api/studio.html |
