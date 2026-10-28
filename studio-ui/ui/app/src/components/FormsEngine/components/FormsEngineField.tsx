@@ -24,8 +24,26 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
-import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
+import React, {
+	forwardRef,
+	PropsWithChildren,
+	ReactNode,
+	SyntheticEvent,
+	useContext,
+	useEffect,
+	useId,
+	useLayoutEffect,
+	useRef,
+	useState
+} from 'react';
 import { type FieldValidityMessage, isEmptyValue, isFieldRequired } from '../lib/validators';
+import {
+	applyFieldControlA11y,
+	FIELD_CONTROL_READY_EVENT,
+	FormSaveAttemptedContext,
+	FormValidationAnnouncerContext,
+	resolveFieldControl
+} from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import useItemsByPath from '../../../hooks/useItemsByPath';
 import { FormattedMessage, type IntlFormatters, useIntl } from 'react-intl';
@@ -124,8 +142,65 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const value = useAtomValue(atoms.valueByFieldId[fieldId]);
 	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
 	const dispatch = useDispatch();
+	const announceValidation = useContext(FormValidationAnnouncerContext);
+	const saveAttempted = useContext(FormSaveAttemptedContext);
+	const editedRef = useRef(false);
+	const generatedId = useId();
+	const controlId = htmlFor || generatedId;
+	const descriptionId = hasDescription ? `${controlId}-description` : undefined;
+	const errorMessages =
+		!isValid && validityData.state === 'hasData'
+			? (validityData.data?.messages ?? []).map((messageData) => translateValidityMessage(messageData, formatMessage))
+			: [];
+	const errorText = errorMessages.join(' ');
+	const errorId = errorText ? `${controlId}-error` : undefined;
+	const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+	const formControlRef = useRef<HTMLDivElement>(null);
+	const a11yRef = useRef({ describedBy, required: isRequired, invalid: !isValid, htmlFor });
+	a11yRef.current = { describedBy, required: isRequired, invalid: !isValid, htmlFor };
+	const setFormControlRef = (node: HTMLDivElement | null) => {
+		formControlRef.current = node;
+		if (typeof ref === 'function') ref(node);
+		else if (ref) ref.current = node;
+	};
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
+	const linkControl = () => {
+		const root = formControlRef.current;
+		if (!root) return;
+		const current = a11yRef.current;
+		const control = resolveFieldControl(root, current.htmlFor);
+		if (!control) return;
+		applyFieldControlA11y(control, current);
+	};
+	// Re-apply after every commit. Attributes are written on the visible control (the TinyMCE
+	// iframe, not its hidden textarea). Same-value writes are skipped inside applyFieldControlA11y.
+	useLayoutEffect(() => {
+		linkControl();
+	});
+	useEffect(() => {
+		const root = formControlRef.current;
+		if (!root) return;
+		const onFocusIn = () => {
+			queueMicrotask(linkControl);
+		};
+		const onControlReady = () => linkControl();
+		root.addEventListener('focusin', onFocusIn);
+		root.addEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
+		return () => {
+			root.removeEventListener('focusin', onFocusIn);
+			root.removeEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
+		};
+	}, []);
+	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget;
+		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		if (!errorText) return;
+		// Tabbing through a pristine required field should not announce. Announce after the
+		// user edits the field, or after Save has already been attempted.
+		if (!editedRef.current && !saveAttempted) return;
+		announceValidation(formatMessage({ defaultMessage: '{field}: {error}' }, { field: field.name, error: errorText }));
+	};
 	useEffect(() => {
 		// Offer controls the option to focus on the label when the field is rendered.
 		if (autoFocus) {
@@ -134,12 +209,16 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	}, [autoFocus]);
 	return (
 		<FormControl
-			ref={ref}
+			ref={setFormControlRef}
 			fullWidth
 			error={!isValid}
 			variant="standard"
 			data-field-id={fieldId}
 			required={isRequired}
+			onInput={() => {
+				editedRef.current = true;
+			}}
+			onBlur={handleFieldBlur}
 			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
 		>
 			<Box
@@ -301,12 +380,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				</Alert>
 			)}
 			{children}
-			{hasDescription && <FormHelperText>{field.description}</FormHelperText>}
-			{!isValid &&
-				validityData.state === 'hasData' &&
-				validityData.data?.messages?.map((messageData, key) => (
-					<FormHelperText key={key}>{translateValidityMessage(messageData, formatMessage)}</FormHelperText>
-				))}
+			{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
+			{errorText && <FormHelperText id={errorId}>{errorText}</FormHelperText>}
 		</FormControl>
 	);
 });

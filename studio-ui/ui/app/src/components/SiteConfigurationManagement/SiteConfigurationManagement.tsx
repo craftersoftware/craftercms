@@ -475,6 +475,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		setConfirmDialogProps({
 			open: true,
 			title: <FormattedMessage id="siteConfigurationManagement.unsavedChangesTitle" defaultMessage="Unsaved changes" />,
+			defaultFocus: 'cancel',
 			body: (
 				<FormattedMessage
 					id="siteConfigurationManagement.unsavedChangesSubtitle"

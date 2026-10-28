@@ -16,7 +16,7 @@
 
 import { useAtom, useAtomValue } from 'jotai';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { MouseEvent, useContext } from 'react';
+import React, { MouseEvent, useContext, useId } from 'react';
 import { StableFormContext } from '../lib/formsEngineContext';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
@@ -26,10 +26,6 @@ import FormHelperText from '@mui/material/FormHelperText';
 import Grow from '@mui/material/Grow';
 import Alert from '@mui/material/Alert';
 import { SplitButton } from '../../SplitButton';
-import { useDispatch } from 'react-redux';
-import { pushConfirmDialog } from '../../../utils/system';
-import { popDialog } from '../../../state/actions/dialogStack';
-import { nanoid } from 'nanoid';
 
 export interface SaveCardProps {
 	isRepeatMode: boolean;
@@ -38,19 +34,28 @@ export interface SaveCardProps {
 	setSaveAsDraft: (value: boolean) => void;
 	invalidForm: boolean;
 	onSave: (e: MouseEvent, draft?: boolean) => void;
+	/** Called when Save is pressed and the form is invalid. Focus and announce the first error. */
+	onInvalidSave: () => void;
 }
 
 export function SaveCard(props: SaveCardProps) {
-	const { isEmbedded, isStackedForm, isRepeatMode, setSaveAsDraft, invalidForm, onSave } = props;
+	const { isEmbedded, isStackedForm, isRepeatMode, setSaveAsDraft, invalidForm, onSave, onInvalidSave } = props;
 	const stableFormContext = useContext(StableFormContext);
 	const isSubmitting = useAtomValue(stableFormContext.atoms.isSubmitting);
 	const [versionComment, setVersionComment] = useAtom(stableFormContext.atoms.versionComment);
 	const hasPendingChanges = useAtomValue(stableFormContext.atoms.hasPendingChanges);
 	const [closeAfterSave, setCloseAfterSave] = useAtom(stableFormContext.atoms.closeAfterSave);
 	const [minimizeAfterSave, setMinimizeAfterSave] = useAtom(stableFormContext.atoms.minimizeAfterSave);
-	const disableSave = !isEmbedded && !isRepeatMode && (isSubmitting || !versionComment);
+	const versionCommentRequired = !isEmbedded && !isRepeatMode;
+	const versionCommentMissing = versionCommentRequired && !versionComment.trim();
+	const disableSave = versionCommentRequired && (isSubmitting || versionCommentMissing);
+	const versionCommentFieldId = useId();
+	const invalidFormHelpId = useId();
 	const { formatMessage } = useIntl();
-	const dispatch = useDispatch();
+	const describedBy =
+		[versionCommentMissing ? `${versionCommentFieldId}-helper-text` : '', invalidForm ? invalidFormHelpId : '']
+			.filter(Boolean)
+			.join(' ') || undefined;
 
 	const handleSetCloseAfterSave = (checked: boolean) => {
 		if (checked) {
@@ -66,24 +71,10 @@ export function SaveCard(props: SaveCardProps) {
 	};
 	const handleSave = (e: MouseEvent, type: 'save' | 'saveDraft', draft?: boolean) => {
 		if (type === 'save' && invalidForm) {
-			const dialogId = nanoid();
-			dispatch(
-				pushConfirmDialog({
-					id: dialogId,
-					props: {
-						title: formatMessage({ defaultMessage: 'Cannot Proceed' }),
-						body: formatMessage({
-							defaultMessage:
-								'You cannot save until all form requirements are satisfied. If you still want to save, you can use the Save as draft option, but required fields left blank may cause errors when previewed or deployed.'
-						}),
-						cancelButtonText: formatMessage({ defaultMessage: 'Ok' }),
-						onCancel: () => dispatch(popDialog({ id: dialogId }))
-					}
-				})
-			);
-		} else {
-			onSave(e, draft);
+			onInvalidSave();
+			return;
 		}
+		onSave(e, draft);
 	};
 
 	return (
@@ -91,13 +82,18 @@ export function SaveCard(props: SaveCardProps) {
 			{(!isEmbedded || !isStackedForm) && !isRepeatMode && (
 				// TODO: Should embedded components and repeats get a version comment? How would that work?
 				<TextField
+					id={versionCommentFieldId}
 					size="small"
 					multiline
 					fullWidth
+					required={versionCommentRequired}
 					label={<FormattedMessage defaultMessage="Version Comment" />}
 					value={versionComment}
 					onChange={(e) => setVersionComment(e.target.value)}
 					onFocus={(e) => e.target.select()}
+					helperText={
+						versionCommentMissing ? formatMessage({ defaultMessage: 'Enter a version comment to save.' }) : undefined
+					}
 				/>
 			)}
 			{!isEmbedded && !isRepeatMode && (
@@ -128,6 +124,7 @@ export function SaveCard(props: SaveCardProps) {
 				fullWidth
 				loading={isSubmitting}
 				disabled={disableSave}
+				describedBy={describedBy}
 				options={[
 					{
 						id: 'save',
@@ -153,6 +150,14 @@ export function SaveCard(props: SaveCardProps) {
 					}
 				]}
 			/>
+			{invalidForm && (
+				<FormHelperText id={invalidFormHelpId}>
+					{formatMessage({
+						defaultMessage:
+							'You cannot save until all form requirements are satisfied. If you still want to save, you can use the Save as draft option, but required fields left blank may cause errors when previewed or deployed.'
+					})}
+				</FormHelperText>
+			)}
 			{isStackedForm && isEmbedded && (
 				<FormHelperText sx={{ textAlign: 'center' }}>
 					<FormattedMessage defaultMessage="Changes are saved with the main item." />

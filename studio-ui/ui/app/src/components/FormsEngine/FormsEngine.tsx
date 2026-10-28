@@ -26,6 +26,7 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState
@@ -111,6 +112,13 @@ import {
 	useValidateFormProps
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
+import {
+	countInvalidFields,
+	focusFirstInvalidField,
+	FormSaveAttemptedContext,
+	FormValidationAnnouncerContext
+} from './lib/fieldA11y';
+import { SkipToActionsLink } from '../SkipToActionsLink';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -825,6 +833,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const formActionsId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
@@ -907,6 +916,40 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const [collapseHeader, setCollapseHeader] = useState(false);
 	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
 	const [invalidForm, setInvalidForm] = useState(false);
+	const [validationStatusMessage, setValidationStatusMessage] = useState('');
+	const [saveAttempted, setSaveAttempted] = useState(false);
+	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const announceValidation = useCallback((message: string) => {
+		setValidationStatusMessage('');
+		if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		// Clear first so a repeated message still changes the live region's text.
+		validationStatusTimer.current = setTimeout(() => setValidationStatusMessage(message), 40);
+	}, []);
+	useEffect(
+		() => () => {
+			if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		},
+		[]
+	);
+	const handleInvalidSave = useCallback(() => {
+		setSaveAttempted(true);
+		const root = containerRef.current;
+		// Focus is moved onto the field, which exposes its own error. The live region only
+		// reports how many fields need attention so the error is not spoken twice.
+		const count = countInvalidFields(root);
+		focusFirstInvalidField(root);
+		announceValidation(
+			count > 0
+				? formatMessage(
+						{
+							defaultMessage:
+								'Cannot save yet. {count, plural, one {# field needs attention} other {# fields need attention}}'
+						},
+						{ count }
+					)
+				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
+		);
+	}, [announceValidation, formatMessage]);
 	const jotai = useJotaiStore();
 
 	useMount(() => {
@@ -1196,7 +1239,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box id="header" sx={{ minHeight: 50 }}>
+				<Box id="header" sx={{ minHeight: 50, position: 'relative' }}>
+					<SkipToActionsLink targetId={formActionsId} scopeRef={containerRef} />
 					<Box
 						component={Container}
 						sx={{
@@ -1344,7 +1388,14 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
 					</Grid>
 					<Grid size="grow">
-						<StickyBox className="space-y" sx={{ height: 'auto' }}>
+						<StickyBox
+							id={formActionsId}
+							role="region"
+							tabIndex={-1}
+							aria-label={formatMessage({ defaultMessage: 'Form actions' })}
+							className="space-y"
+							sx={{ height: 'auto', scrollMarginTop: 8 }}
+						>
 							{readonly ? (
 								<>
 									<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>
@@ -1368,6 +1419,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 										setSaveAsDraft={setSaveAsDraftAction}
 										invalidForm={invalidForm}
 										onSave={(e, draft) => saveFn(draft)}
+										onInvalidSave={handleInvalidSave}
 									/>
 									{!isCreateMode && // There's no locking on create mode
 										(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
@@ -1490,7 +1542,29 @@ function FormOrchestrator(props: FormsEngineProps) {
 	return (
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
-		isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment
+		<FormValidationAnnouncerContext.Provider value={announceValidation}>
+			<FormSaveAttemptedContext.Provider value={saveAttempted}>
+				{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+				<Box
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					sx={{
+						border: 0,
+						clip: 'rect(0 0 0 0)',
+						height: '1px',
+						margin: '-1px',
+						overflow: 'hidden',
+						padding: 0,
+						position: 'absolute',
+						whiteSpace: 'nowrap',
+						width: '1px'
+					}}
+				>
+					{validationStatusMessage}
+				</Box>
+			</FormSaveAttemptedContext.Provider>
+		</FormValidationAnnouncerContext.Provider>
 	);
 }
 

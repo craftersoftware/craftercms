@@ -32,6 +32,7 @@ import { getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
 import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
+import { FIELD_CONTROL_READY_EVENT } from '../lib/fieldA11y';
 import { getCurrentLocale } from '../../../utils/i18n';
 import Dialog from '@mui/material/Dialog';
 import MenuList from '@mui/material/MenuList';
@@ -168,6 +169,10 @@ export function RichTextEditor(props: RichTextEditorProps) {
 					editor.once('focus', () => {
 						hasReceivedFocusRef.current = true;
 					});
+					// Init does not re-render an empty required field, so the layout effect never
+					// sees the iframe. Tell the field to link aria-invalid onto it now.
+					const host = editor.getElement();
+					host?.dispatchEvent(new Event(FIELD_CONTROL_READY_EVENT, { bubbles: true }));
 				}}
 				disabled={readonly}
 			/>

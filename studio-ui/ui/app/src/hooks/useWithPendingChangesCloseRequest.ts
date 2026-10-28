@@ -32,6 +32,7 @@ export function useWithPendingChangesCloseRequest(onClose: DialogProps['onClose'
 				id: dialogId,
 				props: {
 					title: formatMessage(translations.pendingChanges),
+					defaultFocus: 'cancel',
 					onOk: () => {
 						dispatch(popDialog({ id: dialogId }));
 						onClose(e, reason);

@@ -553,6 +553,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							component: 'craftercms.components.ConfirmDialog',
 							props: {
 								title: <FormattedMessage defaultMessage="Discard changes?" />,
+								defaultFocus: 'cancel',
 								onOk: () => {
 									onClose?.();
 									onUpdateHasPendingChanges(false);
@@ -649,6 +650,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							body: (
 								<FormattedMessage defaultMessage="Are you sure you want to revert all changes made during this session?" />
 							),
+							defaultFocus: 'cancel',
 							onOk: () => {
 								resetSelection();
 								setType(withPersistedJsController(props.type));

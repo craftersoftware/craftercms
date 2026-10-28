@@ -15,7 +15,7 @@
  */
 
 import { useSpreadState } from '../../hooks/useSpreadState';
-import React, { SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import React, { SyntheticEvent, useEffect, useId, useMemo, useState } from 'react';
 import { PublishingTarget, PublishParams } from '../../models/Publishing';
 import LookupTable from '../../models/LookupTable';
 import { InternalDialogState, itemsArrayChanged, PublishDialogContainerProps, usePublishState } from './utils';
@@ -38,6 +38,7 @@ import { EmptyState } from '../EmptyState';
 import DialogFooter from '../DialogFooter';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
+import { SkipToActionsLink } from '../SkipToActionsLink';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
@@ -97,6 +98,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const [childrenItems, setChildrenItems] = useState<LightItem[]>([]);
 	const [published, setPublished] = useState<boolean>(null);
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
+	const [publishingTargetsFailed, setPublishingTargetsFailed] = useState(false);
 	const {
 		itemsDataSummary,
 		dependencyData,
@@ -241,55 +243,59 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		hardDependenciesWithoutPublishPermission;
 
 	useEffect(() => {
-		setState({ fetchingItems: true });
-		if (state.publishingTarget) {
-			const sub = calculatePackage(siteId, {
-				publishingTarget: state.publishingTarget,
-				paths: itemsDataSummary.itemPaths.map((path) => ({
-					path,
-					includeChildren,
-					includeSoftDeps: false
-				}))
-			}).subscribe({
-				next(dependenciesByType) {
-					const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
-					const depMap: DependencyMap = {};
-					const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
-					dependenciesByType.hardDependencies.forEach(({ path }) => {
-						depMap[path] = 'hard';
-					});
-					dependenciesByType.softDependencies.forEach(({ path }) => {
-						depMap[path] = 'soft';
-					});
-					setState({ fetchingItems: false });
-					setPackageDependenciesFetchFailed(false);
-					if (includeChildren && dependenciesByType.items) {
-						if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
-							setChildrenItems(dependenciesByType.items);
-						}
-					} else {
-						if (effectRefs.current.childrenItems.length !== 0) {
-							setChildrenItems([]);
-						}
-					}
-					setSelectedDependenciesMap({});
-					setDependencyData({
-						typeByPath: depMap,
-						paths: Object.keys(depMap),
-						itemsByPath: depLookup,
-						items: itemsList
-					});
-				},
-				error() {
-					setState({ fetchingItems: false });
-					setIsFetchingItems(false);
-					setSelectedDependenciesMap({});
-					setDependencyData(null);
-					setPackageDependenciesFetchFailed(true);
-				}
-			});
-			return () => sub.unsubscribe();
+		// Package calculation only runs once a target exists. Leaving fetchingItems true with no
+		// target made the disabled-button reason stay on "items are loading" and hid the real cause.
+		if (!state.publishingTarget) {
+			setState({ fetchingItems: false });
+			return;
 		}
+		setState({ fetchingItems: true });
+		const sub = calculatePackage(siteId, {
+			publishingTarget: state.publishingTarget,
+			paths: itemsDataSummary.itemPaths.map((path) => ({
+				path,
+				includeChildren,
+				includeSoftDeps: false
+			}))
+		}).subscribe({
+			next(dependenciesByType) {
+				const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
+				const depMap: DependencyMap = {};
+				const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
+				dependenciesByType.hardDependencies.forEach(({ path }) => {
+					depMap[path] = 'hard';
+				});
+				dependenciesByType.softDependencies.forEach(({ path }) => {
+					depMap[path] = 'soft';
+				});
+				setState({ fetchingItems: false });
+				setPackageDependenciesFetchFailed(false);
+				if (includeChildren && dependenciesByType.items) {
+					if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
+						setChildrenItems(dependenciesByType.items);
+					}
+				} else {
+					if (effectRefs.current.childrenItems.length !== 0) {
+						setChildrenItems([]);
+					}
+				}
+				setSelectedDependenciesMap({});
+				setDependencyData({
+					typeByPath: depMap,
+					paths: Object.keys(depMap),
+					itemsByPath: depLookup,
+					items: itemsList
+				});
+			},
+			error() {
+				setState({ fetchingItems: false });
+				setIsFetchingItems(false);
+				setSelectedDependenciesMap({});
+				setDependencyData(null);
+				setPackageDependenciesFetchFailed(true);
+			}
+		});
+		return () => sub.unsubscribe();
 	}, [
 		itemsDataSummary.itemPaths,
 		setState,
@@ -379,6 +385,60 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
+	const publishSubmitReasonId = useId();
+	const publishActionsId = useId();
+	// Visible reason for a disabled Publish/Schedule/Request Publish button. One object-literal
+	// formatMessage per branch so the formatjs babel plugin can inject message ids.
+	let publishSubmitReason = '';
+	if (!isSubmitting) {
+		if (isFetchingItems || !contentItems) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for the items to finish loading before publishing.'
+			});
+		} else if (publishingTargetsFailed) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Publishing targets could not be loaded. Retry before publishing.'
+			});
+		} else if (publishingTargets && publishingTargets.length === 0) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
+		} else if (!state.publishingTarget && publishingTargets == null) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
+		} else if (!state.publishingTarget) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Select a publishing target to publish.' });
+		} else if (state.fetchingItems) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for the items to finish loading before publishing.'
+			});
+		} else if (isBlank(state.packageTitle)) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a package title to publish.' });
+		} else if (isBlank(state.submissionComment)) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a submission comment to publish.' });
+		} else if (selectedDependenciesPaths?.length) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Apply or discard the dependency changes before publishing.'
+			});
+		} else if (state.error) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Resolve the error shown in this dialog before publishing.'
+			});
+		} else if (state.scheduledDateTime < new Date()) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Choose a schedule time in the future.' });
+		} else if (arePublishingItemsFolders) {
+			publishSubmitReason = formatMessage({ defaultMessage: 'Select items that are not empty folders to publish.' });
+		} else if (packageDependenciesFetchFailed) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Dependency validation could not complete. Try again before publishing.'
+			});
+		} else if (dependencyValidationIncomplete) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'Wait for dependency validation to finish before publishing.'
+			});
+		} else if (hardDependenciesWithoutPublishPermission) {
+			publishSubmitReason = formatMessage({
+				defaultMessage: 'This package has required references you do not have permission to publish.'
+			});
+		}
+	}
 
 	const onDependencyCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
@@ -433,6 +493,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	return (
 		<>
+			<SkipToActionsLink targetId={publishActionsId} />
 			<DialogBody sx={{ px: 4, minHeight: 'calc(100vh * 0.5)' }}>
 				{state.error ? (
 					<ApiResponseErrorState error={state.error} />
@@ -451,9 +512,11 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 									isRequestPublish={isRequestPublish}
 									disabled={disabled}
 									onFetchedPublishedTargets={({ targets, published }) => {
+										setPublishingTargetsFailed(false);
 										setPublished(published);
 										setPublishingTargets(targets);
 									}}
+									onPublishingTargetsError={() => setPublishingTargetsFailed(true)}
 								/>
 								<Divider />
 								<PublishReferencesLegend />
@@ -575,11 +638,32 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 					</Typography>
 				)}
 			</DialogBody>
-			<DialogFooter>
+			<DialogFooter
+				id={publishActionsId}
+				tabIndex={-1}
+				role="group"
+				aria-label={formatMessage({ defaultMessage: 'Publish actions' })}
+				sx={{ flexWrap: 'wrap' }}
+			>
+				{publishSubmitReason && (
+					<Typography
+						id={publishSubmitReasonId}
+						variant="body2"
+						color="text.secondary"
+						sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}
+					>
+						{publishSubmitReason}
+					</Typography>
+				)}
 				<SecondaryButton onClick={onCloseButtonClick} disabled={isSubmitting}>
 					<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
 				</SecondaryButton>
-				<PrimaryButton onClick={handleSubmit} disabled={submitDisabled} loading={isSubmitting}>
+				<PrimaryButton
+					onClick={handleSubmit}
+					disabled={submitDisabled}
+					loading={isSubmitting}
+					aria-describedby={publishSubmitReason ? publishSubmitReasonId : undefined}
+				>
 					{submitLabel}
 				</PrimaryButton>
 			</DialogFooter>

@@ -55,6 +55,7 @@ export function UploadDialog(props: UploadDialogProps) {
 					id: dialogId,
 					props: {
 						body: formatMessage(translations.uploadInProgressConfirmation),
+						defaultFocus: 'cancel',
 						onOk: () => {
 							dispatch(popDialog({ id: dialogId }));
 							props.onClose();
