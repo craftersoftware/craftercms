@@ -632,7 +632,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
 | Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
 | Control rendering                 | `lib/controlHelpers.tsx`, `lib/controlMap.ts`, `controls/*`                                           |
-| Legacy plugin URL/module protocol | `cstudio-common/common-api.js` (`getPluginInfo`, `Module`)                                            |
+| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
 | New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
 | Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
 | Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
