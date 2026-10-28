@@ -1130,25 +1130,36 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
 	// overflow exceeds the header height, which is more than that growth can remove.
 	useEffect(() => {
-		if (!mainContent || !sentinelRef.current) return;
+		const sentinel = sentinelRef.current;
+		if (!mainContent || !sentinel) return;
 
-		const observer = new IntersectionObserver(
+		let isIntersecting = true;
+		const checkThreshold = () => {
+			const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
+			const overflow = mainContent.scrollHeight - mainContent.clientHeight;
+			// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
+			const sentinelOffset = sentinel.offsetTop;
+			setCollapseHeader(!isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset);
+		};
+
+		const intersectionObserver = new IntersectionObserver(
 			([entry]) => {
-				const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
-				const overflow = mainContent.scrollHeight - mainContent.clientHeight;
-				// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
-				const sentinelOffset = (entry.target as HTMLElement).offsetTop;
-				if (!entry.isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset) {
-					setCollapseHeader(true);
-				} else if (entry.isIntersecting) {
-					setCollapseHeader(false);
-				}
+				isIntersecting = entry.isIntersecting;
+				checkThreshold();
 			},
 			{ root: mainContent, threshold: 0, rootMargin: '0px' }
 		);
+		intersectionObserver.observe(sentinel);
 
-		observer.observe(sentinelRef.current);
-		return () => observer.disconnect();
+		// Re-check the same threshold when section content resizes (e.g. collapsing a SectionAccordion).
+		// The intersection observer alone won't fire for that, so collapseHeader could otherwise get stuck.
+		const resizeObserver = new ResizeObserver(checkThreshold);
+		resizeObserver.observe(sentinel.nextElementSibling ?? mainContent);
+
+		return () => {
+			intersectionObserver.disconnect();
+			resizeObserver.disconnect();
+		};
 	}, [mainContent]);
 
 	// Scroll to the field requested via the `fieldToScroll` prop, once form body layout settles
