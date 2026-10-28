@@ -26,7 +26,7 @@
     "test": "mocha"
   },
   "dependencies": {
-    "@craftercms/content": "^4.4.1",
+    "@craftercms/content": "^4.5.0",
     "@reduxjs/toolkit": "^2.13.0",
     "redux": "^5.0.1",
     "redux-observable": "^3.0.0-rc.3",

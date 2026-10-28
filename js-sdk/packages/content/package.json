@@ -26,9 +26,9 @@
     "test": "mocha"
   },
   "dependencies": {
-    "@craftercms/classes": "^4.4.0",
-    "@craftercms/models": "^4.3.0",
-    "@craftercms/utils": "^4.3.0",
+    "@craftercms/classes": "^4.4.1",
+    "@craftercms/models": "^4.3.1-next",
+    "@craftercms/utils": "^4.3.1-next",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
