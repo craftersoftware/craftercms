@@ -730,7 +730,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const leafId = resolvedParentPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
 		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${leafId}` : leafId;
 		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
-		setType(nextType);		
+		setType(nextType);
 		onUpdateHasPendingChanges(true);
 		handleFieldSelected(newFieldPath, newField, sectionId, nextType);
 	};
