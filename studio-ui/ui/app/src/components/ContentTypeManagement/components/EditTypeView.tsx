@@ -217,6 +217,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const xmlDiffDialogState = useEnhancedDialogState();
 	const [xmlDiffContent, setXmlDiffContent] = useState<{ initialContent: string; currentContent }>(undefined);
 	const [selectedFieldIdPath, setSelectedFieldIdPath] = useState<string>(null);
+	/** Id of the field that was open when closeAndCleanup last committed (post-rename). Used to rewrite child paths. */
+	const committedSelectedFieldIdOnCloseRef = useRef<string | null>(null);
 	const [hasPendingChanges, setHasPendingChanges] = useState(false);
 	const [virtualContentType, setVirtualContentType] = useState<ContentType>(null);
 	const [fieldFormViewProps, setFieldFormViewProps] = useState<FieldFormViewProps>(null);
@@ -345,6 +347,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const closeAndCleanup = async (): Promise<ContentType | false> => {
 		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		const postCloseType = commitOpenFormChanges() ?? typeRef.current;
+		// Capture after commit (rename applied to selectedField) before clearing for path rewrite.
+		committedSelectedFieldIdOnCloseRef.current = stateRef.current.selectedField?.id ?? null;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
 		stateRef.current.selectedDataSource = null;
@@ -396,12 +400,27 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		sectionId: string,
 		overrideType?: ContentType
 	) => {
+		// Capture before closeAndCleanup clears selectedFieldIdPath (React state still closed over,
+		// but be explicit). Committed id is stashed by closeAndCleanup after rename commit.
+		const openFieldIdPath = selectedFieldIdPath;
 		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
+		// Path was captured pre-commit; if the open form renamed the parent (or an ancestor), rewrite that segment.
+		let resolvedFieldIdPath = fieldIdPath;
+		const committedOpenFieldId = committedSelectedFieldIdOnCloseRef.current;
+		if (
+			openFieldIdPath &&
+			committedOpenFieldId &&
+			(fieldIdPath === openFieldIdPath || fieldIdPath.startsWith(`${openFieldIdPath}.`))
+		) {
+			const segments = fieldIdPath.split('.');
+			segments[openFieldIdPath.split('.').length - 1] = committedOpenFieldId;
+			resolvedFieldIdPath = segments.join('.');
+		}
 		// Prefer the field from typeForForm so nested child edits committed by closeAndCleanup
 		// are preserved (e.g. selecting a parent after editing one of its children).
-		const fieldForForm = getFieldFromType(typeForForm, fieldIdPath) ?? field;
+		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
 		const controlDescriptor =
 			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
@@ -423,7 +442,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
-					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath, configDescriptors.controlDescriptors ?? undefined),
+					siblingIds: getSiblingFieldIds(
+						typeForForm,
+						resolvedFieldIdPath,
+						configDescriptors.controlDescriptors ?? undefined
+					),
 					currentIds: getFieldIdSet(
 						fieldForForm.id,
 						fieldForForm.type,
@@ -434,13 +457,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			),
 			{
 				field: fieldForForm,
-				fieldIdPath,
+				fieldIdPath: resolvedFieldIdPath,
 				controlDescriptor: applyTranslations(controlDescriptor, formatMessage),
 				sectionId,
 				type: typeForForm
 			}
 		);
-		setSelectedFieldIdPath(fieldIdPath);
+		setSelectedFieldIdPath(resolvedFieldIdPath);
 		stateRef.current.selectedField = fieldForForm;
 	};
 	const handleSectionSelected = async (section: ContentTypeSection, overrideType?: ContentType) => {
