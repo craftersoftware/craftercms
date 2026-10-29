@@ -22,7 +22,9 @@ import {
 	extractContent,
 	parseProps,
 	parseFieldValue,
-	preParseSearchResults
+	preParseSearchResults,
+	fetchModelByPath,
+	fetchModelByUrl
 } from '@craftercms/content';
 import { crafterConf } from '@craftercms/classes';
 import 'url-search-params-polyfill';
@@ -234,6 +236,94 @@ describe('Engine Client', () => {
 					expect(url).to.equal(storeUrl);
 					done();
 				});
+			});
+		});
+	});
+
+	describe('fetchModelByPath', () => {
+		it('returns a ContentInstance when the item has a descriptor', (done) => {
+			nock(baseUrl)
+				.get(endpoints.GET_ITEM_URL)
+				.query({
+					crafterSite,
+					url: '/site/website/index.xml',
+					flatten: true
+				})
+				.reply(200, item);
+
+			fetchModelByPath('/site/website/index.xml').subscribe((model) => {
+				expect(model).to.not.be.null;
+				expect(model.craftercms.label).to.equal(parsedItem.craftercms.label);
+				done();
+			});
+		});
+
+		it('returns null when the item has no descriptor', (done) => {
+			const folderItem = children[0];
+			nock(baseUrl)
+				.get(endpoints.GET_ITEM_URL)
+				.query({
+					crafterSite,
+					url: folderItem.url,
+					flatten: true
+				})
+				.reply(200, folderItem);
+
+			fetchModelByPath(folderItem.url).subscribe((model) => {
+				expect(model).to.be.null;
+				done();
+			});
+		});
+	});
+
+	describe('fetchModelByUrl', () => {
+		it('returns a ContentInstance when the item has a descriptor', (done) => {
+			nock(baseUrl)
+				.get(endpoints.TRANSFORM_URL)
+				.query({
+					crafterSite,
+					transformerName: 'renderUrlToStoreUrl',
+					url: '/'
+				})
+				.reply(200, `"/site/website/index.xml"`);
+			nock(baseUrl)
+				.get(endpoints.GET_ITEM_URL)
+				.query({
+					crafterSite,
+					url: '/site/website/index.xml',
+					flatten: true
+				})
+				.reply(200, item);
+
+			fetchModelByUrl('/').subscribe((model) => {
+				expect(model).to.not.be.null;
+				expect(model.craftercms.label).to.equal(parsedItem.craftercms.label);
+				done();
+			});
+		});
+
+		it('returns null when the item has no descriptor', (done) => {
+			const folderItem = children[0];
+			nock(baseUrl)
+				.get(endpoints.TRANSFORM_URL)
+				.query({
+					crafterSite,
+					transformerName: 'renderUrlToStoreUrl',
+					url: '/articles'
+				})
+				.reply(200, `"${folderItem.url}"`);
+			nock(baseUrl)
+				.get(endpoints.GET_ITEM_URL)
+				.query({
+					crafterSite,
+					url: folderItem.url,
+					flatten: true
+				})
+				.reply(200, folderItem);
+
+			fetchModelByUrl('/articles').subscribe((model) => {
+				expect(model).to.be.null;
+				done();
 			});
 		});
 	});
