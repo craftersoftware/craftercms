@@ -68,7 +68,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@craftercms/classes@npm:^4.4.1, @craftercms/classes@workspace:packages/classes":
+"@craftercms/classes@npm:^4.4.2-next, @craftercms/classes@workspace:packages/classes":
   version: 0.0.0-use.local
   resolution: "@craftercms/classes@workspace:packages/classes"
   dependencies:
@@ -93,7 +93,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@craftercms/content@workspace:packages/content"
   dependencies:
-    "@craftercms/classes": "npm:^4.4.1"
+    "@craftercms/classes": "npm:^4.4.2-next"
     "@craftercms/models": "npm:^4.3.1-next"
     "@craftercms/utils": "npm:^4.3.1-next"
     "@rollup/plugin-commonjs": "npm:^29.0.3"
@@ -185,7 +185,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@craftercms/search@workspace:packages/search"
   dependencies:
-    "@craftercms/classes": "npm:^4.4.1"
+    "@craftercms/classes": "npm:^4.4.2-next"
     "@craftercms/models": "npm:^4.3.1-next"
     "@craftercms/utils": "npm:^4.3.1-next"
     "@rollup/plugin-commonjs": "npm:^29.0.3"
