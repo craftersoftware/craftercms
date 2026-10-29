@@ -17,7 +17,7 @@
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
@@ -326,7 +326,11 @@ export function SelectField(props: {
 			</Box>
 			<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 1, mb: 2 }}>
 				{filteredFields.map((field, index) => (
-					<ListItemButton key={field.id} onClick={() => setSelectedField(field)} selected={selectedField?.id === field.id}>
+					<ListItemButton
+						key={field.id}
+						onClick={() => setSelectedField(field)}
+						selected={selectedField?.id === field.id}
+					>
 						<ListItemIcon>
 							{configLookup?.[field.id]?.icon?.id ? (
 								<SystemIcon icon={configLookup[field.id].icon} />
