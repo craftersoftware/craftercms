@@ -631,6 +631,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'ko', {
 	datasourceBasics: '데이터 소스 기본 사항',
 	title: '이름',
 	name: '이름',
+	id: 'Id',
 	properties: '등록',
 	sectionBasics: '섹션 기본 사항',
 	variableName: '이름 / 변수 이름',

@@ -105,6 +105,7 @@ import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { filterTypesByKeywordsAndObjectType } from '../../../utils/contentType';
+import { countLimitValue } from '../../../utils/countLimits';
 import {
 	buildActionGroups,
 	consolidateItemActions,
@@ -629,7 +630,9 @@ function NodeSelector(props: NodeSelectorProps) {
 				onMenuClose={() => setAddMenuOpen(false)}
 			/>
 		) : null;
-	const maxLimitReached = value.length >= field.validations.maxCount?.value;
+	// minCount/maxCount are the mapped limits. 0 is unlimited. See utils/countLimits.ts.
+	const maxCount = countLimitValue(field.validations?.maxCount?.value);
+	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
 	return (
 		<>
@@ -712,8 +715,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			</Dialog>
 			<FormsEngineField
 				field={field}
-				min={field.validations.minCount?.value}
-				max={field.validations.maxCount?.value}
+				min={countLimitValue(field.validations?.minCount?.value)}
+				max={maxCount}
 				length={value.length}
 				action={
 					<Tooltip
@@ -852,10 +855,10 @@ function NodeSelector(props: NodeSelectorProps) {
 						<Box
 							children={
 								menuOptions.length || customActionItems ? (
-									<>
-										<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{menuOptions}</MenuList>
+									<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>
+										{menuOptions}
 										{customActionItems}
-									</>
+									</MenuList>
 								) : (
 									<EmptyState
 										key="emptyState"

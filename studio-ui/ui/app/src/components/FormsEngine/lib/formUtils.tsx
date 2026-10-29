@@ -68,7 +68,16 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
-import { isFieldPathIrrelevant } from '../formControllers/runtime';
+import {
+	createFormVisibilityAtoms,
+	fieldVisibility,
+	aggregateStackFlags,
+	hasFormAtoms,
+	stackEntryFlagsAtom,
+	type FormVisibilityState,
+	type LaunchFieldsLookup,
+	visibilityFromLaunch
+} from './formVisibility';
 import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
@@ -93,6 +102,21 @@ export function getScrollContainer(container: HTMLElement): HTMLElement {
 	return mainContent instanceof HTMLElement ? mainContent : container;
 }
 
+const focusableControl =
+	'input:not([type=hidden]):not([aria-hidden="true"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], [role="combobox"], [tabindex="0"]';
+
+/** Attribute selector for a field. Ids are not a closed set, so the value is escaped. */
+export function fieldIdSelector(fieldId: string): string {
+	return `[data-field-id="${CSS.escape(fieldId)}"]`;
+}
+
+function focusField(field: HTMLElement): void {
+	const inner = field.querySelector<HTMLElement>(focusableControl);
+	const target = inner ?? field;
+	if (target === field && !field.hasAttribute('tabindex')) field.tabIndex = -1;
+	target.focus({ preventScroll: true });
+}
+
 /**
  * Scrolls to a field after the form body layout settles (e.g. lazy controls, RTEs, images).
  * Observes `[data-area-id="formBody"]` — the content that grows — not the fixed-height scroll container.
@@ -101,14 +125,16 @@ export function getScrollContainer(container: HTMLElement): HTMLElement {
 export function scrollToFieldWhenSettled(
 	root: HTMLElement,
 	fieldId: string,
-	{ quietMs = 250, maxWaitMs = 2500 }: { quietMs?: number; maxWaitMs?: number } = {}
+	{ quietMs = 250, maxWaitMs = 2500, focus = false }: { quietMs?: number; maxWaitMs?: number; focus?: boolean } = {}
 ): () => void {
 	const formBody = root.querySelector('[data-area-id="formBody"]');
 	const scroll = () => {
-		(formBody
-			? formBody.querySelector(`[data-field-id="${fieldId}"]`)
-			: root.querySelector(`[data-field-id="${fieldId}"]`)
-		)?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		const selector = fieldIdSelector(fieldId);
+		const field = formBody ? formBody.querySelector(selector) : root.querySelector(selector);
+		if (!(field instanceof HTMLElement)) return;
+		field.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		// Plain `fieldToScroll` passes focus off. A reveal sets it so opening a hidden field moves focus.
+		if (focus) focusField(field);
 	};
 
 	if (!formBody) {
@@ -358,7 +384,8 @@ export function createFieldAtoms(
 	);
 	const validationAtom = atom(async (get) => {
 		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
-		get(formContextRef.current.atoms.relevanceVersion);
+		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
+		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
 		return validateFieldValue(field, value, {
 			siteId: validatorsData?.siteId,
@@ -367,10 +394,15 @@ export function createFieldAtoms(
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : '',
+			fileName: formContextRef.current.atoms?.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
-			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance
+			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
+			// Item-count fields compare min and max. Reading the partner subscribes this atom to it.
+			getValue: (fieldId: string) => {
+				const partner = formContextRef.current.atoms?.valueByFieldId?.[fieldId];
+				return partner ? get(partner) : undefined;
+			}
 		});
 	});
 	return [valueAtom, validationAtom];
@@ -392,8 +424,20 @@ export function createFileNameAtom(
 	formContextRef: RefObject<FieldTrackingContext>,
 	initialValue?: string
 ): PrimitiveAtom<string> {
-	const initial = initialValue ?? (path ? getFileNameValueFromPath(path, isPagePath(path)) : '');
+	const initial = initialValue ?? fileNameFromItemPath(path);
 	return createTrackedFileNameAtom(initial, formContextRef);
+}
+
+/** Site root index. Its file name is fixed, so a blank file name is allowed there. */
+export const rootPagePath = '/site/website/index.xml';
+
+/**
+ * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given.
+ * The home page, and a form that has no path yet, are blank.
+ */
+export function fileNameFromItemPath(path?: string | null): string {
+	if (!path) return '';
+	return getFileNameValueFromPath(path, isPagePath(path));
 }
 
 /**
@@ -406,7 +450,7 @@ export function createFileNameAtom(
  */
 export const getBasePath = (path: string, isPage: boolean): string => {
 	// If home page
-	if (path === '/site/website/index.xml' && isPage) return '/site/website/';
+	if (path === rootPagePath && isPage) return '/site/website/';
 
 	const pathParts = path.split('/');
 	return isPage
@@ -424,7 +468,7 @@ export const getBasePath = (path: string, isPage: boolean): string => {
  */
 export const getFileNameValueFromPath = (path: string, isPage: boolean): string => {
 	// If home page, return empty string
-	if (path === '/site/website/index.xml' && isPage) return '';
+	if (path === rootPagePath && isPage) return '';
 
 	const basePath = getBasePath(path, isPage);
 	return path.replace(basePath, '').replace(isPage ? '/index.xml' : '.xml', '');
@@ -447,6 +491,7 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,
+		itemFormMode: null,
 		changedFieldIds: new Set<string>(),
 		fieldUpdates$: new Subject<string>(),
 		itemMeta: null,
@@ -516,22 +561,43 @@ export const extractAtomValues: (store: JotaiStore, valueAtoms: LookupTable<Atom
 	}, {});
 
 /**
- * Validation atoms for the save / invalid-form snapshot.
+ * Fields for the save / invalid-form snapshot.
  * The deny-list is qualified (`repeatFieldId.subFieldId`). Only the unqualified entry applies
  * at this form's level, unless `parentPath` names the repeat group these atoms belong to.
  * Atoms the controller never rejected (descriptor additional fields, `folder-name`, …) stay.
+ * Out-of-scope fields stay in the list.
  */
+export function relevantFieldValidations(
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
+	parentPath?: string
+): Array<{ fieldId: string; atom: Atom<Promise<FieldValidityState>> }> {
+	return Object.entries(validationByFieldId).flatMap(([fieldId, atom]) =>
+		fieldVisibility({ fieldId, irrelevantFieldPaths, parentPath, scopeFieldIds: null }) === 'irrelevant'
+			? []
+			: [{ fieldId, atom }]
+	);
+}
+
+/** Live invalid field ids. The alert and a selected-item save both read through this. */
+export async function readInvalidFieldIds(
+	store: { get<Value>(atom: Atom<Value>): Value },
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
+	parentPath?: string
+): Promise<string[]> {
+	if (!validationByFieldId) return [];
+	const fields = relevantFieldValidations(validationByFieldId, irrelevantFieldPaths, parentPath);
+	const states = await Promise.all(fields.map(({ atom: validityAtom }) => store.get(validityAtom)));
+	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
+}
+
 export function getValidationAtomsExcludingIrrelevant(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
-	irrelevantFieldPaths: Set<string> | null | undefined,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
 	parentPath?: string
 ): Array<Atom<Promise<FieldValidityState>>> {
-	if (!irrelevantFieldPaths?.size) {
-		return Object.values(validationByFieldId);
-	}
-	return Object.entries(validationByFieldId)
-		.filter(([fieldId]) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId, parentPath))
-		.map(([, validityAtom]) => validityAtom);
+	return relevantFieldValidations(validationByFieldId, irrelevantFieldPaths, parentPath).map(({ atom }) => atom);
 }
 
 /**
@@ -618,8 +684,14 @@ export function fetchUpdateRequirements({
  **/
 export function createFormsEngineAtoms(
 	username: string,
-	mixin: Partial<FormsEngineAtoms> & Pick<FormsEngineAtoms, 'readonly' | 'lockResult' | 'fileName'>
+	mixin: Partial<FormsEngineAtoms> & Pick<FormsEngineAtoms, 'readonly' | 'lockResult' | 'fileName'>,
+	launch?: {
+		selectedFields?: readonly string[];
+		index?: string | number;
+		fields: LaunchFieldsLookup;
+	}
 ): FormsEngineAtoms {
+	const visibility = visibilityFromLaunch(launch);
 	const atoms: FormsEngineAtoms = {
 		isSubmitting: atom(false),
 		hasPendingChanges: atom(false),
@@ -640,9 +712,28 @@ export function createFormsEngineAtoms(
 			getOnInit: true
 		}) as unknown as AtomWithStorage,
 		...mixin,
-		relevanceVersion: atom(0)
+		relevanceVersion: atom(0),
+		...createFormVisibilityAtoms(visibility.state, visibility.scrollFieldId)
 	};
 	return atoms;
+}
+
+/** The one write for a visibility change: scope notice, View in form, and a hidden-invalid save. */
+export function commitFormVisibility(
+	set: <Value>(atom: PrimitiveAtom<Value>, value: Value) => void,
+	atoms: {
+		formVisibility: PrimitiveAtom<FormVisibilityState>;
+		pendingScrollFieldId: PrimitiveAtom<string | null>;
+		pendingScrollFocus: PrimitiveAtom<boolean>;
+	},
+	next: FormVisibilityState,
+	scrollFieldId?: string
+): void {
+	set(atoms.formVisibility, next);
+	if (scrollFieldId) {
+		set(atoms.pendingScrollFieldId, scrollFieldId);
+		set(atoms.pendingScrollFocus, true);
+	}
 }
 
 /**
@@ -764,7 +855,7 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 	const siteId = useActiveSiteId();
 	const previousProps = usePreviousValue(props);
 	const propsChangedRef = useRef(false);
-	const { create, update, repeat, fieldsToRender, readonly } = props;
+	const { create, update, repeat, fieldIds, repeatIndex, readonly } = props;
 	if (!siteId) {
 		throw NoSiteIdError;
 	} else if (
@@ -784,7 +875,8 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 			// Note: Make sure to include all relevant props here
 			!areAllPairsEqual([
 				[create, previousProps.create],
-				[fieldsToRender, previousProps.fieldsToRender],
+				[fieldIds, previousProps.fieldIds],
+				[repeatIndex, previousProps.repeatIndex],
 				[readonly, previousProps.readonly],
 				[repeat?.fieldId, previousProps.repeat?.fieldId],
 				[repeat?.values, previousProps.repeat?.values],
@@ -891,6 +983,7 @@ export function useUnlockOnClose(
 	// it will have an outdated value).
 	const currentFileName = useAtomValue(atoms.fileName);
 	const isRenamed = itemPath ? currentFileName !== getFileNameValueFromPath(itemPath, isPagePath(itemPath)) : false;
+	const parentAtoms = stackEntryAtoms(formsStackData[stackIndex - 1]);
 
 	const unlockEffectRefs = useUpdateRefs<ShouldUnlockArguments & { dispatch: ReduxDispatch }>({
 		dispatch,
@@ -899,7 +992,7 @@ export function useUnlockOnClose(
 		readonly,
 		isEmbedded,
 		isStackedForm,
-		isParentReadonly: formsStackData[stackIndex - 1] ? store.get(formsStackData[stackIndex - 1].atoms.readonly) : false,
+		isParentReadonly: parentAtoms ? store.get(parentAtoms.readonly) : false,
 		siteId,
 		isRenamed,
 		saveAsDraft,
@@ -932,19 +1025,19 @@ export function useUnlockOnClose(
  **/
 export function generateDefaultChangesComment(
 	contentTypeFields: LookupTable<ContentTypeField>,
-	fieldsToRenderSubset: ContentTypeField[],
+	fields: ContentTypeField[],
 	changedFieldIds: Set<string>,
 	currentMessage: string
 ): string | undefined {
-	let fieldsToRender = contentTypeFields;
-	if (fieldsToRenderSubset) {
-		fieldsToRender = {};
-		fieldsToRenderSubset.forEach((field) => {
-			fieldsToRender[field.id] = field;
+	let namedFields = contentTypeFields;
+	if (fields) {
+		namedFields = {};
+		fields.forEach((field) => {
+			namedFields[field.id] = field;
 		});
 	}
 	const fieldsChangedNames: string[] = Array.from(changedFieldIds).flatMap(
-		(fieldId) => fieldsToRender[fieldId]?.name ?? []
+		(fieldId) => namedFields[fieldId]?.name ?? []
 	);
 	const newMessage = produceChangedFieldsMessage(fieldsChangedNames);
 	if (
@@ -1000,9 +1093,22 @@ export function generateDefaultCreationComment(
 	return newMessage;
 }
 
-/**
- * Creates a summary of the state the current stacked form being rendered (last one on the stack)
- **/
+/** True while any form on the stack is saving. Open full form and close both read this. */
+export function useStackSubmitting(): boolean {
+	const flags = useAtomValue(stackEntryFlagsAtom);
+	return aggregateStackFlags(flags).submitting;
+}
+
+/** True for an embedded component: an existing one (`update.modelId`) or a new one (`create.embedded`). */
+export function isEmbeddedForm(props: { update?: { modelId?: string }; create?: { embedded?: boolean } }): boolean {
+	return Boolean(props.update?.modelId) || Boolean(props.create?.embedded);
+}
+
+/** Atoms of a stack entry, or null while prep has not finished. */
+export function stackEntryAtoms(entry: { atoms: FormsEngineAtoms | null } | null | undefined): FormsEngineAtoms | null {
+	return hasFormAtoms(entry) ? entry.atoms : null;
+}
+
 export function getCurrentChildFormStateSummary(
 	store: JotaiStore,
 	formsStackData: StableGlobalContextProps['formsStackData']
@@ -1011,10 +1117,13 @@ export function getCurrentChildFormStateSummary(
 	hasPendingChanges: boolean;
 	readonly: boolean;
 } {
+	const atoms = stackEntryAtoms(formsStackData[formsStackData.length - 1]);
+	if (!atoms) return { isSubmitting: false, hasPendingChanges: false, readonly: true };
 	return {
-		isSubmitting: store.get(formsStackData[formsStackData.length - 1].atoms.isSubmitting),
-		hasPendingChanges: store.get(formsStackData[formsStackData.length - 1].atoms.hasPendingChanges),
-		readonly: store.get(formsStackData[formsStackData.length - 1].atoms.readonly)
+		isSubmitting: store.get(atoms.isSubmitting),
+		hasPendingChanges:
+			store.get(atoms.hasPendingChanges) || formsStackData[formsStackData.length - 1].changedFieldIds.size > 0,
+		readonly: store.get(atoms.readonly)
 	};
 }
 
@@ -1049,6 +1158,8 @@ export function prepareEmbeddedItemForm(props: {
 	lockError: ApiResponse;
 	affectedPackages: PublishPackage[];
 	update: FormsEngineProps['update'];
+	fieldIds?: string[];
+	repeatIndex?: string | number;
 	parentStackData: StableFormContextProps;
 	stableFormContextRef: RefObject<StableFormContextProps>;
 	parentPathInSite: string;
@@ -1060,6 +1171,8 @@ export function prepareEmbeddedItemForm(props: {
 		username,
 		contentType,
 		update,
+		fieldIds,
+		repeatIndex,
 		parentStackData,
 		stableFormContextRef,
 		parentPathInSite,
@@ -1075,12 +1188,16 @@ export function prepareEmbeddedItemForm(props: {
 		lockError,
 		affectedPackages
 	});
-	const atoms = createFormsEngineAtoms(username, {
-		lockResult: lockResultAtom,
-		readonly: createReadonlyAtom(lockResultAtom),
-		expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-		fileName: createFileNameAtom('', stableFormContextRef, update.modelId)
-	});
+	const atoms = createFormsEngineAtoms(
+		username,
+		{
+			lockResult: lockResultAtom,
+			readonly: createReadonlyAtom(lockResultAtom),
+			expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
+			fileName: createFileNameAtom('', stableFormContextRef, update.modelId)
+		},
+		{ selectedFields: fieldIds, index: repeatIndex, fields: contentType.fields }
+	);
 	const values = { ...update.values };
 	delete values[XmlKeys.fileName];
 	const validatorsData: ValidatorsData = {

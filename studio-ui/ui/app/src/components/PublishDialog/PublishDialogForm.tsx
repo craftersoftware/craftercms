@@ -88,6 +88,8 @@ export interface PublishDialogFormProps {
 	showRequestApproval?: boolean;
 	isRequestPublish?: boolean;
 	disabled?: boolean;
+	/** Disables only the publishing target selection (e.g. when editing an existing package, whose target is fixed). */
+	disablePublishingTarget?: boolean;
 	isPromote?: boolean;
 	onFetchedPublishedTargets?: ({ published, targets }: { published: boolean; targets: PublishingTarget[] }) => void;
 	sxs?: PartialSxRecord<PublishDialogFormSxKeys>;
@@ -102,6 +104,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 		showRequestApproval,
 		isRequestPublish,
 		disabled = false,
+		disablePublishingTarget = false,
 		isPromote = false,
 		onFetchedPublishedTargets,
 		sxs
@@ -322,6 +325,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 										<FormControlLabel
 											disabled={
 												disabled ||
+												disablePublishingTarget ||
 												(target.name === 'staging' && isPromote) ||
 												(target.name === 'staging' && !published)
 											}

@@ -152,7 +152,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
-		if (state && mainItems && Array.isArray(mainItems) && isBlank(state.submissionComment)) {
+		if (!nnou(published) || !isBlank(state.submissionComment)) return;
+		if (!published) {
+			setState({ submissionComment: formatMessage({ defaultMessage: 'Initial publish' }) });
+		} else if (Array.isArray(mainItems)) {
 			const labels = mainItems.map((item) => item.label).filter(Boolean);
 			const base = `${formatMessage({ defaultMessage: 'Publishing' })}: `;
 
@@ -187,7 +190,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			}
 		}
 		// Only run when mainItems or submissionComment changes
-	}, [mainItems, state, setState, formatMessage, commentMaxLength]);
+	}, [mainItems, state, setState, formatMessage, commentMaxLength, published]);
 
 	const isRequestPublish = !hasPublishPermission || state.requestApproval;
 	const showRequestApproval = hasPublishPermission;

@@ -37,6 +37,7 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageType;
 import org.craftercms.studio.api.v2.dal.repository.RepoOperation;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.event.workflow.WorkflowEvent;
+import org.craftercms.studio.api.v2.event.workflow.WorkflowEvent.WorkFlowEventType;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.exception.publish.InvalidPackageStateException;
 import org.craftercms.studio.api.v2.exception.publish.InvalidTargetException;
@@ -44,7 +45,6 @@ import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.exception.security.PeerReviewCheckException;
 import org.craftercms.studio.api.v2.repository.GitContentRepository;
 import org.craftercms.studio.api.v2.security.PermissionCheckingUtils;
-import org.craftercms.studio.api.v2.security.SemanticsAvailableActionsResolver;
 import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActionResolver;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.service.audit.AuditService;
@@ -80,7 +80,6 @@ import static org.apache.commons.lang3.Strings.CS;
 import static org.apache.tika.io.FilenameUtils.getName;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.*;
-import static org.craftercms.studio.api.v2.dal.ItemState.IN_WORKFLOW;
 import static org.craftercms.studio.api.v2.dal.ItemState.isNew;
 import static org.craftercms.studio.api.v2.dal.publish.PublishDAO.ACTIVE_APPROVAL_STATES;
 import static org.craftercms.studio.api.v2.dal.publish.PublishItem.Action.*;
@@ -647,6 +646,7 @@ public class PublishServiceInternalImpl implements PublishService, ApplicationCo
 			} else {
 				retryingDatabaseOperationFacade.retry(() -> publishDao.updatePackage(publishPackage));
 				auditPublishSubmission(publishPackage, OPERATION_UPDATE_PUBLISH_PACKAGE);
+				applicationContext.publishEvent(new WorkflowEvent(getAuthentication(), siteId, packageId, WorkFlowEventType.UPDATE));
 			}
 		} finally {
 			generalLockService.unlock(packageLockKey);

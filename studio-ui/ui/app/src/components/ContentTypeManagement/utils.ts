@@ -44,6 +44,7 @@ import {
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
+import { createFormVisibilityAtoms } from '../FormsEngine/lib/formVisibility';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
@@ -59,6 +60,16 @@ import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import type { BuiltInControlType } from '../FormsEngine/lib/controlMap';
 import { asArray } from '../../utils/array';
 import { componentsDataSourceContentTypesPropertyNames, systemValidationsKeysMap } from '../../utils/contentType';
+import {
+	countLimitEditorOverrides,
+	countLimitValidationKeys,
+	countLimitsFromEditorValues,
+	getCountLimitStorage,
+	storageRefreshesVirtualCount,
+	virtualCountValidationIds,
+	writeCountLimitXml,
+	type ItemCountEditorSpec
+} from '../../utils/countLimits';
 import { XmlKeys } from '../FormsEngine/lib/formConsts';
 import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
@@ -175,6 +186,8 @@ export function createTypeFieldValuesObject(field: ContentTypeField): LookupTabl
 			values[contentTypeFieldToXmlNameMap[property] ?? property] = field[property];
 		}
 	}
+	// Virtual editor fields (checkbox minSize) come from minCount. Property-backed bounds are already copied.
+	Object.assign(values, countLimitEditorOverrides(getCountLimitStorage(field.type), field.validations));
 	return values;
 }
 
@@ -292,7 +305,10 @@ export function reverseTypeFieldValuesObject(
 			const validations = fieldWithReversedValues.validations;
 			const mergedValidations = { ...defaults.validations, ...(field.validations ?? {}) };
 			let validationKey: ValidationKeys;
+			const countLimitKeys = new Set(countLimitValidationKeys(getCountLimitStorage(field.type)));
 			for (validationKey in mergedValidations) {
+				// A count-limit constraint is not a runtime validation. Save writes it from minCount.
+				if (countLimitKeys.has(validationKey)) continue;
 				validations[validationKey as ValidationKeys] = { ...mergedValidations[validationKey as ValidationKeys] };
 				validations[validationKey as ValidationKeys].value =
 					// TODO: Should we use upgrade manager to remove from properties and into constraints?
@@ -303,6 +319,24 @@ export function reverseTypeFieldValuesObject(
 			// See notes on `contentTypeFieldToXmlNameMap` declaration.
 			// @ts-expect-error: TS is unable to determine the match between types here
 			fieldWithReversedValues[property] = values[contentTypeFieldToXmlNameMap[property] ?? property];
+		}
+	}
+	// Rebuild virtual minCount/maxCount from editor fields that are not stored as properties.
+	const countStorage = getCountLimitStorage(field.type);
+	if (countStorage && storageRefreshesVirtualCount(countStorage)) {
+		const limits = countLimitsFromEditorValues(countStorage, values);
+		const validations = { ...(fieldWithReversedValues.validations ?? {}) };
+		for (const name of countLimitValidationKeys(countStorage)) {
+			delete validations[name as keyof typeof validations];
+		}
+		fieldWithReversedValues.validations = validations;
+		if (countStorage.min && (countStorage.min.editorFromVirtual || countStorage.min.sources.includes('constraint'))) {
+			if (limits.minCount == null) delete validations.minCount;
+			else validations.minCount = { id: 'minCount', value: limits.minCount, level: 'required' };
+		}
+		if (countStorage.max && (countStorage.max.editorFromVirtual || countStorage.max.sources.includes('constraint'))) {
+			if (limits.maxCount == null) delete validations.maxCount;
+			else validations.maxCount = { id: 'maxCount', value: limits.maxCount, level: 'required' };
 		}
 	}
 	return fieldWithReversedValues;
@@ -340,7 +374,7 @@ export type DescriptorField = Omit<ContentTypeField, 'name' | 'description' | 'f
 	validations: Partial<DescriptorFieldValidations>;
 };
 
-export type DescriptorFieldValidationKeys = ValidationKeys | 'root' | 'regex' | 'type';
+export type DescriptorFieldValidationKeys = ValidationKeys | 'root' | 'regex' | 'type' | 'itemCount';
 
 export type DescriptorContentTypeFieldValidation = Omit<ContentTypeFieldValidation, 'id'> & {
 	id: DescriptorFieldValidationKeys;
@@ -490,6 +524,10 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 		popForm: noOp,
 		updateProps: noOp,
 		setStateCache: noOp
+	},
+	rootFormActions: {
+		save: () => Promise.resolve(),
+		setSaveAsDraft: noOp
 	}
 });
 
@@ -563,8 +601,10 @@ export const createStableFormContextProps = (
 			closeAfterSave: undefined,
 			minimizeAfterSave: undefined,
 			// Field validation atoms always read this, even where no form controller attaches.
-			relevanceVersion: atom(0)
+			relevanceVersion: atom(0),
+			...createFormVisibilityAtoms()
 		},
+		itemFormMode: null,
 		changedFieldIds: null,
 		fieldUpdates$: null,
 		itemMeta: createFieldItemMetaContext(type), // TODO: Property may be removed from this context altogether
@@ -662,14 +702,31 @@ export function buildContentTypeXml(serializeTypeStructureObject: SerializeToXml
 }
 
 function convertFieldStructToXmlStruct(field: ContentTypeField): Required<LegacyFormDefinitionField> {
-	const minOccurs = field.properties?.minOccurs?.value as string;
-	const maxOccurs = field.properties?.maxOccurs?.value as string;
+	// Count-limit XML comes from the storage table: elements, property types, and positive constraints.
+	const countXml = (() => {
+		const storage = getCountLimitStorage(field.type);
+		return storage ? writeCountLimitXml(storage, field) : undefined;
+	})();
+	const minOccurs = countXml?.elements.minOccurs ?? (field.properties?.minOccurs?.value as string);
+	const maxOccurs = countXml?.elements.maxOccurs ?? (field.properties?.maxOccurs?.value as string);
+	const propertiesSource =
+		countXml && Object.keys(countXml.properties).length > 0
+			? {
+					...field.properties,
+					...Object.fromEntries(
+						Object.entries(countXml.properties).map(([name, written]) => [
+							name,
+							{ ...field.properties?.[name], ...written }
+						])
+					)
+				}
+			: field.properties;
 
 	// 'plugin' comes in 'field.properties'. (see ContentTypeField['properties'], but it's a separate object in the XML.
 	let plugin: LegacyFormDefinitionField['plugin'];
-	const properties: LegacyFormDefinitionField['properties'] = field.properties
+	const properties: LegacyFormDefinitionField['properties'] = propertiesSource
 		? ({
-				property: Object.entries(field.properties ?? {})
+				property: Object.entries(propertiesSource)
 					.filter(([key, value]) => {
 						if (key === 'plugin') plugin = value as LegacyFormDefinitionField['plugin'];
 						return key !== 'plugin';
@@ -678,23 +735,34 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 			} as LegacyFormDefinitionField['properties'])
 		: undefined;
 
-	const invertedSystemValidationsNames = [
+	const strippedValidationNames = [
 		...Object.values(systemValidationsKeysMap),
-		...componentsDataSourceContentTypesPropertyNames
+		...virtualCountValidationIds,
+		...componentsDataSourceContentTypesPropertyNames,
+		...(countXml?.stripConstraints ?? [])
 	];
 
-	const constraints =
+	const constraintList =
 		field.validations && Object.keys(field.validations).length > 0
-			? {
-					constraint: Object.values(field.validations)
-						.map((validation) => ({
-							name: validation.id,
-							value: validation.value,
-							type: typeof validation.value
-						}))
-						.filter((validation) => !invertedSystemValidationsNames.includes(validation.name))
-				}
-			: undefined;
+			? Object.values(field.validations)
+					.map((validation) => ({
+						name: validation.id,
+						value: validation.value,
+						type: typeof validation.value
+					}))
+					.filter((validation) => validation.name && !strippedValidationNames.includes(validation.name))
+			: [];
+	for (const constraint of countXml?.constraints ?? []) {
+		if (!constraintList.some((item) => item.name === constraint.name)) {
+			// The table stores the constraint name as a string. The list's name is the validation-id union.
+			constraintList.push({
+				name: constraint.name as (typeof constraintList)[number]['name'],
+				value: constraint.value,
+				type: constraint.type as (typeof constraintList)[number]['type']
+			});
+		}
+	}
+	const constraints = constraintList.length > 0 ? { constraint: constraintList } : undefined;
 
 	// Note: `undefined` suppresses nodes in the XML, empty strings doesn't.
 	return {
@@ -756,6 +824,17 @@ function convertDataSourceStructToXmlStruct(
 	};
 }
 
+/** An `itemCount` validation carries its role and, when the control has two bounds, its partner field id. */
+export function createValidation(
+	key: 'itemCount',
+	value: ItemCountEditorSpec,
+	level?: ContentTypeFieldValidation['level']
+): DescriptorContentTypeFieldValidation;
+export function createValidation<T = unknown>(
+	key: DescriptorFieldValidationKeys,
+	value: T,
+	level?: ContentTypeFieldValidation['level']
+): DescriptorContentTypeFieldValidation;
 export function createValidation<T = unknown>(
 	key: DescriptorFieldValidationKeys,
 	value: T,

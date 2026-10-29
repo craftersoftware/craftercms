@@ -93,10 +93,13 @@ export function descriptorsReducer(
 					...state.loading,
 					[url]: false
 				},
-				entries: {
-					...state.entries,
-					[url]: descriptor ?? null
-				}
+				entries:
+					'descriptor' in action.payload
+						? {
+								...state.entries,
+								[url]: descriptor
+							}
+						: state.entries
 			};
 		}
 		default:

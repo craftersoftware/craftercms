@@ -640,12 +640,12 @@ The host registers the form's controller state before calling `initialize`, so l
 
 #### Integration points in FE2
 
-| Hook                      | Where                                                                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Load + `await initialize` | New loader called from `FormsEngine` / `FormBootstrap` after atoms exist and relevance is resolved, before field render                             |
-| Cleanup                   | Form unmount / stack pop                                                                                                                            |
-| `await isFieldRelevant`   | When mapping `contentType.sections` → visible fields (same place FE already strips `file-name` for embeds); wait before paint if any check is async |
-| `await onBeforeSave`      | `useSaveForm`, after validity snapshot / draft decision, **before** `buildContentXml` / write; veto restores submitting UI and stops                |
+| Hook                      | Where                                                                                                                                                                                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Load + `await initialize` | New loader called from `FormsEngine` / `FormBootstrap` after atoms exist and relevance is resolved, before field render                                                                                                                                                                                             |
+| Cleanup                   | Form unmount / stack pop                                                                                                                                                                                                                                                                                            |
+| `await isFieldRelevant`   | When mapping `contentType.sections` → visible fields (same place FE already strips `file-name` for embeds); wait before paint if any check is async                                                                                                                                                                 |
+| `await onBeforeSave`      | `useSaveForm`, after the validity snapshot. A hidden invalid field or a cannot-proceed result returns before this hook and before plugin preload. A save that continues may re-read validity after the hook only to refresh the draft flag, then builds XML and writes. A veto restores the submitting UI and stops |
 
 #### TB companion
 

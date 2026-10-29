@@ -674,6 +674,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
 	datasourceBasics: 'Data Source Basics',
 	title: 'Title',
 	name: 'Name',
+	id: 'Id',
 	properties: 'Properties',
 	sectionBasics: 'Section Basics',
 	variableName: 'Name / Variable Name',

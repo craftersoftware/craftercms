@@ -23,9 +23,9 @@ export function MediaSkeletonCard() {
 	return (
 		<Card
 			sx={{
-				width: '200px',
+				width: '100%',
 				height: '155px',
-				margin: '10px'
+				margin: 0
 			}}
 		>
 			<CardHeader

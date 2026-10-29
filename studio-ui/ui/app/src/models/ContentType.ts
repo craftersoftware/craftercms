@@ -263,7 +263,7 @@ export interface LegacyFormDefinitionField {
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	fields?: { field: LegacyFormDefinitionField | Array<LegacyFormDefinitionField> };
 	plugin: FormDefinitionPlugin;
-	// Repeat groups carry these both at the top and inside "properties" (duplicated)
+	// Repeat groups store these as elements and as properties. See utils/countLimits.ts.
 	minOccurs?: string;
 	maxOccurs?: string;
 }

@@ -29,6 +29,7 @@ import {
 import { createFile, fetchContentItem } from '../../services/content';
 import { reloadContentItem } from '../actions/content';
 import { blockUI, showEditItemSuccessNotification, unblockUI } from '../actions/system';
+import { saveSuccessFollowUps } from '../../utils/contentFormLaunch';
 import { CrafterCMSEpic } from '../store';
 import { translations } from '../../components/ItemActionsMenu/translations';
 import { getFileNameFromPath, getParentPath } from '../../utils/path';
@@ -54,8 +55,12 @@ const epics = [
 							path,
 							authoringBase: state.env.authoringBase,
 							changeTemplate: newContentTypeId,
-							onSaveSuccess: ({ action }) =>
-								store.dispatch(batchActions([showEditItemSuccessNotification({ action }), reloadContentItem({ path })]))
+							onSaveSuccess: ({ draft }) =>
+								store.dispatch(
+									batchActions(
+										saveSuccessFollowUps(draft, showEditItemSuccessNotification(), [reloadContentItem({ path })])
+									)
+								)
 						})
 					);
 				}

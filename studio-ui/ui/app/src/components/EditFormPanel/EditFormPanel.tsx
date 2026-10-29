@@ -58,14 +58,19 @@ const getEditDialogProps = (props: {
 	selectedId: string;
 	site: string;
 	selectedFields: string[];
+	index?: string | number;
 }) => {
-	const { authoringBase, hierarchyMap, model, models, path, selectedId, site, selectedFields } = props;
+	const { authoringBase, hierarchyMap, model, models, path, selectedId, site, selectedFields, index } = props;
+	const targeting = {
+		...(selectedFields ? { selectedFields } : {}),
+		...(index !== undefined && index !== '' ? { index } : {})
+	};
 	if (path) {
 		return {
 			authoringBase,
 			site,
 			path,
-			...(selectedFields ? { selectedFields } : {})
+			...targeting
 		};
 	} else {
 		let parentPath;
@@ -82,7 +87,7 @@ const getEditDialogProps = (props: {
 			path: parentPath,
 			isHidden: true,
 			modelId: selectedId,
-			...(selectedFields ? { selectedFields } : {})
+			...targeting
 		};
 	}
 };
@@ -194,10 +199,21 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 	function openDialog(type: string) {
 		onDismiss();
 		if (type === 'form') {
-			const selectedFields = selected[0]?.fieldId.length ? selected[0].fieldId : null;
+			const selection = selected[0];
+			const selectedFields = selection?.fieldId.length ? selection.fieldId : null;
 			dispatch(
 				pickShowContentFormAction(
-					getEditDialogProps({ authoringBase, hierarchyMap, model, models, path, selectedFields, selectedId, site })
+					getEditDialogProps({
+						authoringBase,
+						hierarchyMap,
+						model,
+						models,
+						path,
+						selectedFields,
+						selectedId,
+						site,
+						index: selection?.index
+					})
 				)
 			);
 		} else {

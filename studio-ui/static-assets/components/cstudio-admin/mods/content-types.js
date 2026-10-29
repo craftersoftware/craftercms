@@ -98,6 +98,7 @@
 				var sections = formDef.sections,
 					datasources = formDef.datasources,
 					idError = [],
+					datasourceIdError = [],
 					flagTitleError = false,
 					currentField,
 					postfixError = [],
@@ -175,13 +176,14 @@
 						flagTitleError = true;
 					}
 					if ((!datasources[i].id || datasources[i].id == '') && datasources[i].title && datasources[i].title != '') {
-						idError.push(datasources[i].title);
+						datasourceIdError.push(datasources[i].title);
 					}
 				}
 
 				return {
 					flagTitleError,
 					idError,
+					datasourceIdError,
 					postfixError,
 					fileNameError,
 					internalNameError
@@ -314,6 +316,13 @@
 							errorMessage +=
 								validation.idError.length > 0
 									? `<li>${formatMessage(contentTypesMessages.idError)} ${validation.idError
+											.map((s) => CrafterCMSNext.util.string.escapeHTML(s))
+											.join(', ')}</li>`
+									: '';
+
+							errorMessage +=
+								validation.datasourceIdError.length > 0
+									? `<li>${formatMessage(contentTypesMessages.datasourceIdError)} ${validation.datasourceIdError
 											.map((s) => CrafterCMSNext.util.string.escapeHTML(s))
 											.join(', ')}</li>`
 									: '';
@@ -2389,7 +2398,7 @@
 						}
 					}
 				);
-				this.createRowFn(CMgs.format(langBundle, 'name'), 'name', item.id, '', 'variable', sheetEl, function (e, el) {
+				this.createRowFn(CMgs.format(langBundle, 'id'), 'name', item.id, '', 'variable', sheetEl, function (e, el) {
 					item.id = el.value;
 					onSetDirty(true);
 				});

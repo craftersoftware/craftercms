@@ -18,14 +18,24 @@ import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
-import { getScrollContainer } from '../lib/formUtils';
+import { commitFormVisibility, getScrollContainer, useStackSubmitting } from '../lib/formUtils';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import SearchBar from '../../SearchBar';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
 import Box from '@mui/material/Box';
 import { atom, useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
-import { hasFieldValidator, isEmptyValue, isFieldRequired } from '../lib/validators';
+import { FormattedMessage, useIntl } from 'react-intl';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import {
+	isScopeActive,
+	revealField,
+	returnToLaunchScope,
+	scopeFieldCounts,
+	scopeToggleVisible
+} from '../lib/formVisibility';
+import { hasFieldValidator, hasValidationKeyValidator, isEmptyValue, isFieldRequired } from '../lib/validators';
 import { immutableEmptyArray } from '../../../utils/array';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import Skeleton from '@mui/material/Skeleton';
@@ -35,12 +45,18 @@ import { XmlKeys } from '../lib/formConsts';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
-	fieldsToRender: ContentTypeField[];
+	/** Flat field list for a repeat-item editor, which has no sections. */
+	fields?: ContentTypeField[];
 	/** When provided (full form), ToC sections follow the same filtered field lists as the form body. */
 	sections?: ContentTypeSection[];
+	/**
+	 * Field ids of the unscoped form (already past the embedded file-name filter).
+	 * Present when this form was opened with a launch scope.
+	 */
+	countFieldIds?: string[];
 }
 
-export function TableOfContents({ containerRef, fieldsToRender, sections }: TableOfContentsProps) {
+export function TableOfContents({ containerRef, fields, sections, countFieldIds }: TableOfContentsProps) {
 	const store = useJotaiStore();
 	const atoms = useContext(StableFormContext).atoms;
 	const contentType = useContext(ItemMetaContext).contentType;
@@ -86,7 +102,7 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 	const [searchFieldValue, setSearchFieldValue] = useState('');
 	const [filteredFields, setFilteredFields] = useState<ContentTypeField[]>(null);
 	const contentTypeFieldsArray =
-		fieldsToRender ??
+		fields ??
 		contentTypeSections.flatMap((section) =>
 			section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean)
 		);
@@ -111,6 +127,7 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 	};
 	return (
 		<>
+			{countFieldIds && <FieldScopeNotice countFieldIds={countFieldIds} />}
 			<SearchBar
 				dense
 				sx={{ mb: 1, mt: 1 }}
@@ -129,7 +146,7 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 					expandedItems={expandedSectionIds}
 				>
 					{filteredFields?.map(createFieldTreeItem) ??
-						fieldsToRender?.map(createFieldTreeItem) ??
+						fields?.map(createFieldTreeItem) ??
 						contentTypeSections.map((section) => (
 							<TreeItem
 								key={section.id}
@@ -145,6 +162,57 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 			{/* Spacer: */}
 			<Box sx={{ minHeight: 50 }} />
 		</>
+	);
+}
+
+export function FieldScopeNotice({ countFieldIds }: { countFieldIds: string[] }) {
+	const { formatMessage } = useIntl();
+	const store = useJotaiStore();
+	const stableForm = useContext(StableFormContext);
+	const stackSubmitting = useStackSubmitting();
+	const visibility = useAtomValue(stableForm.atoms.formVisibility);
+	useAtomValue(stableForm.atoms.relevanceVersion);
+	const repeatFieldId = stableForm.props?.repeat?.fieldId;
+	if (!scopeToggleVisible(visibility)) return null;
+	const viewingFullForm = !isScopeActive(visibility.active);
+	const { showing, total } = scopeFieldCounts(countFieldIds, {
+		irrelevantFieldPaths: stableForm.formControllerState?.irrelevantFieldPaths,
+		parentPath: repeatFieldId,
+		scopeFieldIds: visibility.active.fieldIds
+	});
+	return (
+		<Box role="status" sx={{ mb: 1 }}>
+			<Typography variant="body2" color="textSecondary">
+				{viewingFullForm
+					? formatMessage({ defaultMessage: 'Showing all {total, plural, one {# field} other {# fields}}' }, { total })
+					: formatMessage(
+							{ defaultMessage: 'Showing {showing} of {total, plural, one {# field} other {# fields}}' },
+							{ showing, total }
+						)}
+			</Typography>
+			<Button
+				size="small"
+				sx={{ px: 0, minWidth: 0 }}
+				disabled={!viewingFullForm && stackSubmitting}
+				onClick={() => {
+					const current = store.get(stableForm.atoms.formVisibility);
+					if (viewingFullForm) {
+						commitFormVisibility(store.set, stableForm.atoms, returnToLaunchScope(current));
+						if (stableForm.itemFormMode) store.set(stableForm.itemFormMode, 'selected');
+						return;
+					}
+					const reveal = revealField(current);
+					commitFormVisibility(store.set, stableForm.atoms, reveal.state);
+					if (stableForm.itemFormMode) store.set(stableForm.itemFormMode, 'full');
+				}}
+			>
+				{viewingFullForm ? (
+					<FormattedMessage defaultMessage="Back to selected fields" />
+				) : (
+					<FormattedMessage defaultMessage="Open full form" />
+				)}
+			</Button>
+		</Box>
 	);
 }
 
@@ -174,7 +242,7 @@ function TreeItemLabelContent({
 	const validityData = useLoadableAtom(validationAtom);
 	const isValid = validityData.state === 'hasData' ? validityData?.data.isValid : true;
 	const isRequired = isFieldRequired(field);
-	const hasValidator = hasFieldValidator(field.type);
+	const hasValidator = hasFieldValidator(field.type) || hasValidationKeyValidator(field);
 	return (
 		<Box
 			sx={{

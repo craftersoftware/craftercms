@@ -224,6 +224,7 @@
 	"contentType.contentTypeWarningMessage": "어린이 콘텐츠 데이터 소스는 CrafterCMS에서 단계적으로 중단되었습니다. 여러 페이지 나 구성 요소간에 공유해야하는 구성 요소의 경우 공유 컨텐트를 대신 사용하십시오. 이 컨텐츠 객체에만 속하는 구성 요소의 경우 내장 컨텐츠를 사용하십시오.",
 	"contentType.continueEditing": "계속 편집",
 	"contentType.createATemplate": "템플릿 만들기",
+	"contentType.datasourceIdError": "데이터 소스 Id를 입력하십시오 :",
 	"contentType.dependsOn": "이 속성은 \"{dependency}\"에 따라 다릅니다.",
 	"contentType.enableSpellCheck": "맞춤법 검사 사용",
 	"contentType.fileManager": "파일 관리자",

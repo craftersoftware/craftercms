@@ -32,6 +32,7 @@ import { DialogStackItem } from '../models';
 import type { ConfirmDialogProps } from '../components/ConfirmDialog';
 import type { ErrorDialogProps } from '../components/ErrorDialog';
 import { getPathFromPreviewURL, getPreviewURLFromPath, isPagePath } from './path';
+import { formsEnginePropsFromLaunch } from './contentFormLaunch';
 
 export type SystemLinkId =
 	| 'preview'
@@ -105,6 +106,14 @@ export function consolidateSx(...sxs: SxProps<Theme>[]): SxProps<Theme> {
 	return sxs.flatMap((item) => item ?? []);
 }
 
+/**
+ * Chooses the legacy dialog or Forms Engine 2.
+ *
+ * When #9213 removes the legacy engine, `showContentFormAction` should call
+ * {@link formsEnginePropsFromLaunch} the way this function does. That PR's
+ * `ShowContentFormProps` still needs `index` and the save-result `draft` / `action`
+ * fields. Drop its hardcoded `'saveAndClose'` and `fieldToScroll: selectedFields[0]`.
+ */
 export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
 	const useLegacy = window.localStorage.getItem('useLegacyFormEngine') === 'true';
 	const dialogId = nanoid();
@@ -122,13 +131,7 @@ export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
 				allowMinimize: true,
 				props: {
 					formProps: {
-						...(oldProps.isNewContent
-							? { create: { path: oldProps.path, contentTypeId: oldProps.contentTypeId } }
-							: oldProps.isEmbedded || Boolean(oldProps.modelId)
-								? { update: { path: oldProps.path, modelId: oldProps.modelId } }
-								: { update: { path: oldProps.path, changeTypeId: oldProps.changeTemplate } }),
-						readonly: oldProps.readonly ?? false,
-						fieldToScroll: oldProps.selectedFields?.[0] ?? undefined,
+						...formsEnginePropsFromLaunch(oldProps),
 						onSave(result) {
 							if (isPreviewAppUrl()) {
 								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
@@ -153,9 +156,9 @@ export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
 									getHostToGuestBus().next(reloadRequest());
 								}
 							}
-							// FE2 TODO: handling oldProps.onSaveSuccess required?
+							oldProps.onSaveSuccess?.(result);
 						}
-					} as FormsEngineProps
+					} satisfies FormsEngineProps
 				}
 			});
 }

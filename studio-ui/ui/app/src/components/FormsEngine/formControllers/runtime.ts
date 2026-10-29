@@ -37,6 +37,7 @@ import type { PrimitiveAtom } from 'jotai';
 import { retrieveProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
 import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
+import { childFields } from '../lib/formVisibility';
 import {
 	collectRelevanceTargets,
 	createRelevanceContext,
@@ -48,7 +49,7 @@ import {
 	type FieldRelevanceResult
 } from './relevance';
 
-type FormControllerFormProps = Pick<FormsEngineProps, 'create' | 'update' | 'repeat' | 'fieldsToRender'>;
+type FormControllerFormProps = Pick<FormsEngineProps, 'create' | 'update' | 'repeat'>;
 
 /**
  * Derives the controller mode from how the form was opened.
@@ -349,19 +350,6 @@ export function runFormControllerCleanup(stackEntry: StableFormContextProps | un
 	detachFormControllerState(state);
 }
 
-/**
- * True when `fieldId` (qualified by `parentPath` for a repeat subfield) is on the controller deny-list.
- * A flat id match is not used for subfields: `title_s` hidden in one repeat group must not hide `title_s` in another.
- */
-export function isFieldPathIrrelevant(
-	irrelevantFieldPaths: Set<string> | null | undefined,
-	fieldId: string,
-	parentPath?: string
-): boolean {
-	if (!irrelevantFieldPaths?.size) return false;
-	return irrelevantFieldPaths.has(parentPath ? `${parentPath}.${fieldId}` : fieldId);
-}
-
 function notifyRelevanceFailures(
 	failedCount: number,
 	dispatch: ReduxDispatch,
@@ -384,10 +372,11 @@ function notifyRelevanceFailures(
 
 /**
  * Fields offered to `isFieldRelevant`. `file-name` and `internal-name` are never hideable:
- * the save path requires both even when they are not rendered. Repeat / partial forms use `fieldsToRender`.
+ * the save path requires both even when they are not rendered. A repeat-item editor offers that field's children.
  */
 function collectFieldsForRelevance(contentType: ContentType, formProps: FormControllerFormProps): ContentTypeField[] {
-	const fields = formProps.fieldsToRender?.length ? formProps.fieldsToRender : Object.values(contentType.fields);
+	const repeatField = formProps.repeat?.fieldId ? contentType.fields[formProps.repeat.fieldId] : undefined;
+	const fields = repeatField ? childFields(repeatField) : Object.values(contentType.fields);
 	return fields.filter((field) => !SAVE_MINIMUM_FIELD_IDS.has(field.id));
 }
 

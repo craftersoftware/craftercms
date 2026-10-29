@@ -30,9 +30,9 @@ import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActionResolver;
 import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.APPROVE;
+import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.UPDATE;
 import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.getPossibleActionsForPackageStates;
 
-import org.craftercms.studio.api.v2.service.publish.PublishService;
 import org.craftercms.studio.api.v2.service.security.UserService;
 import org.craftercms.studio.api.v2.security.PermissionMappingsProvider;
 import org.craftercms.studio.api.v2.security.SitePermissionMappings;
@@ -74,24 +74,29 @@ public class PublishPackageAvailableActionResolverImpl implements PublishPackage
 		Collection<PublishItem> publishItems = publishDao.getPublishItems(siteId, publishPackage.getId());
 		SitePermissionMappings permissionMappings = permissionMappingProvider.getPermissionMappings(siteId);
 		List<Group> groups = userService.getUserGroups(-1, user);
-		boolean isSubmitter = publishPackage.getSubmitter().getUsername().equals(getCurrentUsername());
+		boolean isSubmitter = user.equals(publishPackage.getSubmitter().getUsername());
 		long userAllowedActions = permissionMappings.getPublishPackageAvailableActions(user, groups, publishItems, userService.isSystemAdmin(user));
 		long packageStateActions = getPossibleActionsForPackageStates(publishPackage.getPackageState(),
 			publishPackage.getApprovalState());
 
 		long allowedActions = userAllowedActions & packageStateActions;
 
-		return applyPeerReviewConfig(allowedActions, siteId, isSubmitter);
+		return applySubmitterRestrictions(allowedActions, siteId, isSubmitter);
 	}
 
 	/**
 	 * Ensure the submitter of a package does not have the APPROVE action available if peer review is enabled
+	 * and that non-submitters do not have the UPDATE action available
 	 */
-	private long applyPeerReviewConfig(long allowedActions, String siteId, boolean isSubmitter) throws SiteNotFoundException {
+	private long applySubmitterRestrictions(long allowedActions, String siteId, boolean isSubmitter) throws SiteNotFoundException {
 		long result = allowedActions;
 		boolean peerReviewEnabled = servicesConfig.isRequirePeerReview(siteId);
 		if (isSubmitter && peerReviewEnabled) {
 			result &= ~APPROVE;
+		}
+
+		if (!isSubmitter) {
+			result &= ~UPDATE;
 		}
 
 		return result;

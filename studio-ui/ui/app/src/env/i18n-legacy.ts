@@ -174,6 +174,10 @@ export const contentTypesMessages = defineMessages({
 		id: 'contentType.idError',
 		defaultMessage: 'Please fill variable name for: '
 	},
+	datasourceIdError: {
+		id: 'contentType.datasourceIdError',
+		defaultMessage: 'Please fill id for data source(s): '
+	},
 	noTemplateAssoc: {
 		id: 'contentType.noTemplateAssoc',
 		defaultMessage:
@@ -833,10 +837,6 @@ export const itemSuccessMessages = defineMessages({
 	itemContentTypeChanged: {
 		id: 'item.contentTypeChanged',
 		defaultMessage: 'Item type changed successfully'
-	},
-	itemSavedAsDraft: {
-		id: 'item.savedAsDraft',
-		defaultMessage: 'Draft saved. Required fields left blank may cause errors when previewed or deployed.'
 	},
 	folderCreated: {
 		id: 'folder.created',

@@ -58,6 +58,7 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 		error
 	} = props;
 	const [openSelector, setOpenSelector] = useState(false);
+	const filteredDependencies = dependencies?.filter((dependency) => assetsTypes[showTypes].filter(dependency));
 
 	return (
 		<>
@@ -106,20 +107,24 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 					<ApiResponseErrorState error={error} />
 				) : !dependencies ? (
 					<LoadingState sxs={{ root: { height: '100%', flexGrow: 1 } }} />
-				) : dependencies?.length === 0 ? (
+				) : filteredDependencies.length === 0 ? (
 					<EmptyState
 						sxs={{ root: { minHeight: 300, height: '100%' } }}
 						title={
-							dependenciesShown === 'depends-on-me' ? (
-								<FormattedMessage
-									defaultMessage={'"{itemName}" has no references'}
-									values={{ itemName: item?.label }}
-								/>
+							dependencies.length === 0 ? (
+								dependenciesShown === 'depends-on-me' ? (
+									<FormattedMessage
+										defaultMessage={'"{itemName}" has no references'}
+										values={{ itemName: item?.label }}
+									/>
+								) : (
+									<FormattedMessage
+										defaultMessage={'Nothing is referenced by "{itemName}"'}
+										values={{ itemName: item?.label }}
+									/>
+								)
 							) : (
-								<FormattedMessage
-									defaultMessage={'Nothing is referenced by "{itemName}"'}
-									values={{ itemName: item?.label }}
-								/>
+								<FormattedMessage defaultMessage="No references match the selected type" />
 							)
 						}
 					/>

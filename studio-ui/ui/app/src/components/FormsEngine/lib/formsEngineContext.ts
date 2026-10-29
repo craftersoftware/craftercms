@@ -27,6 +27,7 @@ import { AtomWithStorage } from '../types';
 import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
 import type { FormControllerState } from '../formControllers/types';
+import type { FormVisibilityState } from './formVisibility';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -99,6 +100,15 @@ export interface FormsEngineAtoms {
 	 * deny-list that arrives after bootstrap invalidates verdicts computed without it.
 	 */
 	relevanceVersion: PrimitiveAtom<number>;
+	/**
+	 * Launch scope and the "open full form" toggle. Relevance is not stored here;
+	 * `fieldVisibility` reads this atom together with the controller deny-list.
+	 */
+	formVisibility: PrimitiveAtom<FormVisibilityState>;
+	/** Set when a save or "View in form" should scroll to a field after the scope changes. */
+	pendingScrollFieldId: PrimitiveAtom<string | null>;
+	/** A reveal moves focus. The launch fallback scroll names a field and leaves this false. */
+	pendingScrollFocus: PrimitiveAtom<boolean>;
 }
 
 // Contains information to restore the state of a form when it comes back to being the active form on the stack
@@ -114,11 +124,30 @@ export interface FormsEngineCachedStackedFormState {
 export interface StableGlobalContextProps {
 	formsStackData: StableFormContextProps[];
 	api: FormsEngineGlobalApiContextProps;
+	/**
+	 * The root form publishes these from a layout effect. The functions read refs that
+	 * update every render, so a selected-fields Save runs the current root save.
+	 */
+	rootFormActions: {
+		save: (draft?: boolean) => Promise<'revealed' | 'invalid' | 'saved' | void>;
+		setSaveAsDraft: (value: boolean) => void;
+	};
 }
 
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).
 export interface StableFormContextProps {
-	atoms: FormsEngineAtoms;
+	/**
+	 * Null until this entry's prep finishes. `pushForm` inserts the entry before atoms exist.
+	 * strictNullChecks is off, so the compiler does not enforce this.
+	 * Readers must use hasFormAtoms or stackEntryAtoms.
+	 */
+	atoms: FormsEngineAtoms | null;
+	/**
+	 * Set for an Experience Builder item launch. `selected` uses the parent's Save card.
+	 * Only Open full form, View in form, and Back to selected fields change it.
+	 * Null for the pencil and for Add.
+	 */
+	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
 	changedFieldIds: Set<string>;
 	fieldUpdates$: Subject<string>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
@@ -150,7 +179,9 @@ export const StableGlobalContext = /*#__PURE__*/ createContext<StableGlobalConte
 StableGlobalContext.displayName = 'StableGlobalContext';
 
 // Each form (e.g. root form and stacked child form) has one
-export const StableFormContext = /*#__PURE__*/ createContext<StableFormContextProps>(undefined);
+export type ReadyFormContext = StableFormContextProps & { atoms: FormsEngineAtoms };
+
+export const StableFormContext = /*#__PURE__*/ createContext<ReadyFormContext>(undefined);
 StableFormContext.displayName = 'StableFormContext';
 
 export const ItemContext = /*#__PURE__*/ createContext<ContentItem>(undefined);

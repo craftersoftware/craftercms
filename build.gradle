@@ -122,9 +122,13 @@ task deploy() {
 	// Module deploy tasks are attached in deploy.gradle (projectsEvaluated).
 }
 
-task upgrade() {
+// Nested build so clean/build/deploy are ordered and see scripts updated by selfUpdate,
+// without spawning a second Gradle process against this project.
+task upgrade(type: GradleBuild) {
 	description = 'Upgrades all modules and redeploys them'
-	dependsOn = ["selfUpdate", "clean", "build", "deploy"]
+	dependsOn = ["selfUpdate"]
+	dir = projectDir
+	tasks = ['clean', 'build', 'deploy']
 }
 
 task start() {

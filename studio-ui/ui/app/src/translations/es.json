@@ -225,6 +225,7 @@
 	"contentType.contentTypeWarningMessage": "Tenga en cuenta que la fuente de datos de contenido secundario se está eliminando gradualmente de CrafterCMS. Para los componentes que deben compartirse entre páginas o componentes, utilice Contenido compartido en su lugar. Para los componentes que pertenecen exclusivamente a este objeto de contenido, utilice Contenido incorporado.",
 	"contentType.continueEditing": "Continua editando",
 	"contentType.createATemplate": "Crear una plantilla",
+	"contentType.datasourceIdError": "Por favor complete el Id para la(s) fuente(s) de datos:",
 	"contentType.dependsOn": "Esta propiedad depende de \"{dependency}\"",
 	"contentType.enableSpellCheck": "Habilitar revisión ortográfica",
 	"contentType.fileManager": "Administrador de archivos",

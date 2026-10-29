@@ -260,13 +260,13 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 			if (mode === 'ftl') {
 				let { contentVariable, ...rest } = freemarkerCodeSnippets;
 				setSnippets(rest);
-				if (contentVariable && _contentType) {
+				if (contentVariable && contentTypes[_contentType]) {
 					setContentModelSnippets(getContentModelSnippets(contentVariable, contentTypes[_contentType].fields));
 				}
 			} else if (mode === 'groovy') {
 				let { accessContentModel, ...rest } = groovyCodeSnippets;
 				setSnippets(rest);
-				if (accessContentModel && _contentType) {
+				if (accessContentModel && contentTypes[_contentType]) {
 					setContentModelSnippets(getContentModelSnippets(accessContentModel, contentTypes[_contentType].fields));
 				}
 			}

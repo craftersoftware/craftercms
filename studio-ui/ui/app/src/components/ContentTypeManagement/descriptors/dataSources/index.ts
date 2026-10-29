@@ -60,7 +60,7 @@ export const commonDataSourceDescriptors: LookupTable<DescriptorField> = {
 	id: {
 		id: 'id',
 		type: 'variable',
-		name: defineMessage({ defaultMessage: 'Variable Name' }),
+		name: defineMessage({ id: 'words.id', defaultMessage: 'Id' }),
 		defaultValue: undefined,
 		validations: {
 			required: { id: 'required', level: 'required', value: true }

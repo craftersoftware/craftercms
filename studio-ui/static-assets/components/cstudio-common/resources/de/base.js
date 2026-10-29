@@ -680,6 +680,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'de', {
 	datasourceBasics: 'Data Source - Grundeinstellungen',
 	title: 'Titel',
 	name: 'Name',
+	id: 'ID',
 	properties: 'Eigenschaften',
 	sectionBasics: 'Abschnitt - Grundeinstellungen',
 	variableName: 'Name / Variablenname',
