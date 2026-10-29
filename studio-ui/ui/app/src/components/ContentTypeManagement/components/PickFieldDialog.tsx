@@ -242,7 +242,7 @@ export function SelectField(props: {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
 	const { formatMessage, locale } = useIntl();
-	const collator = new Intl.Collator(locale);
+	const collator = useMemo(() => new Intl.Collator(locale), [locale]);
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
 
 	const systemFields = sortFieldsByName(
