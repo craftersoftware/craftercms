@@ -95,13 +95,12 @@ import Box from '@mui/material/Box';
 import { firstValueFrom } from 'rxjs';
 import { useInfiniteLoader } from 'react-window-infinite-loader';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
+import { showPackageDetails } from '../ViewPackagesDialog/utils';
 
 export interface ActivityDashletProps extends Partial<DashletCardProps> {}
 
 interface ActivityDashletState {
 	openRangePicker: boolean;
-	openPackageDetailsDialog: boolean;
-	selectedPackageId: number;
 	feed: Activity[];
 	usernames: string[];
 	feedType: FeedTypes;
@@ -188,8 +187,6 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 			openRangePicker,
 			loadingFeed,
 			loadingChunk,
-			selectedPackageId,
-			openPackageDetailsDialog,
 			error
 		},
 		// endregion
@@ -198,8 +195,6 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 		loadingChunk: false,
 		loadingFeed: false,
 		openRangePicker: false,
-		openPackageDetailsDialog: false,
-		selectedPackageId: null,
 		feed: null,
 		usernames: null,
 		feedType: 'timeline',
@@ -335,7 +330,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 		}
 	};
 	const onPackageClick = (pkg) => {
-		setState({ openPackageDetailsDialog: true, selectedPackageId: pkg.id });
+		showPackageDetails({ pkg, dispatch });
 	};
 	const [hoveredActivity, setHoveredActivity] = useState<Activity | null>(null);
 	const packageContextMenu = usePackageContextMenu();
@@ -732,12 +727,6 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 							}
 						: UNDEFINED
 				}
-			/>
-			<PackageDetailsDialog
-				open={openPackageDetailsDialog}
-				onClose={() => setState({ openPackageDetailsDialog: false })}
-				onClosed={() => setState({ selectedPackageId: null })}
-				packageId={selectedPackageId}
 			/>
 			{packageContextMenu?.contextMenuElement}
 		</DashletCard>
