@@ -300,6 +300,11 @@ export function SelectField(props: {
 				>
 					<Button
 						variant="text"
+						aria-label={formatMessage(
+							sortOrder === 'ascending'
+								? { defaultMessage: 'Sort by name (ascending)' }
+								: { defaultMessage: 'Sort by name (descending)' }
+						)}
 						endIcon={
 							sortOrder === 'ascending' ? (
 								<ArrowUpwardRoundedIcon color="primary" />
