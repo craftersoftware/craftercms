@@ -1128,7 +1128,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	// Collapse when the sentinel (~60px) scrolls out of view. The header is a sibling of this scroll
 	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
-	// overflow exceeds the header height, which is more than that growth can remove.
+	// overflow exceeds the header height plus the sentinel offset, which that growth can't eat into.
 	useEffect(() => {
 		const sentinel = sentinelRef.current;
 		if (!mainContent || !sentinel) return;
