@@ -399,11 +399,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
+		// Prefer the field from typeForForm so nested child edits committed by closeAndCleanup
+		// are preserved (e.g. selecting a parent after editing one of its children).
+		const fieldForForm = getFieldFromType(typeForForm, fieldIdPath) ?? field;
 
 		const controlDescriptor =
-			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor;
+			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
 		if (!controlDescriptor)
-			return showAlert(`No control descriptor found for field "${field.name}" of type "${field.type}"`);
+			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
@@ -414,19 +417,23 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			virtualType,
 			createVirtualTypeFormContext(
 				virtualType,
-				createTypeFieldValuesObject(field),
+				createTypeFieldValuesObject(fieldForForm),
 				contentTypesLookup,
 				{
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
 					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath, configDescriptors.controlDescriptors ?? undefined),
-					currentIds: getFieldIdSet(field.id, field.type, configDescriptors.controlDescriptors ?? undefined),
+					currentIds: getFieldIdSet(
+						fieldForForm.id,
+						fieldForForm.type,
+						configDescriptors.controlDescriptors ?? undefined
+					),
 					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
 				}
 			),
 			{
-				field,
+				field: fieldForForm,
 				fieldIdPath,
 				controlDescriptor: applyTranslations(controlDescriptor, formatMessage),
 				sectionId,
@@ -434,7 +441,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 		);
 		setSelectedFieldIdPath(fieldIdPath);
-		stateRef.current.selectedField = field;
+		stateRef.current.selectedField = fieldForForm;
 	};
 	const handleSectionSelected = async (section: ContentTypeSection, overrideType?: ContentType) => {
 		const postCloseType = await closeAndCleanup();
