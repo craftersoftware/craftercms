@@ -345,7 +345,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 const fileNameTypeIds = ['file-name', 'auto-filename'];
 
 function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
-	const { field, sectionId, controlDescriptor, onSwapField } = props;
+	const { field, fieldIdPath, sectionId, controlDescriptor, onSwapField } = props;
 	const swapFieldDialogState = useEnhancedDialogState();
 	if (!props.field) return;
 
@@ -359,7 +359,8 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 			<ListItem
 				component="div"
 				secondaryAction={
-					field.id === 'file-name' && (
+					field.id === 'file-name' &&
+					!fieldIdPath?.includes('.') && (
 						<Tooltip title={<FormattedMessage defaultMessage="Swap Field" />}>
 							<IconButton onClick={() => swapFieldDialogState.onOpen()}>
 								<SwapCallsOutlined />
