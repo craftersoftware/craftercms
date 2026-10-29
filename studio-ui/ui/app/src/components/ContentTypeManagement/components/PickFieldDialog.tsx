@@ -241,7 +241,8 @@ export function SelectField(props: {
 	} = props;
 	const [searchTerm, setSearchTerm] = useState('');
 	const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
-	const { formatMessage } = useIntl();
+	const { formatMessage, locale } = useIntl();
+	const collator = new Intl.Collator(locale);
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
 
 	const systemFields = sortFieldsByName(
@@ -263,7 +264,8 @@ export function SelectField(props: {
 						(type.id === 'auto-filename' && currentFieldTypes.includes('file-name'))
 					)
 			),
-		sortOrder
+		sortOrder,
+		collator
 	);
 
 	const filteredFields = sortFieldsByName(
@@ -275,7 +277,8 @@ export function SelectField(props: {
 						type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
 					!systemFieldsIds.includes(type.id)
 			),
-		sortOrder
+		sortOrder,
+		collator
 	);
 
 	const handleSearchChange: SearchBarProps['onChange'] = (value) => {
@@ -363,13 +366,14 @@ export function SelectField(props: {
 /**
  * Sorts an array of fields alphabetically by their name property, either in ascending or descending order.
  */
-function sortFieldsByName(fields: PartialContentType[], order: 'ascending' | 'descending'): PartialContentType[] {
+function sortFieldsByName(
+	fields: PartialContentType[],
+	order: 'ascending' | 'descending',
+	collator: Intl.Collator
+): PartialContentType[] {
 	return [...fields].sort((a, b) => {
-		const aValue = a.name.toLowerCase();
-		const bValue = b.name.toLowerCase();
-		if (aValue < bValue) return order === 'ascending' ? -1 : 1;
-		if (aValue > bValue) return order === 'ascending' ? 1 : -1;
-		return 0;
+		const result = collator.compare(a.name, b.name);
+		return order === 'ascending' ? result : -result;
 	});
 }
 
