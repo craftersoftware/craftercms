@@ -714,20 +714,25 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			segments[selectedFieldIdPath.split('.').length - 1] = committedId;
 			resolvedParentPath = segments.join('.');
 		}
-		if (
-			resolvedParentPath &&
-			!resolvedParentPath
-				.split('.')
-				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
-					fields: baseType.fields
-				})
-		) {
+		const parentField = resolvedParentPath
+			? resolvedParentPath
+					.split('.')
+					.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
+						fields: baseType.fields
+					})
+			: undefined;
+		if (resolvedParentPath && !parentField) {
 			showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
 			return;
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
 		// Root drafts are keyed `{NEW}`; nested (addSubField) uses field.id when preset (e.g. file-name).
 		const leafId = resolvedParentPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
+		// Preset IDs (system fields) must not replace an existing sibling in the target group.
+		if (resolvedParentPath && newField.id && parentField.fields?.[newField.id]) {
+			showAlert(formatMessage({ defaultMessage: 'That variable name is already in use.' }));
+			return;
+		}
 		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${leafId}` : leafId;
 		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
 		setType(nextType);

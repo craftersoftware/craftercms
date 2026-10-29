@@ -48,6 +48,8 @@ export interface PickFieldDialogProps extends EnhancedDialogProps {
 	configLookup?: LookupTable<{ descriptor?: DescriptorContentType; icon: { id: string }; id: string }>; // TODO: not a li
 	typesFullList: DescriptorContentType[];
 	typesCurrentList: DescriptorField[] | DataSource[];
+	/** Fields already present in the insertion target (root or repeat group). Defaults to type.fields. */
+	currentFields?: LookupTable<ContentTypeField>;
 	title: ReactNode;
 	onInsert: (fieldType: string, position: number) => void;
 	systemFieldsIds?: string[];
@@ -57,8 +59,17 @@ export interface PickFieldDialogProps extends EnhancedDialogProps {
 export interface PickFieldDialogBodyProps extends Omit<PickFieldDialogProps, 'title'> {}
 
 export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
-	const { configLookup, typesFullList, typesCurrentList, onInsert, onClose, systemFieldsTitle, systemFieldsIds, type } =
-		props;
+	const {
+		configLookup,
+		typesFullList,
+		typesCurrentList,
+		currentFields,
+		onInsert,
+		onClose,
+		systemFieldsTitle,
+		systemFieldsIds,
+		type
+	} = props;
 	const [selectedField, setSelectedField] = useState<PartialContentType>(undefined);
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [position, setPosition] = useState<number>(typesCurrentList?.length ?? 0);
@@ -95,7 +106,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 				{selectedView === 0 ? (
 					<SelectField
 						configLookup={configLookup}
-						currentFields={type.fields}
+						currentFields={currentFields ?? type.fields}
 						typesFullList={typesFullList}
 						selectedField={selectedField}
 						setSelectedField={onSelectField}
@@ -199,6 +210,7 @@ export function PickFieldDialog({
 	onInsert,
 	typesFullList,
 	typesCurrentList,
+	currentFields,
 	systemFieldsTitle,
 	systemFieldsIds,
 	...dialogProps
@@ -211,6 +223,7 @@ export function PickFieldDialog({
 				onInsert={onInsert}
 				typesFullList={typesFullList}
 				typesCurrentList={typesCurrentList}
+				currentFields={currentFields}
 				systemFieldsTitle={systemFieldsTitle}
 				systemFieldsIds={systemFieldsIds}
 			/>
