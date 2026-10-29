@@ -42,6 +42,9 @@ import Divider from '@mui/material/Divider';
 import LookupTable from '../../../models/LookupTable';
 import { SystemIcon } from '../../SystemIcon';
 import ComponentIcon from '../../../icons/Component';
+import Button from '@mui/material/Button';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 
 export interface PickFieldDialogProps extends EnhancedDialogProps {
 	type: ContentType;
@@ -237,36 +240,43 @@ export function SelectField(props: {
 		currentFields = {}
 	} = props;
 	const [searchTerm, setSearchTerm] = useState('');
+	const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
 	const { formatMessage } = useIntl();
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
 
-	const systemFields = typesFullList
-		.map((type) => applyTranslations(type, formatMessage))
-		.filter(
-			(type) =>
-				(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-				systemFieldsIds.includes(type.id) &&
-				// Type is not in 'currentTypeIds'
-				!currentFieldTypes.includes(type.id) &&
-				// id is not in currentFields
-				!currentFields[type.id] &&
-				// If type is file-name and `currentTypeIds` has auto-filename, or
-				// type is auto-filename and `currentTypeIds` has file-name, then filter out
-				!(
-					(type.id === 'file-name' && currentFieldTypes.includes('auto-filename')) ||
-					(type.id === 'auto-filename' && currentFieldTypes.includes('file-name'))
-				)
-		);
+	const systemFields = sortFieldsByName(
+		typesFullList
+			.map((type) => applyTranslations(type, formatMessage))
+			.filter(
+				(type) =>
+					(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+						type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+					systemFieldsIds.includes(type.id) &&
+					// Type is not in 'currentTypeIds'
+					!currentFieldTypes.includes(type.id) &&
+					// id is not in currentFields
+					!currentFields[type.id] &&
+					// If type is file-name and `currentTypeIds` has auto-filename, or
+					// type is auto-filename and `currentTypeIds` has file-name, then filter out
+					!(
+						(type.id === 'file-name' && currentFieldTypes.includes('auto-filename')) ||
+						(type.id === 'auto-filename' && currentFieldTypes.includes('file-name'))
+					)
+			),
+		sortOrder
+	);
 
-	const filteredFields = typesFullList
-		.map((type) => applyTranslations(type, formatMessage))
-		.filter(
-			(type) =>
-				(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-				!systemFieldsIds.includes(type.id)
-		);
+	const filteredFields = sortFieldsByName(
+		typesFullList
+			.map((type) => applyTranslations(type, formatMessage))
+			.filter(
+				(type) =>
+					(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+						type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+					!systemFieldsIds.includes(type.id)
+			),
+		sortOrder
+	);
 
 	const handleSearchChange: SearchBarProps['onChange'] = (value) => {
 		setSearchTerm(value);
@@ -274,7 +284,38 @@ export function SelectField(props: {
 
 	return (
 		<>
-			<SearchBar keyword={searchTerm} onChange={handleSearchChange} autoFocus={true} />
+			<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+				<SearchBar keyword={searchTerm} onChange={handleSearchChange} autoFocus={true} sx={{ flexGrow: 1 }} />
+				<Tooltip
+					title={
+						sortOrder === 'ascending' ? (
+							<FormattedMessage defaultMessage="Sort by name (ascending)" />
+						) : (
+							<FormattedMessage defaultMessage="Sort by name (descending)" />
+						)
+					}
+				>
+					<Button
+						variant="text"
+						endIcon={
+							sortOrder === 'ascending' ? (
+								<ArrowUpwardRoundedIcon color="primary" />
+							) : (
+								<ArrowDownwardRoundedIcon color="primary" />
+							)
+						}
+						onClick={() => setSortOrder((order) => (order === 'ascending' ? 'descending' : 'ascending'))}
+						sx={{
+							color: 'text.primary',
+							fontWeight: 'normal',
+							fontSize: (theme) => theme.typography.fontSize,
+							flexShrink: 0
+						}}
+					>
+						<FormattedMessage defaultMessage="Sort" />
+					</Button>
+				</Tooltip>
+			</Box>
 			<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 1, mb: 2 }}>
 				{filteredFields.map((field, index) => (
 					<ListItemButton key={index} onClick={() => setSelectedField(field)} selected={selectedField?.id === field.id}>
@@ -317,6 +358,19 @@ export function SelectField(props: {
 			)}
 		</>
 	);
+}
+
+/**
+ * Sorts an array of fields alphabetically by their name property, either in ascending or descending order.
+ */
+function sortFieldsByName<T extends { name: string }>(fields: T[], order: 'ascending' | 'descending'): T[] {
+	return [...fields].sort((a, b) => {
+		const aValue = a.name.toLowerCase();
+		const bValue = b.name.toLowerCase();
+		if (aValue < bValue) return order === 'ascending' ? -1 : 1;
+		if (aValue > bValue) return order === 'ascending' ? 1 : -1;
+		return 0;
+	});
 }
 
 export default PickFieldDialog;
