@@ -31,7 +31,7 @@ import { DialogStackItem } from '../models';
 import type { ConfirmDialogProps } from '../components/ConfirmDialog';
 import type { ErrorDialogProps } from '../components/ErrorDialog';
 import { getPathFromPreviewURL, getPreviewURLFromPath, isPagePath } from './path';
-import { formsEnginePropsFromLaunch } from './contentFormLaunch';
+import { formsEnginePropsFromLaunch, type ContentFormSaveAction } from './contentFormLaunch';
 
 export type SystemLinkId =
 	| 'preview'
@@ -116,54 +116,54 @@ export interface ShowContentFormProps {
 	changeTemplate?: string;
 	contentTypeId?: string;
 	isNewContent?: boolean;
-	onSaveSuccess?(result?: { path?: string }): any;
+	/** Repeat-item index. Nested indexes such as `"1.2"` are not applied. */
+	index?: string | number;
+	onSaveSuccess?(result?: {
+		path?: string;
+		/** Set on repository writes. True when the item was stored as a draft. */
+		draft?: boolean;
+		/** Set on repository writes. From the close/minimize checkboxes. */
+		action?: ContentFormSaveAction;
+	}): any;
 }
 
-/**
- * Chooses the legacy dialog or Forms Engine 2.
- *
- * When #9213 removes the legacy engine, `showContentFormAction` should call
- * {@link formsEnginePropsFromLaunch} the way this function does. That PR's
- * `ShowContentFormProps` still needs `index` and the save-result `draft` / `action`
- * fields. Drop its hardcoded `'saveAndClose'` and `fieldToScroll: selectedFields[0]`.
- */
 export function showContentFormAction(props: ShowContentFormProps) {
 	return pushDialog({
-				component: createComponentId('FormsEngineDialog'),
-				allowFullScreen: true,
-				allowMinimize: true,
-				props: {
-					formProps: {
-						...formsEnginePropsFromLaunch(props),
-						onSave(result) {
-							if (isPreviewAppUrl()) {
-								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
-								const previewURL = params.get('page');
-								if (
-									previewURL &&
-									result.path &&
-									isPagePath(props.path) &&
-									getPathFromPreviewURL(previewURL) === props.path &&
-									props.path !== result.path
-								) {
-									// oldProps.path is a page and the same as the preview page path, but the new path is different,
-									// which means there was a rename of the page currently being previewed. Then we need to update the
-									// preview URL to reflect the new page path.
-									window.location.href = getSystemLink({
-										page: getPreviewURLFromPath(result.path),
-										systemLinkId: 'preview',
-										site: props.site,
-										authoringBase: props.authoringBase
-									});
-								} else {
-									getHostToGuestBus().next(reloadRequest());
-								}
-							}
-							props.onSaveSuccess?.(result);
+		component: createComponentId('FormsEngineDialog'),
+		allowFullScreen: true,
+		allowMinimize: true,
+		props: {
+			formProps: {
+				...formsEnginePropsFromLaunch(props),
+				onSave(result) {
+					if (isPreviewAppUrl()) {
+						const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
+						const previewURL = params.get('page');
+						if (
+							previewURL &&
+							result.path &&
+							isPagePath(props.path) &&
+							getPathFromPreviewURL(previewURL) === props.path &&
+							props.path !== result.path
+						) {
+							// oldProps.path is a page and the same as the preview page path, but the new path is different,
+							// which means there was a rename of the page currently being previewed. Then we need to update the
+							// preview URL to reflect the new page path.
+							window.location.href = getSystemLink({
+								page: getPreviewURLFromPath(result.path),
+								systemLinkId: 'preview',
+								site: props.site,
+								authoringBase: props.authoringBase
+							});
+						} else {
+							getHostToGuestBus().next(reloadRequest());
 						}
-					} satisfies FormsEngineProps
+					}
+					props.onSaveSuccess?.(result);
 				}
-			});
+			} satisfies FormsEngineProps
+		}
+	});
 }
 
 export function createUseContextHook<T>(name: string, context: Context<T>): () => T;

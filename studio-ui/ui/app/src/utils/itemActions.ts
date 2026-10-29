@@ -512,7 +512,6 @@ export const itemActionDispatcher = ({
 						onSaveSuccess: ({ draft }) => {
 							const followUps = saveSuccessFollowUps(
 								draft,
-								// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
 								showEditItemSuccessNotification(),
 								onActionSuccess ? [onActionSuccess] : []
 							);
