@@ -28,7 +28,7 @@ import EmptyState from '../EmptyState/EmptyState';
 import Pagination from '../Pagination';
 import FolderBrowserTreeView from '../FolderBrowserTreeView';
 import Box from '@mui/material/Box';
-import { BrowseFilesDialogUIProps } from './utils';
+import { BrowseFilesDialogUIProps, MEDIA_CARD_GRID_TEMPLATE_COLUMNS } from './utils';
 import Divider from '@mui/material/Divider';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -347,7 +347,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 						sx={[
 							{
 								display: 'grid',
-								gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
+								gridTemplateColumns: MEDIA_CARD_GRID_TEMPLATE_COLUMNS,
 								gridGap: '16px',
 								padding: 'initial'
 							},

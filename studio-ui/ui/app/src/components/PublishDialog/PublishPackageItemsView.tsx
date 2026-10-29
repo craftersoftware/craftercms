@@ -33,6 +33,7 @@ import { PathTreeNode } from './buildPathTrees';
 import { getPublishingPackagePreferredView, setPublishingPackagePreferredView } from '../../utils/state';
 import { nnou } from '../../utils/object';
 import useActiveUser from '../../hooks/useActiveUser';
+import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import { generateSingleItemOptions, itemActionDispatcher } from '../../utils/itemActions';
 import useEnv from '../../hooks/useEnv';
@@ -290,11 +291,13 @@ export function PublishPackageItemsView(props: PublishItemsProps) {
 				anchorPosition={contextMenu.anchorPosition}
 				onClose={onContextMenuClose}
 			>
-				{contextMenu.options?.map((option) => (
-					<MenuItem key={option.id} onClick={() => onMenuItemClicked(option.id)}>
-						{option.label}
-					</MenuItem>
-				))}
+				<MenuList autoFocusItem>
+					{contextMenu.options?.map((option) => (
+						<MenuItem key={option.id} onClick={() => onMenuItemClicked(option.id)}>
+							{option.label}
+						</MenuItem>
+					))}
+				</MenuList>
 			</Popover>
 		</>
 	);

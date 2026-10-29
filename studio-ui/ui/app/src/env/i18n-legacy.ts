@@ -830,10 +830,6 @@ export const itemSuccessMessages = defineMessages({
 		id: 'item.contentTypeChanged',
 		defaultMessage: 'Item type changed successfully'
 	},
-	itemSavedAsDraft: {
-		id: 'item.savedAsDraft',
-		defaultMessage: 'Draft saved. Required fields left blank may cause errors when previewed or deployed.'
-	},
 	folderCreated: {
 		id: 'folder.created',
 		defaultMessage: 'Folder created successfully'

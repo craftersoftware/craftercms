@@ -164,7 +164,7 @@
     * Created `updateLauncher` action.
     * Removed `showCopyDialog`, `closeCopyDialog`, `copyDialogClosed` and `updateCopyDialog` actions.
   * `actions/system`:
-    * Updated `showEditItemSuccessNotification` action payload to be `{ action: CommonSaveOptions; }`.
+    * `showEditItemSuccessNotification` no longer takes a payload. Draft saves don't dispatch it.
     * Removed `workflowEvent`. Replaced by `workflowEventSubmit`, `workflowEventDirectPublish`, `workflowEventApprove`, `workflowEventReject`, `workflowEventCancel`.
   * `actions/preview`:
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.

@@ -20,6 +20,7 @@ import { ContextMenuOption } from '../components/ContextMenu';
 import { getControllerPath, getRootPath, withoutIndex } from './path';
 import { popCodeEditorDialog, showHistoryDialog } from '../state/actions/dialogs';
 import { checkPathExistence, fetchContentItem, fetchContentItems } from '../services/content';
+import { saveSuccessFollowUps } from './contentFormLaunch';
 import {
 	batchActions,
 	changeContentType,
@@ -508,14 +509,15 @@ export const itemActionDispatcher = ({
 						site,
 						path,
 						authoringBase,
-						onSaveSuccess: () =>
-							dispatch(
-								batchActions([
-									// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
-									showEditItemSuccessNotification({ action: 'saveAndClose' }),
-									...(onActionSuccess ? [onActionSuccess] : [])
-								])
-							),
+						onSaveSuccess: ({ draft }) => {
+							const followUps = saveSuccessFollowUps(
+								draft,
+								// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
+								showEditItemSuccessNotification(),
+								onActionSuccess ? [onActionSuccess] : []
+							);
+							if (followUps.length) dispatch(batchActions(followUps));
+						},
 						...extraPayload
 					})
 				);

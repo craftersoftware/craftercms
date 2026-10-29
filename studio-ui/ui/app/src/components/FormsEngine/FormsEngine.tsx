@@ -26,11 +26,12 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState
 } from 'react';
-import { ContentTypeField, PublishPackage } from '../../models';
+import { PublishPackage } from '../../models';
 import {
 	FormsEngineAtoms,
 	FormsEngineEditContextProps,
@@ -87,7 +88,9 @@ import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {
 	buildSectionExpandedStateAtoms,
 	createFileNameAtom,
+	commitFormVisibility,
 	createFormsEngineAtoms,
+	extractAtomValues,
 	createFormStackData,
 	createObjectWithSystemProps,
 	createReadonlyAtom,
@@ -96,10 +99,12 @@ import {
 	fetchUpdateRequirements,
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
-	getValidationAtomsExcludingIrrelevant,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
+	isEmbeddedForm,
+	readInvalidFieldIds,
+	stackEntryAtoms,
 	getScrollContainer,
 	getTargetHeight,
 	internalLockContentService,
@@ -107,6 +112,7 @@ import {
 	prepareEmbeddedItemForm,
 	scrollToFieldWhenSettled,
 	setFieldAtoms,
+	useStackSubmitting,
 	useUnlockOnClose,
 	useValidateFormProps
 } from './lib/formUtils';
@@ -119,7 +125,7 @@ import {
 	XmlKeys
 } from './lib/formConsts';
 import FormLayout from './components/FormLayout';
-import TableOfContents from './components/TableOfContents';
+import TableOfContents, { FieldScopeNotice } from './components/TableOfContents';
 import CreateModeHeader from './components/CreateModeHeader';
 import RepeatModeHeader from './components/RepeatModeHeader';
 import EditModeHeader from './components/EditModeHeader';
@@ -133,7 +139,6 @@ import {
 	preloadControlPluginsForFields,
 	type ControlPluginPreloadFailure
 } from './lib/controlPluginLoader';
-import { fromString } from '../../utils/xml';
 import { displayWithPendingChangesConfirm } from '../../utils/ui';
 import useActiveUser from '../../hooks/useActiveUser';
 import FormBackToTop from './components/FormBackToTop';
@@ -148,16 +153,38 @@ import {
 import { getHostToHostBus } from '../../utils/subjects';
 import { fetchAffectedPackages } from '../../services/workflow';
 import useMount from '../../hooks/useMount';
-import { nnou, nou } from '../../utils/object';
+import { nnou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
 import {
 	attachFormController,
 	findAncestorFormControllerEntry,
-	isFieldPathIrrelevant,
 	runFormControllerCleanup
 } from './formControllers/runtime';
 import { createEmbeddedRelevanceResolver } from './formControllers/relevance';
+import {
+	aggregateStackFlags,
+	childFields,
+	fieldVisibility,
+	hasFormAtoms,
+	validationErrorsAlert,
+	itemLaunchBlocksParent,
+	itemLaunchFrom,
+	itemLaunchVisibleChildren,
+	missedItemLaunch,
+	parentBodyHiddenForItemLaunch,
+	planSettledFieldScroll,
+	repeatFormLock,
+	revealField,
+	showValidationError,
+	selectedItemSavePlan,
+	stackEntryFlagsAtom,
+	stackedFormCloseAction,
+	stackedFormsClosedByReload
+} from './lib/formVisibility';
+import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
+import ValidationErrorsAlert from './components/ValidationErrorsAlert';
+import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -170,13 +197,28 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 	/** Whether the form is rendered in a dialog. Causes various layout adjustments. **/
 	isDialog?: boolean;
 	onClose?: EnhancedDialogProps['onClose'];
+	/** Closes a stacked form after its own save. Does not restore selected-fields edits. */
+	onCommittedClose?(): void;
 	onMinimize?: EnhancedDialogProps['onMinimize'];
 	onFullScreen?: EnhancedDialogProps['onFullScreen'];
 	onCancelFullScreen?: EnhancedDialogProps['onCancelFullScreen'];
-	/** The form will render only the specified fields from the main content type being worked with */
-	fieldsToRender?: ContentTypeField[];
+	/**
+	 * Experience Builder `selectedFields`: show only these fields. Dotted ids (`articles_o.headline_s`)
+	 * select the base field. Resolved against the content type once it is loaded.
+	 */
+	fieldIds?: string[];
+	/**
+	 * Repeat-item index from Experience Builder. Limits that repeat field to one item.
+	 * Nested indexes such as `"1.2"` are not supported and are ignored.
+	 */
+	repeatIndex?: string | number;
 	/** Id of a field the form should scroll into view once rendered. Expands the field's section if collapsed. */
 	fieldToScroll?: string;
+	/**
+	 * Experience Builder item launch. The item form starts in selected-fields mode,
+	 * including a whole item. The pencil and Add leave this unset.
+	 */
+	selectedItemForm?: boolean;
 	// Controls like the Item Selector and Repeat use the onSave to update once the form they opened is "saved".
 	// Executing the onClose without the "timeout", causes values set at the control prior to closing to get lost somehow.
 	// The promise works as a timeout and allows the control to do async operations before the form acts on its result.
@@ -187,6 +229,10 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 		values: LookupTable<unknown>;
 		versionComment: string;
 		path?: string;
+		/** Set on repository writes. In-memory repeat and stacked-embedded saves omit it. */
+		action?: 'save' | 'saveAndClose' | 'saveAndMinimize';
+		/** Set on repository writes. True when the item was stored as a draft. */
+		draft?: boolean;
 	}): Promise<FormSavePromiseResult> | void;
 }
 
@@ -217,6 +263,14 @@ export interface CreateModeProps {
 
 export type FormsEngineProps = BaseProps & (UpdateModeProps | RepeatModeProps | CreateModeProps);
 
+type RootFormActions = StableGlobalContextProps['rootFormActions'];
+
+/** Writes the latest parent save into the stack's mutable slot. The slot is not React state. */
+function publishRootFormActions(actions: RootFormActions, refs: { current: RootFormActions }) {
+	actions.save = (draft) => refs.current.save(draft);
+	actions.setSaveAsDraft = (value) => refs.current.setSaveAsDraft(value);
+}
+
 // Entry point for the form engine. It validates the props and continues if valid.
 function FormGuard(props: FormsEngineProps) {
 	try {
@@ -237,7 +291,11 @@ function GlobalFormsState(props: FormsEngineProps) {
 	if (!stableGlobalContextRef.current) {
 		stableGlobalContextRef.current = {
 			api: null,
-			formsStackData: [createFormStackData({ props })]
+			formsStackData: [createFormStackData({ props })],
+			rootFormActions: {
+				save: () => Promise.resolve(),
+				setSaveAsDraft: () => undefined
+			}
 		};
 	}
 	stableGlobalContextRef.current.api = useMemo<FormsEngineGlobalApiContextProps>(() => {
@@ -247,7 +305,12 @@ function GlobalFormsState(props: FormsEngineProps) {
 		};
 		const api: FormsEngineGlobalApiContextProps = {
 			pushForm(props) {
-				stableGlobalContextRef.current.formsStackData.push(createFormStackData({ props }));
+				stableGlobalContextRef.current.formsStackData.push(
+					createFormStackData({
+						props,
+						itemFormMode: props.selectedItemForm ? atom<'selected' | 'full'>('selected') : null
+					})
+				);
 				setCount(1);
 			},
 			popForm() {
@@ -294,7 +357,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		const { create: _create, ...rest } = props;
 		return { ...rest, update: { path: savedCreatePath } };
 	}, [props, savedCreatePath]);
-	const { create, update, repeat, fieldsToRender, readonly: readonlyProp, stackIndex = 0, isDialog } = effectiveProps;
+	const { create, update, repeat, readonly: readonlyProp, stackIndex = 0, isDialog } = effectiveProps;
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypesById = useContentTypes();
@@ -318,7 +381,13 @@ function FormBootstrap(props: FormsEngineProps) {
 	const prepStartedRef = useRef(false);
 	const [renamedPath, setRenamedPath] = useState<string | null>(null);
 	const [reloadNonce, setReloadNonce] = useState(0);
-	const triggerReload = useCallback(() => setReloadNonce((nonce) => nonce + 1), []);
+	const triggerReload = useCallback(() => {
+		// A reload replaces this entry's atoms. Close stacked forms first so they cannot keep the old ones.
+		// The launch then opens a new item form on the new atoms.
+		const closeCount = stackedFormsClosedByReload(formsStackData.length, stackIndex);
+		for (let i = 0; i < closeCount; i++) api.popForm();
+		setReloadNonce((nonce) => nonce + 1);
+	}, [api, formsStackData, stackIndex]);
 	const effectiveUpdatePath = renamedPath ?? update?.path;
 	const customControls = useSelection((state) => state.uiConfig.controls);
 	const { formatMessage } = useIntl();
@@ -327,9 +396,9 @@ function FormBootstrap(props: FormsEngineProps) {
 		const getInitialValues = () => stableFormContextRef.current.originalValues;
 		const rollbackAtom = (atom: PrimitiveAtom<unknown>, value: unknown) => store.set(atom, value);
 		const internalRollbackValue = (initialValues: LookupTable<unknown>, fieldId: string) => {
-			const value = initialValues[fieldId];
-			const atom = stableFormContextRef.current.atoms.valueByFieldId[fieldId];
-			rollbackAtom(atom, value);
+			const valueAtom = stableFormContextRef.current.atoms?.valueByFieldId[fieldId];
+			if (!valueAtom) return;
+			rollbackAtom(valueAtom, initialValues[fieldId]);
 		};
 		const api: FormsEngineFormApiContextProps = {
 			rollback() {
@@ -445,23 +514,26 @@ function FormBootstrap(props: FormsEngineProps) {
 		) {
 			const contentType = parentContentType ? effectRefs.current.contentTypesById[parentContentType.id] : undefined;
 			if (!contentType) return setPrepError(ContentTypeNotFoundError);
+			if (!parentAtoms) return setPrepError(UnknownError);
 			const contentTypesById = effectRefs.current.contentTypesById;
-			const parentLockResult = store.get(parentAtoms.lockResult);
-			const isParentLocked = parentLockResult.locked;
-			const isCreate = nou(parentPath);
-			const lockResultAtom = atom<FormsEngineEditContextProps>({
-				locked: isCreate ? true : isParentLocked,
-				lockError: parentLockResult.lockError,
-				affectedPackages: parentLockResult.affectedPackages
-			});
-			const atoms = createFormsEngineAtoms(effectRefs.current.username, {
-				lockResult: lockResultAtom,
-				readonly: createReadonlyAtom(lockResultAtom),
-				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: createFileNameAtom('', stableFormContextRef)
-			});
+			const sharedLock = repeatFormLock(parentAtoms);
+			const repeatGroup = contentType.fields[repeat.fieldId];
+			const repeatFieldsForLaunch = childFields(repeatGroup);
+			const repeatFieldLookup = Object.fromEntries(repeatFieldsForLaunch.map((field) => [field.id, field]));
+			const atoms = createFormsEngineAtoms(
+				effectRefs.current.username,
+				{
+					lockResult: sharedLock.lockResult,
+					readonly: sharedLock.readonly,
+					expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
+					fileName: createFileNameAtom('', stableFormContextRef)
+				},
+				effectRefs.current.effectiveProps.fieldIds?.length
+					? { selectedFields: effectRefs.current.effectiveProps.fieldIds, fields: repeatFieldLookup }
+					: undefined
+			);
 			const seedValues = repeat.values ? { ...repeat.values } : {};
-			preloadControlPluginsForFields(siteId, fieldsToRender, seedValues, contentTypesById).then((failures) => {
+			preloadControlPluginsForFields(siteId, repeatFieldsForLaunch, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
 				const validatorsData = {
 					siteId,
@@ -482,14 +554,14 @@ function FormBootstrap(props: FormsEngineProps) {
 				};
 				const values = repeat.values
 					? seedValues
-					: createParsedValuesObject(fieldsToRender, {}, contentTypesById, atomValueCreator, customControls);
+					: createParsedValuesObject(repeatFieldsForLaunch, {}, contentTypesById, atomValueCreator, customControls);
 
 				const descriptors = resolveControlDescriptors(customControls);
 				const additionalFieldsIds: string[] = [];
 				// If repeat.values was provided, `createCleanValuesObject` didn't run; hence, atomValueCreator needs to be run manually.
 				if (repeat.values) {
 					// First gather all additional fields ids from the provided values
-					(fieldsToRender ?? []).forEach((field) => {
+					repeatFieldsForLaunch.forEach((field) => {
 						const descriptor = descriptors[field.type];
 						if (!descriptor) return;
 						additionalFieldsIds.push(...getAdditionalFieldsIdsFromDescriptor(field.id, descriptor));
@@ -507,13 +579,9 @@ function FormBootstrap(props: FormsEngineProps) {
 					});
 				}
 
-				const xmlDoc = fromString(parentStackData.itemMeta.contentXml ?? '');
-				const fieldId = repeat.fieldId;
-				const index = repeat.index ?? 0;
-				const element = xmlDoc?.querySelector(`:scope > ${fieldId}`)?.children[index];
-				const contentObject =
-					(parentStackData.itemMeta.contentObject[fieldId] as { item: Array<LookupTable<unknown>> })?.item?.[index] ??
-					{};
+				// Repeat items are not saved as their own documents. A snapshot keyed by index
+				// would belong to a different item after a reorder or delete, so it is not kept.
+				const contentObject = {};
 
 				initializeState(
 					atoms,
@@ -525,7 +593,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						pathInSite: parentPathInSite,
 						contentType: parentContentType,
 						contentObject,
-						contentXml: element?.outerHTML ?? ''
+						contentXml: ''
 					},
 					failures
 				);
@@ -540,6 +608,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		) {
 			const contentType = effectRefs.current.contentTypesById[update.values[XmlKeys.contentTypeId] as string];
 			if (!contentType) return setPrepError(ContentTypeNotFoundError);
+			if (!parentAtoms) return setPrepError(UnknownError);
 			const isParentReadonly = store.get(parentAtoms.readonly);
 			const readonly = readonlyProp ?? isParentReadonly;
 			const parentLockResult = store.get(parentAtoms.lockResult);
@@ -558,6 +627,8 @@ function FormBootstrap(props: FormsEngineProps) {
 						locked,
 						lockError,
 						affectedPackages,
+						fieldIds: effectRefs.current.effectiveProps.fieldIds,
+						repeatIndex: effectRefs.current.effectiveProps.repeatIndex,
 						update,
 						parentStackData,
 						stableFormContextRef,
@@ -596,14 +667,22 @@ function FormBootstrap(props: FormsEngineProps) {
 				lockError: null,
 				affectedPackages: null
 			});
-			const atoms: FormsEngineAtoms = createFormsEngineAtoms(effectRefs.current.username, {
-				lockResult: lockResultAtom,
-				readonly: atom(false),
-				expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-				fileName: createFileNameAtom('', stableFormContextRef),
-				// Default version comment for new content.
-				versionComment: atom(generateDefaultCreationComment('', formatMessage))
-			});
+			const atoms: FormsEngineAtoms = createFormsEngineAtoms(
+				effectRefs.current.username,
+				{
+					lockResult: lockResultAtom,
+					readonly: atom(false),
+					expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
+					fileName: createFileNameAtom('', stableFormContextRef),
+					// Default version comment for new content.
+					versionComment: atom(generateDefaultCreationComment('', formatMessage))
+				},
+				{
+					selectedFields: effectRefs.current.effectiveProps.fieldIds,
+					index: effectRefs.current.effectiveProps.repeatIndex,
+					fields: contentType.fields
+				}
+			);
 			const contentObject = createObjectWithSystemProps(contentType);
 			const initCreateForm = (failures: ControlPluginPreloadFailure[] = []) => {
 				if (disposed) return;
@@ -694,12 +773,20 @@ function FormBootstrap(props: FormsEngineProps) {
 						lockError: requirements.lockError,
 						affectedPackages: requirements.affectedPackages
 					});
-					const atoms = createFormsEngineAtoms(effectRefs.current.username, {
-						lockResult: lockResultAtom,
-						readonly: createReadonlyAtom(lockResultAtom),
-						expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
-						fileName: createFileNameAtom(requirements.item.path, stableFormContextRef)
-					});
+					const atoms = createFormsEngineAtoms(
+						effectRefs.current.username,
+						{
+							lockResult: lockResultAtom,
+							readonly: createReadonlyAtom(lockResultAtom),
+							expandedStateBySectionId: buildSectionExpandedStateAtoms(requirements.contentType.sections),
+							fileName: createFileNameAtom(requirements.item.path, stableFormContextRef)
+						},
+						{
+							selectedFields: effectRefs.current.effectiveProps.fieldIds,
+							index: effectRefs.current.effectiveProps.repeatIndex,
+							fields: requirements.contentType.fields
+						}
+					);
 					preloadControlPluginsForFields(
 						siteId,
 						requirements.contentType.fields,
@@ -759,7 +846,6 @@ function FormBootstrap(props: FormsEngineProps) {
 		customControls,
 		dispatch,
 		effectRefs,
-		fieldsToRender,
 		formatMessage,
 		formsStackData,
 		readonlyProp,
@@ -777,12 +863,14 @@ function FormBootstrap(props: FormsEngineProps) {
 		return <FormPrepError error={prepError} />;
 	} else if (
 		ready &&
+		hasFormAtoms(stableFormContextRef.current) &&
 		// Create doesn't need the liveUpdateItem, but otherwise, it should be preset before proceeding to rendering a form
 		(create || repeat || liveUpdatedItem)
 	) {
+		const readyEntry = stableFormContextRef.current;
 		return (
 			<FormsEngineFormContextApi.Provider value={contextApi}>
-				<StableFormContext.Provider value={stableFormContextRef.current}>
+				<StableFormContext.Provider value={readyEntry}>
 					<ItemContext.Provider value={liveUpdatedItem}>
 						<ItemMetaContext.Provider value={itemMeta}>
 							<RenamedPathContext.Provider
@@ -815,7 +903,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 		repeat,
 		stackIndex = 0,
 		stackTransitionEnded,
-		fieldsToRender,
 		fieldToScroll,
 		isDialog = false,
 		onSave,
@@ -835,7 +922,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		onClose: enhancedDialogOnClose
 	} = useEnhancedDialogContext() ?? {};
 	const store = useJotaiStore();
-	const { api: contextApi, formsStackData } = useContext(StableGlobalContext);
+	const { api: contextApi, formsStackData, rootFormActions } = useContext(StableGlobalContext);
 	const stableFormContext = useContext(StableFormContext);
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const item = useContext(ItemContext);
@@ -845,6 +932,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const formControllerFileMissing = Boolean(formControllerState?.fileMissing);
 	const formControllerLoadFailed = Boolean(formControllerState?.loadFailed);
 	const [disableStackedFormDrawerAutoFocus, setDisableStackedFormDrawerAutoFocus] = useState(true);
+	const [itemLaunchEntering, setItemLaunchEntering] = useState(false);
 	const [enablingEditInProgress, setEnablingEditInProgress] = useState(false);
 	const [openDrawerSidebar, setOpenDrawerSidebar] = useAtom(atoms.tableOfContentsDrawerOpen);
 	const isSubmitting = useAtomValue(atoms.isSubmitting);
@@ -854,12 +942,31 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const stackFormCount = useAtomValue(stackFormCountAtom);
 	const isStackedForm = stackIndex > 0;
 	const hasStackedForms = !isStackedForm && stackFormCount > 0;
-	const isEmbedded = Boolean(update?.modelId) || Boolean(create?.embedded);
+	const isEmbedded = isEmbeddedForm({ update, create });
 	const isCreateMode = Boolean(create?.path);
 	const isRepeatMode = Boolean(repeat?.fieldId);
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
-	const contentTypeSections = useMemo(() => {
+	// Re-render when the controller publishes a deny-list. The list itself lives on the stack entry.
+	useAtomValue(atoms.relevanceVersion);
+	const visibility = useAtomValue(atoms.formVisibility);
+	const scopeFieldIds = visibility.active.fieldIds;
+	const pendingItemFieldId = !isStackedForm && !isRepeatMode ? visibility.itemForm?.fieldId : undefined;
+	const idlePendingValue = useMemo(() => atom<unknown>(undefined), []);
+	const pendingRepeatValue = useAtomValue(
+		(pendingItemFieldId ? atoms.valueByFieldId[pendingItemFieldId] : undefined) ?? idlePendingValue
+	);
+	const pendingItemLength = Array.isArray(pendingRepeatValue) ? pendingRepeatValue.length : null;
+	// Hide the parent as soon as the item can open. Setting this in the launch effect flashes the body.
+	const canOpenItemLaunch =
+		pendingItemFieldId != null &&
+		atoms.valueByFieldId[pendingItemFieldId] != null &&
+		pendingItemLength != null &&
+		itemLaunchFrom(visibility, pendingItemLength) != null;
+	if (canOpenItemLaunch && !itemLaunchEntering) {
+		setItemLaunchEntering(true);
+	}
+	const formSections = useMemo(() => {
 		let sections = contentType.sections;
 		if (isEmbedded) {
 			// Embedded components don't have any path/file-name, so excluding the field from the sections will prevent it from
@@ -869,34 +976,58 @@ function FormOrchestrator(props: FormsEngineProps) {
 				fields: section.fields.filter((fieldId) => fieldId !== XmlKeys['fileName'])
 			}));
 		}
-		if (irrelevantFieldPaths && !fieldsToRender) {
-			sections = sections
+		return sections;
+	}, [contentType.sections, isEmbedded]);
+	const visibleSections = useMemo(
+		() =>
+			formSections
 				.map((section) => ({
 					...section,
-					fields: section.fields.filter((fieldId) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId))
+					fields: section.fields.filter(
+						(fieldId) =>
+							fieldVisibility({ fieldId, irrelevantFieldPaths, parentPath: repeat?.fieldId, scopeFieldIds }) ===
+							'visible'
+					)
 				}))
-				// Remove sections that contain no remaining fields.
-				.filter((section) => section.fields.length > 0);
-		}
-		return sections;
-	}, [contentType.sections, isEmbedded, irrelevantFieldPaths, fieldsToRender]);
-	const visibleFieldsToRender = useMemo(() => {
-		if (!fieldsToRender) return fieldsToRender;
-		if (!irrelevantFieldPaths?.size) return fieldsToRender;
-		// Repeat item fields are subfields. Qualify them with the repeat group so `title_s` in
-		// another group is not hidden by this one.
-		return fieldsToRender.filter((field) => !isFieldPathIrrelevant(irrelevantFieldPaths, field.id, repeat?.fieldId));
-	}, [fieldsToRender, irrelevantFieldPaths, repeat?.fieldId]);
+				.filter((section) => section.fields.length > 0),
+		[formSections, irrelevantFieldPaths, repeat?.fieldId, scopeFieldIds]
+	);
+	const repeatOwnedFields = useMemo(
+		() => (isRepeatMode ? childFields(contentType.fields[repeat?.fieldId]) : []),
+		[contentType.fields, isRepeatMode, repeat?.fieldId]
+	);
+	const repeatFields = useMemo(
+		() =>
+			isRepeatMode
+				? repeatOwnedFields.filter(
+						(field) =>
+							fieldVisibility({
+								fieldId: field.id,
+								irrelevantFieldPaths,
+								parentPath: repeat?.fieldId,
+								scopeFieldIds
+							}) === 'visible'
+					)
+				: undefined,
+		[irrelevantFieldPaths, isRepeatMode, repeat?.fieldId, repeatOwnedFields, scopeFieldIds]
+	);
+	const repeatFieldIdList = useMemo(() => repeatOwnedFields.map((field) => field.id), [repeatOwnedFields]);
+	const countFieldIds = useMemo(
+		() => (isRepeatMode ? repeatFieldIdList : formSections.flatMap((section) => section.fields)),
+		[formSections, isRepeatMode, repeatFieldIdList]
+	);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
 	const tableOfContents = (
 		<TableOfContents
-			fieldsToRender={visibleFieldsToRender}
-			sections={contentTypeSections}
+			fields={isRepeatMode ? repeatFields : undefined}
+			sections={isRepeatMode ? undefined : visibleSections}
+			countFieldIds={visibility.launch ? countFieldIds : undefined}
 			containerRef={containerRef}
 		/>
 	);
 	const effectRefs = useUpdateRefs({
-		fieldsToRender: visibleFieldsToRender,
+		// Comments name every changed field, including ones the launch scope is hiding.
+		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName,
 		lockStatus
@@ -906,8 +1037,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
 	const [collapseHeader, setCollapseHeader] = useState(false);
 	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
-	const [invalidForm, setInvalidForm] = useState(false);
-	const jotai = useJotaiStore();
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -915,29 +1044,25 @@ function FormOrchestrator(props: FormsEngineProps) {
 		if (update?.changeTypeId) {
 			setHasPendingChanges(true);
 		}
-		const checkValidationState = async () => {
-			const validityStates = await Promise.all(
-				getValidationAtomsExcludingIrrelevant(
-					stableFormContext.atoms.validationByFieldId,
-					stableFormContext.formControllerState?.irrelevantFieldPaths,
-					repeat?.fieldId
-				).map((validityDataAtom) => jotai.get(validityDataAtom))
-			);
-			setInvalidForm(validityStates.some((state) => !state.isValid));
-		};
-		void checkValidationState();
-		const subscription = stableFormContext.fieldUpdates$
-			.pipe(debounceTime(300))
-			.subscribe(() => void checkValidationState());
-		return () => subscription.unsubscribe();
 	});
 
-	// Changes comment generation & change detection/tracking
+	// Pending changes publish immediately. The version comment stays on the 300ms debounce.
 	useEffect(() => {
-		const sub = fieldUpdates$.pipe(debounceTime(300)).subscribe(() => {
-			// String-type fields have auto-rollback detection; the fieldUpdates$ will emit anyway. Checking if the fieldId
-			// emitted is in changedFieldIds should tell if the field was rolled back.
-			setHasPendingChanges(changedFieldIds.size > 0);
+		const pendingSub = fieldUpdates$.subscribe(() => {
+			const pending = changedFieldIds.size > 0;
+			setHasPendingChanges(pending);
+			// The dialog reads its own flag. Publish it here so a dismiss in the same turn still sees the edit.
+			if (!isStackedForm) {
+				const stackedPending = Object.entries(store.get(stackEntryFlagsAtom)).some(
+					([index, flag]) => Number(index) !== stackIndex && flag.pending
+				);
+				updateSubmittingOrHasPendingChanges?.({
+					hasPendingChanges: pending || stackedPending,
+					isSubmitting: store.get(atoms.isSubmitting)
+				});
+			}
+		});
+		const commentSub = fieldUpdates$.pipe(debounceTime(300)).subscribe(() => {
 			const versionCommentAtom = effectRefs.current.versionCommentAtom;
 			// Create mode bases the comment off of the page URL (file-name) instead of the fields changed. Note that any
 			// field update re-runs this since every field's validation depends on the file name.
@@ -956,34 +1081,87 @@ function FormOrchestrator(props: FormsEngineProps) {
 			}
 			const newMessage = generateDefaultChangesComment(
 				contentType.fields,
-				effectRefs.current.fieldsToRender,
+				effectRefs.current.commentFields,
 				changedFieldIds,
 				store.get(versionCommentAtom).trim()
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);
 		});
 		return () => {
-			sub.unsubscribe();
+			pendingSub.unsubscribe();
+			commentSub.unsubscribe();
 		};
 	}, [
+		atoms.isSubmitting,
 		changedFieldIds,
 		contentType.fields,
 		effectRefs,
 		setHasPendingChanges,
 		fieldUpdates$,
-		store,
+		formatMessage,
 		isCreateMode,
-		formatMessage
+		isStackedForm,
+		stackIndex,
+		store,
+		updateSubmittingOrHasPendingChanges
 	]);
 
 	const sourceMapPaths = useMemo(() => Object.values(sourceMap ?? []).sort(), [sourceMap]);
 	useFetchContentItems(sourceMapPaths);
 
-	// If rendered in a dialog, update the dialog's isSubmitting and hasPendingChanges. Only the root form.
-	// Stacked forms have their own changes and submit state management.
+	const parentEntry = isStackedForm ? formsStackData[stackIndex - 1] : null;
+	const parentAtoms = stackEntryAtoms(parentEntry);
+	const idleItemMode = useMemo(() => atom<'selected' | 'full' | null>(null), []);
+	const itemMode = useAtomValue(stableFormContext.itemFormMode ?? idleItemMode);
+	const stackFlags = useAtomValue(stackEntryFlagsAtom);
+	const stackSummary = aggregateStackFlags(stackFlags);
+	const stackSubmitting = useStackSubmitting();
+	// Publish this entry once its atoms exist. Entries that are still null never publish, so a push cannot crash.
+	// A covered form unmounts, but its flag stays until the entry is popped. Width and dirty state
+	// come from the whole stack, including an item sitting under a node selector.
 	useEffect(() => {
-		if (!isStackedForm) updateSubmittingOrHasPendingChanges?.({ isSubmitting, hasPendingChanges });
-	}, [isSubmitting, hasPendingChanges, isStackedForm, updateSubmittingOrHasPendingChanges]);
+		store.set(stackEntryFlagsAtom, (current) => ({
+			...current,
+			[stackIndex]: {
+				pending: hasPendingChanges,
+				submitting: isSubmitting,
+				selected: itemMode === 'selected'
+			}
+		}));
+		return () => {
+			if (formsStackData[stackIndex] === stableFormContext) return;
+			store.set(stackEntryFlagsAtom, (current) => {
+				const next = { ...current };
+				delete next[stackIndex];
+				return next;
+			});
+		};
+	}, [formsStackData, hasPendingChanges, isSubmitting, itemMode, stackIndex, stableFormContext, store]);
+	// If rendered in a dialog, update the dialog's isSubmitting and hasPendingChanges. Only the root form.
+	// Every stacked entry is included, so an item under another stacked form still counts.
+	useEffect(() => {
+		if (!isStackedForm)
+			updateSubmittingOrHasPendingChanges?.({
+				isSubmitting: stackSummary.submitting,
+				hasPendingChanges: stackSummary.pending
+			});
+	}, [isStackedForm, stackSummary.pending, stackSummary.submitting, updateSubmittingOrHasPendingChanges]);
+
+	// Live invalid ids. The first read is immediate; later edits wait out the pause in the hook,
+	// so the alert's count is not rewritten on every keystroke.
+	const localInvalidFieldIds = useInvalidFieldIds(
+		atoms.validationByFieldId,
+		irrelevantFieldPaths,
+		repeat?.fieldId,
+		fieldUpdates$
+	);
+	const invalidForm = localInvalidFieldIds.length > 0;
+	const parentInvalidFieldIds = useInvalidFieldIds(
+		parentAtoms?.validationByFieldId,
+		parentEntry?.formControllerState?.irrelevantFieldPaths,
+		undefined,
+		parentEntry?.fieldUpdates$
+	);
 
 	// Unlock content when the form is closed.
 	useUnlockOnClose({
@@ -1035,24 +1213,61 @@ function FormOrchestrator(props: FormsEngineProps) {
 		scroller.style.overflowY = '';
 		setOpenDrawerSidebar(false);
 	};
+	const popTopStackedForm = (restoreOpenedItem: boolean) => {
+		const childEntry = formsStackData[formsStackData.length - 1];
+		const childMode = childEntry?.itemFormMode ? store.get(childEntry.itemFormMode) : null;
+		// The child form item unlocking should be getting done by the FormOrchestrator of the unmounting form via useUnlockOnClose hook.
+		childEntry?.props.stackIndex === 0 && (containerRef.current.style.overflowY = '');
+		if (restoreOpenedItem && childEntry) {
+			const repeat = childEntry.props.repeat;
+			const parentEntry = formsStackData[formsStackData.length - 2];
+			const parentOfChild = stackEntryAtoms(parentEntry);
+			const itemsAtom = repeat?.fieldId ? parentOfChild?.valueByFieldId[repeat.fieldId] : undefined;
+			if (itemsAtom) {
+				const current = store.get(itemsAtom);
+				const parentList = repeat?.fieldId ? parentEntry?.originalValues?.[repeat.fieldId] : undefined;
+				const next = stackedRepeatItemAfterClose({
+					wasSelectedItemForm: childEntry.itemFormMode != null,
+					items: Array.isArray(current) ? current : undefined,
+					index: repeat?.index,
+					checkpoint: childEntry.originalValues ?? undefined,
+					parentCheckpoint: Array.isArray(parentList) ? parentList : undefined
+				});
+				if (next) store.set(itemsAtom, next);
+			}
+		}
+		contextApi.popForm();
+		// An item form that left selected-fields mode returns to the parent. Scroll to its repeat.
+		if (childMode === 'full' && childEntry?.props.repeat?.fieldId) {
+			const reveal = revealField(store.get(atoms.formVisibility), childEntry.props.repeat.fieldId);
+			commitFormVisibility(store.set, atoms, reveal.state, reveal.fieldId);
+		}
+	};
 	const handleCloseDrawerForm: DrawerProps['onClose'] = () => {
 		if (!hasStackedForms) return;
+		const childEntry = formsStackData[formsStackData.length - 1];
+		const childMode = childEntry.itemFormMode ? store.get(childEntry.itemFormMode) : null;
 		const childState = getCurrentChildFormStateSummary(store, formsStackData);
-		// Note: This is executed in the context of the parent form.
-		// Executed in the case of escape, backdrop click or form close button click.
-		const doClose = () => {
-			// The child form item unlocking should be getting done by the FormOrchestrator of the unmounting form via useUnlockOnClose hook.
-			const childProps = formsStackData[formsStackData.length - 1].props;
-			// Only unlock scroll if this is the last item in the forms stack
-			childProps.stackIndex === 0 && (containerRef.current.style.overflowY = '');
-			contextApi.popForm();
-		};
-		if (childState.isSubmitting) {
+		const action = stackedFormCloseAction({
+			mode: childMode,
+			isRepeatItem: Boolean(childEntry.props.repeat),
+			isSubmitting: childState.isSubmitting,
+			stackSubmitting,
+			hasPendingChanges: childState.hasPendingChanges
+		});
+		// Selected-fields mode closes the whole dialog. The dialog shows the one unsaved prompt.
+		// Do not pop first: cancelling that prompt would have already dropped the item.
+		if (action === 'closeDialog') {
+			enhancedDialogOnClose?.(null, null);
+			return;
+		}
+		if (action === 'wait') {
 			displayFormBeingSavedSnack(dispatch, formatMessage);
-		} else if (childState.hasPendingChanges) {
-			displayWithPendingChangesConfirm(dispatch, doClose);
+		} else if (action === 'confirmPop') {
+			displayWithPendingChangesConfirm(dispatch, () => popTopStackedForm(true));
 		} else {
-			doClose();
+			// Nothing is pending, so the checkpoint is what the item form shows. Put that back.
+			popTopStackedForm(true);
 		}
 	};
 
@@ -1090,17 +1305,175 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const onCloseHandler = isStackedForm ? onCloseProp : enhancedDialogOnClose;
 
-	const saveFn = useSaveForm({
+	const { save: saveFn } = useSaveForm({
 		onSave,
 		isEmbedded,
 		isStackedForm,
 		isCreateMode,
 		isRepeatMode,
-		fieldsToRender,
 		createPath: Boolean(create?.path) ? pathInSite : undefined, // pathInSite is the result of processing the create path with macros.
-		onClose: () => onCloseHandler(null, null),
+		onClose: () => {
+			// Done already wrote the item. Popping must not put the opened values back.
+			if (props.onCommittedClose) {
+				props.onCommittedClose();
+				return;
+			}
+			onCloseHandler?.(null, null);
+		},
 		onMinimize: () => props.onMinimize?.()
 	});
+
+	// Published after paint layout, not during render. The refs stay current, so a click reads this save.
+	const rootActionRefs = useUpdateRefs({ save: saveFn, setSaveAsDraft: setSaveAsDraftAction });
+	useLayoutEffect(() => {
+		if (stackIndex !== 0) return;
+		// Stable mutable registry for the item form, not React state. Read .current when Save is clicked.
+		publishRootFormActions(rootFormActions, rootActionRefs);
+	}, [rootActionRefs, rootFormActions, stackIndex]);
+
+	const itemLaunchStarted = useRef(false);
+	const launchedForAtoms = useRef<FormsEngineAtoms | null>(null);
+	useEffect(() => {
+		if (launchedForAtoms.current !== atoms) {
+			itemLaunchStarted.current = false;
+			launchedForAtoms.current = atoms;
+		}
+		if (itemLaunchStarted.current || isStackedForm || isRepeatMode) return;
+		const visibilityState = store.get(atoms.formVisibility);
+		const repeatFieldId = visibilityState.itemForm?.fieldId;
+		const valueAtom = repeatFieldId ? atoms.valueByFieldId[repeatFieldId] : undefined;
+		const items = valueAtom ? store.get(valueAtom) : undefined;
+		const launch = itemLaunchFrom(visibilityState, Array.isArray(items) ? items.length : 0);
+		if (!launch || !valueAtom || !Array.isArray(items)) {
+			// This launch will not open an item form. Scroll the parent to the repeat and drop the marker.
+			const missed = missedItemLaunch(visibilityState, Array.isArray(items) ? items : null);
+			if (missed) {
+				itemLaunchStarted.current = true;
+				console.warn(missed.warning);
+				commitFormVisibility(store.set, atoms, missed.reveal.state, missed.reveal.fieldId);
+			}
+			return;
+		}
+		const visibleLaunch = itemLaunchVisibleChildren(launch, irrelevantFieldPaths);
+		if (launch.fieldIds?.length && visibleLaunch.fieldIds == null) {
+			console.warn(
+				`Every selected field of "${launch.fieldId}" is hidden by the form controller. Opening the whole item.`
+			);
+		}
+		itemLaunchStarted.current = true;
+		store.set(atoms.formVisibility, { ...visibilityState, itemForm: null });
+		// The marker is cleared in this same step. The parent body stays hidden until the drawer enters.
+		contextApi.pushForm({
+			...repeatItemFormProps({
+				fieldId: visibleLaunch.fieldId,
+				index: visibleLaunch.index,
+				values: items[visibleLaunch.index] as Record<string, unknown>,
+				fieldIds: visibleLaunch.fieldIds,
+				getItems: () => (store.get(valueAtom) as Record<string, unknown>[]) ?? [],
+				setItems: (next) => store.set(valueAtom, next)
+			}),
+			// A whole item uses the parent Save card too. The pencil and Add leave this unset.
+			selectedItemForm: true,
+			onMinimize: props.onMinimize
+		});
+	}, [atoms, contextApi, irrelevantFieldPaths, isRepeatMode, isStackedForm, props.onMinimize, store]);
+
+	// Selected-fields mode writes the open item into the parent on entry and on each edit.
+	// Full-mode edits are included by the write on entry, so Back to selected fields then Save keeps them.
+	useEffect(() => {
+		if (itemMode !== 'selected' || !parentAtoms || repeat?.index === undefined) return;
+		const valueAtom = parentAtoms.valueByFieldId[repeat.fieldId];
+		if (!valueAtom) return;
+		const index = repeat.index;
+		const write = () => {
+			const current = store.get(valueAtom);
+			if (!Array.isArray(current)) return;
+			const next = writeItemToParent(current, index, extractAtomValues(store, atoms.valueByFieldId));
+			if (next !== current) store.set(valueAtom, next);
+		};
+		write();
+		const subscription = fieldUpdates$.subscribe(write);
+		return () => subscription.unsubscribe();
+	}, [atoms.valueByFieldId, fieldUpdates$, itemMode, parentAtoms, repeat?.fieldId, repeat?.index, store]);
+
+	const parentFieldOrder = useMemo(
+		() => parentEntry?.itemMeta.contentType.sections?.flatMap((section) => section.fields) ?? [],
+		[parentEntry]
+	);
+	const validationErrors = validationErrorsAlert({
+		localInvalidFieldIds,
+		localSectionOrder: isRepeatMode ? repeatFieldIdList : countFieldIds,
+		localIrrelevant: irrelevantFieldPaths,
+		localParentPath: repeat?.fieldId,
+		includeParent: itemMode === 'selected',
+		openRepeatFieldId: repeat?.fieldId,
+		parent: parentEntry
+			? {
+					invalidFieldIds: parentInvalidFieldIds,
+					sectionOrder: parentFieldOrder,
+					irrelevantFieldPaths: parentEntry.formControllerState?.irrelevantFieldPaths
+				}
+			: undefined
+	});
+	const validationFieldName = (() => {
+		if (!validationErrors) return undefined;
+		const fields =
+			validationErrors.where === 'parent'
+				? parentEntry?.itemMeta.contentType.fields
+				: isRepeatMode
+					? contentType.fields[repeat?.fieldId]?.fields
+					: contentType.fields;
+		return fields?.[validationErrors.fieldId]?.name;
+	})();
+	const useParentSaveCard = itemMode === 'selected' && parentAtoms != null;
+	const showValidationField = () => {
+		if (!validationErrors) return;
+		if (validationErrors.where === 'local') {
+			const reveal = showValidationError({
+				visibility: store.get(atoms.formVisibility),
+				fieldId: validationErrors.fieldId,
+				irrelevantFieldPaths,
+				parentPath: repeat?.fieldId
+			});
+			commitFormVisibility(store.set, atoms, reveal.state, reveal.fieldId);
+			return;
+		}
+		if (!parentAtoms) return;
+		const reveal = revealField(store.get(parentAtoms.formVisibility), validationErrors.fieldId);
+		commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
+		contextApi.popForm();
+	};
+	const saveFromSelectedItem = async (_event: unknown, draft?: boolean) => {
+		if (!parentAtoms || !parentEntry) return;
+		const [itemInvalidFieldIds, parentInvalidNow] = await Promise.all([
+			readInvalidFieldIds(store, atoms.validationByFieldId, irrelevantFieldPaths, repeat?.fieldId),
+			readInvalidFieldIds(store, parentAtoms.validationByFieldId, parentEntry.formControllerState?.irrelevantFieldPaths)
+		]);
+		const plan = selectedItemSavePlan({
+			draft: draft === true,
+			itemVisibility: store.get(atoms.formVisibility),
+			itemInvalidFieldIds,
+			itemFieldOrder: repeatFieldIdList,
+			parentVisibility: store.get(parentAtoms.formVisibility),
+			parentInvalidFieldIds: parentInvalidNow,
+			parentFieldOrder,
+			itemIrrelevant: irrelevantFieldPaths,
+			parentIrrelevant: parentEntry.formControllerState?.irrelevantFieldPaths,
+			itemParentPath: repeat?.fieldId
+		});
+		if (plan.action === 'revealItem') {
+			commitFormVisibility(store.set, atoms, plan.reveal.state, plan.reveal.fieldId);
+			return 'revealed' as const;
+		}
+		if (plan.action === 'blocked') return 'invalid' as const;
+		if (plan.action === 'revealParent') {
+			commitFormVisibility(store.set, parentAtoms, plan.reveal.state, plan.reveal.fieldId);
+			contextApi.popForm();
+			return 'revealed' as const;
+		}
+		// SaveCard already set the root draft flag. Read save at click time.
+		return rootFormActions.save(draft);
+	};
 
 	// If not on a dialog or the prop is not provided, there's no need to handle the close. The form is running in a standalone mode.
 	const handleClose: ButtonProps['onClick'] = (e) => {
@@ -1126,11 +1499,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 	};
 
-	const beginSettledFieldScroll = useCallback((fieldId: string) => {
+	const beginSettledFieldScroll = useCallback((fieldId: string, focus: boolean) => {
 		cancelFieldScrollRef.current?.();
 		const root = containerRef.current;
 		if (!root) return;
-		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId);
+		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId, { focus });
 	}, []);
 
 	// Monitor when sentinel element crosses the threshold
@@ -1158,32 +1531,93 @@ function FormOrchestrator(props: FormsEngineProps) {
 		};
 	}, [mainContent]);
 
-	// Scroll to the field requested via the `fieldToScroll` prop, once form body layout settles
-	// (lazy controls, RTEs, images can still grow after first paint).
+	const pendingScrollFieldId = useAtomValue(atoms.pendingScrollFieldId);
+	const pendingScrollFocus = useAtomValue(atoms.pendingScrollFocus);
+	// True between starting a scroll and the effect re-running because that start cleared
+	// `pendingScrollFieldId`. That re-run has no target and must leave the observer in place.
+	// A later run with no target (the scope changed and the field is gone) cancels it.
+	const retainSettledScrollRef = useRef(false);
+	// Set immediately before clearing pendingScrollFieldId, so the follow-up run does not
+	// scroll to fieldToScroll and take the reveal's place.
+	const clearingPendingRef = useRef(false);
+	// fieldToScroll already scrolled. A later visibility change must not scroll it again.
+	const lastFieldToScrollRef = useRef<string | null>(null);
+	const cancelSettledScroll = useCallback(() => {
+		cancelFieldScrollRef.current?.();
+		cancelFieldScrollRef.current = null;
+		pendingFieldScrollRef.current = null;
+	}, []);
+	// Scroll to a requested field once form body layout settles (lazy controls, RTEs, images).
+	// `fieldToScroll` is a prop and does not move focus. `pendingScrollFieldId` is a reveal,
+	// or the launch fallback scroll, which sets pendingScrollFocus false.
 	useEffect(() => {
-		if (!fieldToScroll || !mainContent) return;
-		const cancelSettle = () => {
-			cancelFieldScrollRef.current?.();
-			cancelFieldScrollRef.current = null;
-		};
-		// The field may be inside a collapsed section; it needs to be expanded for the field to be scrolled to.
-		const sectionId = contentTypeSections.find((section) => section.fields.includes(fieldToScroll))?.id;
+		const plan = planSettledFieldScroll({
+			pendingScrollFieldId,
+			fieldToScroll,
+			clearingPending: clearingPendingRef.current,
+			retainSettledScroll: retainSettledScrollRef.current,
+			hasMainContent: Boolean(mainContent),
+			focusPending: pendingScrollFocus,
+			lastFieldToScroll: lastFieldToScrollRef.current
+		});
+		lastFieldToScrollRef.current = plan.rememberFieldToScroll;
+		if (plan.action === 'keep') {
+			clearingPendingRef.current = false;
+			return;
+		}
+		retainSettledScrollRef.current = plan.retainSettledScroll;
+		if (plan.action === 'idle') {
+			if (plan.cancelInFlight) cancelSettledScroll();
+			return;
+		}
+		cancelSettledScroll();
+		const fieldId = plan.fieldId;
+		const focus = Boolean(plan.focus);
+		const sectionId = visibleSections.find((section) => section.fields.includes(fieldId))?.id;
 		const expandedAtom = sectionId ? atoms.expandedStateBySectionId[sectionId] : null;
 		const isExpanding = expandedAtom && !store.get(expandedAtom);
 		if (isExpanding) {
 			store.set(expandedAtom, true);
 			pendingFieldScrollRef.current = {
 				sectionId,
-				start: () => beginSettledFieldScroll(fieldToScroll)
+				start: () => beginSettledFieldScroll(fieldId, focus)
 			};
-			return () => {
-				pendingFieldScrollRef.current = null;
-				cancelSettle();
-			};
+		} else {
+			beginSettledFieldScroll(fieldId, focus);
 		}
-		beginSettledFieldScroll(fieldToScroll);
-		return cancelSettle;
-	}, [fieldToScroll, mainContent, contentTypeSections, atoms.expandedStateBySectionId, store, beginSettledFieldScroll]);
+		if (plan.clearPending) {
+			clearingPendingRef.current = true;
+			store.set(atoms.pendingScrollFieldId, null);
+		}
+	}, [
+		pendingScrollFieldId,
+		pendingScrollFocus,
+		fieldToScroll,
+		mainContent,
+		visibleSections,
+		atoms.expandedStateBySectionId,
+		atoms.pendingScrollFieldId,
+		store,
+		beginSettledFieldScroll,
+		cancelSettledScroll
+	]);
+	useEffect(() => cancelSettledScroll, [cancelSettledScroll]);
+
+	// Hide the parent fields until the item drawer has entered. The layout and drawer stay mounted.
+	const hideParentBody =
+		!isStackedForm &&
+		!isRepeatMode &&
+		parentBodyHiddenForItemLaunch(itemLaunchBlocksParent(visibility, pendingItemLength), itemLaunchEntering);
+	const finishStackedDrawerEnter = useCallback(() => {
+		const paper = containerRef.current?.querySelector(
+			`[data-area-id="stackedFormDrawer"] .${drawerClasses.paper}`
+		) as HTMLDivElement | null;
+		if (paper && !paper.contains(document.activeElement)) {
+			paper.focus();
+		}
+		setDisableStackedFormDrawerAutoFocus(false);
+		setItemLaunchEntering(false);
+	}, []);
 
 	const bodyFragment = (
 		<FormLayout
@@ -1211,7 +1645,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={<FormattedMessage defaultMessage="Miminize" />}>
+								<Tooltip title={<FormattedMessage defaultMessage="Minimize" />}>
 									<IconButton size="small" onClick={props.onMinimize}>
 										<MinimizeIconRounded />
 									</IconButton>
@@ -1243,154 +1677,176 @@ function FormOrchestrator(props: FormsEngineProps) {
 				</Box>
 			}
 			mainContentGrid={
-				<>
-					<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
-						<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
-							{useCollapsedToC ? (
-								<IconButton size="small" onClick={handleOpenDrawerSidebar}>
-									<MenuRounded />
-								</IconButton>
-							) : (
-								tableOfContents
-							)}
-						</StickyBox>
+				hideParentBody ? (
+					<Grid size={12}>
+						<LoadingState
+							title={<FormattedMessage defaultMessage="Please wait" />}
+							subtitle={<FormattedMessage defaultMessage="Gathering content information" />}
+						/>
 					</Grid>
-					<Grid size={useCollapsedToC ? 8.3 : 7} className="space-y" data-area-id="formBody">
-						{affectedPackages && (
-							<Alert
-								severity="warning"
-								variant="outlined"
-								action={
-									<Button
-										color="inherit"
-										size="small"
-										onClick={() => {
-											dispatch(
-												pushDialog({
-													component: createComponentId('ViewPackagesDialog'),
-													props: { item } as ViewPackagesDialogProps
-												})
-											);
-										}}
-									>
-										Review
-									</Button>
-								}
-							>
-								<AlertTitle>
-									<FormattedMessage defaultMessage="Publish Cancellation Warning" />
-								</AlertTitle>
-								<FormattedMessage defaultMessage="The item is part of a publishing package. Editing it will cancel the entire package." />
-							</Alert>
-						)}
-						{lockStatus.lockError && (
-							<Alert severity="error">
-								{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
-							</Alert>
-						)}
-						{formControllerFileMissing && (
-							<Alert severity="warning" variant="outlined">
-								<AlertTitle>
-									<FormattedMessage defaultMessage="Form controller missing" />
-								</AlertTitle>
-								<FormattedMessage defaultMessage="This content type has a client-side form controller enabled, but form-controller.js was not found. The form will open without a custom controller." />
-							</Alert>
-						)}
-						{formControllerLoadFailed && (
-							<Alert severity="warning" variant="outlined">
-								<AlertTitle>
-									<FormattedMessage defaultMessage="Form controller failed to load" />
-								</AlertTitle>
-								<FormattedMessage defaultMessage="This content type has a client-side form controller, but it could not be loaded. Check form-controller.js for syntax or export errors. The form will open without a custom controller." />
-							</Alert>
-						)}
-						{visibleFieldsToRender ? (
-							// Renders the specified set of fields only
-							<Paper sx={{ p: 2 }}>
-								{visibleFieldsToRender.map((field, index) =>
-									renderFieldControl(field, stableFormContext.atoms.valueByFieldId, index === 0, readonly, contentType)
+				) : (
+					<>
+						<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
+							<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
+								{useCollapsedToC ? (
+									<IconButton size="small" onClick={handleOpenDrawerSidebar}>
+										<MenuRounded />
+									</IconButton>
+								) : (
+									tableOfContents
 								)}
-							</Paper>
-						) : (
-							// Renders the full form, all sections
-							contentTypeSections.map((section, sectionIndex) => (
-								<SectionAccordion
-									key={sectionIndex}
-									section={section}
-									slotProps={{
-										transition: {
-											onEntered: () => {
-												const pending = pendingFieldScrollRef.current;
-												if (pending?.sectionId === section.id) {
-													pending.start();
-													pendingFieldScrollRef.current = null;
-												}
-											}
-										}
-									}}
-									renderControl={(fieldId, fieldIndex) =>
+							</StickyBox>
+						</Grid>
+						<Grid size={useCollapsedToC ? 8.3 : 7} className="space-y" data-area-id="formBody">
+							{useCollapsedToC && !openDrawerSidebar && <FieldScopeNotice countFieldIds={countFieldIds} />}
+							{affectedPackages && (
+								<Alert
+									severity="warning"
+									variant="outlined"
+									action={
+										<Button
+											color="inherit"
+											size="small"
+											onClick={() => {
+												dispatch(
+													pushDialog({
+														component: createComponentId('ViewPackagesDialog'),
+														props: { item } as ViewPackagesDialogProps
+													})
+												);
+											}}
+										>
+											Review
+										</Button>
+									}
+								>
+									<AlertTitle>
+										<FormattedMessage defaultMessage="Publish Cancellation Warning" />
+									</AlertTitle>
+									<FormattedMessage defaultMessage="The item is part of a publishing package. Editing it will cancel the entire package." />
+								</Alert>
+							)}
+							{lockStatus.lockError && (
+								<Alert severity="error">
+									{createErrorStatePropsFromApiResponse(lockStatus.lockError, formatMessage).message}
+								</Alert>
+							)}
+							{formControllerFileMissing && (
+								<Alert severity="warning" variant="outlined">
+									<AlertTitle>
+										<FormattedMessage defaultMessage="Form controller missing" />
+									</AlertTitle>
+									<FormattedMessage defaultMessage="This content type has a client-side form controller enabled, but form-controller.js was not found. The form will open without a custom controller." />
+								</Alert>
+							)}
+							{formControllerLoadFailed && (
+								<Alert severity="warning" variant="outlined">
+									<AlertTitle>
+										<FormattedMessage defaultMessage="Form controller failed to load" />
+									</AlertTitle>
+									<FormattedMessage defaultMessage="This content type has a client-side form controller, but it could not be loaded. Check form-controller.js for syntax or export errors. The form will open without a custom controller." />
+								</Alert>
+							)}
+							{isRepeatMode ? (
+								// Repeat-item editor: subfields are not grouped into sections.
+								<Paper sx={{ p: 2 }}>
+									{(repeatFields ?? []).map((field, index) =>
 										renderFieldControl(
-											contentTypeFields[fieldId],
+											field,
 											stableFormContext.atoms.valueByFieldId,
-											sectionIndex === 0 && fieldIndex === 0,
+											index === 0,
 											readonly,
 											contentType
 										)
-									}
-								/>
-							))
-						)}
-						{/* Spacer & back to top */}
-						<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
-					</Grid>
-					<Grid size="grow">
-						<StickyBox className="space-y" sx={{ height: 'auto' }}>
-							{readonly ? (
-								<>
-									<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>
-										<FormattedMessage defaultMessage="Readonly mode" />
-									</Alert>
-									<SecondaryButton
-										fullWidth
-										variant="outlined"
-										onClick={() => updateEditEnablement(true)}
-										loading={enablingEditInProgress}
-									>
-										<FormattedMessage defaultMessage="Edit" />
-									</SecondaryButton>
-								</>
+									)}
+								</Paper>
 							) : (
-								<>
-									<SaveCard
-										isEmbedded={isEmbedded}
-										isStackedForm={isStackedForm}
-										isRepeatMode={isRepeatMode}
-										setSaveAsDraft={setSaveAsDraftAction}
-										invalidForm={invalidForm}
-										onSave={(e, draft) => saveFn(draft)}
+								visibleSections.map((section, sectionIndex) => (
+									<SectionAccordion
+										key={section.id}
+										section={section}
+										slotProps={{
+											transition: {
+												onEntered: () => {
+													const pending = pendingFieldScrollRef.current;
+													if (pending?.sectionId === section.id) {
+														pending.start();
+														pendingFieldScrollRef.current = null;
+													}
+												}
+											}
+										}}
+										renderControl={(fieldId, fieldIndex) =>
+											renderFieldControl(
+												contentTypeFields[fieldId],
+												stableFormContext.atoms.valueByFieldId,
+												sectionIndex === 0 && fieldIndex === 0,
+												readonly,
+												contentType
+											)
+										}
 									/>
-									{!isCreateMode && // There's no locking on create mode
-										(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
-										!(isEmbedded && isStackedForm) && ( // For embedded components, only allow releasing the lock if it's the top form.
-											<SecondaryButton
-												fullWidth
-												variant="outlined"
-												onClick={() => updateEditEnablement(false)}
-												loading={enablingEditInProgress}
-											>
-												<FormattedMessage defaultMessage="Release Lock" />
-											</SecondaryButton>
+								))
+							)}
+							{/* Spacer & back to top */}
+							<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
+						</Grid>
+						<Grid size="grow">
+							<StickyBox className="space-y" sx={{ height: 'auto' }}>
+								{readonly ? (
+									<>
+										<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>
+											<FormattedMessage defaultMessage="Readonly mode" />
+										</Alert>
+										<SecondaryButton
+											fullWidth
+											variant="outlined"
+											onClick={() => updateEditEnablement(true)}
+											loading={enablingEditInProgress}
+										>
+											<FormattedMessage defaultMessage="Edit" />
+										</SecondaryButton>
+									</>
+								) : (
+									<>
+										{validationErrors && (
+											<ValidationErrorsAlert
+												count={validationErrors.count}
+												fieldName={validationFieldName}
+												onShow={showValidationField}
+											/>
 										)}
-								</>
-							)}
-							{handleClose && (
-								<Button fullWidth variant="outlined" disabled={enablingEditInProgress} onClick={handleClose}>
-									<FormattedMessage defaultMessage="Close" />
-								</Button>
-							)}
-						</StickyBox>
-					</Grid>
-				</>
+										<SaveCard
+											isEmbedded={useParentSaveCard ? isEmbeddedForm(parentEntry?.props ?? {}) : isEmbedded}
+											isStackedForm={useParentSaveCard ? false : isStackedForm}
+											isRepeatMode={useParentSaveCard ? false : isRepeatMode}
+											atoms={useParentSaveCard ? parentAtoms : undefined}
+											setSaveAsDraft={useParentSaveCard ? rootFormActions.setSaveAsDraft : setSaveAsDraftAction}
+											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
+										/>
+										{!isCreateMode && // There's no locking on create mode
+											(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
+											!(isEmbedded && isStackedForm) && ( // For embedded components, only allow releasing the lock if it's the top form.
+												<SecondaryButton
+													fullWidth
+													variant="outlined"
+													onClick={() => updateEditEnablement(false)}
+													loading={enablingEditInProgress}
+												>
+													<FormattedMessage defaultMessage="Release Lock" />
+												</SecondaryButton>
+											)}
+									</>
+								)}
+								{handleClose && (
+									<Button fullWidth variant="outlined" disabled={enablingEditInProgress} onClick={handleClose}>
+										<FormattedMessage defaultMessage="Close" />
+									</Button>
+								)}
+							</StickyBox>
+						</Grid>
+					</>
+				)
 			}
 		>
 			{/* region Stacked Form Drawer */}
@@ -1408,6 +1864,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 					disableAutoFocus={disableStackedFormDrawerAutoFocus}
 					onTransitionExited={() => {
 						setDisableStackedFormDrawerAutoFocus(true);
+						setItemLaunchEntering(false);
 					}}
 					onTransitionEnd={
 						// onTransitionEnd keeps triggering after the Drawer transition has finished on certain interactions (e.g. when hovering buttons)
@@ -1416,16 +1873,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 							? (e) => {
 									// Make sure it is the drawer paper that finished transitioning before considering the transition complete.
 									if ((e.target as HTMLElement).getAttribute('data-area-id') !== 'stackedFormDrawerPaper') return;
-									const paper = containerRef.current.querySelector(
-										`[data-area-id="stackedFormDrawer"] .${drawerClasses.paper}`
-									) as HTMLDivElement;
-									// TODO: Could paper ever be null here?
-									// Check that the focus was moved inside the paper by the autoFocus prop in the control.
-									// If focus is not on the paper, move it to it.
-									if (!paper.contains(document.activeElement)) {
-										paper.focus();
-									}
-									setDisableStackedFormDrawerAutoFocus(false);
+									finishStackedDrawerEnter();
 								}
 							: undefined
 					}
@@ -1434,7 +1882,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 						position: 'absolute',
 						[`& > .${paperClasses.root}`]: {
 							top: 0,
-							width: 'calc(var(--container-width) - 100px)',
+							width: stackSummary.fullWidth ? '100%' : 'calc(var(--container-width) - 100px)',
 							height: isDialog ? `var(--container-height)` : '100vh',
 							position: 'absolute'
 						}
@@ -1454,6 +1902,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 							stackTransitionEnded={!disableStackedFormDrawerAutoFocus}
 							isDialog={isDialog}
 							onClose={handleCloseDrawerForm}
+							onCommittedClose={() => popTopStackedForm(false)}
 						/>
 					)}
 				</Drawer>

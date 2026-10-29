@@ -75,8 +75,12 @@ export const checkboxGroupDescriptor: DescriptorContentType = {
 			id: 'minSize',
 			type: 'int',
 			name: defineMessage({ defaultMessage: 'Minimum Selected' }),
+			description: defineMessage({ defaultMessage: 'Enter 0 or leave blank for no minimum.' }),
 			defaultValue: undefined,
-			validations: immutableEmptyObject
+			// See utils/countLimits.ts.
+			validations: {
+				itemCount: createValidation('itemCount', { role: 'min' })
+			}
 		}
 	},
 	metadata: {

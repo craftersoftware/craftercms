@@ -43,7 +43,7 @@ import ReorderRoundedIcon from '@mui/icons-material/ReorderRounded';
 import GridViewIcon from '@mui/icons-material/GridOnRounded';
 import { getStoredBrowseDialogViewMode, setStoredBrowseDialogViewMode } from '../../utils/state';
 import useActiveUser from '../../hooks/useActiveUser';
-import { viewModes } from '../BrowseFilesDialog';
+import { MEDIA_CARD_GRID_TEMPLATE_COLUMNS, viewModes } from '../BrowseFilesDialog';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import BrowseFilesDialogContainerSkeleton from '../BrowseFilesDialog/BrowseFilesDialogContainerSkeleton';
@@ -309,7 +309,7 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 										sx={[
 											{
 												display: 'grid',
-												gridTemplateColumns: 'repeat(auto-fit, minmax(200px, max-content))',
+												gridTemplateColumns: MEDIA_CARD_GRID_TEMPLATE_COLUMNS,
 												gridGap: '16px',
 												padding: 'initial'
 											},

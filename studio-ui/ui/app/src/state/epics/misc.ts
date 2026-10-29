@@ -29,6 +29,7 @@ import {
 import { createFile, fetchContentItem } from '../../services/content';
 import { reloadContentItem } from '../actions/content';
 import { blockUI, showEditItemSuccessNotification, unblockUI } from '../actions/system';
+import { saveSuccessFollowUps } from '../../utils/contentFormLaunch';
 import { CrafterCMSEpic } from '../store';
 import { translations } from '../../components/ItemActionsMenu/translations';
 import { getFileNameFromPath, getParentPath } from '../../utils/path';
@@ -54,13 +55,11 @@ const epics = [
 							path,
 							authoringBase: state.env.authoringBase,
 							changeTemplate: newContentTypeId,
-							onSaveSuccess: () =>
+							onSaveSuccess: ({ draft }) =>
 								store.dispatch(
-									batchActions([
-										// onSaveSuccess no longer gets the action. By sending `saveAndClose` we ensure that the `item edited` snack shows up.
-										showEditItemSuccessNotification({ action: 'saveAndClose' }),
-										reloadContentItem({ path })
-									])
+									batchActions(
+										saveSuccessFollowUps(draft, showEditItemSuccessNotification(), [reloadContentItem({ path })])
+									)
 								)
 						})
 					);

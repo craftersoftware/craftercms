@@ -20,6 +20,7 @@ import Jabber from 'jabber';
 import LookupTable from '../models/LookupTable';
 import { generatePlaceholderImageDataUrl } from './content';
 import { ensureSingleSlash, isEmpty, toColor } from './string';
+import { getRepeatMinimum } from './countLimits';
 import { darken } from '@mui/material/styles';
 import type { Theme } from '@mui/material';
 import type { ObjectTypeOption } from '../components/ContentTypeFilter/ContentTypesFilter';
@@ -124,7 +125,22 @@ export function getFieldsByType(contentType: ContentType, fieldType): ContentTyp
 export function getDefaultValue(field: ContentTypeField): string | number | boolean | any[] {
 	if (field.defaultValue) {
 		return field.defaultValue;
-	} else if (field.validations.required?.value) {
+	}
+	// Prefill to minCount.value (the validation object is not the count). See utils/countLimits.ts.
+	if (field.type === 'repeat') {
+		const minimum = getRepeatMinimum(field.validations.minCount?.value);
+		if (minimum <= 0 || !field.fields) {
+			return [];
+		}
+		return Array.from({ length: minimum }, () => {
+			const item = {};
+			for (const subFieldId in field.fields) {
+				item[subFieldId] = getDefaultValue(field.fields[subFieldId]);
+			}
+			return item;
+		});
+	}
+	if (field.validations.required?.value) {
 		switch (field.type as BuiltInControlType) {
 			case 'image-picker': {
 				const width = field.validations.width?.value ?? field.validations.minWidth?.value ?? 150;
@@ -158,19 +174,6 @@ export function getDefaultValue(field: ContentTypeField): string | number | bool
 			}
 			case 'date-time': {
 				return new Date().toISOString();
-			}
-			case 'repeat': {
-				const repeat = [];
-				if (field.validations.minCount && field.fields) {
-					new Array(field.validations.minCount).fill(null).forEach(() => {
-						const item = {};
-						for (const subFieldId in field.fields) {
-							item[subFieldId] = getDefaultValue(field.fields[subFieldId]);
-						}
-						repeat.push(item);
-					});
-				}
-				return repeat;
 			}
 			case 'node-selector':
 				// TODO: CHECK MIN/MAX COUNT
@@ -263,8 +266,6 @@ export function createConfigPathFromTypeId(contentTypeId: string): string {
 
 export const systemValidationsNames = [
 	'itemManager',
-	'minSize',
-	'maxSize',
 	'maxlength',
 	'readonly',
 	'width',
@@ -284,9 +285,8 @@ export const systemValidationsNames = [
 	'fileBrowseRepo'
 ];
 
+// Item-count storage (minOccurs/maxOccurs, minSize/maxSize, checkbox minSize) is mapped in utils/countLimits.ts.
 export const systemValidationsKeysMap = {
-	minSize: 'minCount',
-	maxSize: 'maxCount',
 	maxlength: 'maxLength',
 	contentTypes: 'allowedContentTypes',
 	tags: 'allowedContentTypeTags',

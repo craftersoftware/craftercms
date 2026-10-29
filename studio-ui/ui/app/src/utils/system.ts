@@ -31,6 +31,7 @@ import { DialogStackItem } from '../models';
 import type { ConfirmDialogProps } from '../components/ConfirmDialog';
 import type { ErrorDialogProps } from '../components/ErrorDialog';
 import { getPathFromPreviewURL, getPreviewURLFromPath, isPagePath } from './path';
+import { formsEnginePropsFromLaunch } from './contentFormLaunch';
 
 export type SystemLinkId =
 	| 'preview'
@@ -118,49 +119,51 @@ export interface ShowContentFormProps {
 	onSaveSuccess?(result?: { path?: string }): any;
 }
 
+/**
+ * Chooses the legacy dialog or Forms Engine 2.
+ *
+ * When #9213 removes the legacy engine, `showContentFormAction` should call
+ * {@link formsEnginePropsFromLaunch} the way this function does. That PR's
+ * `ShowContentFormProps` still needs `index` and the save-result `draft` / `action`
+ * fields. Drop its hardcoded `'saveAndClose'` and `fieldToScroll: selectedFields[0]`.
+ */
 export function showContentFormAction(props: ShowContentFormProps) {
 	return pushDialog({
-		component: createComponentId('FormsEngineDialog'),
-		allowFullScreen: true,
-		allowMinimize: true,
-		props: {
-			formProps: {
-				...(props.isNewContent
-					? { create: { path: props.path, contentTypeId: props.contentTypeId } }
-					: props.isEmbedded || Boolean(props.modelId)
-						? { update: { path: props.path, modelId: props.modelId } }
-						: { update: { path: props.path, changeTypeId: props.changeTemplate } }),
-				readonly: props.readonly ?? false,
-				fieldToScroll: props.selectedFields?.[0] ?? undefined,
-				onSave(result) {
-					if (isPreviewAppUrl()) {
-						const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
-						const previewURL = params.get('page');
-						if (
-							previewURL &&
-							result.path &&
-							isPagePath(props.path) &&
-							getPathFromPreviewURL(previewURL) === props.path &&
-							props.path !== result.path
-						) {
-							// oldProps.path is a page and the same as the preview page path, but the new path is different,
-							// which means there was a rename of the page currently being previewed. Then we need to update the
-							// preview URL to reflect the new page path.
-							window.location.href = getSystemLink({
-								page: getPreviewURLFromPath(result.path),
-								systemLinkId: 'preview',
-								site: props.site,
-								authoringBase: props.authoringBase
-							});
-						} else {
-							getHostToGuestBus().next(reloadRequest());
+				component: createComponentId('FormsEngineDialog'),
+				allowFullScreen: true,
+				allowMinimize: true,
+				props: {
+					formProps: {
+						...formsEnginePropsFromLaunch(props),
+						onSave(result) {
+							if (isPreviewAppUrl()) {
+								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
+								const previewURL = params.get('page');
+								if (
+									previewURL &&
+									result.path &&
+									isPagePath(props.path) &&
+									getPathFromPreviewURL(previewURL) === props.path &&
+									props.path !== result.path
+								) {
+									// oldProps.path is a page and the same as the preview page path, but the new path is different,
+									// which means there was a rename of the page currently being previewed. Then we need to update the
+									// preview URL to reflect the new page path.
+									window.location.href = getSystemLink({
+										page: getPreviewURLFromPath(result.path),
+										systemLinkId: 'preview',
+										site: props.site,
+										authoringBase: props.authoringBase
+									});
+								} else {
+									getHostToGuestBus().next(reloadRequest());
+								}
+							}
+							props.onSaveSuccess?.(result);
 						}
-					}
-					props.onSaveSuccess?.(result);
+					} satisfies FormsEngineProps
 				}
-			} as FormsEngineProps
-		}
-	});
+			});
 }
 
 export function createUseContextHook<T>(name: string, context: Context<T>): () => T;

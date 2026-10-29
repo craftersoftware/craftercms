@@ -24,18 +24,23 @@ import {
 	ItemContext,
 	ItemMetaContext,
 	RenamedPathContext,
-	StableFormContext
+	StableFormContext,
+	StableGlobalContext
 } from './formsEngineContext';
 import {
+	commitFormVisibility,
 	composePathForType,
 	createObjectWithSystemProps,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
-	getValidationAtomsExcludingIrrelevant,
+	readInvalidFieldIds,
 	showAlert
 } from './formUtils';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
+import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
+import { applySaveGate, childFields, repositorySaveFollowUp, saveAsDraftFlag } from './formVisibility';
+import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
 import {
@@ -51,14 +56,14 @@ import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import ContentType, { ContentTypeField } from '../../../models/ContentType';
+import ContentType from '../../../models/ContentType';
 import { cancelPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
-import { atom, PrimitiveAtom, useAtom, useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
+import { useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
 import { showSystemNotification } from '../../../state/actions/system';
 import {
 	AffectedPluginControlField,
@@ -74,8 +79,6 @@ export interface UseSaveFormProps {
 	isEmbedded: boolean;
 	/** True when this form was opened via pushForm on top of another form. */
 	isStackedForm?: boolean;
-	/** Repeat stacked forms: sub-fields of the repeat group (same set as bootstrap). */
-	fieldsToRender?: ContentTypeField[];
 	onBeforeSave?: FormsEngineProps['onSave'];
 	onSave?: FormsEngineProps['onSave'];
 	onClose?(): void;
@@ -85,38 +88,44 @@ export interface UseSaveFormProps {
 const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEngineProps['onSave'] = (onSaveProp) => (args) =>
 	onSaveProp?.(args) ?? Promise.resolve({ close: false });
 
+/** What `save` tells the Save card. A plugin or policy block returns void instead. */
+export type SaveFormResult = 'revealed' | 'invalid' | 'saved';
+
 export function useSaveForm(props: UseSaveFormProps) {
 	const jotai = useJotaiStore();
 	const store = useReduxStore<GlobalState>();
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const siteId = useActiveSiteId();
-	const {
-		isEmbedded,
-		isStackedForm = false,
-		isRepeatMode,
-		isCreateMode,
-		onClose,
-		onMinimize,
-		createPath,
-		fieldsToRender
-	} = props;
+	const { isEmbedded, isStackedForm = false, isRepeatMode, isCreateMode, onClose, onMinimize, createPath } = props;
 	const { id, contentType, contentObject, path: itemPath } = useContext(ItemMetaContext);
 	const isPage = contentType.type === 'page';
 	const stableFormContext = useContext(StableFormContext);
+	const { formsStackData } = useContext(StableGlobalContext);
 	const { affectedPackages } = useAtomValue(stableFormContext.atoms.lockResult);
 	const formContextApi = useContext(FormsEngineFormContextApi);
 	const setIsSubmitting = useSetAtom(stableFormContext.atoms.isSubmitting);
-	const closeAfterSave = useAtomValue(stableFormContext.atoms.closeAfterSave);
-	const minimizeAfterSave = useAtomValue(stableFormContext.atoms.minimizeAfterSave);
-	const [versionComment, setVersionComment] = useAtom(stableFormContext.atoms.versionComment);
+	const setVersionComment = useSetAtom(stableFormContext.atoms.versionComment);
 	const setHasPendingChanges = useSetAtom(stableFormContext.atoms.hasPendingChanges);
 	const onSave = wrapOnSaveProp(props.onSave);
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
 	const item = useContext(ItemContext);
-	return async (draft?: boolean) => {
-		// Get before the first await so a second call cannot re-enter preload or onBeforeSave.
+	const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
+	const readCurrentValidity = async () => {
+		// Out-of-scope fields stay in this list. Only controller-irrelevant fields are skipped.
+		const invalidFieldIds = await readInvalidFieldIds(
+			jotai,
+			stableFormContext.atoms.validationByFieldId,
+			stableFormContext.formControllerState?.irrelevantFieldPaths,
+			repeatFieldId
+		);
+		return { isFormInvalid: invalidFieldIds.length > 0, invalidFieldIds };
+	};
+	const save = async (draft?: boolean): Promise<SaveFormResult | void> => {
+		// Two guards. SaveCard's ref returns before setSaveAsDraft, so an ignored click
+		// cannot flip the draft flag while this read is in flight. isSubmitting is the
+		// write lock: it stays set through preload, onBeforeSave, and the repository write.
 		if (jotai.get(stableFormContext.atoms.isSubmitting)) {
 			return;
 		}
@@ -143,433 +152,495 @@ export function useSaveForm(props: UseSaveFormProps) {
 			});
 		};
 
-		try {
-			const fieldListMessage = (fields: AffectedPluginControlField[]) =>
-				fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
-			const blockSaveForBootstrapPluginFailures = (fields: AffectedPluginControlField[]) => {
-				return showAlert({
-					dispatch,
-					message: formatMessage(
-						{
-							defaultMessage:
-								'Cannot save: one or more control plugins failed to load when the form opened ({fields}). Reload the form and try again. If the problem continues, contact your administrator.'
-						},
-						{ fields: fieldListMessage(fields) }
-					)
-				});
-			};
-			const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
-				const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
-				return showAlert({
-					dispatch,
-					message: formatMessage(
-						{
-							defaultMessage:
-								'Cannot save: one or more control plugins failed to load ({fields}). If the problem continues, contact your administrator.'
-						},
-						{ fields: fieldList }
-					)
-				});
-			};
-			// Bootstrap failures mean values may have been parsed without the plugin valueRetriever.
-			// Do not clear them for an in-place import retry — a successful load would still let
-			// valueSerializer see raw shapes. Require a form reload so bootstrap re-parses correctly.
-			const bootstrapAffectedFields = stableFormContext.affectedPluginControlFields.filter(
-				(field) => field.fromBootstrap
-			);
-			if (bootstrapAffectedFields.length) {
-				setIsSubmitting(false);
-				return blockSaveForBootstrapPluginFailures(bootstrapAffectedFields);
-			}
-			// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
-			stableFormContext.affectedPluginControlFields = [];
-			let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
-			const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
-			let validityStates = await Promise.all(
-				getValidationAtomsExcludingIrrelevant(
-					stableFormContext.atoms.validationByFieldId,
-					stableFormContext.formControllerState?.irrelevantFieldPaths,
-					repeatFieldId
-				).map((validityDataAtom) => jotai.get(validityDataAtom))
-			);
-			// Put system properties in before creating the XML
-			let isFormInvalid = validityStates.some((state) => !state.isValid);
-			let saveAsDraft = draft || isFormInvalid;
-
-			const onSavePromiseHandler = ({ close }: FormSavePromiseResult) => {
-				if (saveAsDraft) {
-					// Show a snack indicating that the item was saved as draft.
-					dispatch(
-						showSystemNotification({
-							options: { variant: 'warning' },
-							message: formatMessage({
-								defaultMessage: 'Draft saved. Required fields left blank may cause errors when previewed or deployed.'
-							})
-						})
-					);
-				}
-
-				flushSync(() => {
+		// Validity first. preloadAndWrite is plugin preload and onBeforeSave, and it runs only for a write.
+		let saveAsDraft = false;
+		const preloadAndWrite = async (nextSaveAsDraft: boolean) => {
+			saveAsDraft = nextSaveAsDraft;
+			// Read at save time. A render snapshot is stale when the parent save runs right after an item edit.
+			const versionComment = jotai.get(stableFormContext.atoms.versionComment);
+			const closeAfterSave = jotai.get(stableFormContext.atoms.closeAfterSave);
+			const minimizeAfterSave = jotai.get(stableFormContext.atoms.minimizeAfterSave);
+			try {
+				const fieldListMessage = (fields: AffectedPluginControlField[]) =>
+					fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
+				const blockSaveForBootstrapPluginFailures = (fields: AffectedPluginControlField[]) => {
+					return showAlert({
+						dispatch,
+						message: formatMessage(
+							{
+								defaultMessage:
+									'Cannot save: one or more control plugins failed to load when the form opened ({fields}). Reload the form and try again. If the problem continues, contact your administrator.'
+							},
+							{ fields: fieldListMessage(fields) }
+						)
+					});
+				};
+				const blockSaveForPluginFailures = (fields: AffectedPluginControlField[]) => {
+					const fieldList = fields.map((field) => `"${field.fieldName}" (${field.fieldId})`).join(', ');
+					return showAlert({
+						dispatch,
+						message: formatMessage(
+							{
+								defaultMessage:
+									'Cannot save: one or more control plugins failed to load ({fields}). If the problem continues, contact your administrator.'
+							},
+							{ fields: fieldList }
+						)
+					});
+				};
+				// Bootstrap failures mean values may have been parsed without the plugin valueRetriever.
+				// Do not clear them for an in-place import retry — a successful load would still let
+				// valueSerializer see raw shapes. Require a form reload so bootstrap re-parses correctly.
+				const bootstrapAffectedFields = stableFormContext.affectedPluginControlFields.filter(
+					(field) => field.fromBootstrap
+				);
+				if (bootstrapAffectedFields.length) {
 					setIsSubmitting(false);
-					setHasPendingChanges(false);
-					// TODO: What would `setValuesCheckpoint` do if called on a repeat group form?
-					!isRepeatMode && formContextApi.setValuesCheckpoint(values);
-				});
-				if (close || closeAfterSave) {
-					onClose?.();
-				} else if (minimizeAfterSave) {
-					setVersionComment('');
-					onMinimize?.();
+					return blockSaveForBootstrapPluginFailures(bootstrapAffectedFields);
 				}
-			};
+				// Prior save-time failures are safe to clear; `controlPluginCache` drops failed entries so retry works.
+				stableFormContext.affectedPluginControlFields = [];
+				let values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
 
-			const contentTypesById = store.getState().contentTypes.byId;
-			// Re-walk current values (incl. embeds added after open) so serializers exist before XML build.
-			// Runs before the repeat early-return so a failed bootstrap preload can retry on save in
-			// repeat stacked forms as well as create/edit/embedded.
-			// Repeat mode: only the repeat item's fields (fieldsToRender). Root/embedded: full content type.
-			const fieldsForPluginPreload = isRepeatMode ? fieldsToRender : contentType.fields;
-			const preloadPluginsOrBlock = async (currentValues: LookupTable<unknown>) => {
-				const pluginPreloadFailures = await preloadControlPluginsForFields(
-					siteId,
-					fieldsForPluginPreload,
-					currentValues,
-					contentTypesById
-				);
-				if (!pluginPreloadFailures.length) {
-					return true;
-				}
-				const affected = collectAffectedPluginControlFields(
-					fieldsForPluginPreload,
-					pluginPreloadFailures,
-					currentValues,
-					contentTypesById
-				);
-				const fields =
-					affected.length > 0
-						? affected
-						: // Defensive: import failed but no field mapped — still block save.
-							pluginPreloadFailures.map((failure) => ({
-								fieldId: failure.plugin.name,
-								fieldName: failure.plugin.name
-							}));
-				stableFormContext.affectedPluginControlFields = fields;
-				blockSaveForPluginFailures(fields);
-				setIsSubmitting(false);
-				return false;
-			};
-			if (!(await preloadPluginsOrBlock(values))) {
-				return;
-			}
+				const onSavePromiseHandler = ({ close }: FormSavePromiseResult) => {
+					if (saveAsDraft) {
+						// Show a snack indicating that the item was saved as draft.
+						dispatch(
+							showSystemNotification({
+								options: { variant: 'warning' },
+								message: formatMessage({
+									id: 'item.savedAsDraft',
+									defaultMessage: 'Draft saved. Required fields left blank may cause errors when previewed or deployed.'
+								})
+							})
+						);
+					}
 
-			// Form controller may veto save after validation / plugin preload, before XML write.
-			// Repeat entries store no controller, so this is a no-op for in-memory repeat commits.
-			const hadBeforeSaveHook = Boolean(stableFormContext.formControllerState?.controller?.onBeforeSave);
-			const beforeSave = await runFormControllerBeforeSave(stableFormContext, dispatch, formatMessage);
-			if (!beforeSave.allowed) {
-				setIsSubmitting(false);
-				if (beforeSave.message) {
-					dispatch(
-						showSystemNotification({
-							message: beforeSave.message,
-							options: { variant: 'error' }
-						})
+					flushSync(() => {
+						setIsSubmitting(false);
+						setHasPendingChanges(false);
+						// TODO: What would `setValuesCheckpoint` do if called on a repeat group form?
+						!isRepeatMode && formContextApi.setValuesCheckpoint(values);
+					});
+					// Selected-fields edits that match this save are already in the parent.
+					// An edit made after the snapshot keeps its pending flag. A full-mode or pencil item does too.
+					if (!isRepeatMode) {
+						const entries = formsStackData.map((entry) => {
+							const repeat = entry.props?.repeat;
+							return {
+								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
+								changedFieldIds: entry.changedFieldIds,
+								fieldId: repeat?.fieldId,
+								savedItem: repeatItemInValues(values, repeat?.fieldId, repeat?.index),
+								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
+								setCheckpoint(next: Record<string, unknown>) {
+									entry.originalValues = next;
+								},
+								setPending(value: boolean) {
+									if (entry.atoms) jotai.set(entry.atoms.hasPendingChanges, value);
+								}
+							};
+						});
+						clearStackPendingFlags(entries, stableFormContext.changedFieldIds);
+						if (entries.some((entry) => entry.selected && entry.changedFieldIds.size > 0)) {
+							setHasPendingChanges(true);
+						}
+					}
+					const followUp = repositorySaveFollowUp({
+						resultClose: close,
+						closeAfterSave,
+						minimizeAfterSave
+					});
+					if (followUp === 'close') {
+						onClose?.();
+					} else if (followUp === 'minimize') {
+						setVersionComment('');
+						onMinimize?.();
+					}
+				};
+
+				const contentTypesById = store.getState().contentTypes.byId;
+				// Re-walk current values (incl. embeds added after open) so serializers exist before XML build.
+				// Runs before the repeat early-return so a failed bootstrap preload can retry on save in
+				// repeat stacked forms as well as create/edit/embedded.
+				// Repeat mode: that field's children. Root/embedded: the whole content type.
+				const fieldsForPluginPreload = isRepeatMode
+					? childFields(contentType.fields[repeatFieldId])
+					: contentType.fields;
+				const preloadPluginsOrBlock = async (currentValues: LookupTable<unknown>) => {
+					const pluginPreloadFailures = await preloadControlPluginsForFields(
+						siteId,
+						fieldsForPluginPreload,
+						currentValues,
+						contentTypesById
 					);
-				}
-				return;
-			}
-
-			// onBeforeSave may have mutated atoms via setValue (incl. new embeds); refresh before serialize/onSave.
-			if (hadBeforeSaveHook) {
-				values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
+					if (!pluginPreloadFailures.length) {
+						return true;
+					}
+					const affected = collectAffectedPluginControlFields(
+						fieldsForPluginPreload,
+						pluginPreloadFailures,
+						currentValues,
+						contentTypesById
+					);
+					const fields =
+						affected.length > 0
+							? affected
+							: // Defensive: import failed but no field mapped — still block save.
+								pluginPreloadFailures.map((failure) => ({
+									fieldId: failure.plugin.name,
+									fieldName: failure.plugin.name
+								}));
+					stableFormContext.affectedPluginControlFields = fields;
+					blockSaveForPluginFailures(fields);
+					setIsSubmitting(false);
+					return false;
+				};
 				if (!(await preloadPluginsOrBlock(values))) {
 					return;
 				}
-				validityStates = await Promise.all(
-					getValidationAtomsExcludingIrrelevant(
-						stableFormContext.atoms.validationByFieldId,
-						stableFormContext.formControllerState?.irrelevantFieldPaths,
-						repeatFieldId
-					).map((validityDataAtom) => jotai.get(validityDataAtom))
+
+				// A reveal or cannot-proceed already returned, before preload. The controller may still
+				// veto a save that is going to write. Repeat entries store no controller, so this is
+				// a no-op for in-memory repeat commits.
+				const hadBeforeSaveHook = Boolean(stableFormContext.formControllerState?.controller?.onBeforeSave);
+				const beforeSave = await runFormControllerBeforeSave(stableFormContext, dispatch, formatMessage);
+				if (!beforeSave.allowed) {
+					setIsSubmitting(false);
+					if (beforeSave.message) {
+						dispatch(
+							showSystemNotification({
+								message: beforeSave.message,
+								options: { variant: 'error' }
+							})
+						);
+					}
+					return;
+				}
+
+				// onBeforeSave may have mutated atoms via setValue (incl. new embeds); refresh before serialize/onSave.
+				if (hadBeforeSaveHook) {
+					values = extractAtomValues(jotai, stableFormContext.atoms.valueByFieldId);
+					if (!(await preloadPluginsOrBlock(values))) {
+						return;
+					}
+					// Re-read only to refresh the draft flag. Do not reveal or block again.
+					const afterHook = await readCurrentValidity();
+					saveAsDraft = saveAsDraftFlag(draft === true, afterHook.isFormInvalid);
+				}
+
+				// `onBeforeSave` may have changed `file-name`; the render-time snapshot is stale from here on.
+				const currentFileName = jotai.get(stableFormContext.atoms.fileName);
+
+				// Repeat handled here. If true, execution ends inside if statement.
+				if (isRepeatMode) {
+					(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
+						onSavePromiseHandler,
+						showSaveError
+					);
+					return 'saved';
+				}
+
+				// Repository writes report the checkbox action and whether the item was stored as a draft.
+				const repositorySaveArgs = (savedPath: string, dom: Document | Element, xml: string) => ({
+					dom,
+					xml,
+					values,
+					versionComment,
+					path: savedPath,
+					action: contentFormSaveAction({ close: closeAfterSave, minimize: minimizeAfterSave }),
+					draft: saveAsDraft
+				});
+
+				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
+				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
+				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
+				// Embedded handled here. If true, execution ends inside if statement.
+				if (isEmbedded) {
+					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+					if (!isInternalNameValid(values)) {
+						setIsSubmitting(false);
+						return showAlert({
+							dispatch,
+							message: formatMessage(
+								{ defaultMessage: 'You need an {internalName} at a minimum to save content.' },
+								{ internalName: contentType.fields[XmlKeys.internalName].name }
+							)
+						});
+					}
+
+					const dom = fromString(xml);
+
+					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
+					if (isStackedForm) {
+						// Same object the parent will validate. Keep this session's deny-list on it so a
+						// field hidden at bootstrap — or only in create mode — is not re-judged and then
+						// required. Callers pass `values` through; copying it would drop the association.
+						const committed = stableFormContext.formControllerState;
+						if (committed?.controller && committed.irrelevantFieldPaths) {
+							rememberCommittedRelevance(values, committed.controller, committed.irrelevantFieldPaths);
+						}
+						(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
+							onSavePromiseHandler,
+							showSaveError
+						);
+						return 'saved';
+					}
+
+					// Root embedded: merge the component into the parent document and write the parent.
+					// The callback path is that parent, so a component inside a page reports the page path.
+					const path = itemPath;
+					const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
+						const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
+						const saveOrCancel$ = affectedPackages?.length
+							? cancelPackages(siteId, {
+									packageIds: affectedPackages.map((pkg) => pkg.id),
+									comment: cancelPackagesComment
+								}).pipe(switchMap(() => writeService$))
+							: writeService$;
+
+						saveOrCancel$.subscribe({
+							async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
+								try {
+									const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+									const result = ((await onSave?.(repositorySaveArgs(path, dom, xml))) ?? {
+										close: false
+									}) as FormSavePromiseResult;
+									const shouldClose =
+										repositorySaveFollowUp({ resultClose: result.close, closeAfterSave, minimizeAfterSave }) ===
+										'close';
+									if (!shouldClose && isAmended) {
+										triggerReload();
+									}
+									onSavePromiseHandler(result);
+								} catch (error) {
+									showSaveError(error as AjaxError | Error);
+								}
+							},
+							error: showSaveError
+						});
+					};
+
+					if (affectedPackages?.length) {
+						const dialogId = nanoid();
+						dispatch(
+							pushDialog({
+								id: dialogId,
+								component: createComponentId('ViewPackagesDialog'),
+								props: {
+									item,
+									cancelPackagesInitialComment: formatMessage(
+										{ defaultMessage: 'Cancel packages to write on "{path}"' },
+										{ path }
+									),
+									onContinue: (cancelPackagesUpdatedComment) => {
+										saveEmbeddedContent(cancelPackagesUpdatedComment);
+										dispatch(popDialog({ id: dialogId }));
+									},
+									onClose: () => {
+										setIsSubmitting(false);
+										dispatch(popDialog({ id: dialogId }));
+									}
+								}
+							})
+						);
+					} else {
+						saveEmbeddedContent();
+					}
+					return 'saved';
+				}
+				let path: string;
+				let renamePath: string;
+				const isRename = !isCreateMode && currentFileName !== initialFileName;
+				if (isCreateMode) {
+					path = composePathForType(createPath, currentFileName, contentType);
+				} /* is a plain update (page or component) */ else {
+					if (isRename) {
+						const basePath = getBasePath(itemPath, isPage);
+						path = composePathForType(basePath, currentFileName, contentType);
+						renamePath = path;
+					} else {
+						path = itemPath;
+					}
+				}
+
+				const saveActionCallbacks = {
+					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
+						try {
+							const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+							const dom = fromString(xml);
+							const result = ((await onSave?.(repositorySaveArgs(path, dom, xml))) ?? {
+								close: false
+							}) as FormSavePromiseResult;
+							const shouldClose =
+								repositorySaveFollowUp({ resultClose: result.close, closeAfterSave, minimizeAfterSave }) === 'close';
+							if (!shouldClose) {
+								if (isCreateMode) {
+									setSavedCreatePath(path);
+								} else if (isRename) {
+									setRenamedPath(renamePath);
+								} else if (isAmended) {
+									triggerReload();
+								}
+							}
+							onSavePromiseHandler(result);
+						} catch (error) {
+							showSaveError(error as AjaxError | Error);
+						}
+					},
+					error: showSaveError
+				};
+
+				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+				const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
+					jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
+					values
 				);
-				isFormInvalid = validityStates.some((state) => !state.isValid);
-				saveAsDraft = draft || isFormInvalid;
-			}
-
-			// `onBeforeSave` may have changed `file-name`; the render-time snapshot is stale from here on.
-			const currentFileName = jotai.get(stableFormContext.atoms.fileName);
-
-			// Repeat handled here. If true, execution ends inside if statement.
-			if (isRepeatMode) {
-				(onSave?.({ values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
-					onSavePromiseHandler,
-					showSaveError
-				);
-				return;
-			}
-
-			complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-			const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-			const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
-			// Embedded handled here. If true, execution ends inside if statement.
-			if (isEmbedded) {
-				// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
-				if (!isInternalNameValid(values)) {
+				if (!minimumRequirementsFullfilled) {
 					setIsSubmitting(false);
 					return showAlert({
 						dispatch,
 						message: formatMessage(
-							{ defaultMessage: 'You need an {internalName} at a minimum to save content.' },
-							{ internalName: contentType.fields[XmlKeys.internalName].name }
+							{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
+							{
+								fileName: contentType.fields[XmlKeys.fileName].name,
+								internalName: contentType.fields[XmlKeys.internalName].name
+							}
 						)
 					});
 				}
 
-				const dom = fromString(xml);
-
-				// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
-				if (isStackedForm) {
-					// Same object the parent will validate. Keep this session's deny-list on it so a
-					// field hidden at bootstrap — or only in create mode — is not re-judged and then
-					// required. Callers pass `values` through; copying it would drop the association.
-					const committed = stableFormContext.formControllerState;
-					if (committed?.controller && committed.irrelevantFieldPaths) {
-						rememberCommittedRelevance(values, committed.controller, committed.irrelevantFieldPaths);
-					}
-					(onSave?.({ dom, xml, values, versionComment }) as Promise<FormSavePromiseResult>)?.then(
-						onSavePromiseHandler,
-						showSaveError
-					);
-					return;
-				}
-
-				// Root embedded: merge the component into the parent document and write the parent.
-				const path = itemPath;
-				const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
-					const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
+				// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?
+				const saveContent = (cancelPackagesComment: string = '') => {
+					const saveOrMoveService$ = isRename
+						? moveAndUpdateContent(siteId, itemPath, path, xml)
+						: writeContent(siteId, path, xml, { comment: versionComment });
 					const saveOrCancel$ = affectedPackages?.length
 						? cancelPackages(siteId, {
 								packageIds: affectedPackages.map((pkg) => pkg.id),
 								comment: cancelPackagesComment
-							}).pipe(switchMap(() => writeService$))
-						: writeService$;
+							}).pipe(
+								switchMap(() => {
+									return saveOrMoveService$;
+								})
+							)
+						: saveOrMoveService$;
 
-					saveOrCancel$.subscribe({
-						async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
-							try {
-								const isAmended = ajaxResponse.response?.items?.[0]?.amended;
-								const result = (await onSave?.({
-									dom,
-									xml,
-									values,
-									versionComment,
-									path
-								})) as FormSavePromiseResult;
-								const shouldClose = result.close || closeAfterSave;
-								if (!shouldClose && isAmended) {
-									triggerReload();
-								}
-								onSavePromiseHandler(result);
-							} catch (error) {
-								showSaveError(error as AjaxError | Error);
-							}
-						},
-						error: showSaveError
-					});
+					saveOrCancel$.subscribe(saveActionCallbacks);
 				};
 
-				if (affectedPackages?.length) {
-					const dialogId = nanoid();
-					dispatch(
-						pushDialog({
-							id: dialogId,
-							component: createComponentId('ViewPackagesDialog'),
-							props: {
-								item,
-								cancelPackagesInitialComment: formatMessage(
-									{ defaultMessage: 'Cancel packages to write on "{path}"' },
-									{ path }
-								),
-								onContinue: (cancelPackagesUpdatedComment) => {
-									saveEmbeddedContent(cancelPackagesUpdatedComment);
-									dispatch(popDialog({ id: dialogId }));
-								},
-								onClose: () => {
-									setIsSubmitting(false);
-									dispatch(popDialog({ id: dialogId }));
+				// If there are affected packages, show ViewPackagesDialog dialog first, to let user know that packages will be cancelled
+				const checkWorkflow = () => {
+					if (affectedPackages?.length) {
+						const dialogId = nanoid();
+						dispatch(
+							pushDialog({
+								id: dialogId,
+								component: createComponentId('ViewPackagesDialog'),
+								props: {
+									item,
+									cancelPackagesInitialComment: formatMessage(
+										{ defaultMessage: 'Cancel packages to write on "{path}"' },
+										{ path }
+									),
+									onContinue: (cancelPackagesUpdatedComment) => {
+										saveContent(cancelPackagesUpdatedComment);
+										dispatch(popDialog({ id: dialogId }));
+									},
+									onClose: () => {
+										setIsSubmitting(false);
+										dispatch(popDialog({ id: dialogId }));
+									}
 								}
-							}
-						})
-					);
-				} else {
-					saveEmbeddedContent();
-				}
-				return;
-			}
-			let path: string;
-			let renamePath: string;
-			const isRename = !isCreateMode && currentFileName !== initialFileName;
-			if (isCreateMode) {
-				path = composePathForType(createPath, currentFileName, contentType);
-			} /* is a plain update (page or component) */ else {
-				if (isRename) {
-					const basePath = getBasePath(itemPath, isPage);
-					path = composePathForType(basePath, currentFileName, contentType);
-					renamePath = path;
-				} else {
-					path = itemPath;
-				}
-			}
-
-			const saveActionCallbacks = {
-				async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
-					try {
-						const isAmended = ajaxResponse.response?.items?.[0]?.amended;
-						const dom = fromString(xml);
-						const result = (await onSave?.({ dom, xml, values, versionComment, path })) as FormSavePromiseResult;
-						const shouldClose = result.close || closeAfterSave;
-						if (!shouldClose) {
-							if (isCreateMode) {
-								setSavedCreatePath(path);
-							} else if (isRename) {
-								setRenamedPath(renamePath);
-							} else if (isAmended) {
-								triggerReload();
-							}
-						}
-						onSavePromiseHandler(result);
-					} catch (error) {
-						showSaveError(error as AjaxError | Error);
-					}
-				},
-				error: showSaveError
-			};
-
-			// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
-			const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
-				jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
-				values
-			);
-			if (!minimumRequirementsFullfilled) {
-				setIsSubmitting(false);
-				return showAlert({
-					dispatch,
-					message: formatMessage(
-						{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
-						{
-							fileName: contentType.fields[XmlKeys.fileName].name,
-							internalName: contentType.fields[XmlKeys.internalName].name
-						}
-					)
-				});
-			}
-
-			// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?
-			const saveContent = (cancelPackagesComment: string = '') => {
-				const saveOrMoveService$ = isRename
-					? moveAndUpdateContent(siteId, itemPath, path, xml)
-					: writeContent(siteId, path, xml, { comment: versionComment });
-				const saveOrCancel$ = affectedPackages?.length
-					? cancelPackages(siteId, {
-							packageIds: affectedPackages.map((pkg) => pkg.id),
-							comment: cancelPackagesComment
-						}).pipe(
-							switchMap(() => {
-								return saveOrMoveService$;
 							})
-						)
-					: saveOrMoveService$;
+						);
+					} else {
+						saveContent();
+					}
+				};
 
-				saveOrCancel$.subscribe(saveActionCallbacks);
-			};
-
-			// If there are affected packages, show ViewPackagesDialog dialog first, to let user know that packages will be cancelled
-			const checkWorkflow = () => {
-				if (affectedPackages?.length) {
-					const dialogId = nanoid();
-					dispatch(
-						pushDialog({
-							id: dialogId,
-							component: createComponentId('ViewPackagesDialog'),
-							props: {
-								item,
-								cancelPackagesInitialComment: formatMessage(
-									{ defaultMessage: 'Cancel packages to write on "{path}"' },
-									{ path }
-								),
-								onContinue: (cancelPackagesUpdatedComment) => {
-									saveContent(cancelPackagesUpdatedComment);
-									dispatch(popDialog({ id: dialogId }));
-								},
-								onClose: () => {
-									setIsSubmitting(false);
-									dispatch(popDialog({ id: dialogId }));
-								}
+				// Validate site policy, if allowed, proceed to check workflow
+				const dialogId = nanoid();
+				validateActionPolicy(siteId, {
+					type: 'CREATE',
+					target: path,
+					contentMetadata: { contentType: contentType.id }
+				}).subscribe({
+					next({ allowed, modifiedValue }) {
+						if (allowed) {
+							if (modifiedValue) {
+								dispatch(
+									pushConfirmDialog({
+										id: dialogId,
+										props: {
+											body: formatMessage(
+												{
+													defaultMessage:
+														'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
+												},
+												{
+													originalPath: path,
+													path: modifiedValue
+												}
+											),
+											onOk: () => {
+												dispatch(popDialog({ id: dialogId }));
+												checkWorkflow();
+											},
+											onCancel: () => {
+												setIsSubmitting(false);
+												dispatch(popDialog({ id: dialogId }));
+											}
+										}
+									})
+								);
+							} else {
+								checkWorkflow();
 							}
-						})
-					);
-				} else {
-					saveContent();
-				}
-			};
-
-			// Validate site policy, if allowed, proceed to check workflow
-			const dialogId = nanoid();
-			validateActionPolicy(siteId, {
-				type: 'CREATE',
-				target: path,
-				contentMetadata: { contentType: contentType.id }
-			}).subscribe({
-				next({ allowed, modifiedValue }) {
-					if (allowed) {
-						if (modifiedValue) {
+						} else {
+							setIsSubmitting(false);
 							dispatch(
 								pushConfirmDialog({
 									id: dialogId,
 									props: {
-										body: formatMessage(
-											{
-												defaultMessage:
-													'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
-											},
-											{
-												originalPath: path,
-												path: modifiedValue
-											}
-										),
-										onOk: () => {
-											dispatch(popDialog({ id: dialogId }));
-											checkWorkflow();
-										},
-										onCancel: () => {
-											setIsSubmitting(false);
-											dispatch(popDialog({ id: dialogId }));
-										}
+										body: formatMessage({ defaultMessage: 'This content goes against project policies.' }),
+										onOk: () => dispatch(popDialog({ id: dialogId }))
 									}
 								})
 							);
-						} else {
-							checkWorkflow();
 						}
-					} else {
-						setIsSubmitting(false);
-						dispatch(
-							pushConfirmDialog({
-								id: dialogId,
-								props: {
-									body: formatMessage({ defaultMessage: 'This content goes against project policies.' }),
-									onOk: () => dispatch(popDialog({ id: dialogId }))
-								}
-							})
-						);
-					}
+					},
+					error: showSaveError
+				});
+				return 'saved';
+			} catch (error) {
+				showSaveError(error as AjaxError | Error);
+			}
+		};
+		try {
+			const outcome = await applySaveGate({
+				draft: draft === true,
+				visibility: jotai.get(stableFormContext.atoms.formVisibility),
+				sectionOrder: isRepeatMode
+					? childFields(contentType.fields[repeatFieldId]).map((field) => field.id)
+					: (contentType.sections?.flatMap((section) => section.fields) ?? []),
+				irrelevantFieldPaths: stableFormContext.formControllerState?.irrelevantFieldPaths,
+				parentPath: repeatFieldId,
+				readValidity: readCurrentValidity,
+				onReveal(reveal) {
+					commitFormVisibility(jotai.set, stableFormContext.atoms, reveal.state, reveal.fieldId);
 				},
-				error: showSaveError
+				preloadAndWrite
 			});
+			if (outcome === 'revealed' || outcome === 'invalid') setIsSubmitting(false);
+			return outcome;
 		} catch (error) {
-			showSaveError(error as AjaxError | Error);
+			setIsSubmitting(false);
+			throw error;
 		}
 	};
+
+	return { save };
 }
 
 function complementValuesWithSystemProps(
