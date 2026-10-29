@@ -44,7 +44,7 @@ export function fetchAll(options?: Partial<PaginationOptions> & { keyword?: stri
 	);
 }
 
-export function fetchUsersFromGroup(id: number, options?: PaginationOptions): Observable<PagedArray<User>> {
+export function fetchUsersFromGroup(id: number, options?: Partial<PaginationOptions>): Observable<PagedArray<User>> {
 	const qs = toQueryString({
 		...paginationDefault,
 		...options
