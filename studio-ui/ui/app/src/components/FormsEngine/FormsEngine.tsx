@@ -1524,10 +1524,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 		);
 		intersectionObserver.observe(sentinel);
 
-		// Re-check the same threshold when section content resizes (e.g. collapsing a SectionAccordion).
-		// The intersection observer alone won't fire for that, so collapseHeader could otherwise get stuck.
+		// Re-check the same threshold when section content or the scroll root resizes (e.g. collapsing a
+		// SectionAccordion, or the dialog/viewport changing mainContent.clientHeight). The intersection
+		// observer alone won't fire for that, so collapseHeader could otherwise get stuck.
 		const resizeObserver = new ResizeObserver(checkThreshold);
-		resizeObserver.observe(sentinel.nextElementSibling ?? mainContent);
+		const contentContainer = sentinel.nextElementSibling;
+		if (contentContainer) resizeObserver.observe(contentContainer);
+		resizeObserver.observe(mainContent);
 
 		return () => {
 			intersectionObserver.disconnect();
