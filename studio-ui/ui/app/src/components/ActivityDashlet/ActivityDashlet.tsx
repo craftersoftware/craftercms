@@ -66,7 +66,6 @@ import {
 import { getSystemLink } from '../../utils/system';
 import { useDispatch } from 'react-redux';
 import { changeCurrentUrl } from '../../state/actions/preview';
-import PackageDetailsDialog from '../PackageDetailsDialog/PackageDetailsDialog';
 import {
 	contentEvent,
 	deleteContentEvent,
