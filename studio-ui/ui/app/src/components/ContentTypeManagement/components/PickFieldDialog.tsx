@@ -363,7 +363,7 @@ export function SelectField(props: {
 /**
  * Sorts an array of fields alphabetically by their name property, either in ascending or descending order.
  */
-function sortFieldsByName<T extends { name: string }>(fields: T[], order: 'ascending' | 'descending'): T[] {
+function sortFieldsByName(fields: PartialContentType[], order: 'ascending' | 'descending'): PartialContentType[] {
 	return [...fields].sort((a, b) => {
 		const aValue = a.name.toLowerCase();
 		const bValue = b.name.toLowerCase();
