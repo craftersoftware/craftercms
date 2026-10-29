@@ -326,7 +326,7 @@ export function SelectField(props: {
 			</Box>
 			<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 1, mb: 2 }}>
 				{filteredFields.map((field, index) => (
-					<ListItemButton key={index} onClick={() => setSelectedField(field)} selected={selectedField?.id === field.id}>
+					<ListItemButton key={field.id} onClick={() => setSelectedField(field)} selected={selectedField?.id === field.id}>
 						<ListItemIcon>
 							{configLookup?.[field.id]?.icon?.id ? (
 								<SystemIcon icon={configLookup[field.id].icon} />
