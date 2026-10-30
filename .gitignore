@@ -216,8 +216,6 @@ studio-ui/ui/app/public/*.umd.js*
 studio-ui/ui/app/public/shared-worker.js*
 studio-ui/ui/guest/src/jquery/
 studio-ui/static-assets/components/cstudio-admin/mods/encrypt-tool.js
-studio-ui/static-assets/components/cstudio-admin/mods/content-type-propsheet/contentTypes.js
-studio-ui/static-assets/components/cstudio-admin/mods/content-type-propsheet/content-path-input.js
 studio-ui/static-assets/components/cstudio-admin/mods/plugin-management.js
 studio-ui/static-assets/images/blueprints/
 studio-ui/static-assets/libs/ace/

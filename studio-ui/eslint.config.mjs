@@ -49,7 +49,6 @@ export default [{
     'static-assets/components/cstudio-common/amplify-core.js',
     'static-assets/components/cstudio-common/heatmap-support.js',
     'static-assets/components/cstudio-preview-tools/mods/annotate',
-    'static-assets/components/cstudio-admin/mods/encrypt-tool.js',
     'static-assets/libs/*',
     'static-assets/js/*',
     'static-assets/modules/*',
