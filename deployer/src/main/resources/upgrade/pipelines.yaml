@@ -124,3 +124,26 @@ pipelines:
                             -   url: '.*/api/2/plugin/script/reload.json.*'
                         properties:
                             -   url: ${target.studioUrl}/api/2/plugin/${target.siteName}/script/reload.json?token=${target.studioManagementToken}
+            -   currentVersion: 5.0.0.0
+                nextVersion: 5.0.0.1
+                operations:
+                    -   type: addProcessorUpgrader
+                        processor: s3ContentStoreManifestProcessor
+                        beforeProcessor: s3DeploymentEventsProcessor
+                        requireBeforeProcessor: true
+                        skipIfPresent: true
+                        copyProperties:
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: region
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: accessKey
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: secretKey
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: endpoint
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: pathStyleAccess
+                            -   fromProcessor: s3DeploymentEventsProcessor
+                                property: url
+                            -   fromProcessor: s3SyncProcessor
+                                property: ignoreBlobs
