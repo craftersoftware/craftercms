@@ -67,6 +67,7 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 			square
 			disableGutters
 			elevation={0}
+			slots={{ heading: 'h2' }}
 			expanded={open}
 			onChange={(e, isExpanded) => setOpen(isExpanded)}
 			sx={{

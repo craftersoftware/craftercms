@@ -28,6 +28,8 @@ import {
 } from '../../services/auth';
 import { isBlank, unescapeHTML } from '../../utils/string';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import LogInForm from '../LoginForm/LoginForm';
 import MenuItem from '@mui/material/MenuItem';
 import { fetchProductLanguages } from '../../services/configuration';
@@ -51,6 +53,7 @@ import useTimer from '../../hooks/useTimer';
 import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SystemLang {
 	id: string;
@@ -601,6 +604,12 @@ export function LoginViewContainer(props: LoginViewProps) {
 		}
 	}, [language]);
 
+	// The message already names the product. Do not prefix "CrafterCMS - " again.
+	const loginTitle = formatMessage(translations.loginDialogTitle);
+	useEffect(() => {
+		document.title = loginTitle;
+	}, [loginTitle]);
+
 	return (
 		<>
 			<Dialog
@@ -628,21 +637,27 @@ export function LoginViewContainer(props: LoginViewProps) {
 				}}
 				aria-labelledby="loginDialog"
 			>
-				<DialogTitle id="loginDialog">
-					<CrafterCMSLogo
-						sxs={{
-							root: {
-								maxWidth: 250,
-								display: 'block',
-								margin: (theme) => `${theme.spacing(2)} auto ${theme.spacing(1)}`
-							}
-						}}
-						width="auto"
-						alt={formatMessage(translations.loginDialogTitle)}
-					/>
-				</DialogTitle>
-				<CurrentView {...currentViewProps} />
-				<LanguageDropDown language={language} languages={languages} onChange={setLanguage} />
+				<SkipToMainContent />
+				<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
+					<DialogTitle id="loginDialog" component="h1">
+						<Box component="span" sx={visuallyHidden}>
+							{formatMessage(translations.loginDialogTitle)}
+						</Box>
+						<CrafterCMSLogo
+							sxs={{
+								root: {
+									maxWidth: 250,
+									display: 'block',
+									margin: (theme) => `${theme.spacing(2)} auto ${theme.spacing(1)}`
+								}
+							}}
+							width="auto"
+							alt=""
+						/>
+					</DialogTitle>
+					<CurrentView {...currentViewProps} />
+					<LanguageDropDown language={language} languages={languages} onChange={setLanguage} />
+				</Box>
 			</Dialog>
 			<Snackbar
 				open={snack.open}

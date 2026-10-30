@@ -249,9 +249,11 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 
 	return (
 		<>
-			<Typography variant="caption" style={{ padding: '0 16px 5px' }} component="p">
-				{title}
-			</Typography>
+			<li role="presentation">
+				<Typography component="h2" variant="subtitle2" sx={{ px: 2, pt: 1, pb: 0.5, m: 0 }}>
+					{title}
+				</Typography>
+			</li>
 			<MenuItem onClick={() => openDialog('form')}>{formatMessage(translations.openComponentForm)}</MenuItem>
 			<MenuItem onClick={() => openDialog('template')}>{formatMessage(translations.editTemplate)}</MenuItem>
 			{/* TODO: should use type instead of content type id string inspection */}

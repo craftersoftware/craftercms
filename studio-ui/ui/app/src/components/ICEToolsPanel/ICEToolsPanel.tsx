@@ -26,7 +26,7 @@ import { renderWidgets } from '../Widget/renderWidgets';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import EmptyState from '../EmptyState/EmptyState';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { nnou } from '../../utils/object';
 import { isItemLockedForMe } from '../../utils/content';
 import { useCurrentPreviewItem } from '../../hooks/useCurrentPreviewItem';
@@ -37,6 +37,7 @@ import { blockPreviewIframePointerEvents } from '../Preview/utils';
 
 export function ICEToolsPanel() {
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const uiConfig = useSiteUIConfig();
 	const { icePanel, windowSize, guest } = usePreviewState();
 	const { id: site, uuid } = useActiveSite();
@@ -65,6 +66,8 @@ export function ICEToolsPanel() {
 			open={isOpen}
 			belowToolbar
 			anchor="right"
+			landmark="complementary"
+			landmarkLabel={formatMessage({ id: 'iceToolsPanel.landmark', defaultMessage: 'Editing tools' })}
 			width={width}
 			maxWidth={windowSize}
 			onWidthChange={onWidthChange}
@@ -95,6 +98,7 @@ export function ICEToolsPanel() {
 					) : (
 						<EmptyState
 							title={<FormattedMessage id="icePanel.noWidgetsMessage" defaultMessage="No tools have been configured" />}
+							titleComponent="h2"
 						/>
 					)}
 				</ConditionalLoadingState>

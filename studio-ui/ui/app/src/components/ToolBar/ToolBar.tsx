@@ -17,6 +17,7 @@
 import React, { Suspense, useEffect } from 'react';
 import ViewToolbar from '../ViewToolbar';
 import LauncherOpenerButton from '../LauncherOpenerButton';
+import DocumentationLink from '../DocumentationLink';
 import { closeToolsPanel, initToolbarConfig, openToolsPanel } from '../../state/actions/preview';
 import { useDispatch } from 'react-redux';
 import { defineMessages, useIntl } from 'react-intl';
@@ -64,6 +65,8 @@ export function ToolBar() {
 
 	return (
 		<ViewToolbar
+			component="nav"
+			ariaLabel={formatMessage({ id: 'preview.toolbarLabel', defaultMessage: 'Preview toolbar' })}
 			sxs={{
 				appBar: {
 					borderBottom: '5px',
@@ -72,7 +75,7 @@ export function ToolBar() {
 			}}
 		>
 			<section>
-				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
+				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)} describeChild>
 					<LogoAndMenuBundleButton
 						aria-label={formatMessage(translations.openToolsPanel)}
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
@@ -91,6 +94,7 @@ export function ToolBar() {
 				<Suspense fallback="">
 					{renderWidgets(toolbar.rightSection?.widgets, { userRoles, overrideProps: { site, item } })}
 				</Suspense>
+				<DocumentationLink />
 				<LauncherOpenerButton />
 			</section>
 		</ViewToolbar>

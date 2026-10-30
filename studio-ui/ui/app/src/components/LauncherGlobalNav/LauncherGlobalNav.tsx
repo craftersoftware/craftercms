@@ -82,13 +82,6 @@ function LauncherGlobalNav(props: LauncherGlobalNavProps) {
 					sxs={props.tileSxs}
 				/>
 			))}
-			<LauncherTile
-				title={formatMessage(messages.docs)}
-				icon={{ id: 'craftercms.icons.Docs' }}
-				link={`https://craftercms.com/docs`}
-				target="_blank"
-				sxs={props.tileSxs}
-			/>
 		</LauncherSectionUI>
 	);
 }

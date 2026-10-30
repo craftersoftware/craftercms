@@ -582,6 +582,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
+	const hideConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.hideConfigurationFiles',
+		defaultMessage: 'Hide configuration files'
+	});
+	const showConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.showConfigurationFiles',
+		defaultMessage: 'Show configuration files'
+	});
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -627,6 +635,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						height: '100%'
 					}}
 					component="nav"
+					aria-label={formatMessage({
+						id: 'siteConfigurationManagement.configurationFiles',
+						defaultMessage: 'Configuration files'
+					})}
 					dense
 					subheader={
 						<ListSubheader
@@ -782,8 +794,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
+								titleComponent={embedded ? 'h1' : 'h2'}
+								subtitleComponent="h3"
 								startContent={
-									<IconButton onClick={onToggleDrawer} size="large">
+									<IconButton
+										onClick={onToggleDrawer}
+										size="large"
+										aria-label={openDrawer ? hideConfigurationFilesLabel : showConfigurationFilesLabel}
+									>
 										{openDrawer ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
 									</IconButton>
 								}
@@ -923,6 +941,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="Please choose a config file from the left."
 							/>
 						}
+						titleComponent={embedded ? 'h1' : 'p'}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				</Box>

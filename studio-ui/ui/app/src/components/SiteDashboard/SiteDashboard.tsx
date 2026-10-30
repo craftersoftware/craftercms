@@ -25,7 +25,11 @@ import { useDispatch } from 'react-redux';
 import { initDashboardConfig } from '../../state/actions/dashboard';
 import { renderWidgets } from '../Widget/renderWidgets';
 import EmptyState from '../EmptyState';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
+import Typography from '@mui/material/Typography';
+import { visuallyHidden } from '@mui/utils';
+import { messages as launcherMessages } from '../LauncherSection/utils';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 import Skeleton from '@mui/material/Skeleton';
 import { useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
@@ -35,14 +39,17 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { IconGuideDashlet } from '../IconGuideDashlet';
 import { SiteDashboardContext } from './useSiteDashboardContext';
 import { ErrorBoundary } from '../ErrorBoundary';
+import DocumentationLink from '../DocumentationLink';
 
 export interface DashboardProps {
 	mountMode?: string;
 	onMinimize?(): void;
+	/** The legacy dashboard page already places help in its toolbar. */
+	showHelpLink?: boolean;
 }
 
 export function Dashboard(props: DashboardProps) {
-	const { mountMode, onMinimize } = props;
+	const { mountMode, onMinimize, showHelpLink = true } = props;
 
 	const {
 		palette: { mode }
@@ -70,21 +77,39 @@ export function Dashboard(props: DashboardProps) {
 		[]
 	);
 
+	const { formatMessage } = useIntl();
+	const dashboardLabel = formatMessage(launcherMessages.dashboard);
 	useEffect(() => {
 		if (uiConfig.xml && !dashboard) {
 			dispatch(initDashboardConfig({ configXml: uiConfig.xml }));
 		}
 	}, [uiConfig.xml, dashboard, dispatch]);
+	useEffect(() => {
+		if (mountMode === 'dialog') {
+			return;
+		}
+		document.title = studioDocumentTitle(dashboardLabel);
+	}, [dashboardLabel, mountMode]);
 	const height = 400;
 	return (
 		<SiteDashboardContext.Provider value={context}>
+			{mountMode !== 'dialog' && (
+				<Typography component="h1" sx={visuallyHidden}>
+					{dashboardLabel}
+				</Typography>
+			)}
+			{showHelpLink && mountMode !== 'dialog' && (
+				<Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+					<DocumentationLink />
+				</Box>
+			)}
 			<Box
 				sx={{
 					position: 'relative',
 					bgcolor: 'background.default',
 					...(desktopScreen
 						? {
-								height: mountMode === 'dialog' ? '100%' : 'calc(100% - 65px)',
+								height: mountMode === 'dialog' ? '100%' : showHelpLink ? 'calc(100% - 48px)' : 'calc(100% - 65px)',
 								overflow: 'hidden'
 							}
 						: {
@@ -143,6 +168,7 @@ export function Dashboard(props: DashboardProps) {
 							) : (
 								<Grid size={12}>
 									<EmptyState
+										titleComponent="h2"
 										title={
 											<FormattedMessage
 												id="siteDashboard.emptyStateMessageTitle"

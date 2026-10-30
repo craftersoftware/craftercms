@@ -97,6 +97,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			square
 			disableGutters
 			elevation={0}
+			slots={{ heading: 'h2' }}
 			slotProps={{
 				transition: {
 					unmountOnExit: true
