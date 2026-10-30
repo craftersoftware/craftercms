@@ -532,11 +532,30 @@ export default [
 					const path = item.path;
 					// Existing children fetch applies systemTypes and stores children.total. Skip nodes whose
 					// children are already loaded — those are refreshed by the content-event path.
-					return Object.values(state.pathNavigatorTree)
-						.filter(
-							(tree) => tree.seedFilteredChildTotals && path in tree.totalByPath && !(path in tree.childrenByParentPath)
-						)
-						.map((tree) => pathNavigatorTreeFetchPathChildren({ id: tree.id, path, expand: false }));
+					// Pages may be keyed as either .../index.xml or the folder path; keep updates on the
+					// key already present so PathNavigatorTreeItem continues to read the same entry.
+					return Object.values(state.pathNavigatorTree).flatMap((tree) => {
+						if (!tree.seedFilteredChildTotals) {
+							return [];
+						}
+						const pathToFetch =
+							path in tree.totalByPath
+								? path
+								: withIndex(path) in tree.totalByPath
+									? withIndex(path)
+									: withoutIndex(path) in tree.totalByPath
+										? withoutIndex(path)
+										: null;
+						if (
+							pathToFetch == null ||
+							pathToFetch in tree.childrenByParentPath ||
+							withIndex(pathToFetch) in tree.childrenByParentPath ||
+							withoutIndex(pathToFetch) in tree.childrenByParentPath
+						) {
+							return [];
+						}
+						return [pathNavigatorTreeFetchPathChildren({ id: tree.id, path: pathToFetch, expand: false })];
+					});
 				}
 			)
 		),
