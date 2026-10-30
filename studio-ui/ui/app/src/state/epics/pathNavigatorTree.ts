@@ -52,6 +52,7 @@ import {
 	pathNavigatorTreeSetKeyword,
 	pathNavigatorTreeToggleCollapsed,
 	pathNavigatorTreeUpdate,
+	PathNavigatorTreeRestoreCompletePayload,
 	PathNavTreeBulkFetchPathChildrenPayload,
 	PathNavTreeFetchPathChildrenPayload
 } from '../actions/pathNavigatorTree';
@@ -108,34 +109,50 @@ const createGetChildrenOptions: (
 	...optionOverrides
 });
 
-/** When opted in, fetch filtered totals for each child so caret visibility matches systemTypes. */
+/** When opted in, fetch filtered totals so caret visibility matches systemTypes. */
 const fetchFilteredChildTotals = (
 	siteId: string,
 	chunk: PathNavigatorTreeStateProps,
-	children: GetChildrenResponse
+	items: Array<{ path: string; childrenCount: number }>
 ): Observable<LookupTable<number> | undefined> => {
-	// If the seedFilteredChildTotals flag is off, the helper returns immediately, so there are no extra requests and the original behavior is preserved.
-	if (!chunk.seedFilteredChildTotals || !children?.length) {
+	// If the seedFilteredChildTotals flag is off, return immediately — no extra requests.
+	if (!chunk.seedFilteredChildTotals || !items?.length) {
 		return of(undefined);
 	}
 	const optionsByPath = createPresenceTable(
-		children.map((child) => child.path),
+		items.map((item) => item.path),
 		() => ({
 			...createGetChildrenOptions(chunk),
 			limit: 0
 		})
 	);
-	// fetchChildrenByPaths returns a lookup table of paths and their children meeting the options provided (including systemTypes, so it filters according the options).
+	// Returns totals for children matching options (including systemTypes).
 	return fetchChildrenByPaths(siteId, optionsByPath).pipe(
 		map((byPath) => {
 			const totals: LookupTable<number> = {};
-			children.forEach((item) => {
+			items.forEach((item) => {
 				totals[item.path] = byPath[item.path]?.total ?? item.childrenCount;
 			});
 			return totals;
 		}),
 		catchError(() => of(undefined))
 	);
+};
+
+const collectItemsForFilteredTotals = (
+	items: Array<{ path: string; childrenCount: number }>,
+	children: LookupTable<GetChildrenResponse>
+): Array<{ path: string; childrenCount: number }> => {
+	const byPath: LookupTable<{ path: string; childrenCount: number }> = {};
+	items.forEach((item) => {
+		byPath[item.path] = item;
+	});
+	Object.values(children).forEach((childrenOfPath) => {
+		childrenOfPath.forEach((child) => {
+			byPath[child.path] = child;
+		});
+	});
+	return Object.values(byPath);
 };
 
 export default [
@@ -201,7 +218,7 @@ export default [
 						createGetChildrenOptions(chunk, pluckProps(payload, true, 'limit', 'excludes'))
 					)
 				]).pipe(
-					map(([items, children]) => {
+					switchMap(([items, children]) => {
 						let updatedExpanded = expanded;
 						if (items.missingItems.length) {
 							// remove items.missingItems from expanded
@@ -213,7 +230,22 @@ export default [
 								keywordByPath: state.pathNavigatorTree[id].keywordByPath
 							});
 						}
-						return pathNavigatorTreeRestoreComplete({ id, expanded: updatedExpanded, collapsed, items, children });
+						return fetchFilteredChildTotals(
+							state.sites.active,
+							chunk,
+							collectItemsForFilteredTotals(items, children)
+						).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeRestoreComplete({
+									id,
+									expanded: updatedExpanded,
+									collapsed,
+									items,
+									children,
+									childTotals
+								})
+							)
+						);
 					}),
 					catchAjaxError((error) => {
 						if (error.status === 404) {
@@ -273,9 +305,8 @@ export default [
 							fetchContentItems(state.sites.active, paths),
 							fetchChildrenByPaths(state.sites.active, optionsByPath)
 						]).pipe(
-							map(([items, children]) => {
-								const trees = [];
-								requests.forEach(({ id }) => {
+							switchMap(([items, children]) => {
+								const treeRequests: Observable<PathNavigatorTreeRestoreCompletePayload>[] = requests.map(({ id }) => {
 									let updatedExpanded = state.pathNavigatorTree[id].expanded;
 									if (items.missingItems.length) {
 										updatedExpanded = state.pathNavigatorTree[id].expanded.filter(
@@ -290,24 +321,31 @@ export default [
 									}
 
 									// Filter children, only keep those that are children of the rootPath of the current tree
-									const treeChildrenByPath = {};
+									const treeChildrenByPath: LookupTable<GetChildrenResponse> = {};
 									Object.entries(children).forEach(([parentPath, children]) => {
 										if (parentPath.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))) {
 											treeChildrenByPath[parentPath] = children;
 										}
 									});
-									// Add the restored tree, containing the filtered items and children for the current tree.
-									trees.push({
-										id,
-										expanded: updatedExpanded,
-										collapsed: state.pathNavigatorTree[id].collapsed,
-										items: items.filter((item) =>
-											item.path.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))
-										),
-										children: treeChildrenByPath
-									});
+									const treeItems = items.filter((item) =>
+										item.path.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))
+									);
+									return fetchFilteredChildTotals(
+										state.sites.active,
+										state.pathNavigatorTree[id],
+										collectItemsForFilteredTotals(treeItems, treeChildrenByPath)
+									).pipe(
+										map((childTotals) => ({
+											id,
+											expanded: updatedExpanded,
+											collapsed: state.pathNavigatorTree[id].collapsed,
+											items: treeItems,
+											children: treeChildrenByPath,
+											childTotals
+										}))
+									);
 								});
-								return pathNavigatorTreeBulkRestoreComplete({ trees });
+								return forkJoin(treeRequests).pipe(map((trees) => pathNavigatorTreeBulkRestoreComplete({ trees })));
 							}),
 							catchAjaxError((error) =>
 								pathNavigatorTreeBulkRestoreFailed({ ids: requests.map(({ id }) => id), error })

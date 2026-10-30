@@ -57,6 +57,7 @@ export type PathNavigatorTreeRestoreCompletePayload = PayloadWithId<{
 	collapsed: boolean;
 	items: ContentItem[];
 	children: LookupTable<GetChildrenResponse>;
+	childTotals?: LookupTable<number>;
 }>;
 
 export const pathNavigatorTreeRestoreComplete = /*#__PURE__*/ createAction<PathNavigatorTreeRestoreCompletePayload>(
