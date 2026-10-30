@@ -322,15 +322,16 @@ export default [
 									}
 
 									// Filter children, only keep those that are children of the rootPath of the current tree
+									const rootPath = withoutIndex(state.pathNavigatorTree[id].rootPath);
+									const rootPrefix = rootPath === '/' ? rootPath : `${rootPath}/`;
+									const isWithinRoot = (path: string) => path === rootPath || path.startsWith(rootPrefix);
 									const treeChildrenByPath: LookupTable<GetChildrenResponse> = {};
 									Object.entries(children).forEach(([parentPath, children]) => {
-										if (parentPath.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))) {
+										if (isWithinRoot(parentPath)) {
 											treeChildrenByPath[parentPath] = children;
 										}
 									});
-									const treeItems = items.filter((item) =>
-										item.path.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))
-									);
+									const treeItems = items.filter((item) => isWithinRoot(item.path));
 									return fetchFilteredChildTotals(
 										state.sites.active,
 										state.pathNavigatorTree[id],
@@ -533,8 +534,7 @@ export default [
 					// children are already loaded — those are refreshed by the content-event path.
 					return Object.values(state.pathNavigatorTree)
 						.filter(
-							(tree) =>
-								tree.seedFilteredChildTotals && path in tree.totalByPath && !(path in tree.childrenByParentPath)
+							(tree) => tree.seedFilteredChildTotals && path in tree.totalByPath && !(path in tree.childrenByParentPath)
 						)
 						.map((tree) => pathNavigatorTreeFetchPathChildren({ id: tree.id, path, expand: false }));
 				}
