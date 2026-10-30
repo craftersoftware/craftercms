@@ -1551,6 +1551,10 @@ function parseConfigPlugins(
 				...plugin,
 				descriptor: {
 					...plugin.descriptor,
+					metadata: {
+						...plugin.descriptor.metadata,
+						additionalFields: asArray(plugin.descriptor.metadata?.additionalFields)
+					},
 					fields: createLookupTable(fields),
 					sections:
 						asArray(plugin.descriptor?.sections).map((section) => ({

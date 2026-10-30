@@ -14,12 +14,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import type { ContentItem } from '../../models';
+import type { ContentItem, PublishPackage } from '../../models';
 import { Dispatch } from 'redux';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { cancelPackages, fetchAffectedPackages } from '../../services/workflow';
 import { IntlShape } from 'react-intl';
+import { createComponentId } from '../../utils/system';
+import { hasApproveAction, hasRejectAction } from '../../utils/content';
+
+export function showPackageDetails({ pkg, dispatch }: { pkg: PublishPackage; dispatch: Dispatch }) {
+	if (
+		pkg.approvalState === 'SUBMITTED' &&
+		(hasApproveAction(pkg.availableActions) || hasRejectAction(pkg.availableActions))
+	) {
+		const dialogId = nanoid();
+		dispatch(
+			pushDialog({
+				id: dialogId,
+				component: createComponentId('PublishPackageReviewDialog'),
+				props: {
+					packageId: pkg.id,
+					onSuccess: () => {
+						dispatch(popDialog({ id: dialogId }));
+					}
+				}
+			})
+		);
+	} else {
+		dispatch(
+			pushDialog({
+				component: createComponentId('PackageDetailsDialog'),
+				props: { packageId: pkg.id }
+			})
+		);
+	}
+}
 
 export function checkAndCancelAffectedPackages({
 	siteId,

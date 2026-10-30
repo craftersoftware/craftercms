@@ -55,13 +55,12 @@ import { filter } from 'rxjs/operators';
 import { LoadingIconButton } from '../LoadingIconButton';
 import useLocale from '../../hooks/useLocale';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
-import { nnou } from '../../utils/object';
 import { fetchPackages, FetchPackagesResponse, PackageApprovalState } from '../../services/publishing';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import IconButton from '@mui/material/IconButton';
-import PackageDetailsDialog from '../PackageDetailsDialog';
 import { generatePackageOptions, packageActionDispatcher } from '../../utils/packageActions';
 import { PublishPackage } from '../../models';
+import { showPackageDetails } from '../ViewPackagesDialog/utils';
 
 interface PendingApprovalDashletProps extends CommonDashletProps {}
 
@@ -71,7 +70,6 @@ interface PendingApprovalDashletState extends WithSelectedState<FetchPackagesRes
 	loadingSkeleton: boolean;
 	limit: number;
 	offset: number;
-	packageDetailsDialogId: number;
 }
 
 const pendingApprovalState: PackageApprovalState[] = ['SUBMITTED'];
@@ -89,8 +87,7 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 			selected,
 			selectedCount,
 			limit,
-			offset,
-			packageDetailsDialogId
+			offset
 		},
 		setState,
 		onSelectItem,
@@ -101,8 +98,7 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 		loadingSkeleton: true,
 		total: null,
 		limit: 50,
-		offset: 0,
-		packageDetailsDialogId: null
+		offset: 0
 	});
 	const { formatMessage } = useIntl();
 	const currentPage = offset / limit;
@@ -193,8 +189,8 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 		}
 	};
 
-	const onPackageDetailsClick = (packageId: number) => {
-		setState({ packageDetailsDialogId: packageId });
+	const onPackageDetailsClick = (pkg: PublishPackage) => {
+		showPackageDetails({ pkg, dispatch });
 	};
 
 	// region Item Updates Propagation
@@ -335,7 +331,7 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 							<IconButton
 								onClick={(e) => {
 									e.stopPropagation();
-									onPackageDetailsClick(pkg.id);
+									onPackageDetailsClick(pkg);
 								}}
 								aria-label={formatMessage({ defaultMessage: 'Package details' })}
 							>
@@ -353,11 +349,6 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 					/>
 				</DashletEmptyMessage>
 			)}
-			<PackageDetailsDialog
-				open={nnou(packageDetailsDialogId)}
-				onClose={() => setState({ packageDetailsDialogId: null })}
-				packageId={packageDetailsDialogId}
-			/>
 		</DashletCard>
 	);
 }

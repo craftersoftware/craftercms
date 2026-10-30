@@ -20,7 +20,7 @@ import ContentType from '../../../models/ContentType';
 import ApiResponse from '../../../models/ApiResponse';
 import { type FormsEngineProps } from '../FormsEngine';
 import LookupTable from '../../../models/LookupTable';
-import type { Atom, PrimitiveAtom } from 'jotai';
+import { atom, useAtom, type Atom, type PrimitiveAtom } from 'jotai';
 import { FieldValidityState } from './validators';
 import { Subject } from 'rxjs';
 import { AtomWithStorage } from '../types';
@@ -201,6 +201,25 @@ export const useStableGlobalApiContext = /*#__PURE__*/ createUseContextHook<Stab
 );
 
 export const useStableFormContext = /*#__PURE__*/ createUseContextHook('useStableFormContext', StableFormContext);
+
+// Shared stand-in so `useFieldValue` can call `useAtom` unconditionally when a field has no atom.
+const missingFieldAtom = atom<unknown>(undefined);
+const noop = (): void => {};
+
+/**
+ * Purpose-built access to a sibling field's value (e.g. a descriptor-declared companion
+ * field such as `{id}_tz`) without exposing the atom map or Jotai to plugin controls.
+ * Returns `[value, setValue, exists]`; when the field wasn't initialized, `value` is
+ * `undefined`, `exists` is `false` and `setValue` is a no-op.
+ */
+export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (value: T) => void, boolean] {
+	const { atoms } = useStableFormContext();
+	const fieldAtom = Object.prototype.hasOwnProperty.call(atoms.valueByFieldId, fieldId)
+		? (atoms.valueByFieldId[fieldId] as PrimitiveAtom<T>)
+		: undefined;
+	const [value, setValue] = useAtom(fieldAtom ?? (missingFieldAtom as PrimitiveAtom<T>));
+	return [fieldAtom ? value : undefined, fieldAtom ? setValue : noop, Boolean(fieldAtom)];
+}
 
 export const useItemContext = /*#__PURE__*/ createUseContextHook('useItemContext', ItemContext);
 

@@ -1216,7 +1216,7 @@ export function prepareEmbeddedItemForm(props: {
 	});
 	// Ensure descriptor additional fields exist in values so atoms are created (same as main/repeat bootstrap).
 	additionalFieldsIds.forEach((additionalFieldId) => {
-		if (!(additionalFieldId in values)) {
+		if (!Object.prototype.hasOwnProperty.call(values, additionalFieldId)) {
 			values[additionalFieldId] = undefined;
 		}
 	});

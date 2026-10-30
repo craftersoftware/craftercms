@@ -43,7 +43,6 @@ import { changeCurrentUrl } from '../../state/actions/preview';
 import { getSystemLink } from '../../utils/system';
 import useSpreadState from '../../hooks/useSpreadState';
 import ListItem from '@mui/material/ListItem';
-import PackageDetailsDialog from '../PackageDetailsDialog';
 import {
 	contentEvent,
 	deleteContentEvent,
@@ -68,6 +67,7 @@ import LoadingIconButton from '../LoadingIconButton';
 import { fetchItemByPath } from '../../services/content';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import IconButton from '@mui/material/IconButton';
+import { showPackageDetails } from '../ViewPackagesDialog/utils';
 
 interface MyRecentActivityDashletProps extends CommonDashletProps {}
 
@@ -78,8 +78,6 @@ interface MyRecentActivityDashletState {
 	loadingSkeleton: boolean;
 	limit: number;
 	offset: number;
-	openPackageDetailsDialog: boolean;
-	selectedPackageId: number;
 }
 
 export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
@@ -93,19 +91,15 @@ export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
 	const dispatch = useDispatch();
 	const packageContextMenu = usePackageContextMenu();
 
-	const [
-		{ loading, loadingSkeleton, total, feed, limit, offset, selectedPackageId, openPackageDetailsDialog },
-		setState
-	] = useSpreadState<MyRecentActivityDashletState>({
-		feed: null,
-		loading: false,
-		loadingSkeleton: true,
-		total: null,
-		limit: 50,
-		offset: 0,
-		openPackageDetailsDialog: false,
-		selectedPackageId: null
-	});
+	const [{ loading, loadingSkeleton, total, feed, limit, offset }, setState] =
+		useSpreadState<MyRecentActivityDashletState>({
+			feed: null,
+			loading: false,
+			loadingSkeleton: true,
+			total: null,
+			limit: 50,
+			offset: 0
+		});
 	const currentPage = offset / limit;
 	const totalPages = total ? Math.ceil(total / limit) : 0;
 	const itemsByPath = useItemsByPath();
@@ -161,7 +155,7 @@ export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
 	};
 
 	const onPackageClick = (pkg) => {
-		setState({ openPackageDetailsDialog: true, selectedPackageId: pkg.id });
+		showPackageDetails({ pkg, dispatch });
 	};
 
 	const onRefresh = () => {
@@ -380,12 +374,6 @@ export function MyRecentActivityDashlet(props: MyRecentActivityDashletProps) {
 					<FormattedMessage id="activityDashlet.noEntriesFound" defaultMessage="No activity was found." />
 				</DashletEmptyMessage>
 			)}
-			<PackageDetailsDialog
-				open={openPackageDetailsDialog}
-				onClose={() => setState({ openPackageDetailsDialog: false })}
-				onClosed={() => setState({ selectedPackageId: null })}
-				packageId={selectedPackageId}
-			/>
 			{packageContextMenu?.contextMenuElement}
 		</DashletCard>
 	);
