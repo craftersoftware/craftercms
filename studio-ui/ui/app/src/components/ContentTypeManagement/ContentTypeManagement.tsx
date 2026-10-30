@@ -26,10 +26,13 @@ export interface ContentTypeManagementProps {
 	embedded?: boolean;
 	showAppsButton?: boolean;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
+	mountMode?: 'dialog' | 'page';
+	onClose?: () => void;
+	onMinimize?: () => void;
 }
 
 export function ContentTypeManagement(props: ContentTypeManagementProps) {
-	const { embedded = false, showAppsButton, onSubmittingAndOrPendingChange } = props;
+	const { embedded = false, showAppsButton, onSubmittingAndOrPendingChange, mountMode, onClose, onMinimize } = props;
 	const [view, setView] = useState<'list' | 'edit' | 'create'>('list');
 	const [selectedType, setSelectedType] = useState<ContentType>(null);
 
@@ -37,7 +40,7 @@ export function ContentTypeManagement(props: ContentTypeManagementProps) {
 		setSelectedType(item);
 		setView('edit');
 	};
-	const handleBackToList: EditTypeAppProps['onClose'] = () => {
+	const handleBackToList: EditTypeAppProps['onExit'] = () => {
 		setSelectedType(null);
 		setView('list');
 	};
@@ -58,7 +61,10 @@ export function ContentTypeManagement(props: ContentTypeManagementProps) {
 				<Fade in>
 					<EditTypeView
 						type={selectedType}
-						onClose={handleBackToList}
+						onExit={handleBackToList}
+						mountMode={mountMode}
+						onClose={onClose}
+						onMinimize={onMinimize}
 						onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
 					/>
 				</Fade>

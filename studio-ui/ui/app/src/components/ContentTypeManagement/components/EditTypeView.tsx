@@ -127,7 +127,14 @@ export interface EditTypeAppProps {
 	type: PossibleContentTypeDraft;
 	sx?: BoxProps['sx'];
 	style?: BoxProps['style'];
+	/** Navigate back to the type listing (toolbar Done/back). */
+	onExit?: () => void;
+	/** Whether the tool is mounted in a dialog or as a standalone page. */
+	mountMode?: 'dialog' | 'page';
+	/** Close the host dialog (Save & Close). Only used when mountMode is 'dialog'. */
 	onClose?: () => void;
+	/** Minimize the host dialog (Save & Minimize). Only used when mountMode is 'dialog'. */
+	onMinimize?: () => void;
 	onSubmittingAndOrPendingChange?: (value: onSubmittingAndOrPendingChangeProps) => void;
 }
 
@@ -174,7 +181,7 @@ export interface ContentTypeManagementConfig {
 }
 
 export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props, ref) => {
-	const { onClose, onSubmittingAndOrPendingChange } = props;
+	const { onExit, onClose, onMinimize, mountMode, onSubmittingAndOrPendingChange } = props;
 
 	const site = useActiveSiteId();
 	const contentTypesLookup = useContentTypes();
@@ -547,7 +554,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			case 'deleted':
 				onUpdateHasPendingChanges(false);
 				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
-				onClose?.();
+				onExit?.();
 				break;
 		}
 	};
@@ -564,7 +571,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							props: {
 								title: <FormattedMessage defaultMessage="Discard changes?" />,
 								onOk: () => {
-									onClose?.();
+									onExit?.();
 									onUpdateHasPendingChanges(false);
 									dispatch(popDialog({ id }));
 								},
@@ -573,10 +580,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						})
 					);
 				} else {
-					onClose?.();
+					onExit?.();
 				}
 				break;
-			case 'save': {
+			case 'save':
+			case 'saveAndClose':
+			case 'saveAndMinimize': {
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
 				reportSubmittingOrPending({ isSubmitting: true });
@@ -603,6 +612,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 								})
 							])
 						);
+						if (action === 'saveAndClose') {
+							onClose?.();
+						} else if (action === 'saveAndMinimize') {
+							onMinimize?.();
+						}
 					},
 					error(error: AjaxError) {
 						reportSubmittingOrPending({ isSubmitting: false });
@@ -1059,6 +1073,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				open={open}
 				onClose={handleCloseDrawer}
 				disableSave={disableSave}
+				mountMode={mountMode}
 				onActionClick={handleToolbarActionClick}
 				drawerContent={fieldEditorView}
 				drawerProps={{
