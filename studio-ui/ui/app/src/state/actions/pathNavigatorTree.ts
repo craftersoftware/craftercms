@@ -36,6 +36,7 @@ export const pathNavigatorTreeInit = /*#__PURE__*/ createAction<
 		sortStrategy?: GetChildrenOptions['sortStrategy'];
 		order?: GetChildrenOptions['order'];
 		keywordByPath: LookupTable<string>;
+		seedFilteredChildTotals?: boolean;
 	}>
 >('PATH_NAV_TREE_INIT');
 
@@ -94,7 +95,12 @@ export const pathNavigatorTreeFetchPathPage = /*#__PURE__*/ createAction<
 >('PATH_NAV_TREE_FETCH_PATH_PAGE');
 
 export const pathNavigatorTreeFetchPathPageComplete = /*#__PURE__*/ createAction<
-	PayloadWithId<{ children: GetChildrenResponse; parentPath: string; options?: Partial<GetChildrenOptions> }>
+	PayloadWithId<{
+		children: GetChildrenResponse;
+		parentPath: string;
+		options?: Partial<GetChildrenOptions>;
+		childTotals?: LookupTable<number>;
+	}>
 >('PATH_NAV_TREE_FETCH_PATH_PAGE_COMPLETE');
 
 export const pathNavigatorTreeFetchPathPageFailed = /*#__PURE__*/ createAction<{
@@ -118,11 +124,21 @@ export const pathNavigatorTreeBulkFetchPathChildren =
 	/*#__PURE__*/ createAction<PathNavTreeBulkFetchPathChildrenPayload>('PATH_NAV_TREE_BULK_FETCH_PATH_CHILDREN');
 
 export const pathNavigatorTreeFetchPathChildrenComplete = /*#__PURE__*/ createAction<
-	PayloadWithId<{ children: GetChildrenResponse; parentPath: string; options?: Partial<GetChildrenOptions> }>
+	PayloadWithId<{
+		children: GetChildrenResponse;
+		parentPath: string;
+		options?: Partial<GetChildrenOptions>;
+		childTotals?: LookupTable<number>;
+	}>
 >('PATH_NAV_TREE_FETCH_PATH_CHILDREN_COMPLETE');
 
 export type PathNavTreeBulkFetchPathChildrenCompletePayload = {
-	paths: PayloadWithId<{ children: GetChildrenResponse; parentPath: string; options?: Partial<GetChildrenOptions> }>[];
+	paths: PayloadWithId<{
+		children: GetChildrenResponse;
+		parentPath: string;
+		options?: Partial<GetChildrenOptions>;
+		childTotals?: LookupTable<number>;
+	}>[];
 };
 
 export const pathNavigatorTreeBulkFetchPathChildrenComplete =

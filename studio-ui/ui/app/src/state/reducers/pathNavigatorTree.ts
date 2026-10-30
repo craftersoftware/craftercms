@@ -111,7 +111,7 @@ export function deleteItemFromState(tree: PathNavigatorTreeStateProps, targetPat
 }
 
 const updatePath = (state, payload) => {
-	const { id, parentPath, children, options } = payload;
+	const { id, parentPath, children, options, childTotals } = payload;
 	const chunk = state[id];
 	chunk.totalByPath[parentPath] = children.total;
 	chunk.childrenByParentPath[parentPath] = [];
@@ -121,7 +121,7 @@ const updatePath = (state, payload) => {
 	}
 	children.forEach((item) => {
 		chunk.childrenByParentPath[parentPath].push(item.path);
-		chunk.totalByPath[item.path] = item.childrenCount;
+		chunk.totalByPath[item.path] = childTotals?.[item.path] ?? item.childrenCount;
 	});
 	// If the expanded node has no children, no level descriptor and is not filtered, it's a
 	// leaf node and there's no point keeping it in `expanded`
@@ -197,7 +197,8 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 					excludes = null,
 					systemTypes = null,
 					sortStrategy = null,
-					order = null
+					order = null,
+					seedFilteredChildTotals = false
 				}
 			} = action;
 			state[id] = {
@@ -216,7 +217,8 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 				isRootPathMissing: false,
 				systemTypes,
 				sortStrategy,
-				order
+				order,
+				seedFilteredChildTotals
 			};
 		})
 		// endregion
@@ -258,17 +260,20 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 				? state[id].offsetByPath[path] + state[id].limit
 				: state[id].limit;
 		})
-		.addCase(pathNavigatorTreeFetchPathPageComplete, (state, { payload: { id, parentPath, children, options } }) => {
-			const chunk = state[id];
-			chunk.totalByPath[parentPath] = children.total;
-			if (children.levelDescriptor) {
-				chunk.totalByPath[children.levelDescriptor.path] = 0;
+		.addCase(
+			pathNavigatorTreeFetchPathPageComplete,
+			(state, { payload: { id, parentPath, children, childTotals } }) => {
+				const chunk = state[id];
+				chunk.totalByPath[parentPath] = children.total;
+				if (children.levelDescriptor) {
+					chunk.totalByPath[children.levelDescriptor.path] = 0;
+				}
+				children.forEach((item) => {
+					chunk.childrenByParentPath[parentPath].push(item.path);
+					chunk.totalByPath[item.path] = childTotals?.[item.path] ?? item.childrenCount;
+				});
 			}
-			children.forEach((item) => {
-				chunk.childrenByParentPath[parentPath].push(item.path);
-				chunk.totalByPath[item.path] = item.childrenCount;
-			});
-		})
+		)
 		.addCase(pathNavigatorTreeUpdate, (state, { payload }) => {
 			return {
 				...state,

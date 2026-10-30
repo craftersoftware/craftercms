@@ -15,7 +15,17 @@
  */
 
 import { ofType } from 'redux-observable';
-import { filter, ignoreElements, map, mergeMap, switchMap, tap, throttleTime, withLatestFrom } from 'rxjs/operators';
+import {
+	catchError,
+	filter,
+	ignoreElements,
+	map,
+	mergeMap,
+	switchMap,
+	tap,
+	throttleTime,
+	withLatestFrom
+} from 'rxjs/operators';
 import { CrafterCMSEpic } from '../store';
 import {
 	pathNavigatorTreeBackgroundRefresh,
@@ -53,7 +63,7 @@ import {
 } from '../../services/content';
 import { catchAjaxError } from '../../utils/ajax';
 import { removeStoredPathNavigatorTree, setStoredPathNavigatorTree } from '../../utils/state';
-import { EMPTY, forkJoin, Observable } from 'rxjs';
+import { EMPTY, forkJoin, Observable, of } from 'rxjs';
 import { createPresenceTable } from '../../utils/array';
 import {
 	getFileExtension,
@@ -78,7 +88,14 @@ import {
 	workflowEventSubmit
 } from '../actions/system';
 import StandardAction from '../../models/StandardAction';
-import { GetChildrenOptions, MarketplacePlugin, MoveContentEventPayload, SocketEventBase } from '../../models';
+import {
+	GetChildrenOptions,
+	GetChildrenResponse,
+	LookupTable,
+	MarketplacePlugin,
+	MoveContentEventPayload,
+	SocketEventBase
+} from '../../models';
 import { contentAndDeleteEventForEachApplicableTree } from '../reducers/pathNavigatorTree';
 import { PathNavigatorTreeStateProps } from '../../components/PathNavigatorTree';
 import { pluckProps } from '../../utils/object';
@@ -90,6 +107,36 @@ const createGetChildrenOptions: (
 	...pluckProps(chunk, true, 'limit', 'excludes', 'systemTypes', 'sortStrategy', 'order'),
 	...optionOverrides
 });
+
+/** When opted in, fetch filtered totals for each child so caret visibility matches systemTypes. */
+const fetchFilteredChildTotals = (
+	siteId: string,
+	chunk: PathNavigatorTreeStateProps,
+	children: GetChildrenResponse
+): Observable<LookupTable<number> | undefined> => {
+	// If seedFilteredChildTotals flag is off, the helper returns immediately, no there are no extra requests and the original behavior is preserved.
+	if (!chunk.seedFilteredChildTotals || !children?.length) {
+		return of(undefined);
+	}
+	const optionsByPath = createPresenceTable(
+		children.map((child) => child.path),
+		() => ({
+			...createGetChildrenOptions(chunk),
+			limit: 0
+		})
+	);
+	// fetchChildrenByPaths returns a lookup table of paths and their children meeting the options provided (including systemTypes, so it filters according the options).
+	return fetchChildrenByPaths(siteId, optionsByPath).pipe(
+		map((byPath) => {
+			const totals: LookupTable<number> = {};
+			children.forEach((item) => {
+				totals[item.path] = byPath[item.path]?.total ?? item.childrenCount;
+			});
+			return totals;
+		}),
+		catchError(() => of(undefined))
+	);
+};
 
 export default [
 	// region pathNavigatorTreeInit, pathNavigatorTreeRefresh, pathNavigatorTreeBackgroundRefresh
@@ -285,13 +332,18 @@ export default [
 						limit: chunk.limit + chunk.offsetByPath[path]
 					})
 				}).pipe(
-					map((children) =>
-						pathNavigatorTreeFetchPathChildrenComplete({
-							id,
-							children,
-							parentPath: path,
-							options: finalOptions
-						})
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathChildrenComplete({
+									id,
+									children,
+									parentPath: path,
+									options: finalOptions,
+									childTotals
+								})
+							)
+						)
 					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathChildrenFailed({ error, id, path }))
 				);
@@ -316,17 +368,22 @@ export default [
 					};
 				});
 				return fetchChildrenByPaths(state.sites.active, optionsByPath).pipe(
-					map((children) => {
-						const paths = [];
-						requests.forEach((item) => {
-							paths.push({
-								id: item.id,
-								children: children[item.path],
-								parentPath: item.path,
-								options: optionsByPath[item.path]
-							});
+					switchMap((children) => {
+						const totalsRequests = requests.map((item) => {
+							const chunk = state.pathNavigatorTree[item.id];
+							return fetchFilteredChildTotals(state.sites.active, chunk, children[item.path]).pipe(
+								map((childTotals) => ({
+									id: item.id,
+									children: children[item.path],
+									parentPath: item.path,
+									options: optionsByPath[item.path],
+									childTotals
+								}))
+							);
 						});
-						return pathNavigatorTreeBulkFetchPathChildrenComplete({ paths });
+						return (totalsRequests.length ? forkJoin(totalsRequests) : of([])).pipe(
+							map((paths) => pathNavigatorTreeBulkFetchPathChildrenComplete({ paths }))
+						);
 					}),
 					catchAjaxError((error) =>
 						pathNavigatorTreeBulkFetchPathChildrenFailed({ ids: requests.map((item) => item.id), error })
@@ -345,7 +402,13 @@ export default [
 				const chunk = state.pathNavigatorTree[id];
 				const options = createGetChildrenOptions(chunk, { keyword });
 				return fetchChildrenByPath(state.sites.active, path, options).pipe(
-					map((children) => pathNavigatorTreeFetchPathChildrenComplete({ id, parentPath: path, children, options })),
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathChildrenComplete({ id, parentPath: path, children, options, childTotals })
+							)
+						)
+					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathChildrenFailed({ error, id, path }))
 				);
 			})
@@ -369,13 +432,18 @@ export default [
 						offset: offset
 					})
 				).pipe(
-					map((children) =>
-						pathNavigatorTreeFetchPathPageComplete({
-							id,
-							parentPath: path,
-							children,
-							options: { keyword, offset }
-						})
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathPageComplete({
+									id,
+									parentPath: path,
+									children,
+									options: { keyword, offset },
+									childTotals
+								})
+							)
+						)
 					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathPageFailed({ error, id }))
 				);
