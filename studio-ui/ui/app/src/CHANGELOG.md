@@ -162,7 +162,7 @@
     * Updated `historyDialogUpdate` action type to `UPDATE_HISTORY_DIALOG`.
     * Removed `fetchDeleteDependencies`, `fetchDeleteDependenciesComplete`, `fetchDeleteDependenciesFailed` actions.
     * Updated `newContentCreationComplete` action payload to be `{ item: ContentItem; redirectUrl: string }`.
-    * Removed `showEditDialog`, `closeEditDialog`, `editDialogClosed` and `updateEditDialogConfig` actions. Dispatching `SHOW_EDIT_DIALOG` no longer opens a content form. Use `showContentFormAction` from `utils/system` (pushes `craftercms.components.FormsEngineDialog`) instead.
+    * Removed `closeEditDialog`, `editDialogClosed` and `updateEditDialogConfig` actions. `showEditDialog` remains exported from `actions/preview` and handles `SHOW_EDIT_DIALOG`; dispatching it opens `craftercms.components.FormsEngineDialog` through `showContentFormAction`.
     * Updated `fetchRenameAssetDependants` action payload to be `{ path: string; dialogId: string }`.
     * Updated `updateSingleFileUploadDialog` action payload to be `Partial<CreateFileStateProps>`
     * Created `updateLauncher` action.
