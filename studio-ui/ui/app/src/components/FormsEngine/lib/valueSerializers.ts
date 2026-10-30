@@ -50,7 +50,7 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	'image-picker': undefined,
 	input: (field, value) => prepareString(field, value as string),
 	string: (field, value) => prepareString(field, value as string),
-	'internal-name': undefined,
+	'internal-name': (field, value) => prepareString(field, value as string),
 	label: undefined,
 	'locale-selector': undefined,
 	repeat: (field, value, contentTypesLookup) => prepareRepeat(field, value as RepeatItem[], contentTypesLookup),
