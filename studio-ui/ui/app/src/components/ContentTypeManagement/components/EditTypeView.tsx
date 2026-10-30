@@ -318,6 +318,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 		formContext.changedFieldIds.clear();
 		stateRef.current.formFieldsChanged = false;
+		// Keep typeRef in sync immediately so in-flight save completion can detect
+		// structural divergence from typeToSave before the next render.
+		typeRef.current = updatedType;
 		setType(updatedType);
 		return updatedType;
 	};
@@ -593,9 +596,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
-						// Edits that landed in the open form after submit (fieldUpdates$ → changedFieldIds)
-						// must keep pending state and must not close the dialog.
-						const postSubmitEdits = activeFormHasChanges();
+						// Edits that landed after submit must keep pending state and must not close the dialog:
+						// - open-form edits (fieldUpdates$ → changedFieldIds)
+						// - structural working-type edits (delete/insert/move/etc. via setType) while save was in flight
+						const postSubmitEdits = activeFormHasChanges() || typeRef.current !== typeToSave;
 						onUpdateHasPendingChanges(postSubmitEdits);
 						reportSubmittingOrPending({ isSubmitting: false, hasPendingChanges: postSubmitEdits });
 						// If the type being saved is new, update the type state to remove the NEW property.
