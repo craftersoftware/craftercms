@@ -593,13 +593,17 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
-						onUpdateHasPendingChanges(false);
-						reportSubmittingOrPending({ isSubmitting: false, hasPendingChanges: false });
+						// Edits that landed in the open form after submit (fieldUpdates$ → changedFieldIds)
+						// must keep pending state and must not close the dialog.
+						const postSubmitEdits = activeFormHasChanges();
+						onUpdateHasPendingChanges(postSubmitEdits);
+						reportSubmittingOrPending({ isSubmitting: false, hasPendingChanges: postSubmitEdits });
 						// If the type being saved is new, update the type state to remove the NEW property.
 						// Clearing NEW triggers the contentItem effect to fetch once. For existing types, bump
 						// the reload token so the same effect re-fetches (and cancels any in-flight request).
+						// Use the current working copy so edits made while save was in flight are kept.
 						if (isNew) {
-							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
+							setType((current) => reversePluckProps(current as PossibleContentTypeDraft, 'NEW'));
 						} else {
 							setContentItemReloadToken((token) => token + 1);
 						}
@@ -613,7 +617,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							])
 						);
 						if (action === 'saveAndClose') {
-							onClose?.();
+							if (!postSubmitEdits) {
+								onClose?.();
+							}
 						} else if (action === 'saveAndMinimize') {
 							onMinimize?.();
 						}
