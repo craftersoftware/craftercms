@@ -644,7 +644,7 @@ export default [
 								// Get correct path to fetch (may include index.xml)
 								const pathToFetch = path in tree.totalByPath ? path : withIndex(path);
 								// If its children are loaded, then re-fetch to get the new
-								if (tree.childrenByParentPath[pathToFetch]) {
+								if (tree.childrenByParentPath[pathToFetch] || tree.seedFilteredChildTotals) {
 									idsToRefreshChildrenOnly.push({ id, path: pathToFetch, expand: false });
 								}
 								// Re-fetching the item done by content epics.
