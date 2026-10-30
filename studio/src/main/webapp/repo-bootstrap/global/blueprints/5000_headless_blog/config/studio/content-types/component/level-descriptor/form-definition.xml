@@ -79,7 +79,6 @@
    </sections>
    <datasources/>
    <previewable>false</previewable>
-   <noThumbnail>true</noThumbnail>
    <paths>
       <includes>
          <pattern>^/site/website/.*</pattern>

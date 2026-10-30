@@ -223,7 +223,6 @@
       </datasource>
    </datasources>
    <previewable>false</previewable>
-   <noThumbnail>false</noThumbnail>
    <paths>
       <includes>
          <pattern>^/site/website/.*</pattern>

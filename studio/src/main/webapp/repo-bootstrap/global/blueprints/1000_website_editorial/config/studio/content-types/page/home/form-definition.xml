@@ -753,7 +753,6 @@
       </datasource>
    </datasources>
    <previewable>true</previewable>
-   <noThumbnail>false</noThumbnail>
    <paths>
       <excludes>
          <pattern>^/site/.*</pattern>

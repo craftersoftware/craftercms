@@ -289,7 +289,6 @@
       </datasource>
    </datasources>
    <previewable>false</previewable>
-   <noThumbnail>false</noThumbnail>
    <paths>
       <includes>
          <pattern>^/site/components/articles-widget/.*</pattern>
