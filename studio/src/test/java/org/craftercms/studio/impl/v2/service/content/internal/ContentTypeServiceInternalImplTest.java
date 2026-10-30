@@ -160,7 +160,6 @@ public class ContentTypeServiceInternalImplTest {
 				{
 					"previewable": true,
 					"imageThumbnail": "page-test1.png",
-					"noThumbnail": false,
 					"quickCreate": true,
 					"quickCreatePath": "/site/website/tests/{year}/{month}",
 					"type": "unknown",
@@ -176,7 +175,6 @@ public class ContentTypeServiceInternalImplTest {
 
 		assertEquals(expected.get("previewable").asBoolean(), contentType.isPreviewable());
 		assertEquals(expected.get("imageThumbnail").asText(), contentType.getImageThumbnail());
-		assertEquals(expected.get("noThumbnail").asBoolean(), contentType.isNoThumbnail());
 		assertEquals(expected.get("quickCreate").asBoolean(), contentType.isQuickCreate());
 		assertEquals(expected.get("quickCreatePath").asText(), contentType.getQuickCreatePath());
 		assertEquals(ContentType.Type.valueOf(expected.get("type").asText()), contentType.getType());

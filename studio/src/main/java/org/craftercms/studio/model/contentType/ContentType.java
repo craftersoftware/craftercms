@@ -49,7 +49,6 @@ public class ContentType {
 	protected List<CopyDependency> copyDependencies = emptyList();
 	protected boolean previewable;
 	protected String imageThumbnail;
-	protected boolean noThumbnail;
 	// Because both excludes and excludes need to be set together, we use a single property for both, and ignore it during serialization
 	// so the JSON representation still has the same structure as before, with separate includes and excludes properties
 	@JsonProperty(value = "paths", access = JsonProperty.Access.WRITE_ONLY)
@@ -107,14 +106,6 @@ public class ContentType {
 
 	public void setLabel(String label) {
 		this.label = label;
-	}
-
-	public boolean isNoThumbnail() {
-		return noThumbnail;
-	}
-
-	public void setNoThumbnail(boolean noThumbnail) {
-		this.noThumbnail = noThumbnail;
 	}
 
 	public Collection<String> getPathIncludes() {
