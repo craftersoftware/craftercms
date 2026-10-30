@@ -93,14 +93,14 @@ export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorContro
 		checkboxGroupValidator(field, currentValue as CheckboxGroupProps['value'], messages),
 	checkbox: (field, currentValue, messages) => checkboxValidator(field, currentValue as boolean, messages),
 	'date-time': (field, currentValue, messages) => dateTimeValidator(field, currentValue as string, messages),
-	disabled: undefined,
+	disabled: (field, currentValue, messages) => checkboxValidator(field, currentValue as boolean, messages),
 	dropdown: undefined,
 	'file-name': (field, currentValue, messages, meta) =>
 		fileNameValidator(field, currentValue as string, messages, meta),
 	forcehttps: undefined,
 	'image-picker': undefined,
 	input: (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
-	'internal-name': undefined,
+	'internal-name': (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
 	label: undefined,
 	'locale-selector': undefined,
 	'node-selector': (field, currentValue, messages, meta) =>
