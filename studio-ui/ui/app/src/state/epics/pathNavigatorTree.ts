@@ -534,7 +534,7 @@ export default [
 					return Object.values(state.pathNavigatorTree)
 						.filter(
 							(tree) =>
-								tree.seedFilteredChildTotals && tree.totalByPath[path] === 0 && !(path in tree.childrenByParentPath)
+								tree.seedFilteredChildTotals && path in tree.totalByPath && !(path in tree.childrenByParentPath)
 						)
 						.map((tree) => pathNavigatorTreeFetchPathChildren({ id: tree.id, path, expand: false }));
 				}
