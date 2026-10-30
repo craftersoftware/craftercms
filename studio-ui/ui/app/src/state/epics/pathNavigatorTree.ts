@@ -75,6 +75,7 @@ import {
 	withoutIndex
 } from '../../utils/path';
 import { batchActions } from '../actions/misc';
+import { fetchContentItemComplete } from '../actions/content';
 import {
 	contentEvent,
 	deleteContentEvent,
@@ -510,6 +511,34 @@ export default [
 				});
 			}),
 			ignoreElements()
+		),
+	// endregion
+	// region fetchContentItemComplete — recount a filtered zero once childrenCount becomes positive
+	(action$, state$) =>
+		action$.pipe(
+			ofType(fetchContentItemComplete.type),
+			withLatestFrom(state$),
+			mergeMap(
+				([
+					{
+						payload: { item }
+					},
+					state
+				]) => {
+					if (item.childrenCount <= 0) {
+						return EMPTY;
+					}
+					const path = item.path;
+					// Existing children fetch applies systemTypes and stores children.total. Skip nodes whose
+					// children are already loaded — those are refreshed by the content-event path.
+					return Object.values(state.pathNavigatorTree)
+						.filter(
+							(tree) =>
+								tree.seedFilteredChildTotals && tree.totalByPath[path] === 0 && !(path in tree.childrenByParentPath)
+						)
+						.map((tree) => pathNavigatorTreeFetchPathChildren({ id: tree.id, path, expand: false }));
+				}
+			)
 		),
 	// endregion
 	// region contentEvent
