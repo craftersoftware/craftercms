@@ -18,7 +18,7 @@ import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
-import { commitFormVisibility, getScrollContainer, useStackSubmitting } from '../lib/formUtils';
+import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import SearchBar from '../../SearchBar';
@@ -74,10 +74,6 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 		// Wait for the drawer to hide so the transition focus doesn't impede the scrollIntoView.
 		// When the sidebar is a drawer, the hide transition is set to 0 for this to work with minimal timeout.
 		setTimeout(() => {
-			const root = containerRef.current;
-			getScrollContainer(root).style.overflowY = '';
-			root.style.overflowY = '';
-			root.style.removeProperty('--scroll-top');
 			target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 		});
 	};
@@ -100,12 +96,7 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 	const handleSectionExpansionToggleClick = (event: SyntheticEvent, itemId: string, expanded: boolean) => {
 		event.stopPropagation(); // Avoid accordion expansion
 		store.set(expandedStateAtoms[itemId], expanded);
-		// Closing via atom does not invoke Drawer.onClose; restore scroll freeze from open.
 		setOpenDrawerSidebar(false);
-		const root = containerRef.current;
-		getScrollContainer(root).style.overflowY = '';
-		root.style.overflowY = '';
-		root.style.removeProperty('--scroll-top');
 	};
 	const [searchFieldValue, setSearchFieldValue] = useState('');
 	const [filteredFields, setFilteredFields] = useState<ContentTypeField[]>(null);

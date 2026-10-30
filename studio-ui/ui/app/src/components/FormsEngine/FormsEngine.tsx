@@ -1202,25 +1202,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 		};
 	}, [effectRefs, item, setLockStatus, siteId]);
 
-	const handleOpenDrawerSidebar = () => {
+	// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer) while the ToC drawer is open.
+	// --scroll-top must live on formContainer so both drawers can inherit it.
+	// Keyed on the atom, so every close path (Drawer onClose, section/field click, expansion toggle) releases the lock.
+	useLayoutEffect(() => {
+		if (!openDrawerSidebar) return;
 		const root = containerRef.current;
 		const scroller = getScrollContainer(root);
-		// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer).
-		// --scroll-top must live on formContainer so both drawers can inherit it.
 		const scrollTop = scroller.scrollTop;
 		scroller.style.overflowY = 'hidden';
 		root.style.overflowY = 'hidden';
 		scroller.scrollTop = scrollTop;
 		root.style.setProperty('--scroll-top', `${root.scrollTop}px`);
-		setOpenDrawerSidebar(true);
-	};
-	const handleCloseDrawerSidebar: DrawerProps['onClose'] = () => {
-		const root = containerRef.current;
-		getScrollContainer(root).style.overflowY = '';
-		root.style.overflowY = '';
-		root.style.removeProperty('--scroll-top');
-		setOpenDrawerSidebar(false);
-	};
+		return () => {
+			scroller.style.overflowY = '';
+			root.style.overflowY = '';
+			root.style.removeProperty('--scroll-top');
+		};
+	}, [openDrawerSidebar]);
+	const handleOpenDrawerSidebar = () => setOpenDrawerSidebar(true);
+	const handleCloseDrawerSidebar: DrawerProps['onClose'] = () => setOpenDrawerSidebar(false);
 	const popTopStackedForm = (restoreOpenedItem: boolean) => {
 		const childEntry = formsStackData[formsStackData.length - 1];
 		const childMode = childEntry?.itemFormMode ? store.get(childEntry.itemFormMode) : null;
