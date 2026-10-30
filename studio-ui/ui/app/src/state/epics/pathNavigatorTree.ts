@@ -15,7 +15,17 @@
  */
 
 import { ofType } from 'redux-observable';
-import { filter, ignoreElements, map, mergeMap, switchMap, tap, throttleTime, withLatestFrom } from 'rxjs/operators';
+import {
+	catchError,
+	filter,
+	ignoreElements,
+	map,
+	mergeMap,
+	switchMap,
+	tap,
+	throttleTime,
+	withLatestFrom
+} from 'rxjs/operators';
 import { CrafterCMSEpic } from '../store';
 import {
 	pathNavigatorTreeBackgroundRefresh,
@@ -42,6 +52,7 @@ import {
 	pathNavigatorTreeSetKeyword,
 	pathNavigatorTreeToggleCollapsed,
 	pathNavigatorTreeUpdate,
+	PathNavigatorTreeRestoreCompletePayload,
 	PathNavTreeBulkFetchPathChildrenPayload,
 	PathNavTreeFetchPathChildrenPayload
 } from '../actions/pathNavigatorTree';
@@ -53,7 +64,7 @@ import {
 } from '../../services/content';
 import { catchAjaxError } from '../../utils/ajax';
 import { removeStoredPathNavigatorTree, setStoredPathNavigatorTree } from '../../utils/state';
-import { EMPTY, forkJoin, Observable } from 'rxjs';
+import { EMPTY, forkJoin, Observable, of } from 'rxjs';
 import { createPresenceTable } from '../../utils/array';
 import {
 	getFileExtension,
@@ -64,6 +75,7 @@ import {
 	withoutIndex
 } from '../../utils/path';
 import { batchActions } from '../actions/misc';
+import { fetchContentItemComplete } from '../actions/content';
 import {
 	contentEvent,
 	deleteContentEvent,
@@ -78,7 +90,14 @@ import {
 	workflowEventSubmit
 } from '../actions/system';
 import StandardAction from '../../models/StandardAction';
-import { GetChildrenOptions, MarketplacePlugin, MoveContentEventPayload, SocketEventBase } from '../../models';
+import {
+	GetChildrenOptions,
+	GetChildrenResponse,
+	LookupTable,
+	MarketplacePlugin,
+	MoveContentEventPayload,
+	SocketEventBase
+} from '../../models';
 import { contentAndDeleteEventForEachApplicableTree } from '../reducers/pathNavigatorTree';
 import { PathNavigatorTreeStateProps } from '../../components/PathNavigatorTree';
 import { pluckProps } from '../../utils/object';
@@ -90,6 +109,52 @@ const createGetChildrenOptions: (
 	...pluckProps(chunk, true, 'limit', 'excludes', 'systemTypes', 'sortStrategy', 'order'),
 	...optionOverrides
 });
+
+/** When opted in, fetch filtered totals so caret visibility matches systemTypes. */
+const fetchFilteredChildTotals = (
+	siteId: string,
+	chunk: PathNavigatorTreeStateProps,
+	items: Array<{ path: string; childrenCount: number }>
+): Observable<LookupTable<number> | undefined> => {
+	// If the seedFilteredChildTotals flag is off, return immediately — no extra requests.
+	if (!chunk.seedFilteredChildTotals || !items?.length) {
+		return of(undefined);
+	}
+	const optionsByPath = createPresenceTable(
+		items.map((item) => item.path),
+		() => ({
+			...createGetChildrenOptions(chunk),
+			limit: 0
+		})
+	);
+	// Returns totals for children matching options (including systemTypes).
+	return fetchChildrenByPaths(siteId, optionsByPath).pipe(
+		map((byPath) => {
+			const totals: LookupTable<number> = {};
+			items.forEach((item) => {
+				totals[item.path] = byPath[item.path]?.total ?? item.childrenCount;
+			});
+			return totals;
+		}),
+		catchError(() => of(undefined))
+	);
+};
+
+const collectItemsForFilteredTotals = (
+	items: Array<{ path: string; childrenCount: number }>,
+	children: LookupTable<GetChildrenResponse>
+): Array<{ path: string; childrenCount: number }> => {
+	const byPath: LookupTable<{ path: string; childrenCount: number }> = {};
+	items.forEach((item) => {
+		byPath[item.path] = item;
+	});
+	Object.values(children).forEach((childrenOfPath) => {
+		childrenOfPath.forEach((child) => {
+			byPath[child.path] = child;
+		});
+	});
+	return Object.values(byPath);
+};
 
 export default [
 	// region pathNavigatorTreeInit, pathNavigatorTreeRefresh, pathNavigatorTreeBackgroundRefresh
@@ -154,7 +219,7 @@ export default [
 						createGetChildrenOptions(chunk, pluckProps(payload, true, 'limit', 'excludes'))
 					)
 				]).pipe(
-					map(([items, children]) => {
+					switchMap(([items, children]) => {
 						let updatedExpanded = expanded;
 						if (items.missingItems.length) {
 							// remove items.missingItems from expanded
@@ -166,7 +231,22 @@ export default [
 								keywordByPath: state.pathNavigatorTree[id].keywordByPath
 							});
 						}
-						return pathNavigatorTreeRestoreComplete({ id, expanded: updatedExpanded, collapsed, items, children });
+						return fetchFilteredChildTotals(
+							state.sites.active,
+							chunk,
+							collectItemsForFilteredTotals(items, children)
+						).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeRestoreComplete({
+									id,
+									expanded: updatedExpanded,
+									collapsed,
+									items,
+									children,
+									childTotals
+								})
+							)
+						);
 					}),
 					catchAjaxError((error) => {
 						if (error.status === 404) {
@@ -226,9 +306,8 @@ export default [
 							fetchContentItems(state.sites.active, paths),
 							fetchChildrenByPaths(state.sites.active, optionsByPath)
 						]).pipe(
-							map(([items, children]) => {
-								const trees = [];
-								requests.forEach(({ id }) => {
+							switchMap(([items, children]) => {
+								const treeRequests: Observable<PathNavigatorTreeRestoreCompletePayload>[] = requests.map(({ id }) => {
 									let updatedExpanded = state.pathNavigatorTree[id].expanded;
 									if (items.missingItems.length) {
 										updatedExpanded = state.pathNavigatorTree[id].expanded.filter(
@@ -243,24 +322,32 @@ export default [
 									}
 
 									// Filter children, only keep those that are children of the rootPath of the current tree
-									const treeChildrenByPath = {};
+									const rootPath = withoutIndex(state.pathNavigatorTree[id].rootPath);
+									const rootPrefix = rootPath === '/' ? rootPath : `${rootPath}/`;
+									const isWithinRoot = (path: string) => path === rootPath || path.startsWith(rootPrefix);
+									const treeChildrenByPath: LookupTable<GetChildrenResponse> = {};
 									Object.entries(children).forEach(([parentPath, children]) => {
-										if (parentPath.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))) {
+										if (isWithinRoot(parentPath)) {
 											treeChildrenByPath[parentPath] = children;
 										}
 									});
-									// Add the restored tree, containing the filtered items and children for the current tree.
-									trees.push({
-										id,
-										expanded: updatedExpanded,
-										collapsed: state.pathNavigatorTree[id].collapsed,
-										items: items.filter((item) =>
-											item.path.startsWith(withoutIndex(state.pathNavigatorTree[id].rootPath))
-										),
-										children: treeChildrenByPath
-									});
+									const treeItems = items.filter((item) => isWithinRoot(item.path));
+									return fetchFilteredChildTotals(
+										state.sites.active,
+										state.pathNavigatorTree[id],
+										collectItemsForFilteredTotals(treeItems, treeChildrenByPath)
+									).pipe(
+										map((childTotals) => ({
+											id,
+											expanded: updatedExpanded,
+											collapsed: state.pathNavigatorTree[id].collapsed,
+											items: treeItems,
+											children: treeChildrenByPath,
+											childTotals
+										}))
+									);
 								});
-								return pathNavigatorTreeBulkRestoreComplete({ trees });
+								return forkJoin(treeRequests).pipe(map((trees) => pathNavigatorTreeBulkRestoreComplete({ trees })));
 							}),
 							catchAjaxError((error) =>
 								pathNavigatorTreeBulkRestoreFailed({ ids: requests.map(({ id }) => id), error })
@@ -285,13 +372,18 @@ export default [
 						limit: chunk.limit + chunk.offsetByPath[path]
 					})
 				}).pipe(
-					map((children) =>
-						pathNavigatorTreeFetchPathChildrenComplete({
-							id,
-							children,
-							parentPath: path,
-							options: finalOptions
-						})
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathChildrenComplete({
+									id,
+									children,
+									parentPath: path,
+									options: finalOptions,
+									childTotals
+								})
+							)
+						)
 					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathChildrenFailed({ error, id, path }))
 				);
@@ -316,17 +408,22 @@ export default [
 					};
 				});
 				return fetchChildrenByPaths(state.sites.active, optionsByPath).pipe(
-					map((children) => {
-						const paths = [];
-						requests.forEach((item) => {
-							paths.push({
-								id: item.id,
-								children: children[item.path],
-								parentPath: item.path,
-								options: optionsByPath[item.path]
-							});
+					switchMap((children) => {
+						const totalsRequests = requests.map((item) => {
+							const chunk = state.pathNavigatorTree[item.id];
+							return fetchFilteredChildTotals(state.sites.active, chunk, children[item.path]).pipe(
+								map((childTotals) => ({
+									id: item.id,
+									children: children[item.path],
+									parentPath: item.path,
+									options: optionsByPath[item.path],
+									childTotals
+								}))
+							);
 						});
-						return pathNavigatorTreeBulkFetchPathChildrenComplete({ paths });
+						return (totalsRequests.length ? forkJoin(totalsRequests) : of([])).pipe(
+							map((paths) => pathNavigatorTreeBulkFetchPathChildrenComplete({ paths }))
+						);
 					}),
 					catchAjaxError((error) =>
 						pathNavigatorTreeBulkFetchPathChildrenFailed({ ids: requests.map((item) => item.id), error })
@@ -345,7 +442,13 @@ export default [
 				const chunk = state.pathNavigatorTree[id];
 				const options = createGetChildrenOptions(chunk, { keyword });
 				return fetchChildrenByPath(state.sites.active, path, options).pipe(
-					map((children) => pathNavigatorTreeFetchPathChildrenComplete({ id, parentPath: path, children, options })),
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathChildrenComplete({ id, parentPath: path, children, options, childTotals })
+							)
+						)
+					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathChildrenFailed({ error, id, path }))
 				);
 			})
@@ -369,13 +472,18 @@ export default [
 						offset: offset
 					})
 				).pipe(
-					map((children) =>
-						pathNavigatorTreeFetchPathPageComplete({
-							id,
-							parentPath: path,
-							children,
-							options: { keyword, offset }
-						})
+					switchMap((children) =>
+						fetchFilteredChildTotals(state.sites.active, chunk, children).pipe(
+							map((childTotals) =>
+								pathNavigatorTreeFetchPathPageComplete({
+									id,
+									parentPath: path,
+									children,
+									options: { keyword, offset },
+									childTotals
+								})
+							)
+						)
 					),
 					catchAjaxError((error) => pathNavigatorTreeFetchPathPageFailed({ error, id }))
 				);
@@ -404,6 +512,52 @@ export default [
 				});
 			}),
 			ignoreElements()
+		),
+	// endregion
+	// region fetchContentItemComplete — recount a filtered zero once childrenCount becomes positive
+	(action$, state$) =>
+		action$.pipe(
+			ofType(fetchContentItemComplete.type),
+			withLatestFrom(state$),
+			mergeMap(
+				([
+					{
+						payload: { item }
+					},
+					state
+				]) => {
+					if (item.childrenCount <= 0) {
+						return EMPTY;
+					}
+					const path = item.path;
+					// Existing children fetch applies systemTypes and stores children.total. Skip nodes whose
+					// children are already loaded — those are refreshed by the content-event path.
+					// Pages may be keyed as either .../index.xml or the folder path; keep updates on the
+					// key already present so PathNavigatorTreeItem continues to read the same entry.
+					return Object.values(state.pathNavigatorTree).flatMap((tree) => {
+						if (!tree.seedFilteredChildTotals) {
+							return [];
+						}
+						const pathToFetch =
+							path in tree.totalByPath
+								? path
+								: withIndex(path) in tree.totalByPath
+									? withIndex(path)
+									: withoutIndex(path) in tree.totalByPath
+										? withoutIndex(path)
+										: null;
+						if (
+							pathToFetch == null ||
+							pathToFetch in tree.childrenByParentPath ||
+							withIndex(pathToFetch) in tree.childrenByParentPath ||
+							withoutIndex(pathToFetch) in tree.childrenByParentPath
+						) {
+							return [];
+						}
+						return [pathNavigatorTreeFetchPathChildren({ id: tree.id, path: pathToFetch, expand: false })];
+					});
+				}
+			)
 		),
 	// endregion
 	// region contentEvent
@@ -509,7 +663,7 @@ export default [
 								// Get correct path to fetch (may include index.xml)
 								const pathToFetch = path in tree.totalByPath ? path : withIndex(path);
 								// If its children are loaded, then re-fetch to get the new
-								if (tree.childrenByParentPath[pathToFetch]) {
+								if (tree.childrenByParentPath[pathToFetch] || tree.seedFilteredChildTotals) {
 									idsToRefreshChildrenOnly.push({ id, path: pathToFetch, expand: false });
 								}
 								// Re-fetching the item done by content epics.
