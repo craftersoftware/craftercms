@@ -114,7 +114,7 @@ const fetchFilteredChildTotals = (
 	chunk: PathNavigatorTreeStateProps,
 	children: GetChildrenResponse
 ): Observable<LookupTable<number> | undefined> => {
-	// If seedFilteredChildTotals flag is off, the helper returns immediately, no there are no extra requests and the original behavior is preserved.
+	// If the seedFilteredChildTotals flag is off, the helper returns immediately, so there are no extra requests and the original behavior is preserved.
 	if (!chunk.seedFilteredChildTotals || !children?.length) {
 		return of(undefined);
 	}
