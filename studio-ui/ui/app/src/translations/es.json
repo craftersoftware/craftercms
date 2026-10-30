@@ -434,7 +434,6 @@
 	"editUserDialog.lastNameRequired": "Se requiere apellido",
 	"eEh5bC": "Tipo de contenido seleccionado",
 	"embeddedContentDS.embeddedContent": "Contenido incrustado",
-	"embeddedLegacyFormMessages.openContentFormFailedError": "Se produjo un error al abrir el formulario de contenido. Inténtelo de nuevo momentáneamente. Comuníquese con el administrador si el error persiste.",
 	"emptyUiConfigMessageTitle.subtitle": "Aquí no se muestra nada.",
 	"emptyUiConfigMessageTitle.title": "La configuración está vacía",
 	"encryptTool.buttonText": "Cifrar texto",

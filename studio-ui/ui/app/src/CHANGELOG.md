@@ -8,6 +8,9 @@
   * Removed `parseLegacyItemToContentItem` and `getLegacyItemSystemType`.
 * [utils/path]:
   * Removed `getPasteItemFromPath` and `addToPasteItem`.
+  * Removed `getEditFormSrc` and `getCodeEditorSrc`. Both built URLs for the removed `/studio/legacy/form` page.
+* [utils/system]:
+  * Removed `pickShowContentFormAction`. Replaced by `showContentFormAction`, which always opens `craftercms.components.FormsEngineDialog`. The `useLegacyFormEngine` localStorage flag is no longer honored.
 * [components]
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
@@ -68,6 +71,7 @@
   * [RenameContentDialogContainer] Updated `dependantItems` prop to be of type `LightItem[]`.
   * [RenameItemView] Updated `dependantItems` prop to be of type `LightItem[]`.
   * Removed `CopyDialog` component.
+  * Removed `LegacyFormDialog` component (`craftercms.components.LegacyFormDialog`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * [TypeList] Added `disableSelected` prop.
   * [UserManagement] Removed delete user functionality. Only `enable`/`disable` users is allowed.
 * [hooks]
@@ -157,8 +161,8 @@
   * `actions/dialogs`:
     * Updated `historyDialogUpdate` action type to `UPDATE_HISTORY_DIALOG`.
     * Removed `fetchDeleteDependencies`, `fetchDeleteDependenciesComplete`, `fetchDeleteDependenciesFailed` actions.
-    * Updated `newContentCreationComplete` action payload to be `{ item: LegacyItem; redirectUrl: string }`.
-    * Updated `updateEditDialogConfig` action type to `UPDATE_EDIT_DIALOG`.
+    * Updated `newContentCreationComplete` action payload to be `{ item: ContentItem; redirectUrl: string }`.
+    * Removed `closeEditDialog`, `editDialogClosed` and `updateEditDialogConfig` actions. `showEditDialog` remains exported from `actions/preview` and handles `SHOW_EDIT_DIALOG`; dispatching it opens `craftercms.components.FormsEngineDialog` through `showContentFormAction`.
     * Updated `fetchRenameAssetDependants` action payload to be `{ path: string; dialogId: string }`.
     * Updated `updateSingleFileUploadDialog` action payload to be `Partial<CreateFileStateProps>`
     * Created `updateLauncher` action.
@@ -168,6 +172,7 @@
     * Removed `workflowEvent`. Replaced by `workflowEventSubmit`, `workflowEventDirectPublish`, `workflowEventApprove`, `workflowEventReject`, `workflowEventCancel`.
   * `actions/preview`:
     * `requestWorkflowCancellationDialog`: Removed `path`, replaced by `item`.
+    * Removed the `EMBEDDED_LEGACY_*` constants used by the legacy form iframe (`EMBEDDED_LEGACY_FORM_CLOSE`, `EMBEDDED_LEGACY_FORM_SUCCESS`, `EMBEDDED_LEGACY_FORM_RENDERED`, `EMBEDDED_LEGACY_FORM_DISABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_ON_CLOSE`, `EMBEDDED_LEGACY_FORM_ENABLE_HEADER`, `EMBEDDED_LEGACY_FORM_DISABLE_HEADER`, `EMBEDDED_LEGACY_FORM_RENDER_FAILED`, `EMBEDDED_LEGACY_FORM_PENDING_CHANGES`, `EMBEDDED_LEGACY_FORM_SAVE`, `EMBEDDED_LEGACY_FORM_FAILURE`, `EMBEDDED_LEGACY_MINIMIZE_REQUEST`, `EMBEDDED_LEGACY_CHANGE_TO_EDIT_MODE`, `EMBEDDED_LEGACY_FORM_SAVE_START`, `EMBEDDED_LEGACY_FORM_SAVE_END`).
   * `actions/pathNavigator`:
     * Updated `pathNavigatorFetchPathComplete`, `pathNavigatorFetchParentItemsComplete` and `pathNavigatorFetchPathFailed` action payloads to include a `path` property.
     * Updated `pathNavigatorConditionallySetPathFailed` action payload to include a `path` property.
@@ -189,6 +194,13 @@
   * Updated `Clipboard` interface: removed `paths` property, added `includeChildren` property.
 * [common-api.js]
   * Removed `CStudioAuthoring.Operations.uploadCMISAsset` and `CStudioAuthoring.Operations.openCMISUploadDialog`.
+  * Removed legacy Forms Engine entry points: `CStudioAuthoring.Operations.openContentWebForm`, `openContentWebFormWithPermission`, `openContentWebFormLegacyFormServer`, `performSimpleIceEdit`, `createNewContent`, `createNewContentForType`, `editContent`, `viewContent`, `addMetadata`, `reorderServiceCreatePanel`, and `CStudioAuthoring.Operations.form` (`getPluginInfo`, `getPluginError`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
+  * Removed `CStudioAuthoring.ChildFormManager` and `CStudioAuthoring.InContextEdit`.
+  * Removed `CStudioAuthoring.Constants.CONTROL_URL` and `CStudioAuthoring.Constants.DATASOURCE_URL` (legacy FE1 control/datasource script roots).
+* Removed the legacy Forms Engine runtime (`forms-engine.js`, `cstudio-forms` controls/datasources) and Type Builder (`content-types.js`, content-type-propsheet). Custom FE1 controls/datasources and the legacy Type Builder no longer load.
+* Removed the `/studio/form` and `/studio/legacy/form` routes (and their FTLs).
+* Removed the legacy site-config-tools `content-types` tool from blueprints and the sample config. Use `craftercms.components.ContentTypeManagement` (configured in `ui.xml`) instead.
+* Existing `form-control` and `form-datasource` plugin installations still target `site-config-tools.xml`. The new Type Builder does not read that file, so these entries may not appear until they are migrated. See https://github.com/craftersoftware/craftercms/issues/9277.
 * Removed LegacyVersionDialog and the entire associated `/studio/diff` route
 * [ItemDisplay/utils]
   * Updated `getItemPublishingTargetText` to return a string. It now receives `formatMessage` as a parameter.
@@ -232,8 +244,6 @@
   * `getUserPermissions`
     * Use `fetchMyPermissions` instead
   * [services/contentTypes] Add `fetchContentType` service
-* [state]
-  * `actions/dialogs`: Renamed `updateEditConfig` action to `updateEditDialogConfig`
 * [hooks]
   * `usePreviewUrlControl`: Removed `history` prop. Retrieval of search and navigate (previously called 'push') is now done internally.
 * Removed deprecated `aws-file-upload` and `aws-video` upload controls.

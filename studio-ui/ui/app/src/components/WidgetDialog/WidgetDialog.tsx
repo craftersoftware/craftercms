@@ -22,7 +22,17 @@ import { Widget } from '../Widget/Widget';
 import Box from '@mui/material/Box';
 
 export function WidgetDialog(props: WidgetDialogProps) {
-	const { title, fullHeight = true, widget, onSubmittingAndOrPendingChange, isSubmitting, extraProps, ...rest } = props;
+	const {
+		title,
+		fullHeight = true,
+		widget,
+		onSubmittingAndOrPendingChange,
+		isSubmitting,
+		extraProps,
+		onClose,
+		onMinimize,
+		...rest
+	} = props;
 	return (
 		<EnhancedDialog
 			title={title}
@@ -34,6 +44,8 @@ export function WidgetDialog(props: WidgetDialogProps) {
 			}}
 			isSubmitting={isSubmitting}
 			updateSubmittingOrHasPendingChanges={onSubmittingAndOrPendingChange}
+			onClose={onClose}
+			onMinimize={onMinimize}
 			{...rest}
 		>
 			<Box
@@ -69,7 +81,14 @@ export function WidgetDialog(props: WidgetDialogProps) {
 				<Suspencified loadingStateProps={{ sxs: { graphicRoot: { minWidth: '350px', minHeight: '150px' } } }}>
 					<Widget
 						{...widget}
-						overrideProps={{ onSubmittingAndOrPendingChange, isSubmitting, mountMode: 'dialog', ...extraProps }}
+						overrideProps={{
+							onSubmittingAndOrPendingChange,
+							isSubmitting,
+							mountMode: 'dialog',
+							onClose: () => onClose?.(null, null),
+							onMinimize,
+							...extraProps
+						}}
 					/>
 				</Suspencified>
 			</Box>

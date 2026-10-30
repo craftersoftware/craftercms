@@ -36,7 +36,7 @@ import { fetchContentItems } from '../../services/content';
 import { map, switchMap } from 'rxjs/operators';
 import { of } from 'rxjs';
 
-import { pickShowContentFormAction, pushErrorDialog } from '../../utils/system';
+import { showContentFormAction, pushErrorDialog } from '../../utils/system';
 import { extractErrorPayload } from '../../utils/ajax';
 
 export function BrokenReferencesDialogContainer(props: BrokenReferencesDialogContainerProps) {
@@ -53,7 +53,7 @@ export function BrokenReferencesDialogContainer(props: BrokenReferencesDialogCon
 
 	const onEditReferenceClick = (referencePath: string) => {
 		dispatch(
-			pickShowContentFormAction({
+			showContentFormAction({
 				path: referencePath,
 				authoringBase,
 				site,

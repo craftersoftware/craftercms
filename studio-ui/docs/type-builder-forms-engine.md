@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-10-22
+Last updated: 2026-10-27
 
 ---
 
@@ -51,12 +51,16 @@ Typical type folder contents:
 
 ## 2. Centric files (legacy vs next)
 
-### Legacy (YUI / static-assets)
+### Legacy (YUI / static-assets) — removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)
 
-| Module       | Entry                                                          |
-| ------------ | -------------------------------------------------------------- |
-| Type Builder | `static-assets/components/cstudio-admin/mods/content-types.js` |
-| Forms Engine | `static-assets/components/cstudio-forms/forms-engine.js`       |
+**History only.** The YUI Type Builder and Forms Engine entry points were deleted in [#9197](https://github.com/craftersoftware/craftercms/issues/9197). Do not treat these paths as present on this branch.
+
+Last commit that still had the files: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) —
+
+| Module       | Historical entry                                                                 |
+| ------------ | -------------------------------------------------------------------------------- |
+| Type Builder | [`cstudio-admin/mods/content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) |
+| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) |
 
 ### Next (React / `ui/app`)
 
@@ -93,7 +97,7 @@ State: Jotai atoms + React context (`StableFormContext`, `ItemMetaContext`, …)
 
 ```text
 ContentTypeManagement/
-  ContentTypeManagement.tsx   # list | edit | create; can fall back to legacy iframe
+  ContentTypeManagement.tsx   # list | edit | create;
   utils.ts                    # serialize/deserialize helpers, TypePropsToEdit, paths
   controlMap.ts / suffixesMap.ts
   descriptors/                # control & datasource “virtual type” descriptors
@@ -150,7 +154,7 @@ Field id suffixes (`_s`, `_html`, `_o`, `_dt`, …) matter for indexing/Engine �
 ## 4. Strategic objectives (current effort)
 
 1. **Modern FE** — React FormsEngine replacing `forms-engine.js` (substantial progress).
-2. **Modern TB** — ContentTypeManagement replacing `content-types.js` (in progress; legacy toggle still exists).
+2. **Modern TB** — ContentTypeManagement replacing `content-types.js`.
 3. **Single type artifact** — fold `config.xml` into `form-definition.xml` and delete `config.xml` (requires Studio **backend** alignment, not UI-only).
 4. **Descriptors / site-config-tools** — control & datasource listing + property forms driven by code defaults + optional XML overrides/plugins (`proposal.xml`, crawl → walk → run).
 
@@ -178,91 +182,17 @@ There are four related but distinct mechanisms:
 3. **Data source catalog / descriptor vs runtime** — TB edits a DS definition, while FE must execute/interpret that definition for a consuming control.
 4. **Form controller** — content-type-specific behavior (`form-controller.js`), separate from a control/DS plugin and from the server-side `controller.groovy`.
 
-### 5.2 Legacy Type Builder: catalog and plugin discovery
+### 5.2 Legacy Type Builder: catalog and plugin discovery — removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)
 
-Verified configuration source: `/config/studio/administration/site-config-tools.xml` (the repo sample is `samples/site-config-tools.xml`).
+**History only.** Legacy TB (`content-types.js`) and its `site-config-tools.xml` palette / plugin-discovery flow were removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197). Those files are not on this branch.
 
-Flow:
+For the pre-removal sources and behavior, use the last commit that still had them: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) — especially [`content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) and the legacy [`controls`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/controls) / [`data-sources`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/data-sources) trees. Current TB catalog work lives in §5.4 (`EditTypeView` + `/config/studio/ui.xml`).
 
-1. `static-assets/components/cstudio-admin/base.js` calls `lookupConfigurtion(..., '/administration/site-config-tools.xml')`.
-2. `buildModules` loads the `content-types` tool and passes that tool's complete XML-derived config object into `content-types.js`.
-3. `renderContentTypeTools(config)` reads `config.controls.control` and `config.datasources.datasource`.
-4. Each catalog entry is resolved by `CStudioAuthoring.Utils.form.getPluginInfo`:
-   - built-in control: `/static-assets/components/cstudio-forms/controls/<name>.js`
-   - built-in DS: `/static-assets/components/cstudio-forms/data-sources/<name>.js`
-   - plugin: `/studio/1/plugin/{siteId}/file?...` assembled from `type`, `name`, `filename`, optional `pluginId`
-5. `CStudioAuthoring.Module.requireModule` injects the script, waits for `moduleLoaded(prefix, Class)`, and caches the class globally in `loadedModules`.
-6. TB instantiates a fake control/DS to introspect behavior:
-   - controls: `getName`, `getLabel`, `getSupportedProperties`, `getSupportedConstraints`, `getSupportedPostFixes`, etc.
-   - data sources: `getName`, `getLabel`, `getInterface`, `getSupportedProperties`.
-7. Dragging an item into a type copies its executable object's defaults plus the catalog's `<plugin>` metadata into the in-memory form definition. Saving writes that plugin declaration into `form-definition.xml`.
+### 5.3 Legacy Forms Engine: runtime controls and data sources — removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)
 
-`site-config-tools.xml` is therefore primarily the **legacy TB palette/catalog**, not the legacy FE's runtime registry. It chooses what TB offers and provides the plugin coordinates TB persists into the type.
+**History only.** Legacy FE (`forms-engine.js`) — control/DS script loading, `getPluginInfo` / `Module` transport, and Blob-backed form-controller execution — was removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197). Those files are not on this branch.
 
-### 5.3 Legacy Forms Engine: runtime controls and data sources
-
-The type's `form-definition.xml` is the runtime manifest.
-
-#### Controls
-
-For every field, `_renderField`:
-
-1. Calls `getPluginInfo(field, CONTROL_URL, 'control')`.
-2. Resolves either the built-in script from `field.type` or the plugin URL from `field.plugin`.
-3. Obtains the constructor through the global module registry.
-4. Instantiates a control with the common constructor contract:
-   `(fieldId, form, section, properties, constraints, readOnly, pencilMode)`.
-5. Calls `initialize`, then sets the model/default value.
-
-Plugin controls and built-ins participate in essentially the same runtime protocol. The plugin declaration travels with the field, so FE does not need the original TB catalog to execute it.
-
-#### Data sources
-
-Before fields render, `_loadDatasources` iterates `form.definition.datasources`, dynamically loads each built-in/plugin class, instantiates it as:
-
-`new DataSourceClass(datasourceId, form, properties)`
-
-and registers the object in `form.datasourceMap[id]`. It publishes `/datasource/loaded` for controls waiting on an asynchronous DS.
-
-The base `CStudioFormDatasource` is intentionally small (`getInterface`, `getName`, `getLabel`, `getSupportedProperties`, path macro processing). Concrete DS objects expose operational capabilities consumed by controls, for example:
-
-- item DS: `getList(callback)` and sometimes `add(control)`
-- media/repository DS: browse/upload/search-specific methods
-- `interface` (`item`, `image`, `video`, `audio`, …) lets TB filter compatible DS choices
-
-This is dynamic but not a perfectly uniform abstraction: controls still know capability methods and some DS families. Its key virtue is that behavior lives on the loaded DS object instead of in a central switch over every DS type.
-
-Load-mechanism quirks (legacy FE):
-
-- built-in/plugin **controls** typically go through `requireModule`, with external plugin controls also using dynamic `import('/studio...')`
-- **datasources** typically load via `jQuery.getScript` (or a cached module) rather than the same control path
-- TB palette always uses `requireModule` for both
-
-#### Legacy plugin transport
-
-`getPluginInfo` is shared by TB and FE. A declaration contains:
-
-- `type`
-- `name`
-- `filename`
-- optional `pluginId`
-
-The plugin script must register the expected module prefix through `CStudioAuthoring.Module.moduleLoaded`. Missing coordinates are reported; loaded modules are cached.
-
-TB availability checks for plugin controls compare against `control.plugin.name` (not the outer `<name>`), so palette identity and persisted `field.type` must stay aligned.
-
-#### Form controllers
-
-Legacy FE loads `/content-types/<type>/config.xml`; when `<controller>true</controller>`:
-
-1. It fetches the type's `form-controller.js` through the authenticated form-controller API.
-2. It executes the returned script through a Blob-backed `<script>`.
-3. The script must register `${formId}-controller`.
-4. FE constructs it and calls `initialize(form)`.
-5. `isFieldRelevant(field)` can suppress fields/repeats.
-6. `onBeforeSave()` can manipulate/validate state and veto save by returning `false`.
-
-This is distinct from `controller.groovy`, which is a server-side content-type controller.
+For the pre-removal runtime, use [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms) — especially [`forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js). Current FE runtime is §5.5 / §5.9 (`FormsEngine/`, `formControllers/`).
 
 ### 5.4 New Type Builder: current configuration and descriptors
 
@@ -740,7 +670,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### When editing
 
-- Prefer next React modules; treat legacy JS as behavior reference / fallback, not the destination.
+- Prefer next React modules. Legacy YUI TB/FE sources are gone from the tree (see §2 / §5.2 / §5.3 history pointers); use them only as historical reference.
 - Match existing patterns (MUI, react-intl, RxJS services, Jotai in FE).
 - Avoid drive-by refactors outside the task.
 
@@ -751,8 +681,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
 | Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
 | Control rendering                 | `lib/controlHelpers.tsx`, `lib/controlMap.ts`, `controls/*`                                           |
-| Legacy plugin URL/module protocol | `cstudio-common/common-api.js` (`getPluginInfo`, `Module`)                                            |
-| Legacy DS runtime                 | `forms-engine.js` (`_loadDatasources`), `cstudio-forms/data-sources/*`                                |
+| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
 | New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
 | Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
 | Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
@@ -762,7 +691,6 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | config.xml merge plan             | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
 | Plugin packaging / runtime        | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
 | Plugin / listing design           | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
-| Legacy behavior                   | `content-types.js`, `forms-engine.js`                                                                 |
 
 ---
 

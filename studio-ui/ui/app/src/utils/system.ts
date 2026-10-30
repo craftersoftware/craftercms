@@ -26,13 +26,12 @@ import type { FormsEngineProps } from '../components/FormsEngine/FormsEngine';
 import { getHostToGuestBus } from './subjects';
 import { reloadRequest } from '../state/actions/preview';
 import { Context, useContext } from 'react';
-import type { LegacyFormDialogProps } from '../components/LegacyFormDialog/utils';
 import { nanoid } from 'nanoid';
 import { DialogStackItem } from '../models';
 import type { ConfirmDialogProps } from '../components/ConfirmDialog';
 import type { ErrorDialogProps } from '../components/ErrorDialog';
 import { getPathFromPreviewURL, getPreviewURLFromPath, isPagePath } from './path';
-import { formsEnginePropsFromLaunch } from './contentFormLaunch';
+import { formsEnginePropsFromLaunch, type ContentFormSaveAction } from './contentFormLaunch';
 
 export type SystemLinkId =
 	| 'preview'
@@ -106,61 +105,65 @@ export function consolidateSx(...sxs: SxProps<Theme>[]): SxProps<Theme> {
 	return sxs.flatMap((item) => item ?? []);
 }
 
-/**
- * Chooses the legacy dialog or Forms Engine 2.
- *
- * When #9213 removes the legacy engine, `showContentFormAction` should call
- * {@link formsEnginePropsFromLaunch} the way this function does. That PR's
- * `ShowContentFormProps` still needs `index` and the save-result `draft` / `action`
- * fields. Drop its hardcoded `'saveAndClose'` and `fieldToScroll: selectedFields[0]`.
- */
-export function pickShowContentFormAction(oldProps: LegacyFormDialogProps) {
-	const useLegacy = window.localStorage.getItem('useLegacyFormEngine') === 'true';
-	const dialogId = nanoid();
-	return useLegacy
-		? pushDialog({
-				id: dialogId,
-				component: createComponentId('LegacyFormDialog'),
-				allowFullScreen: true,
-				allowMinimize: true,
-				props: { ...oldProps, dialogId }
-			})
-		: pushDialog({
-				component: createComponentId('FormsEngineDialog'),
-				allowFullScreen: true,
-				allowMinimize: true,
-				props: {
-					formProps: {
-						...formsEnginePropsFromLaunch(oldProps),
-						onSave(result) {
-							if (isPreviewAppUrl()) {
-								const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
-								const previewURL = params.get('page');
-								if (
-									previewURL &&
-									result.path &&
-									isPagePath(oldProps.path) &&
-									getPathFromPreviewURL(previewURL) === oldProps.path &&
-									oldProps.path !== result.path
-								) {
-									// oldProps.path is a page and the same as the preview page path, but the new path is different,
-									// which means there was a rename of the page currently being previewed. Then we need to update the
-									// preview URL to reflect the new page path.
-									window.location.href = getSystemLink({
-										page: getPreviewURLFromPath(result.path),
-										systemLinkId: 'preview',
-										site: oldProps.site,
-										authoringBase: oldProps.authoringBase
-									});
-								} else {
-									getHostToGuestBus().next(reloadRequest());
-								}
-							}
-							oldProps.onSaveSuccess?.(result);
+export interface ShowContentFormProps {
+	path: string;
+	authoringBase: string;
+	site?: string;
+	readonly?: boolean;
+	selectedFields?: string[];
+	modelId?: string;
+	isEmbedded?: boolean;
+	changeTemplate?: string;
+	contentTypeId?: string;
+	isNewContent?: boolean;
+	/** Repeat-item index. Nested indexes such as `"1.2"` are not applied. */
+	index?: string | number;
+	onSaveSuccess?(result?: {
+		path?: string;
+		/** Set on repository writes. True when the item was stored as a draft. */
+		draft?: boolean;
+		/** Set on repository writes. From the close/minimize checkboxes. */
+		action?: ContentFormSaveAction;
+	}): any;
+}
+
+export function showContentFormAction(props: ShowContentFormProps) {
+	return pushDialog({
+		component: createComponentId('FormsEngineDialog'),
+		allowFullScreen: true,
+		allowMinimize: true,
+		props: {
+			formProps: {
+				...formsEnginePropsFromLaunch(props),
+				onSave(result) {
+					if (isPreviewAppUrl()) {
+						const params = new URLSearchParams(window.location.hash.replace(/^#\/?\?/, ''));
+						const previewURL = params.get('page');
+						if (
+							previewURL &&
+							result.path &&
+							isPagePath(props.path) &&
+							getPathFromPreviewURL(previewURL) === props.path &&
+							props.path !== result.path
+						) {
+							// oldProps.path is a page and the same as the preview page path, but the new path is different,
+							// which means there was a rename of the page currently being previewed. Then we need to update the
+							// preview URL to reflect the new page path.
+							window.location.href = getSystemLink({
+								page: getPreviewURLFromPath(result.path),
+								systemLinkId: 'preview',
+								site: props.site,
+								authoringBase: props.authoringBase
+							});
+						} else {
+							getHostToGuestBus().next(reloadRequest());
 						}
-					} satisfies FormsEngineProps
+					}
+					props.onSaveSuccess?.(result);
 				}
-			});
+			} satisfies FormsEngineProps
+		}
+	});
 }
 
 export function createUseContextHook<T>(name: string, context: Context<T>): () => T;
