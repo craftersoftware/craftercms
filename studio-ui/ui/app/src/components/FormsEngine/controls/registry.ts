@@ -15,20 +15,25 @@
  */
 
 import type { ComponentType } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import type { DataSourceBinding } from '../dataSources/types';
 import type { ValueRetriever, ValueSerializer } from '../lib/controlValueTypes';
-import type { ValidatorFunctionDef } from '../lib/validators';
-import type { ControlProps } from '../types';
+import type { Validator } from '../lib/validators';
+import type { AnyValue, ControlProps } from '../types';
 
 /** Cached plugin control: Component, bindings, optional IO/validator hooks, and owning `PluginDescriptor.id`. */
 export interface RegisteredControlContribution {
-	Component: ComponentType<ControlProps>;
+	Component: ComponentType<ControlProps<AnyValue>>;
 	bindings: readonly DataSourceBinding[];
+	/** Wrap in `FormsEngineField` when not `false`. See `ControlPluginContribution.fieldChrome`. */
+	fieldChrome?: boolean;
+	/** `sx` for the default wrapper. */
+	fieldSx?: SxProps<Theme>;
 	/** Owning {@link PluginDescriptor.id} — not the form-definition asset locator `pluginId`. */
 	pluginId: string;
-	valueRetriever?: ValueRetriever;
-	valueSerializer?: ValueSerializer;
-	validator?: ValidatorFunctionDef;
+	valueRetriever?: ValueRetriever<AnyValue>;
+	valueSerializer?: ValueSerializer<AnyValue>;
+	validator?: Validator<AnyValue>;
 }
 
 const registeredControls = new Map<string, RegisteredControlContribution>();
@@ -39,7 +44,7 @@ const registeredControls = new Map<string, RegisteredControlContribution>();
  * Idempotent for the same owning plugin + Component. Throws if another plugin's descriptor already
  * claims the type (even with an identical Component reference), so binding/IO metadata cannot be
  * overwritten under a retained first owner. Re-entry with the same owner+Component replaces
- * bindings and optional valueRetriever/valueSerializer/validator (omitted hooks are cleared).
+ * bindings, fieldChrome, fieldSx and the optional valueRetriever/valueSerializer/validator (omitted ones are cleared).
  */
 export function registerControlContribution(controlType: string, contribution: RegisteredControlContribution): void {
 	if (!controlType) {
@@ -73,16 +78,16 @@ export function hasRegisteredControl(controlType: string): boolean {
 }
 
 /** Plugin control valueRetriever for `field.type`, if contributed. */
-export function getPluginControlValueRetriever(controlType: string): ValueRetriever | undefined {
+export function getPluginControlValueRetriever(controlType: string): ValueRetriever<AnyValue> | undefined {
 	return registeredControls.get(controlType)?.valueRetriever;
 }
 
 /** Plugin control valueSerializer for `field.type`, if contributed. */
-export function getPluginControlValueSerializer(controlType: string): ValueSerializer | undefined {
+export function getPluginControlValueSerializer(controlType: string): ValueSerializer<AnyValue> | undefined {
 	return registeredControls.get(controlType)?.valueSerializer;
 }
 
 /** Plugin control validator for `field.type`, if contributed. */
-export function getPluginControlValidator(controlType: string): ValidatorFunctionDef | undefined {
+export function getPluginControlValidator(controlType: string): Validator<AnyValue> | undefined {
 	return registeredControls.get(controlType)?.validator;
 }

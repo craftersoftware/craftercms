@@ -269,7 +269,7 @@ For a field with `field.properties.plugin`, `ControlWrapper` (`controlHelpers.ts
 
 1. creates a plugin locator from `type`, `name`, `filename`, `pluginId`;
 2. loads via `controlPluginLoader` → `importPlugin` → `descriptor.controls[field.type]`;
-3. renders the registered React component;
+3. renders the registered React component inside `FormsEngineField` (unless the contribution sets `fieldChrome: false`);
 4. uses `dataSourceBindings` from the descriptor control entry (registered for `field.type`);
 5. resolves `ControlProps.dataSources` before render;
 6. isolates load/render errors.
@@ -282,10 +282,14 @@ export default {
 	controls: {
 		'my-custom-picker': {
 			Component: MyPicker,
+			// Optional. Default true: the host wraps Component in FormsEngineField. false renders it bare.
+			fieldChrome: true,
+			// Optional. sx for the default wrapper. Ignored when fieldChrome is false.
+			fieldSx: { mt: 1 },
 			dataSourceBindings: [{ propertyName: 'itemManager', interfaces: ['item'], selection: 'multi' }],
-			valueRetriever: (raw, field) => /* XML → form value */,
-			valueSerializer: (field, value) => /* form value → XML-ready shape */,
-			validator: (field, value, messages, meta) => /* type-specific; push messages; return bool */
+			valueRetriever: (raw, ctx) => /* XML → form value; ctx = { field } */,
+			valueSerializer: (value, ctx) => /* form value → XML-ready shape; ctx = { field, contentTypesById } */,
+			validator: async (value, ctx) => ({ valid: true, messages: [] }) // ctx = { field, signal, siteId, getValue }
 		}
 	}
 };
@@ -295,12 +299,93 @@ Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSeri
 
 Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component). Host also exposes `getValueRetriever` / `getValueSerializer` / `getValidator` for inspection.
 
-**Field chrome.** Plugin controls are rendered without a wrapper, so validation state is invisible unless the control renders it. `craftercms.formsEngine.controls.FormsEngineField` is the same component built-in controls use — it reads the field's validity atom and renders the label, required/invalid indicator, validator messages, field menu, and inheritance notice:
+**Field chrome.** The host wraps every plugin control in `FormsEngineField` by default, the same component built-in controls use. It reads the field's validity atom and renders the label, the required/invalid indicator, validator messages, the field menu and the inheritance notice. The control renders only its input.
+
+The host generates two ids per field instance and passes them to the control as `inputId` and `labelId`. The wrapper's label points at them (`htmlFor={inputId}`, `id={labelId}`), so put `inputId` on the focusable element. The load-error placeholder wraps itself, and the host never wraps it a second time.
+
+```js
+// Default (fieldChrome omitted or true): render only the input.
+function MyPicker({ inputId, value, setValue }) {
+	return <input id={inputId} value={value} onChange={(e) => setValue(e.target.value)} />;
+}
+```
+
+To control the whole field, set `fieldChrome: false` on the contribution. The control then renders bare and wraps itself with `craftercms.formsEngine.controls.FormsEngineField`:
 
 ```js
 const { FormsEngineField } = globalThis.craftercms?.formsEngine?.controls ?? {};
-// <FormsEngineField field={field} htmlFor={id}>{yourInput}</FormsEngineField>
+function MyPicker({ field, inputId, labelId, value, setValue }) {
+	return (
+		<FormsEngineField field={field} htmlFor={inputId} labelId={labelId} sx={{ mt: 1 }} className="my-picker">
+			<input id={inputId} value={value} onChange={(e) => setValue(e.target.value)} />
+		</FormsEngineField>
+	);
+}
 ```
+
+> **Migration.** Controls written before the host wrapped plugin controls wrapped themselves in `FormsEngineField`. They now render two wrappers. Set `fieldChrome: false` on the contribution, or remove the control's own wrapper.
+
+`FormsEngineField` props that are stable for plugins (everything else is host-internal and can change):
+
+| Prop                | Type                             | Notes                                                                                          |
+| ------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `field`             | `Readonly<ContentTypeField>`     | Required. Drives the label, required marker, validity and help text.                           |
+| `children`          | `ReactNode`                      | The input.                                                                                     |
+| `htmlFor`           | `string`                         | Id of the input the label points at. Pass `inputId`.                                           |
+| `labelId`           | `string`                         | Id of the label element. Pass `labelId`.                                                       |
+| `length`, `max`     | `number`                         | Shows a `length/max` counter.                                                                  |
+| `action`            | `ReactNode`                      | Rendered in the label row.                                                                     |
+| `menu`              | `false`                          | Hides the field menu.                                                                          |
+| `menuOptions`       | `Array<{ id, text, icon? } \| 'divider'>` | Extra field menu entries.                                                          |
+| `onMenuOptionClick` | `(e, optionId, closeMenu) => void` | Called when an extra menu entry is chosen.                                                   |
+| `sx`                | MUI `SxProps<Theme>`             | Object, function or array. Applied after the host's own styles.                                |
+| `className`         | `string`                         | Class name on the wrapper element.                                                             |
+
+The default wrapper takes its `sx` from `fieldSx` on the contribution.
+
+### Control, hook and XML contracts
+
+Everything below is public contract. `ControlProps` and every hook context may gain members. Existing members and their meaning stay stable. `field` and `contentType` are `Readonly`; treat them as read only.
+
+`ControlProps<V = unknown>`: `value: V`, `setValue(newValue: V)`, `field`, `contentType`, `readonly`, `autoFocus`, `inputId`, `labelId`, and optional `dataSources`. Type a control with its value type, for example `ControlProps<string>`. Built-in props follow the same pattern, such as `NodeSelectorProps` for `ControlProps<NodeSelectorItem[]>`.
+
+The descriptor's `controls` map holds contributions of different value types, so it does not check an entry's `V` on its own. To have the compiler tie an entry's component, hooks and `V` together, check the entry with `satisfies ControlPluginContribution<V>` (TypeScript), or `/** @satisfies {import('@craftercms/studio-ui/models/PluginDescriptor').ControlPluginContribution<string>} */` on the entry (JavaScript with type checking):
+
+```ts
+export default {
+	id: 'org.example.my-controls',
+	controls: {
+		'my-custom-picker': {
+			Component: MyPicker, // ComponentType<ControlProps<string>>
+			validator: (value) => ({ valid: value.length > 2 }) // value is string
+		} satisfies ControlPluginContribution<string>
+	}
+};
+```
+
+| Hook              | Signature                                                          | Context (`ctx`)                                                                                                  |
+| ----------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `valueRetriever`  | `(value, ctx) => V`. Synchronous.                                  | `{ field }`                                                                                                      |
+| `valueSerializer` | `(value, ctx) => unknown`. Synchronous. Returns an XML builder shape. | `{ field, contentTypesById }`                                                                                  |
+| `validator`       | `(value, ctx) => { valid, messages? }`. May be async.              | `{ field, signal, siteId, getValue }`                                                                            |
+
+A validator returns `{ valid: boolean, messages?: FieldValidityMessage[] }` and never mutates an argument. The field is valid only when `valid === true`. A result of any other shape is reported in the console and treated as invalid. That includes `messages` that is not an array, or an entry that is not one of the message forms below. Messages show under the field in the order given. A `FieldValidityMessage` is a string, an `react-intl` `MessageDescriptor`, or `[MessageDescriptor, values]`.
+
+- `ctx.signal` is an `AbortSignal` that aborts when this validation run is superseded before it settles. This can happen when the value changes, when a value read through `getValue` changes, or when the form's relevance changes. So `signal.aborted` can be `true` while your own value is unchanged. Pass it to `fetch` or any abortable call.
+- `ctx.getValue(fieldId)` returns the current value of a field that lives next to the one being validated, or `undefined` for an id that level does not have. For a top-level field that is the open form's fields. For a field inside a repeat item it is that item's fields, and for a field inside an embedded component it is that component's fields. A nested field never sees the page's values, so the same data gets the same verdict whether the item is validated from its parent or in its own form. Reading a field makes this field validate again when that field changes.
+- A validator that throws or rejects is reported in the console and treated as invalid, so a failed request does not break form validation. An `AbortError` is not logged only when `ctx.signal` aborted: that run was superseded and its outcome is discarded. A validator that aborts its own controller is still logged.
+- Required and empty checks run first and are host-owned. The validator does not run for a required field that is empty.
+- The host passes plugins nothing else. Internals such as the form controller's relevance deny-list are not part of the context.
+
+Serializers return the shape the XML builder renders. The special keys it reads are exported constants, and the host publishes them at `craftercms.formsEngine.controls.xmlKeys` for bundles that cannot import host modules. If the XML parser changes, the host maps these keys, so plugin code keeps working.
+
+| Constant (`lib/controlValueTypes.ts`) | Runtime (`xmlKeys.`) | Value         | Meaning                                                                       |
+| ------------------------------------- | -------------------- | ------------- | ----------------------------------------------------------------------------- |
+| `XML_ATTRIBUTE_PREFIX`                | `attributePrefix`    | `'@:'`        | Key prefix that renders an attribute. `{ '@:inline': true }` gives `inline="true"`. |
+| `XML_CDATA_KEY`                       | `cdata`              | `'__cdata__'` | The value is emitted in a CDATA section. `{ __cdata__: html }`.               |
+| `XML_TEXT_KEY`                        | `text`               | `'#text'`     | The text node next to attributes. `{ '@:flag': true, '#text': 'x' }`.         |
+| `XML_LIST_ITEM_KEY`                   | `listItem`           | `'item'`      | An array under this key renders repeated `<item>` elements. `{ item: [...] }`. |
+| `XML_ITEM_LIST_ATTRIBUTE`             | `itemListAttribute`  | `'@:item-list'` | Marks a `{ item: [...] }` list as an item list.                             |
 
 Missing for a complete extension contract:
 
@@ -463,12 +548,14 @@ interface PluginDescriptor {
 	controls?: Record<string, ControlPluginContribution>; // key = control type id (= field.type) — installed by registerPlugin ✓
 }
 
-interface ControlPluginContribution {
-	Component: ComponentType<ControlProps>;
+interface ControlPluginContribution<V = unknown> {
+	Component: ComponentType<ControlProps<V>>;
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
-	valueRetriever?: ValueRetriever; // optional XML → form value
-	valueSerializer?: ValueSerializer; // optional form value → XML shape
-	validator?: ValidatorFunctionDef; // optional type-specific; required/empty is host-owned
+	fieldChrome?: boolean; // optional; default true wraps Component in FormsEngineField
+	fieldSx?: SxProps<Theme>; // optional sx for the default wrapper
+	valueRetriever?: ValueRetriever<V>; // optional XML → form value: (value, { field }) => V
+	valueSerializer?: ValueSerializer<V>; // optional form value → XML shape: (value, { field, contentTypesById }) => unknown
+	validator?: Validator<V>; // optional type-specific: (value, { field, signal, siteId, getValue }) => { valid, messages? }
 }
 ```
 

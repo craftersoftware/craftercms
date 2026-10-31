@@ -1470,7 +1470,7 @@ function updateTypeFromDataSourceUpdate(
 		const field = descriptorFields[key];
 		const fieldType = field?.type;
 		const serializer = fieldType ? valueSerializersLookup[fieldType] : undefined;
-		serializedValues[key] = serializer ? serializer(field, value) : value;
+		serializedValues[key] = serializer ? serializer(value, { field, contentTypesById: {} }) : value;
 	});
 	const nextDataSource = { ...selectedDataSource };
 	// When updating a new data source, we need to exclude NEW prop from the new datasource content

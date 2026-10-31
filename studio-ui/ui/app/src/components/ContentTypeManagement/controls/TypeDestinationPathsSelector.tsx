@@ -26,9 +26,7 @@ import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutl
 import { TypeBuilderControl } from '../utils';
 import Typography from '@mui/material/Typography';
 
-export interface TypeDestinationPathsSelectorProps extends TypeBuilderControl {
-	value: DestinationPaths;
-}
+export type TypeDestinationPathsSelectorProps = TypeBuilderControl<DestinationPaths>;
 
 type Destination = 'includes' | 'excludes';
 interface DestinationPaths {

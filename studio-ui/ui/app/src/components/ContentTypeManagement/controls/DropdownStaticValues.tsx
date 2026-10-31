@@ -20,13 +20,13 @@ import MenuItem from '@mui/material/MenuItem';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import { TypeBuilderControl } from '../utils';
 
-export interface DropdownStaticValuesProps extends TypeBuilderControl {
-	value: {
-		value: string;
-		label: string;
-		selected: boolean;
-	}[];
+interface DropdownStaticValue {
+	value: string;
+	label: string;
+	selected: boolean;
 }
+
+export type DropdownStaticValuesProps = TypeBuilderControl<DropdownStaticValue[]>;
 
 /**
  * Enables the selection of a key/value pair from a predefined list of options.

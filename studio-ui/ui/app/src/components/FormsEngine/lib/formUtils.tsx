@@ -382,7 +382,7 @@ export function createFieldAtoms(
 			formContext.fieldUpdates$.next(field.id);
 		}
 	);
-	const validationAtom = atom(async (get) => {
+	const validationAtom = atom(async (get, { signal }) => {
 		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
 		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
 		if (relevanceVersion) get(relevanceVersion);
@@ -393,6 +393,7 @@ export function createFieldAtoms(
 			siblingIds: validatorsData?.siblingIds,
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
+			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			fileName: formContextRef.current.atoms?.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.

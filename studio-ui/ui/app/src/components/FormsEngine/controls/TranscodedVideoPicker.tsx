@@ -43,9 +43,7 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { svgIconClasses } from '@mui/material/SvgIcon';
 import { listItemIconClasses } from '@mui/material/ListItemIcon';
 
-export interface TranscodedVideoPickerProps extends ControlProps {
-	value: { url: string }[];
-}
+export type TranscodedVideoPickerProps = ControlProps<{ url: string }[]>;
 
 export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 	const { field, value, setValue, readonly: formReadOnly, autoFocus, dataSources } = props;

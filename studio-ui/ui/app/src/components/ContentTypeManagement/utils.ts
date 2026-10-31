@@ -297,7 +297,7 @@ export function reverseTypeFieldValuesObject(
 				// Serialize field properties
 				const serializer = valueSerializersLookup[fieldDescriptor.type];
 				properties[property].value = serializer
-					? serializer(fieldDescriptor, values[property])
+					? serializer(values[property], { field: fieldDescriptor, contentTypesById: {} })
 					: (values[property] as never);
 			}
 		} else if (property === 'validations') {
@@ -382,7 +382,7 @@ export type DescriptorContentTypeFieldValidation = Omit<ContentTypeFieldValidati
 
 export type DescriptorFieldValidations = Record<DescriptorFieldValidationKeys, DescriptorContentTypeFieldValidation>;
 
-export interface TypeBuilderControl extends Omit<ControlProps, 'field'> {
+export interface TypeBuilderControl<V = unknown> extends Omit<ControlProps<V>, 'field'> {
 	field: ContentTypeField & {
 		validations: Partial<DescriptorFieldValidations>;
 	};

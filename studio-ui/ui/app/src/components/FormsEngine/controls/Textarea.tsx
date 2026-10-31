@@ -20,9 +20,7 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import { getPropertyValue, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
 
-export interface TextareaProps extends ControlProps {
-	value: string;
-}
+export type TextareaProps = ControlProps<string>;
 
 export function Textarea(props: TextareaProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;

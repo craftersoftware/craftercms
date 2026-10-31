@@ -28,7 +28,7 @@ import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
 import { Matcher } from 'path-expression-matcher';
 import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
-import type { ValueRetriever } from './controlValueTypes';
+import type { ValueRetriever, ValueRetrieverContext } from './controlValueTypes';
 
 export type { ValueRetriever } from './controlValueTypes';
 
@@ -197,7 +197,7 @@ export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: 
 	if (!retriever) {
 		return fieldValue as T;
 	}
-	return retriever(fieldValue, field);
+	return retriever(fieldValue, { field });
 }
 
 /** Takes in the CrafterCMS content XML and returns a JS object with the values */
@@ -223,8 +223,8 @@ export function arrayFieldExtractor(value: unknown): unknown[] {
 	return Array.isArray(value) ? value : ((value as Record<'item', unknown[]>)?.item ?? []);
 }
 
-export function textFieldExtractor(value: unknown, field?: ContentTypeField): string {
-	const escapeContent = (field?.properties?.escapeContent?.value as boolean) ?? false;
+export function textFieldExtractor(value: unknown, ctx?: ValueRetrieverContext): string {
+	const escapeContent = (ctx?.field?.properties?.escapeContent?.value as boolean) ?? false;
 	const rawValue: string = nnou(value) ? (value as string) : '';
 	return escapeContent ? unescapeXml(rawValue) : rawValue;
 }

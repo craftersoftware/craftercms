@@ -18,12 +18,34 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type LookupTable from '../../../models/LookupTable';
 
-/** XML / form-value → in-memory control value (form load). */
-export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
+/** Second argument of a {@link ValueRetriever}. New members may be added; existing ones are stable. */
+export interface ValueRetrieverContext {
+	readonly field: Readonly<ContentTypeField>;
+}
 
-/** In-memory control value → XML-serialiser-ready shape (form save). */
-export type ValueSerializer<T = unknown> = (
-	field: ContentTypeField,
-	value: unknown,
-	contentTypesLookup?: LookupTable<ContentType>
-) => T;
+/** XML / form-value → in-memory control value (form load). Synchronous. */
+export type ValueRetriever<V = unknown> = (value: unknown, ctx: ValueRetrieverContext) => V;
+
+/** Second argument of a {@link ValueSerializer}. New members may be added; existing ones are stable. */
+export interface ValueSerializerContext {
+	readonly field: Readonly<ContentTypeField>;
+	/** Every content type known to the form, by id. Empty when serializing outside a content form. */
+	readonly contentTypesById: Readonly<LookupTable<ContentType>>;
+}
+
+/**
+ * In-memory control value → XML-serialiser-ready shape (form save). Synchronous.
+ * The returned shape uses the special keys documented next to the `XML_*` constants below.
+ */
+export type ValueSerializer<V = unknown> = (value: V, ctx: ValueSerializerContext) => unknown;
+
+/** Prefix of an object key that becomes an XML attribute. `{ '@:inline': true }` renders `inline="true"`. */
+export const XML_ATTRIBUTE_PREFIX = '@:';
+/** Key whose value is emitted wrapped in a CDATA section. `{ __cdata__: html }`. */
+export const XML_CDATA_KEY = '__cdata__';
+/** Key holding a text node next to attributes. `{ '@:tokenized': true, '#text': 'x' }`. */
+export const XML_TEXT_KEY = '#text';
+/** Key whose array value renders as repeated `<item>` elements. `{ item: [...] }`. */
+export const XML_LIST_ITEM_KEY = 'item';
+/** Attribute key that marks a `{ item: [...] }` list as an item list. */
+export const XML_ITEM_LIST_ATTRIBUTE = `${XML_ATTRIBUTE_PREFIX}item-list` as const;

@@ -338,12 +338,12 @@ Plugin bundles are cached by file URL. `registerPlugin` registers bindings for e
 
 Example: `samples/fe2-control-plugin.example.mjs`.
 
-The runtime control contract is `ControlProps` (`value`, `setValue`, `field`, `contentType`, `readonly`, `autoFocus`, optional `dataSources`). Host helpers:
+The runtime control contract is `ControlProps<V>` (`value: V`, `setValue(newValue: V)`, read-only `field` and `contentType`, `readonly`, `autoFocus`, host-generated `inputId` and `labelId`, optional `dataSources`). Host helpers:
 
 - `window.craftercms.formsEngine.dataSources` — DS module registry
-- `window.craftercms.formsEngine.controls` — `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`
+- `window.craftercms.formsEngine.controls` — `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`, `xmlKeys`
 
-Plugin controls are rendered bare by `ResolvedControlRenderer` (built-ins wrap themselves in `FormsEngineField`). A plugin that wants label, required/invalid styling, and validity messages must wrap its input in the host-provided `FormsEngineField`; otherwise a failing validator only surfaces in the Table of Contents and the save gate.
+`ResolvedControlRenderer` wraps plugin controls in `FormsEngineField` by default, wired to the generated `inputId` / `labelId` (built-ins and Type Builder controls wrap themselves and are rendered bare). A contribution opts out with `fieldChrome: false` and wraps its input itself; `fieldSx` styles the default wrapper. The load-error placeholder wraps itself and is never wrapped twice: `controlPluginLoader` reports `fieldChrome: false` for it. Contract details and the `FormsEngineField` public props are in the plugins doc §6.
 
 `useFieldValue(fieldId)` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`) is the supported way for a plugin control to read/write a **sibling field** — typically a descriptor-declared additional field such as `{id}_tz` (date/time) or `{id}_bk` (see §5.4 for the `metadata/additionalFields` XML that declares those companions and gets their atoms created at bootstrap). It is a React hook returning `[value, setValue, exists]`: when the field was not initialized, `value` is `undefined`, `exists` is `false`, and `setValue` is a no-op instead of throwing — compare built-in `DateTime`, which throws on a missing `${field.id}_tz` atom. Plugins must use the host's instance (hooks/context identity), so the hook is exposed here rather than imported or bundled by the plugin:
 
@@ -355,7 +355,7 @@ const [timezone, setTimezone, timezoneExists] = useFieldValue(`${field.id}_tz`);
 
 `StableFormContext` and Jotai's `useAtom` are deliberately **not** host members: an earlier revision exposed them so plugins could reach `atoms.valueByFieldId` directly, but that leaked the atom map and a Jotai dependency to plugins. `useFieldValue` supersedes them — do not import Jotai or reach into the atoms map from plugin code.
 
-This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Required/empty validation stays host-owned in `validateFieldValue`.
+This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Hooks take the value first, then one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, both synchronous; validator `(value, { field, signal, siteId, getValue })` returning `{ valid, messages }`, possibly async. Built-in validators use the same shape and also receive the host's internal `meta` (module-private). Required/empty validation stays host-owned in `validateFieldValue`.
 
 Additional current FE control gaps:
 
@@ -639,7 +639,7 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 Why Blob instead of pointing `<script>` / `import()` at the API URL: that endpoint requires auth; a raw script/module request does not reliably carry the same credentials FE1 needed — hence authenticated `getText` then Blob module (same constraint as FE1’s current loader).
 
-Host helpers may live under `window.craftercms.formsEngine.formControllers` (load/clear cache) for tests and debugging — optional, not required for authors.
+The public `window.craftercms.formsEngine.formControllers` host does not expose the loader. `load`, `getCached` and `clearCache` live under an undocumented `__internal` key for tests and console debugging; Studio code imports `formControllers/loader.ts` directly.
 
 #### `FormControllerContext` (host-provided)
 
@@ -810,6 +810,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-30** — FE2 plugin API settled for 5.0 (#9306). Hooks are value-first with one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, validator `(value, { field, signal, siteId, getValue }) => { valid, messages }` (async allowed, malformed result is invalid). The XML builder's special keys are exported constants and published at `craftercms.formsEngine.controls.xmlKeys`. `ControlProps<V>` is generic with read-only `field` / `contentType` and host-generated `inputId` / `labelId`. Plugin controls render inside `FormsEngineField` by default (`fieldChrome: false` opts out, `fieldSx` styles the wrapper); the load-error placeholder is not double-wrapped. `formControllers` `load` / `getCached` / `clearCache` moved under `__internal`. API versions stay at 1.
 - **2026-10-22** — `EditTypeView`'s `parseConfigPlugins` now normalizes descriptor `metadata.additionalFields` with `asArray` (see §5.4), matching the Redux `uiConfig` reducer for that field; `metadata.suffixes` is still not normalized on this path. This supersedes the `parseConfigPlugins` note in the `additionalFields` entry below.
 - **2026-10-22** — Expose `useFieldValue` on `craftercms.formsEngine.controls` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`). Plugin controls use this host hook — `const [value, setValue, exists] = useFieldValue(field.id + '_tz')` — to access sibling fields, e.g. descriptor-declared additional fields such as `{id}_tz` / `{id}_bk`, without depending on the atoms map or Jotai. An uninitialized field returns `[undefined, setValue, false]` (the setter is a no-op) instead of throwing. This supersedes exposing `StableFormContext` + Jotai `useAtom` on the same host (added earlier on this branch): neither is a host member anymore. See §5.5.
 - **2026-10-22** — Expected `ui.xml` shape for descriptor `metadata/additionalFields` documented in §5.4: repeated leaf elements under `widget[id="craftercms.components.ContentTypeManagement"] > configuration > controls > control > descriptor > metadata` (one `<additionalFields>{id}_tz</additionalFields>` per template; same for `<suffixes>`), _not_ the `<additionalFields><id>…</id></additionalFields>` shape persisted per field in `form-definition.xml`. A single element deserializes as a bare `string`, multiples as `string[]`; the Redux `uiConfig` reducer now reads the nested `control > descriptor` (previously it looked for a top-level `descriptor`, so XML descriptors were not registered there) and normalizes `suffixes`/`additionalFields` via `asArray` (`string[] | null`), while `variableValidator` now `asArray`s `meta.additionalFields` itself because `EditTypeView`'s `parseConfigPlugins` path does not normalize `metadata`. `{id}` expands to the field id via `processAdditionalFieldMacro`; entries without it are verbatim.

@@ -20,9 +20,7 @@ import { ControlProps } from '../types';
 import Switch from '@mui/material/Switch';
 import { isFieldReadOnly } from '../lib/formUtils';
 
-export interface CheckboxProps extends ControlProps {
-	value: boolean;
-}
+export type CheckboxProps = ControlProps<boolean>;
 
 export function Checkbox(props: CheckboxProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;

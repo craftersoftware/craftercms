@@ -26,9 +26,7 @@ import { processPopulateExpression, validateDatePopulateExpression } from '../li
 import { getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
 import { PrimitiveAtom, useAtom } from 'jotai';
 
-export interface DateTimeProps extends ControlProps {
-	value: string;
-}
+export type DateTimeProps = ControlProps<string>;
 
 export function DateTime(props: DateTimeProps) {
 	const { field, value: valueProp, setValue, readonly: formReadonly, autoFocus } = props;

@@ -37,9 +37,7 @@ import { getFileNameFromPath } from '../../../utils/path';
 import { uploadFile } from '../../../services/content';
 import { pushErrorDialog } from '../../../utils/system';
 
-export interface TypeImageSelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type TypeImageSelectorProps = TypeBuilderControl<string>;
 
 /** Content-type thumbnail size caps (WIDTHCONSTRAINS / HEIGHTCONSTRAINS). */
 const TYPE_IMAGE_RESTRICTIONS: ImageRestrictions = {

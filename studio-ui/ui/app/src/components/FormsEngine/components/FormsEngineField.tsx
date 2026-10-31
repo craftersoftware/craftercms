@@ -15,7 +15,8 @@
  */
 
 import { ContentTypeField } from '../../../models';
-import FormControl, { FormControlProps } from '@mui/material/FormControl';
+import FormControl from '@mui/material/FormControl';
+import type { SxProps, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import FieldRequiredStateIndicator from './FieldRequiredStateIndicator';
 import Typography from '@mui/material/Typography';
@@ -47,6 +48,7 @@ import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
 import { translateIfMessageDescriptor } from '../../ContentTypeManagement/utils';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
+import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
@@ -78,7 +80,8 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	length?: number;
 	action?: ReactNode;
 	isValid?: boolean;
-	sx?: FormControlProps['sx'];
+	sx?: SxProps<Theme>;
+	className?: string;
 	menu?: false;
 	menuOptions?: Array<
 		| {
@@ -90,6 +93,26 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	>;
 	onMenuOptionClick?(e: SyntheticEvent, optionId: string, closeMenu: () => void): void;
 }>;
+
+/**
+ * The `FormsEngineField` props that are a stable contract for plugin controls that opt out of the default
+ * wrapper (`fieldChrome: false`) and wrap themselves. Every other prop is host-internal and may change.
+ */
+export type FormsEngineFieldPublicProps = Pick<
+	FormsEngineFieldProps,
+	| 'field'
+	| 'children'
+	| 'htmlFor'
+	| 'labelId'
+	| 'length'
+	| 'max'
+	| 'action'
+	| 'menu'
+	| 'menuOptions'
+	| 'onMenuOptionClick'
+	| 'sx'
+	| 'className'
+>;
 
 export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps>(function (props, ref) {
 	const {
@@ -104,7 +127,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		autoFocus,
 		menu = true,
 		menuOptions,
-		onMenuOptionClick
+		onMenuOptionClick,
+		sx,
+		className
 	} = props;
 	const { sourceMap } = useItemMetaContext();
 	const stableForm = useStableFormContext();
@@ -147,7 +172,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			variant="standard"
 			data-field-id={fieldId}
 			required={isRequired}
-			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
+			className={className}
+			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
 			<Box
 				sx={{

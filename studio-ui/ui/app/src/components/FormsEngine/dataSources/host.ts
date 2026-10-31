@@ -25,6 +25,13 @@ import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { useFieldValue } from '../lib/formsEngineContext';
+import {
+	XML_ATTRIBUTE_PREFIX,
+	XML_CDATA_KEY,
+	XML_ITEM_LIST_ATTRIBUTE,
+	XML_LIST_ITEM_KEY,
+	XML_TEXT_KEY
+} from '../lib/controlValueTypes';
 
 /**
  * Public runtime surface for the data-source *module registry* (built-ins and
@@ -50,8 +57,9 @@ export const formsEngineDataSourcesHost = {
  * for UMD-style loaders.
  *
  * `FormsEngineField` is the field chrome built-in controls use (label, required/invalid
- * state, validity messages, field menu, inheritance notice). Plugin controls are rendered
- * bare, so they must wrap their input in it to display validation state like built-ins do.
+ * state, validity messages, field menu, inheritance notice). The host wraps plugin controls
+ * in it by default. A contribution that sets `fieldChrome: false` renders bare and wraps its
+ * input in `FormsEngineField` itself, using the `inputId` / `labelId` control props.
  *
  * `useFieldValue(fieldId)` is the supported way for plugin controls to access sibling
  * fields — e.g. a descriptor-declared additional field such as `{id}_tz` (date/time) or
@@ -68,5 +76,13 @@ export const formsEngineControlsHost = {
 	getValueSerializer: getPluginControlValueSerializer,
 	getValidator: getPluginControlValidator,
 	useFieldValue,
-	FormsEngineField
+	FormsEngineField,
+	/** Special keys a `valueSerializer` may use in the shape it returns. See the plugins doc. */
+	xmlKeys: {
+		attributePrefix: XML_ATTRIBUTE_PREFIX,
+		cdata: XML_CDATA_KEY,
+		text: XML_TEXT_KEY,
+		listItem: XML_LIST_ITEM_KEY,
+		itemListAttribute: XML_ITEM_LIST_ATTRIBUTE
+	}
 };

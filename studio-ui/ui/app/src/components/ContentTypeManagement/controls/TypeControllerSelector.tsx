@@ -39,9 +39,7 @@ import { clearFormControllerCache } from '../../FormsEngine/formControllers/load
 import { TypeControllerFlagContext } from '../typeControllerFlagContext';
 import { catchError, defer, EMPTY, finalize, type Observable, switchMap, tap, throwError } from 'rxjs';
 
-export interface TypeControllerSelectorProps extends TypeBuilderControl {
-	value: boolean;
-}
+export type TypeControllerSelectorProps = TypeBuilderControl<boolean>;
 
 /**
  * Allows the selection and edition of a controller for a content type.
@@ -67,8 +65,7 @@ export function TypeControllerSelector(props: TypeControllerSelectorProps) {
 	// stableFormContext.originalValues is of type `ContentType`, and `id` is the current contentTypeId.
 	const contentTypeId: string = stableFormContext.originalValues.id as string;
 	const type: 'javascript' | 'groovy' = getPropertyValue(field.properties, 'type', 'javascript') as
-		| 'javascript'
-		| 'groovy';
+		'javascript' | 'groovy';
 	const isJavascript = type === 'javascript';
 	const fileName = isJavascript ? 'form-controller.js' : 'controller.groovy';
 	const controllerPath = ensureSingleSlash(`${CONTENT_TYPES_BASE_PATH}${contentTypeId}/${fileName}`);

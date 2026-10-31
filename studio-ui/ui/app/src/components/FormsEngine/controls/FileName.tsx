@@ -37,7 +37,7 @@ import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { isPagePath } from '../../../utils/path';
 
-export function FileName(props: ControlProps) {
+export function FileName(props: ControlProps<string>) {
 	const { field, readonly: formReadonly, autoFocus } = props;
 	const { path: initialPath, pathInSite } = useItemMetaContext();
 	const formContext = useStableFormContext();

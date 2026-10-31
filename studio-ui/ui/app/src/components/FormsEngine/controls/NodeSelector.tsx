@@ -121,9 +121,7 @@ import { MenuList } from '@mui/material';
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
-export interface NodeSelectorProps extends ControlProps {
-	value: NodeSelectorItem[];
-}
+export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
 export interface NodeSelectorItem {
 	key: string;

@@ -41,9 +41,7 @@ import type { DataSourceSelection } from '../dataSources/types';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { EmptyState } from '../../EmptyState';
 
-export interface VideoPickerProps extends ControlProps {
-	value: string;
-}
+export type VideoPickerProps = ControlProps<string>;
 
 export function VideoPicker(props: VideoPickerProps) {
 	const { field, value, setValue, readonly: formReadonly, dataSources } = props;

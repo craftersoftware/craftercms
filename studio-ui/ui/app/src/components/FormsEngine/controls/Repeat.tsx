@@ -56,9 +56,7 @@ const repeatMessages = defineMessages({
 
 export type RepeatItem = Record<string, unknown>;
 
-export interface RepeatProps extends ControlProps {
-	value: RepeatItem[];
-}
+export type RepeatProps = ControlProps<RepeatItem[]>;
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));

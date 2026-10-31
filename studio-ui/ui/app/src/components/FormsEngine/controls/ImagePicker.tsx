@@ -51,9 +51,7 @@ import { showSystemNotification } from '../../../state/actions/system';
 import { EmptyState } from '../../EmptyState';
 import MenuList from '@mui/material/MenuList';
 
-export interface ImagePickerProps extends ControlProps {
-	value: string | null;
-}
+export type ImagePickerProps = ControlProps<string | null>;
 
 export function ImagePicker(props: ImagePickerProps) {
 	const { field, value: valueProp, setValue, autoFocus, readonly: formReadonly, dataSources } = props;

@@ -24,13 +24,13 @@ import CompareArrowsOutlinedIcon from '@mui/icons-material/CompareArrowsOutlined
 import Tooltip from '@mui/material/Tooltip';
 import { TypeBuilderControl } from '../utils';
 
-export interface RangeProps extends TypeBuilderControl {
-	value: {
-		exact: string;
-		min: string;
-		max: string;
-	};
+interface RangeValue {
+	exact: string;
+	min: string;
+	max: string;
 }
+
+export type RangeProps = TypeBuilderControl<RangeValue>;
 
 /**
  * Enables selection of a range of values through two text fields.

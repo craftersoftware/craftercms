@@ -34,9 +34,7 @@ import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions } from '../dataSourceHooks/useDataSourceListOptions';
 import type { DataSourceListItem } from '../dataSources/types';
 
-export interface CheckboxGroupProps extends ControlProps {
-	value: Array<{ key: string; value_smv: string }>;
-}
+export type CheckboxGroupProps = ControlProps<Array<{ key: string; value_smv: string }>>;
 
 export function CheckboxGroup(props: CheckboxGroupProps) {
 	const theme = useTheme();

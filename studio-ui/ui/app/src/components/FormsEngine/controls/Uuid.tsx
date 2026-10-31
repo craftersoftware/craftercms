@@ -18,9 +18,7 @@ import { ControlProps } from '../types';
 import Text from './Text';
 import { getPropertyValue } from '../lib/formUtils';
 
-export interface UuidProps extends ControlProps {
-	value: string;
-}
+export type UuidProps = ControlProps<string>;
 
 export function Uuid(props: UuidProps) {
 	const { field } = props;

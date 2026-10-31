@@ -17,11 +17,15 @@
 import { clearFormControllerCache, getCachedFormController, loadFormController } from './loader';
 
 /**
- * Public runtime surface for form-controller load/cache helpers (tests & debugging).
- * Authors do not need this; FE2 loads controllers during form bootstrap.
+ * Public runtime surface for form controllers.
+ * Authors do not need it; FE2 loads controllers during form bootstrap.
+ * `__internal` holds load/cache helpers for tests and console debugging. It is undocumented and not a contract:
+ * it can change or go away without an API version change.
  */
 export const formsEngineFormControllersHost = {
-	load: loadFormController,
-	getCached: getCachedFormController,
-	clearCache: clearFormControllerCache
+	__internal: {
+		load: loadFormController,
+		getCached: getCachedFormController,
+		clearCache: clearFormControllerCache
+	}
 };

@@ -29,9 +29,7 @@ import { useAtomValue } from 'jotai';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import { isFieldReadOnly } from '../../FormsEngine/lib/formUtils';
 
-export interface VariableProps extends ControlProps {
-	value: string;
-}
+export type VariableProps = ControlProps<string>;
 
 const disabledFields = ['internal-name', 'file-name'];
 const disableSuffixes = ['internal-name', 'file-name', 'disabled'];

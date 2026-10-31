@@ -24,9 +24,7 @@ import Box from '@mui/material/Box';
 import { TypeBuilderControl } from '../utils';
 import IconButton from '@mui/material/IconButton';
 
-export interface TextProps extends TypeBuilderControl {
-	value: string;
-}
+export type TextProps = TypeBuilderControl<string>;
 
 const DATE_TIME_FORMAT_OFFSET = '[now] [+ or -] [number] [days | weeks | years | hours | minutes | d | w | y | h | m]';
 const DATE_TIME_FORMAT_DAY = '[day-of-week | {day-of-week}] or {macro} [optional HH:mm[:ss]]';

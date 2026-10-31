@@ -20,9 +20,7 @@ import TextField from '@mui/material/TextField';
 import Autocomplete, { AutocompleteProps } from '@mui/material/Autocomplete';
 import { TypeBuilderControl } from '../utils';
 
-export interface MergeStrategySelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type MergeStrategySelectorProps = TypeBuilderControl<string>;
 
 const mergeStrategies = ['inherit-levels'];
 
