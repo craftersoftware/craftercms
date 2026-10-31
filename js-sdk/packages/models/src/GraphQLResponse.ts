@@ -15,16 +15,16 @@
  */
 
 export interface GraphQLResponse {
-  [root: string]: {
-    // Repeating groups & node selectors collection root
-    item?:
-      object[] |
-      Array<{
-        key: string;
-        value: string;
-        component: unknown;
-      }>
-    // Other field types
-    [contentTypeField: string]: unknown
-  }
+	[root: string]: {
+		// Repeating groups & node selectors collection root
+		item?:
+			| object[]
+			| Array<{
+					key: string;
+					value: string;
+					component: unknown;
+			  }>;
+		// Other field types
+		[contentTypeField: string]: unknown;
+	};
 }

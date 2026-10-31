@@ -20,17 +20,17 @@ import { composeUrl } from '@craftercms/utils';
 import { Observable } from 'rxjs';
 
 export type UrlTransformers =
-  | 'storeUrlToRenderUrl'
-  | 'renderUrlToStoreUrl'
-  | 'renderUrlToTargetedStoreUrl'
-  | 'storeUrlToFullRenderUrl'
-  | 'toWebAppRelativeUrl'
-  | 'toServletRelativeUrl'
-  | 'toFullUrl'
-  | 'toFullHttpsUrl'
-  | 'folderToIndexUrl'
-  | 'toTargetedUrl'
-  | 'toCurrentTargetedUrl';
+	| 'storeUrlToRenderUrl'
+	| 'renderUrlToStoreUrl'
+	| 'renderUrlToTargetedStoreUrl'
+	| 'storeUrlToFullRenderUrl'
+	| 'toWebAppRelativeUrl'
+	| 'toServletRelativeUrl'
+	| 'toFullUrl'
+	| 'toFullHttpsUrl'
+	| 'folderToIndexUrl'
+	| 'toTargetedUrl'
+	| 'toCurrentTargetedUrl';
 
 /**
  * Transforms a URL, based on the current site's UrlTransformationEngine.
@@ -38,23 +38,35 @@ export type UrlTransformers =
  * @param {string} url - URL that will be transformed
  */
 export function urlTransform(transformerName: UrlTransformers, url: string): Observable<string>;
-export function urlTransform(transformerName: UrlTransformers, url: string, config: Partial<CrafterConfig>): Observable<string>;
-export function urlTransform(transformerName: UrlTransformers, url: string, config?: Partial<CrafterConfig>): Observable<string> {
-  config = crafterConf.mix(config);
-  const requestURL = composeUrl(config, config.endpoints.TRANSFORM_URL);
-  return SDKService.httpGet<string>(requestURL, {
-    crafterSite: config.site,
-    transformerName,
-    url
-  }, config.headers);
+export function urlTransform(
+	transformerName: UrlTransformers,
+	url: string,
+	config: Partial<CrafterConfig>
+): Observable<string>;
+export function urlTransform(
+	transformerName: UrlTransformers,
+	url: string,
+	config?: Partial<CrafterConfig>
+): Observable<string> {
+	config = crafterConf.mix(config);
+	const requestURL = composeUrl(config, config.endpoints.TRANSFORM_URL);
+	return SDKService.httpGet<string>(
+		requestURL,
+		{
+			crafterSite: config.site,
+			transformerName,
+			url
+		},
+		config.headers
+	);
 }
 
 /**
  * URL Transformation Service API
  */
 export const UrlTransformationService = {
-  transform: urlTransform,
-  urlTransform
+	transform: urlTransform,
+	urlTransform
 };
 
 export default UrlTransformationService;

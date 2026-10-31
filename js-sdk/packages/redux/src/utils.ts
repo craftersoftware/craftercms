@@ -15,14 +15,14 @@
  */
 
 import {
-  applyMiddleware,
-  compose,
-  Store,
-  createStore,
-  combineReducers,
-  AnyAction,
-  ReducersMapObject,
-  Middleware
+	applyMiddleware,
+	compose,
+	Store,
+	createStore,
+	combineReducers,
+	AnyAction,
+	ReducersMapObject,
+	Middleware
 } from 'redux';
 import { combineEpics, createEpicMiddleware, Epic } from 'redux-observable';
 
@@ -34,47 +34,50 @@ import { allEpics, allReducers } from '@craftercms/redux';
  * Retrieves a crafter-redux store based on a config, combining craftercms states/epics with
  * optional extra states/epics from config
  */
-export function createReduxStore(config: {
-  namespace?: string,
-  namespaceCrafterState?: boolean,
-  reducerMixin?: ReducersMapObject<any, any>,
-  epicsArray?: Epic[],
-  additionalMiddleWare?: Middleware[],
-  reduxDevTools?: boolean
-} = {}) {
+export function createReduxStore(
+	config: {
+		namespace?: string;
+		namespaceCrafterState?: boolean;
+		reducerMixin?: ReducersMapObject<any, any>;
+		epicsArray?: Epic[];
+		additionalMiddleWare?: Middleware[];
+		reduxDevTools?: boolean;
+	} = {}
+) {
+	config = Object.assign(
+		{},
+		{
+			namespace: 'craftercms',
+			reduxDevTools: true,
+			namespaceCrafterState: false
+		},
+		config
+	);
 
-  config = Object.assign({}, {
-    namespace: 'craftercms',
-    reduxDevTools: true,
-    namespaceCrafterState: false
-  }, config);
+	const epicMiddleware = createEpicMiddleware();
 
-  const epicMiddleware = createEpicMiddleware();
+	const enhancers = config.reduxDevTools
+		? (typeof window !== 'undefined' && window['__REDUX_DEVTOOLS_EXTENSION_COMPOSE__']) || compose
+		: compose;
 
-  const enhancers = config.reduxDevTools
-    ? ((typeof window !== "undefined" && window['__REDUX_DEVTOOLS_EXTENSION_COMPOSE__']) || compose)
-    : compose;
+	// if config has namespaceCrafterState set to true, combines crafter reducers into namespace, plus config reducers
+	// (if available), otherwise, combines crafter reducers directly on root of state.
+	const reducer = config.namespaceCrafterState
+		? <ReducersMapObject<CrafterNamespacedState, AnyAction>>{ [config.namespace]: combineReducers(allReducers) }
+		: <ReducersMapObject<CrafterState, AnyAction>>allReducers;
 
-  // if config has namespaceCrafterState set to true, combines crafter reducers into namespace, plus config reducers
-  // (if available), otherwise, combines crafter reducers directly on root of state.
-  const reducer = (config.namespaceCrafterState)
-    ? <ReducersMapObject<CrafterNamespacedState, AnyAction>>{ [config.namespace]: combineReducers(allReducers) }
-    : <ReducersMapObject<CrafterState, AnyAction>>allReducers;
+	var middlewares = config.additionalMiddleWare ? [epicMiddleware, ...config.additionalMiddleWare] : [epicMiddleware];
 
-  var middlewares = config.additionalMiddleWare
-    ? [ epicMiddleware, ...config.additionalMiddleWare ]
-    : [ epicMiddleware ];
+	const store: Store = createStore(
+		config.reducerMixin ? combineReducers({ ...reducer, ...config.reducerMixin }) : combineReducers(reducer),
+		enhancers(applyMiddleware(...middlewares))
+	);
 
-  const store: Store = createStore(
-    config.reducerMixin ? combineReducers({ ...reducer, ...config.reducerMixin }) : combineReducers(reducer),
-    enhancers(applyMiddleware(...middlewares))
-  );
+	epicMiddleware.run(
+		config.epicsArray ? combineEpics(...allEpics.concat(config.epicsArray)) : combineEpics(...allEpics)
+	);
 
-  epicMiddleware.run(config.epicsArray
-    ? combineEpics(...allEpics.concat(config.epicsArray))
-    : combineEpics(...allEpics));
-
-  return store;
+	return store;
 }
 
 /**
@@ -86,28 +89,28 @@ export function createReduxStore(config: {
  * @returns {CrafterState}
  */
 export function getState(store: Store<CrafterNamespacedState>): CrafterState {
-  const state = store.getState();
-  if ('craftercms' in state) {
-    validateCrafterStore(state.craftercms);
-    return state.craftercms;
-  } else {
-    validateCrafterStore(store);
-    return state;
-  }
+	const state = store.getState();
+	if ('craftercms' in state) {
+		validateCrafterStore(state.craftercms);
+		return state.craftercms;
+	} else {
+		validateCrafterStore(store);
+		return state;
+	}
 }
 
 function validateCrafterStore(store: Object) {
-  if (!('studioConfig' in store)) {
-    // TODO
-    // * Link to right page when we have it.
-    // * Improve copy
-    log(
-      'Missing craftercms store properties on the app store. ' +
-      'Make sure you\'ve configured the state and reducers appropriately. ' +
-      'See http://docs.craftercms.com/ for more',
-      log.ERROR
-    );
-  }
+	if (!('studioConfig' in store)) {
+		// TODO
+		// * Link to right page when we have it.
+		// * Improve copy
+		log(
+			'Missing craftercms store properties on the app store. ' +
+				"Make sure you've configured the state and reducers appropriately. " +
+				'See http://docs.craftercms.com/ for more',
+			log.ERROR
+		);
+	}
 }
 
 /**
@@ -116,40 +119,36 @@ function validateCrafterStore(store: Object) {
  * @param {string} childrenProperty
  * @returns {LookupTable}
  */
-export function flattenEntries(item: Item, childrenProperty:string = 'children'): LookupTable<any>{
-  let entries: LookupTable<any> = {},
-      childIds: LookupTable<any> = {},
-      children,
-      noChildren = { ...item },
-      itemUrl = item['url'];
+export function flattenEntries(item: Item, childrenProperty: string = 'children'): LookupTable<any> {
+	let entries: LookupTable<any> = {},
+		childIds: LookupTable<any> = {},
+		children,
+		noChildren = { ...item },
+		itemUrl = item['url'];
 
-  //Removes children to store in entries.
-  noChildren[childrenProperty] = null;
-  entries[itemUrl] = noChildren;
+	//Removes children to store in entries.
+	noChildren[childrenProperty] = null;
+	entries[itemUrl] = noChildren;
 
-  childIds[itemUrl] = [];
+	childIds[itemUrl] = [];
 
-  children = item[childrenProperty]
-    ? [ ...item[childrenProperty] ]
-    : [];
+	children = item[childrenProperty] ? [...item[childrenProperty]] : [];
 
-  //If item has children
-  if(children && children.length > 0){
+	//If item has children
+	if (children && children.length > 0) {
+		for (let child of children) {
+			//Adds child url (id) into childIds
+			childIds[itemUrl].push(child.url);
 
-    for (let child of children) {
-      //Adds child url (id) into childIds
-      childIds[itemUrl].push(child.url);
+			//Recursive call
+			let newState = flattenEntries(child, childrenProperty);
+			//Assigns values from lookupTable got from recursive call
+			(entries = Object.assign(entries, newState.entries)), (childIds = Object.assign(childIds, newState.childIds));
+		}
+	}
 
-      //Recursive call
-      let newState = flattenEntries(child, childrenProperty);
-      //Assigns values from lookupTable got from recursive call
-      entries = Object.assign(entries, newState.entries),
-      childIds = Object.assign(childIds, newState.childIds)
-    }
-  }
-
-  return {
-    entries,
-    childIds
-  };
- }
+	return {
+		entries,
+		childIds
+	};
+}
