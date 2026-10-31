@@ -88,7 +88,7 @@ export interface CountLimitBound {
 	editorUnset?: '' | 0 | '*';
 	/** Write this constraint on save only when the limit is a positive integer. */
 	writeConstraintWhenPositive?: boolean;
-	/** XML `<type>` of that constraint. Checkbox `minSize` is `number`. */
+	/** XML `<type>` of that constraint. Checkbox `minSize` is `int` (the descriptor field type). */
 	constraintType?: string;
 }
 
@@ -147,7 +147,7 @@ export const countLimitStorage: Record<string, CountLimitControl> = {
 			editorFromVirtual: true,
 			editorUnset: '',
 			writeConstraintWhenPositive: true,
-			constraintType: 'number'
+			constraintType: 'int'
 		}
 	}
 };
@@ -157,13 +157,6 @@ export function getCountLimitStorage(fieldType?: string | null): CountLimitContr
 	// Own keys only. `constructor` and `toString` are on the prototype, not controls.
 	if (!fieldType || !Object.hasOwn(countLimitStorage, fieldType)) return undefined;
 	return countLimitStorage[fieldType];
-}
-
-/** True when some control stores an item-count bound under this constraint name. */
-export function isCountLimitConstraint(name: string): boolean {
-	return Object.values(countLimitStorage).some((control) =>
-		[control.min, control.max].some((bound) => bound?.sources.includes('constraint') && bound.name === name)
-	);
 }
 
 /** Constraint names the validations loop must not copy onto the content field (checkbox `minSize`). */
@@ -315,8 +308,7 @@ export function writeCountLimitXml(
 		if (bound.writeConstraintWhenPositive) {
 			const raw = bound.kind === 'min' ? field.validations?.minCount?.value : field.validations?.maxCount?.value;
 			const minimum = countLimitValue(raw);
-			if (minimum != null)
-				constraints.push({ name: bound.name, value: minimum, type: bound.constraintType ?? 'number' });
+			if (minimum != null) constraints.push({ name: bound.name, value: minimum, type: bound.constraintType ?? 'int' });
 		}
 	}
 	return { elements, properties, stripConstraints: storage.stripConstraints, constraints };

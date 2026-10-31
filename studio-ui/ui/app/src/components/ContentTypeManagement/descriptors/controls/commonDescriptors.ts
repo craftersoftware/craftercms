@@ -167,6 +167,11 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 			id: 'allowedDestinations',
 			title: defineMessage({ defaultMessage: 'Allowed Destinations' }),
 			fields: ['paths', 'delete-dependencies', 'copy-dependencies', 'previewable']
+		}),
+		createVirtualSection({
+			id: 'allowedRoles',
+			title: defineMessage({ defaultMessage: 'Allowed Roles' }),
+			fields: ['allowedRoles']
 		})
 	],
 	fields: {
@@ -300,6 +305,15 @@ export const typeBasicDetailsDescriptor: DescriptorContentType = {
 				includes: { pattern: [] },
 				excludes: { pattern: [] }
 			},
+			validations: immutableEmptyObject
+		},
+		allowedRoles: {
+			id: 'allowedRoles',
+			type: 'type-allowed-roles-selector',
+			name: defineMessage({ defaultMessage: 'Allowed Roles' }),
+			description: '',
+			helpText: '',
+			defaultValue: [],
 			validations: immutableEmptyObject
 		},
 		'delete-dependencies': {

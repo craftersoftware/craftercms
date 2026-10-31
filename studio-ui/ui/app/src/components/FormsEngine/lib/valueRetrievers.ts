@@ -72,6 +72,7 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	'type-controller-selector': textFieldExtractor,
 	'key-value-map': (value) => objectArrayExtractor(value as string),
 	'type-destination-paths-selector': null,
+	'type-allowed-roles-selector': null,
 	'path-with-macro-creator': textFieldExtractor,
 	'merge-strategy-selector': textFieldExtractor,
 	'datasource:image': (value) => stringArrayExtractor(value as string),

@@ -285,6 +285,17 @@ export const systemValidationsNames = [
 	'fileBrowseRepo'
 ];
 
+/**
+ * A thumbnail file name, or null when there is none.
+ * The string "undefined" is a legacy bug (no image was chosen) and must not be requested or written.
+ */
+export function normalizeThumbnailFileName(fileName: unknown): string | null {
+	if (typeof fileName !== 'string') return null;
+	const trimmed = fileName.trim();
+	if (trimmed === '' || trimmed === 'undefined') return null;
+	return trimmed;
+}
+
 // Item-count storage (minOccurs/maxOccurs, minSize/maxSize, checkbox minSize) is mapped in utils/countLimits.ts.
 export const systemValidationsKeysMap = {
 	maxlength: 'maxLength',

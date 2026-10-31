@@ -39,7 +39,6 @@ import {
 	countLimitPropertyWrites,
 	countLimitsFromLegacy,
 	getCountLimitStorage,
-	isCountLimitConstraint,
 	itemCountEditorValue,
 	type CountLimits
 } from '../utils/countLimits';
@@ -53,6 +52,7 @@ import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 import AllowedContentTypesData from '../models/AllowedContentTypesData';
 import {
 	createFormDefinitionPathFromTypeId,
+	normalizeThumbnailFileName,
 	systemValidationsKeysMap,
 	systemValidationsNames
 } from '../utils/contentType';
@@ -251,6 +251,19 @@ function getFieldDataSourceValidations(
 	return validations;
 }
 
+function parseAllowedRoles(definition: LegacyFormDefinition): string[] {
+	const seen = new Set<string>();
+	const roles: string[] = [];
+	for (const entry of asArray(definition['allowed-roles']?.role)) {
+		if (typeof entry !== 'string') continue;
+		const trimmed = entry.trim();
+		if (!trimmed || seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		roles.push(trimmed);
+	}
+	return roles;
+}
+
 function rawLegacyPropertyValue(legacyField: LegacyFormDefinitionField, name: string): unknown {
 	return asArray(legacyField.properties?.property).find((prop) => prop.name === name)?.value;
 }
@@ -334,6 +347,7 @@ function parseLegacyFormDefinitionFields(
 
 		sectionFieldIds?.push(fieldId);
 
+		const rawConstraints: LegacyFormDefinitionProperty[] = [];
 		const field: ContentTypeField = {
 			id: fieldId,
 			name: legacyField.title,
@@ -343,7 +357,8 @@ function parseLegacyFormDefinitionFields(
 			sortable: legacyField.type === 'node-selector' || legacyField.type === 'repeat',
 			validations: {},
 			properties: {},
-			defaultValue: legacyField.defaultValue
+			defaultValue: legacyField.defaultValue,
+			rawConstraints
 		};
 
 		if (legacyField.plugin) {
@@ -369,6 +384,8 @@ function parseLegacyFormDefinitionFields(
 		});
 
 		asArray<LegacyFormDefinitionProperty>(legacyField.constraints?.constraint).forEach((legacyProp) => {
+			if (!legacyProp.name) return;
+			rawConstraints.push({ ...legacyProp });
 			const value = legacyProp.value?.trim();
 			switch (legacyProp.name) {
 				case 'required':
@@ -400,9 +417,7 @@ function parseLegacyFormDefinitionFields(
 					break;
 				default:
 					// Item-count constraints (checkbox minSize) are applied from countLimitStorage, not as runtime validations.
-					if (!isCountLimitConstraint(legacyProp.name)) {
-						console.log(`[parseLegacyFormDef] Unhandled constraint "${legacyProp.name}"`, legacyProp);
-					}
+					break;
 			}
 		});
 
@@ -412,7 +427,7 @@ function parseLegacyFormDefinitionFields(
 				// Nested fields only. Count limits come from countLimitStorage below.
 				field.fields = {};
 				parseLegacyFormDefinitionFields(
-					legacyField.fields.field,
+					legacyField.fields?.field,
 					field.fields,
 					dropTargetsLookup,
 					null,
@@ -457,9 +472,8 @@ function parseLegacyFormDefinitionFields(
 
 /** Maps a form-definition document into the Forms Engine content-type model. */
 export function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentType {
-	if (nou(definition)) {
-		return {} as ContentType;
-	}
+	// A missing document parses as an empty form. `{}` has no sections and must not throw.
+	definition = definition ?? ({} as LegacyFormDefinition);
 
 	const fields: LookupTable<ContentTypeField> = {};
 	const sections: Array<ContentTypeSection> = [];
@@ -522,10 +536,8 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 		});
 	});
 
-	const topLevelPropMap: LookupTable<LegacyFormDefinitionProperty> = createLookupTable(
-		asArray(definition.properties?.property) as LegacyFormDefinitionProperty[],
-		'name'
-	);
+	const formProperties = asArray(definition.properties?.property).map((property) => ({ ...property }));
+	const topLevelPropMap: LookupTable<LegacyFormDefinitionProperty> = createLookupTable(formProperties, 'name');
 
 	return {
 		id: definition['content-type'],
@@ -538,12 +550,14 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 		mergeStrategy: topLevelPropMap[XmlKeys.mergeStrategy]?.value?.trim() || null,
 		// ∨∨∨ Added during TypeBuilder 2 ∨∨∨
 		hasJsController: definition.controller?.trim() === 'true',
-		thumbnailFileName: definition.imageThumbnail,
+		thumbnailFileName: normalizeThumbnailFileName(definition.imageThumbnail),
 		isHeadless: topLevelPropMap[XmlKeys.templateNotRequired]?.value?.trim() === 'true',
 		paths: parseLegacyFormDefinitionPathsProp(definition),
 		'delete-dependencies': parseFormDefinitionDeleteDependencies(definition),
 		'copy-dependencies': parseFormDefinitionCopyDependencies(definition),
 		previewable: definition.previewable?.trim() === 'true',
+		allowedRoles: parseAllowedRoles(definition),
+		formProperties,
 		// ^^^ Added during TypeBuilder 2 ^^^
 		dataSources: Object.values(dataSources),
 		sections,

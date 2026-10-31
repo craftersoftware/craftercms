@@ -136,6 +136,11 @@ export interface ContentTypeField {
 	fields?: LookupTable<ContentTypeField>;
 	values?: { label: string; value: string }[];
 	helpText?: string;
+	/**
+	 * Constraints as parsed (name, value, type, label). Save writes them in their original order,
+	 * updating the ones Type Builder edits in place. Item-count constraints stay with countLimits.
+	 */
+	rawConstraints?: LegacyFormDefinitionProperty[];
 	// localized: boolean;
 	// disabled: boolean;
 	// readOnly: boolean;
@@ -210,6 +215,13 @@ export interface ContentType {
 	};
 	previewable: boolean;
 	// ^^^ Added during TypeBuilder 2 ^^^
+	/** Roles allowed to create content of this type. Omitted from the form definition when empty. */
+	allowedRoles: string[];
+	/**
+	 * Every form `<property>` as parsed. Save writes them in their original order, updating
+	 * display-template, no-template-required and merge-strategy in place.
+	 */
+	formProperties?: LegacyFormDefinitionProperty[];
 	sections: ContentTypeSection[];
 	fields: LookupTable<ContentTypeField>;
 	dataSources: DataSource[];
@@ -258,7 +270,6 @@ export interface LegacyFormDefinitionField {
 	defaultValue: string;
 	type: string;
 	help: string;
-	iceId: string;
 	constraints: { constraint: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	fields?: { field: LegacyFormDefinitionField | Array<LegacyFormDefinitionField> };
@@ -300,7 +311,8 @@ export interface SerializeToXmlContentTypeStructure {
 	title: string;
 	description: string;
 	objectType: string;
-	imageThumbnail: string;
+	imageThumbnail?: string;
+	'allowed-roles'?: { role: string[] };
 	// ∨∨∨ config.xml ∨∨∨
 	controller: 'true' | 'false';
 	quickCreate: 'true' | 'false';
@@ -313,28 +325,7 @@ export interface SerializeToXmlContentTypeStructure {
 	'copy-dependencies': ContentType['copy-dependencies'];
 	// ^^^ config.xml ^^^
 	// TODO: Can we move these to the root or drop `label` and `type`?
-	properties: {
-		property: [
-			{
-				name: 'display-template';
-				value: string;
-				label: 'Display Template';
-				type: 'template';
-			},
-			{
-				name: 'no-template-required';
-				value: 'true' | 'false';
-				label: 'No Template Required';
-				type: 'boolean';
-			},
-			{
-				name: 'merge-strategy';
-				value: string;
-				label: 'Merge Strategy';
-				type: 'string';
-			}
-		];
-	};
+	properties: { property: LegacyFormDefinitionProperty[] };
 	sections: { section: Array<LegacyFormDefinitionSectionWithId> };
 	datasources: { datasource: Array<LegacyDataSource> };
 	previewable: boolean;
@@ -360,6 +351,7 @@ export interface LegacyFormDefinition {
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	datasources: { datasource: LegacyDataSource | Array<LegacyDataSource> };
 	previewable: string;
+	'allowed-roles'?: { role?: string | string[] };
 }
 
 // As returned by `/studio/api/1/services/api/1/content/get-content-types.json?site=${site}`
