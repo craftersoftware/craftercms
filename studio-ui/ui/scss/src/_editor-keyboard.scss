@@ -1,0 +1,90 @@
+// Single source for the code-editor keyboard styles.
+// studio-ui/scripts/build-editor-keyboard.mjs compiles this partial into
+// editorKeyboardFallbackCss.ts. Runtime code injects that CSS only when
+// tinymce-ace.css is not already linked. Do not copy these rules into JS.
+
+// Oxide draws split-button carets at 16px (20px on touch). 24px meets WCAG 2.5.8.
+// !important wins over the skin TinyMCE injects when an editor is created.
+.tox .tox-split-button__chevron,
+.tox.tox-platform-touch .tox-split-button__chevron,
+.tox .tox-tbtn__select-chevron,
+.tox .tox-listbox__select-chevron {
+	width: 24px !important;
+	min-width: 24px !important;
+}
+
+.craftercms-code-editor-frame {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	flex: 1 1 0%;
+	min-height: 0;
+	min-width: 0;
+	width: 100%;
+}
+
+.craftercms-code-editor-frame > .ace_editor {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	min-width: 0;
+	width: 100%;
+}
+
+// The hint is a sibling of .ace_editor, so `.tox-dialog .ace_editor *` does not
+// restyle it. No max-height: the sentence wraps instead of clipping.
+.craftercms-code-editor-frame > .craftercms-code-editor-hint,
+.tox-dialog .craftercms-code-editor-frame > .craftercms-code-editor-hint,
+.acecode-inline .craftercms-code-editor-frame > .craftercms-code-editor-hint {
+	flex: 0 0 auto;
+	position: static;
+	box-sizing: border-box;
+	min-width: 0;
+	contain: inline-size;
+	margin: 0;
+	padding: 4px 8px;
+	pointer-events: none;
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400 !important;
+	line-height: 20px !important;
+	white-space: normal !important;
+	background: #f4f4f5;
+	color: #333333;
+	border-top: 1px solid #d0d0d0;
+}
+
+.craftercms-code-editor-frame:has(> .ace_editor.ace_dark) > .craftercms-code-editor-hint,
+.craftercms-code-editor-frame:has(> .ace_editor.ace-tomorrow-night) > .craftercms-code-editor-hint,
+.craftercms-code-editor-frame:has(> .ace_editor.ace-nord-dark) > .craftercms-code-editor-hint {
+	background: #252526;
+	color: #e6e6e6;
+	border-top-color: #3c3c3c;
+}
+
+// Ace draws `.ace_keyboard-focus:focus` as an inset shadow under the text layer.
+// ::before leaves ::after for Ace's scrolled-left shadow.
+// Outer #0b4f8a is 8.4:1 on white and 7.6:1 on the #f4f4f5 hint bar.
+// Inner white is 15:1 on #252526 and 16:1 on tomorrow-night #1d1f21.
+// The pair meets 3:1 against both the light and dark editor backgrounds.
+.ace_scroller.ace_keyboard-focus:focus,
+.ace_gutter.ace_keyboard-focus:focus {
+	outline: none;
+}
+
+.ace_scroller.ace_keyboard-focus:focus::before,
+.ace_gutter.ace_keyboard-focus:focus::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 20;
+	box-shadow:
+		inset 0 0 0 2px #0b4f8a,
+		inset 0 0 0 4px #ffffff;
+}

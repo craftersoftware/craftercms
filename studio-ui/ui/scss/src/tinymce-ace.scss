@@ -1,5 +1,5 @@
 /*!
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -142,6 +142,15 @@
 	&.acecode .tox-dialog__body-content [role='presentation'],
 	.tox-dialog__body-content [role='presentation'] .ace_editor {
 		height: 100%;
+	}
+
+	// The hint sits under the editor. The frame takes the dialog height; the Ace node fills what remains.
+	.tox-dialog__body-content [role='presentation'] .craftercms-code-editor-frame {
+		height: 100%;
+	}
+
+	.tox-dialog__body-content [role='presentation'] .craftercms-code-editor-frame > .ace_editor {
+		height: auto;
 	}
 
 	.ace_search {
@@ -313,3 +322,7 @@
 		}
 	}
 }
+
+// Keyboard hint, focus ring, and TinyMCE target size. The partial is the only
+// copy; the JS fallback is generated from it.
+@import 'editor-keyboard';

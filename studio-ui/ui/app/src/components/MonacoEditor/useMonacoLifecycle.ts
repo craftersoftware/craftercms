@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { withMonaco } from '../../utils/system';
 import type Monaco from '../../models/Monaco';
 import { normalizeMonacoTheme } from './types';
+import { enforceMonacoKeyboardOptions } from '../editorKeyboard/monacoKeyboard';
 import './setupMonacoWorkers';
 type MonacoModel = ReturnType<Monaco['editor']['createModel']>;
 
@@ -36,23 +37,26 @@ interface UseMonacoLifecycleOptions<TEditor extends MonacoEditorInstance<TOption
 	theme: string;
 	options?: TOptions;
 	createEditor(monaco: Monaco, container: HTMLDivElement, models: MonacoModel[], options?: TOptions): TEditor;
+	/** Called once after the editor is created. */
+	onReady?(editor: TEditor, monaco: Monaco): void;
 }
 
 export function useMonacoLifecycle<TEditor extends MonacoEditorInstance<TOptions>, TOptions>({
 	models,
 	theme,
 	options,
-	createEditor
+	createEditor,
+	onReady
 }: UseMonacoLifecycleOptions<TEditor, TOptions>) {
 	const containerRef = useRef<HTMLDivElement>(undefined);
 	const editorRef = useRef<TEditor>(null);
 	const monacoRef = useRef<Monaco>(null);
 	const modelRefs = useRef<MonacoModel[]>([]);
-	const lifecycleOptionsRef = useRef({ models, theme, options, createEditor });
+	const lifecycleOptionsRef = useRef({ models, theme, options, createEditor, onReady });
 	const [ready, setReady] = useState(false);
 
 	useEffect(() => {
-		lifecycleOptionsRef.current = { models, theme, options, createEditor };
+		lifecycleOptionsRef.current = { models, theme, options, createEditor, onReady };
 	});
 
 	useEffect(() => {
@@ -67,6 +71,7 @@ export function useMonacoLifecycle<TEditor extends MonacoEditorInstance<TOptions
 			const editorModels = current.models.map(({ value, language }) => monaco.editor.createModel(value, language));
 			modelRefs.current = editorModels;
 			editorRef.current = current.createEditor(monaco, containerRef.current, editorModels, current.options);
+			current.onReady?.(editorRef.current, monaco);
 			setReady(true);
 		});
 		return () => {
@@ -97,6 +102,8 @@ export function useMonacoLifecycle<TEditor extends MonacoEditorInstance<TOptions
 	useEffect(() => {
 		if (ready) {
 			editorRef.current?.updateOptions(options ?? ({} as TOptions));
+			// Diff editor options do not always forward tabIndex to both textareas.
+			enforceMonacoKeyboardOptions(editorRef.current);
 		}
 	}, [ready, options]);
 

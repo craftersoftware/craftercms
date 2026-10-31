@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
@@ -22,6 +22,13 @@ import type Monaco from '../../models/Monaco';
 import { MonacoDiffEditorOptions } from './types';
 import { useMonacoLifecycle } from './useMonacoLifecycle';
 import clsx from 'clsx';
+import { CodeEditorFrame } from '../editorKeyboard/CodeEditorFrame';
+import {
+	enforceMonacoKeyboardOptions,
+	focusMonacoEditor,
+	takePendingCodeEditorEnter,
+	withEditorKeyboardOptions
+} from '../editorKeyboard/monacoKeyboard';
 
 export interface MonacoDiffEditorProps {
 	height?: string | number;
@@ -69,18 +76,40 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 		],
 		[original, modified, language]
 	);
-	const containerRef = useMonacoLifecycle({ models, theme, options, createEditor: createDiffEditor });
+	const keyboardOptions = useMemo(() => withEditorKeyboardOptions(options), [options]);
+	const frameRef = useRef<HTMLDivElement>(null);
+	const editorRef = useRef<object>(null);
+	const containerRef = useMonacoLifecycle({
+		models,
+		theme,
+		options: keyboardOptions,
+		createEditor: createDiffEditor,
+		onReady(editor, monaco) {
+			editorRef.current = editor;
+			enforceMonacoKeyboardOptions(editor, monaco, () => frameRef.current);
+			if (takePendingCodeEditorEnter(frameRef.current)) {
+				focusMonacoEditor(editor);
+			}
+		}
+	});
 
 	return (
-		<Box
-			ref={containerRef}
-			className={clsx(className, 'monaco-workbench')}
-			sx={{
-				height,
-				width: '100%',
-				...((sx as object) ?? {})
+		<CodeEditorFrame
+			frameRef={frameRef}
+			height={height}
+			className={className}
+			sx={sx}
+			readOnly={Boolean(options?.readOnly)}
+			onActivate={() => {
+				if (!editorRef.current) {
+					return false;
+				}
+				focusMonacoEditor(editorRef.current);
+				return true;
 			}}
-		/>
+		>
+			<Box ref={containerRef} className={clsx('monaco-workbench')} sx={{ height: '100%', width: '100%' }} />
+		</CodeEditorFrame>
 	);
 }
 

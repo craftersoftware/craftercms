@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -41,6 +41,7 @@
 
   <script src="/studio/static-assets/libs/ace/ace.js"></script>
   <script src="/studio/static-assets/libs/tinymce/tinymce.min.js"></script>
+  <script src="/studio/static-assets/js/editor-keyboard-a11y.js"></script>
   <script src="/studio/static-assets/modules/editors/tinymce/v2/tiny_mce/tiny_mce.js"></script>
   <script src="/studio/static-assets/libs/amplify/lib/amplify.core.js"></script>
   <script src="/studio/static-assets/libs/notify/notify.min.js"></script>

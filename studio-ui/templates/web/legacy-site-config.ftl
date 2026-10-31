@@ -27,6 +27,7 @@
 		<link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/css/console.css" />
 
 		<script type="text/javascript" src="/studio/static-assets/libs/tinymce/tinymce.min.js"></script>
+		<script type="text/javascript" src="/studio/static-assets/js/editor-keyboard-a11y.js"></script>
 		<script type="text/javascript" src="/studio/static-assets/modules/editors/tinymce/v2/tiny_mce/tiny_mce.js"></script>
 
 		<script type="text/javascript" src="/studio/static-assets/components/cstudio-common/resources/en/base.js"></script>

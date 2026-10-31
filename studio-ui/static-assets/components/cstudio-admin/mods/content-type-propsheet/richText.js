@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -174,6 +174,8 @@ YAHOO.extend(
 					'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent | removeformat',
 				valid_elements: 'ul,ol,li,img[src,style,class],p,br,strong/b,a[href|target=_blank],em,s,h1,h2,h3,h4,h5,h6,pre',
 				setup: function (editor) {
+					// Loaded by templates/web/legacy-site-config.ftl before this module runs.
+					window.craftercmsEditorKeyboard?.installTinyMceKeyboard(editor);
 					editor.on('init', function (e) {
 						_self.editor = editor;
 						editor.setContent(value);

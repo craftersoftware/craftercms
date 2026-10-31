@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useMount } from '../../hooks/useMount';
 import { useTheme } from '@mui/material/styles';
 import { useEnhancedDialogContext } from '../EnhancedDialog/useEnhancedDialogContext';
@@ -23,6 +23,9 @@ import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
+import { useIntl } from 'react-intl';
+import { ACE_FRAME_CLASS, ACE_HINT_CLASS, applyAceKeyboardAccessibility } from '../editorKeyboard/aceKeyboard';
+import { codeEditorKeyboardMessages } from '../editorKeyboard/messages';
 
 // @see https://github.com/ajaxorg/ace/wiki/Configuring-Ace
 export interface AceOptions {
@@ -207,6 +210,27 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 	const {
 		palette: { mode }
 	} = useTheme();
+	const { formatMessage } = useIntl();
+	const editorName = formatMessage(codeEditorKeyboardMessages.groupLabel);
+	const instructions = formatMessage(codeEditorKeyboardMessages.instructions);
+	const instructionsReadOnly = formatMessage(codeEditorKeyboardMessages.instructionsReadOnly);
+	const gutterLabel = formatMessage(codeEditorKeyboardMessages.gutterLabel);
+	const hintId = useId();
+	const frameRef = useRef<HTMLDivElement>(null);
+	const labelsRef = useRef({
+		name: editorName,
+		instructions,
+		instructionsReadOnly,
+		gutterLabel,
+		hintIdPrefix: 'craftercms-code-editor-hint-react'
+	});
+	labelsRef.current = {
+		name: editorName,
+		instructions,
+		instructionsReadOnly,
+		gutterLabel,
+		hintIdPrefix: 'craftercms-code-editor-hint-react'
+	};
 
 	options.theme = options.theme ?? `ace/theme/${mode === 'light' ? 'chrome' : 'tomorrow_night'}`;
 
@@ -224,17 +248,19 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 				deps.languageTools &&
 				// @ts-ignore - Ace types are incorrect; the require function takes a callback
 				window.ace.require(['ace/ace', 'ace/ext/language_tools', 'ace/ext/emmet', ...extensions], (ace) => {
-					if (!unmounted) {
+					if (!unmounted && frameRef.current) {
 						const pre = document.createElement('pre');
 						pre.className = editorRootClasses;
 						refs.current.pre = pre;
-						refs.current.elem.appendChild(pre);
+						frameRef.current.insertBefore(pre, frameRef.current.firstChild);
 						// @ts-ignore - Ace types are incorrect; they don't implement the constructor that receives options.
 						aceEditor = ace.edit(pre, refs.current.options);
 						aceEditor.setOptions({
 							fontSize: '15px',
 							fontFamily: "'Monaco', 'Menlo', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace"
 						});
+						// Tab still indents while editing. Esc returns to the scroller, then Tab leaves.
+						applyAceKeyboardAccessibility(aceEditor, labelsRef.current);
 						autoFocus && aceEditor.focus();
 						if (refs.current.options.readOnly) {
 							// This setting of the cursor to not display is unnecessary as the
@@ -311,6 +337,14 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 		}
 	}, [initialized, options?.readOnly]);
 
+	// Re-apply after locale changes. Runs after the setOptions effect above so a
+	// caller option refresh cannot drop the localized labels.
+	useEffect(() => {
+		if (initialized) {
+			applyAceKeyboardAccessibility(refs.current.ace, labelsRef.current);
+		}
+	}, [initialized, editorName, instructions, instructionsReadOnly, gutterLabel, options?.readOnly]);
+
 	// If the Editor is inside a dialog, resize when fullscreen changes
 	const isFullScreen = useEnhancedDialogContext()?.isFullScreen;
 	useEffect(() => {
@@ -342,11 +376,6 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 
 	return (
 		<Box
-			ref={(e) => {
-				if (e) {
-					refs.current.elem = e;
-				}
-			}}
 			className={props.classes?.root}
 			sx={{
 				position: 'relative',
@@ -363,7 +392,40 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 					...(sxs?.editorRoot as SystemStyleObject<Theme>)
 				}
 			}}
-		/>
+		>
+			<Box
+				ref={frameRef}
+				className={ACE_FRAME_CLASS}
+				sx={{
+					display: 'flex',
+					flexDirection: 'column',
+					boxSizing: 'border-box',
+					flex: '1 1 0%',
+					minHeight: 0,
+					minWidth: 0,
+					width: '100%',
+					height: '100%'
+				}}
+			>
+				<Box
+					id={hintId}
+					component="div"
+					className={ACE_HINT_CLASS}
+					sx={{
+						flex: '0 0 auto',
+						boxSizing: 'border-box',
+						px: 1,
+						py: 0.5,
+						pointerEvents: 'none',
+						fontSize: 12,
+						lineHeight: '20px',
+						whiteSpace: 'normal'
+					}}
+				>
+					{options?.readOnly ? instructionsReadOnly : instructions}
+				</Box>
+			</Box>
+		</Box>
 	);
 }
 
