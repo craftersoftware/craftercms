@@ -1150,6 +1150,7 @@
 	"search.noResults": "No se encontraron resultados.",
 	"search.resultsCaption": "{from}-{to} de {count} resultados {keywordLength, plural, =0 {}other{ para <b>“{keyword}”</b>}} ",
 	"search.resultsSelected": "{count, plural, one {{count} item seleccionado} other {{count} items seleccionados}}",
+	"search.resultsStatus": "{from}-{to} de {count} resultados{keywordLength, plural, =0 {}other{ para “{keyword}”}}",
 	"search.selectAll": "Seleccionar todo en esta página",
 	"search.videoProcessed": "El video se está procesando, la vista previa estará disponible cuando se complete el procesamiento",
 	"searchAhead.noResults": "No hay resultados.",

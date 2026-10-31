@@ -29,12 +29,10 @@ import { useActiveUser } from '../../hooks/useActiveUser';
 import { useSiteUIConfig } from '../../hooks/useSiteUIConfig';
 import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
 import { useTheme } from '@mui/material';
+import { PREVIEW_TOOLBAR_CLASS } from '../../utils/a11y/previewToolbarTooltip';
+import { PreviewToolbarTooltipTiming } from '../../utils/a11y/previewToolbarTooltipTiming';
 
 const translations = defineMessages({
-	openToolsPanel: {
-		id: 'openToolsPanel.label',
-		defaultMessage: 'Open tools panel'
-	},
 	toggleSidebarTooltip: {
 		id: 'common.toggleSidebarTooltip',
 		defaultMessage: 'Toggle sidebar'
@@ -70,11 +68,12 @@ export function ToolBar() {
 					background: theme.palette.background.default
 				}
 			}}
+			classes={{ appBar: PREVIEW_TOOLBAR_CLASS }}
 		>
 			<section>
 				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
 					<LogoAndMenuBundleButton
-						aria-label={formatMessage(translations.openToolsPanel)}
+						aria-label={formatMessage(translations.toggleSidebarTooltip)}
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
 					/>
 				</Tooltip>
@@ -97,4 +96,13 @@ export function ToolBar() {
 	);
 }
 
-export default ToolBar;
+/** Default mount used by Preview. Keeps the longer delays on this bar without editing the bar's own JSX. */
+function PreviewToolbarWithNarrowTooltipDelays() {
+	return (
+		<PreviewToolbarTooltipTiming>
+			<ToolBar />
+		</PreviewToolbarTooltipTiming>
+	);
+}
+
+export default PreviewToolbarWithNarrowTooltipDelays;

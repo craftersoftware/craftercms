@@ -40,6 +40,7 @@ import { LoadingState } from '../LoadingState';
 import Box from '@mui/material/Box';
 import { drawerClasses } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
 
 export interface SearchUIProps
 	extends
@@ -128,6 +129,26 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
+	const resultsTotal = searchResults?.total ?? 0;
+	const resultsFrom = searchResults == null || resultsTotal === 0 ? 0 : searchParameters.offset + 1;
+	const resultsTo =
+		searchResults == null ? 0 : Math.min(searchParameters.offset + searchParameters.limit, resultsTotal);
+	// Use the keyword the results were fetched for. `keyword` is the live input and changes on every keystroke,
+	// ahead of (debounced) results, so it would announce stale counts with a half-typed keyword.
+	// URLDrivenSearch passes the parsed query string through, so a repeated `keywords` param arrives as an array.
+	const keywordsParam: string | string[] = searchParameters.keywords ?? '';
+	const resultsKeyword = Array.isArray(keywordsParam) ? keywordsParam.join(' ') : keywordsParam;
+	const keywordForStatus = resultsKeyword.length > 18 ? `${resultsKeyword.substring(0, 15).trim()}...` : resultsKeyword;
+	const resultsStatus =
+		searchResults == null
+			? ''
+			: formatMessage(translations.resultsStatus, {
+					from: resultsFrom,
+					to: resultsTo,
+					count: resultsTotal,
+					keyword: keywordForStatus,
+					keywordLength: resultsKeyword.length
+				});
 
 	const container = useRef(undefined);
 
@@ -137,6 +158,7 @@ export function SearchUI(props: SearchUIProps) {
 			ref={container}
 			sx={{ height: '100%', position: 'relative', background: (theme) => theme.palette.background.default }}
 		>
+			<PoliteStatus message={resultsStatus} />
 			<SiteSearchToolBar
 				onChange={handleSearchKeyword}
 				onMenuIconClick={toggleDrawer}

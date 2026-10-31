@@ -18,6 +18,7 @@ import { useSnackbar } from 'notistack';
 import { IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import React from 'react';
+import { useIntl } from 'react-intl';
 
 export interface SnackbarCloseButtonProps {
 	id: number | string;
@@ -26,8 +27,14 @@ export interface SnackbarCloseButtonProps {
 export function SnackbarCloseButton(props: SnackbarCloseButtonProps) {
 	const { id } = props;
 	const { closeSnackbar } = useSnackbar();
+	const { formatMessage } = useIntl();
 	return (
-		<IconButton onClick={() => closeSnackbar(id)} size="small" color="secondary">
+		<IconButton
+			onClick={() => closeSnackbar(id)}
+			size="small"
+			color="secondary"
+			aria-label={formatMessage({ id: 'words.close', defaultMessage: 'Close' })}
+		>
 			<CloseIcon fontSize="small" />
 		</IconButton>
 	);

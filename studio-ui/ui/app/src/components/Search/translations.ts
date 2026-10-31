@@ -33,6 +33,10 @@ export const translations = defineMessages({
 		id: 'search.resultsSelected',
 		defaultMessage: '{count, plural, one {{count} item selected} other {{count} items selected}}'
 	},
+	resultsStatus: {
+		id: 'search.resultsStatus',
+		defaultMessage: '{from}-{to} of {count} results{keywordLength, plural, =0 {}other{ for “{keyword}”}}'
+	},
 	itemsPerPage: {
 		id: 'search.itemsPerPage',
 		defaultMessage: 'Items per page:'

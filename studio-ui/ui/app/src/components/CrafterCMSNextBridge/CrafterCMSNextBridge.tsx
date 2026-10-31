@@ -37,7 +37,8 @@ import { registerComponents } from '../../env/registerComponents';
 import LoadingState from '../LoadingState';
 import GlobalStyles from '../GlobalStyles';
 import ErrorState from '../ErrorState/ErrorState';
-import NotistackVariant from '../NotistackVariant';
+import NotistackVariant, { DefaultStatusSnackbar } from '../NotistackVariant';
+import TooltipEscapeHandler from '../TooltipEscapeHandler/TooltipEscapeHandler';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
 const LegacyConcierge = lazy(() => import('../LegacyConcierge/LegacyConcierge'));
 const GlobalDialogManager = lazy(() => import('../GlobalDialogManager/GlobalDialogManager'));
@@ -72,6 +73,7 @@ export function CrafterCMSNextBridge(
 				anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
 				action: (id) => <SnackbarCloseButton id={id} />,
 				Components: {
+					default: DefaultStatusSnackbar,
 					error: NotistackVariant,
 					success: NotistackVariant,
 					warning: NotistackVariant,
@@ -93,6 +95,7 @@ export function CrafterCMSNextBridge(
 		<CrafterThemeProvider themeOptions={themeOptions}>
 			<I18nProvider>
 				<SnackbarOrFragment {...snackbarOrFragmentProps}>
+					<TooltipEscapeHandler />
 					{storeError ? (
 						<ErrorState
 							title={storeError}

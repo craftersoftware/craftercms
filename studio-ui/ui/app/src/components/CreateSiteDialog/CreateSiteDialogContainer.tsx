@@ -30,6 +30,7 @@ import { getSystemLink } from '../../utils/system';
 import Grid from '@mui/material/Grid';
 import PluginCard from '../PluginCard';
 import ConfirmDialog from '../ConfirmDialog';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
 import LoadingState from '../LoadingState';
 import ApiResponseErrorState from '../ApiResponseErrorState';
 import PluginDetailsView from '../PluginDetailsView';
@@ -613,8 +614,13 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 		};
 	}, [apiState.error, fetchMarketplaceBlueprints, marketplace]);
 
+	const creatingStatus = apiState.creatingSite
+		? `${formatMessage(messages.creatingSite)}. ${formatMessage(messages.pleaseWait)}`
+		: '';
+
 	return (
 		<>
+			<PoliteStatus message={creatingStatus} />
 			<ConfirmDialog
 				open={dialog.inProgress}
 				onOk={onConfirmOk}
