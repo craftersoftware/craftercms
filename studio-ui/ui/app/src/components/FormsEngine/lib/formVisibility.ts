@@ -479,7 +479,10 @@ export type SelectedItemSavePlan =
  * Item edits are already in the parent array.
  */
 export function selectedItemSavePlan(args: {
-	draft: boolean;
+	/** `auto` is the main button: draft when this item or its parent is invalid, else the remembered choice. */
+	draft: boolean | 'auto';
+	/** Remembered dropdown choice. False or absent is Save. Used only for `auto`. */
+	saveAsDraft?: boolean;
 	itemVisibility: FormVisibilityState;
 	itemInvalidFieldIds: readonly string[];
 	itemFieldOrder: readonly string[];
@@ -490,7 +493,12 @@ export function selectedItemSavePlan(args: {
 	parentIrrelevant?: ReadonlySet<string> | null;
 	itemParentPath?: string;
 }): SelectedItemSavePlan {
-	if (!args.draft) {
+	const draft = resolveSaveDraft(
+		args.draft,
+		args.itemInvalidFieldIds.length > 0 || args.parentInvalidFieldIds.length > 0,
+		args.saveAsDraft === true
+	);
+	if (!draft) {
 		const itemReveal = hiddenInvalidReveal({
 			visibility: args.itemVisibility,
 			invalidFieldIds: args.itemInvalidFieldIds,
@@ -815,7 +823,10 @@ export interface SaveValidity {
  * A rejected read propagates to the caller.
  */
 export async function gateSaveBeforeWrite(args: {
-	draft: boolean;
+	/** `auto` is the main button. A menu pick is the boolean the author chose. */
+	draft: boolean | 'auto';
+	/** Remembered dropdown choice. False or absent is Save. Used only for `auto`. */
+	saveAsDraft?: boolean;
 	visibility: FormVisibilityState;
 	sectionOrder: readonly string[];
 	irrelevantFieldPaths?: ReadonlySet<string> | null;
@@ -824,11 +835,12 @@ export async function gateSaveBeforeWrite(args: {
 }): Promise<
 	| { status: 'revealed'; reveal: HiddenInvalidReveal }
 	| { status: 'invalid' }
-	| { status: 'write'; isFormInvalid: boolean }
+	| { status: 'write'; isFormInvalid: boolean; draft: boolean }
 > {
 	const validity = await args.readValidity();
+	const draft = resolveSaveDraft(args.draft, validity.isFormInvalid, args.saveAsDraft === true);
 	const decision = decideSaveReveal({
-		draft: args.draft,
+		draft,
 		visibility: args.visibility,
 		invalidFieldIds: validity.invalidFieldIds,
 		sectionOrder: args.sectionOrder,
@@ -837,12 +849,31 @@ export async function gateSaveBeforeWrite(args: {
 	});
 	if (decision.status === 'revealed') return decision;
 	if (decision.status === 'invalid') return decision;
-	return { status: 'write', isFormInvalid: validity.isFormInvalid };
+	return { status: 'write', isFormInvalid: validity.isFormInvalid, draft };
 }
 
 /** Draft flag for a write. `onBeforeSave` may change validity; the save calls this again and does not re-decide the reveal. */
 export function saveAsDraftFlag(explicitDraft: boolean, isFormInvalid: boolean): boolean {
 	return explicitDraft || isFormInvalid;
+}
+
+/**
+ * Main button (`auto`): draft when the fresh read is invalid, otherwise the remembered choice.
+ * A menu pick is that boolean, so Save while invalid still reveals or blocks.
+ */
+export function resolveSaveDraft(choice: boolean | 'auto', isFormInvalid: boolean, saveAsDraft: boolean): boolean {
+	if (choice === 'auto') return saveAsDraftFlag(saveAsDraft, isFormInvalid);
+	return choice;
+}
+
+/** Second read after `onBeforeSave`. Uses the remembered choice for `auto`, then the same draft rule. */
+export function draftFlagAfterBeforeSave(
+	choice: boolean | 'auto',
+	isFormInvalid: boolean,
+	saveAsDraft: boolean
+): boolean {
+	const explicit = choice === 'auto' ? saveAsDraft : choice;
+	return saveAsDraftFlag(explicit, isFormInvalid);
 }
 
 /**
@@ -862,7 +893,7 @@ export async function applySaveGate<WriteResult>(
 		return 'revealed';
 	}
 	if (gate.status === 'invalid') return 'invalid';
-	return args.preloadAndWrite(saveAsDraftFlag(args.draft, gate.isFormInvalid));
+	return args.preloadAndWrite(saveAsDraftFlag(gate.draft, gate.isFormInvalid));
 }
 
 /**

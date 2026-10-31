@@ -46,7 +46,10 @@ export function useInvalidFieldIds(
 	const jotai = useJotaiStore();
 	const [ids, setIds] = useState<string[]>([]);
 	useEffect(() => {
-		if (!validationByFieldId) return;
+		if (!validationByFieldId) {
+			setIds([]);
+			return;
+		}
 		let disposed = false;
 		let latest = 0;
 		const read = async () => {

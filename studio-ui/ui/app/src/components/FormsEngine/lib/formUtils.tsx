@@ -26,20 +26,27 @@ import {
 	FormsEngineEditContextProps,
 	FormsEngineItemMetaContextProps,
 	FormsEngineSourceMap,
-	ItemContext,
-	StableFormContext,
 	StableFormContextProps,
 	StableGlobalContext,
 	StableGlobalContextProps
 } from './formsEngineContext';
 import { fetchContentItem, fetchContentXML, fetchDescriptorXML, lock, unlock } from '../../../services/content';
+import { getGlobalHeaders } from '../../../utils/ajax';
 import { AjaxError } from 'rxjs/ajax';
 import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
 import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
-import React, { ReactNode, RefObject, useContext, useEffect, useRef, type SetStateAction } from 'react';
+import React, {
+	ReactNode,
+	RefObject,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	type SetStateAction
+} from 'react';
 import { fromString, getInnerHtml } from '../../../utils/xml';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
@@ -65,6 +72,7 @@ import { useDispatch } from 'react-redux';
 import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
+import useActiveUser from '../../../hooks/useActiveUser';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
@@ -84,13 +92,27 @@ import ApiResponse from '../../../models/ApiResponse';
 import {
 	getFormsEngineCloseAfterSave,
 	getFormsEngineCollapseToCKey,
-	getFormsEngineMinimizeAfterSave
+	getFormsEngineMinimizeAfterSave,
+	getFormsEngineReleaseLockOnClose,
+	getFormsEngineSaveAsDraft,
+	getStoredFormsEngineReleaseLockOnClose
 } from '../../../utils/state';
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
 import { isPagePath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
+import {
+	createLockReleaseGate,
+	keepLockOnStackedUnmount,
+	lockPathToRelease,
+	planLockRelease,
+	postUnlockKeepalive,
+	sharedPerUserAtom,
+	shouldUnlockOnPageHide,
+	unlockErrorPayload,
+	type UnlockOnCloseState
+} from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
@@ -190,7 +212,7 @@ export const internalLockContentService: (siteId: string, path: string) => Obser
 	path
 ) =>
 	lock(siteId, path).pipe(
-		map(() => ({ locked: true, lockError: null })),
+		map(() => ({ locked: true, lockError: null, lockedPath: path })),
 		catchError((error: AjaxError) => {
 			// switch (error.status) {
 			//   case 404: {
@@ -200,7 +222,7 @@ export const internalLockContentService: (siteId: string, path: string) => Obser
 			//     // content already locked...
 			//   }
 			// }
-			return of({ locked: false, lockError: error.response?.response });
+			return of({ locked: false, lockError: error.response?.response, lockedPath: null });
 		}),
 		switchMap((lockResult) =>
 			fetchAffectedPackages(siteId, path).pipe(
@@ -215,8 +237,9 @@ export const internalUnlockContentService: (siteId: string, path: string) => Obs
 	path: string
 ) =>
 	unlock(siteId, path).pipe(
-		map(() => ({ locked: false, lockError: null })),
-		catchError((error) => of({ locked: true, lockError: error.response?.response }))
+		map(() => ({ locked: false, lockError: null, lockedPath: null })),
+		// Still holding the lock. Keep `path` so a later close can release it. The caller shows the error.
+		catchError((error: AjaxError) => of({ locked: true, lockError: unlockErrorPayload(error), lockedPath: path }))
 	);
 
 export function createSourceMap(descriptorXml: string): FormsEngineSourceMap {
@@ -625,7 +648,12 @@ export function fetchUpdateRequirements({
 	// requirements service.
 	return (
 		readonly
-			? of({ locked: false, lockError: null, affectedPackages: null } as FormsEngineEditContextProps)
+			? of({
+					locked: false,
+					lockError: null,
+					affectedPackages: null,
+					lockedPath: null
+				} as FormsEngineEditContextProps)
 			: internalLockContentService(siteId, path)
 	).pipe(
 		switchMap((lockResult) =>
@@ -668,6 +696,7 @@ export function fetchUpdateRequirements({
 				locked: lockResult.locked,
 				lockError: lockResult.lockError,
 				affectedPackages: lockResult.affectedPackages,
+				lockedPath: lockResult.locked ? (lockResult.lockedPath ?? path) : null,
 				// If opening as readonly, lock result is of no consequence. If opened for edit, will set to readonly
 				// if there was an error locking the content (the item is not locked).
 				// readonly: readonly || !lockResult.locked,
@@ -711,6 +740,22 @@ export function createFormsEngineAtoms(
 		minimizeAfterSave: atomWithStorage(getFormsEngineMinimizeAfterSave(username), false, undefined, {
 			getOnInit: true
 		}) as unknown as AtomWithStorage,
+		// One atom per user. A second form must not keep its own copy or a toggle on a stacked form is invisible to the root.
+		releaseLockOnClose: sharedPerUserAtom(
+			getFormsEngineReleaseLockOnClose(username),
+			() =>
+				atomWithStorage(getFormsEngineReleaseLockOnClose(username), true, undefined, {
+					getOnInit: true
+				}) as unknown as AtomWithStorage
+		),
+		// False or absent is Save. One atom per user, same as the release-lock switch.
+		saveAsDraft: sharedPerUserAtom(
+			getFormsEngineSaveAsDraft(username),
+			() =>
+				atomWithStorage(getFormsEngineSaveAsDraft(username), false, undefined, {
+					getOnInit: true
+				}) as unknown as AtomWithStorage
+		),
 		...mixin,
 		relevanceVersion: atom(0),
 		...createFormVisibilityAtoms(visibility.state, visibility.scrollFieldId)
@@ -912,111 +957,137 @@ export function getMessageForErrorSymbol(errorSymbol: unknown): ReactNode {
 	}
 }
 
-export interface ShouldUnlockArguments {
-	isRepeatMode: boolean;
-	isCreateMode: boolean;
-	readonly: boolean;
-	isEmbedded: boolean;
-	isStackedForm: boolean;
-	isParentReadonly: boolean;
-	siteId: string;
-	isRenamed: boolean;
-	saveAsDraft: boolean;
-	invalidForm: boolean;
-	itemSavedAsDraft: boolean;
-}
-
 /**
- * Determines if an item should be unlocked when its form is being unmounted.
- **/
-export function shouldUnlockItem(props: ShouldUnlockArguments): boolean {
-	const {
-		isRepeatMode,
-		isCreateMode,
-		readonly,
-		isEmbedded,
-		isStackedForm,
-		isParentReadonly,
-		isRenamed,
-		saveAsDraft,
-		invalidForm,
-		itemSavedAsDraft
-	} = props;
-	return (
-		!invalidForm &&
-		!saveAsDraft &&
-		!isRenamed &&
-		!isRepeatMode &&
-		!isCreateMode &&
-		!readonly &&
-		!itemSavedAsDraft &&
-		// Note these "Or" statements below build on top of the previous one (i.e. it only gets to the next if the previous is false).
-		// If it's not embedded, unlock the item.
-		(!isEmbedded ||
-			// If is embedded but not stacked, unlock as the embedded is the root form.
-			!isStackedForm ||
-			// If the parent form is readonly, release the lock to put the parent back in sync with its readonly mode.
-			isParentReadonly)
-	);
-}
-
-/**
- * When the consumer component is being unmounted, checks if it should be unlocked and unlocks if so.
- * @param props {FormsEngineProps}
- **/
-export function useUnlockOnClose(
-	props: FormsEngineProps & { saveAsDraft?: boolean; invalidForm?: boolean; itemSavedAsDraft?: boolean }
-) {
-	const { create, update, repeat, stackIndex = 0, saveAsDraft = false, invalidForm, itemSavedAsDraft } = props;
-	const itemPath = useContext(ItemContext)?.path;
-	const { atoms } = useContext(StableFormContext);
-	const { formsStackData } = useContext(StableGlobalContext);
+ * Releases this form's lock when the form session ends, not when a dependency changes.
+ * Mount it on the bootstrap that stays up across reload and minimize. A stacked form has its own.
+ * Repeat, create, readonly, and an embedded form on an editable parent do not unlock.
+ * A user choice to keep the lock is read from storage at close time, including pagehide.
+ */
+export function useUnlockOnClose(props: {
+	stackIndex?: number;
+	stableFormContextRef: RefObject<StableFormContextProps>;
+	formsStackData: StableGlobalContextProps['formsStackData'];
+}) {
+	const { stackIndex = 0, stableFormContextRef, formsStackData } = props;
+	const globalContext = useContext(StableGlobalContext);
 	const store = useJotaiStore();
-	const isEmbedded = Boolean(update?.modelId);
-	const isCreateMode = Boolean(create?.path);
-	const isRepeatMode = Boolean(repeat?.fieldId);
-	const isStackedForm = stackIndex > 0;
 	const dispatch = useDispatch();
-	const readonly = useAtomValue(atoms.readonly);
 	const siteId = useActiveSiteId();
-	// Check fileName atom to determine if renamed (renamedPath context is not updated until saving, so if we use that here
-	// it will have an outdated value).
-	const currentFileName = useAtomValue(atoms.fileName);
-	const isRenamed = itemPath ? currentFileName !== getFileNameValueFromPath(itemPath, isPagePath(itemPath)) : false;
-	const parentAtoms = stackEntryAtoms(formsStackData[stackIndex - 1]);
-
-	const unlockEffectRefs = useUpdateRefs<ShouldUnlockArguments & { dispatch: ReduxDispatch }>({
+	const username = useActiveUser()?.username ?? '';
+	const readEntryState = (entry: StableFormContextProps | undefined, index: number): UnlockOnCloseState => {
+		const atoms = entry?.atoms ?? null;
+		const lockResult = atoms ? store.get(atoms.lockResult) : null;
+		const parentEntry = index > 0 ? formsStackData[index - 1] : null;
+		const parentAtoms = stackEntryAtoms(parentEntry);
+		const props = entry?.props;
+		const recorded = lockResult?.lockedPath;
+		const atomChoice = atoms ? store.get(atoms.releaseLockOnClose) : undefined;
+		const storedChoice = getStoredFormsEngineReleaseLockOnClose(username);
+		const liveParentReadonly = parentAtoms ? store.get(parentAtoms.readonly) : false;
+		return {
+			isRepeatMode: Boolean(props?.repeat?.fieldId),
+			isCreateMode: Boolean(props?.create?.path),
+			readonly: atoms ? store.get(atoms.readonly) : true,
+			isEmbedded: Boolean(props?.update?.modelId),
+			isStackedForm: index > 0,
+			// A mounted top unmounts after root reload has popped its parent. The remembered flag
+			// is the parent that was still on the stack when this entry was popped.
+			isParentReadonly: entry
+				? (globalContext?.lockReleaseSession.parentReadonly(entry, liveParentReadonly) ?? liveParentReadonly)
+				: liveParentReadonly,
+			siteId,
+			lockedPath: lockResult?.locked ? recorded || entry?.itemMeta?.path || null : null,
+			// Storage is shared across dialog stores. The atom covers a missing or unreadable value.
+			releaseLockOnClose: storedChoice ?? atomChoice !== false
+		};
+	};
+	const unlockEffectRefs = useUpdateRefs({
 		dispatch,
-		isRepeatMode,
-		isCreateMode,
-		readonly,
-		isEmbedded,
-		isStackedForm,
-		isParentReadonly: parentAtoms ? store.get(parentAtoms.readonly) : false,
-		siteId,
-		isRenamed,
-		saveAsDraft,
-		invalidForm,
-		itemSavedAsDraft
+		readState: (): UnlockOnCloseState => readEntryState(stableFormContextRef.current, stackIndex),
+		readCovered: (index: number): UnlockOnCloseState => readEntryState(formsStackData[index], index),
+		stackLength: () => formsStackData.length,
+		isRoot: stackIndex === 0,
+		// A deeper form replaces this bootstrap. The entry is still in the stack until popForm.
+		entryStillOnStack: () => stackIndex > 0 && formsStackData[stackIndex] === stableFormContextRef.current,
+		coveredByDeeperForm: () => formsStackData.length > stackIndex + 1
 	});
-	useEffect(
-		() => () => {
-			if (shouldUnlockItem(unlockEffectRefs.current)) {
-				unlock(unlockEffectRefs.current.siteId, itemPath).subscribe({
+	// Only the top stacked bootstrap is mounted. popForm uses this to skip the entry that will unmount.
+	useLayoutEffect(() => {
+		if (!globalContext || stackIndex === 0) return;
+		globalContext.mountedStackEntry = stableFormContextRef.current;
+		return () => {
+			if (globalContext.mountedStackEntry === stableFormContextRef.current) {
+				globalContext.mountedStackEntry = null;
+			}
+		};
+	}, [globalContext, stackIndex, stableFormContextRef]);
+	// Stable dep: the ref identity does not change. Save Draft must not re-run this cleanup while the form is open.
+	useEffect(() => {
+		const gate = createLockReleaseGate();
+		const session = globalContext?.lockReleaseSession;
+		const sendUnlock = (entry: StableFormContextProps, state: UnlockOnCloseState, via: 'pagehide' | 'unmount') => {
+			session?.releaseOnce(entry, state, (path) => {
+				if (via === 'pagehide') {
+					postUnlockKeepalive(state.siteId, path, getGlobalHeaders());
+					return;
+				}
+				unlock(state.siteId, path).subscribe({
 					next: () => {
 						unlockEffectRefs.current.dispatch(showUnlockItemSuccessNotification());
 					},
-					error: (e) => {
-						// If error is 404, assume rename (itemPath changed, and the renamed item is not locked) and do not show error dialog.
-						if (e.status !== 404) {
-							unlockEffectRefs.current.dispatch(showErrorDialog({ error: e.response?.response }));
-						}
+					error: (error: AjaxError) => {
+						unlockEffectRefs.current.dispatch(showErrorDialog({ error: unlockErrorPayload(error) }));
 					}
 				});
+			});
+		};
+		const release = (via: 'pagehide' | 'unmount') => {
+			const refs = unlockEffectRefs.current;
+			const state = refs.readState();
+			if (
+				keepLockOnStackedUnmount({
+					via,
+					isStackedForm: state.isStackedForm,
+					entryStillOnStack: refs.entryStillOnStack(),
+					coveredByDeeperForm: refs.coveredByDeeperForm()
+				})
+			) {
+				return;
 			}
-		},
-		[itemPath, unlockEffectRefs, saveAsDraft]
-	);
+			const path = planLockRelease(state, gate);
+			const entry = stableFormContextRef.current;
+			if (path && entry) sendUnlock(entry, state, via);
+			// Covered forms are not mounted, so closing the session must release the locks they still hold.
+			if (!refs.isRoot) return;
+			const length = refs.stackLength();
+			for (let index = 1; index < length - 1; index++) {
+				const coveredEntry = formsStackData[index];
+				const covered = refs.readCovered(index);
+				const coveredPath = lockPathToRelease(covered);
+				if (coveredPath && coveredEntry) sendUnlock(coveredEntry, covered, via);
+			}
+		};
+		if (globalContext && stackIndex === 0) {
+			globalContext.releaseUnmountedEntry = (entry) => {
+				const index = formsStackData.lastIndexOf(entry);
+				if (index <= 0) return;
+				const state = unlockEffectRefs.current.readCovered(index);
+				sendUnlock(entry, state, 'unmount');
+			};
+		}
+		const onPageHide = (event: PageTransitionEvent) => {
+			if (!shouldUnlockOnPageHide(event)) return;
+			release('pagehide');
+		};
+		window.addEventListener('pagehide', onPageHide);
+		return () => {
+			if (globalContext && stackIndex === 0 && globalContext.releaseUnmountedEntry) {
+				globalContext.releaseUnmountedEntry = null;
+			}
+			window.removeEventListener('pagehide', onPageHide);
+			release('unmount');
+		};
+	}, [unlockEffectRefs]);
 }
 
 /**
@@ -1157,6 +1228,8 @@ export function prepareEmbeddedItemForm(props: {
 	locked: boolean;
 	lockError: ApiResponse;
 	affectedPackages: PublishPackage[];
+	/** Path this form locked. Null when it is using the parent's lock. */
+	lockedPath?: string | null;
 	update: FormsEngineProps['update'];
 	fieldIds?: string[];
 	repeatIndex?: string | number;
@@ -1179,6 +1252,7 @@ export function prepareEmbeddedItemForm(props: {
 		locked,
 		lockError,
 		affectedPackages,
+		lockedPath,
 		siteId,
 		contentTypesById,
 		customControls
@@ -1186,7 +1260,8 @@ export function prepareEmbeddedItemForm(props: {
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
 		lockError,
-		affectedPackages
+		affectedPackages,
+		lockedPath: locked ? (lockedPath ?? null) : null
 	});
 	const atoms = createFormsEngineAtoms(
 		username,

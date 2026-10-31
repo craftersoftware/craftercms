@@ -28,6 +28,7 @@ import { createUseContextHook } from '../../../utils/system';
 import type { AffectedPluginControlField } from './controlPluginLoader';
 import type { FormControllerState } from '../formControllers/types';
 import type { FormVisibilityState } from './formVisibility';
+import type { FormLockReleaseSession } from './unlockOnClose';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -76,6 +77,11 @@ export interface FormsEngineEditContextProps {
 	locked: boolean;
 	lockError: ApiResponse;
 	affectedPackages?: PublishPackage[];
+	/**
+	 * Path this form successfully locked. A saved rename updates it to the new path,
+	 * because a move carries the lock. Null when this form does not hold a lock.
+	 */
+	lockedPath?: string | null;
 }
 
 // Contains the various state atoms of a form
@@ -94,6 +100,10 @@ export interface FormsEngineAtoms {
 	tableOfContentsDrawerOpen: PrimitiveAtom<boolean>;
 	closeAfterSave: AtomWithStorage;
 	minimizeAfterSave: AtomWithStorage;
+	/** Per-user. When false, closing the form keeps the lock. Defaults to true. */
+	releaseLockOnClose: AtomWithStorage;
+	/** Per-user. False or absent means Save. True means the user last chose Save Draft. */
+	saveAsDraft: AtomWithStorage;
 	fileName?: Atom<string>;
 	/**
 	 * Bumped after form-controller relevance is stored. Validation atoms read it so a
@@ -129,9 +139,14 @@ export interface StableGlobalContextProps {
 	 * update every render, so a selected-fields Save runs the current root save.
 	 */
 	rootFormActions: {
-		save: (draft?: boolean) => Promise<'revealed' | 'invalid' | 'saved' | void>;
-		setSaveAsDraft: (value: boolean) => void;
+		save: (draft?: boolean | 'auto') => Promise<'revealed' | 'invalid' | 'saved' | void>;
 	};
+	/** Stacked bootstrap that is mounted. It releases its own lock on unmount. */
+	mountedStackEntry: StableFormContextProps | null;
+	/** Releases a removed entry that has no mounted bootstrap (a covered form popped by reload). */
+	releaseUnmountedEntry: ((entry: StableFormContextProps) => void) | null;
+	/** Dedup and parent-readonly memory for unlocks in this root session. */
+	lockReleaseSession: FormLockReleaseSession;
 }
 
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).

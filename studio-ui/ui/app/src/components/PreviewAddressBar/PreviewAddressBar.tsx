@@ -44,6 +44,7 @@ import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
 import useEnv from '../../hooks/useEnv';
 import { Subscription } from 'rxjs';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
+import DraftChip from '../DraftChip';
 
 export interface AddressBarProps {
 	site: string;
@@ -190,10 +191,26 @@ export function PreviewAddressBar(props: AddressBarProps) {
 			>
 				{!focus && item && (
 					<Box
-						sx={{ width: '100%', overflow: 'hidden', cursor: 'pointer', display: 'flex' }}
+						sx={{
+							width: '100%',
+							minWidth: 0,
+							overflow: 'hidden',
+							cursor: 'pointer',
+							display: 'flex',
+							alignItems: 'center',
+							gap: 0.75
+						}}
 						onClick={() => setFocus(true)}
 					>
-						<ItemDisplay item={item} sxs={{ root: { maxWidth: '100%' } }} showNavigableAsLinks={false} />
+						<ItemDisplay
+							item={item}
+							showNavigableAsLinks={false}
+							sxs={{
+								root: { minWidth: 0, flex: '0 1 auto', overflow: 'hidden' },
+								label: { minWidth: 0 }
+							}}
+						/>
+						{item.savedAsDraft && <DraftChip size="small" sx={{ flexShrink: 0 }} />}
 					</Box>
 				)}
 				{(focus || !item) && (

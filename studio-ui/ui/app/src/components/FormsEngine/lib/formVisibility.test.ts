@@ -45,6 +45,8 @@ import {
 	decideSaveReveal,
 	gateSaveBeforeWrite,
 	planSettledFieldScroll,
+	draftFlagAfterBeforeSave,
+	resolveSaveDraft,
 	saveAsDraftFlag,
 	fieldVisibility,
 	clearRepeatItemScope,
@@ -643,6 +645,74 @@ describe('save gate before the controller hook', () => {
 	it('marks a completed save as a draft when the hook leaves the form invalid', () => {
 		assert.equal(saveAsDraftFlag(false, true), true);
 		assert.equal(saveAsDraftFlag(false, false), false);
+	});
+
+	// The main button is auto. A remembered Save of a valid form writes a normal save.
+	it('writes a non-draft when the form is valid and the user last chose Save', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: false, invalidFieldIds: [] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, false);
+	});
+
+	// A remembered Save Draft of a valid form still writes a draft.
+	it('writes a draft when the form is valid and the user last chose Save Draft', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: true,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: false, invalidFieldIds: [] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, true);
+	});
+
+	// Invalid wins over a remembered Save. The main action stores a draft.
+	it('writes a draft when the form is invalid regardless of the remembered choice', async () => {
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: true, invalidFieldIds: ['title_s'] }),
+			onReveal() {},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(result, true);
+	});
+
+	// A hidden error on the main button does not open the field. The write is a draft.
+	it('writes a draft for a hidden error in auto mode without revealing it', async () => {
+		let revealed = false;
+		const result = await applySaveGate({
+			draft: 'auto',
+			saveAsDraft: false,
+			visibility,
+			sectionOrder: ['title_s', 'body_html'],
+			readValidity: async () => ({ isFormInvalid: true, invalidFieldIds: ['body_html'] }),
+			onReveal() {
+				revealed = true;
+			},
+			preloadAndWrite: async (saveAsDraft) => saveAsDraft
+		});
+		assert.equal(revealed, false);
+		assert.equal(result, true);
+	});
+
+	// onBeforeSave can change validity. The second read uses the remembered choice and the fresh invalid bit.
+	it('re-reads the draft flag after onBeforeSave', () => {
+		assert.equal(draftFlagAfterBeforeSave('auto', true, false), true);
+		assert.equal(draftFlagAfterBeforeSave('auto', false, true), true);
+		assert.equal(draftFlagAfterBeforeSave('auto', false, false), false);
+		assert.equal(resolveSaveDraft('auto', true, false), true);
 	});
 });
 

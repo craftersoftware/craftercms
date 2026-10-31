@@ -14,17 +14,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { MutableRefObject } from 'react';
+import { MutableRefObject, ReactNode } from 'react';
 
 export interface SplitButtonOption {
 	id: string;
 	label: string;
 	callback(e): void;
+	icon?: ReactNode;
+	color?: 'primary' | 'warning';
 }
 
 export interface SplitButtonProps {
 	options: SplitButtonOption[];
 	defaultSelected?: string;
+	/** When set, the highlighted action comes from the parent instead of internal state. */
+	selectedId?: string;
+	/** Fires for a dropdown pick, with that option's id. */
+	onSelect?: (id: string) => void;
+	/** Main segment click. When set, the option callback is not used for that click. */
+	onClick?: (e) => void;
 	disablePortal?: boolean;
 	disabled?: boolean;
 	loading?: boolean;
