@@ -58,6 +58,18 @@ describe('repeat item display', () => {
 		assert.equal(getRepeatItemSummary(item, fields), '');
 	});
 
+	it('skips an empty node selector that precedes the title field', () => {
+		const item = { subtitle_o: [], key: 'alpha', title_t: 'The title' };
+		assert.equal(getRepeatItemTitle(item, ['subtitle_o', 'key', 'title_t']), 'The title');
+	});
+
+	it('treats 0 and false as displayable values', () => {
+		assert.equal(getRepeatItemTitle({ key: 'alpha', count_title: 0 }, ['key', 'count_title']), '0');
+		assert.equal(getRepeatItemTitle({ key: 'alpha', flag_title: false }, ['key', 'flag_title']), 'false');
+		assert.equal(getRepeatItemTitle({ count: 0, key: 'alpha' }, ['count', 'key']), '0');
+		assert.equal(getRepeatItemTitle({ flag: false, key: 'alpha' }, ['flag', 'key']), 'false');
+	});
+
 	it('reorders with the corrected title and keeps the stored item', () => {
 		const item = { unicode: 'U+0041', [attribute]: 'legacy', key: 'alpha', value: 'Alpha' };
 		const [entry] = repeatSortItems([item], fields);

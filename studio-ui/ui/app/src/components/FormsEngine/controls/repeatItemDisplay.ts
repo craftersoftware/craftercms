@@ -36,12 +36,12 @@ function displayText(value: unknown): string | undefined {
  * child is used. An item with nothing to show is blank.
  */
 export function getRepeatItemTitle(item: RepeatItem, fieldIds: readonly string[]): string {
-	const titleId = fieldIds.find((id) => id.includes('title') && item[id]);
+	const titleId = fieldIds.find((id) => id.includes('title') && displayText(item[id]) !== undefined);
 	const title = titleId ? displayText(item[titleId]) : undefined;
-	if (title) return title;
+	if (title !== undefined) return title;
 	for (const id of fieldIds) {
 		const text = displayText(item[id]);
-		if (text) return text;
+		if (text !== undefined) return text;
 	}
 	return '';
 }
