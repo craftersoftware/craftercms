@@ -835,7 +835,7 @@
 	"passwordStrengthDisplay.tooGuessable": "Zu erraten",
 	"passwordStrengthDisplay.veryGuessable": "Sehr erraten",
 	"passwordStrengthDisplay.veryUnguessable": "Sehr unvorhersehbar",
-	"passwordTextField.toggleVisibilityButtonText": "Passwortsichtbarkeit umschalten",
+	"passwordTextField.toggleVisibilityButtonText": "Passwort anzeigen",
 	"pastePolicy.confirm": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis. • Ursprünglicher Pfad: „{path}“, • Vorgeschlagener Pfad ist: „{modifiedPath}“. Möchten Sie den vorgeschlagenen Pfad verwenden?",
 	"pastePolicy.error": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis.",
 	"pathNavigator.noChildren": "Element hat keine Unterebenen",

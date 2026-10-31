@@ -39,6 +39,9 @@ export type LogInFormProps = PropsWithChildren<{
 	onRecover?: Function;
 	xsrfParamName?: string;
 	xsrfToken?: string;
+	/** Bad credentials. Marks the password field, and the username field when that field is editable. */
+	invalidCredentials?: boolean;
+	credentialsErrorId?: string;
 }>;
 
 export function LogInForm(props: LogInFormProps) {
@@ -57,8 +60,14 @@ export function LogInForm(props: LogInFormProps) {
 		method = 'post',
 		onRecover,
 		xsrfParamName,
-		xsrfToken
+		xsrfToken,
+		invalidCredentials = false,
+		credentialsErrorId
 	} = props;
+	// A disabled username (session re-login) is not an editable credential, so it stays out of the error.
+	const usernameInvalid = invalidCredentials && enableUsernameInput;
+	const describedBy = (invalid: boolean) =>
+		invalid && credentialsErrorId ? { 'aria-describedby': credentialsErrorId } : undefined;
 	return (
 		<form action={action} method={method} onSubmit={onSubmit}>
 			{children}
@@ -68,6 +77,7 @@ export function LogInForm(props: LogInFormProps) {
 				fullWidth
 				autoFocus={enableUsernameInput && !Boolean(username)}
 				disabled={!enableUsernameInput}
+				error={usernameInvalid}
 				type="text"
 				value={username}
 				onChange={(e: any) => onSetUsername?.(e.target.value)}
@@ -89,7 +99,9 @@ export function LogInForm(props: LogInFormProps) {
 						}
 					},
 					htmlInput: {
-						maxLength: USER_USERNAME_MAX_LENGTH
+						maxLength: USER_USERNAME_MAX_LENGTH,
+						autoComplete: 'username',
+						...describedBy(usernameInvalid)
 					}
 				}}
 			/>
@@ -98,6 +110,7 @@ export function LogInForm(props: LogInFormProps) {
 				name="password"
 				fullWidth
 				autoFocus={!enableUsernameInput || Boolean(username)}
+				error={invalidCredentials}
 				value={password}
 				onChange={(e: any) => onSetPassword?.(e.target.value)}
 				className={['last-before-button', classes?.password].join(' ')}
@@ -120,7 +133,9 @@ export function LogInForm(props: LogInFormProps) {
 						}
 					},
 					htmlInput: {
-						maxLength: USER_PASSWORD_MAX_LENGTH
+						maxLength: USER_PASSWORD_MAX_LENGTH,
+						autoComplete: 'current-password',
+						...describedBy(invalidCredentials)
 					}
 				}}
 			/>

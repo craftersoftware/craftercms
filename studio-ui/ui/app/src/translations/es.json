@@ -835,7 +835,7 @@
 	"passwordStrengthDisplay.tooGuessable": "Demasiado adivinable",
 	"passwordStrengthDisplay.veryGuessable": "Muy adivinable",
 	"passwordStrengthDisplay.veryUnguessable": "Muy inconcebible",
-	"passwordTextField.toggleVisibilityButtonText": "alternar la visibilidad de la contraseña",
+	"passwordTextField.toggleVisibilityButtonText": "Mostrar contraseña",
 	"pastePolicy.confirm": "El destino {action} seleccionado va en contra de las políticas del proyecto para el directorio de destino. • Ruta original: \"{path}\", • La ruta sugerida es: \"{modifiedPath}\". ¿Le gustaría utilizar la ruta sugerida?",
 	"pastePolicy.error": "El destino {action} seleccionado va en contra de las políticas del proyecto para el directorio de destino.",
 	"pathNavigator.noChildren": "El artículo no tiene hijos",
