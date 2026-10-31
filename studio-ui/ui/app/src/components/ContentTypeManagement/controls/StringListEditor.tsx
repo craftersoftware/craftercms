@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -40,6 +40,17 @@ function nextRowId(): string {
 	return `string-list-row-${rowIdSequence}`;
 }
 
+/** Keep the ids a handler already assigned, and name only the rows a parent appended. */
+function idsForLength(rowIds: string[], length: number, instanceKey: string): string[] {
+	const kept = rowIds.slice(0, length);
+	if (kept.length === length) return kept;
+	const added: string[] = [];
+	for (let index = kept.length; index < length; index++) {
+		added.push(`${instanceKey}:${index}:${length}`);
+	}
+	return kept.concat(added);
+}
+
 /**
  * Free-text list with add and remove. Callers supply the labels.
  * Row ids stay with the value so removing a middle row does not reuse the next row's DOM.
@@ -47,18 +58,19 @@ function nextRowId(): string {
 export function StringListEditor(props: StringListEditorProps) {
 	const { values, onChange, itemLabel, addLabel, removeLabel, maxLength } = props;
 	const { formatMessage } = useIntl();
-	const rowIds = useRef<string[]>([]);
+	const list = values ?? [];
+	// First ids only. Later length changes are derived below, or assigned in the add/remove handlers.
+	const [instanceKey] = useState(nextRowId);
+	const [rowIds, setRowIds] = useState(() => list.map(() => nextRowId()));
 	const inputRefs = useRef(new Map<string, HTMLInputElement>());
 	const addButtonRef = useRef<HTMLButtonElement>(null);
 	const pendingFocus = useRef<string | 'add' | null>(null);
-	const list = values ?? [];
-
-	if (rowIds.current.length !== list.length) {
-		const nextIds: string[] = [];
-		for (let i = 0; i < list.length; i++) {
-			nextIds.push(rowIds.current[i] ?? nextRowId());
-		}
-		rowIds.current = nextIds;
+	// A parent can replace the list without going through add/remove. Adjust before returning so this
+	// render's keys already match the list; React retries with that state instead of committing a mismatch.
+	let ids = rowIds;
+	if (ids.length !== list.length) {
+		ids = idsForLength(ids, list.length, instanceKey);
+		setRowIds(ids);
 	}
 
 	useEffect(() => {
@@ -80,15 +92,15 @@ export function StringListEditor(props: StringListEditorProps) {
 
 	const addValue = () => {
 		const id = nextRowId();
-		rowIds.current = [...rowIds.current, id];
+		setRowIds([...ids, id]);
 		// The new input renders before this button. Leave focus here and Tab skips it.
 		pendingFocus.current = id;
 		onChange([...list, '']);
 	};
 
 	const removeValue = (index: number) => {
-		const nextIds = rowIds.current.filter((_, i) => i !== index);
-		rowIds.current = nextIds;
+		const nextIds = ids.filter((_, i) => i !== index);
+		setRowIds(nextIds);
 		const focusIndex = index < nextIds.length ? index : nextIds.length - 1;
 		pendingFocus.current = focusIndex >= 0 ? nextIds[focusIndex] : 'add';
 		onChange(list.filter((_, i) => i !== index));
@@ -99,7 +111,7 @@ export function StringListEditor(props: StringListEditorProps) {
 	return (
 		<>
 			{list.map((entry, index) => {
-				const id = rowIds.current[index];
+				const id = ids[index];
 				const rowNumber = index + 1;
 				const rowLabel = formatMessage(itemLabel, { index: rowNumber });
 				const removeText = formatMessage(removeLabel, { index: rowNumber });

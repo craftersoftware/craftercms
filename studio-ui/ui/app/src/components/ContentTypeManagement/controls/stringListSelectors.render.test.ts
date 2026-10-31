@@ -150,6 +150,58 @@ describe('string list selectors render', () => {
 		assert.equal(focused.value, 'admin');
 	});
 
+	it('keeps earlier rows when the parent replaces the list', async () => {
+		let setRoles: (next: string[]) => void = () => {};
+		function Roles() {
+			const [value, setValue] = React.useState(['author', 'editor']);
+			setRoles = setValue;
+			return React.createElement(TypeAllowedRolesSelector, {
+				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
+				value,
+				setValue
+			});
+		}
+
+		const host = await render(React.createElement(Roles));
+		const initial = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			initial.map((input) => input.value),
+			['author', 'editor']
+		);
+
+		await act(async () => {
+			setRoles(['author', 'publisher']);
+		});
+		const replaced = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			replaced.map((input) => input.value),
+			['author', 'publisher']
+		);
+		assert.equal(replaced[0], initial[0]);
+		assert.equal(replaced[1], initial[1]);
+
+		await act(async () => {
+			setRoles(['author', 'publisher', 'admin']);
+		});
+		const grown = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			grown.map((input) => input.value),
+			['author', 'publisher', 'admin']
+		);
+		assert.equal(grown[0], initial[0]);
+		assert.equal(grown[1], initial[1]);
+
+		await act(async () => {
+			setRoles(['author']);
+		});
+		const shrunk = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			shrunk.map((input) => input.value),
+			['author']
+		);
+		assert.equal(shrunk[0], initial[0]);
+	});
+
 	it('appends an empty role and focuses it from an empty list and a populated list', async () => {
 		let latest: string[] = [];
 		function Roles() {
