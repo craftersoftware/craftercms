@@ -17,7 +17,7 @@
 import prettierXmlPlugin from '@prettier/plugin-xml';
 import { format } from 'prettier/standalone';
 import { nnou } from './object';
-import { XMLParser, X2jOptions } from 'fast-xml-parser';
+import { XMLBuilder, XMLParser, X2jOptions } from 'fast-xml-parser';
 import { legacyUnescapeXml } from './string';
 
 export function fromString(xml: string): XMLDocument {
@@ -71,7 +71,15 @@ export function getInnerHtml(element: Element, options?: Partial<GetInnerHtmlOpt
 		// @ts-ignore downlevelIteration
 		const matches = [...content.matchAll(/<!\[CDATA\[([\s\S\n]*?)\]\]>/g)];
 		if (matches.length > 0) {
-			content = matches[0][1].trim();
+			// ']]>' is stored as adjacent sections (]]]]><![CDATA[>). Read every section in that run.
+			// Joining adjacent CDATA sections on read is intentional.
+			let cdata = matches[0][1];
+			let end = matches[0].index + matches[0][0].length;
+			for (let i = 1; i < matches.length && matches[i].index === end; i++) {
+				cdata += matches[i][1];
+				end = matches[i].index + matches[i][0].length;
+			}
+			content = cdata.trim();
 		}
 		if (opts.trim) {
 			content = content.trim();
@@ -187,6 +195,8 @@ export function deserialize(xml: Node): any;
 export function deserialize(xml: string, options: Partial<X2jOptions>): any;
 export function deserialize(xml: Node, options: Partial<X2jOptions>): any;
 export function deserialize(xml: string | Node, options?: Partial<X2jOptions>): any {
+	// fast-xml-parser 5.11.2: constructor, prototype and __proto__ throw [SECURITY] Invalid name.
+	// toString, valueOf and hasOwnProperty are renamed with a __ prefix.
 	const parser = new XMLParser({
 		attributeNamePrefix: '',
 		ignoreAttributes: false,
@@ -200,8 +210,22 @@ export function deserialize(xml: string | Node, options?: Partial<X2jOptions>): 
 	return parser.parse(xml);
 }
 
+// fast-xml-parser stores Object.prototype names on a __ prefix (toString → __toString).
+// Own-property reads skip the inherited value. constructor, prototype and __proto__ still throw in deserialize.
+export function getParsedField(source: object | null | undefined, fieldId: string): unknown {
+	if (source == null) return undefined;
+	const record = source as Record<string, unknown>;
+	if (Object.hasOwn(record, fieldId)) return record[fieldId];
+	const renamed = `__${fieldId}`;
+	if (Object.hasOwn(record, renamed)) return record[renamed];
+	return undefined;
+}
+
+// Uses the library's CDATA handling. null and undefined become an empty section.
+const cdataBuilder = new XMLBuilder({ cdataPropName: '#cdata' });
+
 export function cdataWrap(value: string): string {
-	return `<![CDATA[${value}]]>`;
+	return cdataBuilder.build({ '#cdata': value == null ? '' : String(value) });
 }
 
 export function parseValidateDocument(content: string): XMLDocument | string {
