@@ -202,6 +202,68 @@ describe('string list selectors render', () => {
 		assert.equal(shrunk[0], initial[0]);
 	});
 
+	it('does not reuse a kept row id when the parent appends after a removal', async () => {
+		let setRoles: (next: string[]) => void = () => {};
+		function Roles() {
+			const [value, setValue] = React.useState(['author', 'editor']);
+			setRoles = setValue;
+			return React.createElement(TypeAllowedRolesSelector, {
+				field: field('allowedRoles', 'Allowed Roles', 'type-allowed-roles-selector'),
+				value,
+				setValue
+			});
+		}
+
+		const host = await render(React.createElement(Roles));
+		await act(async () => {
+			setRoles(['author', 'editor', 'admin']);
+		});
+		const grown = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			grown.map((input) => input.value),
+			['author', 'editor', 'admin']
+		);
+
+		const remove = host.querySelector('button[aria-label="Remove Role 1"]');
+		assert.ok(remove instanceof HTMLButtonElement);
+		await act(async () => {
+			remove.click();
+		});
+		const kept = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			kept.map((input) => input.value),
+			['editor', 'admin']
+		);
+		assert.equal(kept[0], grown[1]);
+		assert.equal(kept[1], grown[2]);
+
+		const errors: unknown[][] = [];
+		const originalError = console.error;
+		console.error = (...args: unknown[]) => {
+			errors.push(args);
+		};
+		try {
+			await act(async () => {
+				setRoles(['editor', 'admin', 'publisher']);
+			});
+		} finally {
+			console.error = originalError;
+		}
+
+		const appended = [...host.querySelectorAll('input')];
+		assert.deepEqual(
+			appended.map((input) => input.value),
+			['editor', 'admin', 'publisher']
+		);
+		assert.equal(appended[0], kept[0]);
+		assert.equal(appended[1], kept[1]);
+		assert.equal(new Set(appended).size, appended.length);
+		assert.equal(
+			errors.some((args) => args.some((arg) => String(arg).includes('same key'))),
+			false
+		);
+	});
+
 	it('appends an empty role and focuses it from an empty list and a populated list', async () => {
 		let latest: string[] = [];
 		function Roles() {

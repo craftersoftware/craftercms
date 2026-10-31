@@ -40,13 +40,21 @@ function nextRowId(): string {
 	return `string-list-row-${rowIdSequence}`;
 }
 
-/** Keep the ids a handler already assigned, and name only the rows a parent appended. */
+/** Keep ids already assigned. Each parent-appended row gets the first free `${instanceKey}:${n}`. */
 function idsForLength(rowIds: string[], length: number, instanceKey: string): string[] {
 	const kept = rowIds.slice(0, length);
 	if (kept.length === length) return kept;
+	const used = new Set(kept);
 	const added: string[] = [];
 	for (let index = kept.length; index < length; index++) {
-		added.push(`${instanceKey}:${index}:${length}`);
+		let n = index;
+		let candidate = `${instanceKey}:${n}`;
+		while (used.has(candidate)) {
+			n += 1;
+			candidate = `${instanceKey}:${n}`;
+		}
+		used.add(candidate);
+		added.push(candidate);
 	}
 	return kept.concat(added);
 }
