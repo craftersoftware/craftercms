@@ -20,13 +20,12 @@ import type { BuiltInControlType } from './controlMap';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import { getPluginControlValueRetriever } from '../controls/registry';
-import { systemFieldsNotInType, XmlKeys } from './formConsts';
+import { preservedElements, systemFieldsNotInType, xmlAttributePrefix, XmlKeys } from './formConsts';
 import { deserialize, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
-import { Matcher } from 'path-expression-matcher';
 import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
 import type { ValueRetriever } from './controlValueTypes';
 
@@ -138,6 +137,11 @@ export function createParsedValuesObject(
 		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
 		fieldCallback?.(field.id, values[field.id]);
 	});
+	preservedElements.forEach((elementId) => {
+		if (!(elementId in values) && nnou(xmlDeserializedValues[elementId])) {
+			values[elementId] = xmlDeserializedValues[elementId];
+		}
+	});
 	return values;
 }
 
@@ -157,9 +161,11 @@ export function createParsedValueForField<T = unknown>(
 	const controlType = field.type as BuiltInControlType;
 	switch (controlType) {
 		case 'repeat': {
-			return (value as Array<RepeatItem>).map((item) =>
-				createParsedValuesObject(field.fields ?? ({} as LookupTable<ContentTypeField>), item, contentTypesLookup)
-			) as T;
+			// Item children without a field are kept, as FE1 did, e.g. a taxonomy item's `unicode`.
+			return (value as Array<RepeatItem>).map((item) => ({
+				...item,
+				...createParsedValuesObject(field.fields ?? ({} as LookupTable<ContentTypeField>), item, contentTypesLookup)
+			})) as T;
 		}
 		case 'node-selector': {
 			return (value as Array<NodeSelectorItem>).map((item) => {
@@ -204,11 +210,16 @@ export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: 
 export function deserializeContentDoc(contentDom: XMLDocument | Element): LookupTable<unknown> {
 	if (!contentDom) return null;
 	return deserialize(contentDom, {
-		ignoreAttributes: true,
+		// Values are text. Typed fields convert theirs in their value retriever.
+		parseTagValue: false,
+		// Only collection item attributes (e.g. `datasource`) are kept, so other values stay plain.
+		ignoreAttributes: (attributeName, jPathOrMatcher) =>
+			typeof jPathOrMatcher !== 'string' || !jPathOrMatcher.endsWith('.item'),
+		attributeNamePrefix: xmlAttributePrefix,
 		// Ideally, we would extract all collection types (item selector, repeat) that have
 		// this sort of syntax to avoid false positives.
 		// e.g.collectionFieldIds.map((fieldId) => `${rootTagName}.${fieldId}.item`).includes(jPath);
-		isArray: (tagName: string, jPathOrMatcher: string | Matcher) => {
+		isArray: (tagName, jPathOrMatcher) => {
 			return typeof jPathOrMatcher === 'string' && jPathOrMatcher.endsWith('.item');
 		}
 	})[(contentDom as XMLDocument).documentElement?.tagName ?? (contentDom as Element).tagName];
@@ -234,7 +245,7 @@ export function textOrNullExtractor(value: unknown): string | null {
 }
 
 export function numberFieldExtractor(value: unknown): number | null {
-	return nnou(value) ? Number(value) : null;
+	return nnou(value) && value !== '' ? Number(value) : null;
 }
 
 /** Handles boolean values that may come as actual booleans or as strings. An empty string or null/undefined becomes (no value set). */

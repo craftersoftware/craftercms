@@ -55,6 +55,7 @@ import {
 	ItemNotFoundError,
 	NoSiteIdError,
 	PropsChangedError,
+	preservedElements,
 	systemFieldsNotInType,
 	UnknownError,
 	XmlKeys
@@ -89,8 +90,8 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { isPagePath } from '../../../utils/path';
-import { nou } from '../../../utils/object';
+import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { nnou, nou } from '../../../utils/object';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
@@ -794,6 +795,7 @@ export function setFieldAtoms(
 export type SystemPropsObject = Pick<
 	Record<XmlKeys, string | boolean>,
 	| XmlKeys.modelId
+	| XmlKeys.groupId
 	| XmlKeys.internalName
 	| XmlKeys.contentTypeId
 	| XmlKeys.displayTemplate
@@ -825,8 +827,10 @@ export function createObjectWithSystemProps(
 	mixin?: Partial<SystemPropsObject>
 ): CreatedSystemPropsObject {
 	const dateIsoString = new Date().toISOString();
+	const objectId = (mixin?.[XmlKeys.modelId] as string) ?? uuid();
 	const contentObject: CreatedSystemPropsObject = {
-		[XmlKeys.modelId]: mixin?.[XmlKeys.modelId] ?? uuid(),
+		[XmlKeys.modelId]: objectId,
+		[XmlKeys.groupId]: mixin?.[XmlKeys.groupId] ?? createObjectGroupId(objectId),
 		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.displayTemplate]: contentType.displayTemplate ?? '',
@@ -839,6 +843,35 @@ export function createObjectWithSystemProps(
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
 	return contentObject;
+}
+
+/** Adds the system props and preserved elements that `values` doesn't have. Values already there are kept. */
+export function complementValuesWithSystemProps(
+	id: string,
+	values: LookupTable<unknown>,
+	contentObject: LookupTable<unknown>,
+	contentType: ContentType,
+	saveAsDraft: boolean
+): void {
+	const systemProps = createObjectWithSystemProps(contentType, {
+		[XmlKeys.modelId]: id,
+		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
+		[XmlKeys.dateCreated]: contentObject[XmlKeys.dateCreated] as string,
+		[XmlKeys.dateCreatedDt]: contentObject[XmlKeys.dateCreatedDt] as string,
+		[XmlKeys.savedAsDraft]: saveAsDraft
+	});
+
+	// Do not overwrite any existing value.
+	preservedElements.forEach((key) => {
+		if (!(key in values) && nnou(contentObject[key])) {
+			values[key] = contentObject[key];
+		}
+	});
+	for (const key in systemProps) {
+		if (!(key in values)) {
+			values[key] = systemProps[key];
+		}
+	}
 }
 
 export function produceChangedFieldsMessage(changedFieldNames: string[]): string {

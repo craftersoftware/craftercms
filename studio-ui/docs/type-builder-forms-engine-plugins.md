@@ -291,6 +291,8 @@ export default {
 };
 ```
 
+`raw` is the element text as a string, never auto-typed (`<count>5</count>` gives `'5'`, not `5`), or the deserialized object for elements with children. When the element is missing and the field has no default value, `raw` is `undefined`, so handle that case. Convert typed values in `valueRetriever`; without one, the control receives the value as-is.
+
 Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSerializersLookup` / `validatorsMap` first (`Object.hasOwn`), then plugin contribution for `field.type`. Required/empty checks stay in `validateFieldValue` (host). FE preloads all `field.properties.plugin` locators via `preloadControlPluginsForFields` (1) before form value parse at bootstrap and (2) again in `useSaveForm` before `buildContentXml`, walking current values so embeds added after open still register serializers. Bootstrap failures are recorded on `StableFormContext.affectedPluginControlFields`; save-time failures update that list and hard-block save (avoids writing unconverted XML shapes).
 
 Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component). Host also exposes `getValueRetriever` / `getValueSerializer` / `getValidator` for inspection.
@@ -339,7 +341,7 @@ Most modules return actions whose `run(ctx, { target? })` calls shared services.
 
 Action ids must be unique within a configured datasource instance. Resolution stamps the stable cross-instance key `dataSourceId::actionId`. Create actions may expose multiple typed targets; `createContent` resolves after nested-form save/cancel so the selected action returns a semantic item selection.
 
-The runtime retains the source datasource on the resolved action/choice. It does not currently persist FE1's node-selector `datasource` XML attribute; FE2/XB provenance round-tripping is intentionally deferred.
+The runtime retains the source datasource on the resolved action/choice. Node-selector items added through an action get that datasource's id in the `datasource` XML attribute, as in FE1, and existing item attributes are kept on save. XB inserts write the attribute only when exactly one `components` datasource of the field allows the inserted type in that mode; otherwise it is left off.
 
 ### Form controllers
 
@@ -466,7 +468,7 @@ interface PluginDescriptor {
 interface ControlPluginContribution {
 	Component: ComponentType<ControlProps>;
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
-	valueRetriever?: ValueRetriever; // optional XML → form value
+	valueRetriever?: ValueRetriever; // optional XML → form value; `raw` is a string (never auto-typed), an object for elements with children, or undefined when absent with no default
 	valueSerializer?: ValueSerializer; // optional form value → XML shape
 	validator?: ValidatorFunctionDef; // optional type-specific; required/empty is host-owned
 }

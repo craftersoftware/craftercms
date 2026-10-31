@@ -1378,8 +1378,14 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	 * Replace the content IDs in the given path.
 	 */
 	protected String replaceContentIdsInPath(String path, ContentItemIds oldContentIds, ContentItemIds newContentItemIds) {
-		return path.replaceAll(oldContentIds.objectId(), newContentItemIds.objectId())
-				.replaceAll(oldContentIds.groupId, newContentItemIds.groupId);
+		String newPath = path;
+		if (StringUtils.isNotEmpty(oldContentIds.objectId())) {
+			newPath = newPath.replace(oldContentIds.objectId(), newContentItemIds.objectId());
+		}
+		if (StringUtils.isNotEmpty(oldContentIds.groupId())) {
+			newPath = newPath.replace(oldContentIds.groupId(), newContentItemIds.groupId());
+		}
+		return newPath;
 	}
 
 	/**
@@ -2529,6 +2535,10 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	protected ContentItemIds extractContentIds(Element root) {
 		String objectId = readSingleDocumentNodeText(root, ELM_OBJECT_ID);
 		String groupId = readSingleDocumentNodeText(root, ELM_GROUP_ID);
+		if (StringUtils.isEmpty(groupId) && StringUtils.isNotEmpty(objectId)) {
+			// The group id may be missing from stored content; it is always derived from the object id
+			return new ContentItemIds(objectId);
+		}
 		return new ContentItemIds(objectId, groupId);
 	}
 
@@ -2788,7 +2798,7 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 		 * @param objectId the object id
 		 */
 		public ContentItemIds(String objectId) {
-			this(objectId, objectId.substring(0, 4));
+			this(objectId, StringUtils.left(objectId, 4));
 		}
 
 		/**

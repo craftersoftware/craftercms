@@ -18,7 +18,10 @@ import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type LookupTable from '../../../models/LookupTable';
 
-/** XML / form-value → in-memory control value (form load). */
+/**
+ * XML / form-value → in-memory control value (form load). `value` is the element text as a string (never auto-typed),
+ * the deserialized object for elements with children, or `undefined` when the element is missing and there is no default.
+ */
 export type ValueRetriever<T = unknown> = (value: unknown, field: ContentTypeField) => T;
 
 /** In-memory control value → XML-serialiser-ready shape (form save). */

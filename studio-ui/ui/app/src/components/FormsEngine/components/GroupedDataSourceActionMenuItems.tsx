@@ -40,8 +40,8 @@ export interface GroupedDataSourceActionMenuItemsProps {
 	context: DataSourceFieldContext;
 	/** When true, disables group and custom menu items (and nested choice items). */
 	disabled?: boolean;
-	/** Called with the selection (or `null`) after a successful action / dialog. */
-	onResult(selection: DataSourceSelection | DataSourceSelection[] | null): void;
+	/** Called with the selection (or `null`) and the action that made it, after a successful action / dialog. */
+	onResult(selection: DataSourceSelection | DataSourceSelection[] | null, action: ResolvedDataSourceAction): void;
 	/** Called when an invoked action / dialog rejects. */
 	onError(error: unknown): void;
 	/**
@@ -108,17 +108,18 @@ export function GroupedDataSourceActionMenuItems({
 		setChoiceAnchor(null);
 		setChoiceGroup(null);
 	};
-	const handleResult = (selection: DataSourceSelection | DataSourceSelection[] | null) => {
-		onResult(selection);
-		onMenuClose?.();
-	};
+	const handleResult =
+		(action: ResolvedDataSourceAction) => (selection: DataSourceSelection | DataSourceSelection[] | null) => {
+			onResult(selection, action);
+			onMenuClose?.();
+		};
 	const handleError = (error: unknown) => {
 		onError(error);
 		onMenuClose?.();
 	};
 	const runGroup = (group: DataSourceActionGroup, event: MouseEvent<HTMLElement>) => {
 		if (group.choices.length === 1) {
-			invokeActionChoice(group.choices[0], context).then(handleResult).catch(handleError);
+			invokeActionChoice(group.choices[0], context).then(handleResult(group.choices[0].action)).catch(handleError);
 		} else {
 			setChoiceGroup(group);
 			setChoiceAnchor(event.currentTarget);
@@ -128,7 +129,7 @@ export function GroupedDataSourceActionMenuItems({
 		if (action.Dialog) {
 			setDialogAction(action);
 		} else {
-			invokeResolvedAction(action, context).then(handleResult).catch(handleError);
+			invokeResolvedAction(action, context).then(handleResult(action)).catch(handleError);
 		}
 	};
 
@@ -153,7 +154,7 @@ export function GroupedDataSourceActionMenuItems({
 						action={action}
 						context={context}
 						disabled={disabled}
-						onResult={handleResult}
+						onResult={handleResult(action)}
 						onError={handleError}
 					/>
 				) : (
@@ -175,7 +176,7 @@ export function GroupedDataSourceActionMenuItems({
 						disabled={disabled}
 						onClick={() => {
 							closeChoices();
-							invokeActionChoice(choice, context).then(handleResult).catch(handleError);
+							invokeActionChoice(choice, context).then(handleResult(choice.action)).catch(handleError);
 						}}
 					>
 						<ListItemText primary={choice.label} secondary={choice.description} />
@@ -188,7 +189,7 @@ export function GroupedDataSourceActionMenuItems({
 					context={context}
 					disabled={disabled}
 					onResult={(selection) => {
-						handleResult(selection);
+						handleResult(dialogAction)(selection);
 						setDialogAction(null);
 					}}
 					onError={(error) => {

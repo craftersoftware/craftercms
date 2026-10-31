@@ -23,12 +23,12 @@ import { createInstanceFromRecord, defineDataSourceModule } from '../defineModul
 import { expandPathOrRaw } from '../pathUtils';
 import { normalizeListItem, propString } from '../moduleHelpers';
 
-function itemsFromTaxonomyDoc(doc: XMLDocument): DataSourceListItem[] {
+export function itemsFromTaxonomyDoc(doc: XMLDocument): DataSourceListItem[] {
 	const itemsNode = doc.querySelector(':scope > items');
 	if (!itemsNode) {
 		throw new Error('Taxonomy content is missing an <items> element.');
 	}
-	const deserialized = deserialize(itemsNode) as { items?: { item?: unknown } };
+	const deserialized = deserialize(itemsNode, { parseTagValue: false }) as { items?: { item?: unknown } };
 	const items = asArray(deserialized?.items?.item);
 	return items.map((item, index) => normalizeListItem(item, index, 'Taxonomy item'));
 }
