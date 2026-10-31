@@ -21,7 +21,7 @@ import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import { getPluginControlValueRetriever } from '../controls/registry';
 import { systemFieldsNotInType, XmlKeys } from './formConsts';
-import { deserialize, unescapeXml } from '../../../utils/xml';
+import { deserialize, getParsedField, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
@@ -110,8 +110,9 @@ export function createParsedValuesObject(
 ): LookupTable<unknown> {
 	const values = {};
 	systemFieldsNotInType.forEach((systemFieldId) => {
-		if (systemFieldId in xmlDeserializedValues) {
-			values[systemFieldId] = xmlDeserializedValues[systemFieldId] ?? '';
+		const rawValue = getParsedField(xmlDeserializedValues, systemFieldId);
+		if (rawValue !== undefined) {
+			values[systemFieldId] = rawValue ?? '';
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
@@ -128,13 +129,17 @@ export function createParsedValuesObject(
 				defaultValue: undefined
 			};
 			values[additionalFieldId] = createParsedValueForField(
-				xmlDeserializedValues[additionalFieldId],
+				getParsedField(xmlDeserializedValues, additionalFieldId),
 				additionalField,
 				contentTypesLookup
 			);
 			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
 		});
-		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
+		values[field.id] = createParsedValueForField(
+			getParsedField(xmlDeserializedValues, field.id),
+			field,
+			contentTypesLookup
+		);
 		fieldCallback?.(field.id, values[field.id]);
 	});
 	return values;
