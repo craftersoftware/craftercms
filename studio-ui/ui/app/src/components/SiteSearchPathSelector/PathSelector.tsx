@@ -17,10 +17,11 @@
 import { defineMessages, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import React, { useEffect, useState } from 'react';
-import InputBase from '@mui/material/InputBase';
+import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
 import SiteExplorer from '../../icons/SiteExplorer';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
@@ -86,50 +87,56 @@ export function PathSelector(props: PathSelectorProps) {
 	return (
 		<Paper
 			variant="outlined"
-			onClick={disabled ? null : onOpenPathSelectionDialog}
 			sx={{
 				flex: 1,
 				minHeight: 40,
 				display: 'flex',
-				cursor: disabled ? 'default' : 'pointer',
+				alignItems: 'center',
 				padding: '0 0 0 10px',
 				opacity: disabled ? 0.7 : 1,
-				'&:hover:not(.disabled)': {
-					borderColor: (theme) => theme.palette.action.active
+				'&:hover': {
+					borderColor: (theme) => (disabled ? undefined : theme.palette.action.active)
 				}
 			}}
 		>
-			<InputBase
-				sx={{ flexGrow: 1 }}
-				inputProps={{
-					sx: {
-						border: 0,
-						padding: '0 0 0 5px',
-						height: '100%',
-						cursor: 'pointer',
-						background: 'none',
-						'&:focus': {
-							borderColor: 'none',
-							boxShadow: 'inherit'
-						},
-						'&:disabled': {
-							cursor: 'default'
-						}
+			<ButtonBase
+				disabled={disabled}
+				onClick={onOpenPathSelectionDialog}
+				// With no path the visible text is the name. A label that left it out would fail 2.5.3.
+				aria-label={
+					path
+						? formatMessage({ id: 'pathSelector.searchInPath', defaultMessage: 'Search in path: {path}' }, { path })
+						: undefined
+				}
+				sx={{
+					flex: 1,
+					minHeight: 40,
+					display: 'flex',
+					justifyContent: 'flex-start',
+					alignItems: 'center',
+					gap: '5px',
+					textAlign: 'left',
+					cursor: disabled ? 'default' : 'pointer',
+					'&:focus-visible, &.Mui-focusVisible': {
+						outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+						outlineOffset: '-2px'
 					}
 				}}
-				disabled={disabled}
-				readOnly
-				value={path}
-				placeholder={formatMessage(messages.searchIn)}
-				startAdornment={disabled ? null : <SiteExplorer sx={{ color: 'text.secondary' }} />}
-				endAdornment={
-					!disabled && value ? (
-						<IconButton onClick={onClean} size="small">
-							<CloseIcon />
-						</IconButton>
-					) : null
-				}
-			/>
+			>
+				{disabled ? null : <SiteExplorer sx={{ color: 'text.secondary' }} />}
+				<Typography
+					variant="body2"
+					noWrap
+					sx={{ flex: 1, color: path ? 'text.primary' : 'text.secondary', textAlign: 'left' }}
+				>
+					{path || formatMessage(messages.searchIn)}
+				</Typography>
+			</ButtonBase>
+			{!disabled && value ? (
+				<IconButton size="small" onClick={onClean} aria-label={formatMessage({ defaultMessage: 'Clear path' })}>
+					<CloseIcon />
+				</IconButton>
+			) : null}
 		</Paper>
 	);
 }

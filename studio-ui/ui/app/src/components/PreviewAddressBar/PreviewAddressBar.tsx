@@ -38,6 +38,7 @@ import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import CircularProgress from '@mui/material/CircularProgress';
 import usePreviewState from '../../hooks/usePreviewState';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
@@ -189,12 +190,13 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				})}
 			>
 				{!focus && item && (
-					<Box
-						sx={{ width: '100%', overflow: 'hidden', cursor: 'pointer', display: 'flex' }}
+					<ButtonBase
+						sx={{ width: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}
 						onClick={() => setFocus(true)}
+						aria-label={formatMessage({ defaultMessage: 'Edit address for {label}' }, { label: item.label })}
 					>
 						<ItemDisplay item={item} sxs={{ root: { maxWidth: '100%' } }} showNavigableAsLinks={false} />
-					</Box>
+					</ButtonBase>
 				)}
 				{(focus || !item) && (
 					<PagesSearchAhead

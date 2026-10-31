@@ -23,7 +23,10 @@ import { isPreviewable } from '../PathNavigator/utils';
 import ItemStateIcon, { ItemStateIconProps } from '../ItemStateIcon';
 import ItemTypeIcon, { ItemTypeIconProps } from '../ItemTypeIcon';
 import ItemPublishingTargetIcon, { ItemPublishingTargetIconProps } from '../ItemPublishingTargetIcon';
-import { isInWorkflow } from './utils';
+import { getItemPublishingTargetText, getItemStateText, isInWorkflow } from './utils';
+import { getItemTypeText } from '../ItemTypeIcon';
+import { visuallyHidden } from '@mui/utils';
+import { useIntl } from 'react-intl';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
 import { SxProps } from '@mui/system';
@@ -52,6 +55,8 @@ export interface ItemDisplayProps<
 	itemTypeIconProps?: Partial<ItemTypeIconProps>;
 	sx?: SxProps<Theme>;
 	component?: ElementType;
+	/** Visually hidden type and workflow text, referenced by a treeitem's aria-describedby. */
+	descriptionId?: string;
 }
 
 const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) => {
@@ -75,9 +80,11 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 		component = 'span',
 		classes,
 		sxs,
+		descriptionId,
 		...rest
 	} = props;
 	// endregion
+	const { formatMessage } = useIntl();
 	if (!item) {
 		// Prevents crashing if the item is nullish
 		return null;
@@ -86,6 +93,29 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 	// inWorkflow will only be true for type ContentItem (if they met the workflow criteria). Casting to ContentItem
 	// is only done on scenarios where `isWorkflow` is true.
 	const inWorkflow = isInWorkflow((item as ContentItem).stateMap) || item.systemType === 'folder';
+	const contentItem = item as ContentItem;
+	const descriptionParts: string[] = [];
+	if (descriptionId) {
+		if (showItemType) {
+			descriptionParts.push(getItemTypeText(item, formatMessage));
+		}
+		if (isDisabledItem) {
+			descriptionParts.push(formatMessage({ id: 'itemState.disabled', defaultMessage: 'Disabled' }));
+		}
+		if (inWorkflow && !shouldItemShowAsStaged(item)) {
+			if (showWorkflowState && contentItem.stateMap) {
+				const stateText = getItemStateText(contentItem.stateMap, formatMessage, {
+					user: contentItem.lockOwner?.username,
+					draft: contentItem.savedAsDraft
+				});
+				if (stateText) {
+					descriptionParts.push(stateText);
+				}
+			}
+		} else if (showPublishingTarget && contentItem.stateMap) {
+			descriptionParts.push(getItemPublishingTargetText(contentItem.stateMap, formatMessage));
+		}
+	}
 	return (
 		<Box
 			component={component}
@@ -156,6 +186,11 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 				title={item[titleDisplayProp]}
 				children={item[labelDisplayProp]}
 			/>
+			{descriptionId && descriptionParts.length > 0 && (
+				<Box component="span" id={descriptionId} sx={visuallyHidden}>
+					{descriptionParts.join(', ')}
+				</Box>
+			)}
 		</Box>
 	);
 });

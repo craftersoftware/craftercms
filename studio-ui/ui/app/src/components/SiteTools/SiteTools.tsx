@@ -16,8 +16,11 @@
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import React from 'react';
-import MenuList from '@mui/material/MenuList';
-import MenuItem from '@mui/material/MenuItem';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -141,39 +144,41 @@ export function SiteTools(props: SiteToolsProps) {
 						)}
 						{!hideSidebarSiteSwitcher && <SiteSwitcherSelect site={site} fullWidth />}
 					</Box>
-					<MenuList disablePadding sx={{ overflow: 'auto' }}>
-						{tools ? (
-							tools.map((tool) => (
-								<MenuItem
-									onClick={() => onNavItemClick(tool.url)}
-									key={tool.url}
-									selected={`/${tool.url}` === activeToolId}
-								>
-									<SystemIcon
-										sx={{ marginRight: '10px' }}
-										icon={tool.icon}
-										svgIconProps={{ fontSize: 'small', color: 'action' }}
-									/>
-									<Typography>{getPossibleTranslation(tool.title, formatMessage)}</Typography>
-								</MenuItem>
-							))
-						) : (
-							<EmptyState
-								title={
-									<FormattedMessage
-										id="siteTools.toolListingNotConfigured"
-										defaultMessage="The project tools list has not been set"
-									/>
-								}
-								subtitle={
-									<FormattedMessage
-										id="siteTools.toolListingNotConfiguredSubtitle"
-										defaultMessage="Please set the craftercms.siteTools reference on the ui.xml"
-									/>
-								}
-							/>
-						)}
-					</MenuList>
+					{tools ? (
+						<Box component="nav" aria-label={formatMessage({ defaultMessage: 'Project tools' })}>
+							<List disablePadding sx={{ overflow: 'auto' }}>
+								{tools.map((tool) => (
+									<ListItem key={tool.url} disablePadding>
+										<ListItemButton
+											selected={`/${tool.url}` === activeToolId}
+											aria-current={`/${tool.url}` === activeToolId ? 'page' : undefined}
+											onClick={() => onNavItemClick(tool.url)}
+										>
+											<ListItemIcon sx={{ minWidth: 36 }}>
+												<SystemIcon icon={tool.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+											</ListItemIcon>
+											<ListItemText primary={getPossibleTranslation(tool.title, formatMessage)} />
+										</ListItemButton>
+									</ListItem>
+								))}
+							</List>
+						</Box>
+					) : (
+						<EmptyState
+							title={
+								<FormattedMessage
+									id="siteTools.toolListingNotConfigured"
+									defaultMessage="The project tools list has not been set"
+								/>
+							}
+							subtitle={
+								<FormattedMessage
+									id="siteTools.toolListingNotConfiguredSubtitle"
+									defaultMessage="Please set the craftercms.siteTools reference on the ui.xml"
+								/>
+							}
+						/>
+					)}
 				</section>
 				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
 					{!hideSidebarLogo && <CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />}

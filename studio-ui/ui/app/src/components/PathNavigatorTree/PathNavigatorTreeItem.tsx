@@ -15,7 +15,7 @@
  */
 
 import { TreeItem, treeItemClasses } from '@mui/x-tree-view/TreeItem';
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { ContentItem } from '../../models/Item';
 import LookupTable from '../../models/LookupTable';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -37,6 +37,7 @@ import { lookupItemByPath } from '../../utils/content';
 import { PathNavigatorTreeStateProps } from './PathNavigatorTree';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
+import { cancelTreeItemKey, isOwnTreeItemEvent, isTreeContextMenuKey } from '../../utils/treeKeyboard';
 
 export interface PathNavigatorTreeItemProps extends Pick<
 	PathNavigatorTreeStateProps,
@@ -51,7 +52,9 @@ export interface PathNavigatorTreeItemProps extends Pick<
 	showPublishingTarget?: boolean;
 	showWorkflowState?: boolean;
 	showItemMenu?: boolean;
-	onLabelClick(event: React.MouseEvent<Element, MouseEvent>, path: string): void;
+	/** 1-based depth. The tree view does not set aria-level itself. */
+	level?: number;
+	onLabelClick(event: React.MouseEvent<Element> | React.KeyboardEvent<Element>, path: string): void;
 	onIconClick(path: string): void;
 	onOpenItemMenu?(element: Element, path: string): void;
 	onFilterChange(keyword: string, path: string): void;
@@ -65,18 +68,12 @@ const translations = defineMessages({
 	filter: {
 		id: 'pathNavigatorTreeItemFilter.placeholder',
 		defaultMessage: 'Filter children...'
-	},
-	expand: {
-		id: 'words.expand',
-		defaultMessage: 'Expand'
-	},
-	collapse: {
-		id: 'words.collapse',
-		defaultMessage: 'Collapse'
 	}
 });
 
 export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
+	const labelId = useId();
+	const descriptionId = useId();
 	const {
 		path,
 		itemsByPath,
@@ -89,6 +86,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		showPublishingTarget = true,
 		showWorkflowState = true,
 		showItemMenu = true,
+		level = 1,
 		onLabelClick,
 		onIconClick,
 		onOpenItemMenu,
@@ -100,6 +98,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 	const [showFilter, setShowFilter] = useState(Boolean(keywordByPath[path]));
 	const [keyword, setKeyword] = useState(keywordByPath[path] ?? '');
 	const { formatMessage } = useIntl();
+	const loadingLabelId = useId();
 	const item = lookupItemByPath(path, itemsByPath);
 	const children = lookupItemByPath(path, childrenByParentPath) ?? [];
 
@@ -124,10 +123,37 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		}
 	};
 
-	const onContextMenu = (e) => {
+	const onContextMenu = (event: React.MouseEvent<HTMLElement>) => {
+		// The handler sits on the treeitem root. A right-click on a nested item bubbles here.
+		if (!isOwnTreeItemEvent(event)) {
+			return;
+		}
+		// The filter field lives inside the treeitem. Leave the browser's edit menu alone.
+		const target = event.target as Element | null;
+		if (target?.closest?.('input, textarea, [contenteditable]')) {
+			return;
+		}
+		event.stopPropagation();
 		if (onOpenItemMenu) {
-			e.preventDefault();
-			onOpenItemMenu(e.currentTarget.querySelector('[data-item-menu]'), path);
+			event.preventDefault();
+			const menuButton = event.currentTarget.querySelector(':scope > .MuiTreeItem-content [data-item-menu]');
+			onOpenItemMenu(menuButton ?? event.currentTarget, path);
+		}
+	};
+
+	const onItemKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+		if (!isOwnTreeItemEvent(event)) {
+			return;
+		}
+		// Enter activates the item. MUI's default Enter expands a parent instead.
+		if (event.key === 'Enter') {
+			cancelTreeItemKey(event);
+			onLabelClick(event, path);
+			return;
+		}
+		if (isTreeContextMenuKey(event)) {
+			cancelTreeItemKey(event);
+			onOpenItemMenu?.(event.currentTarget, path);
 		}
 	};
 
@@ -146,6 +172,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 				errorByPath={errorByPath}
 				active={active}
 				sxs={sxs}
+				level={level + 1}
 				onLabelClick={onLabelClick}
 				onIconClick={onIconClick}
 				onOpenItemMenu={onOpenItemMenu}
@@ -162,10 +189,21 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 				<TreeItem
 					key="more"
 					itemId={`${path}::__more__`}
+					aria-level={level + 1}
+					onKeyDown={(event) => {
+						if (!isOwnTreeItemEvent(event)) {
+							return;
+						}
+						if (event.key === 'Enter' || event.key === ' ') {
+							cancelTreeItemKey(event);
+							onMoreClick(path);
+						}
+					}}
 					label={
 						<Button
 							color="primary"
 							size="small"
+							tabIndex={-1}
 							onClick={(event) => {
 								event.stopPropagation();
 								onMoreClick(path);
@@ -178,26 +216,34 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							/>
 						</Button>
 					}
-					sx={{
-						[`& > .${treeItemClasses.content}`]: {
-							pt: 0,
-							pb: 0,
-							pr: 0,
-							alignItems: 'center',
-							minHeight: '23.5px',
-							cursor: 'default',
-							'&:hover': {
-								background: 'none'
+					sx={[
+						{
+							[`& > .${treeItemClasses.content}`]: {
+								pt: 0,
+								pb: 0,
+								pr: 0,
+								alignItems: 'center',
+								minHeight: '23.5px',
+								cursor: 'default',
+								'&:hover': {
+									background: 'none'
+								}
+							},
+							[`& .${treeItemClasses.label}`]: {
+								paddingLeft: 0
+							},
+							[`& .${treeItemClasses.iconContainer}`]: {
+								width: '26px',
+								marginRight: 0
 							}
 						},
-						[`& .${treeItemClasses.label}`]: {
-							paddingLeft: 0
-						},
-						[`& .${treeItemClasses.iconContainer}`]: {
-							width: '26px',
-							marginRight: 0
+						{
+							'&:focus-visible > .MuiTreeItem-content': {
+								outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+								outlineOffset: '-2px'
+							}
 						}
-					}}
+					]}
 				/>
 			);
 	} else if (totalByPath[path] > 0 && !childrenByParentPath[path]?.length) {
@@ -242,8 +288,8 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}
 					}}
 				>
-					<CircularProgress size={14} />
-					<Typography variant="caption" color="textSecondary">
+					<CircularProgress size={14} aria-labelledby={loadingLabelId} />
+					<Typography id={loadingLabelId} variant="caption" color="textSecondary">
 						<FormattedMessage id="words.loading" defaultMessage="Loading" />
 					</Typography>
 				</Box>
@@ -278,29 +324,20 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		<TreeItem
 			key={path}
 			itemId={path}
+			aria-level={level}
+			aria-selected={Boolean(active[path])}
+			aria-labelledby={labelId}
+			aria-describedby={item ? descriptionId : undefined}
+			onKeyDown={onItemKeyDown}
+			onContextMenu={onContextMenu}
 			slots={{
 				expandIcon: ArrowRightRoundedIcon,
 				collapseIcon: ArrowDropDownRoundedIcon
-			}}
-			slotProps={{
-				expandIcon: {
-					role: 'button',
-					'aria-label': formatMessage(translations.expand),
-					'aria-hidden': 'false',
-					onClick: () => onIconClick(path)
-				},
-				collapseIcon: {
-					role: 'button',
-					'aria-label': formatMessage(translations.collapse),
-					'aria-hidden': 'false',
-					onClick: () => onIconClick(path)
-				}
 			}}
 			label={
 				<>
 					<Box
 						component="section"
-						role="button"
 						onClick={(event) => onLabelClick(event, path)}
 						sx={{
 							width: '100%',
@@ -314,7 +351,6 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}}
 						onMouseOver={onMouseOver}
 						onMouseLeave={onMouseLeave}
-						onContextMenu={onContextMenu}
 					>
 						<ItemDisplay
 							sxs={{
@@ -325,7 +361,8 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 								}
 							}}
 							item={item}
-							labelTypographyProps={{ variant: 'body2' }}
+							descriptionId={descriptionId}
+							labelTypographyProps={{ id: labelId, variant: 'body2' }}
 							showNavigableAsLinks={showNavigableAsLinks}
 							showPublishingTarget={showPublishingTarget}
 							showWorkflowState={showWorkflowState}
@@ -334,6 +371,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							<Tooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
 								<IconButton
 									size="small"
+									tabIndex={-1}
 									sx={{ padding: '2px 3px' }}
 									data-item-menu
 									onClick={(e) => {
@@ -352,6 +390,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							<Tooltip title={<FormattedMessage id="words.filter" defaultMessage="Filter" />}>
 								<IconButton
 									size="small"
+									tabIndex={-1}
 									sx={{ padding: '2px 3px' }}
 									onClick={(e) => {
 										e.preventDefault();
@@ -427,48 +466,53 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 					)}
 				</>
 			}
-			sx={{
-				[`& > .${treeItemClasses.content}`]: {
-					pt: 0,
-					pb: 0,
-					pr: 0,
-					alignItems: 'flex-start',
-					'&:hover': {
-						background: 'none'
-					}
-				},
-				[`& .${treeItemClasses.label}`]: {
-					display: 'flex',
-					paddingLeft: 0,
-					flexWrap: 'wrap',
-					overflow: 'hidden',
-					'&:hover': {
-						background: 'none'
+			sx={[
+				{
+					[`& > .${treeItemClasses.content}`]: {
+						pt: 0,
+						pb: 0,
+						pr: 0,
+						alignItems: 'flex-start',
+						'&:hover': {
+							background: 'none'
+						}
 					},
-					'& .MuiSvgIcon-root': {
-						fontSize: '1.1rem'
+					[`& .${treeItemClasses.label}`]: {
+						display: 'flex',
+						paddingLeft: 0,
+						flexWrap: 'wrap',
+						overflow: 'hidden',
+						'&:hover': {
+							background: 'none'
+						},
+						'& .MuiSvgIcon-root': {
+							fontSize: '1.1rem'
+						}
+					},
+					[`& > .${treeItemClasses.content} > .${treeItemClasses.label}`]: {
+						...(active[path]
+							? {
+									backgroundColor: (theme) => theme.palette.action.selected,
+									...sxs?.activeItem
+								}
+							: {})
+					},
+					[`& .${treeItemClasses.iconContainer}`]: {
+						width: '26px',
+						marginRight: 0,
+						'& svg': {
+							fontSize: '23.5px !important',
+							color: (theme) => theme.palette.text.secondary
+						}
 					}
 				},
-				[`& > .${treeItemClasses.content} > .${treeItemClasses.label}`]: {
-					...(active[path]
-						? {
-								backgroundColor: (theme) => theme.palette.action.selected,
-								...sxs?.activeItem
-							}
-						: {})
-				},
-				[`& .${treeItemClasses.iconContainer}`]: {
-					width: '26px',
-					marginRight: 0,
-					'& svg': {
-						fontSize: '23.5px !important',
-						color: (theme) => theme.palette.text.secondary
+				{
+					'&:focus-visible > .MuiTreeItem-content': {
+						outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+						outlineOffset: '-2px'
 					}
-				},
-				[`& .${treeItemClasses.content}[data-focused]`]: {
-					background: 'none !important'
 				}
-			}}
+			]}
 			{...propsForTreeItem}
 		/>
 		// endregion

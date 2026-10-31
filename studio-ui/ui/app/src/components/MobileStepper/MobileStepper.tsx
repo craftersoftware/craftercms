@@ -15,6 +15,7 @@
  */
 
 import React, { ReactNode } from 'react';
+import { useIntl } from 'react-intl';
 import clsx from 'clsx';
 import Paper from '@mui/material/Paper';
 import { LinearProgress, Theme } from '@mui/material';
@@ -64,6 +65,7 @@ export const UnstyledMobileStepper = React.forwardRef<HTMLDivElement, MobileStep
 			variant = 'dots',
 			...other
 		} = props;
+		const { formatMessage } = useIntl();
 
 		return (
 			<Paper
@@ -83,15 +85,27 @@ export const UnstyledMobileStepper = React.forwardRef<HTMLDivElement, MobileStep
 				)}
 				{variant === 'dots' && (
 					<div className={clsx(classes?.dots, mobileStepperClasses.dots)}>
-						{[...new Array(steps)].map((_, index) => (
-							<div
-								key={index}
-								onClick={onDotClick ? (e) => onDotClick(e, index) : null}
-								className={clsx(classes?.dot, mobileStepperClasses.dot, {
-									[mobileStepperClasses.dotActive]: index === activeStep
-								})}
-							/>
-						))}
+						{[...new Array(steps)].map((_, index) =>
+							onDotClick ? (
+								<button
+									type="button"
+									key={index}
+									onClick={(e) => onDotClick(e, index)}
+									aria-label={formatMessage({ defaultMessage: 'Go to step {step}' }, { step: index + 1 })}
+									aria-current={index === activeStep ? 'true' : undefined}
+									className={clsx(classes?.dot, mobileStepperClasses.dot, {
+										[mobileStepperClasses.dotActive]: index === activeStep
+									})}
+								/>
+							) : (
+								<div
+									key={index}
+									className={clsx(classes?.dot, mobileStepperClasses.dot, {
+										[mobileStepperClasses.dotActive]: index === activeStep
+									})}
+								/>
+							)
+						)}
 					</div>
 				)}
 				{variant === 'progress' && (
@@ -144,11 +158,38 @@ export const MobileStepper = styled(UnstyledMobileStepper, { name: mobileStepper
 		borderRadius: '50%',
 		width: 8,
 		height: 8,
-		margin: '0 2px'
+		margin: '0 2px',
+		border: 0,
+		padding: 0,
+		display: 'block'
+	},
+	/* Clickable dots keep an 8px mark and a 24px hit target (WCAG 2.5.8). */
+	[`& button.${mobileStepperClasses.dot}`]: {
+		backgroundColor: 'transparent',
+		width: 24,
+		height: 24,
+		margin: 0,
+		cursor: 'pointer',
+		display: 'inline-flex',
+		alignItems: 'center',
+		justifyContent: 'center',
+		'&::before': {
+			content: '""',
+			width: 8,
+			height: 8,
+			borderRadius: '50%',
+			backgroundColor: theme.palette.text.secondary
+		}
 	},
 	/* Styles applied to a dot if `variant="dots"` and this is the active step. */
 	[`& .${mobileStepperClasses.dotActive}`]: {
 		backgroundColor: RedColor
+	},
+	[`& button.${mobileStepperClasses.dotActive}`]: {
+		backgroundColor: 'transparent',
+		'&::before': {
+			backgroundColor: RedColor
+		}
 	},
 	/* Styles applied to the Linear Progress component if `variant="progress"`. */
 	[`& .${mobileStepperClasses.progress}`]: {

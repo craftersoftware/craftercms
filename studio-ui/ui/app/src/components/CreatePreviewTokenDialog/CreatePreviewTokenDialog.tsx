@@ -47,6 +47,8 @@ import useSitesBranch from '../../hooks/useSitesBranch';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
 import hljs from '../../env/hljs';
 import useEnv from '../../hooks/useEnv';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
@@ -297,11 +299,26 @@ function Body(props: BodyProps) {
 					<Tab label="Curl" value="curl" />
 				</Tabs>
 				<Box>
+					<Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+						<IconButton
+							size="small"
+							aria-label={formatMessage({ defaultMessage: 'Copy code' })}
+							onClick={() => {
+								copy(cookieSettingCode);
+							}}
+						>
+							<ContentCopyRounded fontSize="small" />
+						</IconButton>
+					</Box>
 					<Box
 						component="pre"
-						sx={{ width: '100%', overflow: 'auto', bgcolor: 'background.paper', p: 1, borderRadius: 1 }}
-						onClick={() => {
-							copy(cookieSettingCode);
+						tabIndex={0}
+						sx={{
+							width: '100%',
+							overflow: 'auto',
+							bgcolor: 'background.paper',
+							p: 1,
+							borderRadius: 1
 						}}
 					>
 						<code
