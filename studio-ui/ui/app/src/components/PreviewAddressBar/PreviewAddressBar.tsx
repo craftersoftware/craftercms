@@ -177,6 +177,9 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				elevation={focus ? 2 : 0}
 				sx={(theme) => ({
 					width: '300px',
+					maxWidth: '100%',
+					minWidth: 0,
+					flex: '0 1 auto',
 					borderRadius: 8,
 					padding: '2px 2px 2px 10px',
 					display: 'flex',

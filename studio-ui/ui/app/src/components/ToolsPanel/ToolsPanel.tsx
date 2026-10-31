@@ -72,8 +72,7 @@ export function ToolsPanel() {
 				drawerBody: {
 					paddingBottom: '50px'
 				},
-				resizeHandle: { backgroundColor: 'transparent' },
-				drawerPaperBelowToolbar: { top: '64px' }
+				resizeHandle: { backgroundColor: 'transparent' }
 			}}
 			onWidthChange={onWidthChange}
 			onResizeStart={() => blockPreviewIframePointerEvents(true)}
