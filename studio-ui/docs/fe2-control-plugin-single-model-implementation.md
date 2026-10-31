@@ -82,12 +82,16 @@ dataSources?: Record<string, DataSourceModule>; // key = DS type id
 
 Add to `ui/app/src/models/PluginDescriptor.ts` (or a small `ControlPluginContribution.ts` if you prefer separation):
 
+`CONTROL_API_VERSION` (`export const CONTROL_API_VERSION = 1 as const`) lives in `components/FormsEngine/types.ts` next to `ControlProps`, not under `models/` (`clean:models` deletes published `build_tsc/models/**/*.js`).
+
 ```ts
 import type { ComponentType } from 'react';
-import type { ControlProps } from '../components/FormsEngine/types';
+import type { CONTROL_API_VERSION, ControlProps } from '../components/FormsEngine/types';
 import type { DataSourceBinding } from '../components/FormsEngine/dataSources/types';
 
 export interface ControlPluginContribution {
+	/** Optional. Missing counts as {@link CONTROL_API_VERSION}. Any other value is refused at registration. */
+	apiVersion?: typeof CONTROL_API_VERSION;
 	/** React control component; must accept ControlProps. */
 	Component: ComponentType<ControlProps>;
 	/** Optional; same shapes as today’s plugin module exports. */
@@ -128,6 +132,7 @@ In `ui/app/src/services/plugin.ts`, add sibling to `registerPluginDataSources`:
 
 1. If no `plugin.controls`, return.
 2. For each `[typeKey, entry]`:
+   - Refuse `entry.apiVersion` other than `1` (`CONTROL_API_VERSION`). A missing value counts as `1`. The error names the plugin id and the control type. Same failure mode as any other invalid entry: throw before registry writes.
    - Validate `entry.Component` is a valid React component (`isValidElementType` from `react-is`).
    - Normalize bindings via existing `normalizeDataSourceBindings(entry.dataSourceBindings ?? [])`.
    - If `registeredControls.has(typeKey)` and existing component !== entry.Component → throw.
@@ -207,6 +212,7 @@ const plugin = {
 	id: 'org.example.my-control',
 	controls: {
 		'example-custom-input': {
+			apiVersion: 1, // optional; omit to mean 1 (CONTROL_API_VERSION)
 			Component: function ExampleCustomInput(props) {
 				/* use props.dataSources */
 			},

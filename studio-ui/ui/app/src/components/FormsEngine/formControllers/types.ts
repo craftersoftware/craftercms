@@ -101,14 +101,23 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 }
 
 /**
+ * FE2 form-controller contract. One positive integer, not semver.
+ * A missing `apiVersion` counts as this value. Any other value is rejected at load.
+ * Published as `craftercms.formsEngine.formControllers.apiVersion`.
+ * Bump only for a breaking change. Policy: `docs/type-builder-forms-engine-plugins.md` §10.
+ */
+export const FORM_CONTROLLER_API_VERSION = 1 as const;
+
+/**
  * ESM export shape for `/config/studio/content-types/{id}/form-controller.js`.
  * Default export (or named `formController`) must satisfy this contract.
- *
- * `apiVersion` is currently `1`. Missing `apiVersion` is treated as `1`.
- * Bump when breaking the host↔controller contract.
  */
 export interface FormController {
-	apiVersion?: 1;
+	/**
+	 * Contract version. Currently {@link FORM_CONTROLLER_API_VERSION}.
+	 * A missing value counts as that version. Any other value is refused at load.
+	 */
+	apiVersion?: typeof FORM_CONTROLLER_API_VERSION;
 	/**
 	 * Called once per form that owns a controller (root and embedded children), after
 	 * form atoms exist and relevance is resolved. Not called for repeat stacked forms — those

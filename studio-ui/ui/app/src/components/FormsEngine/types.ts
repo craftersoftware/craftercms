@@ -21,6 +21,13 @@ import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
 import type { ResolvedDataSources } from './dataSources/types';
 
+/**
+ * FE2 control-contribution contract. One positive integer, not semver.
+ * A missing `apiVersion` counts as this value. Bump only for a breaking change.
+ * Policy: `docs/type-builder-forms-engine-plugins.md` §10.
+ */
+export const CONTROL_API_VERSION = 1 as const;
+
 export interface ControlProps {
 	value: unknown;
 	setValue(newValue: unknown): void;

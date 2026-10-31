@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-08-07
+Last updated: 2026-10-30
 
 ## 1. Why plugins are part of the core design
 
@@ -281,6 +281,8 @@ export default {
 	id: 'org.example.my-controls',
 	controls: {
 		'my-custom-picker': {
+			// Optional. Current contract is 1 (`CONTROL_API_VERSION`). Omit to mean 1.
+			apiVersion: 1,
 			Component: MyPicker,
 			dataSourceBindings: [{ propertyName: 'itemManager', interfaces: ['item'], selection: 'multi' }],
 			valueRetriever: (raw, field) => /* XML → form value */,
@@ -290,6 +292,10 @@ export default {
 	}
 };
 ```
+
+`apiVersion` is optional and currently `1`. Omitting it is treated as `1`, so existing plugins keep registering. Any other value is refused by `registerPlugin` before any registry write (same as a missing `Component` or other invalid control entry). The error names the plugin id and the control type. The whole `registerPlugin` call fails, so nothing from that plugin registers (its other controls, data sources, widgets and locales included), and every field using one of its controls shows the existing load-error placeholder.
+
+Plugin bundles can read the host contract at runtime from `craftercms.formsEngine.controls.apiVersion` (`CONTROL_API_VERSION` on `formsEngineControlsHost`), the same way data-source bundles read `craftercms.formsEngine.dataSources.apiVersion`. When to bump that integer: [§10](#10-plugin-api-versioning).
 
 Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSerializersLookup` / `validatorsMap` first (`Object.hasOwn`), then plugin contribution for `field.type`. Required/empty checks stay in `validateFieldValue` (host). FE preloads all `field.properties.plugin` locators via `preloadControlPluginsForFields` (1) before form value parse at bootstrap and (2) again in `useSaveForm` before `buildContentXml`, walking current values so embeds added after open still register serializers. Bootstrap failures are recorded on `StableFormContext.affectedPluginControlFields`; save-time failures update that list and hard-block save (avoids writing unconverted XML shapes).
 
@@ -350,7 +356,7 @@ The runtime retains the source datasource on the resolved action/choice. It does
 - Gate: `hasJsController` / `<controller>`.
 - File on disk: `/config/studio/content-types/{contentTypeId}/form-controller.js`.
 - Load: authenticated `form_controller` API → ESM via Blob URL; FE2 owns this in a dedicated loader called from form bootstrap (not `importPlugin` / plugin file URLs).
-- Export: `{ apiVersion, initialize?, isFieldRelevant?, onBeforeSave? }` — all hooks may be async; host awaits. FE1 `moduleLoaded('{typeId}-controller', Class)` scripts are not compatible.
+- Export: `{ apiVersion, initialize?, isFieldRelevant?, onBeforeSave? }` — all hooks may be async; host awaits. Missing `apiVersion` counts as `1`. Versioning: [§10](#10-plugin-api-versioning). FE1 `moduleLoaded('{typeId}-controller', Class)` scripts are not compatible.
 - Host context: narrow read/write API over form values and type metadata (not the YUI form object). See main doc §5.9 for `onFieldChange` / `notify` / save-result shape.
 - Project plugins may ship the type folder including the file; runtime still loads by content-type id.
 
@@ -384,7 +390,7 @@ Remote S3/WebDAV modules that lack platform services throw visibly via `unsuppor
 5. **Make DS behavior pluggable.** Model capabilities independently from concrete DS ids and let plugins register `DataSourceModule`s through the descriptor.
 6. **Pair TB descriptors with FE implementations.** A plugin should be able to supply catalog metadata, property editor schema/defaults, runtime code, and serialization hooks coherently.
 7. **Round-trip locators losslessly.** Control and DS plugin records must survive parse → edit → serialize unchanged.
-8. **Version contracts.** Declare FE extension API version and compatibility separately from the package's CrafterCMS version range.
+8. **Version contracts.** See [§10](#10-plugin-api-versioning). Each FE contract version is a single integer, separate from the package's `crafterCmsVersions` range.
 9. **Failure isolation and cache invalidation.** Plugins need load/runtime error boundaries and a development-time way to refresh cached modules.
 10. **Security.** Plugin code executes with Studio privileges; installation permissions, asset origin, CSP, auth, and trust boundaries are architectural concerns.
 11. **Migration.** Existing FE1 control/DS packages and `site-config-tools.xml` auto-wiring need an explicit compatibility or conversion story.
@@ -464,6 +470,7 @@ interface PluginDescriptor {
 }
 
 interface ControlPluginContribution {
+	apiVersion?: 1; // optional; missing counts as 1 (CONTROL_API_VERSION). Any other value is refused.
 	Component: ComponentType<ControlProps>;
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
 	valueRetriever?: ValueRetriever; // optional XML → form value
@@ -474,8 +481,8 @@ interface ControlPluginContribution {
 
 `registerPlugin` (current):
 
-1. Validates and installs `dataSources` into `dataSourceModuleRegistry` (before committing the plugin id).
-2. Validates and installs `controls` into the control contribution registry + binding registry (including optional `valueRetriever` / `valueSerializer` / `validator`).
+1. Validates and installs `dataSources` into `dataSourceModuleRegistry` (before committing the plugin id). An `apiVersion` other than `1` throws and installs nothing from that call. The error names the plugin id and the data-source type. Missing `apiVersion` counts as `1`.
+2. Validates and installs `controls` into the control contribution registry + binding registry (including optional `apiVersion`, `valueRetriever` / `valueSerializer` / `validator`). An `apiVersion` other than `1` throws and installs nothing from that call. Missing `apiVersion` counts as `1`.
 3. Stores the descriptor (including `utils`) in the plugins map.
 4. Registers widgets, locales, scripts/stylesheets as before.
 5. `widgets` may be omitted (lib / FE-only bundles).
@@ -525,3 +532,27 @@ Handoff (historical): [`fe2-control-plugin-single-model-implementation.md`](fe2-
 2. Eager library declarations in `ui.xml` (or equivalent) and boot-time `importPlugin`.
 3. Publish `utils` on a stable host path (e.g. `craftercms.plugins[id]`).
 4. Optional AMD resolution of `plugin:<id>` deps.
+
+## 10. Plugin API versioning
+
+Each FE2 contract has its own version: one positive integer, not semver. The number says which contract a plugin was written against, so the host can accept it, adapt it, or reject it. The three contracts change independently.
+
+| Contract             | Constant                                                    | Now | Missing `apiVersion` | Read at runtime                                     |
+| -------------------- | ----------------------------------------------------------- | --- | -------------------- | --------------------------------------------------- |
+| Control contribution | `CONTROL_API_VERSION` in `FormsEngine/types.ts`             | `1` | Counts as `1`        | `craftercms.formsEngine.controls.apiVersion`        |
+| Data-source module   | `DATA_SOURCE_API_VERSION` in `dataSources/types.ts`         | `1` | Counts as `1`        | `craftercms.formsEngine.dataSources.apiVersion`     |
+| Form controller      | `FORM_CONTROLLER_API_VERSION` in `formControllers/types.ts` | `1` | Counts as `1`        | `craftercms.formsEngine.formControllers.apiVersion` |
+
+Bump a constant only when that contract breaks: a prop or hook argument is removed, renamed, or retyped, or a return value's shape or meaning changes.
+
+An additive, compatible change does not bump it. A new optional prop, or a new optional `ctx` or host member, is detected by checking that the member exists. Older plugins ignore it.
+
+There is no minor or patch component. A feature a plugin needs is either detected on the host, or required by the package's `crafterCmsVersions` list in `craftercms-plugin.yaml` (major, minor, and patch). A patch does not change one of these contracts.
+
+The host knows which integers it supports. Today that is `1` for each contract. A missing `apiVersion` counts as `1` on all three. There is no adapter yet. A later bump may keep an adapter for the previous integer while it is deprecated, or reject at load instead of failing later. A rejection through `registerPlugin` names the plugin id and the control or data-source type. A direct `craftercms.formsEngine.dataSources.register(module)` call is rejected too, but the error names only the type. A form-controller rejection names the content type id.
+
+What the code does now:
+
+- Controls. `registerPlugin` uses `apiVersion ?? CONTROL_API_VERSION`. Any other value throws before registry writes, so nothing from that plugin is registered. The error names the plugin id and the control type.
+- Data sources. `validateDataSourceModule`, called from `registerPlugin` before any registry write, uses `apiVersion ?? DATA_SOURCE_API_VERSION`. Any other value throws and names the plugin id and the data-source type, so nothing from that plugin is registered. A direct `dataSources.register` call uses the same rule and names only the type.
+- Form controllers. The loader uses `apiVersion ?? FORM_CONTROLLER_API_VERSION`. Any other value is not used. The form continues with no controller. The console error names the content type id. The host publishes the constant as `craftercms.formsEngine.formControllers.apiVersion`.

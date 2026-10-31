@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-10-22
+Last updated: 2026-10-30
 
 ---
 
@@ -341,7 +341,7 @@ Example: `samples/fe2-control-plugin.example.mjs`.
 The runtime control contract is `ControlProps` (`value`, `setValue`, `field`, `contentType`, `readonly`, `autoFocus`, optional `dataSources`). Host helpers:
 
 - `window.craftercms.formsEngine.dataSources` — DS module registry
-- `window.craftercms.formsEngine.controls` — `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`
+- `window.craftercms.formsEngine.controls` — `apiVersion`, `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`
 
 Plugin controls are rendered bare by `ResolvedControlRenderer` (built-ins wrap themselves in `FormsEngineField`). A plugin that wants label, required/invalid styling, and validity messages must wrap its input in the host-provided `FormsEngineField`; otherwise a failing validator only surfaces in the Table of Contents and the save gate.
 
@@ -355,7 +355,7 @@ const [timezone, setTimezone, timezoneExists] = useFieldValue(`${field.id}_tz`);
 
 `StableFormContext` and Jotai's `useAtom` are deliberately **not** host members: an earlier revision exposed them so plugins could reach `atoms.valueByFieldId` directly, but that leaked the atom map and a Jotai dependency to plugins. `useFieldValue` supersedes them — do not import Jotai or reach into the atoms map from plugin code.
 
-This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Required/empty validation stays host-owned in `validateFieldValue`.
+This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`; omitted means `1`; any other value is refused by `registerPlugin` with an error naming the plugin id and the control type), `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Required/empty validation stays host-owned in `validateFieldValue`. When that integer changes: [Plugin API versioning](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 
 Additional current FE control gaps:
 
@@ -478,7 +478,7 @@ Do **not** use a bare `<script src>` against that API (auth token / cookies); FE
 
 Export an ESM module. Default export (or named `formController`) is a `FormController` object — **not** a YUI class and **not** a `PluginDescriptor`.
 
-All hooks may be sync or async. Host always `await`s them.
+All hooks may be sync or async. Host always `await`s them. Contract version: [Plugin API versioning](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 
 ```ts
 type MaybePromise<T> = T | Promise<T>;
@@ -486,8 +486,8 @@ type FormControllerMode = 'create' | 'edit';
 type FormControllerSaveResult = boolean | { ok: boolean; message?: string };
 
 interface FormController {
-	/** Bump when breaking the host↔controller contract. */
-	apiVersion: 1;
+	/** Currently `1`. Missing counts as `1`. */
+	apiVersion?: 1;
 	/**
 	 * Called once per form that owns a controller (root and embedded children), after relevance.
 	 * Not called for repeat stacked forms.
@@ -631,7 +631,7 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 1. Form opens; content type is available. If `!contentType.hasJsController` → skip (no network call).
 2. Loader calls the form_controller API for `{ siteId, contentTypeId }` (cache hit → reuse).
 3. Response text → `Blob` (`application/javascript`) → object URL → `import(/* @vite-ignore */ blobUrl)` as ESM → revoke URL. The Blob URL has no module base, so `form-controller.js` must be one standalone file. Relative imports are unsupported; bundle dependencies into that file.
-4. Resolve `module.default ?? module.formController`; validate `apiVersion` (`1` or missing-as-1).
+4. Resolve `module.default ?? module.formController`; validate `apiVersion` (`1` or missing-as-1). Rules: [Plugin API versioning](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 5. Cache by `siteId + contentTypeId` for the session. A failed load only evicts its own cache entry, so a concurrent reload is not discarded.
 6. `await isFieldRelevant(field, snapshot)` per field, on a read-only snapshot of the values as loaded; store the deny-list.
 7. Build the live context, `await initialize(ctx)`; keep returned cleanup on the form stack entry.
@@ -639,7 +639,7 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 Why Blob instead of pointing `<script>` / `import()` at the API URL: that endpoint requires auth; a raw script/module request does not reliably carry the same credentials FE1 needed — hence authenticated `getText` then Blob module (same constraint as FE1’s current loader).
 
-Host helpers may live under `window.craftercms.formsEngine.formControllers` (load/clear cache) for tests and debugging — optional, not required for authors.
+`window.craftercms.formsEngine.formControllers.apiVersion` is the form-controller contract integer. The same object also has load/cache helpers for tests and debugging; authors do not need those.
 
 #### `FormControllerContext` (host-provided)
 
@@ -810,6 +810,9 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-10-30** — Controls, data sources, and form controllers share one version rule: a missing `apiVersion` counts as `1`, and any other value is rejected at load. A data-source rejection names the plugin id and type and installs nothing from that plugin. `FORM_CONTROLLER_API_VERSION` is published as `craftercms.formsEngine.formControllers.apiVersion`. See plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
+- **2026-10-30** — Plugin API versions are one integer per contract (controls, data sources, form controllers), not semver. Bump only for a breaking change. Policy and the current missing-value rules: plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
+- **2026-10-30** — FE2 control contributions take an optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`). A missing value counts as `1`. `registerPlugin` refuses any other value with an error that names the plugin id and the control type, and installs nothing from that call (same as any other invalid control entry). See plugins companion §6 and §9.3. #9303
 - **2026-10-22** — `EditTypeView`'s `parseConfigPlugins` now normalizes descriptor `metadata.additionalFields` with `asArray` (see §5.4), matching the Redux `uiConfig` reducer for that field; `metadata.suffixes` is still not normalized on this path. This supersedes the `parseConfigPlugins` note in the `additionalFields` entry below.
 - **2026-10-22** — Expose `useFieldValue` on `craftercms.formsEngine.controls` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`). Plugin controls use this host hook — `const [value, setValue, exists] = useFieldValue(field.id + '_tz')` — to access sibling fields, e.g. descriptor-declared additional fields such as `{id}_tz` / `{id}_bk`, without depending on the atoms map or Jotai. An uninitialized field returns `[undefined, setValue, false]` (the setter is a no-op) instead of throwing. This supersedes exposing `StableFormContext` + Jotai `useAtom` on the same host (added earlier on this branch): neither is a host member anymore. See §5.5.
 - **2026-10-22** — Expected `ui.xml` shape for descriptor `metadata/additionalFields` documented in §5.4: repeated leaf elements under `widget[id="craftercms.components.ContentTypeManagement"] > configuration > controls > control > descriptor > metadata` (one `<additionalFields>{id}_tz</additionalFields>` per template; same for `<suffixes>`), _not_ the `<additionalFields><id>…</id></additionalFields>` shape persisted per field in `form-definition.xml`. A single element deserializes as a bare `string`, multiples as `string[]`; the Redux `uiConfig` reducer now reads the nested `control > descriptor` (previously it looked for a top-level `descriptor`, so XML descriptors were not registered there) and normalizes `suffixes`/`additionalFields` via `asArray` (`string[] | null`), while `variableValidator` now `asArray`s `meta.additionalFields` itself because `EditTypeView`'s `parseConfigPlugins` path does not normalize `metadata`. `{id}` expands to the field id via `processAdditionalFieldMacro`; entries without it are verbatim.
