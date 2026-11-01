@@ -69,6 +69,9 @@ const toggleMarginEnd = 0.5;
 // Extra header width, past the `lg` container, so the shifted toggle stays inside the header.
 // spacing(10) is 80px. Half of that plus the container padding (`spacing(3)`) covers the toggle shift.
 const tocGutterSideAllowance = 10;
+// Unwrapped minimum of this row (toggle, icon, both chips, 8ch title, 6ch path, gaps,
+// and the header container padding) is about 406px. Wrap below that instead of overflowing.
+const titleRowWrapBelow = 420;
 const copiedVisibleMs = 1500;
 
 const copyableValueSx: SxProps<Theme> = {
@@ -106,6 +109,10 @@ function toggleGutterShift(theme: Theme) {
 
 function tocGutterQuery(theme: Theme) {
 	return `@container ${formHeaderContainerName} (min-width: calc(${theme.breakpoints.values.lg}px + ${theme.spacing(tocGutterSideAllowance)}))`;
+}
+
+function titleRowWrapQuery() {
+	return `@container ${formHeaderContainerName} (max-width: ${titleRowWrapBelow}px)`;
 }
 
 function CopyableValue({ value, children, sx }: { value: string; children: ReactNode; sx?: SxProps<Theme> }) {
@@ -210,7 +217,11 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 					alignItems: 'center',
 					minWidth: 0,
 					columnGap: titleRowGap,
-					minHeight: formHeaderTitleMinHeight
+					minHeight: formHeaderTitleMinHeight,
+					[titleRowWrapQuery()]: {
+						flexWrap: 'wrap',
+						rowGap: titleRowGap
+					}
 				}}
 			>
 				{isLargeContainer && <CollapseToCButton />}
