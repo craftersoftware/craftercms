@@ -14,9 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ReactNode, useContext } from 'react';
+import React, { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 import { useDispatch } from 'react-redux';
 import { ItemContext, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
 import { useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
@@ -29,7 +30,7 @@ import Box from '@mui/material/Box';
 import ItemTypeIcon from '../../ItemTypeIcon';
 import Typography from '@mui/material/Typography';
 import Chip, { chipClasses } from '@mui/material/Chip';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, type MessageDescriptor, useIntl } from 'react-intl';
 import { EditOffOutlined, EditOutlined } from '@mui/icons-material';
 import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
 import ItemPublishingTargetIcon from '../../ItemPublishingTargetIcon';
@@ -42,6 +43,7 @@ import { showSystemNotification } from '../../../state/actions/system';
 import MenuOpenIcon from '@mui/icons-material/MenuOpenRounded';
 import { XmlKeys } from '../lib/formConsts';
 import { DraftChip } from '../../DraftChip';
+import { formHeaderTitleMinHeight, iconButtonSmallSize } from './formHeaderMetrics';
 
 export const formHeaderContainerName = 'formHeader';
 
@@ -51,14 +53,23 @@ const copyMessages = defineMessages({
 	copyFailed: { defaultMessage: 'Could not copy to the clipboard' }
 });
 
+const tocMessages = defineMessages({
+	collapse: { defaultMessage: 'Collapse table of contents' },
+	expand: { defaultMessage: 'Expand table of contents' }
+});
+
+const dateMessages = defineMessages({
+	created: { defaultMessage: 'Created {when} by <who>who</who>' },
+	updated: { defaultMessage: 'Updated {when} by <who>who</who>' }
+});
+
 // Theme spacing units. The title row uses `columnGap`; the toggle also keeps a small end margin.
 const titleRowGap = 1;
 const toggleMarginEnd = 0.5;
-// MUI IconButton size="small" pads 5px on each side. That padding is not a theme spacing step.
-const iconButtonSmallPadding = '10px';
-// Extra header width, beyond the `lg` container, so the shifted toggle stays inside the header.
-// Half of this plus the container padding (`spacing(3)`) covers the toggle shift below.
-const tocGutterSideAllowance = 80;
+// Extra header width, past the `lg` container, so the shifted toggle stays inside the header.
+// spacing(10) is 80px. Half of that plus the container padding (`spacing(3)`) covers the toggle shift.
+const tocGutterSideAllowance = 10;
+const copiedVisibleMs = 1500;
 
 const copyableValueSx: SxProps<Theme> = {
 	display: 'flex',
@@ -88,50 +99,89 @@ const copyableValueSx: SxProps<Theme> = {
 	}
 };
 
-// SvgIcon's medium size plus IconButton size="small" padding. Square, so this is the button's height and width.
-function iconButtonSmallSize(theme: Theme) {
-	return `${theme.typography.pxToRem(24)} + ${iconButtonSmallPadding}`;
-}
-
 // Width of the small icon button, its end margin, and the title-row column gap.
 function toggleGutterShift(theme: Theme) {
 	return `${iconButtonSmallSize(theme)} + ${theme.spacing(toggleMarginEnd)} + ${theme.spacing(titleRowGap)}`;
 }
 
 function tocGutterQuery(theme: Theme) {
-	return `@container ${formHeaderContainerName} (min-width: ${theme.breakpoints.values.lg + tocGutterSideAllowance}px)`;
+	return `@container ${formHeaderContainerName} (min-width: calc(${theme.breakpoints.values.lg}px + ${theme.spacing(tocGutterSideAllowance)}))`;
 }
 
 function CopyableValue({ value, children, sx }: { value: string; children: ReactNode; sx?: SxProps<Theme> }) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
+	const [copied, setCopied] = useState(false);
+	const [hovering, setHovering] = useState(false);
+	const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const requestId = useRef(0);
+	const clearTimer = () => {
+		if (resetTimer.current != null) {
+			clearTimeout(resetTimer.current);
+			resetTimer.current = null;
+		}
+	};
+	useEffect(
+		() => () => {
+			if (resetTimer.current != null) clearTimeout(resetTimer.current);
+		},
+		[]
+	);
+	const resetCopied = () => {
+		clearTimer();
+		setCopied(false);
+	};
 	const copyLabel = formatMessage(copyMessages.copyValue, { value });
+	const copiedLabel = formatMessage(copyMessages.copied);
 	return (
-		<Tooltip title={copyLabel}>
-			<Box
-				component="button"
-				type="button"
-				aria-label={copyLabel}
-				onClick={() => {
-					copyToClipboard(value).then(
-						() => {
-							dispatch(showSystemNotification({ message: formatMessage(copyMessages.copied) }));
-						},
-						() => {
-							dispatch(
-								showSystemNotification({
-									message: formatMessage(copyMessages.copyFailed),
-									options: { variant: 'error' }
-								})
-							);
-						}
-					);
-				}}
-				sx={[copyableValueSx, ...(sx === undefined ? [] : Array.isArray(sx) ? sx : [sx])]}
-			>
-				{children}
+		<>
+			<Tooltip title={copied ? copiedLabel : copyLabel} open={hovering || copied}>
+				<Box
+					component="button"
+					type="button"
+					onMouseEnter={() => setHovering(true)}
+					onMouseLeave={() => {
+						setHovering(false);
+						resetCopied();
+					}}
+					onFocus={() => setHovering(true)}
+					onBlur={() => {
+						setHovering(false);
+						resetCopied();
+					}}
+					onClick={() => {
+						clearTimer();
+						const id = ++requestId.current;
+						copyToClipboard(value).then(
+							() => {
+								if (id !== requestId.current) return;
+								setCopied(true);
+								resetTimer.current = setTimeout(() => {
+									resetTimer.current = null;
+									setCopied(false);
+								}, copiedVisibleMs);
+							},
+							() => {
+								if (id !== requestId.current) return;
+								setCopied(false);
+								dispatch(
+									showSystemNotification({
+										message: formatMessage(copyMessages.copyFailed),
+										options: { variant: 'error' }
+									})
+								);
+							}
+						);
+					}}
+					sx={[copyableValueSx, ...(sx === undefined ? [] : Array.isArray(sx) ? sx : [sx])]}
+				>
+					{children}
+				</Box>
+			</Tooltip>
+			<Box component="span" aria-live="polite" sx={visuallyHidden}>
+				{copied ? copiedLabel : ''}
 			</Box>
-		</Tooltip>
+		</>
 	);
 }
 
@@ -156,12 +206,12 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 					alignItems: 'center',
 					minWidth: 0,
 					columnGap: titleRowGap,
-					minHeight: (theme) => `calc(${iconButtonSmallSize(theme)})`
+					minHeight: formHeaderTitleMinHeight
 				}}
 			>
 				{isLargeContainer && <CollapseToCButton />}
 				<ItemTypeIcon item={typeIconItem} sx={{ color: 'info.main', flexShrink: 0 }} />
-				<Typography sx={{ flexShrink: 0 }}>{itemLabel}</Typography>
+				<Typography sx={{ flex: '0 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>{itemLabel}</Typography>
 				{item.savedAsDraft && <DraftChip />}
 				{readonly && (
 					<Chip
@@ -176,7 +226,7 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 						}
 					/>
 				)}
-				<Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+				<Box sx={{ flex: '1 0 6ch', minWidth: '6ch', display: 'flex', justifyContent: 'flex-end', overflow: 'hidden' }}>
 					<Typography
 						component="span"
 						variant="body2"
@@ -192,16 +242,55 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 						<CopyableValue value={item.path}>
 							<Box
 								component="span"
+								dir="ltr"
 								sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0 }}
 							>
 								{item.path}
-								{/* Super-long test path: /Lorem/Ipsum/is/simply/dummy/text/of/the/printing/and/typesetting/industry/Lorem/Ipsum/has/been/the/industrys/standard/dummy/text/ever/since/the/1500s/when/an/unknown/printer/took/a/galley/of/type/and/scrambled/it/to/make/a/type/specimen/book.xml */}
 							</Box>
 						</CopyableValue>
 					</Typography>
 				</Box>
 			</Box>
 		</Container>
+	);
+}
+
+function DateBy({
+	icon,
+	label,
+	when,
+	who
+}: {
+	icon: ReactNode;
+	label: MessageDescriptor;
+	when: string;
+	who: { display: string; tooltip: string };
+}) {
+	return (
+		<Box
+			component="span"
+			sx={{
+				display: 'flex',
+				alignItems: 'center',
+				flexShrink: 0,
+				whiteSpace: 'nowrap'
+			}}
+		>
+			{icon}
+			<span>
+				<FormattedMessage
+					{...label}
+					values={{
+						who: () => (
+							<em key="0" title={who.tooltip}>
+								{who.display}
+							</em>
+						),
+						when
+					}}
+				/>
+			</span>
+		</Box>
 	);
 }
 
@@ -243,54 +332,18 @@ export function EditModeMetadata() {
 							em: { fontWeight: 600 }
 						}}
 					>
-						<Box
-							component="span"
-							sx={{
-								display: 'flex',
-								alignItems: 'center',
-								flexShrink: 0,
-								whiteSpace: 'nowrap'
-							}}
-						>
-							<CalendarTodayRounded sx={{ mr: 0.25 }} fontSize="inherit" />
-							<span>
-								<FormattedMessage
-									defaultMessage="Created {when} by <who>who</who>"
-									values={{
-										who: () => (
-											<em key="0" title={formattedCreator.tooltip}>
-												{formattedCreator.display}
-											</em>
-										),
-										when: formattedCreationDate
-									}}
-								/>
-							</span>
-						</Box>
-						<Box
-							component="span"
-							sx={{
-								display: 'flex',
-								alignItems: 'center',
-								flexShrink: 0,
-								whiteSpace: 'nowrap'
-							}}
-						>
-							<EditOutlined sx={{ mr: 0.25 }} fontSize="inherit" />
-							<span>
-								<FormattedMessage
-									defaultMessage="Updated {when} by <who>who</who>"
-									values={{
-										who: () => (
-											<em key="0" title={formattedModifier.tooltip}>
-												{formattedModifier.display}
-											</em>
-										),
-										when: formattedModifiedDate
-									}}
-								/>
-							</span>
-						</Box>
+						<DateBy
+							icon={<CalendarTodayRounded sx={{ mr: 0.25 }} fontSize="inherit" />}
+							label={dateMessages.created}
+							when={formattedCreationDate}
+							who={formattedCreator}
+						/>
+						<DateBy
+							icon={<EditOutlined sx={{ mr: 0.25 }} fontSize="inherit" />}
+							label={dateMessages.updated}
+							when={formattedModifiedDate}
+							who={formattedModifier}
+						/>
 					</Typography>
 					<Typography
 						variant="body2"
@@ -328,52 +381,58 @@ export function EditModeMetadata() {
 					</Typography>
 				</div>
 			</Box>
-			<Typography
-				component="span"
-				variant="body2"
-				color="textSecondary"
-				sx={{
-					alignSelf: 'flex-start',
-					minWidth: 0,
-					flex: '1 1 0%',
-					maxWidth: '100%',
-					marginInlineStart: 'auto',
-					overflow: 'hidden',
-					textOverflow: 'ellipsis',
-					whiteSpace: 'nowrap',
-					textAlign: 'end'
-				}}
-			>
-				<CopyableValue value={objectId} sx={{ width: '100%' }}>
-					<Box
-						component="span"
-						sx={{
-							minWidth: 0,
-							flex: '1 1 auto',
-							overflow: 'hidden',
-							textOverflow: 'ellipsis',
-							whiteSpace: 'nowrap',
-							textAlign: 'end'
-						}}
-					>
-						{objectId}
-					</Box>
-				</CopyableValue>
-			</Typography>
+			{objectId && (
+				<Typography
+					component="span"
+					variant="body2"
+					color="textSecondary"
+					sx={{
+						alignSelf: 'flex-start',
+						display: 'flex',
+						justifyContent: 'flex-end',
+						minWidth: '12ch',
+						flex: '1 1 18ch',
+						maxWidth: '100%',
+						overflow: 'hidden',
+						whiteSpace: 'nowrap',
+						textAlign: 'end'
+					}}
+				>
+					<CopyableValue value={objectId}>
+						<Box
+							component="span"
+							dir="ltr"
+							sx={{
+								minWidth: 0,
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap'
+							}}
+						>
+							{objectId}
+						</Box>
+					</CopyableValue>
+				</Typography>
+			)}
 		</Box>
 	);
 }
 
 function CollapseToCButton() {
 	const theme = useTheme();
+	const { formatMessage } = useIntl();
 	const { atoms } = useContext(StableFormContext);
 	const [collapseToC, setCollapseToC] = useAtom(atoms.collapseToC);
 	const useCollapsedToC = useAtomValue(atoms.useCollapsedToC);
+	const expanded = !useCollapsedToC;
+	const label = formatMessage(expanded ? tocMessages.collapse : tocMessages.expand);
 
 	return (
-		<Tooltip title={<FormattedMessage defaultMessage="Collapse table of contents" />}>
+		<Tooltip title={label}>
 			<IconButton
 				size="small"
+				aria-label={label}
+				aria-expanded={expanded}
 				onClick={() => setCollapseToC(!collapseToC)}
 				sx={(theme) => ({
 					// TODO: Tabs will be done at a later phase.

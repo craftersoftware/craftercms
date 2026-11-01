@@ -20,6 +20,7 @@ import { ItemMetaContext } from '../lib/formsEngineContext';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import ItemTypeIcon from '../../ItemTypeIcon';
+import { formHeaderTitleMinHeight } from './formHeaderMetrics';
 
 const itemTypeTranslations = defineMessages({
 	component: { defaultMessage: 'Component' },
@@ -38,7 +39,8 @@ export function CreateModeHeader({ path }: { path: string }) {
 				component="h2"
 				sx={{
 					display: 'flex',
-					alignItems: 'center'
+					alignItems: 'center',
+					minHeight: formHeaderTitleMinHeight
 				}}
 			>
 				<ItemTypeIcon item={{ systemType: itemType, mimeType: 'application/xml' }} sx={{ color: 'info.main', mr: 1 }} />
