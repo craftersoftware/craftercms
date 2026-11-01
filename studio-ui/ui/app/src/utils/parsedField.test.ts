@@ -59,4 +59,13 @@ describe('parsed field keys', () => {
 			.item[index].component;
 		assert.equal(component.objectId, 'abc');
 	});
+
+	it('does not read an ordinary __-prefixed id, and an own key wins', () => {
+		const page = deserialize('<page><__title>prefixed</__title><toString>renamed</toString></page>').page;
+		assert.equal(Object.hasOwn(page, '__title'), true);
+		assert.equal(Object.hasOwn(page, 'title'), false);
+		assert.equal(getParsedField(page, 'title'), undefined);
+		assert.equal(getParsedField(page, 'toString'), 'renamed');
+		assert.equal(getParsedField({ toString: 'own', __toString: 'renamed' }, 'toString'), 'own');
+	});
 });

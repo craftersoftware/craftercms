@@ -210,12 +210,23 @@ export function deserialize(xml: string | Node, options?: Partial<X2jOptions>): 
 	return parser.parse(xml);
 }
 
-// fast-xml-parser stores Object.prototype names on a __ prefix (toString → __toString).
-// Own-property reads skip the inherited value. constructor, prototype and __proto__ still throw in deserialize.
+// fast-xml-parser 5.11.2 renames only DANGEROUS_PROPERTY_NAMES (src/util.js) with a __ prefix.
+// constructor, prototype and __proto__ throw instead. Other ids, including __title, stay as written.
+const parserRenamedFieldNames = new Set([
+	'hasOwnProperty',
+	'toString',
+	'valueOf',
+	'__defineGetter__',
+	'__defineSetter__',
+	'__lookupGetter__',
+	'__lookupSetter__'
+]);
+
 export function getParsedField(source: object | null | undefined, fieldId: string): unknown {
 	if (source == null) return undefined;
 	const record = source as Record<string, unknown>;
 	if (Object.hasOwn(record, fieldId)) return record[fieldId];
+	if (!parserRenamedFieldNames.has(fieldId)) return undefined;
 	const renamed = `__${fieldId}`;
 	if (Object.hasOwn(record, renamed)) return record[renamed];
 	return undefined;
