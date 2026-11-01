@@ -113,6 +113,7 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 	const { formatMessage } = useIntl();
 	const [copied, setCopied] = useState(false);
 	const [hovering, setHovering] = useState(false);
+	const [liveMessage, setLiveMessage] = useState('');
 	const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const requestId = useRef(0);
 	const clearTimer = () => {
@@ -123,6 +124,7 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 	};
 	useEffect(
 		() => () => {
+			requestId.current += 1;
 			if (resetTimer.current != null) clearTimeout(resetTimer.current);
 		},
 		[]
@@ -135,27 +137,29 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 	const copiedLabel = formatMessage(copyMessages.copied);
 	return (
 		<>
-			<Tooltip title={copied ? copiedLabel : copyLabel} open={hovering || copied}>
+			<Tooltip
+				title={copied ? copiedLabel : copyLabel}
+				open={hovering}
+				onOpen={() => setHovering(true)}
+				onClose={() => setHovering(false)}
+				slotProps={{ transition: { onExited: resetCopied } }}
+			>
 				<Box
 					component="button"
 					type="button"
 					onMouseEnter={() => setHovering(true)}
-					onMouseLeave={() => {
-						setHovering(false);
-						resetCopied();
-					}}
+					onMouseLeave={() => setHovering(false)}
 					onFocus={() => setHovering(true)}
-					onBlur={() => {
-						setHovering(false);
-						resetCopied();
-					}}
+					onBlur={() => setHovering(false)}
 					onClick={() => {
 						clearTimer();
+						setLiveMessage('');
 						const id = ++requestId.current;
 						copyToClipboard(value).then(
 							() => {
 								if (id !== requestId.current) return;
 								setCopied(true);
+								setLiveMessage(copiedLabel);
 								resetTimer.current = setTimeout(() => {
 									resetTimer.current = null;
 									setCopied(false);
@@ -179,7 +183,7 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 				</Box>
 			</Tooltip>
 			<Box component="span" aria-live="polite" sx={visuallyHidden}>
-				{copied ? copiedLabel : ''}
+				{liveMessage}
 			</Box>
 		</>
 	);
@@ -211,7 +215,19 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 			>
 				{isLargeContainer && <CollapseToCButton />}
 				<ItemTypeIcon item={typeIconItem} sx={{ color: 'info.main', flexShrink: 0 }} />
-				<Typography sx={{ flex: '0 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>{itemLabel}</Typography>
+				<Typography
+					title={itemLabel}
+					sx={{
+						flex: '0 1 auto',
+						minWidth: '8ch',
+						display: '-webkit-box',
+						WebkitLineClamp: 2,
+						WebkitBoxOrient: 'vertical',
+						overflow: 'hidden'
+					}}
+				>
+					{itemLabel}
+				</Typography>
 				{item.savedAsDraft && <DraftChip />}
 				{readonly && (
 					<Chip

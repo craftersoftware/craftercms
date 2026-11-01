@@ -16,12 +16,13 @@
 
 import type { Theme } from '@mui/material/styles';
 
-// MUI IconButton size="small" padding is 5px per side. spacing(1.25) is those 10px.
-export const iconButtonSmallPadding = 1.25;
+// MUI IconButton size="small" hardcodes 5px of padding on each side (10px total).
+// A spacing multiple would drift if the theme spacing unit changed.
+export const iconButtonSmallPadding = '10px';
 
 // SvgIcon's medium size plus that padding. The button is square, so this is its height and width.
 export function iconButtonSmallSize(theme: Theme) {
-	return `${theme.typography.pxToRem(24)} + ${theme.spacing(iconButtonSmallPadding)}`;
+	return `${theme.typography.pxToRem(24)} + ${iconButtonSmallPadding}`;
 }
 
 export function formHeaderTitleMinHeight(theme: Theme) {
