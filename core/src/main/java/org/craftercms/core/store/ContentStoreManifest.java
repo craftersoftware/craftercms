@@ -139,7 +139,8 @@ public class ContentStoreManifest {
 	/**
 	 * Reads a gzip-compressed manifest document.
 	 * The document must include a {@code files} array. A missing or null property is rejected. An empty array is valid.
-	 * Each entry must have a usable {@code path}. A null entry, or a missing, null, or empty path, is rejected.
+	 * Each entry must have a usable {@code path}. A null entry, a missing, null, or empty path, or a path that
+	 * normalizes to {@link ContentStoreIndex#ROOT_PATH}, is rejected.
 	 *
 	 * @param in the gzip payload
 	 * @return the file list stored in the document
@@ -159,7 +160,7 @@ public class ContentStoreManifest {
 	}
 
 	/**
-	 * Rejects entries {@link ContentStoreIndex#from} would otherwise skip.
+	 * Rejects a null entry, an empty path, or a path that normalizes to {@link ContentStoreIndex#ROOT_PATH}.
 	 * An empty list is valid.
 	 */
 	private static void rejectUnusablePaths(List<Item> files) throws IOException {
@@ -167,7 +168,8 @@ public class ContentStoreManifest {
 			return;
 		}
 		for (Item item : files) {
-			if (item == null || isEmpty(item.getPath())) {
+			if (item == null || isEmpty(item.getPath())
+				|| ContentStoreIndex.ROOT_PATH.equals(normalize(item.getPath()))) {
 				throw new IOException("Content store manifest has a file entry with an unusable path");
 			}
 		}
