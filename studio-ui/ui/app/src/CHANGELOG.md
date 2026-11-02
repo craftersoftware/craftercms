@@ -244,6 +244,8 @@
   * `getUserPermissions`
     * Use `fetchMyPermissions` instead
   * [services/contentTypes] Add `fetchContentType` service
+  * [state]
+    * `actions/dialogs`: Renamed `updateEditConfig` action to `updateEditDialogConfig`
 * [hooks]
   * `usePreviewUrlControl`: Removed `history` prop. Retrieval of search and navigate (previously called 'push') is now done internally.
 * Removed deprecated `aws-file-upload` and `aws-video` upload controls.
