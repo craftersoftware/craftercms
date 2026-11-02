@@ -16,6 +16,7 @@
 package org.craftercms.core.store;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.craftercms.core.util.ContentStoreUtils;
 
@@ -137,14 +138,20 @@ public class ContentStoreManifest {
 
 	/**
 	 * Reads a gzip-compressed manifest document.
+	 * The document must include a {@code files} array. A missing or null property is rejected. An empty array is valid.
 	 *
 	 * @param in the gzip payload
 	 * @return the file list stored in the document
-	 * @throws IOException if the payload cannot be read
+	 * @throws IOException if the payload cannot be read, or {@code files} is missing or null
 	 */
 	public static ContentStoreManifest readGzipJson(InputStream in) throws IOException {
 		try (GZIPInputStream gzip = new GZIPInputStream(in)) {
-			return MAPPER.readValue(gzip, ContentStoreManifest.class);
+			JsonNode document = MAPPER.readTree(gzip);
+			JsonNode files = document == null ? null : document.get("files");
+			if (files == null || files.isNull()) {
+				throw new IOException("Content store manifest is missing the files property");
+			}
+			return MAPPER.treeToValue(document, ContentStoreManifest.class);
 		}
 	}
 

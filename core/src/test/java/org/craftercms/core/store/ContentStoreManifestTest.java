@@ -19,11 +19,14 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 /**
  * Tests for {@link ContentStoreManifest}.
@@ -88,6 +91,39 @@ public class ContentStoreManifestTest {
 		ContentStoreManifest restored = ContentStoreManifest.readGzipJson(new ByteArrayInputStream(out.toByteArray()));
 
 		assertEquals(List.of(new ContentStoreManifest.Item("/site/website/index.xml")), restored.getFiles());
+	}
+
+	@Test
+	public void testReadGzipJsonRejectsMissingFiles() throws Exception {
+		InputStream missingFiles = gzip("{}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(missingFiles));
+
+		assertEquals("Content store manifest is missing the files property", error.getMessage());
+	}
+
+	@Test
+	public void testReadGzipJsonRejectsNullFiles() throws Exception {
+		InputStream nullFiles = gzip("{\"files\":null}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(nullFiles));
+
+		assertEquals("Content store manifest is missing the files property", error.getMessage());
+	}
+
+	@Test
+	public void testReadGzipJsonAcceptsEmptyFileList() throws Exception {
+		ContentStoreManifest restored = ContentStoreManifest.readGzipJson(gzip("{\"files\":[]}"));
+
+		assertEquals(List.of(), restored.getFiles());
+	}
+
+	private static ByteArrayInputStream gzip(String json) throws IOException {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
+			gzip.write(json.getBytes(StandardCharsets.UTF_8));
+		}
+		return new ByteArrayInputStream(out.toByteArray());
 	}
 
 }
