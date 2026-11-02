@@ -41,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.endsWith;
 import static org.craftercms.commons.config.ConfigUtils.getBooleanProperty;
 
 /**
@@ -85,7 +84,7 @@ public class S3SyncProcessor extends AbstractS3Processor {
 
 	@Override
 	protected boolean shouldIncludeFile(String file) {
-		return super.shouldIncludeFile(file) && !(ignoreBlobs && endsWith(file, blobExtension));
+		return S3PublishedFileSelection.include(file, includeFiles, excludeFiles, ignoreBlobs, blobExtension);
 	}
 
 	/**

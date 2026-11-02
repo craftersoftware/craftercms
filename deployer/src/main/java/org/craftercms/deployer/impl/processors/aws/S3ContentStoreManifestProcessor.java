@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.endsWith;
 import static org.craftercms.commons.config.ConfigUtils.getBooleanProperty;
 import static org.craftercms.deployer.impl.DeploymentConstants.LATEST_COMMIT_ID_PARAM_NAME;
 import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_ID_PARAM_NAME;
@@ -71,6 +70,10 @@ import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_I
  * makes {@link S3SyncProcessor} upload them. The default is true. A pointer that was never
  * uploaded would show up in Engine folder listings and then fail when Engine reads it to find
  * the blob store.
+ * <p>
+ * When {@code s3SyncProcessor} is set, the manifest uses that processor's file selection.
+ * A regular file the sync processor excludes is not indexed. This processor's own patterns are used
+ * only when no sync processor is set.
  */
 public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
@@ -94,12 +97,21 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	 */
 	protected boolean ignoreBlobs;
 
+	/**
+	 * Sync processor whose include and exclude rules decide which regular files are listed.
+	 */
+	private S3SyncProcessor s3SyncProcessor;
+
 	@ConstructorProperties({"threadPoolTaskExecutor", "localRepoUrl", "blobExtension"})
 	public S3ContentStoreManifestProcessor(ThreadPoolTaskExecutor threadPoolTaskExecutor, String localRepoUrl,
 					       String blobExtension) {
 		super(threadPoolTaskExecutor);
 		this.localRepoUrl = localRepoUrl;
 		this.blobExtension = blobExtension;
+	}
+
+	public void setS3SyncProcessor(S3SyncProcessor s3SyncProcessor) {
+		this.s3SyncProcessor = s3SyncProcessor;
 	}
 
 	@Override
@@ -110,7 +122,10 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
 	@Override
 	protected boolean shouldIncludeFile(String file) {
-		return super.shouldIncludeFile(file) && !(ignoreBlobs && endsWith(file, blobExtension));
+		if (s3SyncProcessor != null) {
+			return s3SyncProcessor.shouldIncludeFile(file);
+		}
+		return S3PublishedFileSelection.include(file, includeFiles, excludeFiles, ignoreBlobs, blobExtension);
 	}
 
 	@Override
@@ -277,7 +292,7 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	}
 
 	/**
-	 * Lists the files in the local repository.
+	 * Lists the files in the local repository that pass the same selection rule as {@link S3SyncProcessor}.
 	 * Blob pointer files are included only when {@code ignoreBlobs} is false.
 	 * {@code .git} directories are not entered.
 	 *
