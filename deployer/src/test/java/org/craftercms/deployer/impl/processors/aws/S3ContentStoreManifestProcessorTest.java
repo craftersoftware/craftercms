@@ -137,6 +137,41 @@ public class S3ContentStoreManifestProcessorTest {
 	}
 
 	@Test
+	public void testListPublishedFilesFiltersContentPathInBothBlobModes() throws Exception {
+		Files.createDirectories(repo.resolve("static-assets"));
+		Files.createDirectories(repo.resolve("sources"));
+		Files.writeString(repo.resolve("static-assets/logo.png.blob"), "pointer");
+		Files.writeString(repo.resolve("static-assets/notes.txt.blob"), "pointer");
+		Files.writeString(repo.resolve("sources/app.js.blob"), "pointer");
+
+		String[] includes = {"^/static-assets/.*\\.txt$"};
+
+		List<String> ignored = processor(includes, null, true).listPublishedFiles(repo);
+		assertTrue(ignored.contains("/static-assets/notes.txt"));
+		assertFalse(ignored.contains("/static-assets/notes.txt.blob"));
+		assertFalse(ignored.contains("/static-assets/logo.png"));
+		assertFalse(ignored.contains("/static-assets/logo.png.blob"));
+		assertFalse(ignored.contains("/sources/app.js"));
+		assertFalse(ignored.contains("/sources/app.js.blob"));
+
+		List<String> pointers = processor(includes, null, false).listPublishedFiles(repo);
+		assertTrue(pointers.contains("/static-assets/notes.txt.blob"));
+		assertFalse(pointers.contains("/static-assets/notes.txt"));
+		assertFalse(pointers.contains("/static-assets/logo.png"));
+		assertFalse(pointers.contains("/static-assets/logo.png.blob"));
+		assertFalse(pointers.contains("/sources/app.js"));
+		assertFalse(pointers.contains("/sources/app.js.blob"));
+
+		String[] broadIncludes = {"^/static-assets/.*$"};
+		String[] excludes = {"^/static-assets/.*\\.png$"};
+
+		List<String> excluded = processor(broadIncludes, excludes, false).listPublishedFiles(repo);
+		assertFalse(excluded.contains("/static-assets/logo.png"));
+		assertFalse(excluded.contains("/static-assets/logo.png.blob"));
+		assertTrue(excluded.contains("/static-assets/notes.txt.blob"));
+	}
+
+	@Test
 	public void testListPublishedFilesListsContentPathWhenBlobsAreIgnored() throws Exception {
 		Files.writeString(repo.resolve("site/website/hero.png.blob"), "blob");
 
