@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.eclipse.jgit.lib.Constants.DOT_GIT;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -75,8 +76,11 @@ public class S3ContentStoreManifestProcessorTest {
 
 	private Path repo;
 
+	private int clientsBuilt;
+
 	@Before
 	public void setUp() throws IOException {
+		clientsBuilt = 0;
 		repo = Files.createTempDirectory("manifest-repo");
 		Files.createDirectories(repo.resolve("site/website"));
 		Files.writeString(repo.resolve("site/website/index.xml"), "<page/>");
@@ -155,6 +159,7 @@ public class S3ContentStoreManifestProcessorTest {
 
 		verify(client).headObject(argThat((HeadObjectRequest request) ->
 			"test-bucket".equals(request.bucket()) && MANIFEST_KEY.equals(request.key())));
+		assertEquals(1, clientsBuilt);
 		verify(client).copyObject(argThat((CopyObjectRequest request) ->
 			"test-bucket".equals(request.sourceBucket()) && MANIFEST_KEY.equals(request.sourceKey())
 				&& "test-bucket".equals(request.destinationBucket()) && MANIFEST_KEY.equals(request.destinationKey())
@@ -267,6 +272,7 @@ public class S3ContentStoreManifestProcessorTest {
 
 			@Override
 			protected S3Client buildClient() {
+				clientsBuilt++;
 				return client;
 			}
 		};

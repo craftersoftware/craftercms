@@ -117,12 +117,19 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	protected ChangeSet doMainProcess(Deployment deployment, ProcessorExecution execution, ChangeSet filteredChangeSet,
 					  ChangeSet originalChangeSet) throws DeployerException {
 		if (!manifestFileListChanged(filteredChangeSet)) {
-			HeadObjectResponse manifest = manifestMatchingPreviousCommit(deployment);
-			if (manifest != null) {
-				advanceManifestCommitId(manifest, getCommitId(deployment, LATEST_COMMIT_ID_PARAM_NAME));
-				logger.info("Skipping content store manifest rebuild for s3://{}/{} because it matches the previous commit",
-					getBucket(), getS3Key(ContentStoreManifest.FILE_NAME));
-				return null;
+			String previousCommitId = getCommitId(deployment, PREVIOUS_COMMIT_ID_PARAM_NAME);
+			// The HEAD check and the metadata copy share this client.
+			if (previousCommitId != null) {
+				try (S3Client client = buildClient()) {
+					HeadObjectResponse manifest = manifestMatchingPreviousCommit(client, previousCommitId);
+					if (manifest != null) {
+						advanceManifestCommitId(client, manifest,
+							getCommitId(deployment, LATEST_COMMIT_ID_PARAM_NAME));
+						logger.info("Skipping content store manifest rebuild for s3://{}/{} because it matches the previous commit",
+							getBucket(), getS3Key(ContentStoreManifest.FILE_NAME));
+						return null;
+					}
+				}
 			}
 		}
 
@@ -179,19 +186,16 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	}
 
 	/**
-	 * @return the manifest header when it was built from the commit that is the base of this deployment.
+	 * @param client           the client shared with the metadata update
+	 * @param previousCommitId the commit that is the base of this deployment
+	 * @return the manifest header when it was built from {@code previousCommitId}.
 	 * A missing manifest, missing metadata, a different commit, or a check failure returns null so the caller
 	 * rebuilds it.
 	 */
-	protected HeadObjectResponse manifestMatchingPreviousCommit(Deployment deployment) {
-		String previousCommitId = getCommitId(deployment, PREVIOUS_COMMIT_ID_PARAM_NAME);
-		if (previousCommitId == null) {
-			return null;
-		}
-
+	protected HeadObjectResponse manifestMatchingPreviousCommit(S3Client client, String previousCommitId) {
 		String bucket = getBucket();
 		String key = getS3Key(ContentStoreManifest.FILE_NAME);
-		try (S3Client client = buildClient()) {
+		try {
 			HeadObjectResponse response = client.headObject(HeadObjectRequest.builder().bucket(bucket).key(key).build());
 			String manifestCommitId = metadataValue(response, MANIFEST_COMMIT_ID_METADATA);
 			if (previousCommitId.equals(manifestCommitId)) {
@@ -218,7 +222,8 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	 * The file list is unchanged. S3 only replaces metadata when the object is copied with
 	 * {@link MetadataDirective#REPLACE}.
 	 */
-	private void advanceManifestCommitId(HeadObjectResponse manifest, String latestCommitId) throws DeployerException {
+	private void advanceManifestCommitId(S3Client client, HeadObjectResponse manifest, String latestCommitId)
+		throws DeployerException {
 		if (latestCommitId == null || latestCommitId.equals(metadataValue(manifest, MANIFEST_COMMIT_ID_METADATA))) {
 			return;
 		}
@@ -243,7 +248,7 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 		}
 
 		logger.info("Updating content store manifest commit id for s3://{}/{} to {}", bucket, key, latestCommitId);
-		try (S3Client client = buildClient()) {
+		try {
 			client.copyObject(request.build());
 		} catch (Exception e) {
 			throw new DeployerException(format(
