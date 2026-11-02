@@ -139,10 +139,11 @@ public class ContentStoreManifest {
 	/**
 	 * Reads a gzip-compressed manifest document.
 	 * The document must include a {@code files} array. A missing or null property is rejected. An empty array is valid.
+	 * Each entry must have a usable {@code path}. A null entry, or a missing, null, or empty path, is rejected.
 	 *
 	 * @param in the gzip payload
 	 * @return the file list stored in the document
-	 * @throws IOException if the payload cannot be read, or {@code files} is missing or null
+	 * @throws IOException if the payload cannot be read, {@code files} is missing or null, or an entry has an unusable path
 	 */
 	public static ContentStoreManifest readGzipJson(InputStream in) throws IOException {
 		try (GZIPInputStream gzip = new GZIPInputStream(in)) {
@@ -151,7 +152,24 @@ public class ContentStoreManifest {
 			if (files == null || files.isNull()) {
 				throw new IOException("Content store manifest is missing the files property");
 			}
-			return MAPPER.treeToValue(document, ContentStoreManifest.class);
+			ContentStoreManifest manifest = MAPPER.treeToValue(document, ContentStoreManifest.class);
+			rejectUnusablePaths(manifest.getFiles());
+			return manifest;
+		}
+	}
+
+	/**
+	 * Rejects entries {@link ContentStoreIndex#from} would otherwise skip.
+	 * An empty list is valid.
+	 */
+	private static void rejectUnusablePaths(List<Item> files) throws IOException {
+		if (files == null) {
+			return;
+		}
+		for (Item item : files) {
+			if (item == null || isEmpty(item.getPath())) {
+				throw new IOException("Content store manifest has a file entry with an unusable path");
+			}
 		}
 	}
 

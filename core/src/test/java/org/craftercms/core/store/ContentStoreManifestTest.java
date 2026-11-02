@@ -118,6 +118,42 @@ public class ContentStoreManifestTest {
 		assertEquals(List.of(), restored.getFiles());
 	}
 
+	@Test
+	public void testReadGzipJsonRejectsNullFileEntry() throws Exception {
+		InputStream nullEntry = gzip("{\"files\":[null]}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(nullEntry));
+
+		assertEquals("Content store manifest has a file entry with an unusable path", error.getMessage());
+	}
+
+	@Test
+	public void testReadGzipJsonRejectsMissingPath() throws Exception {
+		InputStream missingPath = gzip("{\"files\":[{}]}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(missingPath));
+
+		assertEquals("Content store manifest has a file entry with an unusable path", error.getMessage());
+	}
+
+	@Test
+	public void testReadGzipJsonRejectsNullPath() throws Exception {
+		InputStream nullPath = gzip("{\"files\":[{\"path\":null}]}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(nullPath));
+
+		assertEquals("Content store manifest has a file entry with an unusable path", error.getMessage());
+	}
+
+	@Test
+	public void testReadGzipJsonRejectsEmptyPath() throws Exception {
+		InputStream emptyPath = gzip("{\"files\":[{\"path\":\"/site/website/index.xml\"},{\"path\":\"\"}]}");
+
+		IOException error = assertThrows(IOException.class, () -> ContentStoreManifest.readGzipJson(emptyPath));
+
+		assertEquals("Content store manifest has a file entry with an unusable path", error.getMessage());
+	}
+
 	private static ByteArrayInputStream gzip(String json) throws IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
