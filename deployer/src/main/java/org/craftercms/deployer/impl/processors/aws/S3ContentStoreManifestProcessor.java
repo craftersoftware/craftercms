@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.Strings.CS;
 import static org.craftercms.commons.config.ConfigUtils.getBooleanProperty;
 import static org.craftercms.deployer.impl.DeploymentConstants.LATEST_COMMIT_ID_PARAM_NAME;
 import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_ID_PARAM_NAME;
@@ -66,9 +67,12 @@ import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_I
  * Runs after the S3 sync and before {@link S3DeploymentEventsProcessor}, so the
  * deployment-events signal is published only after the manifest is in place.
  * <p>
- * Blob pointer files are listed only when this processor's {@code ignoreBlobs} is false. The default
- * is true. A pointer that was never uploaded would show up in Engine folder listings and then fail
- * when Engine reads it to find the blob store.
+ * A {@code *.blob} pointer is listed as the path Engine can read. {@code ignoreBlobs} defaults to true.
+ * The sync then leaves the pointer out of the bucket, and the blob store publishes the asset at the
+ * content path, so the manifest lists that path with the blob extension removed. This is the same
+ * mapping {@link org.craftercms.deployer.impl.processors.git.GitDiffProcessor} applies to the change set.
+ * When {@code ignoreBlobs} is false, the sync uploads the pointer and the manifest lists the pointer.
+ * Engine resolves the content path through it.
  * <p>
  * {@code includeFiles} and {@code excludeFiles} select regular files through
  * {@link S3PublishedFileSelection}, the same rule {@link S3SyncProcessor} uses. Those patterns are
@@ -93,7 +97,8 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	protected String blobExtension;
 
 	/**
-	 * Indicates if blob pointer files should be left out of the manifest
+	 * When true, a blob pointer is listed as the content path with the blob extension removed.
+	 * When false, the pointer path itself is listed.
 	 */
 	protected boolean ignoreBlobs;
 
@@ -281,8 +286,8 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
 	/**
 	 * Lists the files in the local repository that pass this processor's include, exclude, and
-	 * {@code ignoreBlobs} settings. Blob pointer files are included only when {@code ignoreBlobs} is false.
-	 * {@code .git} directories are not entered.
+	 * {@code ignoreBlobs} settings. A blob pointer is listed as its content path when {@code ignoreBlobs}
+	 * is true, and as the pointer when {@code ignoreBlobs} is false. {@code .git} directories are not entered.
 	 *
 	 * @param repoRoot the local git working tree
 	 * @return store paths beginning with {@code /}
@@ -309,7 +314,7 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 				if (DOT_GIT.equals(relative) || relative.startsWith(GIT_ROOT)) {
 					return FileVisitResult.CONTINUE;
 				}
-				String storePath = "/" + relative;
+				String storePath = listedStorePath("/" + relative);
 				if (shouldIncludeFile(storePath)) {
 					paths.add(storePath);
 				}
@@ -317,6 +322,22 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 			}
 		});
 		return paths;
+	}
+
+	/**
+	 * Manifest path for one repository file.
+	 * When {@code ignoreBlobs} is true, a pointer such as {@code /static-assets/x.png.blob} is listed as
+	 * {@code /static-assets/x.png}, the object the blob store publishes. When {@code ignoreBlobs} is false,
+	 * the pointer path is kept.
+	 *
+	 * @param storePath repository path beginning with {@code /}
+	 * @return the path to record
+	 */
+	private String listedStorePath(String storePath) {
+		if (ignoreBlobs && CS.endsWith(storePath, blobExtension)) {
+			return CS.removeEnd(storePath, blobExtension);
+		}
+		return storePath;
 	}
 
 }

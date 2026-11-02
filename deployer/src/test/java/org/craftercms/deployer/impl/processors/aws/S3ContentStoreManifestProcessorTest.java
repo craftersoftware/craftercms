@@ -95,7 +95,7 @@ public class S3ContentStoreManifestProcessorTest {
 	}
 
 	@Test
-	public void testListPublishedFilesSkipsGitAndIncludesBlobs() throws Exception {
+	public void testListPublishedFilesSkipsGitAndListsPointerWhenBlobsAreNotIgnored() throws Exception {
 		Files.createDirectories(repo.resolve(".git"));
 		Files.writeString(repo.resolve(".git/config"), "git");
 		Files.writeString(repo.resolve("site/website/crafter-level-descriptor.level.xml"), "<level/>");
@@ -106,6 +106,7 @@ public class S3ContentStoreManifestProcessorTest {
 		assertTrue(paths.contains("/site/website/index.xml"));
 		assertTrue(paths.contains("/site/website/crafter-level-descriptor.level.xml"));
 		assertTrue(paths.contains("/site/website/hero.png.blob"));
+		assertFalse(paths.contains("/site/website/hero.png"));
 		assertFalse(paths.contains("/.git/config"));
 	}
 
@@ -115,7 +116,9 @@ public class S3ContentStoreManifestProcessorTest {
 		Files.createDirectories(repo.resolve("static-assets"));
 		Files.createDirectories(repo.resolve("config"));
 		Files.writeString(repo.resolve("sources/app.js"), "js");
+		Files.writeString(repo.resolve("sources/lib.js.blob"), "pointer");
 		Files.writeString(repo.resolve("static-assets/hero.png"), "png");
+		Files.writeString(repo.resolve("static-assets/logo.png.blob"), "pointer");
 		Files.writeString(repo.resolve("config/engine.xml"), "cfg");
 
 		S3ContentStoreManifestProcessor manifest = processor(
@@ -125,17 +128,22 @@ public class S3ContentStoreManifestProcessorTest {
 
 		assertTrue(paths.contains("/site/website/index.xml"));
 		assertTrue(paths.contains("/static-assets/hero.png"));
+		assertTrue(paths.contains("/static-assets/logo.png"));
+		assertFalse(paths.contains("/static-assets/logo.png.blob"));
 		assertFalse(paths.contains("/sources/app.js"));
+		assertFalse(paths.contains("/sources/lib.js"));
+		assertFalse(paths.contains("/sources/lib.js.blob"));
 		assertFalse(paths.contains("/config/engine.xml"));
 	}
 
 	@Test
-	public void testListPublishedFilesSkipsBlobPointersWhenBlobsAreIgnored() throws Exception {
+	public void testListPublishedFilesListsContentPathWhenBlobsAreIgnored() throws Exception {
 		Files.writeString(repo.resolve("site/website/hero.png.blob"), "blob");
 
 		List<String> paths = processor(true).listPublishedFiles(repo);
 
 		assertTrue(paths.contains("/site/website/index.xml"));
+		assertTrue(paths.contains("/site/website/hero.png"));
 		assertFalse(paths.contains("/site/website/hero.png.blob"));
 	}
 
