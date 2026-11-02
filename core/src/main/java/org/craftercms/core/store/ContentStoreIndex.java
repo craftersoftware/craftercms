@@ -39,6 +39,11 @@ public class ContentStoreIndex {
 
 	public static final String ROOT_PATH = "/";
 
+	/**
+	 * Largest initial mapping count. HashMap tables stop at {@code 1 << 30}, so a bigger hint does not help.
+	 */
+	private static final int MAX_INITIAL_MAPPINGS = 1 << 30;
+
 	private final Map<String, Entry> entries;
 
 	private ContentStoreIndex(Map<String, Entry> entries) {
@@ -57,7 +62,7 @@ public class ContentStoreIndex {
 			? List.of() : manifest.getFiles();
 		// Entries are the files plus their parent directories. Shared parents keep that
 		// close to one and a half entries per file, which avoids a resize at large manifests.
-		int capacity = files.size() > Integer.MAX_VALUE / 3 ? Integer.MAX_VALUE : files.size() * 3 / 2;
+		int capacity = (int) Math.min(files.size() * 3L / 2, MAX_INITIAL_MAPPINGS);
 		Map<String, MutableEntry> building = HashMap.newHashMap(capacity);
 
 		for (ContentStoreManifest.Item item : files) {
