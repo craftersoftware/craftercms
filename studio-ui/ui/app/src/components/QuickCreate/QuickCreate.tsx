@@ -53,6 +53,7 @@ import useArchetypes from '../../hooks/useArchetypes';
 import type { ContentType, LookupTable } from '../../models';
 import type { Archetype } from '../ContentTypeManagement/descriptors/archetypes';
 import Box from '@mui/material/Box';
+import { retry } from 'rxjs';
 import { fetchItemByPath } from '../../services/content';
 
 const translations = defineMessages({
@@ -63,6 +64,10 @@ const translations = defineMessages({
 	quickCreateMenuTooltip: {
 		id: 'previewToolbar.quickCreateMenuTooltip',
 		defaultMessage: 'Quick create menu'
+	},
+	itemLookupFailedAfterSave: {
+		id: 'quickCreate.itemLookupFailedAfterSave',
+		defaultMessage: 'Content was saved at {path}, but the item could not be loaded.'
 	}
 });
 
@@ -281,6 +286,7 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 	const items = useItemsByPath();
 	const site = useActiveSiteId();
 	const { authoringBase } = useEnv();
+	const { formatMessage } = useIntl();
 
 	useEffect(() => {
 		site && dispatch(fetchQuickCreateList());
@@ -301,17 +307,29 @@ const QuickCreate = forwardRef<HTMLButtonElement, { item?: ContentItem }>((props
 
 	const onNewContentSaveSuccess = (result?: { path?: string }) => {
 		if (!result?.path) return;
-		fetchItemByPath(site, result.path).subscribe({
-			next: (item) => {
-				dispatch(
-					newContentCreationComplete({
-						item,
-						redirectUrl: getPreviewURLFromPath(result.path)
-					})
-				);
-			},
-			error: (error) => dispatch(pushErrorDialog({ props: { error: error.response ?? error } }))
-		});
+		// Item may not be immediately available after save; retry before surfacing a soft error.
+		fetchItemByPath(site, result.path)
+			.pipe(retry({ count: 3, delay: 1000 }))
+			.subscribe({
+				next: (item) => {
+					dispatch(
+						newContentCreationComplete({
+							item,
+							redirectUrl: getPreviewURLFromPath(result.path)
+						})
+					);
+				},
+				error: () =>
+					dispatch(
+						pushErrorDialog({
+							props: {
+								error: {
+									message: formatMessage(translations.itemLookupFailedAfterSave, { path: result.path })
+								}
+							}
+						})
+					)
+			});
 	};
 
 	const onNewContentSelected = () => {
