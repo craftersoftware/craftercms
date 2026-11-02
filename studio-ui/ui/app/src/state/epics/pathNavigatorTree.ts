@@ -548,6 +548,7 @@ export default [
 										: null;
 						if (
 							pathToFetch == null ||
+							tree.totalByPath[pathToFetch] !== 0 ||
 							pathToFetch in tree.childrenByParentPath ||
 							withIndex(pathToFetch) in tree.childrenByParentPath ||
 							withoutIndex(pathToFetch) in tree.childrenByParentPath
