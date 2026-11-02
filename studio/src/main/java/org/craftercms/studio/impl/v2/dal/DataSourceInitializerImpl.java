@@ -171,7 +171,7 @@ public class DataSourceInitializerImpl implements DataSourceInitializer {
 		logger.info("*** Admin Account Password: \"{}\" ***", randomPassword);
 	}
 
-	private void createSchema(Connection conn) throws IOException {
+	private void createSchema(Connection conn) throws SQLException {
 		String createSchemaScriptPath = getCreateSchemaScriptPath();
 		// Database does not exist
 		logger.info("The database schema does not exists.");
@@ -193,6 +193,7 @@ public class DataSourceInitializerImpl implements DataSourceInitializer {
 			sr.runScript(reader);
 		} catch (Exception e) {
 			logger.error("Failed to run the DB schema create script '{}'", createSchemaScriptPath, e);
+			throw new SQLException("Failed to run the DB schema create script '" + createSchemaScriptPath + "'", e);
 		}
 	}
 

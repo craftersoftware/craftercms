@@ -122,18 +122,24 @@ export const FormLayout = forwardRef<HTMLDivElement, FormLayoutProps>(function (
 	// forms to position themselves at the right position.
 	useLayoutEffect(() => {
 		if (hasStackedForms) {
-			const scrollContainer = getScrollContainer(containerRef.current);
-			// Store the current scroll position to restore
+			const root = containerRef.current;
+			const scrollContainer = getScrollContainer(root);
+			// Store the current scroll position to restore (content scrolls on formMainContent)
 			const scrollTop = scrollContainer.scrollTop;
 			const scrollLeft = scrollContainer.scrollLeft;
-			// Disable scrolling
+			// Freeze both: formMainContent is the content scroller; formContainer hosts the absolute drawer
+			// and can still scroll (header + height:100% main) if left unlocked.
 			scrollContainer.style.overflow = 'hidden';
+			root.style.overflow = 'hidden';
 			// Restore the scroll position
 			scrollContainer.scrollTop = scrollTop;
 			scrollContainer.scrollLeft = scrollLeft;
-			scrollContainer.style.setProperty('--scroll-top', `${scrollTop}px`);
+			// The drawer is absolutely positioned in formContainer, so it must be offset by formContainer's own scroll.
+			root.style.setProperty('--scroll-top', `${root.scrollTop}px`);
 			return () => {
 				scrollContainer.style.overflow = '';
+				root.style.overflow = '';
+				root.style.removeProperty('--scroll-top');
 			};
 		}
 	}, [containerRef, hasStackedForms]);

@@ -231,6 +231,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const xmlDiffDialogState = useEnhancedDialogState();
 	const [xmlDiffContent, setXmlDiffContent] = useState<{ initialContent: string; currentContent }>(undefined);
 	const [selectedFieldIdPath, setSelectedFieldIdPath] = useState<string>(null);
+	/** Id of the field that was open when closeAndCleanup last committed (post-rename). Used to rewrite child paths. */
+	const committedSelectedFieldIdOnCloseRef = useRef<string | null>(null);
 	const [hasPendingChanges, setHasPendingChanges] = useState(false);
 	const [virtualContentType, setVirtualContentType] = useState<ContentType>(null);
 	const [fieldFormViewProps, setFieldFormViewProps] = useState<FieldFormViewProps>(null);
@@ -362,6 +364,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const closeAndCleanup = async (): Promise<ContentType | false> => {
 		if (!(await performCurrentFormErrorCheckAndWarning())) return false;
 		const postCloseType = commitOpenFormChanges() ?? typeRef.current;
+		// Capture after commit (rename applied to selectedField) before clearing for path rewrite.
+		committedSelectedFieldIdOnCloseRef.current = stateRef.current.selectedField?.id ?? null;
 		stateRef.current.selectedField = null;
 		stateRef.current.selectedSection = null;
 		stateRef.current.selectedDataSource = null;
@@ -413,14 +417,32 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		sectionId: string,
 		overrideType?: ContentType
 	) => {
+		// Capture before closeAndCleanup clears selectedFieldIdPath (React state still closed over,
+		// but be explicit). Committed id is stashed by closeAndCleanup after rename commit.
+		const openFieldIdPath = selectedFieldIdPath;
 		const postCloseType = await closeAndCleanup();
 		if (!postCloseType) return;
 		const typeForForm = typeForNextArtefactForm(overrideType, postCloseType);
+		// Path was captured pre-commit; if the open form renamed the parent (or an ancestor), rewrite that segment.
+		let resolvedFieldIdPath = fieldIdPath;
+		const committedOpenFieldId = committedSelectedFieldIdOnCloseRef.current;
+		if (
+			openFieldIdPath &&
+			committedOpenFieldId &&
+			(fieldIdPath === openFieldIdPath || fieldIdPath.startsWith(`${openFieldIdPath}.`))
+		) {
+			const segments = fieldIdPath.split('.');
+			segments[openFieldIdPath.split('.').length - 1] = committedOpenFieldId;
+			resolvedFieldIdPath = segments.join('.');
+		}
+		// Prefer the field from typeForForm so nested child edits committed by closeAndCleanup
+		// are preserved (e.g. selecting a parent after editing one of its children).
+		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
 		const controlDescriptor =
-			controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor;
+			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
 		if (!controlDescriptor)
-			return showAlert(`No control descriptor found for field "${field.name}" of type "${field.type}"`);
+			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
 
 		// Adding data sources to the virtual type to ensure they are available for rendering in the dataSourceSelector.
 		const virtualType = createVirtualTypeForField(
@@ -431,27 +453,35 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			virtualType,
 			createVirtualTypeFormContext(
 				virtualType,
-				createTypeFieldValuesObject(field),
+				createTypeFieldValuesObject(fieldForForm),
 				contentTypesLookup,
 				{
 					fieldUpdates$: stateRef.current.fieldUpdates$
 				},
 				{
-					siblingIds: getSiblingFieldIds(typeForForm, fieldIdPath, configDescriptors.controlDescriptors ?? undefined),
-					currentIds: getFieldIdSet(field.id, field.type, configDescriptors.controlDescriptors ?? undefined),
+					siblingIds: getSiblingFieldIds(
+						typeForForm,
+						resolvedFieldIdPath,
+						configDescriptors.controlDescriptors ?? undefined
+					),
+					currentIds: getFieldIdSet(
+						fieldForForm.id,
+						fieldForForm.type,
+						configDescriptors.controlDescriptors ?? undefined
+					),
 					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
 				}
 			),
 			{
-				field,
-				fieldIdPath,
+				field: fieldForForm,
+				fieldIdPath: resolvedFieldIdPath,
 				controlDescriptor: applyTranslations(controlDescriptor, formatMessage),
 				sectionId,
 				type: typeForForm
 			}
 		);
-		setSelectedFieldIdPath(fieldIdPath);
-		stateRef.current.selectedField = field;
+		setSelectedFieldIdPath(resolvedFieldIdPath);
+		stateRef.current.selectedField = fieldForForm;
 	};
 	const handleSectionSelected = async (section: ContentTypeSection, overrideType?: ContentType) => {
 		const postCloseType = await closeAndCleanup();
@@ -758,19 +788,26 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			segments[selectedFieldIdPath.split('.').length - 1] = committedId;
 			resolvedParentPath = segments.join('.');
 		}
-		if (
-			resolvedParentPath &&
-			!resolvedParentPath
-				.split('.')
-				.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
-					fields: baseType.fields
-				})
-		) {
+		const parentField = resolvedParentPath
+			? resolvedParentPath
+					.split('.')
+					.reduce<Partial<ContentTypeField> | undefined>((parent, id) => parent?.fields?.[id], {
+						fields: baseType.fields
+					})
+			: undefined;
+		if (resolvedParentPath && !parentField) {
 			showAlert(formatMessage({ defaultMessage: 'Unable to insert field: parent field was not found.' }));
 			return;
 		}
 		const newField = getNewFieldFromDescriptor(fieldType, descriptor, configEntry);
-		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${NEW_FIELD_ID}` : NEW_FIELD_ID;
+		// Root drafts are keyed `{NEW}`; nested (addSubField) uses field.id when preset (e.g. file-name).
+		const leafId = resolvedParentPath ? newField.id || NEW_FIELD_ID : NEW_FIELD_ID;
+		// Preset IDs (system fields) must not replace an existing sibling in the target group.
+		if (resolvedParentPath && newField.id && parentField.fields?.[newField.id]) {
+			showAlert(formatMessage({ defaultMessage: 'That variable name is already in use.' }));
+			return;
+		}
+		const newFieldPath = resolvedParentPath ? `${resolvedParentPath}.${leafId}` : leafId;
 		const nextType = addField(baseType, newField, newFieldPath, sectionId, position);
 		setType(nextType);
 		onUpdateHasPendingChanges(true);
@@ -1364,17 +1401,19 @@ function updateTypeFromSubFieldUpdate(
 	} else {
 		const updatedField = reverseTypeFieldValuesObject(state.selectedField, updatedValues, descriptor);
 		let updatedFields = { ...fields };
+		// Drafts are keyed as `{NEW}` while `field.id` is still null — same as root-level updateTypeFromFieldUpdate.
+		const selectedFieldId = state.selectedField.id || NEW_FIELD_ID;
 
-		if (updatedField.id !== state.selectedField.id) {
-			// Since the order of the fields is determined by the lookupTable order, we need to convert it to array, set the
-			// field in the proper position and convert it back to a lookupTable.
+		if (updatedField.id !== selectedFieldId) {
+			// Replace in place (don't insert + delete): createLookupTable re-keys by field.id, so a
+			// draft would become `null` and delete(`{NEW}`) would leave both entries.
 			const updatedFieldsArray = Object.values(updatedFields);
-			const originalFieldIndex = updatedFieldsArray.findIndex((field) => field.id === state.selectedField.id);
-			updatedFieldsArray.splice(originalFieldIndex, 0, updatedField);
-			updatedFields = createLookupTable(updatedFieldsArray, 'id');
-
-			// Delete the old id
-			delete updatedFields[state.selectedField.id];
+			const originalFieldIndex = Object.keys(updatedFields).indexOf(selectedFieldId);
+			updatedFieldsArray.splice(originalFieldIndex, 1, updatedField);
+			updatedFields = updatedFieldsArray.reduce((lookup, field) => {
+				lookup[field.id || NEW_FIELD_ID] = field;
+				return lookup;
+			}, {});
 		} else {
 			updatedFields[updatedField.id] = updatedField;
 		}

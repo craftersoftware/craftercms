@@ -20,6 +20,7 @@ import { FormattedMessage } from 'react-intl';
 import controlDescriptors from '../descriptors/controls';
 import { nou } from '../../../utils/object';
 import { ContentType, ContentTypeField } from '../../../models';
+import LookupTable from '../../../models/LookupTable';
 import PickFieldDialog from './PickFieldDialog';
 import { DescriptorContentType } from '../utils';
 import { ContentTypeManagementConfig } from './EditTypeView';
@@ -48,23 +49,28 @@ export function PickControlDialog(props: PickControlDialogProps) {
 		controlExclusions,
 		...dialogProps
 	} = props;
-	const { sectionFields } = useMemo(() => {
+	const { sectionFields, currentFields } = useMemo(() => {
 		let sectionFields: ContentTypeField[];
+		let currentFields: LookupTable<ContentTypeField>;
 		if (nou(fieldIdPath)) {
 			// If fieldIdPath is null or undefined (not a composed id path), get the sectionFields from the root of 'type'.
 			// Here we retrieve the array of ids so we can ensure the order of the fields.
 			const sectionFieldIds = type.sections.find((section) => section.id === sectionId)?.fields;
 			sectionFields = sectionFieldIds?.map((fieldId) => type.fields[fieldId]) ?? [];
+			// Root inserts: check IDs against all root fields (system fields are unique across the type).
+			currentFields = type.fields;
 		} else {
 			// If fieldIdPath has a value (composed id path), get the sectionFields from the specified path.
 			const fieldPathParts = fieldIdPath.split('.');
-			let subFields = type.fields;
+			let subFields: LookupTable<ContentTypeField> = type.fields;
 			fieldPathParts.forEach((fieldPathPart) => {
 				subFields = subFields?.[fieldPathPart]?.fields ?? {};
 			});
 			sectionFields = Object.values(subFields);
+			// Nested inserts: only fields already in the target repeat group collide on ID.
+			currentFields = subFields;
 		}
-		return { sectionFields };
+		return { sectionFields, currentFields };
 	}, [fieldIdPath, sectionId, type]);
 
 	// Before rendering the PickFieldDialog we need to:
@@ -88,6 +94,7 @@ export function PickControlDialog(props: PickControlDialogProps) {
 			configLookup={configControls}
 			typesFullList={typesFullList}
 			typesCurrentList={sectionFields}
+			currentFields={currentFields}
 			systemFieldsIds={systemFieldsIds}
 		/>
 	);

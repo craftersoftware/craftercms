@@ -472,6 +472,7 @@ pipelines:
             -   currentVersion: 5.0-t
                 nextVersion: 5.0-t2
                 operations:
+                    -   type: databaseCollationUpgrader
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/4.x-to-5.x/4.x-to-5.0.new-schema.sql
             -   currentVersion: 5.0-t2
@@ -672,8 +673,6 @@ pipelines:
                 operations:
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/5.0.0.25-to-5.0.0.26.sql
-
-
 
     # Pipeline to upgrade site repositories
     site:

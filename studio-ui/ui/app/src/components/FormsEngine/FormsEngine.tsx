@@ -153,7 +153,7 @@ import {
 import { getHostToHostBus } from '../../utils/subjects';
 import { fetchAffectedPackages } from '../../services/workflow';
 import useMount from '../../hooks/useMount';
-import { nnou } from '../../utils/object';
+import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
 import { processPathMacros } from '../../utils/path';
 import {
@@ -1202,17 +1202,26 @@ function FormOrchestrator(props: FormsEngineProps) {
 		};
 	}, [effectRefs, item, setLockStatus, siteId]);
 
-	const handleOpenDrawerSidebar = () => {
-		const scroller = getScrollContainer(containerRef.current);
-		scroller.style.setProperty('--scroll-top', `${scroller.scrollTop}px`);
+	// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer) while the ToC drawer is open.
+	// --scroll-top must live on formContainer so both drawers can inherit it.
+	// Keyed on the atom, so every close path (Drawer onClose, section/field click, expansion toggle) releases the lock.
+	useLayoutEffect(() => {
+		if (!openDrawerSidebar) return;
+		const root = containerRef.current;
+		const scroller = getScrollContainer(root);
+		const scrollTop = scroller.scrollTop;
 		scroller.style.overflowY = 'hidden';
-		setOpenDrawerSidebar(true);
-	};
-	const handleCloseDrawerSidebar: DrawerProps['onClose'] = () => {
-		const scroller = getScrollContainer(containerRef.current);
-		scroller.style.overflowY = '';
-		setOpenDrawerSidebar(false);
-	};
+		root.style.overflowY = 'hidden';
+		scroller.scrollTop = scrollTop;
+		root.style.setProperty('--scroll-top', `${root.scrollTop}px`);
+		return () => {
+			scroller.style.overflowY = '';
+			root.style.overflowY = '';
+			root.style.removeProperty('--scroll-top');
+		};
+	}, [openDrawerSidebar]);
+	const handleOpenDrawerSidebar = () => setOpenDrawerSidebar(true);
+	const handleCloseDrawerSidebar: DrawerProps['onClose'] = () => setOpenDrawerSidebar(false);
 	const popTopStackedForm = (restoreOpenedItem: boolean) => {
 		const childEntry = formsStackData[formsStackData.length - 1];
 		const childMode = childEntry?.itemFormMode ? store.get(childEntry.itemFormMode) : null;
@@ -1485,19 +1494,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 		}
 	};
 
-	const [mainContent, setMainContent] = useState(null);
-	const collapseHeaderAllowed = useRef(false);
+	const [mainContent, setMainContent] = useState<HTMLDivElement | null>(null);
 	const sentinelRef = useRef<HTMLDivElement>(null);
 	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
 	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
-	const mainContentRefCallback: RefCallback<HTMLDivElement> = (element) => {
-		setMainContent(element);
-		if (!mainContent && nnou(element)) {
-			// First time the main content is set, if the scrollHeight is not 100px larger than clientHeight, we don't allow collapsing the header.
-			collapseHeaderAllowed.current = element.scrollHeight - element.clientHeight > 100;
-		}
-	};
+	const mainContentRefCallback: RefCallback<HTMLDivElement> = setMainContent;
 
 	const beginSettledFieldScroll = useCallback((fieldId: string, focus: boolean) => {
 		cancelFieldScrollRef.current?.();
@@ -1506,28 +1508,42 @@ function FormOrchestrator(props: FormsEngineProps) {
 		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId, { focus });
 	}, []);
 
-	// Monitor when sentinel element crosses the threshold
+	// Collapse when the sentinel (~60px) scrolls out of view. The header is a sibling of this scroll
+	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
+	// overflow exceeds the header height plus the sentinel offset, which that growth can't eat into.
 	useEffect(() => {
-		if (!mainContent || !sentinelRef.current) return;
+		const sentinel = sentinelRef.current;
+		if (!mainContent || !sentinel) return;
 
-		const observer = new IntersectionObserver(
+		let isIntersecting = true;
+		const checkThreshold = () => {
+			const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
+			const overflow = mainContent.scrollHeight - mainContent.clientHeight;
+			// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
+			const sentinelOffset = sentinel.offsetTop;
+			setCollapseHeader(!isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset);
+		};
+
+		const intersectionObserver = new IntersectionObserver(
 			([entry]) => {
-				// When sentinel is NOT intersecting (scrolled past 60px, sentinel's top position), collapse header
-				if (collapseHeaderAllowed.current) {
-					setCollapseHeader(!entry.isIntersecting);
-				}
+				isIntersecting = entry.isIntersecting;
+				checkThreshold();
 			},
-			{
-				root: mainContent,
-				threshold: 0,
-				rootMargin: '0px'
-			}
+			{ root: mainContent, threshold: 0, rootMargin: '0px' }
 		);
+		intersectionObserver.observe(sentinel);
 
-		observer.observe(sentinelRef.current);
+		// Re-check the same threshold when section content or the scroll root resizes (e.g. collapsing a
+		// SectionAccordion, or the dialog/viewport changing mainContent.clientHeight). The intersection
+		// observer alone won't fire for that, so collapseHeader could otherwise get stuck.
+		const resizeObserver = new ResizeObserver(checkThreshold);
+		const contentContainer = sentinel.nextElementSibling;
+		if (contentContainer) resizeObserver.observe(contentContainer);
+		resizeObserver.observe(mainContent);
 
 		return () => {
-			observer?.disconnect();
+			intersectionObserver.disconnect();
+			resizeObserver.disconnect();
 		};
 	}, [mainContent]);
 

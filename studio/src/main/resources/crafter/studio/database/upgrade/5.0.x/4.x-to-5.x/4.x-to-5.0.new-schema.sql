@@ -48,7 +48,6 @@ CREATE TABLE IF NOT EXISTS `publish_package`
 	INDEX `publish_package_package_state` (`package_state`)
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
 
 /*
@@ -70,7 +69,6 @@ CREATE TABLE IF NOT EXISTS `publish_item`
 	FOREIGN KEY `publish_item_package_id`(`package_id`) REFERENCES `publish_package` (`id`) ON DELETE CASCADE
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
 
 /*
@@ -84,7 +82,6 @@ CREATE TABLE IF NOT EXISTS `item_publish_item`
 	FOREIGN KEY `item_publish_item_item_id`(`item_id`) REFERENCES `item` (`id`) ON DELETE CASCADE
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
 
 /*
@@ -101,7 +98,6 @@ CREATE TABLE IF NOT EXISTS `item_target`
 	FOREIGN KEY `item_target_item_id`(`item_id`) REFERENCES `item` (`id`) ON DELETE CASCADE
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
 
 /********************** PROCEDURE UPDATES **********************/

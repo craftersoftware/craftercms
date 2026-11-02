@@ -23,5 +23,4 @@ CREATE TABLE IF NOT EXISTS `system_properties`
 	UNIQUE INDEX `system_properties_ix_property_name` (`property_name`)
 )
 	ENGINE = InnoDB
-	DEFAULT CHARSET = utf8
 	ROW_FORMAT = DYNAMIC ;
