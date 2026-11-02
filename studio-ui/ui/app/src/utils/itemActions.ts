@@ -582,8 +582,12 @@ export const itemActionDispatcher = ({
 			case 'createContent': {
 				const id = nanoid();
 
+				// TODO: https://github.com/craftersoftware/craftercms/issues/4473
+				// Temporary solution was to add a trailing slash to the path if it's a folder. Backend hasn't been updated to support this yet.
+				const path = item.systemType === 'folder' && !item.path.endsWith('/') ? `${item.path}/` : item.path;
+
 				dispatch(blockUI({ progress: 'indeterminate' }));
-				fetchAllowedTypes(site, item.path).subscribe({
+				fetchAllowedTypes(site, path).subscribe({
 					next(contentTypesIds) {
 						if (contentTypesIds?.length === 1) {
 							const contentTypeId = contentTypesIds[0];
