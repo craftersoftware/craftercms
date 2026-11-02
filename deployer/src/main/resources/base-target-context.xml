@@ -400,9 +400,8 @@
 		<property name="maxPoolSize" value="${aws.threads.max}"/>
 	</bean>
 
-	<!-- Lazy singleton so the manifest processor shares the pipeline instance, and targets that do not sync to S3 never create it. -->
 	<bean id="s3SyncProcessor" class="org.craftercms.deployer.impl.processors.aws.S3SyncProcessor"
-	      parent="deploymentProcessor" scope="singleton" lazy-init="true">
+	      parent="deploymentProcessor">
 		<constructor-arg name="threadPoolTaskExecutor" ref="s3ExecutorService"/>
 		<constructor-arg name="localRepoUrl" value="${target.localRepoPath}"/>
 		<constructor-arg name="blobExtension" value="${deployer.main.targets.config.blob.file.extension}"/>
@@ -427,7 +426,6 @@
 		<constructor-arg name="threadPoolTaskExecutor" ref="s3ExecutorService"/>
 		<constructor-arg name="localRepoUrl" value="${target.localRepoPath}"/>
 		<constructor-arg name="blobExtension" value="${deployer.main.targets.config.blob.file.extension}"/>
-		<property name="s3SyncProcessor" ref="s3SyncProcessor"/>
 	</bean>
 
 	<bean id="s3DeploymentEventsProcessor" parent="deploymentProcessor"

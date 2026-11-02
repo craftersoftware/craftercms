@@ -110,7 +110,7 @@ public class S3ContentStoreManifestProcessorTest {
 	}
 
 	@Test
-	public void testListPublishedFilesOmitsRegularFilesExcludedBySync() throws Exception {
+	public void testListPublishedFilesUsesOwnIncludeAndExclude() throws Exception {
 		Files.createDirectories(repo.resolve("sources"));
 		Files.createDirectories(repo.resolve("static-assets"));
 		Files.createDirectories(repo.resolve("config"));
@@ -118,11 +118,8 @@ public class S3ContentStoreManifestProcessorTest {
 		Files.writeString(repo.resolve("static-assets/hero.png"), "png");
 		Files.writeString(repo.resolve("config/engine.xml"), "cfg");
 
-		// A pattern on this processor would hide index.xml. The sync processor does not, so the file stays.
-		String[] ownExclude = {"^/site/.*$"};
-		SelectingSyncProcessor sync = new SelectingSyncProcessor(
-			new String[] {"^/(site|static-assets)/.*$"}, new String[] {"^/sources/.*$"});
-		S3ContentStoreManifestProcessor manifest = processor(true, ownExclude, sync);
+		S3ContentStoreManifestProcessor manifest = processor(
+			new String[] {"^/(site|static-assets)/.*$"}, new String[] {"^/sources/.*$"}, true);
 
 		List<String> paths = manifest.listPublishedFiles(repo);
 
@@ -130,10 +127,6 @@ public class S3ContentStoreManifestProcessorTest {
 		assertTrue(paths.contains("/static-assets/hero.png"));
 		assertFalse(paths.contains("/sources/app.js"));
 		assertFalse(paths.contains("/config/engine.xml"));
-		assertEquals(sync.allows("/site/website/index.xml"), paths.contains("/site/website/index.xml"));
-		assertEquals(sync.allows("/static-assets/hero.png"), paths.contains("/static-assets/hero.png"));
-		assertEquals(sync.allows("/sources/app.js"), paths.contains("/sources/app.js"));
-		assertEquals(sync.allows("/config/engine.xml"), paths.contains("/config/engine.xml"));
 	}
 
 	@Test
@@ -303,16 +296,16 @@ public class S3ContentStoreManifestProcessorTest {
 		return processor(repo, ignoreBlobFiles);
 	}
 
-	private S3ContentStoreManifestProcessor processor(boolean ignoreBlobFiles, String[] excludeFiles,
-							  S3SyncProcessor s3SyncProcessor) {
+	private S3ContentStoreManifestProcessor processor(String[] includes, String[] excludes,
+							  boolean ignoreBlobFiles) {
 		return new S3ContentStoreManifestProcessor(null, repo.toString(), ".blob") {
 			{
+				includeFiles = includes;
+				excludeFiles = excludes;
 				ignoreBlobs = ignoreBlobFiles;
-				this.excludeFiles = excludeFiles;
 				siteName = "acme";
 				s3Url = S3Utilities.builder().region(Region.US_EAST_1).build()
 					.parseUri(URI.create("s3://test-bucket/sites/acme/"));
-				setS3SyncProcessor(s3SyncProcessor);
 			}
 
 			@Override
@@ -347,20 +340,6 @@ public class S3ContentStoreManifestProcessorTest {
 	private static PutObjectRequest manifestPut() {
 		return argThat((PutObjectRequest request) ->
 			"test-bucket".equals(request.bucket()) && MANIFEST_KEY.equals(request.key()));
-	}
-
-	private static final class SelectingSyncProcessor extends S3SyncProcessor {
-
-		private SelectingSyncProcessor(String[] includes, String[] excludes) {
-			super(null, "/tmp", ".blob");
-			includeFiles = includes;
-			excludeFiles = excludes;
-			ignoreBlobs = true;
-		}
-
-		private boolean allows(String path) {
-			return shouldIncludeFile(path);
-		}
 	}
 
 	private static Deployment deployment(ObjectId previousCommitId, ObjectId latestCommitId) {

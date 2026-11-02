@@ -66,14 +66,14 @@ import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_I
  * Runs after the S3 sync and before {@link S3DeploymentEventsProcessor}, so the
  * deployment-events signal is published only after the manifest is in place.
  * <p>
- * Blob pointer files are listed only when {@code ignoreBlobs} is false, the same setting that
- * makes {@link S3SyncProcessor} upload them. The default is true. A pointer that was never
- * uploaded would show up in Engine folder listings and then fail when Engine reads it to find
- * the blob store.
+ * Blob pointer files are listed only when this processor's {@code ignoreBlobs} is false. The default
+ * is true. A pointer that was never uploaded would show up in Engine folder listings and then fail
+ * when Engine reads it to find the blob store.
  * <p>
- * When {@code s3SyncProcessor} is set, the manifest uses that processor's file selection.
- * A regular file the sync processor excludes is not indexed. This processor's own patterns are used
- * only when no sync processor is set.
+ * {@code includeFiles} and {@code excludeFiles} select regular files through
+ * {@link S3PublishedFileSelection}, the same rule {@link S3SyncProcessor} uses. Those patterns are
+ * this processor's own configuration. Keep them aligned with the sync processor so a file left out
+ * of the bucket is left out of the manifest.
  */
 public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
@@ -97,21 +97,12 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	 */
 	protected boolean ignoreBlobs;
 
-	/**
-	 * Sync processor whose include and exclude rules decide which regular files are listed.
-	 */
-	private S3SyncProcessor s3SyncProcessor;
-
 	@ConstructorProperties({"threadPoolTaskExecutor", "localRepoUrl", "blobExtension"})
 	public S3ContentStoreManifestProcessor(ThreadPoolTaskExecutor threadPoolTaskExecutor, String localRepoUrl,
 					       String blobExtension) {
 		super(threadPoolTaskExecutor);
 		this.localRepoUrl = localRepoUrl;
 		this.blobExtension = blobExtension;
-	}
-
-	public void setS3SyncProcessor(S3SyncProcessor s3SyncProcessor) {
-		this.s3SyncProcessor = s3SyncProcessor;
 	}
 
 	@Override
@@ -122,9 +113,6 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
 	@Override
 	protected boolean shouldIncludeFile(String file) {
-		if (s3SyncProcessor != null) {
-			return s3SyncProcessor.shouldIncludeFile(file);
-		}
 		return S3PublishedFileSelection.include(file, includeFiles, excludeFiles, ignoreBlobs, blobExtension);
 	}
 
@@ -292,8 +280,8 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	}
 
 	/**
-	 * Lists the files in the local repository that pass the same selection rule as {@link S3SyncProcessor}.
-	 * Blob pointer files are included only when {@code ignoreBlobs} is false.
+	 * Lists the files in the local repository that pass this processor's include, exclude, and
+	 * {@code ignoreBlobs} settings. Blob pointer files are included only when {@code ignoreBlobs} is false.
 	 * {@code .git} directories are not entered.
 	 *
 	 * @param repoRoot the local git working tree

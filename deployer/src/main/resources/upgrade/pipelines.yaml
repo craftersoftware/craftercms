@@ -147,3 +147,7 @@ pipelines:
                                 property: url
                             -   fromProcessor: s3SyncProcessor
                                 property: ignoreBlobs
+                            -   fromProcessor: s3SyncProcessor
+                                property: includeFiles
+                            -   fromProcessor: s3SyncProcessor
+                                property: excludeFiles

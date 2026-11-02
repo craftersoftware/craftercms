@@ -53,6 +53,10 @@ public class AddProcessorUpgradeOperationTest {
 		        property: endpoint
 		    -   fromProcessor: s3SyncProcessor
 		        property: ignoreBlobs
+		    -   fromProcessor: s3SyncProcessor
+		        property: includeFiles
+		    -   fromProcessor: s3SyncProcessor
+		        property: excludeFiles
 		""";
 
 	@Mock
@@ -79,6 +83,8 @@ public class AddProcessorUpgradeOperationTest {
 		assertEquals("s3ContentStoreManifestProcessor", pipeline.get(1).get("processorName"));
 		assertEquals("s3://bucket/site", pipeline.get(1).get("url"));
 		assertEquals(false, pipeline.get(1).get("ignoreBlobs"));
+		assertEquals(List.of("^/site/.*$", "^/static-assets/.*$"), pipeline.get(1).get("includeFiles"));
+		assertEquals(List.of("^/sources/.*$"), pipeline.get(1).get("excludeFiles"));
 		assertFalse(pipeline.get(1).containsKey("endpoint"));
 		assertEquals("s3DeploymentEventsProcessor", pipeline.get(2).get("processorName"));
 	}
@@ -108,6 +114,8 @@ public class AddProcessorUpgradeOperationTest {
 		List<Map<String, Object>> pipeline = new ArrayList<>();
 		Map<String, Object> sync = processor("s3SyncProcessor");
 		sync.put("ignoreBlobs", false);
+		sync.put("includeFiles", List.of("^/site/.*$", "^/static-assets/.*$"));
+		sync.put("excludeFiles", List.of("^/sources/.*$"));
 		pipeline.add(sync);
 		if (includeManifest) {
 			pipeline.add(processor("s3ContentStoreManifestProcessor"));
