@@ -19,18 +19,27 @@ import { DATA_SOURCE_API_VERSION, type DataSourceModule } from './types';
 /**
  * Runtime gate for built-in and plugin module contributions.
  *
- * Asserts `apiVersion`, a non-empty `type`, at least one interface, a `capabilities` array, and
- * `create()`. Call before registry insert so bad plugins fail at load time instead of during field
- * resolve.
+ * A missing `apiVersion` counts as {@link DATA_SOURCE_API_VERSION}. Any other value throws.
+ * Also asserts a non-empty `type`, at least one interface, a `capabilities` array, and `create()`.
+ * Call before registry insert so bad plugins fail at load time instead of during field resolve.
+ *
+ * Pass `owner` from `registerPlugin` so a version rejection names the plugin id and the
+ * data-source type. Built-in registration omits it.
  */
-export function validateDataSourceModule(module: unknown): asserts module is DataSourceModule {
+export function validateDataSourceModule(
+	module: unknown,
+	owner?: { pluginId: string; type: string }
+): asserts module is DataSourceModule {
 	if (!module || typeof module !== 'object') {
 		throw new TypeError('A data-source module must export an object.');
 	}
-	const candidate = module as Partial<DataSourceModule>;
-	if (candidate.apiVersion !== DATA_SOURCE_API_VERSION) {
+	const candidate = module as Partial<DataSourceModule> & { apiVersion?: unknown };
+	const reportedVersion = candidate.apiVersion;
+	if ((reportedVersion ?? DATA_SOURCE_API_VERSION) !== DATA_SOURCE_API_VERSION) {
+		const typeName = owner?.type ?? (typeof candidate.type === 'string' && candidate.type ? candidate.type : 'unknown');
+		const subject = owner ? `Plugin "${owner.pluginId}" data-source "${typeName}"` : `Data-source "${typeName}"`;
 		throw new TypeError(
-			`Unsupported data-source API version "${String(candidate.apiVersion)}"; expected ${DATA_SOURCE_API_VERSION}.`
+			`${subject} reports unsupported apiVersion (got ${typeof reportedVersion} "${String(reportedVersion)}"; expected the number ${DATA_SOURCE_API_VERSION}).`
 		);
 	}
 	if (!candidate.type || typeof candidate.type !== 'string') {
