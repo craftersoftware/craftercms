@@ -61,8 +61,8 @@ import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_I
  * A publish that only updates existing files does not change that list. When the manifest
  * already in the bucket was built from the previous commit, the processor leaves the file
  * list in place and advances the stored commit id to this deployment. Created files,
- * deleted files, a missing manifest, or a manifest from another commit rebuild it from
- * the local repository.
+ * deleted files, a missing manifest, a manifest from another commit, or a failed
+ * commit-id update rebuild it from the local repository.
  * <p>
  * Runs after the S3 sync and before {@link S3DeploymentEventsProcessor}, so the
  * deployment-events signal is published only after the manifest is in place.
@@ -122,9 +122,8 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 			if (previousCommitId != null) {
 				try (S3Client client = buildClient()) {
 					HeadObjectResponse manifest = manifestMatchingPreviousCommit(client, previousCommitId);
-					if (manifest != null) {
-						advanceManifestCommitId(client, manifest,
-							getCommitId(deployment, LATEST_COMMIT_ID_PARAM_NAME));
+					if (manifest != null && advanceManifestCommitId(client, manifest,
+						getCommitId(deployment, LATEST_COMMIT_ID_PARAM_NAME))) {
 						logger.info("Skipping content store manifest rebuild for s3://{}/{} because it matches the previous commit",
 							getBucket(), getS3Key(ContentStoreManifest.FILE_NAME));
 						return null;
@@ -221,11 +220,12 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	 * Copies the manifest onto itself so its commit id metadata becomes {@code latestCommitId}.
 	 * The file list is unchanged. S3 only replaces metadata when the object is copied with
 	 * {@link MetadataDirective#REPLACE}.
+	 *
+	 * @return false when the copy fails, so the caller rebuilds the manifest instead of failing the deployment
 	 */
-	private void advanceManifestCommitId(S3Client client, HeadObjectResponse manifest, String latestCommitId)
-		throws DeployerException {
+	private boolean advanceManifestCommitId(S3Client client, HeadObjectResponse manifest, String latestCommitId) {
 		if (latestCommitId == null || latestCommitId.equals(metadataValue(manifest, MANIFEST_COMMIT_ID_METADATA))) {
-			return;
+			return true;
 		}
 
 		String bucket = getBucket();
@@ -250,9 +250,11 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 		logger.info("Updating content store manifest commit id for s3://{}/{} to {}", bucket, key, latestCommitId);
 		try {
 			client.copyObject(request.build());
+			return true;
 		} catch (Exception e) {
-			throw new DeployerException(format(
-				"Error updating content store manifest commit id for s3://%s/%s", bucket, key), e);
+			logger.warn("Unable to update content store manifest commit id for s3://{}/{}. Rebuilding it",
+				bucket, key, e);
+			return false;
 		}
 	}
 

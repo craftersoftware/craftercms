@@ -170,6 +170,25 @@ public class S3ContentStoreManifestProcessorTest {
 	}
 
 	@Test
+	public void testUpdateOnlyPublishRebuildsWhenMetadataCopyFails() throws Exception {
+		when(client.headObject(any(HeadObjectRequest.class))).thenReturn(HeadObjectResponse.builder()
+			.contentType("application/gzip")
+			.metadata(Map.of(MANIFEST_COMMIT_ID_METADATA, PREVIOUS_COMMIT_ID.name())).build());
+		when(client.copyObject(any(CopyObjectRequest.class)))
+			.thenThrow(S3Exception.builder().statusCode(500).message("copy failed").build());
+
+		ChangeSet updates = new ChangeSet(List.of(), List.of("/site/website/index.xml"), List.of());
+		assertNull(processor().doMainProcess(deployment(PREVIOUS_COMMIT_ID, LATEST_COMMIT_ID), null, updates, null));
+
+		verify(client).copyObject(any(CopyObjectRequest.class));
+		verify(client).putObject(argThat((PutObjectRequest request) ->
+			"test-bucket".equals(request.bucket()) && MANIFEST_KEY.equals(request.key())
+				&& LATEST_COMMIT_ID.name().equals(request.metadata().get(MANIFEST_COMMIT_ID_METADATA))),
+			any(RequestBody.class));
+		assertEquals(2, clientsBuilt);
+	}
+
+	@Test
 	public void testUpdateOnlyPublishLeavesMetadataWhenCommitIsUnchanged() throws Exception {
 		when(client.headObject(any(HeadObjectRequest.class))).thenReturn(HeadObjectResponse.builder()
 			.metadata(Map.of(MANIFEST_COMMIT_ID_METADATA, PREVIOUS_COMMIT_ID.name())).build());
