@@ -97,12 +97,22 @@ public class S3ContentStoreManifestProcessorTest {
 		Files.writeString(repo.resolve("site/website/crafter-level-descriptor.level.xml"), "<level/>");
 		Files.writeString(repo.resolve("site/website/hero.png.blob"), "blob");
 
-		List<String> paths = processor().listPublishedFiles(repo);
+		List<String> paths = processor(false).listPublishedFiles(repo);
 
 		assertTrue(paths.contains("/site/website/index.xml"));
 		assertTrue(paths.contains("/site/website/crafter-level-descriptor.level.xml"));
 		assertTrue(paths.contains("/site/website/hero.png.blob"));
 		assertFalse(paths.contains("/.git/config"));
+	}
+
+	@Test
+	public void testListPublishedFilesSkipsBlobPointersWhenBlobsAreIgnored() throws Exception {
+		Files.writeString(repo.resolve("site/website/hero.png.blob"), "blob");
+
+		List<String> paths = processor(true).listPublishedFiles(repo);
+
+		assertTrue(paths.contains("/site/website/index.xml"));
+		assertFalse(paths.contains("/site/website/hero.png.blob"));
 	}
 
 	@Test
@@ -235,12 +245,21 @@ public class S3ContentStoreManifestProcessorTest {
 	}
 
 	private S3ContentStoreManifestProcessor processor() {
-		return processor(repo);
+		return processor(repo, false);
+	}
+
+	private S3ContentStoreManifestProcessor processor(boolean ignoreBlobFiles) {
+		return processor(repo, ignoreBlobFiles);
 	}
 
 	private S3ContentStoreManifestProcessor processor(Path repoRoot) {
-		return new S3ContentStoreManifestProcessor(null, repoRoot.toString()) {
+		return processor(repoRoot, false);
+	}
+
+	private S3ContentStoreManifestProcessor processor(Path repoRoot, boolean ignoreBlobFiles) {
+		return new S3ContentStoreManifestProcessor(null, repoRoot.toString(), ".blob") {
 			{
+				ignoreBlobs = ignoreBlobFiles;
 				siteName = "acme";
 				s3Url = S3Utilities.builder().region(Region.US_EAST_1).build()
 					.parseUri(URI.create("s3://test-bucket/sites/acme/"));
