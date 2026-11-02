@@ -581,9 +581,7 @@ export const itemActionDispatcher = ({
 			}
 			case 'createContent': {
 				const id = nanoid();
-
-				// TODO: https://github.com/craftersoftware/craftercms/issues/4473
-				// Temporary solution was to add a trailing slash to the path if it's a folder. Backend hasn't been updated to support this yet.
+				// Add a trailing slash to the path if it's a folder. https://github.com/craftersoftware/craftercms/issues/4473
 				const path = item.systemType === 'folder' && !item.path.endsWith('/') ? `${item.path}/` : item.path;
 
 				dispatch(blockUI({ progress: 'indeterminate' }));
