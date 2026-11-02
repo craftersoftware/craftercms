@@ -292,7 +292,7 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-				if (!attrs.isRegularFile()) {
+				if (!Files.isRegularFile(file)) {
 					return FileVisitResult.CONTINUE;
 				}
 				String relative = repoRoot.relativize(file).toString().replace('\\', '/');
