@@ -60,13 +60,11 @@ import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
 import { ajax, AjaxError, AjaxResponse } from 'rxjs/ajax';
 import { DEFAULT_CONTENT_TYPE_PREVIEW_IMAGE_URL } from '../utils/constants';
 
-// FE2 TODO: Verify removal
-// const typeMap = {
-//   input: 'text',
-//   rte: 'html',
-//   checkbox: 'boolean',
-//   'image-picker': 'image'
-// };
+/** Remaps legacy form-definition control types to FE2 built-ins at parse time. */
+const legacyTypeRemap: Record<string, string> = {
+	disabled: 'checkbox',
+	'internal-name': 'input'
+};
 
 function bestGuessParse(value: unknown): unknown {
 	if (nou(value)) {
@@ -295,7 +293,7 @@ function applyCountLimits(
 	legacyField: LegacyFormDefinitionField,
 	contentTypeId?: string
 ): void {
-	const storage = getCountLimitStorage(legacyField.type);
+	const storage = getCountLimitStorage(field.type);
 	if (!storage) return;
 	for (const name of storage.stripConstraints) {
 		delete field.validations[name as keyof typeof field.validations];
@@ -331,6 +329,7 @@ function parseLegacyFormDefinitionFields(
 		// FE2 TODO: Changed the camelizing of file-name and internal-name
 		// const fieldId = ['file-name', 'internal-name'].includes(legacyField.id) ? camelize(legacyField.id) : legacyField.id;
 		const fieldId = legacyField.id;
+		const type = legacyTypeRemap[legacyField.type] ?? legacyField.type;
 
 		sectionFieldIds?.push(fieldId);
 
@@ -339,8 +338,8 @@ function parseLegacyFormDefinitionFields(
 			name: legacyField.title,
 			description: legacyField.description,
 			helpText: legacyField.help,
-			type: legacyField.type, // FE2 TODO: Changed from `type: typeMap[legacyField.type] || legacyField.type,`
-			sortable: legacyField.type === 'node-selector' || legacyField.type === 'repeat',
+			type,
+			sortable: type === 'node-selector' || type === 'repeat',
 			validations: {},
 			properties: {},
 			defaultValue: legacyField.defaultValue
@@ -407,7 +406,7 @@ function parseLegacyFormDefinitionFields(
 		});
 
 		const propertyProp = legacyField.properties?.property;
-		switch (legacyField.type) {
+		switch (type) {
 			case 'repeat': {
 				// Nested fields only. Count limits come from countLimitStorage below.
 				field.fields = {};
