@@ -132,7 +132,7 @@ FE loads this (via Studio APIs / content-type catalog) to build the author form.
 Root `<content-type>` with registry-ish metadata, e.g.:
 
 - Dupes of form-definition: `label`, `form`, thumbnail, quickCreate\*
-- Removal candidates (legacy noise): `form-path`, `model-instance-path`, `file-extension`, `content-as-folder`, `previewable`, `noThumbnail`
+- Removal candidates (legacy noise): `form-path`, `model-instance-path`, `file-extension`, `content-as-folder`, `previewable`
 - Move into form-definition: `controller`, `paths` (includes/excludes)
 
 Annotated working notes: `ui/app/src/components/ContentTypeManagement/config.xml`.

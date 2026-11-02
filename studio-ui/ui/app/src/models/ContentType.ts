@@ -375,7 +375,6 @@ export interface LegacyContentType {
 	lastUpdated: string;
 	modelInstancePath: string;
 	name: string; // The type id (legacyType.form === legacyType.name)
-	noThumbnail: boolean;
 	nodeRef: any;
 	pathExcludes: string[];
 	pathIncludes: string[];
