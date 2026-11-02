@@ -621,7 +621,15 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							])
 						);
 						if (action === 'saveAndClose') {
-							if (!postSubmitEdits) {
+							if (postSubmitEdits) {
+								dispatch(
+									showSystemNotification({
+										message: formatMessage({
+											defaultMessage: 'Saved. The dialog stayed open because there are newer unsaved changes.'
+										})
+									})
+								);
+							} else {
 								onClose?.();
 							}
 						} else if (action === 'saveAndMinimize') {
