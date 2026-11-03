@@ -114,6 +114,12 @@ const updatePath = (state, payload) => {
 	const { id, parentPath, children, options } = payload;
 	const chunk = state[id];
 	chunk.totalByPath[parentPath] = children.total;
+	// Pages can be keyed as both `/page` and `/page/index.xml`; keep an existing alias in sync.
+	[withIndex(parentPath), withoutIndex(parentPath)].forEach((alias) => {
+		if (alias !== parentPath && alias in chunk.totalByPath) {
+			chunk.totalByPath[alias] = children.total;
+		}
+	});
 	chunk.childrenByParentPath[parentPath] = [];
 	if (children.levelDescriptor) {
 		chunk.childrenByParentPath[parentPath].push(children.levelDescriptor.path);
