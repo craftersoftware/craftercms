@@ -138,6 +138,27 @@ export function parseComponentsDataSourceContentTypesProperty(
 	return validations;
 }
 
+/**
+ * The id of the field's components data source that allows adding items of the content type the given way.
+ * Undefined when none or more than one does, as the source of the item is then unknown.
+ */
+export function getItemDataSourceId(
+	contentType: ContentType,
+	field: ContentTypeField,
+	itemContentTypeId: string,
+	mode: keyof AllowedContentTypesData
+): string | undefined {
+	const itemManagerIds = (field?.properties?.itemManager?.value as string)?.split(',').map((id) => id.trim()) ?? [];
+	const matches = (contentType.dataSources ?? []).filter(
+		(dataSource) =>
+			dataSource.type === 'components' &&
+			itemManagerIds.includes(dataSource.id) &&
+			parseComponentsDataSourceContentTypesProperty(dataSource, dataSource.properties.contentTypes).allowedContentTypes
+				.value[itemContentTypeId]?.[mode]
+	);
+	return matches.length === 1 ? matches[0].id : undefined;
+}
+
 function getFieldValidations(
 	fieldProperty: LegacyFormDefinitionProperty | LegacyFormDefinitionProperty[],
 	dropTargetsLookup?: LookupTable<DataSource>

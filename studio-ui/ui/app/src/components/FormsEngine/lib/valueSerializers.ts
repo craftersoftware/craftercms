@@ -19,7 +19,7 @@ import { NodeSelectorItem } from '../controls/NodeSelector';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
 import { getPluginControlValueSerializer } from '../controls/registry';
-import { XmlKeys } from './formConsts';
+import { preservedElements, systemFieldsNotInType, XmlKeys } from './formConsts';
 import { BuiltInControlType } from './controlMap';
 import { RepeatItem } from '../controls/Repeat';
 import { XMLBuilder, XmlBuilderOptions } from 'fast-xml-parser';
@@ -109,7 +109,12 @@ function prepareValuesForXmlSerialising(
 	values: LookupTable<unknown>,
 	contentTypesLookup: LookupTable<ContentType>
 ): LookupTable<unknown> {
-	const jObj = { ...values };
+	// System elements go first, as document-wide readers (e.g. querySelector('objectId')) take the first match.
+	const jObj: LookupTable<unknown> = {};
+	[...systemFieldsNotInType, ...preservedElements].forEach((key) => {
+		if (key in values) jObj[key] = values[key];
+	});
+	Object.assign(jObj, values);
 	Object.entries(jObj).forEach(([id, value]) => {
 		// System props are not in the model, hence field might be undefined at times.
 		const field = fields[id];

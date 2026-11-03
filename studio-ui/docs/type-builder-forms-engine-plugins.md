@@ -297,6 +297,8 @@ export default {
 };
 ```
 
+`raw` is the element text as a string, never auto-typed (`<count>5</count>` gives `'5'`, not `5`), or the deserialized object for elements with children. When the element is missing and the field has no default value, `raw` is `undefined`, so handle that case. Convert typed values in `valueRetriever`; without one, the control receives the value as-is.
+
 `apiVersion` is optional and currently `1`. Omitting it is treated as `1`, so existing plugins keep registering. Any other value is refused by `registerPlugin` before any registry write (same as a missing `Component` or other invalid control entry). The error names the plugin id and the control type. The whole `registerPlugin` call fails, so nothing from that plugin registers (its other controls, data sources, widgets and locales included), and every field using one of its controls shows the existing load-error placeholder.
 
 Plugin bundles can read the host contract at runtime from `craftercms.formsEngine.controls.apiVersion` (`CONTROL_API_VERSION` on `formsEngineControlsHost`), the same way data-source bundles read `craftercms.formsEngine.dataSources.apiVersion`. When to bump that integer: [§10](#10-plugin-api-versioning).
@@ -435,7 +437,7 @@ Most modules return actions whose `run(ctx, { target? })` calls shared services.
 
 Action ids must be unique within a configured datasource instance. Resolution stamps the stable cross-instance key `dataSourceId::actionId`. Create actions may expose multiple typed targets; `createContent` resolves after nested-form save/cancel so the selected action returns a semantic item selection.
 
-The runtime retains the source datasource on the resolved action/choice. It does not currently persist FE1's node-selector `datasource` XML attribute; FE2/XB provenance round-tripping is intentionally deferred.
+The runtime retains the source datasource on the resolved action/choice. Node-selector items added through an action get that datasource's id in the `datasource` XML attribute, as in FE1, and existing item attributes are kept on save. XB inserts write the attribute only when exactly one `components` datasource of the field allows the inserted type in that mode; otherwise it is left off.
 
 ### Form controllers
 
@@ -565,7 +567,7 @@ interface ControlPluginContribution<V = unknown> {
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
 	fieldChrome?: boolean; // optional; default true wraps Component in FormsEngineField
 	fieldSx?: SxProps<Theme>; // optional sx for the default wrapper
-	valueRetriever?: ValueRetriever<V>; // optional XML → form value: (value, { field }) => V
+	valueRetriever?: ValueRetriever<V>; // optional XML → form value: (value, { field }) => V. `value` is a string (never auto-typed), an object for elements with children, or undefined when absent with no default
 	valueSerializer?: ValueSerializer<V>; // optional form value → XML shape: (value, { field, contentTypesById }) => unknown
 	validator?: Validator<V>; // optional type-specific: (value, { field, signal, siteId, getValue }) => { valid, messages? }
 }

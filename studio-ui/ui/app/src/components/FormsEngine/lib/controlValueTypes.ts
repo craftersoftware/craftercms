@@ -23,7 +23,11 @@ export interface ValueRetrieverContext {
 	readonly field: Readonly<ContentTypeField>;
 }
 
-/** XML / form-value → in-memory control value (form load). Synchronous. */
+/**
+ * XML / form-value → in-memory control value (form load). Synchronous. `value` is the element text as a string
+ * (never auto-typed), the deserialized object for elements with children, or `undefined` when the element is missing
+ * and there is no default.
+ */
 export type ValueRetriever<V = unknown> = (value: unknown, ctx: ValueRetrieverContext) => V;
 
 /** Second argument of a {@link ValueSerializer}. New members may be added; existing ones are stable. */
