@@ -22,9 +22,7 @@ import { TypeBuilderControl } from '../utils';
 import Typography from '@mui/material/Typography';
 import { StringListEditor } from './StringListEditor';
 
-export interface TypeDestinationPathsSelectorProps extends TypeBuilderControl {
-	value: DestinationPaths;
-}
+export type TypeDestinationPathsSelectorProps = TypeBuilderControl<DestinationPaths>;
 
 const messages = defineMessages({
 	includes: { id: 'typeDestinationPaths.includes', defaultMessage: 'Includes' },

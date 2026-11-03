@@ -33,11 +33,11 @@ interface Dependency {
 	'remove-empty-folder': boolean;
 }
 
-export interface DeleteDependenciesProps extends ControlProps {
-	value: {
-		'delete-dependency': Dependency[];
-	};
+interface DeleteDependenciesValue {
+	'delete-dependency': Dependency[];
 }
+
+export type DeleteDependenciesProps = ControlProps<DeleteDependenciesValue>;
 
 export function DeleteDependencies(props: DeleteDependenciesProps) {
 	const { field, value, setValue } = props;

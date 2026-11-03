@@ -32,9 +32,7 @@ import { reversePluckProps } from '../../../utils/object';
 import { SearchBar, type SearchBarProps } from '../../SearchBar';
 import { getPropertyValue } from '../../FormsEngine/lib/formUtils';
 
-export interface ContentTypesSelectorProps extends TypeBuilderControl {
-	value: string[] | '*';
-}
+export type ContentTypesSelectorProps = TypeBuilderControl<string[] | '*'>;
 
 /**
  * Enables the selection of multiple content types using a checkbox group layout.

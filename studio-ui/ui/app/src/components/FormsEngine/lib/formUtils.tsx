@@ -404,7 +404,7 @@ export function createFieldAtoms(
 			formContext.fieldUpdates$.next(field.id);
 		}
 	);
-	const validationAtom = atom(async (get) => {
+	const validationAtom = atom(async (get, { signal }) => {
 		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
 		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
 		if (relevanceVersion) get(relevanceVersion);
@@ -415,6 +415,7 @@ export function createFieldAtoms(
 			siblingIds: validatorsData?.siblingIds,
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
+			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			fileName: formContextRef.current.atoms?.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
@@ -422,7 +423,9 @@ export function createFieldAtoms(
 			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
 			// Item-count fields compare min and max. Reading the partner subscribes this atom to it.
 			getValue: (fieldId: string) => {
-				const partner = formContextRef.current.atoms?.valueByFieldId?.[fieldId];
+				const valueByFieldId = formContextRef.current.atoms?.valueByFieldId;
+				// Own ids only. `constructor` or `toString` is not a field.
+				const partner = valueByFieldId && Object.hasOwn(valueByFieldId, fieldId) ? valueByFieldId[fieldId] : undefined;
 				return partner ? get(partner) : undefined;
 			}
 		});
@@ -601,6 +604,23 @@ export function relevantFieldValidations(
 	);
 }
 
+/**
+ * The verdict of the latest validation run. A run that is superseded while it is awaited (a value it reads changed)
+ * is aborted and its result is discarded, so a validator that stops on abort can't make the field look invalid.
+ */
+async function readSettledValidity(
+	store: { get<Value>(atom: Atom<Value>): Value },
+	validityAtom: Atom<Promise<FieldValidityState>>
+): Promise<FieldValidityState> {
+	let pending = store.get(validityAtom);
+	for (;;) {
+		const state = await pending;
+		const latest = store.get(validityAtom);
+		if (latest === pending) return state;
+		pending = latest;
+	}
+}
+
 /** Live invalid field ids. The alert and a selected-item save both read through this. */
 export async function readInvalidFieldIds(
 	store: { get<Value>(atom: Atom<Value>): Value },
@@ -610,7 +630,7 @@ export async function readInvalidFieldIds(
 ): Promise<string[]> {
 	if (!validationByFieldId) return [];
 	const fields = relevantFieldValidations(validationByFieldId, irrelevantFieldPaths, parentPath);
-	const states = await Promise.all(fields.map(({ atom: validityAtom }) => store.get(validityAtom)));
+	const states = await Promise.all(fields.map(({ atom: validityAtom }) => readSettledValidity(store, validityAtom)));
 	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
 }
 

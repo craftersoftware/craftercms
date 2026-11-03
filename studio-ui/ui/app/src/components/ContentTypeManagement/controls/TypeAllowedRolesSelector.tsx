@@ -27,9 +27,7 @@ const messages = defineMessages({
 	remove: { id: 'typeAllowedRoles.remove', defaultMessage: 'Remove Role {index}' }
 });
 
-export interface TypeAllowedRolesSelectorProps extends TypeBuilderControl {
-	value: string[];
-}
+export type TypeAllowedRolesSelectorProps = TypeBuilderControl<string[]>;
 
 /**
  * Free-text roles for the content type. The list UI is {@link StringListEditor}.

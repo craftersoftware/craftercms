@@ -15,10 +15,11 @@
  */
 
 import { ControlProps } from '../types';
+import type { SxProps, Theme } from '@mui/material/styles';
 import { countLimitValue } from '../../../utils/countLimits';
 import Alert from '@mui/material/Alert';
 import { FormattedMessage } from 'react-intl';
-import React, { ElementType, memo, Suspense, useCallback, useContext, useMemo } from 'react';
+import React, { ElementType, memo, Suspense, useCallback, useContext, useId, useMemo } from 'react';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { Atom, useAtom } from 'jotai';
 import { controlMap } from './controlMap';
@@ -93,10 +94,19 @@ function PluginControlRenderer({
 	plugin: NonNullable<ContentTypeField['properties']['plugin']>;
 }) {
 	const loaded = useControlPluginModule(siteId, plugin, props.field.type, ControlPluginError);
-	return <ResolvedControlRenderer {...props} Control={loaded.Component} bindings={loaded.bindings} />;
+	return (
+		<ResolvedControlRenderer
+			{...props}
+			Control={loaded.Component}
+			// A control that declares none uses what `registerDataSourceBindings` registered for the type.
+			bindings={loaded.bindings.length ? loaded.bindings : getControlDataSourceBindings(props.field.type)}
+			fieldChrome={loaded.fieldChrome}
+			fieldSx={loaded.fieldSx}
+		/>
+	);
 }
 
-function ResolvedControlRenderer({
+export function ResolvedControlRenderer({
 	field,
 	autoFocus,
 	readonly,
@@ -104,13 +114,22 @@ function ResolvedControlRenderer({
 	value,
 	setValue,
 	Control,
-	bindings = getControlDataSourceBindings(field.type)
+	bindings = getControlDataSourceBindings(field.type),
+	fieldChrome = false,
+	fieldSx
 }: Omit<ControlWrapperProps, 'atom' | 'customControlMap'> & {
 	value: unknown;
 	setValue: (value: unknown) => void;
 	Control: ElementType<ControlProps>;
 	bindings?: ReturnType<typeof getControlDataSourceBindings>;
+	/**
+	 * Wrap the control in `FormsEngineField`, labelled by the generated ids. Built-in controls and Type Builder
+	 * controls wrap themselves, so this is `false` unless a plugin control asks for the default wrapper.
+	 */
+	fieldChrome?: boolean;
+	fieldSx?: SxProps<Theme>;
 }) {
+	const id = useId();
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypes = useContentTypes();
@@ -147,7 +166,9 @@ function ResolvedControlRenderer({
 		expandPath,
 		contentTypes
 	});
-	return (
+	const inputId = `${id}-input`;
+	const labelId = `${id}-label`;
+	const control = (
 		<Control
 			autoFocus={autoFocus && !readonly}
 			value={value}
@@ -155,8 +176,17 @@ function ResolvedControlRenderer({
 			field={field}
 			contentType={contentType}
 			readonly={readonly}
+			inputId={inputId}
+			labelId={labelId}
 			dataSources={dataSources}
 		/>
+	);
+	return fieldChrome ? (
+		<FormsEngineField field={field} htmlFor={inputId} labelId={labelId} sx={fieldSx}>
+			{control}
+		</FormsEngineField>
+	) : (
+		control
 	);
 }
 

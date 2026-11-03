@@ -28,13 +28,34 @@ import type { ResolvedDataSources } from './dataSources/types';
  */
 export const CONTROL_API_VERSION = 1 as const;
 
-export interface ControlProps {
-	value: unknown;
-	setValue(newValue: unknown): void;
-	field: ContentTypeField;
-	contentType: ContentType;
+/**
+ * A control value type erased for registries and maps that hold controls of different value types.
+ * A `ComponentType<ControlProps<string>>` is not assignable to `ComponentType<ControlProps<unknown>>`,
+ * so storage and lookup use this instead. Authors type their controls with a concrete `V`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyValue = any;
+
+/**
+ * Props every FE2 control receives. Public contract for plugin controls.
+ * `V` types the control's value, e.g. `ControlProps<string>` or `ControlProps<NodeSelectorItem[]>`.
+ */
+export interface ControlProps<V = unknown> {
+	value: V;
+	setValue(newValue: V): void;
+	/** The field definition. Read only: a control never changes it. */
+	field: Readonly<ContentTypeField>;
+	/** The content type that owns the field. Read only. */
+	contentType: Readonly<ContentType>;
 	readonly: boolean;
 	autoFocus: boolean;
+	/**
+	 * Host-generated id, unique per field instance. The default field wrapper's label points here (`htmlFor`),
+	 * so put it on the focusable input element.
+	 */
+	inputId: string;
+	/** Host-generated id of the field wrapper's label. Use it for `aria-labelledby` or a MUI `labelId`. */
+	labelId: string;
 	dataSources?: ResolvedDataSources;
 }
 
