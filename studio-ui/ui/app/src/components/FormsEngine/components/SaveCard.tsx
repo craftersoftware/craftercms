@@ -321,8 +321,6 @@ export function SaveCard(props: SaveCardProps) {
 			{showSaveOptions && (
 				// Sibling of the card, so the sidebar's space-y gap sits above Release Lock and Close.
 				<Box
-					role="group"
-					aria-labelledby={afterSavingLabelId}
 					sx={(theme) => ({
 						width: '100%',
 						// Same border ToggleButton paints: `1px solid ${(theme.vars || theme).palette.divider}`.
