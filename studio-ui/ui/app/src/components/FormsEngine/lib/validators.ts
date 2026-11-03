@@ -265,7 +265,7 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 			);
 			return { valid: false, messages: [] };
 		}
-		return { valid: result.valid, messages: result.messages ?? [] };
+		return { valid: result.valid, messages: result.valid ? [] : (result.messages ?? []) };
 	};
 }
 
