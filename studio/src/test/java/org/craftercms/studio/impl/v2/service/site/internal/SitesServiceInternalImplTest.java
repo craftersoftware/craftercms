@@ -33,7 +33,6 @@ import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
 import org.craftercms.studio.api.v2.exception.StagingAlreadyEnabledException;
-import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.exception.CompositeException;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -50,6 +49,7 @@ import org.craftercms.studio.model.rest.sites.CreateSiteRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -65,6 +65,8 @@ import java.io.IOException;
 import java.util.UUID;
 
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.craftercms.studio.model.rest.sites.CreateSiteRequest.RemoteAuthentication.NONE;
 import static org.junit.Assert.assertEquals;
@@ -119,8 +121,6 @@ public class SitesServiceInternalImplTest {
 	protected ItemTargetDAO itemTargetDao;
 	@Mock
 	protected GeneralLockService generalLockService;
-	@Mock
-	protected GitRepositoryHelper gitRepositoryHelper;
 
 	@Before
 	public void setUp() throws IOException, ServiceLayerException {
@@ -129,7 +129,6 @@ public class SitesServiceInternalImplTest {
 		sitesServiceInternal.setServicesConfig(servicesConfig);
 		sitesServiceInternal.setItemTargetDao(itemTargetDao);
 		sitesServiceInternal.setGeneralLockService(generalLockService);
-		sitesServiceInternal.setGitRepositoryHelper(gitRepositoryHelper);
 		sitesServiceInternal.setConfigurationService(configurationService);
 		sitesServiceInternal.setUpgradeManager(upgradeManager);
 		sitesServiceInternal.setContentService(contentService);
@@ -338,17 +337,16 @@ public class SitesServiceInternalImplTest {
 		site.setSiteId(SITE_ID);
 		site.setStagingEnabled(true);
 		when(siteDAO.getSite(SITE_ID)).thenReturn(site);
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 
 		assertThrows(StagingAlreadyEnabledException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
 
 		verify(deployer, never()).createStagingTarget(SITE_ID);
 		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
 	}
 
 	@Test
 	public void enableStagingUnpublishedSiteTest() throws Exception {
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
@@ -360,11 +358,12 @@ public class SitesServiceInternalImplTest {
 		verify(siteDAO).setStagingEnabled(SITE_ID);
 		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
 		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verifyEnableStagingLockReleased();
 	}
 
 	@Test
 	public void enableStagingPublishedSiteTest() throws Exception {
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
@@ -377,14 +376,15 @@ public class SitesServiceInternalImplTest {
 
 		verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
 		verify(itemTargetDao).initStaging(0L, "staging", "live");
-		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging");
+		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
 		verify(deployer).createStagingTarget(SITE_ID);
 		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
 	}
 
 	@Test
 	public void enableStagingExistingBranchSkipsBlobCopy() throws Exception {
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
@@ -396,22 +396,23 @@ public class SitesServiceInternalImplTest {
 		sitesServiceInternal.enableStaging(SITE_ID);
 
 		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
 		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
 		verify(deployer).createStagingTarget(SITE_ID);
 		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
 	}
 
 	@Test
 	public void enableStagingBlobCopyFailureDeletesCreatedBranch() throws Exception {
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
 		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
 		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
 		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
-		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository).copyBlobs(SITE_ID, "live", "staging");
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
 
 		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
 
@@ -420,11 +421,11 @@ public class SitesServiceInternalImplTest {
 		verify(deployer, never()).createStagingTarget(SITE_ID);
 		verify(deployer, never()).deleteStagingTarget(SITE_ID);
 		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
 	}
 
 	@Test
 	public void enableStagingFailureRollsBackTest() throws Exception {
-		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
@@ -439,6 +440,15 @@ public class SitesServiceInternalImplTest {
 		verify(itemTargetDao).deleteForTarget(0L, "staging");
 		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
 		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	private void verifyEnableStagingLockReleased() {
+		String enableLockKey = getEnableStagingLockKey(SITE_ID);
+		InOrder inOrder = inOrder(generalLockService);
+		inOrder.verify(generalLockService).lock(enableLockKey);
+		inOrder.verify(generalLockService).unlock(enableLockKey);
+		verify(generalLockService, never()).lock(getPublishedRepoLockKey(SITE_ID));
 	}
 
 	@Test

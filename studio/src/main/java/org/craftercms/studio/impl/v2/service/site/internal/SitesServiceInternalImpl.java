@@ -100,7 +100,6 @@ import org.craftercms.studio.api.v2.service.site.SitesService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.upgrade.StudioUpgradeManager;
-import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLOB_STORES_CONFIG_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLOB_STORES_SERVERLESS_DEFAULT_CONFIG_PATH;
@@ -115,6 +114,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_DEFAUL
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_SANDBOX_BRANCH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SITES_REPOS_PATH;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
 import org.craftercms.studio.api.v2.utils.spring.context.SiteBootstrapStateProvider;
 import static org.craftercms.studio.impl.v2.utils.PluginUtils.validatePluginParameters;
 import static org.craftercms.studio.impl.v2.utils.db.DBUtils.runAfterCommit;
@@ -169,7 +169,6 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	private ServicesConfig servicesConfig;
 	private ItemTargetDAO itemTargetDao;
 	private GeneralLockService generalLockService;
-	private GitRepositoryHelper gitRepositoryHelper;
 
 	@ConstructorProperties({"descriptorReader",
 			"studioConfiguration", "siteDao",
@@ -1097,14 +1096,9 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		this.generalLockService = generalLockService;
 	}
 
-	@Autowired
-	public void setGitRepositoryHelper(GitRepositoryHelper gitRepositoryHelper) {
-		this.gitRepositoryHelper = gitRepositoryHelper;
-	}
-
 	@Override
 	public void enableStaging(String siteId) throws ServiceLayerException {
-		String lockKey = gitRepositoryHelper.getPublishedRepoLockKey(siteId);
+		String lockKey = getEnableStagingLockKey(siteId);
 		generalLockService.lock(lockKey);
 		try {
 			doEnableStaging(siteId);
@@ -1115,7 +1109,11 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	/**
 	 * Initialize staging for an existing site and set the one-way flag only after initialization succeeds.
-	 * Blobs are copied from live only when this call creates the staging branch. An existing branch is left
+	 * The enable lock is held for the whole call so two requests cannot delete each other's branch or deployer
+	 * target. The published repository lock is not held across blob copy or the deployer call. Branch create and
+	 * delete take that lock themselves.
+	 * Blobs are copied from live only when this call creates the staging branch. The paths come from that new
+	 * branch, which points at the live commit captured when the branch was created. An existing branch is left
 	 * as published, so a retry does not revert staging-only assets. {@code createStagingTarget} is
 	 * create-if-not-exists, so repeating it is safe. On failure, only the branch, item targets, and deployer
 	 * target this call created are removed. There is no blob-prefix delete; deleting the new branch lets the
@@ -1142,7 +1140,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 					insertedTargets = true;
 				}
 				if (createdBranch) {
-					blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+					blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
 				} else {
 					logger.info("Staging branch '{}' already exists for site '{}'. Leaving existing blobs in place",
 						stagingBranch, siteId);
