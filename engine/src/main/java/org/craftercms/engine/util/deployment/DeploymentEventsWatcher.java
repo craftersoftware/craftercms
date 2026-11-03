@@ -16,7 +16,6 @@
 package org.craftercms.engine.util.deployment;
 
 import org.apache.commons.lang3.StringUtils;
-import org.craftercms.core.exception.StoreException;
 import org.craftercms.core.service.CachingOptions;
 import org.craftercms.core.service.Content;
 import org.craftercms.core.service.ContentStoreService;
@@ -92,8 +91,9 @@ public class DeploymentEventsWatcher implements ApplicationListener<ApplicationE
 
 		try {
 			currentDeploymentEvents = loadDeploymentEvents(siteContext);
-		} catch (IOException | StoreException e) {
-			// A failed read must not abort the poll for the remaining sites.
+		} catch (IOException | RuntimeException e) {
+			// A failed read, including an unchecked SDK error from a lazy stream, must not abort
+			// the poll for the remaining sites.
 			logger.error("Unable to load deployment events for site '{}'", siteName, e);
 			return;
 		}

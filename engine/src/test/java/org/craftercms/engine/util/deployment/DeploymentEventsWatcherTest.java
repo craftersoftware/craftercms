@@ -172,6 +172,34 @@ public class DeploymentEventsWatcherTest {
 	}
 
 	@Test
+	public void checkContinuesAfterRuntimeException() throws IOException {
+		String otherSiteName = "othersite";
+		SiteContext otherSite = mock(SiteContext.class);
+		Context otherContext = mock(Context.class);
+		ContentStoreService otherStore = mock(ContentStoreService.class);
+		when(otherSite.getSiteName()).thenReturn(otherSiteName);
+		when(otherSite.getContext()).thenReturn(otherContext);
+		when(otherSite.getStoreService()).thenReturn(otherStore);
+		when(siteContextManager.listContexts()).thenReturn(List.of(siteContext, otherSite));
+
+		Content failedContent = mock(Content.class);
+		when(failedContent.getInputStream()).thenThrow(new RuntimeException("events file is not cached"));
+		when(contentStoreService.findContent(context, CACHE_OFF_CACHING_OPTIONS, DEFAULT_DEPLOYMENT_EVENTS_FILE_URL))
+			.thenReturn(failedContent);
+
+		Instant now = Instant.now();
+		Properties deploymentEvents = createDeploymentEvents(now, now, now);
+		Content deploymentEventsContent = getDeploymentEventsAsContent(deploymentEvents);
+		when(otherStore.findContent(otherContext, CACHE_OFF_CACHING_OPTIONS, DEFAULT_DEPLOYMENT_EVENTS_FILE_URL))
+			.thenReturn(deploymentEventsContent);
+
+		watcher.checkForEvents();
+
+		verify(watcher.latestDeploymentEventsPerSite, never()).put(eq(SITENAME), any());
+		verify(watcher.latestDeploymentEventsPerSite, times(1)).put(otherSiteName, deploymentEvents);
+	}
+
+	@Test
 	public void checkForNoNewEventsTest() throws IOException {
 		Instant now = Instant.now();
 		Properties lastDeploymentEvents = createDeploymentEvents(now, now, now);
