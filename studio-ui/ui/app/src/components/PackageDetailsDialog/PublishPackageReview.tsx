@@ -148,24 +148,28 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 					</Typography>
 					<Paper sx={{ p: 1.5 }}>
 						<Grid container spacing={2}>
-							<Grid size={6}>
-								<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-									<FormattedMessage defaultMessage="Status" />
-								</Typography>
-								<Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-									{publishPackage.approvalState === PACKAGE_APPROVED ? (
-										<>
-											<VerifiedUserOutlinedIcon color="success" fontSize="small" sx={{ mr: 1 }} />
-											<FormattedMessage defaultMessage="Approved" />
-										</>
-									) : (
-										<>
-											<BlockOutlinedIcon color="error" fontSize="small" sx={{ mr: 1 }} />
-											<FormattedMessage defaultMessage="Rejected" />
-										</>
-									)}
-								</Box>
-							</Grid>
+							{/* Show the status if the package has been approved or rejected. At this point a package may be submitted (already approved edited package). */}
+							{(publishPackage.approvalState === PACKAGE_APPROVED ||
+								publishPackage.approvalState === PACKAGE_REJECTED) && (
+								<Grid size={6}>
+									<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+										<FormattedMessage defaultMessage="Status" />
+									</Typography>
+									<Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+										{publishPackage.approvalState === PACKAGE_APPROVED ? (
+											<>
+												<VerifiedUserOutlinedIcon color="success" fontSize="small" sx={{ mr: 1 }} />
+												<FormattedMessage defaultMessage="Approved" />
+											</>
+										) : (
+											<>
+												<BlockOutlinedIcon color="error" fontSize="small" sx={{ mr: 1 }} />
+												<FormattedMessage defaultMessage="Rejected" />
+											</>
+										)}
+									</Box>
+								</Grid>
+							)}
 							<Grid size={6}>
 								<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 									<FormattedMessage defaultMessage="Reviewer" />
