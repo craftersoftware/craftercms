@@ -42,7 +42,7 @@ import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
 import { XmlKeys } from './formConsts';
-import { fromString } from '../../../utils/xml';
+import { fromString, getParsedField } from '../../../utils/xml';
 import {
 	moveAndUpdateContent,
 	updateEmbeddedComponent,
@@ -675,8 +675,8 @@ function complementValuesWithSystemProps(
 	const systemProps = createObjectWithSystemProps(contentType, {
 		[XmlKeys.modelId]: id,
 		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
-		[XmlKeys.dateCreated]: contentObject[XmlKeys.dateCreated] as string,
-		[XmlKeys.dateCreatedDt]: contentObject[XmlKeys.dateCreatedDt] as string,
+		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
+		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
 		[XmlKeys.savedAsDraft]: saveAsDraft
 	});
 

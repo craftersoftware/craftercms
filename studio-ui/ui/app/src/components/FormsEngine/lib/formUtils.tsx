@@ -47,7 +47,7 @@ import React, {
 	useRef,
 	type SetStateAction
 } from 'react';
-import { fromString, getInnerHtml } from '../../../utils/xml';
+import { fromString, getInnerHtml, getParsedField } from '../../../utils/xml';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import alertDialogUrl from '../../../assets/warning.svg';
@@ -1320,7 +1320,9 @@ export function prepareEmbeddedItemForm(props: {
 		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
 		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
 		contentObject = (
-			parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
+			getParsedField(parentStackData.itemMeta.contentObject, fieldId) as {
+				item: Array<{ component: LookupTable<unknown> }>;
+			}
 		).item[index].component;
 		contentXml = element.outerHTML;
 	} else {

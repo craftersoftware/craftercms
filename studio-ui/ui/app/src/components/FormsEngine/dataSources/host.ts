@@ -23,6 +23,7 @@ import {
 } from '../controls/registry';
 import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
+import { CONTROL_API_VERSION } from '../types';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { useFieldValue } from '../lib/formsEngineContext';
 
@@ -61,6 +62,7 @@ export const formsEngineDataSourcesHost = {
  * imported/bundled by the plugin.
  */
 export const formsEngineControlsHost = {
+	apiVersion: CONTROL_API_VERSION,
 	registerDataSourceBindings: registerControlDataSourceBindings,
 	getDataSourceBindings: getControlDataSourceBindings,
 	getControl: getRegisteredControlContribution,
