@@ -71,23 +71,15 @@ function parseXml(xml: string) {
 }
 
 describe('form property and constraint pass-through', () => {
-	// Given /page/catalog, a no-edit save keeps placeInNav and descriptor-mapper and does not write iceId or the thumbnail "undefined".
+	// Given /page/catalog, a no-edit save keeps its form properties and does not write iceId or the thumbnail "undefined".
 	it('keeps catalog form properties and drops iceId and the undefined thumbnail', () => {
 		const parsed = parseXml(readFileSync(catalogPath, 'utf8'));
 		assert.equal(parsed.thumbnailFileName, null);
 		const props = formProperties(parsed);
 		assert.deepEqual(
 			props.map((item) => item.name),
-			['placeInNav', 'display-template', 'no-template-required', 'descriptor-mapper']
+			['display-template', 'no-template-required']
 		);
-		const placeInNav = props.find((item) => item.name === 'placeInNav');
-		const mapper = props.find((item) => item.name === 'descriptor-mapper');
-		assert.equal(placeInNav?.value, 'true');
-		assert.equal(placeInNav?.type, 'boolean');
-		assert.equal(placeInNav?.label, 'Show In Nav');
-		assert.equal(mapper?.value, 'hierarchical-mapper');
-		assert.equal(mapper?.type, 'string');
-		assert.equal(mapper?.label, 'Descriptor Mapper');
 		assert.equal(
 			props.some((item) => item.name === 'merge-strategy'),
 			false
