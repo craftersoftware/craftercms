@@ -41,7 +41,12 @@ import {
 	removeTypeViewCompactMode,
 	removeViewGroupedTypes,
 	removeStoredShowDisabledUsers,
-	removeStoredEnabledKeyboardShortcutsState
+	removeStoredEnabledKeyboardShortcutsState,
+	removeStoredFormsEngineReleaseLockOnClose,
+	removeStoredFormsEngineSaveAsDraft,
+	getFormsEngineCollapseToCKey,
+	getFormsEngineCloseAfterSave,
+	getFormsEngineMinimizeAfterSave
 } from '../../utils/state';
 
 export const preferencesGroups: Array<{
@@ -122,6 +127,15 @@ export const preferencesGroups: Array<{
 		label: <FormattedMessage defaultMessage="Form Settings" />,
 		onClear: (props) => {
 			removeStoredItems((key) => key.includes(`craftercms.${props.username}.saveButtonSubAction.`));
+			removeStoredItems((key) =>
+				[
+					getFormsEngineCollapseToCKey(props.username),
+					getFormsEngineCloseAfterSave(props.username),
+					getFormsEngineMinimizeAfterSave(props.username)
+				].includes(key)
+			);
+			removeStoredFormsEngineReleaseLockOnClose(props.username);
+			removeStoredFormsEngineSaveAsDraft(props.username);
 		}
 	},
 	{
