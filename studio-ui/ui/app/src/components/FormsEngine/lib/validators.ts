@@ -18,7 +18,7 @@ import ContentType, { type ContentTypeField } from '../../../models/ContentType'
 import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
-import { defineMessage, type MessageDescriptor } from 'react-intl';
+import { defineMessage, defineMessages, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
 import { checkPathExistence } from '../../../services/content';
@@ -201,36 +201,90 @@ const validationValidators: Partial<Record<string, BuiltInValidator>> = {
 	itemCount: itemCountEditorValidator
 };
 
-function isMessageDescriptor(value: unknown): value is MessageDescriptor {
-	if (value == null || typeof value !== 'object' || Array.isArray(value)) return false;
-	const { id, defaultMessage } = value as Record<string, unknown>;
-	return typeof id === 'string' || typeof defaultMessage === 'string';
+const pluginValidatorMessages = defineMessages({
+	validationFailed: {
+		defaultMessage: "This value couldn't be validated. Try again or contact your administrator."
+	}
+});
+
+/** Stable 32-bit FNV-1a hash of `text`, as hex. */
+function hashText(text: string): string {
+	let hash = 0x811c9dc5;
+	for (let i = 0; i < text.length; i++) {
+		hash ^= text.charCodeAt(i);
+		hash = Math.imul(hash, 0x01000193);
+	}
+	return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-/** A string, a `MessageDescriptor`, or a `[MessageDescriptor, values?]` tuple. See {@link FieldValidityMessage}. */
-function isValidMessage(message: unknown): boolean {
-	if (typeof message === 'string') return true;
+/**
+ * react-intl throws when it formats a descriptor with no `id`. Studio's build adds ids to the descriptors written
+ * in its source, but a plugin bundle may not use that transform. A descriptor with no usable `id` gets one derived
+ * from its `defaultMessage`, so it formats the default message, with its values, in every locale.
+ * Returns `undefined` for a descriptor that has neither a usable `id` nor a `defaultMessage`.
+ */
+function withMessageId(value: unknown): MessageDescriptor | undefined {
+	if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+	const { id, defaultMessage } = value as Record<string, unknown>;
+	if (
+		(id !== undefined && typeof id !== 'string') ||
+		(defaultMessage !== undefined && typeof defaultMessage !== 'string')
+	) {
+		return undefined;
+	}
+	if (id) return { ...(value as MessageDescriptor) };
+	if (!defaultMessage) return undefined;
+	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage as string)}` };
+}
+
+/**
+ * A string, a `MessageDescriptor` or a `[MessageDescriptor, values?]` tuple. See {@link FieldValidityMessage}.
+ * Returns the message in a form the renderer can always format, or `undefined` when it is malformed.
+ */
+function normalizeMessage(message: unknown): FieldValidityMessage | undefined {
+	if (typeof message === 'string') return message;
 	if (Array.isArray(message)) {
 		const [descriptor, values] = message;
-		return (
-			message.length <= 2 &&
-			isMessageDescriptor(descriptor) &&
-			(values === undefined || (values !== null && typeof values === 'object'))
-		);
+		const normalized = withMessageId(descriptor);
+		if (
+			message.length > 2 ||
+			!normalized ||
+			(values !== undefined && (values === null || typeof values !== 'object' || Array.isArray(values)))
+		) {
+			return undefined;
+		}
+		return values === undefined ? [normalized] : [normalized, values];
 	}
-	return isMessageDescriptor(message);
+	return withMessageId(message);
 }
 
-function isValidMessageList(messages: unknown): boolean {
-	return Array.isArray(messages) && messages.every(isValidMessage);
+/** Normalizes every message of a plugin result, or returns `undefined` when the list or any entry is malformed. */
+function normalizeMessageList(messages: unknown): FieldValidityMessage[] | undefined {
+	if (!Array.isArray(messages)) return undefined;
+	const normalized: FieldValidityMessage[] = [];
+	for (const message of messages) {
+		const next = normalizeMessage(message);
+		if (next === undefined) return undefined;
+		normalized.push(next);
+	}
+	return normalized;
+}
+
+const validationFailedMessage = withMessageId(pluginValidatorMessages.validationFailed) as MessageDescriptor;
+
+/** The reason shown when a plugin validator could not produce a verdict. Technical detail goes to the console. */
+function validationFailedResult(): ValidatorResult {
+	return { valid: false, messages: [validationFailedMessage] };
 }
 
 /**
  * Wraps a plugin validator for the host. The plugin gets a fresh context with only the public members,
  * so host internals cannot leak. A result that is not `{ valid: true }` is invalid, and a malformed one is reported.
  * A validator that throws or rejects is invalid too, so a failed request never rejects the field's validation.
- * It is logged, unless it is an `AbortError` and the host's own signal aborted: that run was superseded and its
- * outcome is discarded. A plugin aborting its own controller is still logged.
+ * Both cases show the user a generic "couldn't be validated" message and log the detail to the console. The log is
+ * skipped for an `AbortError` when the host's own signal aborted: that run was superseded, its outcome is discarded
+ * and no message is shown. A plugin aborting its own controller is still logged and shown.
+ * Messages are normalized so a descriptor without an `id` formats instead of crashing the field.
  */
 function adaptPluginValidator(validator: Validator): BuiltInValidator {
 	return async (value, ctx) => {
@@ -244,28 +298,30 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 		try {
 			result = await validator(value, pluginCtx);
 		} catch (error) {
-			if (!(pluginCtx.signal.aborted && (error as Error | undefined)?.name === 'AbortError')) {
-				console.error(
-					`The validator for control type "${ctx.field.type}" threw. The field is treated as invalid.`,
-					error
-				);
+			if ((error as Error | undefined)?.name === 'AbortError' && pluginCtx.signal.aborted) {
+				return { valid: false, messages: [] };
 			}
-			return { valid: false, messages: [] };
+			console.error(
+				`The validator for control type "${ctx.field.type}" threw. The field is treated as invalid.`,
+				error
+			);
+			return validationFailedResult();
 		}
-		if (
-			result == null ||
-			typeof result !== 'object' ||
-			typeof result.valid !== 'boolean' ||
-			(result.messages !== undefined && !isValidMessageList(result.messages))
-		) {
+		const messages =
+			result != null && typeof result === 'object' && typeof result.valid === 'boolean'
+				? result.messages === undefined
+					? []
+					: normalizeMessageList(result.messages)
+				: undefined;
+		if (messages === undefined) {
 			console.error(
 				`The validator for control type "${ctx.field.type}" must return { valid: boolean, messages?: [] }. ` +
 					`The field is treated as invalid.`,
 				result
 			);
-			return { valid: false, messages: [] };
+			return validationFailedResult();
 		}
-		return { valid: result.valid, messages: result.valid ? [] : (result.messages ?? []) };
+		return { valid: result.valid, messages: result.valid ? [] : messages };
 	};
 }
 

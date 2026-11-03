@@ -26,10 +26,10 @@ import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
 import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { type FieldValidityMessage, isEmptyValue, isFieldRequired } from '../lib/validators';
+import { isEmptyValue, isFieldRequired } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
 import useItemsByPath from '../../../hooks/useItemsByPath';
-import { FormattedMessage, type IntlFormatters, useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -45,7 +45,7 @@ import {
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
 import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
-import { translateIfMessageDescriptor } from '../../ContentTypeManagement/utils';
+import { FieldValidityMessages } from './FieldValidityMessages';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
@@ -350,30 +350,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			)}
 			{children}
 			{hasDescription && <FormHelperText>{field.description}</FormHelperText>}
-			{!isValid &&
-				validityData.state === 'hasData' &&
-				validityData.data?.messages?.map((messageData, key) => (
-					<FormHelperText key={key}>{translateValidityMessage(messageData, formatMessage)}</FormHelperText>
-				))}
+			{!isValid && validityData.state === 'hasData' && <FieldValidityMessages messages={validityData.data?.messages} />}
 		</FormControl>
 	);
 });
-
-/**
- * Translates a validity message for a form field.
- *
- * @param messageData {FieldValidityMessage} - The validity message data, which can be a single message
- * or a tuple containing a message and its associated values.
- * @param formatMessage {IntlFormatters['formatMessage']} - The function used to format internationalized messages.
- * @returns {string} - The translated validity message.
- */
-function translateValidityMessage(
-	messageData: FieldValidityMessage,
-	formatMessage: IntlFormatters['formatMessage']
-): string {
-	const message = Array.isArray(messageData) ? messageData[0] : messageData;
-	const values = Array.isArray(messageData) ? messageData[1] : undefined;
-	return translateIfMessageDescriptor(message, formatMessage, values);
-}
 
 export default FormsEngineField;

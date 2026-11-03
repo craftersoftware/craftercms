@@ -49,6 +49,18 @@ function plugin(validator: Validator<AnyValue>, validations: ContentTypeField['v
 	return { id: 'thing_s', name: 'Thing', type: typeKey, validations } as ContentTypeField;
 }
 
+const fallbackText = "This value couldn't be validated. Try again or contact your administrator.";
+
+/** The result of a validator that could not produce a verdict: invalid, with the generic user-facing reason. */
+function assertFallback(result: { isValid: boolean; messages: unknown[] }, label?: string) {
+	assert.equal(result.isValid, false, label);
+	assert.equal(result.messages.length, 1, label);
+	const [message] = result.messages as Array<{ id: string; defaultMessage: string }>;
+	assert.equal(message.defaultMessage, fallbackText, label);
+	assert.equal(typeof message.id, 'string', label);
+	assert.ok(message.id.length > 0, label);
+}
+
 describe('plugin validator', () => {
 	it('is called with (value, ctx) and the context has only the public members', async () => {
 		const calls: unknown[][] = [];
@@ -79,7 +91,8 @@ describe('plugin validator', () => {
 		});
 		const result = await validateFieldValue(field, 'abc', meta);
 		assert.equal(result.isValid, false);
-		assert.deepEqual(result.messages, ['first', { defaultMessage: 'second' }]);
+		assert.equal(result.messages[0], 'first');
+		assert.equal((result.messages[1] as { defaultMessage: string }).defaultMessage, 'second');
 	});
 
 	it('is valid only when the result says valid: true', async () => {
@@ -96,8 +109,7 @@ describe('plugin validator', () => {
 			for (const bad of [true, undefined, null, 'ok', { valid: 'yes' }, { messages: [] }]) {
 				const field = plugin((() => bad) as unknown as Validator);
 				const result = await validateFieldValue(field, 'x', meta);
-				assert.equal(result.isValid, false, `result ${JSON.stringify(bad)}`);
-				assert.deepEqual(result.messages, []);
+				assertFallback(result, `result ${JSON.stringify(bad)}`);
 			}
 			assert.equal(error.mock.callCount(), 6);
 		} finally {
@@ -115,6 +127,11 @@ describe('plugin validator', () => {
 				[1],
 				[{}],
 				[{ id: 1 }],
+				[{ id: '' }],
+				[{ id: '', defaultMessage: '' }],
+				[{ defaultMessage: '' }],
+				[{ id: 'ok', defaultMessage: 1 }],
+				[[{ defaultMessage: 'a' }, ['not', 'an', 'object']]],
 				[['plain string tuple']],
 				[[{ defaultMessage: 'a' }, null]],
 				[[{ defaultMessage: 'a' }, {}, 'extra']]
@@ -122,7 +139,7 @@ describe('plugin validator', () => {
 			for (const messages of bad) {
 				const field = plugin((() => ({ valid: true, messages })) as unknown as Validator);
 				const result = await validateFieldValue(field, 'x', meta);
-				assert.deepEqual(result, { isValid: false, messages: [] }, JSON.stringify(messages));
+				assertFallback(result, JSON.stringify(messages));
 			}
 			assert.equal(error.mock.callCount(), bad.length);
 		} finally {
@@ -133,10 +150,10 @@ describe('plugin validator', () => {
 	it('accepts strings, message descriptors and descriptor tuples, and a missing messages as empty', async () => {
 		const messages = [
 			'plain',
-			{ defaultMessage: 'by default message' },
-			{ id: 'by.id' },
-			[{ defaultMessage: 'tuple' }],
-			[{ defaultMessage: 'tuple with values {n}' }, { n: 1 }]
+			{ id: 'by.id', defaultMessage: 'by id and default message' },
+			{ id: 'by.id.only' },
+			[{ id: 'tuple.id', defaultMessage: 'tuple' }],
+			[{ id: 'tuple.values', defaultMessage: 'tuple with values {n}' }, { n: 1 }]
 		];
 		const result = await validateFieldValue(
 			plugin(() => ({ valid: false, messages }) as never),
@@ -150,6 +167,34 @@ describe('plugin validator', () => {
 			meta
 		);
 		assert.deepEqual(missing, { isValid: false, messages: [] });
+	});
+
+	it('gives a descriptor without an id a stable id derived from its default message', async () => {
+		const field = plugin(() => ({
+			valid: false,
+			messages: [
+				{ defaultMessage: 'Same text', description: 'kept' },
+				{ id: '', defaultMessage: 'Same text' },
+				[{ defaultMessage: 'Other text {n}' }, { n: 1 }],
+				{ id: 'has.id', defaultMessage: 'untouched' }
+			]
+		}));
+		const first = await validateFieldValue(field, 'x', meta);
+		const second = await validateFieldValue(field, 'x', meta);
+		assert.deepEqual(first, second);
+		const [a, b, tuple, kept] = first.messages as [
+			{ id: string; defaultMessage: string; description: string },
+			{ id: string },
+			[{ id: string; defaultMessage: string }, { n: number }],
+			{ id: string; defaultMessage: string }
+		];
+		assert.match(a.id, /^plugin-validator-message\.[0-9a-f]{8}$/);
+		assert.equal(a.defaultMessage, 'Same text');
+		assert.equal(a.description, 'kept');
+		assert.equal(b.id, a.id);
+		assert.notEqual(tuple[0].id, a.id);
+		assert.deepEqual(tuple[1], { n: 1 });
+		assert.deepEqual(kept, { id: 'has.id', defaultMessage: 'untouched' });
 	});
 
 	it('does not run for a required field with an empty value', async () => {
@@ -187,14 +232,14 @@ describe('plugin validator that fails', () => {
 		return fn(error).finally(() => error.mock.restore());
 	}
 
-	it('is invalid, and logged, when it throws synchronously or rejects', async () => {
+	it('is invalid with the generic message, and logged, when it throws synchronously or rejects', async () => {
 		await quietly(async (error) => {
 			const thrower = plugin(() => {
 				throw new Error('boom');
 			});
 			const rejecter = plugin(() => Promise.reject(new Error('network')));
 			for (const field of [thrower, rejecter]) {
-				assert.deepEqual(await validateFieldValue(field, 'x', meta), { isValid: false, messages: [] });
+				assertFallback(await validateFieldValue(field, 'x', meta));
 			}
 			assert.equal(error.mock.callCount(), 2);
 		});
@@ -217,7 +262,7 @@ describe('plugin validator that fails', () => {
 	it('is logged when the plugin aborts its own controller, and the field is still invalid', async () => {
 		await quietly(async (error) => {
 			const field = plugin(() => Promise.reject(new DOMException('aborted', 'AbortError')));
-			assert.deepEqual(await validateFieldValue(field, 'x', meta), { isValid: false, messages: [] });
+			assertFallback(await validateFieldValue(field, 'x', meta));
 			assert.equal(error.mock.callCount(), 1);
 		});
 	});
@@ -228,7 +273,7 @@ describe('plugin validator that fails', () => {
 			controller.abort();
 			const field = plugin(() => Promise.reject(new Error('real failure')));
 			const result = await validateFieldValue(field, 'x', { ...meta, signal: controller.signal });
-			assert.equal(result.isValid, false);
+			assertFallback(result);
 			assert.equal(error.mock.callCount(), 1);
 		});
 	});

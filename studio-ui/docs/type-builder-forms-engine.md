@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-10-30
+Last updated: 2026-11-03
 
 ---
 
@@ -811,6 +811,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 Keep newest first. One short bullet per meaningful session.
 
 - **2026-10-30** — FE2 plugin API settled for 5.0 (#9306). Hooks are value-first with one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, validator `(value, { field, signal, siteId, getValue }) => { valid, messages }` (async allowed, malformed result is invalid). The XML builder's special keys are exported constants and published at `craftercms.formsEngine.controls.xmlKeys`. `ControlProps<V>` is generic with read-only `field` / `contentType` and host-generated `inputId` / `labelId`. Plugin controls render inside `FormsEngineField` by default (`fieldChrome: false` opts out, `fieldSx` styles the wrapper); the load-error placeholder is not double-wrapped. `formControllers` `load` / `getCached` / `clearCache` moved under `__internal`. API versions stay at 1.
+- **2026-11-03** — Plugin validator messages are normalized before they reach the field (#9306). A descriptor with a missing or empty `id` and a `defaultMessage` gets an `id` derived from it, so it formats instead of crashing the field. A malformed message makes the result a failed validator. A validator that throws, rejects, or returns a malformed result now shows the user a generic "couldn't be validated" message, with the detail in the console only.
 - **2026-10-30** — Controls, data sources, and form controllers share one version rule: a missing `apiVersion` counts as `1`, and any other value is rejected at load. A data-source rejection names the plugin id and type and installs nothing from that plugin. `FORM_CONTROLLER_API_VERSION` is published as `craftercms.formsEngine.formControllers.apiVersion`. See plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 - **2026-10-30** — Plugin API versions are one integer per contract (controls, data sources, form controllers), not semver. Bump only for a breaking change. Policy and the current missing-value rules: plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 - **2026-10-30** — FE2 control contributions take an optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`). A missing value counts as `1`. `registerPlugin` refuses any other value with an error that names the plugin id and the control type, and installs nothing from that call (same as any other invalid control entry). See plugins companion §6 and §9.3. #9303
