@@ -198,7 +198,7 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 				);
 			}
 			const existing = dataSourceModuleRegistry.get(module.type);
-			if (existing && existing !== module) {
+			if (existing && !dataSourceModuleRegistry.isRegisteredFrom(module)) {
 				throw new Error(
 					`Plugin "${plugin.id}" cannot register data-source type "${module.type}": a different module is already registered.`
 				);

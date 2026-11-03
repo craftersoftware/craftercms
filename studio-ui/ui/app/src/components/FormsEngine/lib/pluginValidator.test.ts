@@ -245,6 +245,25 @@ describe('plugin validator that fails', () => {
 		});
 	});
 
+	it('names the plugin, the field and the control type in the logged failure', async () => {
+		await quietly(async (error) => {
+			const thrower = plugin(() => {
+				throw new Error('boom');
+			});
+			const malformer = plugin((() => true) as unknown as Validator);
+			for (const field of [thrower, malformer]) {
+				await validateFieldValue(field, 'x', meta);
+			}
+			assert.equal(error.mock.callCount(), 2);
+			for (const [index, field] of [thrower, malformer].entries()) {
+				const text = String(error.mock.calls[index].arguments[0]);
+				assert.ok(text.includes(`plugin "org.example.${field.type}"`), text);
+				assert.ok(text.includes(`field "${field.id}"`), text);
+				assert.ok(text.includes(`control type "${field.type}"`), text);
+			}
+		});
+	});
+
 	it('is invalid, and not logged, when it throws AbortError after the host signal aborted', async () => {
 		await quietly(async (error) => {
 			const controller = new AbortController();

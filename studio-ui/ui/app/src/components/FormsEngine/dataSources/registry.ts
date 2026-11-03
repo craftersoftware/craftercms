@@ -64,16 +64,28 @@ export function validateDataSourceModule(
  */
 export class DataSourceModuleRegistry {
 	readonly #modules = new Map<string, DataSourceModule>();
+	readonly #sources = new Map<string, DataSourceModule>();
 
 	register(module: DataSourceModule): void {
 		validateDataSourceModule(module);
 		if (this.#modules.has(module.type)) {
 			throw new Error(`A data-source module is already registered for type "${module.type}".`);
 		}
-		// Read through `get` / `getAll`, so a plugin can't swap another module's members.
-		Object.freeze(module.interfaces);
-		Object.freeze(module.capabilities);
-		this.#modules.set(module.type, Object.freeze(module));
+		// Freeze a copy, so the registered module is read-only through `get` / `getAll` without freezing the caller's object.
+		this.#modules.set(
+			module.type,
+			Object.freeze({
+				...module,
+				interfaces: Object.freeze([...module.interfaces]),
+				capabilities: Object.freeze([...module.capabilities])
+			})
+		);
+		this.#sources.set(module.type, module);
+	}
+
+	/** Whether `module` is the object that was passed to {@link register} for its type (`get` returns a frozen copy). */
+	isRegisteredFrom(module: DataSourceModule): boolean {
+		return this.#sources.get(module.type) === module;
 	}
 
 	has(type: string): boolean {

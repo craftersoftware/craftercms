@@ -40,7 +40,7 @@ import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import type { CheckboxGroupProps } from '../controls/CheckboxGroup';
 import { macroCreatorLookupTable } from '../../ContentTypeManagement/controls/PathWithMacroCreator';
-import { getPluginControlValidator } from '../controls/registry';
+import { getPluginControlValidator, getRegisteredControlContribution } from '../controls/registry';
 import { isFieldPathIrrelevant } from './formVisibility';
 import {
 	countLimitValue,
@@ -295,6 +295,7 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 			siteId: ctx.siteId,
 			getValue: ctx.getValue
 		};
+		const pluginId = () => getRegisteredControlContribution(ctx.field.type)?.pluginId;
 		let result: ValidatorResult;
 		try {
 			result = await validator(value, pluginCtx);
@@ -303,7 +304,8 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 				return { valid: false, messages: [] };
 			}
 			console.error(
-				`The validator for control type "${ctx.field.type}" threw. The field is treated as invalid.`,
+				`The validator of plugin "${pluginId()}" for field "${ctx.field.id}" (control type "${ctx.field.type}") ` +
+					`threw. The field is treated as invalid.`,
 				error
 			);
 			return validationFailedResult();
@@ -316,8 +318,8 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 				: undefined;
 		if (messages === undefined) {
 			console.error(
-				`The validator for control type "${ctx.field.type}" must return { valid: boolean, messages?: [] }. ` +
-					`The field is treated as invalid.`,
+				`The validator of plugin "${pluginId()}" for field "${ctx.field.id}" (control type "${ctx.field.type}") ` +
+					`must return { valid: boolean, messages?: [] }. The field is treated as invalid.`,
 				result
 			);
 			return validationFailedResult();

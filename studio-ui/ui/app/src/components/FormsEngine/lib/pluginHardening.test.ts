@@ -273,6 +273,29 @@ describe('registry reads', () => {
 		assert.equal(formsEngineControlsHost.getDataSourceBindings('node-selector')[0].propertyName, 'itemManager');
 	});
 
+	it('freezes a copy of a plugin data source module and leaves the registered object unfrozen', () => {
+		const type = `hardening-ds-${counter++}`;
+		const interfaces = ['item'];
+		const capabilities = ['list'];
+		const module = { type, interfaces, capabilities, create: () => ({}) } as unknown as DataSourceModule;
+		const plugin = { id: `org.example.${type}`, dataSources: { [type]: module } } as PluginDescriptor;
+		registerPlugin(plugin, source);
+		const read = formsEngineDataSourcesHost.get(type);
+		assert.ok(read && read !== module && Object.isFrozen(read));
+		assert.ok(!Object.isFrozen(module) && !Object.isFrozen(interfaces) && !Object.isFrozen(capabilities));
+		interfaces.push('image');
+		(module as { create: unknown }).create = () => ({ tag: 'changed by owner' });
+		assert.deepEqual(read.interfaces, ['item']);
+		assert.notEqual(read.create, module.create);
+		// Registering the plugin's own module again is not a conflict.
+		assert.doesNotThrow(() => registerPlugin(plugin, source));
+		const other = { ...module, interfaces: ['item'] } as unknown as DataSourceModule;
+		assert.throws(
+			() => registerPlugin({ id: `org.example.${type}.2`, dataSources: { [type]: other } } as PluginDescriptor, source),
+			/different module/
+		);
+	});
+
 	it('getDataSourceBindings treats an inherited object member as no control type', () => {
 		assert.deepEqual(formsEngineControlsHost.getDataSourceBindings('constructor'), []);
 		assert.deepEqual(formsEngineControlsHost.getDataSourceBindings('toString'), []);
