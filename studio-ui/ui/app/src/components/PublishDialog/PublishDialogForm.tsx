@@ -192,7 +192,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 									alignItems: 'center'
 								}}
 							>
-								<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request approval" />
+								<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request Approval" />
 								<Tooltip
 									title={
 										<FormattedMessage
