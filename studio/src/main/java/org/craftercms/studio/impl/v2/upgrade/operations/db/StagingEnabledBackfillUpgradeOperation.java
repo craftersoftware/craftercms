@@ -43,10 +43,12 @@ import static java.lang.String.format;
 
 /**
  * Copies the legacy {@code enable-staging-environment} flag from each site's {@code site-config.xml}
- * into {@code site.staging_enabled}. Item targets and blob-store assets are copied from live only when
- * this upgrade creates the staging branch. A branch that already exists is left as published. If a later
- * step fails, that new branch is deleted and the flag stays unset. Runs before the site-config upgrade
- * removes the element.
+ * into {@code site.staging_enabled}. A site whose flag is already set is skipped, so a retry does not
+ * touch a site that finished on an earlier attempt. Item targets and blob-store assets are copied from
+ * live only when this attempt creates the staging branch. A branch that already exists is left as
+ * published, and the deployer target and flag are still written. If a later step fails, that new branch
+ * is deleted, the flag stays unset, and this upgrade fails so the version does not advance. Runs before
+ * the site-config upgrade removes the element.
  */
 public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOperation {
 
@@ -81,6 +83,10 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 	public void doExecute(StudioUpgradeContext context) throws UpgradeException {
 		List<Site> sites = sitesService.getAllSites();
 		for (Site site : sites) {
+			if (site.isStagingEnabled()) {
+				logger.info("Site '{}' already has staging enabled. Skipping backfill", site.getSiteId());
+				continue;
+			}
 			try {
 				if (StudioUtils.isLegacyStagingEnabled(site.getSiteId(), studioConfiguration, configurationService)) {
 					enableStaging(context, site);
