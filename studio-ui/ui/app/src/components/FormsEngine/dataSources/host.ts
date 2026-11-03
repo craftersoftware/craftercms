@@ -80,11 +80,11 @@ export const formsEngineControlsHost = {
 	useFieldValue,
 	FormsEngineField,
 	/** Special keys a `valueSerializer` may use in the shape it returns. See the plugins doc. */
-	xmlKeys: {
+	xmlKeys: Object.freeze({
 		attributePrefix: XML_ATTRIBUTE_PREFIX,
 		cdata: XML_CDATA_KEY,
 		text: XML_TEXT_KEY,
 		listItem: XML_LIST_ITEM_KEY,
 		itemListAttribute: XML_ITEM_LIST_ATTRIBUTE
-	}
+	})
 };

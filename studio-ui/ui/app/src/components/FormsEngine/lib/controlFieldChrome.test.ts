@@ -96,6 +96,23 @@ describe('control contribution apiVersion with the rest of the contract', () => 
 		assert.equal(formsEngineControlsHost.apiVersion, CONTROL_API_VERSION);
 		assert.equal(formsEngineControlsHost.xmlKeys.cdata, '__cdata__');
 	});
+
+	it('publishes every XML key from the exported constants, read-only', async () => {
+		const { formsEngineControlsHost } = await import('../dataSources/host.ts');
+		const constants = await import('./controlValueTypes.ts');
+		assert.deepEqual(formsEngineControlsHost.xmlKeys, {
+			attributePrefix: constants.XML_ATTRIBUTE_PREFIX,
+			cdata: constants.XML_CDATA_KEY,
+			text: constants.XML_TEXT_KEY,
+			listItem: constants.XML_LIST_ITEM_KEY,
+			itemListAttribute: constants.XML_ITEM_LIST_ATTRIBUTE
+		});
+		assert.ok(Object.isFrozen(formsEngineControlsHost.xmlKeys));
+		assert.throws(() => {
+			(formsEngineControlsHost.xmlKeys as Record<string, string>).cdata = 'changed';
+		}, TypeError);
+		assert.equal(formsEngineControlsHost.xmlKeys.cdata, constants.XML_CDATA_KEY);
+	});
 });
 
 describe('loaded control plugin', () => {
