@@ -383,6 +383,46 @@ public class SitesServiceInternalImplTest {
 	}
 
 	@Test
+	public void enableStagingExistingBranchSkipsBlobCopy() throws Exception {
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
+		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
+		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+	}
+
+	@Test
+	public void enableStagingBlobCopyFailureDeletesCreatedBranch() throws Exception {
+		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(true);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(false);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository).copyBlobs(SITE_ID, "live", "staging");
+
+		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
+
+		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
+		verify(itemTargetDao).deleteForTarget(0L, "staging");
+		verify(deployer, never()).createStagingTarget(SITE_ID);
+		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
+	}
+
+	@Test
 	public void enableStagingFailureRollsBackTest() throws Exception {
 		when(gitRepositoryHelper.getPublishedRepoLockKey(SITE_ID)).thenReturn("lock");
 		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");

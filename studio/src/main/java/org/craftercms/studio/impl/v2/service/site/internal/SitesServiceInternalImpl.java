@@ -1115,6 +1115,11 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	/**
 	 * Initialize staging for an existing site and set the one-way flag only after initialization succeeds.
+	 * Blobs are copied from live only when this call creates the staging branch. An existing branch is left
+	 * as published, so a retry does not revert staging-only assets. {@code createStagingTarget} is
+	 * create-if-not-exists, so repeating it is safe. On failure, only the branch, item targets, and deployer
+	 * target this call created are removed. There is no blob-prefix delete; deleting the new branch lets the
+	 * next attempt create it again and copy blobs.
 	 */
 	protected void doEnableStaging(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -1136,7 +1141,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch));
 					insertedTargets = true;
 				}
-				blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+				if (createdBranch) {
+					blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+				} else {
+					logger.info("Staging branch '{}' already exists for site '{}'. Leaving existing blobs in place",
+						stagingBranch, siteId);
+				}
 			}
 			deployer.createStagingTarget(siteId);
 			createdDeployerTarget = true;
@@ -1207,7 +1217,8 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	/**
 	 * Remove the staging deployer target, item targets, and branch created by a failed enable so the flag stays off
-	 * and the call can be retried. Only resources this call created are removed.
+	 * and the call can be retried. Only resources this call created are removed. Blobs are not deleted; removing the
+	 * new branch makes the next attempt create it again and copy them.
 	 */
 	protected void compensateEnableStaging(String siteId, long siteNumericId, String stagingBranch, boolean createdBranch,
 										   boolean insertedTargets, boolean createdDeployerTarget) {

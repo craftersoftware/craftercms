@@ -111,8 +111,24 @@ public class ServerlessDeliveryDeployerTest {
 		assertEquals(STAGING_SITE, body.get("site_name"));
 		assertEquals("staging", body.get("repo_branch"));
 		assertEquals("serverless-delivery", body.get("env"));
+		assertEquals(false, body.get("replace"));
+		assertEquals(CREATE_URL, captor.getValue().getUrl().toString());
 		assertTrue(body.get("repo_url").toString().contains("/repos/sites/" + SITE + "/published"));
 		assertTrue(body.get("local_repo_path").toString().contains("/repos/aws/" + STAGING_SITE));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void createStagingTargetIsSafeToRepeat() {
+		deployer.createStagingTarget(SITE);
+		deployer.createStagingTarget(SITE);
+
+		ArgumentCaptor<RequestEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate, times(2)).exchange(captor.capture(), eq(Map.class));
+		captor.getAllValues().forEach(request -> {
+			assertEquals(CREATE_URL, request.getUrl().toString());
+			assertEquals(false, request.getBody().get("replace"));
+		});
 	}
 
 	@Test
