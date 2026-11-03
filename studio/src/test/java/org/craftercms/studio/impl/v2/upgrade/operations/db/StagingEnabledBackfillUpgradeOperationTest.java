@@ -159,6 +159,7 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		}
 
 		verify(contentRepository).deletePublishedBranch("broken", STAGING);
+		verify(contentRepository).copyBlobs("broken", LIVE, STAGING, STAGING);
 		verify(configurationService, never()).getConfigurationAsDocument(eq("later"), any(), any(), any());
 		verify(context, never()).getConnection();
 	}
