@@ -287,11 +287,12 @@ function DateBy({
 				display: 'flex',
 				alignItems: 'center',
 				flexShrink: 0,
+				maxWidth: '100%',
 				whiteSpace: 'nowrap'
 			}}
 		>
 			{icon}
-			<span>
+			<Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
 				<FormattedMessage
 					{...label}
 					values={{
@@ -303,7 +304,7 @@ function DateBy({
 						when
 					}}
 				/>
-			</span>
+			</Box>
 		</Box>
 	);
 }
