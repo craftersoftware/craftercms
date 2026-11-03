@@ -18,7 +18,8 @@ import { ContentTypeField } from '../../../models';
 import { NodeSelectorItem } from '../controls/NodeSelector';
 import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
-import { getPluginControlValueSerializer } from '../controls/registry';
+import { getPluginControlValueSerializer, getRegisteredControlContribution } from '../controls/registry';
+import { freezeForPlugin } from './pluginHooks';
 import { preservedElements, systemFieldsNotInType, XmlKeys } from './formConsts';
 import { BuiltInControlType } from './controlMap';
 import { RepeatItem } from '../controls/Repeat';
@@ -122,11 +123,12 @@ function prepareValuesForXmlSerialising(
 		const fieldAttributes: Record<string, unknown> = {};
 		// Field type specific hinting...
 
-		const serializer = Object.hasOwn(valueSerializersLookup, fieldType)
-			? valueSerializersLookup[fieldType]
-			: getPluginControlValueSerializer(fieldType);
-		if (serializer) {
+		const isBuiltIn = Object.hasOwn(valueSerializersLookup, fieldType);
+		const serializer = isBuiltIn ? valueSerializersLookup[fieldType] : getPluginControlValueSerializer(fieldType);
+		if (serializer && isBuiltIn) {
 			jObj[id] = serializer(value, { field, contentTypesById: contentTypesLookup });
+		} else if (serializer) {
+			jObj[id] = serializeWithPlugin(serializer, value, field, contentTypesLookup);
 		}
 		if (field?.properties?.tokenize?.value) {
 			fieldAttributes[createAttrHint('tokenized')] = true;
@@ -142,6 +144,30 @@ function prepareValuesForXmlSerialising(
 		}
 	});
 	return jObj;
+}
+
+/**
+ * Runs a plugin's serializer. A failure is not recovered from: any fallback would write XML that doesn't hold what the
+ * author entered. The save stops with an error that names the field and the plugin.
+ */
+function serializeWithPlugin(
+	serializer: ValueSerializer,
+	value: unknown,
+	field: ContentTypeField,
+	contentTypesById: LookupTable<ContentType>
+): unknown {
+	try {
+		return serializer(value, { field: freezeForPlugin(field), contentTypesById: freezeForPlugin(contentTypesById) });
+	} catch (error) {
+		const pluginId = getRegisteredControlContribution(field.type)?.pluginId;
+		console.error(`The valueSerializer of plugin "${pluginId}" for field "${field.id}" threw.`, error);
+		throw new Error(
+			`Couldn't serialize the field "${field.name ?? field.id}" (${field.id}): the valueSerializer of plugin ` +
+				`"${pluginId}" for control type "${field.type}" failed.` +
+				(error instanceof Error && error.message ? ` ${error.message}` : ''),
+			{ cause: error }
+		);
+	}
 }
 
 type XmlNuancedArrayFormat<T = unknown> = {

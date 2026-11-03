@@ -52,6 +52,7 @@ import {
 } from '../../../utils/countLimits';
 import { evaluateRteConstraints, measureRteValue } from './rtePlainText';
 import { asArray } from '../../../utils/array';
+import { freezeForPlugin } from './pluginHooks';
 
 /**
  * Everything the host knows when it validates a field. Internal: built-in validators read it through
@@ -289,7 +290,7 @@ function validationFailedResult(): ValidatorResult {
 function adaptPluginValidator(validator: Validator): BuiltInValidator {
 	return async (value, ctx) => {
 		const pluginCtx: ValidatorContext = {
-			field: ctx.field,
+			field: freezeForPlugin(ctx.field),
 			signal: ctx.signal,
 			siteId: ctx.siteId,
 			getValue: ctx.getValue
@@ -325,6 +326,8 @@ function adaptPluginValidator(validator: Validator): BuiltInValidator {
 	};
 }
 
+const adaptedPluginValidators = new WeakMap<Validator, BuiltInValidator>();
+
 /**
  * Built-in map first (including explicit `undefined` = no type validator).
  * Plugin contributions only for types absent from the built-in map.
@@ -335,7 +338,13 @@ function getFieldValidator(fieldType: string): BuiltInValidator | undefined {
 		return validatorsMap[fieldType as BuiltInControlType | DescriptorControlType];
 	}
 	const pluginValidator = getPluginControlValidator(fieldType);
-	return pluginValidator ? adaptPluginValidator(pluginValidator) : undefined;
+	if (!pluginValidator) return undefined;
+	let adapted = adaptedPluginValidators.get(pluginValidator);
+	if (!adapted) {
+		adapted = adaptPluginValidator(pluginValidator);
+		adaptedPluginValidators.set(pluginValidator, adapted);
+	}
+	return adapted;
 }
 
 /** True when a built-in or plugin type validator is registered for `fieldType`. */
