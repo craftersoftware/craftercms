@@ -115,11 +115,10 @@ function titleRowWrapQuery() {
 	return `@container ${formHeaderContainerName} (max-width: ${titleRowWrapBelow}px)`;
 }
 
-function CopyableValue({ value, children, sx }: { value: string; children: ReactNode; sx?: SxProps<Theme> }) {
+function CopyableValue({ value, children }: { value: string; children: ReactNode }) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const [copied, setCopied] = useState(false);
-	const [hovering, setHovering] = useState(false);
 	const [liveMessage, setLiveMessage] = useState('');
 	const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const requestId = useRef(0);
@@ -139,25 +138,16 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 	const resetCopied = () => {
 		clearTimer();
 		setCopied(false);
+		setLiveMessage('');
 	};
 	const copyLabel = formatMessage(copyMessages.copyValue, { value });
 	const copiedLabel = formatMessage(copyMessages.copied);
 	return (
 		<>
-			<Tooltip
-				title={copied ? copiedLabel : copyLabel}
-				open={hovering}
-				onOpen={() => setHovering(true)}
-				onClose={() => setHovering(false)}
-				slotProps={{ transition: { onExited: resetCopied } }}
-			>
+			<Tooltip title={copied ? copiedLabel : copyLabel} slotProps={{ transition: { onExited: resetCopied } }}>
 				<Box
 					component="button"
 					type="button"
-					onMouseEnter={() => setHovering(true)}
-					onMouseLeave={() => setHovering(false)}
-					onFocus={() => setHovering(true)}
-					onBlur={() => setHovering(false)}
 					onClick={() => {
 						clearTimer();
 						setLiveMessage('');
@@ -167,10 +157,7 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 								if (id !== requestId.current) return;
 								setCopied(true);
 								setLiveMessage(copiedLabel);
-								resetTimer.current = setTimeout(() => {
-									resetTimer.current = null;
-									setCopied(false);
-								}, copiedVisibleMs);
+								resetTimer.current = setTimeout(resetCopied, copiedVisibleMs);
 							},
 							() => {
 								if (id !== requestId.current) return;
@@ -184,7 +171,7 @@ function CopyableValue({ value, children, sx }: { value: string; children: React
 							}
 						);
 					}}
-					sx={[copyableValueSx, ...(sx === undefined ? [] : Array.isArray(sx) ? sx : [sx])]}
+					sx={copyableValueSx}
 				>
 					{children}
 				</Box>
