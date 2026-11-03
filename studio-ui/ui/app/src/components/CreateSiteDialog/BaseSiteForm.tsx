@@ -76,6 +76,10 @@ const messages = defineMessages({
 	},
 	enableStagingHelp: {
 		id: 'createSiteDialog.enableStagingHelp',
+		defaultMessage: 'Staging cannot be turned off later. Removing it means recreating the project.'
+	},
+	enableStagingHelpSource: {
+		id: 'createSiteDialog.enableStagingHelpSource',
 		defaultMessage:
 			'The new project uses this setting, not the source project. Staging cannot be turned off later. Removing it means recreating the project.'
 	}
@@ -89,10 +93,20 @@ export interface BaseSiteFormProps {
 	handleInputChange(event: any, type?: string): void;
 	onKeyPress(event: React.KeyboardEvent): void;
 	onBlur?(event: React.FocusEvent): void;
+	sourceProjectStagingHelp?: boolean;
 }
 
 export function BaseSiteForm(props: BaseSiteFormProps) {
-	const { inputs, checkSites, checkSiteNames, handleInputChange, onKeyPress, fieldsErrorsLookup, onBlur } = props;
+	const {
+		inputs,
+		checkSites,
+		checkSiteNames,
+		handleInputChange,
+		onKeyPress,
+		fieldsErrorsLookup,
+		onBlur,
+		sourceProjectStagingHelp
+	} = props;
 	const { formatMessage } = useIntl();
 
 	return (
@@ -192,7 +206,9 @@ export function BaseSiteForm(props: BaseSiteFormProps) {
 					}
 					label={formatMessage(messages.enableStaging)}
 				/>
-				<FormHelperText>{formatMessage(messages.enableStagingHelp)}</FormHelperText>
+				<FormHelperText>
+					{formatMessage(sourceProjectStagingHelp ? messages.enableStagingHelpSource : messages.enableStagingHelp)}
+				</FormHelperText>
 			</Grid>
 		</>
 	);
