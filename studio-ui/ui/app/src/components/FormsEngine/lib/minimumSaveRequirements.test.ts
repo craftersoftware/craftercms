@@ -20,6 +20,7 @@ import '../../../../test/registerTsLoader.mjs';
 
 const { atom, createStore } = await import('jotai');
 const {
+	blockingFieldName,
 	firstBlockingFieldId,
 	minimumRequirementsCopy,
 	minimumRequirementsNotice,
@@ -126,6 +127,13 @@ describe('minimum requirements copy', () => {
 		assert.equal(firstBlockingFieldId(['internalName'], ['file-name', 'internal-name']), 'internal-name');
 		assert.equal(firstBlockingFieldId(both, []), 'file-name');
 		assert.equal(firstBlockingFieldId([], ['file-name']), undefined);
+	});
+
+	it('names the field the alert opens with the content type name', () => {
+		const notice = { copy: 'both', fileName: 'Page URL', internalName: 'Label' } as const;
+		assert.equal(blockingFieldName(notice, 'file-name'), 'Page URL');
+		assert.equal(blockingFieldName(notice, 'internal-name'), 'Label');
+		assert.equal(blockingFieldName(notice, undefined), undefined);
 	});
 });
 
