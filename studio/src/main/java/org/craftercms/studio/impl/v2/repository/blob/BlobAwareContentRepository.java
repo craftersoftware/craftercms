@@ -502,12 +502,17 @@ public class BlobAwareContentRepository implements StudioBlobAwareContentReposit
 
 	@Override
 	public void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment) throws ServiceLayerException {
+		copyBlobs(siteId, sourceEnvironment, targetEnvironment, sourceEnvironment);
+	}
+
+	@Override
+	public void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment, String revision) throws ServiceLayerException {
 		if (blobStoreResolver.getAll(siteId).isEmpty()) {
 			logger.debug("No blob stores configured for site '{}', skipping blob sync from '{}' to '{}'", siteId, sourceEnvironment, targetEnvironment);
 			return;
 		}
-		logger.info("Copy blobs for site '{}' from '{}' to '{}'", siteId, sourceEnvironment, targetEnvironment);
-		copyBlobItems(siteId, siteId, GitRepositories.PUBLISHED, sourceEnvironment, targetEnvironment, sourceEnvironment);
+		logger.info("Copy blobs for site '{}' from '{}' to '{}' at revision '{}'", siteId, sourceEnvironment, targetEnvironment, revision);
+		copyBlobItems(siteId, siteId, GitRepositories.PUBLISHED, sourceEnvironment, targetEnvironment, revision);
 	}
 
 	private void duplicateBlobs(String sourceSiteId, String siteId, GitRepositories repoType, String environment, String revstr) throws ServiceLayerException {
