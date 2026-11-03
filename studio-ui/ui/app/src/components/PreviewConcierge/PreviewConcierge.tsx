@@ -96,7 +96,7 @@ import {
 	writeInstance
 } from '../../services/content';
 import { uploadDataUrl } from '../../services/contentUpload';
-import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of, Subscription } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
@@ -777,7 +777,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			const permissions = user?.permissionsBySite[siteId];
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
-				takeUntil(guestToHost$.pipe(filter(({ type }) => [guestCheckIn.type, guestCheckOut.type].includes(type))))
+				take(1)
 			);
 			switch (type) {
 				case guestSiteLoad.type:
