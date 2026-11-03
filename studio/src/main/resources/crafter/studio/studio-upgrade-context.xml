@@ -190,13 +190,13 @@
 	<bean id="populateItemTargetTableUpgrader" scope="prototype" parent="dbScriptUpgrader"
 	      class="org.craftercms.studio.impl.v2.upgrade.operations.db.PopulateItemTargetTableUpgradeOperation">
 		<constructor-arg name="sitesService" ref="sitesServiceInternal"/>
-		<constructor-arg name="configurationService" ref="configurationService"/>
+		<constructor-arg name="configurationService" ref="configurationServiceInternal"/>
 	</bean>
 
 	<bean id="stagingEnabledBackfillUpgrader" scope="prototype" parent="upgradeOperation"
 	      class="org.craftercms.studio.impl.v2.upgrade.operations.db.StagingEnabledBackfillUpgradeOperation">
 		<constructor-arg name="sitesService" ref="sitesServiceInternal"/>
-		<constructor-arg name="configurationService" ref="configurationService"/>
+		<constructor-arg name="configurationService" ref="configurationServiceInternal"/>
 		<constructor-arg name="servicesConfig" ref="cstudioServicesConfig"/>
 		<constructor-arg name="contentRepository" ref="contentRepository"/>
 		<constructor-arg name="itemTargetDao" ref="itemTargetDao"/>
