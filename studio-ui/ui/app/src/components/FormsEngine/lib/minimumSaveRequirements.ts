@@ -113,6 +113,12 @@ export function minimumRequirementsNotice(
 	};
 }
 
+/** The content type's name for a blocking field, for the alert's Show button. */
+export function blockingFieldName(notice: MinimumRequirementsNotice, fieldId: string | undefined): string | undefined {
+	if (!fieldId) return undefined;
+	return fieldId === XmlKeys.fileName ? notice.fileName : notice.internalName;
+}
+
 /** The field the alert's Show button opens: the first blocking one in the form's field order. */
 export function firstBlockingFieldId(
 	missing: readonly MinimumSaveRequirement[],

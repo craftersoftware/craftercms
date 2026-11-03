@@ -77,7 +77,7 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 				</Button>
 				{options.length > 1 && (
 					<Button
-						disabled={loading}
+						disabled={disabled || loading}
 						color={selectedColor}
 						size="small"
 						aria-controls={open ? 'split-button-menu' : undefined}

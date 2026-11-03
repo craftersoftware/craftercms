@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -26,21 +25,21 @@ function MinimumRequirementsMessage({ notice }: { notice: MinimumRequirementsNot
 		case 'both':
 			return (
 				<FormattedMessage
-					defaultMessage="Add a {fileName} and {internalName} to save this content."
+					defaultMessage="{fileName} and {internalName} are required to save this content."
 					values={{ fileName: notice.fileName, internalName: notice.internalName }}
 				/>
 			);
 		case 'fileName':
 			return (
 				<FormattedMessage
-					defaultMessage="Add a {fileName} to save this content."
+					defaultMessage="{fileName} is required to save this content."
 					values={{ fileName: notice.fileName }}
 				/>
 			);
 		default:
 			return (
 				<FormattedMessage
-					defaultMessage="Add an {internalName} to save this content."
+					defaultMessage="{internalName} is required to save this content."
 					values={{ internalName: notice.internalName }}
 				/>
 			);
@@ -50,8 +49,6 @@ function MinimumRequirementsMessage({ notice }: { notice: MinimumRequirementsNot
 export function ValidationErrorsAlert(props: {
 	count: number;
 	fieldName?: string;
-	/** The main save action will store a draft until these errors are fixed. */
-	willSaveAsDraft?: boolean;
 	/** Set when no save, not even a draft, would be written. Replaces the draft wording. */
 	minimumRequirements?: MinimumRequirementsNotice;
 	onShow(): void;
@@ -65,14 +62,9 @@ export function ValidationErrorsAlert(props: {
 			<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
 				{props.minimumRequirements ? (
 					<MinimumRequirementsMessage notice={props.minimumRequirements} />
-				) : props.willSaveAsDraft ? (
-					<FormattedMessage
-						defaultMessage="{count, plural, one {The form has a validation error. This will save as a draft until the error is fixed.} other {The form has # validation errors. This will save as a draft until the errors are fixed.}}"
-						values={{ count: props.count }}
-					/>
 				) : (
 					<FormattedMessage
-						defaultMessage="{count, plural, one {The form has a validation error that must be fixed before saving.} other {The form has # validation errors that must be fixed before saving.}}"
+						defaultMessage="{count, plural, one {The form has a validation error. This will save as a draft until the error is fixed.} other {The form has # validation errors. This will save as a draft until the errors are fixed.}}"
 						values={{ count: props.count }}
 					/>
 				)}

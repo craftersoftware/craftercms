@@ -375,7 +375,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 						return showAlert({
 							dispatch,
 							message: formatMessage(
-								{ defaultMessage: 'You need an {internalName} at a minimum to save content.' },
+								{ defaultMessage: '{internalName} is required to save content.' },
 								{ internalName: contentType.fields[XmlKeys.internalName].name }
 							)
 						});

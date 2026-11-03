@@ -189,7 +189,12 @@ import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } f
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
-import { firstBlockingFieldId, minimumRequirementsNotice, validationAlertVariant } from './lib/minimumSaveRequirements';
+import {
+	blockingFieldName,
+	firstBlockingFieldId,
+	minimumRequirementsNotice,
+	validationAlertVariant
+} from './lib/minimumSaveRequirements';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -1924,13 +1929,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 											<ValidationErrorsAlert
 												count={validationErrors?.count ?? 0}
 												fieldName={
-													minimumNotice
-														? blockingFieldId === XmlKeys.fileName
-															? minimumNotice.fileName
-															: minimumNotice.internalName
-														: validationFieldName
+													minimumNotice ? blockingFieldName(minimumNotice, blockingFieldId) : validationFieldName
 												}
-												willSaveAsDraft
 												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
 											/>

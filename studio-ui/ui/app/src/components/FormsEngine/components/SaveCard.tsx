@@ -63,9 +63,9 @@ const messages = defineMessages({
 		defaultMessage: "Others can't edit it until you release the lock."
 	},
 	noChanges: { defaultMessage: 'No changes detected' },
-	addFileNameAndInternalName: { defaultMessage: 'Add a {fileName} and {internalName} to save' },
-	addFileName: { defaultMessage: 'Add a {fileName} to save' },
-	addInternalName: { defaultMessage: 'Add an {internalName} to save' }
+	requiredFileNameAndInternalName: { defaultMessage: '{fileName} and {internalName} are required to save' },
+	requiredFileName: { defaultMessage: '{fileName} is required to save' },
+	requiredInternalName: { defaultMessage: '{internalName} is required to save' }
 });
 
 type AfterSaving = 'stay' | 'minimize' | 'close';
@@ -193,9 +193,9 @@ export function SaveCard(props: SaveCardProps) {
 		if (saveTip === 'noChanges') return formatMessage(messages.noChanges);
 		if (saveTip !== 'minimumRequirements' || !minimumRequirements) return '';
 		const { copy, fileName, internalName } = minimumRequirements;
-		if (copy === 'both') return formatMessage(messages.addFileNameAndInternalName, { fileName, internalName });
-		if (copy === 'fileName') return formatMessage(messages.addFileName, { fileName });
-		return formatMessage(messages.addInternalName, { internalName });
+		if (copy === 'both') return formatMessage(messages.requiredFileNameAndInternalName, { fileName, internalName });
+		if (copy === 'fileName') return formatMessage(messages.requiredFileName, { fileName });
+		return formatMessage(messages.requiredInternalName, { internalName });
 	})();
 	// Same surface as a form section: default paper in light, elevation 2 in dark.
 	const sectionElevation = useIsDarkModeTheme() ? 2 : undefined;
@@ -373,7 +373,6 @@ export function SaveCard(props: SaveCardProps) {
 						ref={setGroup}
 						exclusive
 						fullWidth
-						disabled={blockedByMinimum}
 						size="small"
 						color="primary"
 						value={afterSaving}
