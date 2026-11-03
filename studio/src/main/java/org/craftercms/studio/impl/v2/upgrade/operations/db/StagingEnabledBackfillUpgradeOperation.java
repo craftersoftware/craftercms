@@ -43,9 +43,10 @@ import static java.lang.String.format;
 
 /**
  * Copies the legacy {@code enable-staging-environment} flag from each site's {@code site-config.xml}
- * into {@code site.staging_enabled}. When the site is already published to live, the staging branch is
- * created from live and blob-store assets are copied into the staging environment first. Serverless
- * delivery also gets a staging target. Runs before the site-config upgrade removes the element.
+ * into {@code site.staging_enabled}. Item targets and blob-store assets are copied from live only when
+ * this upgrade creates the staging branch. A branch that already exists is left as published. If a later
+ * step fails, that new branch is deleted and the flag stays unset. Runs before the site-config upgrade
+ * removes the element.
  */
 public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOperation {
 
@@ -92,37 +93,50 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 
 	private void enableStaging(StudioUpgradeContext context, Site site) throws SQLException, ServiceLayerException, IOException {
 		String siteId = site.getSiteId();
-		ensureStagingMatchesLive(site);
-		deployer.createStagingTarget(siteId);
-		try (Connection connection = context.getConnection();
-			 PreparedStatement statement = connection.prepareStatement(UPDATE_STAGING_ENABLED)) {
-			statement.setString(1, siteId);
-			int updated = statement.executeUpdate();
-			connection.commit();
-			if (updated > 0) {
-				logger.info("Enabled staging for site '{}' from site-config.xml", siteId);
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		boolean createdBranch = false;
+		try {
+			if (contentRepository.publishedRepositoryExists(siteId) && contentRepository.isTargetPublished(siteId, liveBranch)) {
+				createdBranch = contentRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+				if (createdBranch) {
+					logger.info("Created staging branch '{}' from '{}' for site '{}'", stagingBranch, liveBranch, siteId);
+					if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
+						itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
+					}
+					contentRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+				}
+			} else {
+				logger.info("Site '{}' is not published to live. The staging branch and blobs will be created on the first publish", siteId);
 			}
+			deployer.createStagingTarget(siteId);
+			try (Connection connection = context.getConnection();
+				 PreparedStatement statement = connection.prepareStatement(UPDATE_STAGING_ENABLED)) {
+				statement.setString(1, siteId);
+				int updated = statement.executeUpdate();
+				connection.commit();
+				if (updated > 0) {
+					logger.info("Enabled staging for site '{}' from site-config.xml", siteId);
+				}
+			}
+		} catch (RuntimeException | SQLException | ServiceLayerException | IOException e) {
+			deleteCreatedStagingBranch(siteId, stagingBranch, createdBranch);
+			throw e;
 		}
 	}
 
 	/**
-	 * Create the staging branch from live, copy publishing rows, and sync blob-store assets when live exists.
-	 * An unpublished site only receives the database flag. The branch is created on the first publish.
+	 * Delete the staging branch created by this attempt so the next upgrade can create it again and copy blobs.
+	 * A branch that already existed is left in place.
 	 */
-	private void ensureStagingMatchesLive(Site site) throws ServiceLayerException, IOException {
-		String siteId = site.getSiteId();
-		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
-		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
-		if (!contentRepository.publishedRepositoryExists(siteId) || !contentRepository.isTargetPublished(siteId, liveBranch)) {
-			logger.info("Site '{}' is not published to live. The staging branch and blobs will be created on the first publish", siteId);
+	private void deleteCreatedStagingBranch(String siteId, String stagingBranch, boolean createdBranch) {
+		if (!createdBranch) {
 			return;
 		}
-		if (contentRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch)) {
-			logger.info("Created staging branch '{}' from '{}' for site '{}'", stagingBranch, liveBranch, siteId);
+		try {
+			contentRepository.deletePublishedBranch(siteId, stagingBranch);
+		} catch (Exception e) {
+			logger.error("Failed to delete staging branch '{}' for site '{}' after a failed backfill", stagingBranch, siteId, e);
 		}
-		if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
-			itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
-		}
-		contentRepository.copyBlobs(siteId, liveBranch, stagingBranch);
 	}
 }
