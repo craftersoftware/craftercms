@@ -96,7 +96,7 @@ import {
 	writeInstance
 } from '../../services/content';
 import { uploadDataUrl } from '../../services/contentUpload';
-import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of, Subscription } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
@@ -274,7 +274,7 @@ const issueDescriptorRequest = (props: {
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
 
-	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
+	return fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
@@ -776,7 +776,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			const permissions = user?.permissionsBySite[siteId];
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
-				take(1)
+				takeUntil(guestToHost$.pipe(filter(({ type }) => [guestCheckIn.type, guestCheckOut.type].includes(type))))
 			);
 			switch (type) {
 				case guestSiteLoad.type:
@@ -816,8 +816,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const { url, location } = payload;
 					const path = getPathFromPreviewURL(url);
 					dispatch(guestCheckIn({ location, site: siteId, path }));
+					let descriptorRequest: Subscription | undefined;
 					contentTypes$.subscribe((contentTypes) => {
-						issueDescriptorRequest({
+						descriptorRequest?.unsubscribe();
+						descriptorRequest = issueDescriptorRequest({
 							site: siteId,
 							path,
 							contentTypes,
@@ -878,10 +880,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						nnou(siteId) && dispatch(changeCurrentUrl('/'));
 					} else {
 						const path = payload.path;
-
+						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
+							descriptorRequest?.unsubscribe();
 							hostToGuest$.next(contentTypesResponse({ contentTypes: Object.values(contentTypes) }));
-							issueDescriptorRequest({
+							descriptorRequest = issueDescriptorRequest({
 								site: siteId,
 								path,
 								contentTypes,
@@ -896,8 +899,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case fetchGuestModel.type: {
 					if (payload.path?.startsWith('/')) {
+						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
-							issueDescriptorRequest({
+							descriptorRequest?.unsubscribe();
+							descriptorRequest = issueDescriptorRequest({
 								site: siteId,
 								path: payload.path,
 								contentTypes,
