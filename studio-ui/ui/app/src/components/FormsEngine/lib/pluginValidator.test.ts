@@ -32,7 +32,7 @@ import type { Validator } from './validators.ts';
 
 const { registerPlugin } = await import('../../../services/plugin.ts');
 const { validateFieldValue, hasFieldValidator } = await import('./validators.ts');
-const { createFieldAtoms } = await import('./formUtils.tsx');
+const { createFieldAtoms, readInvalidFieldIds } = await import('./formUtils.tsx');
 const { createStore, atom } = await import('jotai');
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
@@ -417,6 +417,30 @@ describe('validation atom context', () => {
 		assert.deepEqual(seen, [undefined]);
 	});
 
+	it('getValue reads a field declared next to this one by the descriptor, such as the time zone of a date', async () => {
+		const seen: unknown[] = [];
+		const field = plugin((_value, ctx) => {
+			seen.push(ctx.getValue('thing_s_tz'));
+			return { valid: true };
+		});
+		const { store, otherAtoms, validationAtom } = createAtoms(field, { thing_s_tz: 'Europe/Madrid' });
+		await store.get(validationAtom);
+		store.set(otherAtoms.thing_s_tz, 'UTC');
+		await store.get(validationAtom);
+		assert.deepEqual(seen, ['Europe/Madrid', 'UTC']);
+	});
+
+	it('getValue is undefined, and does not throw, for an id that only exists on Object.prototype', async () => {
+		const seen: unknown[] = [];
+		const field = plugin((_value, ctx) => {
+			for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) seen.push(ctx.getValue(id));
+			return { valid: true };
+		});
+		const { store, validationAtom } = createAtoms(field, { other_s: 'x' });
+		assert.deepEqual(await store.get(validationAtom), { isValid: true, messages: [] });
+		assert.deepEqual(seen, [undefined, undefined, undefined, undefined]);
+	});
+
 	it('supplies a signal that aborts when the value changes before the validator settles', async () => {
 		const signals: AbortSignal[] = [];
 		const release: Array<() => void> = [];
@@ -441,5 +465,53 @@ describe('validation atom context', () => {
 		assert.equal((await second).isValid, true);
 		await first.catch(() => undefined);
 		unsubscribe();
+	});
+});
+
+describe('reading validity for the save gate', () => {
+	function createStoreAndAtoms(field: ContentTypeField) {
+		const store = createStore();
+		const formContextRef = {
+			current: {
+				itemMeta: meta.itemMeta,
+				atoms: { valueByFieldId: {} },
+				fieldUpdates$: { next: () => undefined },
+				changedFieldIds: new Set<string>(),
+				originalValues: {}
+			}
+		};
+		const [valueAtom, validationAtom] = createFieldAtoms(field, 'initial', formContextRef as never, {
+			siteId: 'editorial'
+		});
+		return { store, valueAtom, validationAtom };
+	}
+
+	it('discards a run that was superseded while it was awaited, and uses the latest run', async () => {
+		const release: Array<() => void> = [];
+		const field = plugin(
+			(_value, ctx) =>
+				new Promise((resolve, reject) => {
+					ctx.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+					release.push(() => resolve({ valid: true }));
+				})
+		);
+		const { store, valueAtom, validationAtom } = createStoreAndAtoms(field);
+		const unsubscribe = store.sub(validationAtom, () => undefined);
+		const reading = readInvalidFieldIds(store, { thing_s: validationAtom }, null);
+		assert.equal(release.length, 1);
+		store.set(valueAtom, 'changed');
+		store.get(validationAtom);
+		assert.equal(release.length, 2);
+		release[1]();
+		assert.deepEqual(await reading, []);
+		unsubscribe();
+	});
+
+	it('still reports a field whose latest run is invalid', async () => {
+		const field = plugin((value) => ({ valid: value === 'ok', messages: ['not ok'] }));
+		const { store, valueAtom, validationAtom } = createStoreAndAtoms(field);
+		assert.deepEqual(await readInvalidFieldIds(store, { thing_s: validationAtom }, null), ['thing_s']);
+		store.set(valueAtom, 'ok');
+		assert.deepEqual(await readInvalidFieldIds(store, { thing_s: validationAtom }, null), []);
 	});
 });
