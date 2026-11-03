@@ -84,6 +84,7 @@ import { isTouchDevice, KeyDownEvent, sortableListKeyDownHandler } from '../lib/
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
 import { xmlDataSourceAttribute, XmlKeys } from '../lib/formConsts';
+import { withDataSourceId } from '../lib/withDataSourceId';
 import { showBrowseFilesDialog, showSearchDialog } from '../lib/controlHelpers';
 import { Dispatch as ReduxDispatch } from 'redux';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
@@ -1422,11 +1423,6 @@ function isItemComponent(item: NodeSelectorItem): boolean {
 		// 3. It has an 'include' property that does not point to an editable asset (shared component).
 		item.component || (item.include && (item.include.startsWith('/site/') || !isEditableAsset(item.include)))
 	);
-}
-
-/** Sets the `datasource` attribute of new items to the id of the data source they were added with, when known. */
-export function withDataSourceId(newItems: NodeSelectorItem[], dataSourceId: string | undefined): NodeSelectorItem[] {
-	return dataSourceId ? newItems.map((item) => ({ ...item, [xmlDataSourceAttribute]: dataSourceId })) : newItems;
 }
 
 /**

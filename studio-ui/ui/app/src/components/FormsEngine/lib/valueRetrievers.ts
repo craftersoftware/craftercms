@@ -21,7 +21,7 @@ import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import { getPluginControlValueRetriever } from '../controls/registry';
 import { preservedElements, systemFieldsNotInType, xmlAttributePrefix, XmlKeys } from './formConsts';
-import { deserialize, unescapeXml } from '../../../utils/xml';
+import { deserialize, getParsedField, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
@@ -71,6 +71,7 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	'type-controller-selector': textFieldExtractor,
 	'key-value-map': (value) => objectArrayExtractor(value as string),
 	'type-destination-paths-selector': null,
+	'type-allowed-roles-selector': null,
 	'path-with-macro-creator': textFieldExtractor,
 	'merge-strategy-selector': textFieldExtractor,
 	'datasource:image': (value) => stringArrayExtractor(value as string),
@@ -110,8 +111,9 @@ export function createParsedValuesObject(
 ): LookupTable<unknown> {
 	const values = {};
 	systemFieldsNotInType.forEach((systemFieldId) => {
-		if (systemFieldId in xmlDeserializedValues) {
-			values[systemFieldId] = xmlDeserializedValues[systemFieldId] ?? '';
+		const rawValue = getParsedField(xmlDeserializedValues, systemFieldId);
+		if (rawValue !== undefined) {
+			values[systemFieldId] = rawValue ?? '';
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
@@ -128,13 +130,17 @@ export function createParsedValuesObject(
 				defaultValue: undefined
 			};
 			values[additionalFieldId] = createParsedValueForField(
-				xmlDeserializedValues[additionalFieldId],
+				getParsedField(xmlDeserializedValues, additionalFieldId),
 				additionalField,
 				contentTypesLookup
 			);
 			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
 		});
-		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
+		values[field.id] = createParsedValueForField(
+			getParsedField(xmlDeserializedValues, field.id),
+			field,
+			contentTypesLookup
+		);
 		fieldCallback?.(field.id, values[field.id]);
 	});
 	preservedElements.forEach((elementId) => {
@@ -161,11 +167,18 @@ export function createParsedValueForField<T = unknown>(
 	const controlType = field.type as BuiltInControlType;
 	switch (controlType) {
 		case 'repeat': {
+			const childFields = field.fields ?? ({} as LookupTable<ContentTypeField>);
 			// Item children without a field are kept, as FE1 did, e.g. a taxonomy item's `unicode`.
-			return (value as Array<RepeatItem>).map((item) => ({
-				...item,
-				...createParsedValuesObject(field.fields ?? ({} as LookupTable<ContentTypeField>), item, contentTypesLookup)
-			})) as T;
+			// A child the parser renamed (e.g. `valueOf` read as `__valueOf`) is a field, not an unknown child.
+			return (value as Array<RepeatItem>).map((item) => {
+				const unknownChildren = { ...item };
+				Object.keys(childFields).forEach((fieldId) => {
+					if (!Object.hasOwn(item, fieldId) && getParsedField(item, fieldId) !== undefined) {
+						delete unknownChildren[`__${fieldId}`];
+					}
+				});
+				return { ...unknownChildren, ...createParsedValuesObject(childFields, item, contentTypesLookup) };
+			}) as T;
 		}
 		case 'node-selector': {
 			return (value as Array<NodeSelectorItem>).map((item) => {
@@ -209,20 +222,31 @@ export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: 
 /** Takes in the CrafterCMS content XML and returns a JS object with the values */
 export function deserializeContentDoc(contentDom: XMLDocument | Element): LookupTable<unknown> {
 	if (!contentDom) return null;
-	return deserialize(contentDom, {
-		// Values are text. Typed fields convert theirs in their value retriever.
-		parseTagValue: false,
-		// Only collection item attributes (e.g. `datasource`) are kept, so other values stay plain.
-		ignoreAttributes: (attributeName, jPathOrMatcher) =>
-			typeof jPathOrMatcher !== 'string' || !jPathOrMatcher.endsWith('.item'),
-		attributeNamePrefix: xmlAttributePrefix,
-		// Ideally, we would extract all collection types (item selector, repeat) that have
-		// this sort of syntax to avoid false positives.
-		// e.g.collectionFieldIds.map((fieldId) => `${rootTagName}.${fieldId}.item`).includes(jPath);
-		isArray: (tagName, jPathOrMatcher) => {
-			return typeof jPathOrMatcher === 'string' && jPathOrMatcher.endsWith('.item');
+	try {
+		return deserialize(contentDom, {
+			// Values are text. Typed fields convert theirs in their value retriever.
+			parseTagValue: false,
+			// Only collection item attributes (e.g. `datasource`) are kept, so other values stay plain.
+			ignoreAttributes: (attributeName, jPathOrMatcher) =>
+				typeof jPathOrMatcher !== 'string' || !jPathOrMatcher.endsWith('.item'),
+			attributeNamePrefix: xmlAttributePrefix,
+			// Ideally, we would extract all collection types (item selector, repeat) that have
+			// this sort of syntax to avoid false positives.
+			// e.g.collectionFieldIds.map((fieldId) => `${rootTagName}.${fieldId}.item`).includes(jPath);
+			isArray: (tagName, jPathOrMatcher) => {
+				return typeof jPathOrMatcher === 'string' && jPathOrMatcher.endsWith('.item');
+			}
+		})[(contentDom as XMLDocument).documentElement?.tagName ?? (contentDom as Element).tagName];
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (message.includes('[SECURITY] Invalid name')) {
+			throw new Error(
+				`Cannot read this content document: an element or attribute is named constructor, prototype, or __proto__. ${message}`,
+				{ cause: error }
+			);
 		}
-	})[(contentDom as XMLDocument).documentElement?.tagName ?? (contentDom as Element).tagName];
+		throw error;
+	}
 }
 
 export function stringArrayExtractor(value: string): string[] {

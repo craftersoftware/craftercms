@@ -296,7 +296,7 @@ describe('XB item datasource', () => {
 
 describe('node selector datasource', () => {
 	it('stamps a known data source id and leaves items unchanged when it is unknown', async () => {
-		const { withDataSourceId } = await import('../controls/NodeSelector.tsx');
+		const { withDataSourceId } = await import('./withDataSourceId.ts');
 		const item = { key: '/site/x.xml', value: 'X', include: '/site/x.xml' };
 		const [stamped] = withDataSourceId([item], 'ds');
 		assert.equal(stamped[xmlDataSourceAttribute], 'ds');
@@ -307,6 +307,33 @@ describe('node selector datasource', () => {
 		const items = [item];
 		assert.equal(withDataSourceId(items, undefined), items);
 		assert.equal(withDataSourceId(items, '')[0][xmlDataSourceAttribute], undefined);
+	});
+});
+
+describe('repeat child named valueOf', () => {
+	const repeatType =
+		parseType(`<form><title>T</title><content-type>/page/valueof</content-type><objectType>page</objectType>
+		<properties></properties><sections><section><title>S</title><fields>
+		${field('file-name', 'file-name')}${field('internal-name', 'input')}
+		${field('items_o', 'repeat', `<fields>${field('valueOf', 'input')}</fields>`)}
+		</fields></section></sections></form>`);
+	const xml = `<page><content-type>/page/valueof</content-type><objectId>0123abcd-0000-0000-0000-000000000000</objectId>
+		<items_o item-list="true"><item><valueOf>kept</valueOf><unicode>U+0041</unicode></item></items_o></page>`;
+	it('stays stable across two saves and does not write __valueOf', () => {
+		const types = { [repeatType.id]: repeatType };
+		const once = saveWithoutChanges(xml, types);
+		const onceXml = new XMLSerializer().serializeToString(once);
+		const twice = saveWithoutChanges(onceXml, types);
+		const twiceXml = new XMLSerializer().serializeToString(twice);
+		const withoutModified = (value: string) =>
+			value.replace(/<lastModifiedDate(_dt)?>[^<]*<\/lastModifiedDate(_dt)?>/g, '');
+		assert.equal(once.getElementsByTagName('__valueOf').length, 0);
+		assert.equal(twice.getElementsByTagName('__valueOf').length, 0);
+		assert.equal(once.getElementsByTagName('valueOf').length, 1);
+		assert.equal(twice.getElementsByTagName('valueOf').length, 1);
+		assert.equal(once.querySelector('items_o > item > valueOf')?.textContent, 'kept');
+		assert.equal(once.querySelector('items_o > item > unicode')?.textContent, 'U+0041');
+		assert.equal(withoutModified(twiceXml), withoutModified(onceXml));
 	});
 });
 
