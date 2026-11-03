@@ -317,6 +317,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 										checkSiteNames={checkSiteNames}
 										handleInputChange={handleInputChange}
 										onKeyPress={onKeyPress}
+										sourceProjectStagingHelp
 									/>
 									{sourceSiteHasBlobStores && (
 										<Grid size={12} data-field-id="readOnlyBlobStores">
