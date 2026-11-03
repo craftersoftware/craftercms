@@ -406,9 +406,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
+	const uiConfigLoaded = uiConfig.isFetching === false;
 	const contentTypes = useMemo(
-		() => addConfiguredAdditionalFields(loadedContentTypes, uiConfig.controls),
-		[loadedContentTypes, uiConfig.controls]
+		() => (uiConfigLoaded ? addConfiguredAdditionalFields(loadedContentTypes, uiConfig.controls) : null),
+		[uiConfigLoaded, loadedContentTypes, uiConfig.controls]
 	);
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
