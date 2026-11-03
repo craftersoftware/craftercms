@@ -188,6 +188,88 @@ export function prepareStackedFormPop<T extends object>(args: {
 	return { mounted: null };
 }
 
+/**
+ * "Release lock when closing". A stored choice wins because storage is shared across dialog stores.
+ * The form's atom covers a missing or unreadable value. Absent in both means release.
+ */
+export function resolveReleaseLockOnClose(
+	stored: boolean | null | undefined,
+	atomChoice: boolean | undefined
+): boolean {
+	return stored ?? atomChoice !== false;
+}
+
+/**
+ * The close decision input for one stack entry, from plain values the form already holds.
+ * `lockedPath` is the recorded lock, else the item's own path, and only while the lock is held.
+ * A form whose atoms are not ready yet is readonly, so it never unlocks.
+ */
+export function unlockStateForEntry(args: {
+	atomsReady: boolean;
+	index: number;
+	repeatFieldId?: string;
+	createPath?: string;
+	updateModelId?: string;
+	readonly: boolean;
+	locked: boolean;
+	recordedLockedPath?: string | null;
+	itemPath?: string | null;
+	parentReadonly: boolean;
+	siteId: string;
+	storedReleaseLockOnClose: boolean | null | undefined;
+	atomReleaseLockOnClose: boolean | undefined;
+}): UnlockOnCloseState {
+	return {
+		isRepeatMode: Boolean(args.repeatFieldId),
+		isCreateMode: Boolean(args.createPath),
+		readonly: args.atomsReady ? args.readonly : true,
+		isEmbedded: Boolean(args.updateModelId),
+		isStackedForm: args.index > 0,
+		isParentReadonly: args.parentReadonly,
+		siteId: args.siteId,
+		lockedPath: args.locked ? args.recordedLockedPath || args.itemPath || null : null,
+		releaseLockOnClose: resolveReleaseLockOnClose(args.storedReleaseLockOnClose, args.atomReleaseLockOnClose)
+	};
+}
+
+/**
+ * Everything the form session does when it goes away or the page is hidden, minus React.
+ * This form releases its own lock unless a deeper form only covers it. The root also releases the locks of
+ * covered stacked forms, which have no bootstrap of their own. Each stack entry sends at most once.
+ */
+export function releaseFormSessionLocks<T extends object>(args: {
+	via: 'pagehide' | 'unmount';
+	entry: T | null | undefined;
+	state: UnlockOnCloseState;
+	gate: LockReleaseGate;
+	entryStillOnStack: boolean;
+	coveredByDeeperForm: boolean;
+	isRoot: boolean;
+	/** Stack entries between the root and the mounted top, with their close state. Read only for the root. */
+	readCovered(): Array<{ entry: T | null | undefined; state: UnlockOnCloseState }>;
+	session: FormLockReleaseSession | undefined;
+	send(entry: T, state: UnlockOnCloseState, path: string): void;
+}): void {
+	if (
+		keepLockOnStackedUnmount({
+			via: args.via,
+			isStackedForm: args.state.isStackedForm,
+			entryStillOnStack: args.entryStillOnStack,
+			coveredByDeeperForm: args.coveredByDeeperForm
+		})
+	) {
+		return;
+	}
+	const release = (entry: T, state: UnlockOnCloseState) => {
+		args.session?.releaseOnce(entry, state, (path) => args.send(entry, state, path));
+	};
+	if (args.entry && planLockRelease(args.state, args.gate)) release(args.entry, args.state);
+	if (!args.isRoot) return;
+	for (const covered of args.readCovered()) {
+		if (covered.entry && lockPathToRelease(covered.state)) release(covered.entry, covered.state);
+	}
+}
+
 const storedAtomsByKey = new Map<string, unknown>();
 
 /** One atom per storage key. Stacked forms and the root then share the per-user value in one store. */

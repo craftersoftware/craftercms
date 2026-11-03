@@ -33,11 +33,14 @@ import {
 	lockPathToRelease,
 	planLockRelease,
 	prepareStackedFormPop,
+	releaseFormSessionLocks,
+	resolveReleaseLockOnClose,
 	releaseLockToggleFailed,
 	sharedPerUserAtom,
 	shouldUnlockOnPageHide,
 	unlockErrorPayload,
 	unlockKeepaliveInit,
+	unlockStateForEntry,
 	type FormLockReleaseSession,
 	type UnlockOnCloseState
 } from './unlockOnClose.ts';
@@ -380,5 +383,181 @@ describe('one release per form', () => {
 		const headers = init.headers as Record<string, string>;
 		assert.equal(headers['Content-Type'], 'application/json');
 		assert.equal(headers.Authorization, 'Bearer t');
+	});
+});
+
+describe('release-lock choice at close time', () => {
+	it('lets the stored choice win over the form atom', () => {
+		assert.equal(resolveReleaseLockOnClose(false, true), false);
+		assert.equal(resolveReleaseLockOnClose(true, false), true);
+	});
+
+	it('falls back to the atom, and releases when neither says otherwise', () => {
+		assert.equal(resolveReleaseLockOnClose(null, false), false);
+		assert.equal(resolveReleaseLockOnClose(undefined, true), true);
+		assert.equal(resolveReleaseLockOnClose(null, undefined), true);
+	});
+});
+
+describe('close state of a stack entry', () => {
+	const entry = {
+		atomsReady: true,
+		index: 0,
+		readonly: false,
+		locked: true,
+		recordedLockedPath: article,
+		itemPath: '/site/website/other/index.xml',
+		parentReadonly: false,
+		siteId: 'editorial',
+		storedReleaseLockOnClose: null,
+		atomReleaseLockOnClose: undefined
+	};
+
+	it('reads the recorded lock path, else the item path, and only while locked', () => {
+		assert.equal(unlockStateForEntry(entry).lockedPath, article);
+		assert.equal(unlockStateForEntry({ ...entry, recordedLockedPath: null }).lockedPath, entry.itemPath);
+		assert.equal(unlockStateForEntry({ ...entry, locked: false }).lockedPath, null);
+		assert.equal(unlockStateForEntry({ ...entry, recordedLockedPath: null, itemPath: null }).lockedPath, null);
+	});
+
+	it('maps the form mode from the launch props', () => {
+		const plain = unlockStateForEntry(entry);
+		assert.deepEqual(
+			[plain.isRepeatMode, plain.isCreateMode, plain.isEmbedded, plain.isStackedForm],
+			[false, false, false, false]
+		);
+		const stackedEmbedded = unlockStateForEntry({ ...entry, index: 2, updateModelId: 'abc' });
+		assert.deepEqual([stackedEmbedded.isEmbedded, stackedEmbedded.isStackedForm], [true, true]);
+		assert.equal(unlockStateForEntry({ ...entry, repeatFieldId: 'items_o' }).isRepeatMode, true);
+		assert.equal(unlockStateForEntry({ ...entry, createPath: '/site/website' }).isCreateMode, true);
+	});
+
+	it('treats an entry whose atoms are not ready as readonly, so it never unlocks', () => {
+		const state = unlockStateForEntry({ ...entry, atomsReady: false, locked: false });
+		assert.equal(state.readonly, true);
+		assert.equal(lockPathToRelease(state), null);
+	});
+
+	it('carries the keep-lock choice into the release decision', () => {
+		const kept = unlockStateForEntry({ ...entry, storedReleaseLockOnClose: false });
+		assert.equal(lockPathToRelease(kept), null);
+		assert.equal(lockPathToRelease(unlockStateForEntry(entry)), article);
+	});
+});
+
+interface SessionEntry {
+	name: string;
+	state: UnlockOnCloseState;
+}
+
+describe('form session release', () => {
+	function release(args: {
+		via?: 'pagehide' | 'unmount';
+		self: SessionEntry | null;
+		gate?: ReturnType<typeof createLockReleaseGate>;
+		session?: FormLockReleaseSession;
+		entryStillOnStack?: boolean;
+		coveredByDeeperForm?: boolean;
+		isRoot?: boolean;
+		covered?: SessionEntry[];
+		sent: string[];
+	}) {
+		releaseFormSessionLocks<SessionEntry>({
+			via: args.via ?? 'unmount',
+			entry: args.self,
+			state: args.self?.state ?? holding(null),
+			gate: args.gate ?? createLockReleaseGate(),
+			entryStillOnStack: args.entryStillOnStack ?? false,
+			coveredByDeeperForm: args.coveredByDeeperForm ?? false,
+			isRoot: args.isRoot ?? true,
+			readCovered: () => (args.covered ?? []).map((entry) => ({ entry, state: entry.state })),
+			session: args.session ?? createFormLockReleaseSession(),
+			send: (entry, _state, path) => args.sent.push(`${entry.name}:${path}`)
+		});
+	}
+
+	it('unlocks the root form when it unmounts', () => {
+		const sent: string[] = [];
+		release({ self: { name: 'root', state: holding(article) }, sent });
+		assert.deepEqual(sent, [`root:${article}`]);
+	});
+
+	it('does not unlock a root that was only reloaded while readonly', () => {
+		const sent: string[] = [];
+		release({ self: { name: 'root', state: holding(article, { readonly: true }) }, sent });
+		assert.deepEqual(sent, []);
+	});
+
+	it('keeps the lock when a deeper form covers a stacked form, and releases it on the real pop', () => {
+		const session = createFormLockReleaseSession();
+		const gate = createLockReleaseGate();
+		const stacked = { name: 'stacked', state: holding(article, { isStackedForm: true, isEmbedded: false }) };
+		const sent: string[] = [];
+		release({ self: stacked, session, gate, isRoot: false, entryStillOnStack: true, coveredByDeeperForm: true, sent });
+		assert.deepEqual(sent, []);
+		release({ self: stacked, session, gate, isRoot: false, entryStillOnStack: false, sent });
+		assert.deepEqual(sent, [`stacked:${article}`]);
+	});
+
+	it('releases covered stacked forms from the root, but not from a stacked form', () => {
+		const covered = [{ name: 'covered', state: holding(renamed, { isStackedForm: true }) }];
+		const fromRoot: string[] = [];
+		release({ self: { name: 'root', state: holding(article) }, covered, sent: fromRoot });
+		assert.deepEqual(fromRoot, [`root:${article}`, `covered:${renamed}`]);
+		const fromStacked: string[] = [];
+		release({
+			self: { name: 'top', state: holding(article, { isStackedForm: true }) },
+			isRoot: false,
+			covered,
+			sent: fromStacked
+		});
+		assert.deepEqual(fromStacked, [`top:${article}`]);
+	});
+
+	it('skips a covered form that is readonly, borrows its parent lock, or keeps the lock', () => {
+		const covered = [
+			{ name: 'readonly', state: holding(article, { isStackedForm: true, readonly: true }) },
+			{
+				name: 'borrowed',
+				state: holding(article, { isStackedForm: true, isEmbedded: true, isParentReadonly: false })
+			},
+			{ name: 'kept', state: holding(article, { isStackedForm: true, releaseLockOnClose: false }) }
+		];
+		const sent: string[] = [];
+		release({ self: null, covered, sent });
+		assert.deepEqual(sent, []);
+	});
+
+	it('sends once when pagehide and unmount both run', () => {
+		const session = createFormLockReleaseSession();
+		const gate = createLockReleaseGate();
+		const self = { name: 'root', state: holding(article) };
+		const sent: string[] = [];
+		release({ via: 'pagehide', self, session, gate, sent });
+		release({ via: 'unmount', self, session, gate, sent });
+		assert.deepEqual(sent, [`root:${article}`]);
+	});
+
+	it('sends nothing without a session, as when the form has no global context', () => {
+		const sent: string[] = [];
+		releaseFormSessionLocks<SessionEntry>({
+			via: 'unmount',
+			entry: { name: 'root', state: holding(article) },
+			state: holding(article),
+			gate: createLockReleaseGate(),
+			entryStillOnStack: false,
+			coveredByDeeperForm: false,
+			isRoot: true,
+			readCovered: () => [],
+			session: undefined,
+			send: (entry, _state, path) => sent.push(`${entry.name}:${path}`)
+		});
+		assert.deepEqual(sent, []);
+	});
+
+	it('does nothing for a form that has no entry yet', () => {
+		const sent: string[] = [];
+		release({ self: null, sent });
+		assert.deepEqual(sent, []);
 	});
 });

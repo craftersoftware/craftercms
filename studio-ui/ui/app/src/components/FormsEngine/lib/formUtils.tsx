@@ -104,13 +104,12 @@ import { isPagePath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
 import {
 	createLockReleaseGate,
-	keepLockOnStackedUnmount,
-	lockPathToRelease,
-	planLockRelease,
 	postUnlockKeepalive,
+	releaseFormSessionLocks,
 	sharedPerUserAtom,
 	shouldUnlockOnPageHide,
 	unlockErrorPayload,
+	unlockStateForEntry,
 	type UnlockOnCloseState
 } from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
@@ -977,29 +976,29 @@ export function useUnlockOnClose(props: {
 	const readEntryState = (entry: StableFormContextProps | undefined, index: number): UnlockOnCloseState => {
 		const atoms = entry?.atoms ?? null;
 		const lockResult = atoms ? store.get(atoms.lockResult) : null;
-		const parentEntry = index > 0 ? formsStackData[index - 1] : null;
-		const parentAtoms = stackEntryAtoms(parentEntry);
+		const parentAtoms = stackEntryAtoms(index > 0 ? formsStackData[index - 1] : null);
 		const props = entry?.props;
-		const recorded = lockResult?.lockedPath;
-		const atomChoice = atoms ? store.get(atoms.releaseLockOnClose) : undefined;
-		const storedChoice = getStoredFormsEngineReleaseLockOnClose(username);
 		const liveParentReadonly = parentAtoms ? store.get(parentAtoms.readonly) : false;
-		return {
-			isRepeatMode: Boolean(props?.repeat?.fieldId),
-			isCreateMode: Boolean(props?.create?.path),
+		return unlockStateForEntry({
+			atomsReady: atoms != null,
+			index,
+			repeatFieldId: props?.repeat?.fieldId,
+			createPath: props?.create?.path,
+			updateModelId: props?.update?.modelId,
 			readonly: atoms ? store.get(atoms.readonly) : true,
-			isEmbedded: Boolean(props?.update?.modelId),
-			isStackedForm: index > 0,
+			locked: Boolean(lockResult?.locked),
+			recordedLockedPath: lockResult?.lockedPath,
+			itemPath: entry?.itemMeta?.path,
 			// A mounted top unmounts after root reload has popped its parent. The remembered flag
 			// is the parent that was still on the stack when this entry was popped.
-			isParentReadonly: entry
+			parentReadonly: entry
 				? (globalContext?.lockReleaseSession.parentReadonly(entry, liveParentReadonly) ?? liveParentReadonly)
 				: liveParentReadonly,
 			siteId,
-			lockedPath: lockResult?.locked ? recorded || entry?.itemMeta?.path || null : null,
 			// Storage is shared across dialog stores. The atom covers a missing or unreadable value.
-			releaseLockOnClose: storedChoice ?? atomChoice !== false
-		};
+			storedReleaseLockOnClose: getStoredFormsEngineReleaseLockOnClose(username),
+			atomReleaseLockOnClose: atoms ? store.get(atoms.releaseLockOnClose) : undefined
+		});
 	};
 	const unlockEffectRefs = useUpdateRefs({
 		dispatch,
@@ -1026,46 +1025,43 @@ export function useUnlockOnClose(props: {
 		const gate = createLockReleaseGate();
 		const session = globalContext?.lockReleaseSession;
 		const sendUnlock = (entry: StableFormContextProps, state: UnlockOnCloseState, via: 'pagehide' | 'unmount') => {
-			session?.releaseOnce(entry, state, (path) => {
-				if (via === 'pagehide') {
-					postUnlockKeepalive(state.siteId, path, getGlobalHeaders());
-					return;
+			session?.releaseOnce(entry, state, (path) => sendUnlockRequest(state.siteId, path, via));
+		};
+		const sendUnlockRequest = (siteId: string, path: string, via: 'pagehide' | 'unmount') => {
+			if (via === 'pagehide') {
+				postUnlockKeepalive(siteId, path, getGlobalHeaders());
+				return;
+			}
+			unlock(siteId, path).subscribe({
+				next: () => {
+					unlockEffectRefs.current.dispatch(showUnlockItemSuccessNotification());
+				},
+				error: (error: AjaxError) => {
+					unlockEffectRefs.current.dispatch(showErrorDialog({ error: unlockErrorPayload(error) }));
 				}
-				unlock(state.siteId, path).subscribe({
-					next: () => {
-						unlockEffectRefs.current.dispatch(showUnlockItemSuccessNotification());
-					},
-					error: (error: AjaxError) => {
-						unlockEffectRefs.current.dispatch(showErrorDialog({ error: unlockErrorPayload(error) }));
-					}
-				});
 			});
 		};
 		const release = (via: 'pagehide' | 'unmount') => {
 			const refs = unlockEffectRefs.current;
-			const state = refs.readState();
-			if (
-				keepLockOnStackedUnmount({
-					via,
-					isStackedForm: state.isStackedForm,
-					entryStillOnStack: refs.entryStillOnStack(),
-					coveredByDeeperForm: refs.coveredByDeeperForm()
-				})
-			) {
-				return;
-			}
-			const path = planLockRelease(state, gate);
-			const entry = stableFormContextRef.current;
-			if (path && entry) sendUnlock(entry, state, via);
-			// Covered forms are not mounted, so closing the session must release the locks they still hold.
-			if (!refs.isRoot) return;
-			const length = refs.stackLength();
-			for (let index = 1; index < length - 1; index++) {
-				const coveredEntry = formsStackData[index];
-				const covered = refs.readCovered(index);
-				const coveredPath = lockPathToRelease(covered);
-				if (coveredPath && coveredEntry) sendUnlock(coveredEntry, covered, via);
-			}
+			releaseFormSessionLocks({
+				via,
+				entry: stableFormContextRef.current,
+				state: refs.readState(),
+				gate,
+				entryStillOnStack: refs.entryStillOnStack(),
+				coveredByDeeperForm: refs.coveredByDeeperForm(),
+				isRoot: refs.isRoot,
+				// Covered forms are not mounted, so closing the session must release the locks they still hold.
+				readCovered: () => {
+					const covered: Array<{ entry: StableFormContextProps | undefined; state: UnlockOnCloseState }> = [];
+					for (let index = 1; index < refs.stackLength() - 1; index++) {
+						covered.push({ entry: formsStackData[index], state: refs.readCovered(index) });
+					}
+					return covered;
+				},
+				session,
+				send: (_entry, state, path) => sendUnlockRequest(state.siteId, path, via)
+			});
 		};
 		if (globalContext && stackIndex === 0) {
 			globalContext.releaseUnmountedEntry = (entry) => {
