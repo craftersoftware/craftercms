@@ -20,29 +20,24 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
-import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
+import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
-import org.craftercms.studio.api.v2.utils.GitRepositoryHelper;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.craftercms.studio.api.v2.utils.StudioUtils;
 import org.craftercms.studio.impl.v2.upgrade.StudioUpgradeContext;
 import org.craftercms.studio.impl.v2.upgrade.operations.AbstractUpgradeOperation;
-import org.eclipse.jgit.lib.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.beans.ConstructorProperties;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static java.lang.String.format;
-import static org.craftercms.studio.api.v1.constant.GitRepositories.SANDBOX;
 
 /**
  * Copies the legacy {@code enable-staging-environment} flag from each site's {@code site-config.xml}
@@ -54,26 +49,23 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 
 	private static final Logger logger = LoggerFactory.getLogger(StagingEnabledBackfillUpgradeOperation.class);
 
-	protected static final String SITE_CONFIG_PATH = "config/studio/site-config.xml";
-	protected static final Pattern STAGING_ENABLED_PATTERN =
-		Pattern.compile("<enable-staging-environment>\\s*true\\s*</enable-staging-environment>");
 	protected static final String UPDATE_STAGING_ENABLED =
 		"UPDATE site SET staging_enabled = 1 WHERE site_id = ? AND deleted = 0 AND staging_enabled = 0";
 
 	private final SitesService sitesService;
-	private final GitRepositoryHelper gitRepositoryHelper;
+	private final ConfigurationService configurationService;
 	private final ServicesConfig servicesConfig;
 	private final StudioBlobAwareContentRepository contentRepository;
 	private final ItemTargetDAO itemTargetDao;
 
-	@ConstructorProperties({"studioConfiguration", "sitesService", "gitRepositoryHelper", "servicesConfig",
+	@ConstructorProperties({"studioConfiguration", "sitesService", "configurationService", "servicesConfig",
 		"contentRepository", "itemTargetDao"})
 	public StagingEnabledBackfillUpgradeOperation(StudioConfiguration studioConfiguration, SitesService sitesService,
-												  GitRepositoryHelper gitRepositoryHelper, ServicesConfig servicesConfig,
+												  ConfigurationService configurationService, ServicesConfig servicesConfig,
 												  StudioBlobAwareContentRepository contentRepository, ItemTargetDAO itemTargetDao) {
 		super(studioConfiguration);
 		this.sitesService = sitesService;
-		this.gitRepositoryHelper = gitRepositoryHelper;
+		this.configurationService = configurationService;
 		this.servicesConfig = servicesConfig;
 		this.contentRepository = contentRepository;
 		this.itemTargetDao = itemTargetDao;
@@ -84,7 +76,7 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 		List<Site> sites = sitesService.getAllSites();
 		for (Site site : sites) {
 			try {
-				if (isStagingEnabledInSiteConfig(site.getSiteId())) {
+				if (StudioUtils.isLegacyStagingEnabled(site.getSiteId(), studioConfiguration, configurationService)) {
 					enableStaging(context, site);
 				}
 			} catch (ServiceLayerException | IOException | SQLException e) {
@@ -126,17 +118,5 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 			itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
 		}
 		contentRepository.copyBlobs(siteId, liveBranch, stagingBranch);
-	}
-
-	private boolean isStagingEnabledInSiteConfig(String siteId) throws RepositoryException, IOException {
-		Repository sandbox = gitRepositoryHelper.getRepository(siteId, SANDBOX);
-		if (sandbox == null || sandbox.getWorkTree() == null) {
-			return false;
-		}
-		Path configPath = sandbox.getWorkTree().toPath().resolve(SITE_CONFIG_PATH);
-		if (!Files.exists(configPath)) {
-			return false;
-		}
-		return STAGING_ENABLED_PATTERN.matcher(Files.readString(configPath)).find();
 	}
 }
