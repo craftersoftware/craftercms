@@ -78,6 +78,7 @@ export const valueSerializersLookup: Record<BuiltInControlType | DescriptorContr
 	'type-controller-selector': undefined,
 	'key-value-map': (value) => prepareObjectArray(value as object[]),
 	'type-destination-paths-selector': (value) => prepareObject(value as object),
+	'type-allowed-roles-selector': undefined,
 	'path-with-macro-creator': undefined,
 	'merge-strategy-selector': undefined,
 	'datasource:image': (value) => prepareStringArray(value as string[]),

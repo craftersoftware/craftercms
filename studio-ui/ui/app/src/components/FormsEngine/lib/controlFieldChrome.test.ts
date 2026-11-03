@@ -67,6 +67,37 @@ describe('control contribution fieldChrome', () => {
 	});
 });
 
+describe('control contribution apiVersion with the rest of the contract', () => {
+	it('registers an entry that declares the current apiVersion together with fieldChrome and the hooks', () => {
+		const registered = register('org.example.compose-ok', 'compose-ok', {
+			apiVersion: 1,
+			fieldChrome: false,
+			valueRetriever: (value: unknown) => value,
+			valueSerializer: (value: unknown) => value,
+			validator: () => ({ valid: true })
+		});
+		assert.equal(registered?.fieldChrome, false);
+		assert.equal(typeof registered?.valueRetriever, 'function');
+		assert.equal(typeof registered?.valueSerializer, 'function');
+		assert.equal(typeof registered?.validator, 'function');
+	});
+
+	it('still refuses an unsupported apiVersion before any registry write', () => {
+		assert.throws(
+			() => register('org.example.compose-bad', 'compose-bad', { apiVersion: 2, fieldChrome: false }),
+			/unsupported apiVersion/
+		);
+		assert.equal(getRegisteredControlContribution('compose-bad'), undefined);
+	});
+
+	it('publishes apiVersion and xmlKeys together on the controls host', async () => {
+		const { formsEngineControlsHost } = await import('../dataSources/host.ts');
+		const { CONTROL_API_VERSION } = await import('../types.ts');
+		assert.equal(formsEngineControlsHost.apiVersion, CONTROL_API_VERSION);
+		assert.equal(formsEngineControlsHost.xmlKeys.cdata, '__cdata__');
+	});
+});
+
 describe('loaded control plugin', () => {
 	it('wraps by default and carries the wrapper sx', () => {
 		const fieldSx = { mt: 1 };

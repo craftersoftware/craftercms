@@ -18,7 +18,7 @@ import type { ComponentType } from 'react';
 import type { SxProps, Theme } from '@mui/material/styles';
 import WidgetRecord from './WidgetRecord';
 import type { DataSourceBinding, DataSourceModule } from '../components/FormsEngine/dataSources/types';
-import type { AnyValue, ControlProps } from '../components/FormsEngine/types';
+import type { AnyValue, CONTROL_API_VERSION, ControlProps } from '../components/FormsEngine/types';
 import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
 import type { Validator } from '../components/FormsEngine/lib/validators';
 
@@ -27,6 +27,11 @@ import type { Validator } from '../components/FormsEngine/lib/validators';
  * Map keys on `controls` must equal the control type id (`field.type`).
  */
 export interface ControlPluginContribution<V = unknown> {
+	/**
+	 * Contract version this control implements. Currently {@link CONTROL_API_VERSION}.
+	 * A missing value counts as that version. Any other value is refused at registration.
+	 */
+	apiVersion?: typeof CONTROL_API_VERSION;
 	/** React control component; must accept ControlProps. */
 	Component: ComponentType<ControlProps<V>>;
 	/**

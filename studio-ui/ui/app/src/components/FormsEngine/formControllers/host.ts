@@ -15,14 +15,17 @@
  */
 
 import { clearFormControllerCache, getCachedFormController, loadFormController } from './loader';
+import { FORM_CONTROLLER_API_VERSION } from './types';
 
 /**
  * Public runtime surface for form controllers.
- * Authors do not need it; FE2 loads controllers during form bootstrap.
+ * `apiVersion` is the contract integer (`FORM_CONTROLLER_API_VERSION`).
+ * Authors do not need the rest; FE2 loads controllers during form bootstrap.
  * `__internal` holds load/cache helpers for tests and console debugging. It is undocumented and not a contract:
  * it can change or go away without an API version change.
  */
 export const formsEngineFormControllersHost = {
+	apiVersion: FORM_CONTROLLER_API_VERSION,
 	__internal: {
 		load: loadFormController,
 		getCached: getCachedFormController,

@@ -33,6 +33,12 @@ describe('formsEngineFormControllersHost', () => {
 		}
 	});
 
+	it('keeps the contract integer on the public host next to __internal', async () => {
+		const { FORM_CONTROLLER_API_VERSION } = await import('./types.ts');
+		assert.equal(formsEngineFormControllersHost.apiVersion, FORM_CONTROLLER_API_VERSION);
+		assert.equal(typeof formsEngineFormControllersHost.__internal, 'object');
+	});
+
 	it('keeps the helpers under __internal', () => {
 		const { __internal } = formsEngineFormControllersHost;
 		assert.equal(__internal.load, loadFormController);
