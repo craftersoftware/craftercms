@@ -28,7 +28,7 @@ import type { FieldValidityMessage } from './validators.ts';
 
 const { validateFieldValue } = await import('./validators.ts');
 
-const meta = { siteId: 'editorial', fileName: 'index.xml', itemMeta: { path: '/site/website/index.xml' } };
+const meta = { siteId: 'editorial', itemMeta: { path: '/site/website/index.xml' } };
 
 function field(type: string, id: string, validations: Record<string, unknown> = {}): ContentTypeField {
 	const entries = Object.entries(validations).map(([key, value]) => [key, { id: key, value, level: 'required' }]);
@@ -126,10 +126,7 @@ describe('built-in validators on the new signature', () => {
 	});
 
 	it('file-name owns its required message and does not get the host one', async () => {
-		const result = await validateFieldValue(field('file-name', 'file-name', { required: true }), '', {
-			...meta,
-			fileName: ''
-		});
+		const result = await validateFieldValue(field('file-name', 'file-name', { required: true }), '', meta);
 		assert.equal(result.isValid, false);
 		assert.deepEqual(texts(result.messages), ['This field is required.']);
 	});

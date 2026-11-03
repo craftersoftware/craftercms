@@ -37,7 +37,7 @@ import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
-import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, Atom, createStore, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import React, {
 	ReactNode,
 	RefObject,
@@ -417,7 +417,6 @@ export function createFieldAtoms(
 			additionalFields: validatorsData?.additionalFields,
 			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms?.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
 			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
@@ -850,7 +849,11 @@ export function setFieldAtoms(
 			return;
 		}
 	}
-	const [valueAtom, validityAtom] = createFieldAtoms(field, value, stableFormContextRef, validatorsData);
+	// The file-name value starts from the file-name atom, the name derived from the item path. The validator
+	// reads only this value, so it must not start from the xml value, which can differ from the path.
+	const initialValue =
+		fieldId === XmlKeys.fileName && atomsTarget.fileName ? createStore().get(atomsTarget.fileName) : value;
+	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;
 }

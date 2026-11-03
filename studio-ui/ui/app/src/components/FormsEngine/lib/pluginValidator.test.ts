@@ -37,7 +37,7 @@ const { createStore, atom } = await import('jotai');
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
 const Component = (() => null) as ComponentType<AnyValue>;
-const meta = { siteId: 'editorial', fileName: 'index.xml', itemMeta: { path: '/site/website/index.xml' } };
+const meta = { siteId: 'editorial', itemMeta: { path: '/site/website/index.xml' } };
 
 let counter = 0;
 function plugin(validator: Validator<AnyValue>, validations: ContentTypeField['validations'] = {}) {

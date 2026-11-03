@@ -61,7 +61,6 @@ import { freezeForPlugin } from './pluginHooks';
  */
 export interface ValidatorMetaData {
 	siteId: string;
-	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
 	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
@@ -388,7 +387,7 @@ function createBuiltInContext(field: ContentTypeField, meta: ValidatorMetaData):
  *
  * @param {ContentTypeField} field - The field metadata, including its type and validation rules.
  * @param {unknown} currentValue - The current value of the field to be validated.
- * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and file name.
+ * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and item meta.
  * @returns {Promise<FieldValidityState>} - A promise resolving to the validity state of the field,
  * including whether it is valid and any associated validation messages.
  *
@@ -546,19 +545,17 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 
 /**
  * File-name rules: required, then uniqueness.
- * The name is {@link ValidatorMetaData.fileName}, the atom this control edits. The raw field value is not read.
+ * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync.
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
  *
- * @param {string} _value - Unused. This control does not validate the raw field value.
- * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID, the file-name atom, and item context.
+ * @param {string} currentValue - The file name being validated.
+ * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID and item context.
  * @returns {Promise<ValidatorResult>} - Valid when the file name is allowed, otherwise invalid with the reason.
  *
  */
-export async function fileNameValidator(_value: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
+export async function fileNameValidator(currentValue: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
 	const { field, meta } = ctx;
 	const siteId: string = meta.siteId;
-	// Single source: the file-name atom. createFileNameAtom derives it from the path. The raw field value is ignored.
-	const currentValue = meta.fileName;
 	const blank = isEmptyValue(field, currentValue);
 	const storedRequired = Boolean(field.validations?.required?.value);
 	// Blank is invalid, except on the home page, where it is allowed unless the stored constraint requires it.
