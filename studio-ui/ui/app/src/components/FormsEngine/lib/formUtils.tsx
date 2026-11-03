@@ -104,7 +104,6 @@ import { ensureSingleSlash } from '../../../utils/string';
 import { createObjectGroupId, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
-	createLockReleaseGate,
 	postUnlockKeepalive,
 	releaseFormSessionLocks,
 	sharedPerUserAtom,
@@ -1045,17 +1044,14 @@ export function useUnlockOnClose(props: {
 	});
 	// Only the top stacked bootstrap is mounted. popForm uses this to skip the entry that will unmount.
 	useLayoutEffect(() => {
-		if (!globalContext || stackIndex === 0) return;
-		globalContext.mountedStackEntry = stableFormContextRef.current;
-		return () => {
-			if (globalContext.mountedStackEntry === stableFormContextRef.current) {
-				globalContext.mountedStackEntry = null;
-			}
-		};
+		const session = globalContext?.lockReleaseSession;
+		if (!session || stackIndex === 0) return;
+		const entry = stableFormContextRef.current;
+		session.setMountedEntry(entry);
+		return () => session.clearMountedEntry(entry);
 	}, [globalContext, stackIndex, stableFormContextRef]);
 	// Stable dep: the ref identity does not change. Save Draft must not re-run this cleanup while the form is open.
 	useEffect(() => {
-		const gate = createLockReleaseGate();
 		const session = globalContext?.lockReleaseSession;
 		const sendUnlock = (entry: StableFormContextProps, state: UnlockOnCloseState, via: 'pagehide' | 'unmount') => {
 			session?.releaseOnce(entry, state, (path) => sendUnlockRequest(state.siteId, path, via));
@@ -1080,7 +1076,6 @@ export function useUnlockOnClose(props: {
 				via,
 				entry: stableFormContextRef.current,
 				state: refs.readState(),
-				gate,
 				entryStillOnStack: refs.entryStillOnStack(),
 				coveredByDeeperForm: refs.coveredByDeeperForm(),
 				isRoot: refs.isRoot,
@@ -1096,13 +1091,13 @@ export function useUnlockOnClose(props: {
 				send: (_entry, state, path) => sendUnlockRequest(state.siteId, path, via)
 			});
 		};
-		if (globalContext && stackIndex === 0) {
-			globalContext.releaseUnmountedEntry = (entry) => {
+		if (session && stackIndex === 0) {
+			session.setReleaseUnmounted((entry) => {
 				const index = formsStackData.lastIndexOf(entry);
 				if (index <= 0) return;
 				const state = unlockEffectRefs.current.readCovered(index);
 				sendUnlock(entry, state, 'unmount');
-			};
+			});
 		}
 		const onPageHide = (event: PageTransitionEvent) => {
 			if (!shouldUnlockOnPageHide(event)) return;
@@ -1110,12 +1105,13 @@ export function useUnlockOnClose(props: {
 		};
 		window.addEventListener('pagehide', onPageHide);
 		return () => {
-			if (globalContext && stackIndex === 0 && globalContext.releaseUnmountedEntry) {
-				globalContext.releaseUnmountedEntry = null;
-			}
+			if (session && stackIndex === 0) session.setReleaseUnmounted(null);
 			window.removeEventListener('pagehide', onPageHide);
 			release('unmount');
 		};
+		// Intentional: the session lives for the whole form. Everything the effect reads that changes goes through
+		// unlockEffectRefs. Re-running on globalContext, formsStackData or stackIndex would release the lock mid-session.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [unlockEffectRefs]);
 }
 

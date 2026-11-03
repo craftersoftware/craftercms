@@ -542,9 +542,7 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 	rootFormActions: {
 		save: () => Promise.resolve()
 	},
-	mountedStackEntry: null,
-	releaseUnmountedEntry: null,
-	lockReleaseSession: createFormLockReleaseSession()
+	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
 export function createVirtualTypeFormContext(

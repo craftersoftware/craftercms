@@ -130,17 +130,29 @@ export function entriesReleasedOnStackRemoval<T>(args: {
  * stack entry (that acquisition), not the path. pagehide and unmount share the entry.
  * Parent readonly is remembered before a mounted entry is popped: its unmount runs after
  * root reload has already removed the parent.
+ * It also holds the two hooks the root and the mounted stacked form register while they are on screen,
+ * so the forms set them through methods instead of writing to the shared context.
  */
-export interface FormLockReleaseSession {
+export interface FormLockReleaseSession<T extends object = object> {
 	rememberParentReadonly(entry: object, parentReadonly: boolean): void;
 	parentReadonly(entry: object, liveParentReadonly: boolean): boolean;
 	/** Sends the unlock on the first call for this entry. Later calls return null. */
 	releaseOnce(entry: object, state: UnlockOnCloseState, send: (path: string) => void): string | null;
+	/** The stacked bootstrap that is mounted, if any. It releases its own lock on unmount. */
+	getMountedEntry(): T | null;
+	setMountedEntry(entry: T | null): void;
+	/** Clears the mounted entry only if it is still `entry`, so a newer mount is not wiped by an older cleanup. */
+	clearMountedEntry(entry: T): void;
+	/** Registered by the root. Releases a removed entry that has no mounted bootstrap. */
+	setReleaseUnmounted(release: ((entry: T) => void) | null): void;
+	releaseUnmounted(entry: T): void;
 }
 
-export function createFormLockReleaseSession(): FormLockReleaseSession {
+export function createFormLockReleaseSession<T extends object = object>(): FormLockReleaseSession<T> {
 	const released = new WeakSet<object>();
 	const parentReadonlyByEntry = new WeakMap<object, boolean>();
+	let mountedEntry: T | null = null;
+	let releaseUnmounted: ((entry: T) => void) | null = null;
 	return {
 		rememberParentReadonly(entry, parentReadonly) {
 			if (!parentReadonlyByEntry.has(entry)) parentReadonlyByEntry.set(entry, parentReadonly);
@@ -156,6 +168,21 @@ export function createFormLockReleaseSession(): FormLockReleaseSession {
 			released.add(entry);
 			send(path);
 			return path;
+		},
+		getMountedEntry() {
+			return mountedEntry;
+		},
+		setMountedEntry(entry) {
+			mountedEntry = entry;
+		},
+		clearMountedEntry(entry) {
+			if (mountedEntry === entry) mountedEntry = null;
+		},
+		setReleaseUnmounted(release) {
+			releaseUnmounted = release;
+		},
+		releaseUnmounted(entry) {
+			releaseUnmounted?.(entry);
 		}
 	};
 }
@@ -241,7 +268,6 @@ export function releaseFormSessionLocks<T extends object>(args: {
 	via: 'pagehide' | 'unmount';
 	entry: T | null | undefined;
 	state: UnlockOnCloseState;
-	gate: LockReleaseGate;
 	entryStillOnStack: boolean;
 	coveredByDeeperForm: boolean;
 	isRoot: boolean;
@@ -263,7 +289,7 @@ export function releaseFormSessionLocks<T extends object>(args: {
 	const release = (entry: T, state: UnlockOnCloseState) => {
 		args.session?.releaseOnce(entry, state, (path) => args.send(entry, state, path));
 	};
-	if (args.entry && planLockRelease(args.state, args.gate)) release(args.entry, args.state);
+	if (args.entry) release(args.entry, args.state);
 	if (!args.isRoot) return;
 	for (const covered of args.readCovered()) {
 		if (covered.entry && lockPathToRelease(covered.state)) release(covered.entry, covered.state);
@@ -302,33 +328,6 @@ export function unlockErrorPayload(error: {
 /** Release Lock failed when the unlock call came back with an error. */
 export function releaseLockToggleFailed(result: { lockError?: UnlockErrorBody | null }): boolean {
 	return result.lockError != null;
-}
-
-export interface LockReleaseGate {
-	/** True the first time a release is claimed. Later calls are false so close and pagehide do not both unlock. */
-	claim(): boolean;
-}
-
-export function createLockReleaseGate(): LockReleaseGate {
-	let released = false;
-	return {
-		claim() {
-			if (released) return false;
-			released = true;
-			return true;
-		}
-	};
-}
-
-/**
- * Claims the single release for this form and returns the path to unlock.
- * A call that has nothing to unlock does not claim, so a later call still can.
- */
-export function planLockRelease(state: UnlockOnCloseState, gate: LockReleaseGate): string | null {
-	const path = lockPathToRelease(state);
-	if (!path) return null;
-	if (!gate.claim()) return null;
-	return path;
 }
 
 /** `fetch` options for an unlock that must survive the document going away. */

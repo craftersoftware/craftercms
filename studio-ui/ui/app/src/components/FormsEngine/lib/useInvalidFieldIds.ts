@@ -36,6 +36,8 @@ export function watchInvalidFieldUpdates(
 	return fieldUpdates$?.pipe(debounceTime(dueTime, scheduler)).subscribe(() => read());
 }
 
+const noInvalidFieldIds: string[] = [];
+
 /** Live ids of fields that fail validation, excluding controller-irrelevant fields. */
 export function useInvalidFieldIds(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
@@ -46,10 +48,7 @@ export function useInvalidFieldIds(
 	const jotai = useJotaiStore();
 	const [ids, setIds] = useState<string[]>([]);
 	useEffect(() => {
-		if (!validationByFieldId) {
-			setIds([]);
-			return;
-		}
+		if (!validationByFieldId) return;
 		let disposed = false;
 		let latest = 0;
 		const read = async () => {
@@ -71,5 +70,5 @@ export function useInvalidFieldIds(
 			subscription?.unsubscribe();
 		};
 	}, [fieldUpdates$, irrelevantFieldPaths, jotai, parentPath, validationByFieldId]);
-	return ids;
+	return validationByFieldId ? ids : noInvalidFieldIds;
 }

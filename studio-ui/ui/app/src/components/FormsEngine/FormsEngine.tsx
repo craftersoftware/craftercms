@@ -304,9 +304,7 @@ function GlobalFormsState(props: FormsEngineProps) {
 			rootFormActions: {
 				save: () => Promise.resolve()
 			},
-			mountedStackEntry: null,
-			releaseUnmountedEntry: null,
-			lockReleaseSession: createFormLockReleaseSession()
+			lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 		};
 	}
 	stableGlobalContextRef.current.api = useMemo<FormsEngineGlobalApiContextProps>(() => {
@@ -333,17 +331,17 @@ function GlobalFormsState(props: FormsEngineProps) {
 				// pops the parent before that unmount. A covered entry has no bootstrap and releases now.
 				const next = prepareStackedFormPop({
 					stack,
-					mounted: ctx.mountedStackEntry,
+					mounted: ctx.lockReleaseSession.getMountedEntry(),
 					session: ctx.lockReleaseSession,
 					parentReadonly: (parent) => {
 						const atoms = stackEntryAtoms(parent);
 						return atoms ? store.get(atoms.readonly) : false;
 					},
 					releaseCovered: (entry) => {
-						ctx.releaseUnmountedEntry?.(entry);
+						ctx.lockReleaseSession.releaseUnmounted(entry);
 					}
 				});
-				ctx.mountedStackEntry = next.mounted;
+				ctx.lockReleaseSession.setMountedEntry(next.mounted);
 				runFormControllerCleanup(removed);
 				stack.pop();
 				setCount(-1);

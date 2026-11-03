@@ -26,12 +26,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
 	applySavedRenameToLock,
-	createLockReleaseGate,
 	createFormLockReleaseSession,
 	entriesReleasedOnStackRemoval,
 	keepLockOnStackedUnmount,
 	lockPathToRelease,
-	planLockRelease,
 	prepareStackedFormPop,
 	releaseFormSessionLocks,
 	resolveReleaseLockOnClose,
@@ -217,11 +215,15 @@ describe('release lock when closing', () => {
 	});
 
 	it('keeps the lock on pagehide when the choice is off', () => {
-		const gate = createLockReleaseGate();
+		const session = createFormLockReleaseSession();
+		const entry = {};
+		const unlocks: string[] = [];
 		assert.equal(shouldUnlockOnPageHide({ persisted: false }), true);
-		assert.equal(planLockRelease(keepLock, gate), null);
+		session.releaseOnce(entry, keepLock, (path) => unlocks.push(path));
+		assert.deepEqual(unlocks, []);
 		// The choice did not spend the release. Turning it back on still unlocks.
-		assert.equal(planLockRelease(holding(article), gate), article);
+		session.releaseOnce(entry, holding(article), (path) => unlocks.push(path));
+		assert.deepEqual(unlocks, [article]);
 	});
 
 	it('keeps the lock when close-after-save unmounts and the choice is off', () => {
@@ -353,18 +355,61 @@ describe('root session lock acquisitions', () => {
 	});
 });
 
+describe('session hooks', () => {
+	it('tracks the mounted entry and clears it only for that entry', () => {
+		const session = createFormLockReleaseSession<{ name: string }>();
+		const older = { name: 'older' };
+		const newer = { name: 'newer' };
+		assert.equal(session.getMountedEntry(), null);
+		session.setMountedEntry(older);
+		session.setMountedEntry(newer);
+		session.clearMountedEntry(older);
+		assert.equal(session.getMountedEntry(), newer);
+		session.clearMountedEntry(newer);
+		assert.equal(session.getMountedEntry(), null);
+	});
+
+	it('runs the registered release for a removed entry, and nothing once it is cleared', () => {
+		const session = createFormLockReleaseSession<{ name: string }>();
+		const released: string[] = [];
+		const entry = { name: 'covered' };
+		session.releaseUnmounted(entry);
+		session.setReleaseUnmounted((removed) => released.push(removed.name));
+		session.releaseUnmounted(entry);
+		session.setReleaseUnmounted(null);
+		session.releaseUnmounted(entry);
+		assert.deepEqual(released, ['covered']);
+	});
+});
+
 describe('one release per form', () => {
-	it('lets pagehide claim the release so unmount does not unlock again', () => {
-		const gate = createLockReleaseGate();
+	it('returns the path on the first release of an entry and null after, as pagehide then unmount', () => {
+		const session = createFormLockReleaseSession();
+		const entry = {};
 		const state = holding(article);
-		assert.equal(planLockRelease(state, gate), article);
-		assert.equal(planLockRelease(state, gate), null);
+		const unlocks: string[] = [];
+		assert.equal(
+			session.releaseOnce(entry, state, (path) => unlocks.push(path)),
+			article
+		);
+		assert.equal(
+			session.releaseOnce(entry, state, (path) => unlocks.push(path)),
+			null
+		);
+		assert.deepEqual(unlocks, [article]);
 	});
 
 	it('does not spend the release when this close should not unlock', () => {
-		const gate = createLockReleaseGate();
-		assert.equal(planLockRelease(holding(article, { readonly: true }), gate), null);
-		assert.equal(planLockRelease(holding(article), gate), article);
+		const session = createFormLockReleaseSession();
+		const entry = {};
+		assert.equal(
+			session.releaseOnce(entry, holding(article, { readonly: true }), () => {}),
+			null
+		);
+		assert.equal(
+			session.releaseOnce(entry, holding(article), () => {}),
+			article
+		);
 	});
 
 	it('does not unlock on pagehide when the page is only frozen', () => {
@@ -454,7 +499,6 @@ describe('form session release', () => {
 	function release(args: {
 		via?: 'pagehide' | 'unmount';
 		self: SessionEntry | null;
-		gate?: ReturnType<typeof createLockReleaseGate>;
 		session?: FormLockReleaseSession;
 		entryStillOnStack?: boolean;
 		coveredByDeeperForm?: boolean;
@@ -466,7 +510,6 @@ describe('form session release', () => {
 			via: args.via ?? 'unmount',
 			entry: args.self,
 			state: args.self?.state ?? holding(null),
-			gate: args.gate ?? createLockReleaseGate(),
 			entryStillOnStack: args.entryStillOnStack ?? false,
 			coveredByDeeperForm: args.coveredByDeeperForm ?? false,
 			isRoot: args.isRoot ?? true,
@@ -490,12 +533,11 @@ describe('form session release', () => {
 
 	it('keeps the lock when a deeper form covers a stacked form, and releases it on the real pop', () => {
 		const session = createFormLockReleaseSession();
-		const gate = createLockReleaseGate();
 		const stacked = { name: 'stacked', state: holding(article, { isStackedForm: true, isEmbedded: false }) };
 		const sent: string[] = [];
-		release({ self: stacked, session, gate, isRoot: false, entryStillOnStack: true, coveredByDeeperForm: true, sent });
+		release({ self: stacked, session, isRoot: false, entryStillOnStack: true, coveredByDeeperForm: true, sent });
 		assert.deepEqual(sent, []);
-		release({ self: stacked, session, gate, isRoot: false, entryStillOnStack: false, sent });
+		release({ self: stacked, session, isRoot: false, entryStillOnStack: false, sent });
 		assert.deepEqual(sent, [`stacked:${article}`]);
 	});
 
@@ -530,11 +572,10 @@ describe('form session release', () => {
 
 	it('sends once when pagehide and unmount both run', () => {
 		const session = createFormLockReleaseSession();
-		const gate = createLockReleaseGate();
 		const self = { name: 'root', state: holding(article) };
 		const sent: string[] = [];
-		release({ via: 'pagehide', self, session, gate, sent });
-		release({ via: 'unmount', self, session, gate, sent });
+		release({ via: 'pagehide', self, session, sent });
+		release({ via: 'unmount', self, session, sent });
 		assert.deepEqual(sent, [`root:${article}`]);
 	});
 
@@ -544,7 +585,6 @@ describe('form session release', () => {
 			via: 'unmount',
 			entry: { name: 'root', state: holding(article) },
 			state: holding(article),
-			gate: createLockReleaseGate(),
 			entryStillOnStack: false,
 			coveredByDeeperForm: false,
 			isRoot: true,

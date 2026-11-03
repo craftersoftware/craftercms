@@ -141,12 +141,11 @@ export interface StableGlobalContextProps {
 	rootFormActions: {
 		save: (draft?: boolean | 'auto') => Promise<'revealed' | 'invalid' | 'saved' | void>;
 	};
-	/** Stacked bootstrap that is mounted. It releases its own lock on unmount. */
-	mountedStackEntry: StableFormContextProps | null;
-	/** Releases a removed entry that has no mounted bootstrap (a covered form popped by reload). */
-	releaseUnmountedEntry: ((entry: StableFormContextProps) => void) | null;
-	/** Dedup and parent-readonly memory for unlocks in this root session. */
-	lockReleaseSession: FormLockReleaseSession;
+	/**
+	 * Dedup and parent-readonly memory for unlocks in this root session. It also tracks the mounted stacked
+	 * bootstrap and the release for a covered form popped by reload, which have no bootstrap to release them.
+	 */
+	lockReleaseSession: FormLockReleaseSession<StableFormContextProps>;
 }
 
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).
