@@ -65,7 +65,11 @@ export function registerControlContribution(controlType: string, contribution: R
 			);
 		}
 	}
-	registeredControls.set(controlType, contribution);
+	// Read through `getControl`, so a plugin can't swap another plugin's Component or hooks.
+	registeredControls.set(
+		controlType,
+		Object.freeze({ ...contribution, bindings: Object.freeze([...contribution.bindings]) })
+	);
 }
 
 /** Read API for `controlPluginLoader` / hosts after `registerPlugin`. */

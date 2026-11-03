@@ -24,11 +24,11 @@ import { FORM_CONTROLLER_API_VERSION } from './types';
  * `__internal` holds load/cache helpers for tests and console debugging. It is undocumented and not a contract:
  * it can change or go away without an API version change.
  */
-export const formsEngineFormControllersHost = {
+export const formsEngineFormControllersHost = Object.freeze({
 	apiVersion: FORM_CONTROLLER_API_VERSION,
-	__internal: {
+	__internal: Object.freeze({
 		load: loadFormController,
 		getCached: getCachedFormController,
 		clearCache: clearFormControllerCache
-	}
-};
+	})
+});

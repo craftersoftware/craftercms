@@ -98,14 +98,15 @@ function PluginControlRenderer({
 		<ResolvedControlRenderer
 			{...props}
 			Control={loaded.Component}
-			bindings={loaded.bindings}
+			// A control that declares none uses what `registerDataSourceBindings` registered for the type.
+			bindings={loaded.bindings.length ? loaded.bindings : getControlDataSourceBindings(props.field.type)}
 			fieldChrome={loaded.fieldChrome}
 			fieldSx={loaded.fieldSx}
 		/>
 	);
 }
 
-function ResolvedControlRenderer({
+export function ResolvedControlRenderer({
 	field,
 	autoFocus,
 	readonly,

@@ -18,6 +18,21 @@ import type { ContentType, ContentTypeField, DataSource } from '../../../models/
 import type { BuiltInControlType } from '../lib/controlMap';
 import type { DataSourceBinding, DataSourceResolutionError } from './types';
 
+/** A copy that nothing can change: the array, each binding and its `interfaces`. */
+function freezeBindings(bindings: readonly DataSourceBinding[]): readonly DataSourceBinding[] {
+	return Object.freeze(
+		bindings.map((binding) => Object.freeze({ ...binding, interfaces: Object.freeze([...binding.interfaces]) }))
+	);
+}
+
+function freezeBindingTable(
+	table: Partial<Record<BuiltInControlType, readonly DataSourceBinding[]>>
+): Readonly<Partial<Record<BuiltInControlType, readonly DataSourceBinding[]>>> {
+	return Object.freeze(
+		Object.fromEntries(Object.entries(table).map(([type, bindings]) => [type, freezeBindings(bindings)]))
+	);
+}
+
 /**
  * Built-in control → DS binding metadata. Plugin controls do not belong here;
  * they declare `dataSourceBindings` on `PluginDescriptor.controls[type]`
@@ -28,7 +43,7 @@ import type { DataSourceBinding, DataSourceResolutionError } from './types';
  * separate descriptor-property concern (`datasource:item` vs
  * `datasource:item:singleSelection`).
  */
-export const controlDataSourceBindings: Partial<Record<BuiltInControlType, readonly DataSourceBinding[]>> = {
+export const controlDataSourceBindings = freezeBindingTable({
 	'node-selector': [{ propertyName: 'itemManager', interfaces: ['item'], selection: 'multi' }],
 	'image-picker': [{ propertyName: 'imageManager', interfaces: ['image'], selection: 'single' }],
 	'video-picker': [{ propertyName: 'videoManager', interfaces: ['video'], selection: 'single' }],
@@ -41,7 +56,7 @@ export const controlDataSourceBindings: Partial<Record<BuiltInControlType, reado
 		{ propertyName: 'audioManager', interfaces: ['audio'], selection: 'single' },
 		{ propertyName: 'fileManager', interfaces: ['item'], selection: 'single' }
 	]
-};
+});
 
 /** Runtime registrations for plugin / dynamically discovered control types. */
 const registeredControlDataSourceBindings = new Map<string, readonly DataSourceBinding[]>();
@@ -79,7 +94,8 @@ export function normalizeDataSourceBindings(value: unknown): readonly DataSource
 			'Control dataSourceBindings must be a DataSourceBinding or DataSourceBinding[] with propertyName, interfaces, and selection.'
 		);
 	}
-	return bindings;
+	// Frozen copies, so the plugin's own objects can't change what the registry hands out.
+	return freezeBindings(bindings);
 }
 
 /**
@@ -130,7 +146,9 @@ export function registerControlDataSourceBindings(
  */
 export function getControlDataSourceBindings(controlType: string): readonly DataSourceBinding[] {
 	return (
-		controlDataSourceBindings[controlType as BuiltInControlType] ??
+		(Object.hasOwn(controlDataSourceBindings, controlType)
+			? controlDataSourceBindings[controlType as BuiltInControlType]
+			: undefined) ??
 		registeredControlDataSourceBindings.get(controlType) ??
 		noBindings
 	);

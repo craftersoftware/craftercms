@@ -19,8 +19,36 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import WidgetRecord from './WidgetRecord';
 import type { DataSourceBinding, DataSourceModule } from '../components/FormsEngine/dataSources/types';
 import type { AnyValue, CONTROL_API_VERSION, ControlProps } from '../components/FormsEngine/types';
-import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
-import type { Validator } from '../components/FormsEngine/lib/validators';
+import type {
+	ValueRetriever,
+	ValueRetrieverContext,
+	ValueSerializer,
+	ValueSerializerContext
+} from '../components/FormsEngine/lib/controlValueTypes';
+import type {
+	FieldValidityMessage,
+	Validator,
+	ValidatorContext,
+	ValidatorResult
+} from '../components/FormsEngine/lib/validators';
+import type { FormsEngineFieldPublicProps } from '../components/FormsEngine/components/FormsEngineField';
+
+/**
+ * The types a FE2 control plugin is written against, importable from `@craftercms/studio-ui/models`.
+ * They are type-only. Anything else under `components/FormsEngine` is host-internal.
+ */
+export type {
+	ControlProps,
+	FieldValidityMessage,
+	FormsEngineFieldPublicProps,
+	Validator,
+	ValidatorContext,
+	ValidatorResult,
+	ValueRetriever,
+	ValueRetrieverContext,
+	ValueSerializer,
+	ValueSerializerContext
+};
 
 /**
  * FE2 control contribution on a PluginDescriptor.

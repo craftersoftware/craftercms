@@ -70,7 +70,10 @@ export class DataSourceModuleRegistry {
 		if (this.#modules.has(module.type)) {
 			throw new Error(`A data-source module is already registered for type "${module.type}".`);
 		}
-		this.#modules.set(module.type, module);
+		// Read through `get` / `getAll`, so a plugin can't swap another module's members.
+		Object.freeze(module.interfaces);
+		Object.freeze(module.capabilities);
+		this.#modules.set(module.type, Object.freeze(module));
 	}
 
 	has(type: string): boolean {

@@ -44,12 +44,12 @@ import {
  * `importPlugin` / `registerPlugin` over calling `register` from plugin code.
  * See docs/type-builder-forms-engine-plugins.md §9.
  */
-export const formsEngineDataSourcesHost = {
+export const formsEngineDataSourcesHost = Object.freeze({
 	apiVersion: DATA_SOURCE_API_VERSION,
 	register: registerDataSourceModule,
 	get: dataSourceModuleRegistry.get.bind(dataSourceModuleRegistry),
 	getAll: dataSourceModuleRegistry.getAll.bind(dataSourceModuleRegistry)
-};
+});
 
 /**
  * Public runtime surface for control-extension binding metadata and contributions.
@@ -69,7 +69,7 @@ export const formsEngineDataSourcesHost = {
  * The hook must be the host's own instance, so it is exposed here rather than
  * imported/bundled by the plugin.
  */
-export const formsEngineControlsHost = {
+export const formsEngineControlsHost = Object.freeze({
 	apiVersion: CONTROL_API_VERSION,
 	registerDataSourceBindings: registerControlDataSourceBindings,
 	getDataSourceBindings: getControlDataSourceBindings,
@@ -87,4 +87,4 @@ export const formsEngineControlsHost = {
 		listItem: XML_LIST_ITEM_KEY,
 		itemListAttribute: XML_ITEM_LIST_ATTRIBUTE
 	})
-};
+});

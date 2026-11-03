@@ -35,6 +35,7 @@ import {
 	registerControlContribution
 } from '../components/FormsEngine/controls/registry';
 import { controlMap } from '../components/FormsEngine/lib/controlMap';
+import { controlMap as descriptorControlMap } from '../components/ContentTypeManagement/controlMap';
 import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
 import { CONTROL_API_VERSION, type AnyValue, type ControlProps } from '../components/FormsEngine/types';
 import type { Validator } from '../components/FormsEngine/lib/validators';
@@ -214,7 +215,9 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 			if (!typeKey) {
 				throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
 			}
-			if (typeKey in controlMap) {
+			// Both maps hold types a form can carry in `field.type`, and both own their retriever, serializer and
+			// validator, so a plugin claiming one of them would render but never have its hooks used.
+			if (typeKey in controlMap || typeKey in descriptorControlMap) {
 				throw new Error(
 					`Plugin "${plugin.id}" cannot register control type "${typeKey}": it collides with a built-in control.`
 				);
@@ -237,6 +240,11 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 			}
 			if (entry.fieldChrome != null && typeof entry.fieldChrome !== 'boolean') {
 				throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" fieldChrome must be a boolean when provided.`);
+			}
+			if (entry.fieldSx != null && typeof entry.fieldSx !== 'object' && typeof entry.fieldSx !== 'function') {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" fieldSx must be an sx object, array or function when provided.`
+				);
 			}
 			if (entry.valueRetriever != null && typeof entry.valueRetriever !== 'function') {
 				throw new TypeError(
@@ -294,7 +302,8 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 				valueSerializer,
 				validator
 			});
-			registerControlDataSourceBindings(typeKey, bindings);
+			// A control that declares no bindings keeps whatever `registerDataSourceBindings` registered for the type.
+			if (bindings.length) registerControlDataSourceBindings(typeKey, bindings);
 		}
 	);
 
