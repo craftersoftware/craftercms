@@ -16,7 +16,7 @@
 
 import { useAtom, useAtomValue } from 'jotai';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
-import React, { MouseEvent, useCallback, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
+import { MouseEvent, useCallback, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import { StableFormContext } from '../lib/formsEngineContext';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
