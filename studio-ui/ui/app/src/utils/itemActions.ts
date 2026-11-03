@@ -100,6 +100,7 @@ import { popDialog, pushDialog, updateDialogState } from '../state/actions/dialo
 import { createComponentId, pickShowContentFormAction, pushConfirmDialog, pushErrorDialog } from './system';
 import { checkAndCancelAffectedPackages } from '../components/ViewPackagesDialog/utils';
 import { fetchAllowedTypes } from '../services/contentTypes';
+import { getNormalizedFolderPathForApi1GetTypes } from './contentType';
 
 export type ContextMenuOptionDescriptor<ID extends string = string> = {
 	id: ID;
@@ -581,8 +582,7 @@ export const itemActionDispatcher = ({
 			}
 			case 'createContent': {
 				const id = nanoid();
-				// Add a trailing slash to the path if it's a folder. https://github.com/craftersoftware/craftercms/issues/4473
-				const path = item.systemType === 'folder' && !item.path.endsWith('/') ? `${item.path}/` : item.path;
+				const path = getNormalizedFolderPathForApi1GetTypes(item);
 
 				dispatch(blockUI({ progress: 'indeterminate' }));
 				fetchAllowedTypes(site, path).subscribe({
