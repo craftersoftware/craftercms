@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-10-30
+Last updated: 2026-11-03
 
 ---
 
@@ -336,14 +336,12 @@ New FE has two resolution paths in `controlHelpers.tsx` / `controlPluginLoader.t
 
 Plugin bundles are cached by file URL. `registerPlugin` registers bindings for each control type key; `ControlWrapper` resolves `ControlProps.dataSources` before render. Built-in bindings stay in the static table; plugin controls ship bindings on the descriptor control entry.
 
-Example: `samples/fe2-control-plugin.example.mjs`.
-
-The runtime control contract is `ControlProps` (`value`, `setValue`, `field`, `contentType`, `readonly`, `autoFocus`, optional `dataSources`). Host helpers:
+The runtime control contract is `ControlProps<V>` (`value: V`, `setValue(newValue: V)`, read-only `field` and `contentType`, `readonly`, `autoFocus`, host-generated `inputId` and `labelId`, optional `dataSources`). Host helpers:
 
 - `window.craftercms.formsEngine.dataSources` — DS module registry
-- `window.craftercms.formsEngine.controls` — `apiVersion`, `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`
+- `window.craftercms.formsEngine.controls` — `apiVersion`, `getControl(type)`, `registerDataSourceBindings`, `getDataSourceBindings`, `getValueRetriever`, `getValueSerializer`, `getValidator`, `useFieldValue`, `FormsEngineField`, `xmlKeys`
 
-Plugin controls are rendered bare by `ResolvedControlRenderer` (built-ins wrap themselves in `FormsEngineField`). A plugin that wants label, required/invalid styling, and validity messages must wrap its input in the host-provided `FormsEngineField`; otherwise a failing validator only surfaces in the Table of Contents and the save gate.
+`ResolvedControlRenderer` wraps plugin controls in `FormsEngineField` by default, wired to the generated `inputId` / `labelId` (built-ins and Type Builder controls wrap themselves and are rendered bare). A contribution opts out with `fieldChrome: false` and wraps its input itself; `fieldSx` styles the default wrapper. The load-error placeholder wraps itself and is never wrapped twice: `controlPluginLoader` reports `fieldChrome: false` for it. Contract details and the `FormsEngineField` public props are in the plugins doc §6.
 
 `useFieldValue(fieldId)` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`) is the supported way for a plugin control to read/write a **sibling field** — typically a descriptor-declared additional field such as `{id}_tz` (date/time) or `{id}_bk` (see §5.4 for the `metadata/additionalFields` XML that declares those companions and gets their atoms created at bootstrap). It is a React hook returning `[value, setValue, exists]`: when the field was not initialized, `value` is `undefined`, `exists` is `false`, and `setValue` is a no-op instead of throwing — compare built-in `DateTime`, which throws on a missing `${field.id}_tz` atom. Plugins must use the host's instance (hooks/context identity), so the hook is exposed here rather than imported or bundled by the plugin:
 
@@ -355,7 +353,7 @@ const [timezone, setTimezone, timezoneExists] = useFieldValue(`${field.id}_tz`);
 
 `StableFormContext` and Jotai's `useAtom` are deliberately **not** host members: an earlier revision exposed them so plugins could reach `atoms.valueByFieldId` directly, but that leaked the atom map and a Jotai dependency to plugins. `useFieldValue` supersedes them — do not import Jotai or reach into the atoms map from plugin code.
 
-This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`; omitted means `1`; any other value is refused by `registerPlugin` with an error naming the plugin id and the control type), `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Required/empty validation stays host-owned in `validateFieldValue`. When that integer changes: [Plugin API versioning](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
+This path is functional for plugin metadata already present in a form definition. `customControlMap` exists as an override seam used by Type Builder descriptor forms. Plugin controls may supply optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`; omitted means `1`; any other value is refused by `registerPlugin` with an error naming the plugin id and the control type), `valueRetriever` / `valueSerializer` / `validator` on `ControlPluginContribution` (built-in static maps still win when they define the type). Hooks take the value first, then one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, both synchronous; validator `(value, { field, signal, siteId, getValue })` returning `{ valid, messages }`, possibly async. Built-in validators use the same shape and also receive the host's internal `meta` (module-private). Required/empty validation stays host-owned in `validateFieldValue`. When that integer changes: [Plugin API versioning](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 
 Additional current FE control gaps:
 
@@ -639,7 +637,7 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 Why Blob instead of pointing `<script>` / `import()` at the API URL: that endpoint requires auth; a raw script/module request does not reliably carry the same credentials FE1 needed — hence authenticated `getText` then Blob module (same constraint as FE1’s current loader).
 
-`window.craftercms.formsEngine.formControllers.apiVersion` is the form-controller contract integer. The same object also has load/cache helpers for tests and debugging; authors do not need those.
+`window.craftercms.formsEngine.formControllers.apiVersion` is the form-controller contract integer. The public host does not expose the loader. `load`, `getCached` and `clearCache` live under an undocumented `__internal` key for tests and console debugging; Studio code imports `formControllers/loader.ts` directly.
 
 #### `FormControllerContext` (host-provided)
 
@@ -810,6 +808,9 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-03** — FE2 plugin hooks are isolated and the host state is read-only (#9306). A plugin `valueRetriever` that throws falls back to the raw value for its own field. A plugin `valueSerializer` that throws stops the save with an error naming the field and plugin. Hooks get frozen field definitions. The controls, data sources and form controller hosts are frozen, and registry reads return read-only entries. `registerPlugin` also refuses types owned by Type Builder controls, validates `fieldSx`, and keeps bindings registered with `registerDataSourceBindings`. The save gate uses the latest validation run. The plugin contract types are exported from `models`.
+- **2026-11-03** — Plugin validator messages are normalized before they reach the field (#9306). A descriptor with a missing or empty `id` and a `defaultMessage` gets an `id` derived from it, so it formats instead of crashing the field. A malformed message makes the result a failed validator. A validator that throws, rejects, or returns a malformed result now shows the user a generic "couldn't be validated" message, with the detail in the console only.
+- **2026-10-30** — FE2 plugin API settled (#9306). Hooks are value-first with one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, validator `(value, { field, signal, siteId, getValue }) => { valid, messages }` (async allowed, malformed result is invalid). The XML builder's special keys are exported constants and published at `craftercms.formsEngine.controls.xmlKeys`. `ControlProps<V>` is generic with read-only `field` / `contentType` and host-generated `inputId` / `labelId`. Plugin controls render inside `FormsEngineField` by default (`fieldChrome: false` opts out, `fieldSx` styles the wrapper); the load-error placeholder is not double-wrapped. `formControllers` `load` / `getCached` / `clearCache` moved under `__internal`. API versions stay at 1.
 - **2026-10-30** — Controls, data sources, and form controllers share one version rule: a missing `apiVersion` counts as `1`, and any other value is rejected at load. A data-source rejection names the plugin id and type and installs nothing from that plugin. `FORM_CONTROLLER_API_VERSION` is published as `craftercms.formsEngine.formControllers.apiVersion`. See plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 - **2026-10-30** — Plugin API versions are one integer per contract (controls, data sources, form controllers), not semver. Bump only for a breaking change. Policy and the current missing-value rules: plugins companion [§10](type-builder-forms-engine-plugins.md#10-plugin-api-versioning).
 - **2026-10-30** — FE2 control contributions take an optional `apiVersion` (`CONTROL_API_VERSION`, currently `1`). A missing value counts as `1`. `registerPlugin` refuses any other value with an error that names the plugin id and the control type, and installs nothing from that call (same as any other invalid control entry). See plugins companion §6 and §9.3. #9303

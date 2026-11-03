@@ -76,6 +76,7 @@ import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { Fade } from '@mui/material';
 import AlertTitle from '@mui/material/AlertTitle';
 import { pushDialog } from '../../state/actions/dialogStack';
+import { showErrorDialog } from '../../state/actions/dialogs';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
 import ErrorBoundary from '../ErrorBoundary';
 import { debounceTime } from 'rxjs/operators';
@@ -117,6 +118,7 @@ import {
 	useValidateFormProps
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
+import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -129,7 +131,7 @@ import TableOfContents, { FieldScopeNotice } from './components/TableOfContents'
 import CreateModeHeader from './components/CreateModeHeader';
 import RepeatModeHeader from './components/RepeatModeHeader';
 import EditModeHeader, { EditModeMetadata, formHeaderContainerName } from './components/EditModeHeader';
-import SaveCard from './components/SaveCard';
+import SaveCard, { ReleaseLockOnCloseControl } from './components/SaveCard';
 import SectionAccordion from './components/SectionAccordion';
 import useSaveForm from './lib/useSaveForm';
 import { FormPrepError } from './components/FormPrepError';
@@ -177,6 +179,7 @@ import {
 	repeatFormLock,
 	revealField,
 	showValidationError,
+	resolveSaveDraft,
 	selectedItemSavePlan,
 	stackEntryFlagsAtom,
 	stackedFormCloseAction,
@@ -185,6 +188,13 @@ import {
 import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
+import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
+import {
+	blockingFieldName,
+	firstBlockingFieldId,
+	minimumRequirementsNotice,
+	validationAlertVariant
+} from './lib/minimumSaveRequirements';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -268,7 +278,6 @@ type RootFormActions = StableGlobalContextProps['rootFormActions'];
 /** Writes the latest parent save into the stack's mutable slot. The slot is not React state. */
 function publishRootFormActions(actions: RootFormActions, refs: { current: RootFormActions }) {
 	actions.save = (draft) => refs.current.save(draft);
-	actions.setSaveAsDraft = (value) => refs.current.setSaveAsDraft(value);
 }
 
 // Entry point for the form engine. It validates the props and continues if valid.
@@ -293,9 +302,9 @@ function GlobalFormsState(props: FormsEngineProps) {
 			api: null,
 			formsStackData: [createFormStackData({ props })],
 			rootFormActions: {
-				save: () => Promise.resolve(),
-				setSaveAsDraft: () => undefined
-			}
+				save: () => Promise.resolve()
+			},
+			lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 		};
 	}
 	stableGlobalContextRef.current.api = useMemo<FormsEngineGlobalApiContextProps>(() => {
@@ -314,8 +323,26 @@ function GlobalFormsState(props: FormsEngineProps) {
 				setCount(1);
 			},
 			popForm() {
-				const stack = stableGlobalContextRef.current.formsStackData;
-				runFormControllerCleanup(stack[stack.length - 1]);
+				const ctx = stableGlobalContextRef.current;
+				const stack = ctx.formsStackData;
+				const removed = stack[stack.length - 1];
+				if (!removed) return;
+				// The mounted top releases itself on unmount. Remember its parent first: root reload
+				// pops the parent before that unmount. A covered entry has no bootstrap and releases now.
+				const next = prepareStackedFormPop({
+					stack,
+					mounted: ctx.lockReleaseSession.getMountedEntry(),
+					session: ctx.lockReleaseSession,
+					parentReadonly: (parent) => {
+						const atoms = stackEntryAtoms(parent);
+						return atoms ? store.get(atoms.readonly) : false;
+					},
+					releaseCovered: (entry) => {
+						ctx.lockReleaseSession.releaseUnmounted(entry);
+					}
+				});
+				ctx.lockReleaseSession.setMountedEntry(next.mounted);
+				runFormControllerCleanup(removed);
 				stack.pop();
 				setCount(-1);
 			},
@@ -376,6 +403,12 @@ function FormBootstrap(props: FormsEngineProps) {
 	// deps (via ref) so that a re-render doesn't re-prep the form and discard in-memory edits.
 	const effectRefs = useUpdateRefs({ contentTypesById, username, effectiveProps });
 	const stableFormContextRef = useRef<StableFormContextProps>(formsStackData[stackIndex]);
+	// Lives for the whole form session, including reload and minimize. Unmount is a real close.
+	useUnlockOnClose({
+		stackIndex,
+		stableFormContextRef,
+		formsStackData
+	});
 	// The drawer mounts only the top stacked form. When a child is closed, this instance remounts
 	// for the parent slot; skip full prep if that slot already has atoms so in-memory edits survive.
 	const prepStartedRef = useRef(false);
@@ -616,7 +649,12 @@ function FormBootstrap(props: FormsEngineProps) {
 			const readonly = readonlyProp ?? isParentReadonly;
 			const parentLockResult = store.get(parentAtoms.lockResult);
 			const isParentLocked = parentLockResult.locked;
-			const invokePrepareFn = (locked: boolean, lockError: ApiResponse, affectedPackages: PublishPackage[]) => {
+			const invokePrepareFn = (
+				locked: boolean,
+				lockError: ApiResponse,
+				affectedPackages: PublishPackage[],
+				lockedPath: string | null
+			) => {
 				preloadControlPluginsForFields(
 					siteId,
 					contentType.fields,
@@ -630,6 +668,7 @@ function FormBootstrap(props: FormsEngineProps) {
 						locked,
 						lockError,
 						affectedPackages,
+						lockedPath,
 						fieldIds: effectRefs.current.effectiveProps.fieldIds,
 						repeatIndex: effectRefs.current.effectiveProps.repeatIndex,
 						update,
@@ -644,13 +683,14 @@ function FormBootstrap(props: FormsEngineProps) {
 				});
 			};
 			if (readonly === isParentReadonly) {
-				invokePrepareFn(isParentLocked, parentLockResult.lockError, parentLockResult.affectedPackages);
+				// Sharing the parent's lock. Do not record a path this form would release.
+				invokePrepareFn(isParentLocked, parentLockResult.lockError, parentLockResult.affectedPackages, null);
 				return () => {
 					disposed = true;
 				};
 			} else {
 				const sub = internalLockContentService(siteId, update.path).subscribe((result) => {
-					invokePrepareFn(result.locked, result.lockError, result.affectedPackages);
+					invokePrepareFn(result.locked, result.lockError, result.affectedPackages, result.lockedPath ?? null);
 				});
 				return () => {
 					disposed = true;
@@ -668,7 +708,8 @@ function FormBootstrap(props: FormsEngineProps) {
 			const lockResultAtom = atom<FormsEngineEditContextProps>({
 				locked: false,
 				lockError: null,
-				affectedPackages: null
+				affectedPackages: null,
+				lockedPath: null
 			});
 			const atoms: FormsEngineAtoms = createFormsEngineAtoms(
 				effectRefs.current.username,
@@ -774,7 +815,8 @@ function FormBootstrap(props: FormsEngineProps) {
 					const lockResultAtom = atom<FormsEngineEditContextProps>({
 						locked: requirements.locked,
 						lockError: requirements.lockError,
-						affectedPackages: requirements.affectedPackages
+						affectedPackages: requirements.affectedPackages,
+						lockedPath: requirements.locked ? (requirements.lockedPath ?? requirements.item.path) : null
 					});
 					const atoms = createFormsEngineAtoms(
 						effectRefs.current.username,
@@ -1032,13 +1074,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 		// Comments name every changed field, including ones the launch scope is hiding.
 		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
 		versionCommentAtom: stableFormContext.atoms.versionComment,
-		fileNameAtom: stableFormContext.atoms.fileName,
-		lockStatus
+		fileNameAtom: stableFormContext.atoms.fileName
 	});
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
-	const [saveAsDraftAction, setSaveAsDraftAction] = useState(false);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -1151,28 +1191,29 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	// Live invalid ids. The first read is immediate; later edits wait out the pause in the hook,
 	// so the alert's count is not rewritten on every keystroke.
-	const localInvalidFieldIds = useInvalidFieldIds(
+	const localInvalid = useInvalidFieldIds(
 		atoms.validationByFieldId,
 		irrelevantFieldPaths,
 		repeat?.fieldId,
 		fieldUpdates$
 	);
-	const invalidForm = localInvalidFieldIds.length > 0;
-	const parentInvalidFieldIds = useInvalidFieldIds(
+	const parentInvalid = useInvalidFieldIds(
 		parentAtoms?.validationByFieldId,
 		parentEntry?.formControllerState?.irrelevantFieldPaths,
 		undefined,
 		parentEntry?.fieldUpdates$
 	);
-
-	// Unlock content when the form is closed.
-	useUnlockOnClose({
-		...props,
-		saveAsDraft: saveAsDraftAction,
-		invalidForm,
-		itemSavedAsDraft: Boolean(item?.savedAsDraft)
-	});
-
+	// What the save refuses to write without. A selected-fields item form saves through its parent,
+	// so it reports the parent's requirements, by the parent's own mode.
+	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded }, fieldUpdates$);
+	const parentMinimum = useMinimumSaveRequirements(
+		itemMode === 'selected' ? parentAtoms : null,
+		{
+			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
+		},
+		parentEntry?.fieldUpdates$
+	);
 	// region Workflow item updates
 	useEffect(() => {
 		const events = [
@@ -1188,10 +1229,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 			if (!item || !events.includes(type)) return;
 			fetchAffectedPackages(siteId, item.path).subscribe({
 				next(packages) {
-					setLockStatus({
-						...effectRefs.current.lockStatus,
+					// Merge into the live lock record so a rename's path is not dropped.
+					setLockStatus((current) => ({
+						...current,
 						affectedPackages: packages
-					});
+					}));
 				},
 				error({ response }) {
 					console.error(response);
@@ -1202,7 +1244,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return () => {
 			subscription.unsubscribe();
 		};
-	}, [effectRefs, item, setLockStatus, siteId]);
+	}, [item, setLockStatus, siteId]);
 
 	// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer) while the ToC drawer is open.
 	// --scroll-top must live on formContainer so both drawers can inherit it.
@@ -1227,7 +1269,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const popTopStackedForm = (restoreOpenedItem: boolean) => {
 		const childEntry = formsStackData[formsStackData.length - 1];
 		const childMode = childEntry?.itemFormMode ? store.get(childEntry.itemFormMode) : null;
-		// The child form item unlocking should be getting done by the FormOrchestrator of the unmounting form via useUnlockOnClose hook.
+		// The child form releases its own lock from the unmounting form's useUnlockOnClose hook.
 		childEntry?.props.stackIndex === 0 && (containerRef.current.style.overflowY = '');
 		if (restoreOpenedItem && childEntry) {
 			const repeat = childEntry.props.repeat;
@@ -1290,16 +1332,23 @@ function FormOrchestrator(props: FormsEngineProps) {
 		const doEditEnablement = (restoreValues: boolean = false) => {
 			// TODO: Re-fetch content when enabling edit? Or monitor changes and auto-reload?
 			setEnablingEditInProgress(true);
+			const previous = store.get(atoms.lockResult);
+			// Release the path that is actually locked. A saved rename has moved it off item.path.
+			const targetPath = (!enableEdit && previous.lockedPath) || item.path;
 			const service = enableEdit ? internalLockContentService : internalUnlockContentService;
-			service(siteId, item.path).subscribe((lockResult) => {
+			service(siteId, targetPath).subscribe((lockResult) => {
 				setEnablingEditInProgress(false);
 				setHasPendingChanges(false);
 				if (restoreValues) formContextApi.rollback();
 				setLockStatus({
 					locked: lockResult.locked,
 					lockError: lockResult.lockError,
-					affectedPackages: lockResult?.affectedPackages ?? null
+					affectedPackages: lockResult?.affectedPackages ?? null,
+					lockedPath: lockResult.locked ? (lockResult.lockedPath ?? targetPath) : null
 				});
+				if (!enableEdit && releaseLockToggleFailed(lockResult)) {
+					dispatch(showErrorDialog({ error: lockResult.lockError }));
+				}
 				callback?.(lockResult);
 			});
 		};
@@ -1335,7 +1384,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	});
 
 	// Published after paint layout, not during render. The refs stay current, so a click reads this save.
-	const rootActionRefs = useUpdateRefs({ save: saveFn, setSaveAsDraft: setSaveAsDraftAction });
+	const rootActionRefs = useUpdateRefs({ save: saveFn });
 	useLayoutEffect(() => {
 		if (stackIndex !== 0) return;
 		// Stable mutable registry for the item form, not React state. Read .current when Save is clicked.
@@ -1412,7 +1461,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		[parentEntry]
 	);
 	const validationErrors = validationErrorsAlert({
-		localInvalidFieldIds,
+		localInvalidFieldIds: localInvalid,
 		localSectionOrder: isRepeatMode ? repeatFieldIdList : countFieldIds,
 		localIrrelevant: irrelevantFieldPaths,
 		localParentPath: repeat?.fieldId,
@@ -1420,7 +1469,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		openRepeatFieldId: repeat?.fieldId,
 		parent: parentEntry
 			? {
-					invalidFieldIds: parentInvalidFieldIds,
+					invalidFieldIds: parentInvalid,
 					sectionOrder: parentFieldOrder,
 					irrelevantFieldPaths: parentEntry.formControllerState?.irrelevantFieldPaths
 				}
@@ -1437,7 +1486,34 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return fields?.[validationErrors.fieldId]?.name;
 	})();
 	const useParentSaveCard = itemMode === 'selected' && parentAtoms != null;
+	const missingMinimum = useParentSaveCard ? parentMinimum : localMinimum;
+	const minimumContentType = useParentSaveCard ? parentEntry?.itemMeta.contentType : contentType;
+	const minimumNotice = minimumRequirementsNotice(missingMinimum, minimumContentType?.fields);
+	const alertVariant = validationAlertVariant({
+		missing: missingMinimum,
+		errorCount: validationErrors?.count ?? 0
+	});
+	const blockingFieldId = minimumNotice
+		? firstBlockingFieldId(missingMinimum, useParentSaveCard ? parentFieldOrder : countFieldIds)
+		: undefined;
 	const showValidationField = () => {
+		if (alertVariant === 'minimumRequirements') {
+			if (!blockingFieldId) return;
+			if (!useParentSaveCard) {
+				const reveal = showValidationError({
+					visibility: store.get(atoms.formVisibility),
+					fieldId: blockingFieldId,
+					irrelevantFieldPaths,
+					parentPath: repeat?.fieldId
+				});
+				commitFormVisibility(store.set, atoms, reveal.state, reveal.fieldId);
+				return;
+			}
+			const reveal = revealField(store.get(parentAtoms.formVisibility), blockingFieldId);
+			commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
+			contextApi.popForm();
+			return;
+		}
 		if (!validationErrors) return;
 		if (validationErrors.where === 'local') {
 			const reveal = showValidationError({
@@ -1454,14 +1530,17 @@ function FormOrchestrator(props: FormsEngineProps) {
 		commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
 		contextApi.popForm();
 	};
-	const saveFromSelectedItem = async (_event: unknown, draft?: boolean) => {
+	const saveFromSelectedItem = async (_event: unknown, draft?: boolean | 'auto') => {
 		if (!parentAtoms || !parentEntry) return;
+		const choice = draft ?? false;
+		const rememberedDraft = store.get(parentAtoms.saveAsDraft) === true;
 		const [itemInvalidFieldIds, parentInvalidNow] = await Promise.all([
 			readInvalidFieldIds(store, atoms.validationByFieldId, irrelevantFieldPaths, repeat?.fieldId),
 			readInvalidFieldIds(store, parentAtoms.validationByFieldId, parentEntry.formControllerState?.irrelevantFieldPaths)
 		]);
 		const plan = selectedItemSavePlan({
-			draft: draft === true,
+			draft: choice,
+			saveAsDraft: rememberedDraft,
 			itemVisibility: store.get(atoms.formVisibility),
 			itemInvalidFieldIds,
 			itemFieldOrder: repeatFieldIdList,
@@ -1482,9 +1561,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 			contextApi.popForm();
 			return 'revealed' as const;
 		}
-		// SaveCard already set the root draft flag. Read save at click time.
-		return rootFormActions.save(draft);
+		// The plan already folded `auto` into a boolean from this fresh read. Pass that, not the label.
+		return rootFormActions.save(
+			resolveSaveDraft(choice, itemInvalidFieldIds.length > 0 || parentInvalidNow.length > 0, rememberedDraft)
+		);
 	};
+
+	// Same gate as the Release Lock button. Create, a new repeat item, and an embedded form
+	// on the parent's lock do not show it. The button itself ignores the keep-lock preference.
+	const showReleaseLockControl =
+		!isCreateMode && (!isRepeatMode || Boolean(repeat?.values)) && !(isEmbedded && isStackedForm);
 
 	// If not on a dialog or the prop is not provided, there's no need to handle the close. The form is running in a standalone mode.
 	const handleClose: ButtonProps['onClick'] = (e) => {
@@ -1772,7 +1858,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 							<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
 						</Grid>
 						<Grid size="grow">
-							<StickyBox className="space-y" sx={{ height: 'auto' }}>
+							<StickyBox
+								className="space-y"
+								sx={{
+									height: 'auto',
+									// overflow-y:auto computes overflow-x to auto and clips the paper shadow.
+									// The negative margin moves that edge out; the padding puts the content back.
+									mx: -1,
+									px: 1
+								}}
+							>
 								{readonly ? (
 									<>
 										<Alert severity="info" variant="outlined" icon={<EditOffOutlined />}>
@@ -1789,10 +1884,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 									</>
 								) : (
 									<>
-										{validationErrors && (
+										{alertVariant && (
 											<ValidationErrorsAlert
-												count={validationErrors.count}
-												fieldName={validationFieldName}
+												count={validationErrors?.count ?? 0}
+												fieldName={
+													minimumNotice ? blockingFieldName(minimumNotice, blockingFieldId) : validationFieldName
+												}
+												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
 											/>
 										)}
@@ -1801,27 +1899,29 @@ function FormOrchestrator(props: FormsEngineProps) {
 											isStackedForm={useParentSaveCard ? false : isStackedForm}
 											isRepeatMode={useParentSaveCard ? false : isRepeatMode}
 											atoms={useParentSaveCard ? parentAtoms : undefined}
-											setSaveAsDraft={useParentSaveCard ? rootFormActions.setSaveAsDraft : setSaveAsDraftAction}
+											validationErrorCount={validationErrors?.count ?? 0}
+											minimumRequirements={minimumNotice ?? undefined}
 											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
 										/>
-										{!isCreateMode && // There's no locking on create mode
-											(!isRepeatMode || (isRepeatMode && repeat.values)) && // No point in the "unlock" button for new repeat items
-											!(isEmbedded && isStackedForm) && ( // For embedded components, only allow releasing the lock if it's the top form.
-												<SecondaryButton
-													fullWidth
-													variant="outlined"
-													onClick={() => updateEditEnablement(false)}
-													loading={enablingEditInProgress}
-												>
-													<FormattedMessage defaultMessage="Release Lock" />
-												</SecondaryButton>
-											)}
+										{showReleaseLockControl && (
+											<SecondaryButton
+												fullWidth
+												variant="outlined"
+												onClick={() => updateEditEnablement(false)}
+												loading={enablingEditInProgress}
+											>
+												<FormattedMessage defaultMessage="Release Lock" />
+											</SecondaryButton>
+										)}
 									</>
 								)}
 								{handleClose && (
 									<Button fullWidth variant="outlined" disabled={enablingEditInProgress} onClick={handleClose}>
 										<FormattedMessage defaultMessage="Close" />
 									</Button>
+								)}
+								{!readonly && showReleaseLockControl && (
+									<ReleaseLockOnCloseControl atoms={useParentSaveCard ? parentAtoms : undefined} />
 								)}
 							</StickyBox>
 						</Grid>

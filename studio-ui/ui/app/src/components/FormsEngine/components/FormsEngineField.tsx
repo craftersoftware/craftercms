@@ -15,7 +15,8 @@
  */
 
 import { ContentTypeField } from '../../../models';
-import FormControl, { FormControlProps } from '@mui/material/FormControl';
+import FormControl from '@mui/material/FormControl';
+import type { SxProps, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import FieldRequiredStateIndicator from './FieldRequiredStateIndicator';
 import Typography from '@mui/material/Typography';
@@ -25,10 +26,10 @@ import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
 import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { type FieldValidityMessage, isEmptyValue, isFieldRequired } from '../lib/validators';
+import { isEmptyValue, isFieldRequired } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
 import useItemsByPath from '../../../hooks/useItemsByPath';
-import { FormattedMessage, type IntlFormatters, useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -44,9 +45,10 @@ import {
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
 import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
-import { translateIfMessageDescriptor } from '../../ContentTypeManagement/utils';
+import { FieldValidityMessages } from './FieldValidityMessages';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
+import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
@@ -78,7 +80,8 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	length?: number;
 	action?: ReactNode;
 	isValid?: boolean;
-	sx?: FormControlProps['sx'];
+	sx?: SxProps<Theme>;
+	className?: string;
 	menu?: false;
 	menuOptions?: Array<
 		| {
@@ -90,6 +93,26 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	>;
 	onMenuOptionClick?(e: SyntheticEvent, optionId: string, closeMenu: () => void): void;
 }>;
+
+/**
+ * The `FormsEngineField` props that are a stable contract for plugin controls that opt out of the default
+ * wrapper (`fieldChrome: false`) and wrap themselves. Every other prop is host-internal and may change.
+ */
+export type FormsEngineFieldPublicProps = Pick<
+	FormsEngineFieldProps,
+	| 'field'
+	| 'children'
+	| 'htmlFor'
+	| 'labelId'
+	| 'length'
+	| 'max'
+	| 'action'
+	| 'menu'
+	| 'menuOptions'
+	| 'onMenuOptionClick'
+	| 'sx'
+	| 'className'
+>;
 
 export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps>(function (props, ref) {
 	const {
@@ -104,7 +127,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		autoFocus,
 		menu = true,
 		menuOptions,
-		onMenuOptionClick
+		onMenuOptionClick,
+		sx,
+		className
 	} = props;
 	const { sourceMap } = useItemMetaContext();
 	const stableForm = useStableFormContext();
@@ -147,7 +172,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			variant="standard"
 			data-field-id={fieldId}
 			required={isRequired}
-			sx={{ '.MuiFormLabel-asterisk': { display: 'none' }, ...props.sx }}
+			className={className}
+			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
 			<Box
 				sx={{
@@ -324,30 +350,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			)}
 			{children}
 			{hasDescription && <FormHelperText>{field.description}</FormHelperText>}
-			{!isValid &&
-				validityData.state === 'hasData' &&
-				validityData.data?.messages?.map((messageData, key) => (
-					<FormHelperText key={key}>{translateValidityMessage(messageData, formatMessage)}</FormHelperText>
-				))}
+			{!isValid && validityData.state === 'hasData' && <FieldValidityMessages messages={validityData.data?.messages} />}
 		</FormControl>
 	);
 });
-
-/**
- * Translates a validity message for a form field.
- *
- * @param messageData {FieldValidityMessage} - The validity message data, which can be a single message
- * or a tuple containing a message and its associated values.
- * @param formatMessage {IntlFormatters['formatMessage']} - The function used to format internationalized messages.
- * @returns {string} - The translated validity message.
- */
-function translateValidityMessage(
-	messageData: FieldValidityMessage,
-	formatMessage: IntlFormatters['formatMessage']
-): string {
-	const message = Array.isArray(messageData) ? messageData[0] : messageData;
-	const values = Array.isArray(messageData) ? messageData[1] : undefined;
-	return translateIfMessageDescriptor(message, formatMessage, values);
-}
 
 export default FormsEngineField;

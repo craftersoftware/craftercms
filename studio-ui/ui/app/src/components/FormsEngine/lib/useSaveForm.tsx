@@ -39,7 +39,7 @@ import {
 } from './formUtils';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
-import { applySaveGate, childFields, repositorySaveFollowUp, saveAsDraftFlag } from './formVisibility';
+import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
@@ -62,6 +62,7 @@ import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
+import { reloadContentItem } from '../../../state/actions/content';
 import { useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
 import { showSystemNotification } from '../../../state/actions/system';
 import {
@@ -71,6 +72,7 @@ import {
 } from './controlPluginLoader';
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
+import { applySavedRenameToLock } from './unlockOnClose';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -94,6 +96,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const jotai = useJotaiStore();
 	const store = useReduxStore<GlobalState>();
 	const dispatch = useDispatch();
+	// A connected socket delivers this user's contentEvent (or moveContentEvent). Those epics
+	// refetch an item already in the store, which is the address-bar item. When the socket is
+	// down the event never arrives, so reload once. Skip it while connected to avoid a second fetch.
+	const refreshSavedItem = (savedPath: string) => {
+		if (!savedPath || store.getState().env.socketConnected) return;
+		dispatch(reloadContentItem({ path: savedPath }));
+	};
 	const { formatMessage } = useIntl();
 	const siteId = useActiveSiteId();
 	const { isEmbedded, isStackedForm = false, isRepeatMode, isCreateMode, onClose, onMinimize, createPath } = props;
@@ -121,10 +130,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 		);
 		return { isFormInvalid: invalidFieldIds.length > 0, invalidFieldIds };
 	};
-	const save = async (draft?: boolean): Promise<SaveFormResult | void> => {
-		// Two guards. SaveCard's ref returns before setSaveAsDraft, so an ignored click
-		// cannot flip the draft flag while this read is in flight. isSubmitting is the
-		// write lock: it stays set through preload, onBeforeSave, and the repository write.
+	const save = async (draft?: boolean | 'auto'): Promise<SaveFormResult | void> => {
+		// isSubmitting stays set through preload, onBeforeSave, and the repository write.
+		// SaveCard ignores a dropdown pick while this flag, or its in-flight ref, is set.
 		if (jotai.get(stableFormContext.atoms.isSubmitting)) {
 			return;
 		}
@@ -325,7 +333,11 @@ export function useSaveForm(props: UseSaveFormProps) {
 					}
 					// Re-read only to refresh the draft flag. Do not reveal or block again.
 					const afterHook = await readCurrentValidity();
-					saveAsDraft = saveAsDraftFlag(draft === true, afterHook.isFormInvalid);
+					saveAsDraft = draftFlagAfterBeforeSave(
+						draft ?? false,
+						afterHook.isFormInvalid,
+						jotai.get(stableFormContext.atoms.saveAsDraft) === true
+					);
 				}
 
 				// `onBeforeSave` may have changed `file-name`; the render-time snapshot is stale from here on.
@@ -357,12 +369,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+					// Same safety net as the full form below, for a stacked embedded form too.
 					if (!isInternalNameValid(values)) {
 						setIsSubmitting(false);
 						return showAlert({
 							dispatch,
 							message: formatMessage(
-								{ defaultMessage: 'You need an {internalName} at a minimum to save content.' },
+								{ defaultMessage: '{internalName} is required to save content.' },
 								{ internalName: contentType.fields[XmlKeys.internalName].name }
 							)
 						});
@@ -402,6 +415,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 							async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
 								try {
 									const isAmended = ajaxResponse.response?.items?.[0]?.amended;
+									refreshSavedItem(path);
 									const result = ((await onSave?.(repositorySaveArgs(path, dom, xml))) ?? {
 										close: false
 									}) as FormSavePromiseResult;
@@ -466,8 +480,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
 						try {
+							// The move carries the lock. Record the new path before close so unmount unlocks that path.
+							if (isRename && renamePath) {
+								const lockAtom = stableFormContext.atoms.lockResult;
+								const currentLock = jotai.get(lockAtom);
+								const followed = applySavedRenameToLock(currentLock, renamePath);
+								if (followed) jotai.set(lockAtom, { ...currentLock, ...followed });
+							}
 							const isAmended = ajaxResponse.response?.items?.[0]?.amended;
 							const dom = fromString(xml);
+							refreshSavedItem(path);
 							const result = ((await onSave?.(repositorySaveArgs(path, dom, xml))) ?? {
 								close: false
 							}) as FormSavePromiseResult;
@@ -491,6 +513,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 				};
 
 				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+				// The Save card disables itself on the same rule (minimumSaveRequirements). This stays for a read that is
+				// a moment behind, and for a value `onBeforeSave` changed.
 				const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
 					jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
 					values
@@ -618,7 +642,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 		};
 		try {
 			const outcome = await applySaveGate({
-				draft: draft === true,
+				draft: draft ?? false,
+				saveAsDraft: jotai.get(stableFormContext.atoms.saveAsDraft) === true,
 				visibility: jotai.get(stableFormContext.atoms.formVisibility),
 				sectionOrder: isRepeatMode
 					? childFields(contentType.fields[repeatFieldId]).map((field) => field.id)

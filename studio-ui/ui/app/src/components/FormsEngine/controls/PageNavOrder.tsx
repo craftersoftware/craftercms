@@ -54,9 +54,7 @@ import { nou } from '../../../utils/object';
 import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
 import { XmlKeys } from '../lib/formConsts';
 
-export interface PageNavOrderProps extends ControlProps {
-	value: boolean;
-}
+export type PageNavOrderProps = ControlProps<boolean>;
 
 const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 

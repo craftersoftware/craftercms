@@ -51,9 +51,7 @@ const sortOrderOptions = [
 	}
 ];
 
-export interface SortDropdownProps extends TypeBuilderControl {
-	value: string | undefined;
-}
+export type SortDropdownProps = TypeBuilderControl<string | undefined>;
 
 export function SortDropdown(props: SortDropdownProps) {
 	const { field, value, setValue, readonly, autoFocus } = props;
