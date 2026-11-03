@@ -38,6 +38,7 @@ const { validateFieldValue, isFieldRequired } = await import('./validators.ts');
 const { formsEngineControlsHost, formsEngineDataSourcesHost } = await import('../dataSources/host.ts');
 const { formsEngineFormControllersHost } = await import('../formControllers/host.ts');
 const { registerBuiltInDataSourceModules } = await import('../dataSources/modules/index.ts');
+const { createInstanceFromRecord } = await import('../dataSources/defineModule.ts');
 const { getControlDataSourceBindings, registerControlDataSourceBindings } = await import('../dataSources/bindings.ts');
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
@@ -316,6 +317,31 @@ describe('registry reads', () => {
 		assert.deepEqual(read.interfaces, ['item']);
 		assert.deepEqual(read.capabilities, ['list']);
 		assert.ok(!('apiVersion' in read));
+	});
+
+	it('gives each data source instance its own interfaces and capabilities', async () => {
+		const type = `hardening-ds-${counter++}`;
+		const module: DataSourceModule = {
+			type,
+			interfaces: ['item'],
+			capabilities: ['list'],
+			create: ({ record }) => createInstanceFromRecord(record, module, { getActions: () => [] })
+		};
+		registerPlugin({ id: `org.example.${type}`, dataSources: { [type]: module } } as PluginDescriptor, source);
+		const registered = formsEngineDataSourcesHost.get(type);
+		const context = { record: { id: 'ds', title: 'DS', type } } as never;
+		const first = await registered.create(context);
+		(first.interfaces as string[]).push('image');
+		(first.capabilities as string[]).push('upload');
+		const second = await registered.create(context);
+		assert.deepEqual(second.interfaces, ['item']);
+		assert.deepEqual(second.capabilities, ['list']);
+		assert.deepEqual(module.interfaces, ['item']);
+		assert.deepEqual(module.capabilities, ['list']);
+		const extras = { getActions: () => [], interfaces: ['options' as const] };
+		const narrowed = createInstanceFromRecord(context.record, module, extras);
+		(narrowed.interfaces as string[]).push('image');
+		assert.deepEqual(extras.interfaces, ['options']);
 	});
 
 	it('getDataSourceBindings treats an inherited object member as no control type', () => {
