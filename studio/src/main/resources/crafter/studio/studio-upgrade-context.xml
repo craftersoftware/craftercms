@@ -200,6 +200,7 @@
 		<constructor-arg name="servicesConfig" ref="cstudioServicesConfig"/>
 		<constructor-arg name="contentRepository" ref="contentRepository"/>
 		<constructor-arg name="itemTargetDao" ref="itemTargetDao"/>
+		<constructor-arg name="deployer" ref="allDeployers"/>
 	</bean>
 
 	<bean id="checkContentTypeControllerUpgrader" scope="prototype" parent="upgradeOperation"
