@@ -46,6 +46,7 @@ import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
 import { createFormVisibilityAtoms } from '../FormsEngine/lib/formVisibility';
+import { createFormLockReleaseSession } from '../FormsEngine/lib/unlockOnClose';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
@@ -539,9 +540,9 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 		setStateCache: noOp
 	},
 	rootFormActions: {
-		save: () => Promise.resolve(),
-		setSaveAsDraft: noOp
-	}
+		save: () => Promise.resolve()
+	},
+	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
 export function createVirtualTypeFormContext(
@@ -613,6 +614,8 @@ export const createStableFormContextProps = (
 			tableOfContentsDrawerOpen: undefined,
 			closeAfterSave: undefined,
 			minimizeAfterSave: undefined,
+			releaseLockOnClose: undefined,
+			saveAsDraft: undefined,
 			// Field validation atoms always read this, even where no form controller attaches.
 			relevanceVersion: atom(0),
 			...createFormVisibilityAtoms()

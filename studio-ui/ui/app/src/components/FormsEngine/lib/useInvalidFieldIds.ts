@@ -36,6 +36,8 @@ export function watchInvalidFieldUpdates(
 	return fieldUpdates$?.pipe(debounceTime(dueTime, scheduler)).subscribe(() => read());
 }
 
+const noInvalidFieldIds: string[] = [];
+
 /** Live ids of fields that fail validation, excluding controller-irrelevant fields. */
 export function useInvalidFieldIds(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
@@ -68,5 +70,5 @@ export function useInvalidFieldIds(
 			subscription?.unsubscribe();
 		};
 	}, [fieldUpdates$, irrelevantFieldPaths, jotai, parentPath, validationByFieldId]);
-	return ids;
+	return validationByFieldId ? ids : noInvalidFieldIds;
 }
