@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { MutableRefObject, PropsWithChildren, useEffect, useRef, useState } from 'react';
+import React, { MutableRefObject, PropsWithChildren, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	allowedContentTypesUpdate,
 	changeCurrentUrl,
@@ -219,6 +219,38 @@ import type {
 } from '../FormsEngine/dataSources/types';
 import { getField } from '../../utils/contentType';
 
+function addConfiguredAdditionalFields(
+	contentTypes: Record<string, ContentType>,
+	controls: Record<string, { metadata?: { additionalFields?: string[] } }>
+): Record<string, ContentType> {
+	if (!contentTypes || !controls) return contentTypes;
+
+	let contentTypesChanged = false;
+	const result = Object.fromEntries(
+		Object.entries(contentTypes).map(([contentTypeId, contentType]) => {
+			let fieldsChanged = false;
+			const fields = Object.fromEntries(
+				Object.entries(contentType.fields).map(([fieldId, field]) => {
+					const configuredAdditionalFields = controls[field.type]?.metadata?.additionalFields?.map((additionalField) =>
+						additionalField.replace(/\{id\}/g, field.id)
+					);
+					const additionalFields = [
+						...new Set([...(field.additionalFields ?? []), ...(configuredAdditionalFields ?? [])])
+					];
+					if (additionalFields.length === (field.additionalFields?.length ?? 0)) return [fieldId, field];
+					fieldsChanged = true;
+					return [fieldId, { ...field, additionalFields }];
+				})
+			);
+			if (!fieldsChanged) return [contentTypeId, contentType];
+			contentTypesChanged = true;
+			return [contentTypeId, { ...contentType, fields }];
+		})
+	);
+
+	return contentTypesChanged ? result : contentTypes;
+}
+
 const issueDescriptorRequest = (props: {
 	site: string;
 	path: string;
@@ -357,7 +389,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		usePreviewState();
 	const item = useCurrentPreviewItem();
 	const { currentUrlPath } = usePreviewNavigation();
-	const contentTypes = useContentTypes();
+	const loadedContentTypes = useContentTypes();
 	const contentTypes$Ref = useRef<BehaviorSubject<Record<string, ContentType>>>(undefined);
 	const { authoringBase, guestBase, xsrfArgument } = useSelection((state) => state.env);
 	const priorState = useRef({ site: siteId });
@@ -374,6 +406,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
+	const contentTypes = useMemo(
+		() => addConfiguredAdditionalFields(loadedContentTypes, uiConfig.controls),
+		[loadedContentTypes, uiConfig.controls]
+	);
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();

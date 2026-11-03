@@ -293,16 +293,17 @@ export function parseContentXML(
 						);
 					}
 				}
-				const field = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields?.[tagName];
+				const contentTypeFields = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields;
+				const field = contentTypeFields?.[tagName];
 				if (!field) {
-					// date-time control handles the timezone field using {controlName}_tz format. So if the field without `tz` is
-					// found in the content type, we can ignore the `tz` field (and don't log an error).
-					let isTimezoneField = false;
-					if (tagName.endsWith('_tz')) {
-						const withoutTz = tagName.replace(/_tz$/, '');
-						isTimezoneField = Boolean(contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields?.[withoutTz]);
-					}
-					if (!isTimezoneField) {
+					// Companion props from control `additionalFields` (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields.
+					const isAdditionalField = Object.values(contentTypeFields ?? {}).some((contentTypeField) =>
+						contentTypeField.additionalFields?.includes(tagName)
+					);
+					// Fallback for older form-defs that predate persisted `<additionalFields>` for date-time.
+					const isTimezoneField =
+						!isAdditionalField && tagName.endsWith('_tz') && Boolean(contentTypeFields?.[tagName.replace(/_tz$/, '')]);
+					if (!isAdditionalField && !isTimezoneField) {
 						console.error(
 							`[parseContentXML] Field "${tagName}" was not found on "${
 								sourceContentTypeId ?? contentTypeId
@@ -437,13 +438,23 @@ export function parseElementByContentType(
 			return getInnerHtml(element) === 'true';
 		case 'numeric-input':
 			return getInnerHtmlNumber(element, parseFloat);
-		default:
-			!['transcoded-video', 'transcoded-video-picker', 'taxonomy-selector', 'video-picker'].includes(type) &&
+		default: {
+			// External plugin controls intentionally fall through to generic deserialize.
+			// Custom typing belongs on FormsEngine's valueRetriever / valueSerializer.
+			const isPluginControl = Boolean(field.properties?.plugin);
+			const isKnownDefaultFallthrough = [
+				'transcoded-video',
+				'transcoded-video-picker',
+				'taxonomy-selector',
+				'video-picker'
+			].includes(type);
+			if (!isPluginControl && !isKnownDefaultFallthrough) {
 				console.log(
 					`%c[parseElementByContentType] Missing type "${type}" on switch statement for field "${field.id}".`,
 					'color: blue',
 					element
 				);
+			}
 			try {
 				const extract: any = deserialize(element)?.[element.tagName] ?? '';
 				return extract.item ? (Array.isArray(extract.item) ? extract.item : [extract.item]) : extract;
@@ -451,6 +462,7 @@ export function parseElementByContentType(
 				console.error('[parseElementByContentType] Error deserializing element', element, e);
 				return getInnerHtml(element);
 			}
+		}
 	}
 }
 
