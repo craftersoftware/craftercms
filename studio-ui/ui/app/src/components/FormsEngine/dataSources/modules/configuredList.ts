@@ -33,8 +33,8 @@ function selectedDropdownValue(raw: string | undefined, fallback: string): strin
 	}
 }
 
-function parseConfiguredListItems(doc: XMLDocument): DataSourceListItem[] {
-	const root = deserialize(doc.documentElement) as Record<string, unknown>;
+export function parseConfiguredListItems(doc: XMLDocument): DataSourceListItem[] {
+	const root = deserialize(doc.documentElement, { parseTagValue: false }) as Record<string, unknown>;
 	// Legacy shape: <list><values><item key=".." value=".."/></values></list> or similar.
 	const values =
 		(root as { values?: { item?: unknown } }).values ??

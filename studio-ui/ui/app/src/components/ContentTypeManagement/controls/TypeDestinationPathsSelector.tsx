@@ -14,21 +14,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ChangeEvent, useId } from 'react';
+import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Box from '@mui/material/Box';
-import { FormattedMessage } from 'react-intl';
-import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
-import Tooltip from '@mui/material/Tooltip';
-import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
+import { defineMessages, useIntl } from 'react-intl';
 import { TypeBuilderControl } from '../utils';
 import Typography from '@mui/material/Typography';
+import { StringListEditor } from './StringListEditor';
 
 export interface TypeDestinationPathsSelectorProps extends TypeBuilderControl {
 	value: DestinationPaths;
 }
+
+const messages = defineMessages({
+	includes: { id: 'typeDestinationPaths.includes', defaultMessage: 'Includes' },
+	excludes: { id: 'typeDestinationPaths.excludes', defaultMessage: 'Excludes' },
+	includesPattern: { id: 'typeDestinationPaths.includesPattern', defaultMessage: 'Includes pattern {index}' },
+	excludesPattern: { id: 'typeDestinationPaths.excludesPattern', defaultMessage: 'Excludes pattern {index}' },
+	addInclude: { id: 'typeDestinationPaths.addInclude', defaultMessage: 'Add include path' },
+	addExclude: { id: 'typeDestinationPaths.addExclude', defaultMessage: 'Add exclude path' },
+	removeInclude: { id: 'typeDestinationPaths.removeInclude', defaultMessage: 'Remove include pattern {index}' },
+	removeExclude: { id: 'typeDestinationPaths.removeExclude', defaultMessage: 'Remove exclude pattern {index}' }
+});
 
 type Destination = 'includes' | 'excludes';
 interface DestinationPaths {
@@ -40,75 +47,34 @@ interface DestinationPaths {
  */
 export function TypeDestinationPathsSelector(props: TypeDestinationPathsSelectorProps) {
 	const { field, setValue } = props;
+	const { formatMessage } = useIntl();
 	const value = props.value ?? { includes: { pattern: [] }, excludes: { pattern: [] } };
 	const htmlId = useId();
 	const maxLength = field.validations.maxLength?.value;
-	const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, prop: Destination, index: number) => {
-		const nextArr = [...(value[prop]?.pattern ?? [])];
-		nextArr[index] = e.currentTarget.value;
-		setValue({ ...value, [prop]: { pattern: nextArr } });
-	};
 
-	const addPath = (prop: Destination) => {
-		setValue({ ...value, [prop]: { pattern: [...(value[prop]?.pattern ?? []), ''] } });
-	};
-
-	const removePath = (prop: Destination, index: number) => {
-		const nextArr = (value[prop]?.pattern ?? []).filter((_, i) => i !== index);
-		setValue({ ...value, [prop]: { pattern: nextArr } });
+	const updatePatterns = (prop: Destination, pattern: string[]) => {
+		setValue({ ...value, [prop]: { pattern } });
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
-			{Object.entries(value).map(([key, value]) => (
-				<Box key={key} sx={{ display: 'flex', flexDirection: 'column', rowGap: 2, mt: 2 }}>
-					<Typography variant="subtitle2">
-						{key === 'includes' ? (
-							<FormattedMessage defaultMessage="Includes" />
-						) : (
-							<FormattedMessage defaultMessage="Excludes" />
-						)}
-					</Typography>
-					{value?.pattern?.map((path, index) => (
-						<Box key={index} sx={{ display: 'flex', gap: 2 }}>
-							<TextField
-								fullWidth
-								label={<FormattedMessage defaultMessage="Pattern" />}
-								value={path}
-								variant="outlined"
-								slotProps={{
-									htmlInput: { maxLength }
-								}}
-								onChange={(e) => handleChange(e, key as Destination, index)}
-							/>
-							<Box
-								sx={{
-									display: 'flex',
-									alignItems: 'center'
-								}}
-							>
-								<Tooltip title={<FormattedMessage defaultMessage="Remove Option" />}>
-									<IconButton onClick={() => removePath(key as Destination, index)}>
-										<RemoveCircleOutlineRoundedIcon />
-									</IconButton>
-								</Tooltip>
-							</Box>
-						</Box>
-					))}
-					<Box
-						sx={{
-							display: 'flex',
-							justifyContent: 'center'
-						}}
-					>
-						<Tooltip title={<FormattedMessage defaultMessage="Add Path" />}>
-							<IconButton onClick={() => addPath(key as Destination)}>
-								<AddCircleOutlineRoundedIcon />
-							</IconButton>
-						</Tooltip>
+		<FormsEngineField labelId={htmlId} field={field} max={maxLength}>
+			<Box role="group" aria-labelledby={htmlId}>
+				{Object.entries(value).map(([key, entry]) => (
+					<Box key={key} sx={{ display: 'flex', flexDirection: 'column', rowGap: 2, mt: 2 }}>
+						<Typography variant="subtitle2">
+							{formatMessage(key === 'includes' ? messages.includes : messages.excludes)}
+						</Typography>
+						<StringListEditor
+							values={entry?.pattern ?? []}
+							onChange={(pattern) => updatePatterns(key as Destination, pattern)}
+							maxLength={maxLength}
+							itemLabel={key === 'includes' ? messages.includesPattern : messages.excludesPattern}
+							addLabel={key === 'includes' ? messages.addInclude : messages.addExclude}
+							removeLabel={key === 'includes' ? messages.removeInclude : messages.removeExclude}
+						/>
 					</Box>
-				</Box>
-			))}
+				))}
+			</Box>
 		</FormsEngineField>
 	);
 }

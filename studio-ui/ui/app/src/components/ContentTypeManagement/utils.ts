@@ -21,6 +21,7 @@ import type {
 	DataSource,
 	LegacyDataSource,
 	LegacyFormDefinitionField,
+	LegacyFormDefinitionProperty,
 	NewContentTypeField,
 	NewDataSource,
 	ValidationKeys
@@ -59,7 +60,11 @@ import { editController, editTemplate } from '../../state/actions/misc';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import type { BuiltInControlType } from '../FormsEngine/lib/controlMap';
 import { asArray } from '../../utils/array';
-import { componentsDataSourceContentTypesPropertyNames, systemValidationsKeysMap } from '../../utils/contentType';
+import {
+	componentsDataSourceContentTypesPropertyNames,
+	normalizeThumbnailFileName,
+	systemValidationsKeysMap
+} from '../../utils/contentType';
 import {
 	countLimitEditorOverrides,
 	countLimitValidationKeys,
@@ -90,7 +95,12 @@ export const CONTENT_TYPES_BASE_PATH = '/config/studio/content-types';
 const contentTypeFieldToXmlNameMap = { name: 'title', helpText: 'help' };
 
 type ContentTypeFieldProperties = keyof ContentTypeField;
-const ignoredContentTypeFieldProps: Array<ContentTypeFieldProperties> = ['sortable', 'values', 'type'];
+const ignoredContentTypeFieldProps: Array<ContentTypeFieldProperties> = [
+	'sortable',
+	'values',
+	'type',
+	'rawConstraints'
+];
 
 export type TypePropsToEdit = Pick<
 	ContentType,
@@ -106,6 +116,7 @@ export type TypePropsToEdit = Pick<
 	| 'displayTemplate'
 	| 'isHeadless'
 	| 'paths'
+	| 'allowedRoles'
 	| 'sections'
 	| 'delete-dependencies'
 	| 'copy-dependencies'
@@ -127,6 +138,7 @@ export const typePropsToEdit: Array<keyof TypePropsToEdit> = [
 	'displayTemplate',
 	'isHeadless',
 	'paths',
+	'allowedRoles',
 	'sections',
 	'delete-dependencies',
 	'copy-dependencies',
@@ -406,6 +418,7 @@ export function createEmptyTypeStructure(mixin?: Partial<ContentType>): ContentT
 		'delete-dependencies': null,
 		'copy-dependencies': null,
 		previewable: false,
+		allowedRoles: [],
 		fields: {},
 		sections: [],
 		...mixin
@@ -631,6 +644,98 @@ export function makeIntoTypeFieldStructPath(fieldPath: string): string {
 		.replace(/.fields$/, '');
 }
 
+/**
+ * The three form properties Type Builder edits. A parsed type updates those entries in place and
+ * keeps every other property where it was. A new type (no snapshot) still writes all three.
+ */
+function buildFormProperties(type: ContentType): LegacyFormDefinitionProperty[] {
+	const canonical: LegacyFormDefinitionProperty[] = [
+		{
+			label: 'Display Template',
+			name: XmlKeys.displayTemplate,
+			type: 'template',
+			value: type.displayTemplate
+		},
+		{
+			label: 'No Template Required',
+			name: XmlKeys.templateNotRequired,
+			type: 'boolean',
+			value: toBooleanString(type.isHeadless)
+		},
+		{
+			label: 'Merge Strategy',
+			name: XmlKeys.mergeStrategy,
+			type: 'string',
+			value: type.mergeStrategy
+		}
+	];
+	if (!type.formProperties) return canonical;
+
+	const byName = new Map(canonical.map((property) => [property.name, property]));
+	const seen = new Set<string>();
+	const written = type.formProperties.map((property) => {
+		const next = byName.get(property.name);
+		if (!next) return property;
+		seen.add(property.name);
+		const original = typeof property.value === 'string' ? property.value.trim() : '';
+		const unchanged =
+			property.name === XmlKeys.templateNotRequired
+				? (original === 'true') === Boolean(type.isHeadless)
+				: (original || null) === (next.value || null);
+		// Keep label and type. Only the value changes, and only when the model disagrees.
+		return unchanged ? property : { ...property, value: next.value };
+	});
+	for (const property of canonical) {
+		if (seen.has(property.name)) continue;
+		const hasValue = property.name === XmlKeys.templateNotRequired ? Boolean(type.isHeadless) : Boolean(property.value);
+		if (hasValue) written.push(property);
+	}
+	return written;
+}
+
+/** undefined, or a blank string. A string constraint editor clears to '', not undefined. */
+function isClearedConstraintValue(value: unknown): boolean {
+	return value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
+/** A stored count of blank or 0 is already "no limit". Leaving it unchanged must not drop the constraint. */
+function isUnchangedUnlimitedCount(value: unknown): boolean {
+	if (isClearedConstraintValue(value)) return true;
+	if (typeof value === 'number') return value === 0;
+	return typeof value === 'string' && value.trim() === '0';
+}
+
+/** Keep the stored `<type>` when the new value still fits it. A string type fits any value. */
+function updatedConstraintType(raw: { type?: string }, update: { type?: string; value: unknown }): string | undefined {
+	if (raw.type && valueFitsStoredType(raw.type, update.value)) return raw.type;
+	return update.type || raw.type;
+}
+
+function valueFitsStoredType(storedType: string, value: unknown): boolean {
+	if (storedType === 'string') return true;
+	if (storedType === 'boolean') {
+		return value === true || value === false || value === 'true' || value === 'false';
+	}
+	if (storedType === 'int' || storedType === 'number') {
+		if (typeof value === 'number') return Number.isFinite(value);
+		return typeof value === 'string' && value.trim() !== '' && /^-?\d+$/.test(value.trim());
+	}
+	return true;
+}
+
+function allowedRolesXml(roles: string[] | null | undefined): { role: string[] } | undefined {
+	const seen = new Set<string>();
+	const role: string[] = [];
+	for (const entry of roles ?? []) {
+		if (typeof entry !== 'string') continue;
+		const trimmed = entry.trim();
+		if (!trimmed || seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		role.push(trimmed);
+	}
+	return role.length > 0 ? { role } : undefined;
+}
+
 export function prepareSerializeToXmlTypeObject(
 	type: ContentType,
 	configDescriptors?: {
@@ -638,6 +743,8 @@ export function prepareSerializeToXmlTypeObject(
 		dataSourceDescriptors: LookupTable<DescriptorContentType>;
 	}
 ): SerializeToXmlContentTypeStructure {
+	const imageThumbnail = normalizeThumbnailFileName(type.thumbnailFileName);
+	const allowedRoles = allowedRolesXml(type.allowedRoles);
 	return {
 		'content-type': type.id,
 		title: type.name,
@@ -646,32 +753,14 @@ export function prepareSerializeToXmlTypeObject(
 		objectType: type.type,
 		quickCreate: toBooleanString(type.quickCreate),
 		quickCreatePath: type.quickCreatePath,
-		imageThumbnail: type.thumbnailFileName,
+		...(imageThumbnail ? { imageThumbnail } : {}),
 		paths: type.paths,
 		'delete-dependencies': type['delete-dependencies'],
 		'copy-dependencies': type['copy-dependencies'],
 		previewable: type.previewable,
+		...(allowedRoles ? { 'allowed-roles': allowedRoles } : {}),
 		properties: {
-			property: [
-				{
-					label: 'Display Template',
-					name: 'display-template',
-					type: 'template',
-					value: type.displayTemplate
-				},
-				{
-					label: 'No Template Required',
-					name: 'no-template-required',
-					type: 'boolean',
-					value: toBooleanString(type.isHeadless)
-				},
-				{
-					label: 'Merge Strategy',
-					name: 'merge-strategy',
-					type: 'string',
-					value: type.mergeStrategy
-				}
-			]
+			property: buildFormProperties(type)
 		},
 		sections: {
 			section: type.sections.map((section) => ({
@@ -742,7 +831,7 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		...(countXml?.stripConstraints ?? [])
 	];
 
-	const constraintList =
+	const handledConstraints =
 		field.validations && Object.keys(field.validations).length > 0
 			? Object.values(field.validations)
 					.map((validation) => ({
@@ -753,14 +842,45 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 					.filter((validation) => validation.name && !strippedValidationNames.includes(validation.name))
 			: [];
 	for (const constraint of countXml?.constraints ?? []) {
-		if (!constraintList.some((item) => item.name === constraint.name)) {
-			// The table stores the constraint name as a string. The list's name is the validation-id union.
-			constraintList.push({
-				name: constraint.name as (typeof constraintList)[number]['name'],
-				value: constraint.value,
-				type: constraint.type as (typeof constraintList)[number]['type']
-			});
-		}
+		const existing = handledConstraints.findIndex((item) => item.name === constraint.name);
+		// The table stores the constraint name as a string. The list's name is the validation-id union.
+		const written = {
+			name: constraint.name as (typeof handledConstraints)[number]['name'],
+			value: constraint.value,
+			type: constraint.type as (typeof handledConstraints)[number]['type']
+		};
+		if (existing === -1) handledConstraints.push(written);
+		else if (handledConstraints[existing].value === undefined) handledConstraints[existing] = written;
+	}
+	// Original constraint order. Handled names are updated in place. undefined and a blank string are cleared.
+	const handledByName = new Map<string, (typeof handledConstraints)[number]>(
+		handledConstraints.map((item) => [item.name, item])
+	);
+	const countStorage = getCountLimitStorage(field.type);
+	const omittedConstraintNames = new Set<string>(countStorage?.stripConstraints ?? []);
+	for (const name of countLimitValidationKeys(countStorage)) {
+		if (!handledByName.has(name)) omittedConstraintNames.add(name);
+	}
+	const seenConstraintNames = new Set<string>();
+	const constraintList: Array<(typeof handledConstraints)[number] | LegacyFormDefinitionProperty> = [];
+	for (const raw of field.rawConstraints ?? []) {
+		if (!raw?.name) continue;
+		// A count-limit the editor is not writing back. Keep the stored constraint when this save
+		// did not change it: a blank value or 0 already means no limit. A positive stored value
+		// with no editor value was cleared, so it is omitted.
+		if (omittedConstraintNames.has(raw.name) && !isUnchangedUnlimitedCount(raw.value)) continue;
+		const update = handledByName.get(raw.name);
+		// A cleared editor value must not bring the stored constraint back, or write type "undefined".
+		if (update && isClearedConstraintValue(update.value)) continue;
+		seenConstraintNames.add(raw.name);
+		constraintList.push(
+			update ? { ...raw, value: update.value, type: updatedConstraintType(raw, update) } : { ...raw }
+		);
+	}
+	for (const constraint of handledConstraints) {
+		if (seenConstraintNames.has(constraint.name) || omittedConstraintNames.has(constraint.name)) continue;
+		if (isClearedConstraintValue(constraint.value)) continue;
+		constraintList.push(constraint);
 	}
 	const constraints = constraintList.length > 0 ? { constraint: constraintList } : undefined;
 
@@ -772,7 +892,6 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		defaultValue: field.defaultValue,
 		type: field.type,
 		help: field.helpText,
-		iceId: undefined, // TODO: drop?
 		// region Repeat Groups
 		maxOccurs,
 		minOccurs,

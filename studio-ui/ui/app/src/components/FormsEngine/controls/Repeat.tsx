@@ -41,6 +41,7 @@ import FieldBox from '../components/FieldBox';
 import { buttonClasses } from '@mui/material/Button';
 import { repeatIndexOutOfRangeWarning, visibleRepeatItems } from '../lib/formVisibility';
 import { repeatItemFormProps } from '../lib/repeatItemForm';
+import { getRepeatItemSummary, getRepeatItemTitle, repeatDisplayFieldIds, repeatSortItems } from './repeatItemDisplay';
 import {
 	countLimitValue,
 	getRepeatMinimum,
@@ -62,22 +63,6 @@ export interface RepeatProps extends ControlProps {
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
-
-function getRepeatItemTitle(item: RepeatItem): string {
-	const keys = Object.keys(item);
-	const titleKey = keys.find((key) => key.includes('title'));
-	if (titleKey && item[titleKey]) {
-		return String(item[titleKey]);
-	}
-	return String(item[keys[0]]);
-}
-
-function getRepeatItemSummary(item: RepeatItem): string {
-	// TODO: HTML tags would look quite bad; somehow exclude HTML fields or convert to text?
-	return Object.values(item)
-		.flatMap((value) => (typeof value === 'string' && value ? value.substring(0, 50) : []))
-		.join(' | ');
-}
 
 /** Repeating group. Add stops at maxCount; delete stops at minCount. See utils/countLimits.ts. */
 export function Repeat(props: RepeatProps) {
@@ -145,9 +130,10 @@ export function Repeat(props: RepeatProps) {
 		if (isAddDisabled) return;
 		openItemForm();
 	};
+	const displayFieldIds = useMemo(() => repeatDisplayFieldIds(field.fields), [field.fields]);
 	const sortList = useMemo<Array<TItem<RepeatItem>>>(
-		() => (sortMode ? value.map((i, index) => ({ key: String(index), value: getRepeatItemTitle(i), data: i })) : []),
-		[sortMode, value]
+		() => (sortMode ? repeatSortItems(value, displayFieldIds) : []),
+		[sortMode, value, displayFieldIds]
 	);
 	const onSortChange = (newList: TItem<RepeatItem>[]) => setValue(newList.map((i) => i.data));
 	return (
@@ -206,8 +192,8 @@ export function Repeat(props: RepeatProps) {
 									onClick={(e) => handleEditItem(e, item, index)}
 								>
 									<ListItemText
-										primary={getRepeatItemTitle(item)}
-										secondary={getRepeatItemSummary(item)}
+										primary={getRepeatItemTitle(item, displayFieldIds)}
+										secondary={getRepeatItemSummary(item, displayFieldIds)}
 										slotProps={{
 											primary: {
 												noWrap: true
