@@ -34,8 +34,10 @@ import SortableList from '../../FormsEngine/components/SortableList';
 import ContentType, { ContentTypeField, ContentTypeSection } from '../../../models/ContentType';
 import { LookupTable } from '../../../models';
 import Box from '@mui/material/Box';
-import { isComposedPath } from '../utils';
+import { isComposedPath, isRootOnlyControl } from '../utils';
 import { EmptyState } from '../../EmptyState';
+import controlDescriptors from '../descriptors/controls';
+import { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 
 export interface MoveFieldToSectionDialogProps extends EnhancedDialogProps {
 	fieldIdPath: FieldFormViewProps['fieldIdPath'];
@@ -123,6 +125,10 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 	// Array of sections and repeat groups that the field can be moved to.
 	const filteredTargets = useMemo(() => {
 		const targets = [];
+		// System fields (e.g. Internal Name) may store a remapped type (input/checkbox); check id too.
+		const isRootOnlyField =
+			isRootOnlyControl(field.type, controlDescriptors[field.type as BuiltInControlType]) ||
+			isRootOnlyControl(field.id);
 		sections.forEach((section) => {
 			const repeatGroupsIdsForSection = getRepeatGroupsIdsForSection(section, typeRepeatGroups);
 			const sameFieldInType = Boolean(type.fields[field.id]);
@@ -147,7 +153,12 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 				const sameFieldInRepGroup = typeRepeatGroups[repeatGroupFieldIdPath].fields[field.id];
 				const label = getLabelFromRepeatGroupIdPath(repeatGroupFieldIdPath, typeRepeatGroups);
 
-				if (currentRepeatGroupIdPath !== repeatGroupFieldIdPath && !isSameOrChildRepeatGroup && !sameFieldInRepGroup) {
+				if (
+					!isRootOnlyField &&
+					currentRepeatGroupIdPath !== repeatGroupFieldIdPath &&
+					!isSameOrChildRepeatGroup &&
+					!sameFieldInRepGroup
+				) {
 					targets.push({
 						id: repeatGroupFieldIdPath,
 						title: label
@@ -156,7 +167,7 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 			});
 		});
 		return targets;
-	}, [sections, field?.id, sectionId, type?.fields, typeRepeatGroups, fieldIdPath]);
+	}, [sections, field?.id, field?.type, sectionId, type?.fields, typeRepeatGroups, fieldIdPath]);
 
 	return (
 		<>
