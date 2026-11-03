@@ -296,6 +296,28 @@ describe('registry reads', () => {
 		);
 	});
 
+	it('keeps a prototype create, bound to its module, on the registered copy of a class instance module', async () => {
+		const type = `hardening-ds-${counter++}`;
+		class ClassModule {
+			readonly type = type;
+			readonly interfaces = ['item'];
+			readonly capabilities = ['list'];
+			readonly tag = 'receiver';
+			create() {
+				return { tag: this.tag };
+			}
+		}
+		const module = new ClassModule() as unknown as DataSourceModule;
+		registerPlugin({ id: `org.example.${type}`, dataSources: { [type]: module } } as PluginDescriptor, source);
+		const read = formsEngineDataSourcesHost.get(type);
+		assert.ok(read && Object.isFrozen(read) && !Object.isFrozen(module));
+		assert.equal(typeof read.create, 'function');
+		assert.deepEqual(await read.create({} as never), { tag: 'receiver' });
+		assert.deepEqual(read.interfaces, ['item']);
+		assert.deepEqual(read.capabilities, ['list']);
+		assert.ok(!('apiVersion' in read));
+	});
+
 	it('getDataSourceBindings treats an inherited object member as no control type', () => {
 		assert.deepEqual(formsEngineControlsHost.getDataSourceBindings('constructor'), []);
 		assert.deepEqual(formsEngineControlsHost.getDataSourceBindings('toString'), []);

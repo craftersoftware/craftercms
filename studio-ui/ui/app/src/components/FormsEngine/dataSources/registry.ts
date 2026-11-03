@@ -72,12 +72,15 @@ export class DataSourceModuleRegistry {
 			throw new Error(`A data-source module is already registered for type "${module.type}".`);
 		}
 		// Freeze a copy, so the registered module is read-only through `get` / `getAll` without freezing the caller's object.
+		// Members are read explicitly: a class instance keeps `create` on its prototype, which a spread would drop.
 		this.#modules.set(
 			module.type,
 			Object.freeze({
-				...module,
+				...(module.apiVersion === undefined ? undefined : { apiVersion: module.apiVersion }),
+				type: module.type,
 				interfaces: Object.freeze([...module.interfaces]),
-				capabilities: Object.freeze([...module.capabilities])
+				capabilities: Object.freeze([...module.capabilities]),
+				create: module.create.bind(module)
 			})
 		);
 		this.#sources.set(module.type, module);
