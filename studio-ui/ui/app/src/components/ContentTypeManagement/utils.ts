@@ -363,8 +363,17 @@ export function reverseTypeFieldValuesObject(
 	return fieldWithReversedValues;
 }
 
+export type DescriptorContentTypeMetadata = {
+	suffixes?: string[];
+	additionalFields?: string[];
+	/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+	rootOnly?: boolean;
+};
+
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
+	/** Preserved from the source descriptor (e.g. via applyTranslations); used for rootOnly and related checks. */
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorContentType = Pick<ContentType, 'id'> & {
@@ -374,12 +383,7 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	sections: DescriptorSection[];
 	fields: LookupTable<DescriptorField>;
 	type?: 'image' | 'item' | 'audio' | 'flash' | 'video' | 'transcoded-video';
-	metadata?: {
-		suffixes?: string[];
-		additionalFields?: string[];
-		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
-		rootOnly?: boolean;
-	};
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorSection = Omit<ContentTypeSection, 'title' | 'description'> & {

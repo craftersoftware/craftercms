@@ -36,19 +36,18 @@ import { LookupTable } from '../../../models';
 import Box from '@mui/material/Box';
 import { isComposedPath, isRootOnlyControl } from '../utils';
 import { EmptyState } from '../../EmptyState';
-import controlDescriptors from '../descriptors/controls';
-import { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 
 export interface MoveFieldToSectionDialogProps extends EnhancedDialogProps {
 	fieldIdPath: FieldFormViewProps['fieldIdPath'];
 	field: FieldFormViewProps['field'];
 	sectionId: FieldFormViewProps['sectionId'];
 	type: ContentType;
+	controlDescriptor: FieldFormViewProps['controlDescriptor'];
 	onMoveFieldToSection?: FieldFormViewProps['onMoveFieldToSection'];
 }
 
 export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProps) {
-	const { fieldIdPath, field, sectionId, type, onClose, onMoveFieldToSection } = props;
+	const { fieldIdPath, field, sectionId, type, controlDescriptor, onClose, onMoveFieldToSection } = props;
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [selections, setSelections] = useSpreadState<{
 		sectionId: string;
@@ -125,10 +124,9 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 	// Array of sections and repeat groups that the field can be moved to.
 	const filteredTargets = useMemo(() => {
 		const targets = [];
+		// Prefer the resolved descriptor (built-in or custom) so rootOnly metadata is honored.
 		// System fields (e.g. Internal Name) may store a remapped type (input/checkbox); check id too.
-		const isRootOnlyField =
-			isRootOnlyControl(field.type, controlDescriptors[field.type as BuiltInControlType]) ||
-			isRootOnlyControl(field.id);
+		const isRootOnlyField = isRootOnlyControl(field.type, controlDescriptor) || isRootOnlyControl(field.id);
 		sections.forEach((section) => {
 			const repeatGroupsIdsForSection = getRepeatGroupsIdsForSection(section, typeRepeatGroups);
 			const sameFieldInType = Boolean(type.fields[field.id]);
@@ -167,7 +165,7 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 			});
 		});
 		return targets;
-	}, [sections, field?.id, field?.type, sectionId, type?.fields, typeRepeatGroups, fieldIdPath]);
+	}, [sections, field?.id, field?.type, controlDescriptor, sectionId, type?.fields, typeRepeatGroups, fieldIdPath]);
 
 	return (
 		<>
@@ -246,7 +244,8 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 }
 
 export function MoveFieldToSectionDialog(props: MoveFieldToSectionDialogProps) {
-	const { field, fieldIdPath, sectionId, type, onClose, onMoveFieldToSection, ...dialogProps } = props;
+	const { field, fieldIdPath, sectionId, type, controlDescriptor, onClose, onMoveFieldToSection, ...dialogProps } =
+		props;
 	return (
 		<EnhancedDialog
 			{...dialogProps}
@@ -260,6 +259,7 @@ export function MoveFieldToSectionDialog(props: MoveFieldToSectionDialogProps) {
 				field={field}
 				sectionId={sectionId}
 				type={type}
+				controlDescriptor={controlDescriptor}
 				onClose={onClose}
 				onMoveFieldToSection={onMoveFieldToSection}
 			/>
