@@ -56,6 +56,9 @@ import org.mockito.MockedStatic;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
@@ -450,6 +453,23 @@ public class SitesServiceInternalImplTest {
 		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
 		verify(deployer, never()).createStagingTarget(anyString());
+	}
+
+	@Test
+	public void duplicateMissingSourceStagingTargetCreatesOne() throws Exception {
+		Site sourceSite = new Site();
+		sourceSite.setPublishingEnabled(true);
+		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
+		sourceSite.setStagingEnabled(true);
+		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
+		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
+		doThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Target not found", HttpHeaders.EMPTY, new byte[0], null))
+			.when(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+
+		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
+
+		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
+		verify(deployer).createStagingTarget(NEW_SITE_ID);
 	}
 
 	@Test

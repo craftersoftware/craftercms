@@ -137,7 +137,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 
 public class SitesServiceInternalImpl implements SitesService, ApplicationContextAware {
 
@@ -619,7 +622,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 			deployer.duplicateTargets(sourceSiteId, siteId);
 			if (enableStaging) {
 				if (sourceSite.isStagingEnabled()) {
-					deployer.duplicateStagingTarget(sourceSiteId, siteId);
+					duplicateOrCreateStagingTarget(sourceSiteId, siteId);
 				} else {
 					deployer.createStagingTarget(siteId);
 				}
@@ -1148,6 +1151,21 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 				throw serviceLayerException;
 			}
 			throw new ServiceLayerException(format("Failed to enable staging for site '%s'", siteId), e);
+		}
+	}
+
+	/**
+	 * Duplicate the source staging deployer target. When that target does not exist, create one for the new site.
+	 */
+	private void duplicateOrCreateStagingTarget(String sourceSiteId, String siteId) {
+		try {
+			deployer.duplicateStagingTarget(sourceSiteId, siteId);
+		} catch (RestClientException e) {
+			if (!(e instanceof HttpStatusCodeException status) || !status.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) {
+				throw e;
+			}
+			logger.info("Staging deployer target for site '{}' does not exist. Creating one for site '{}'", sourceSiteId, siteId);
+			deployer.createStagingTarget(siteId);
 		}
 	}
 
