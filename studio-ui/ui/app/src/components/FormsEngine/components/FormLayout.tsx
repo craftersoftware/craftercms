@@ -44,7 +44,6 @@ export type FormLayoutProps = PropsWithChildren<{
 	mainContentGrid: ReactNode;
 	headerFragment: ReactNode;
 	containerRef: RefObject<HTMLDivElement>;
-	sentinelRef: RefObject<HTMLDivElement>;
 	mainContentRefCallback: RefCallback<HTMLDivElement>;
 	hasStackedForms: boolean;
 	stackIndex: number;
@@ -68,7 +67,6 @@ export const FormLayout = forwardRef<HTMLDivElement, FormLayoutProps>(function (
 		targetHeight,
 		containerRef,
 		mainContentRefCallback,
-		sentinelRef,
 		headerFragment,
 		hasStackedForms,
 		stackIndex,
@@ -198,17 +196,6 @@ export const FormLayout = forwardRef<HTMLDivElement, FormLayoutProps>(function (
 					overflow: 'auto'
 				}}
 			>
-				<div
-					ref={sentinelRef}
-					style={{
-						position: 'absolute',
-						top: '60px',
-						height: '1px',
-						width: '1px',
-						pointerEvents: 'none',
-						visibility: 'hidden'
-					}}
-				/>
 				<Container maxWidth={isLargeContainer ? 'xl' : undefined}>
 					<Grid container spacing={2}>
 						{mainContentGrid}

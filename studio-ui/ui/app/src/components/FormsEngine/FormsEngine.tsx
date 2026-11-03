@@ -130,7 +130,7 @@ import FormLayout from './components/FormLayout';
 import TableOfContents, { FieldScopeNotice } from './components/TableOfContents';
 import CreateModeHeader from './components/CreateModeHeader';
 import RepeatModeHeader from './components/RepeatModeHeader';
-import EditModeHeader from './components/EditModeHeader';
+import EditModeHeader, { EditModeMetadata, formHeaderContainerName } from './components/EditModeHeader';
 import SaveCard, { ReleaseLockOnCloseControl } from './components/SaveCard';
 import SectionAccordion from './components/SectionAccordion';
 import useSaveForm from './lib/useSaveForm';
@@ -1079,7 +1079,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
-	const [collapseHeader, setCollapseHeader] = useState(false);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -1584,7 +1583,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	};
 
 	const [mainContent, setMainContent] = useState<HTMLDivElement | null>(null);
-	const sentinelRef = useRef<HTMLDivElement>(null);
 	const cancelFieldScrollRef = useRef<(() => void) | null>(null);
 	const pendingFieldScrollRef = useRef<{ sectionId: string; start: () => void } | null>(null);
 
@@ -1596,45 +1594,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 		if (!root) return;
 		cancelFieldScrollRef.current = scrollToFieldWhenSettled(root, fieldId, { focus });
 	}, []);
-
-	// Collapse when the sentinel (~60px) scrolls out of view. The header is a sibling of this scroll
-	// root, so collapsing it grows clientHeight and can pull the sentinel back — only collapse when
-	// overflow exceeds the header height plus the sentinel offset, which that growth can't eat into.
-	useEffect(() => {
-		const sentinel = sentinelRef.current;
-		if (!mainContent || !sentinel) return;
-
-		let isIntersecting = true;
-		const checkThreshold = () => {
-			const header = mainContent.parentElement?.querySelector<HTMLElement>('[data-area-id="formHeader"]');
-			const overflow = mainContent.scrollHeight - mainContent.clientHeight;
-			// Collapsing frees up to the header's height; scrollTop must still clear the sentinel's offset afterwards.
-			const sentinelOffset = sentinel.offsetTop;
-			setCollapseHeader(!isIntersecting && overflow > (header?.offsetHeight ?? 0) + sentinelOffset);
-		};
-
-		const intersectionObserver = new IntersectionObserver(
-			([entry]) => {
-				isIntersecting = entry.isIntersecting;
-				checkThreshold();
-			},
-			{ root: mainContent, threshold: 0, rootMargin: '0px' }
-		);
-		intersectionObserver.observe(sentinel);
-
-		// Re-check the same threshold when section content or the scroll root resizes (e.g. collapsing a
-		// SectionAccordion, or the dialog/viewport changing mainContent.clientHeight). The intersection
-		// observer alone won't fire for that, so collapseHeader could otherwise get stuck.
-		const resizeObserver = new ResizeObserver(checkThreshold);
-		const contentContainer = sentinel.nextElementSibling;
-		if (contentContainer) resizeObserver.observe(contentContainer);
-		resizeObserver.observe(mainContent);
-
-		return () => {
-			intersectionObserver.disconnect();
-			resizeObserver.disconnect();
-		};
-	}, [mainContent]);
 
 	const pendingScrollFieldId = useAtomValue(atoms.pendingScrollFieldId);
 	const pendingScrollFocus = useAtomValue(atoms.pendingScrollFocus);
@@ -1728,14 +1687,13 @@ function FormOrchestrator(props: FormsEngineProps) {
 		<FormLayout
 			stackIndex={stackIndex}
 			containerRef={containerRef}
-			sentinelRef={sentinelRef}
 			mainContentRefCallback={mainContentRefCallback}
 			hasStackedForms={hasStackedForms}
 			// If the form is rendered in/as a dialog, take up the whole screen minus
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box id="header" sx={{ minHeight: 50 }}>
+				<Box id="header" sx={{ minHeight: 50, containerType: 'inline-size', containerName: formHeaderContainerName }}>
 					<Box
 						component={Container}
 						sx={{
@@ -1773,11 +1731,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Box>
 					</Box>
 					{isRepeatMode ? (
-						<RepeatModeHeader repeat={repeat} collapse={collapseHeader} />
+						<RepeatModeHeader repeat={repeat} />
 					) : isCreateMode ? (
-						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} collapse={collapseHeader} />
+						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} />
 					) : (
-						<EditModeHeader isEmbedded={isEmbedded} collapse={collapseHeader} />
+						<EditModeHeader isEmbedded={isEmbedded} />
 					)}
 				</Box>
 			}
@@ -1866,32 +1824,35 @@ function FormOrchestrator(props: FormsEngineProps) {
 									)}
 								</Paper>
 							) : (
-								visibleSections.map((section, sectionIndex) => (
-									<SectionAccordion
-										key={section.id}
-										section={section}
-										slotProps={{
-											transition: {
-												onEntered: () => {
-													const pending = pendingFieldScrollRef.current;
-													if (pending?.sectionId === section.id) {
-														pending.start();
-														pendingFieldScrollRef.current = null;
+								<>
+									{!isCreateMode && <EditModeMetadata />}
+									{visibleSections.map((section, sectionIndex) => (
+										<SectionAccordion
+											key={section.id}
+											section={section}
+											slotProps={{
+												transition: {
+													onEntered: () => {
+														const pending = pendingFieldScrollRef.current;
+														if (pending?.sectionId === section.id) {
+															pending.start();
+															pendingFieldScrollRef.current = null;
+														}
 													}
 												}
+											}}
+											renderControl={(fieldId, fieldIndex) =>
+												renderFieldControl(
+													contentTypeFields[fieldId],
+													stableFormContext.atoms.valueByFieldId,
+													sectionIndex === 0 && fieldIndex === 0,
+													readonly,
+													contentType
+												)
 											}
-										}}
-										renderControl={(fieldId, fieldIndex) =>
-											renderFieldControl(
-												contentTypeFields[fieldId],
-												stableFormContext.atoms.valueByFieldId,
-												sectionIndex === 0 && fieldIndex === 0,
-												readonly,
-												contentType
-											)
-										}
-									/>
-								))
+										/>
+									))}
+								</>
 							)}
 							{/* Spacer & back to top */}
 							<FormBackToTop containerRef={containerRef} getScrollContainer={getScrollContainer} />
