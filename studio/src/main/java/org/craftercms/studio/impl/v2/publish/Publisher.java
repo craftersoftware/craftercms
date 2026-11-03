@@ -200,25 +200,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			auditPublishOperation(publishPackage, OPERATION_PUBLISH_START);
 			itemLoadStage.complete();
 
-			switch (publishPackage.getPackageType()) {
-				case INITIAL_PUBLISH -> {
-					logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_INITIAL_PUBLISH;
-					doInitialPublish(publishPackage);
-				}
-				case PUBLISH_ALL -> {
-					logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_PUBLISH_ALL;
-					doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget);
-				}
-				case ITEM_LIST -> {
-					logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_ITEM_LIST_PUBLISHED;
-					doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget);
-				}
-				default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
-					publishPackage.getPackageType(), packageId, siteId));
-			}
+			activityOperation = auditOperation(publishPackage.getPackageType(), packageId, siteId);
+			publishPackage(publishPackage, publishItems);
 		} finally {
 			Stage completeStage = taskProgress.startStage("Save completed package");
 			if (activityOperation != null) {
@@ -237,39 +220,98 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST).
-	 * A live package waits for enable-staging to finish, then reads the staging flag while holding the published-repo lock.
-	 * A package that observed staging as off and then blocked while enable ran still publishes to staging.
+	 * Publish one package. Staging cannot be disabled, and a package for the staging target exists only while it is
+	 * on. When staging is on, the package publishes while holding the published-repo lock. A live package also
+	 * publishes to staging. When staging is off, the package is for live: it waits for enable-staging to finish and
+	 * reads the flag again under the published-repo lock, so a package that blocked while enable ran still publishes
+	 * to staging.
 	 */
-	protected void doPublishItemList(final PublishPackage publishPackage,
-					 final Collection<PublishItem> publishItems,
-					 final TargetPublisherFunction targetPublisher) throws SiteNotFoundException {
+	private void publishPackage(final PublishPackage publishPackage, final Collection<PublishItem> publishItems)
+			throws ServiceLayerException {
 		String siteId = publishPackage.getSite().getSiteId();
-		String target = publishPackage.getTarget();
-
-		boolean isLiveTarget = CS.equals(servicesConfig.getLiveEnvironment(siteId), target);
-		if (!isLiveTarget) {
-			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, target);
+		if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, true);
 			return;
 		}
 
 		String enableLockKey = getEnableStagingLockKey(siteId);
 		generalLockService.lock(enableLockKey);
 		try {
-			String publishedRepoLockKey = getPublishedRepoLockKey(siteId);
-			generalLockService.lock(publishedRepoLockKey);
-			try {
-				if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
-					String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
-					runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
-				}
-				runTargetPublisher(publishPackage, publishItems, targetPublisher, true, target);
-			} finally {
-				generalLockService.unlock(publishedRepoLockKey);
-			}
+			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, false);
 		} finally {
 			generalLockService.unlock(enableLockKey);
 		}
+	}
+
+	/**
+	 * Publish a package while holding the published-repo lock. When {@code stagingEnabled} is false, the flag is read
+	 * again while holding the lock.
+	 */
+	private void publishUnderPublishedRepoLock(final PublishPackage publishPackage,
+						   final Collection<PublishItem> publishItems, final String siteId,
+						   boolean stagingEnabled) throws ServiceLayerException {
+		String publishedRepoLockKey = getPublishedRepoLockKey(siteId);
+		generalLockService.lock(publishedRepoLockKey);
+		try {
+			// Staging can only be enabled, never disabled, so recheck the flag only if it was false originally
+			if (!stagingEnabled) {
+				stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
+			}
+			publishByType(publishPackage, publishItems, stagingEnabled);
+		} finally {
+			generalLockService.unlock(publishedRepoLockKey);
+		}
+	}
+
+	private void publishByType(final PublishPackage publishPackage, final Collection<PublishItem> publishItems,
+				   final boolean stagingEnabled) throws ServiceLayerException {
+		String siteId = publishPackage.getSite().getSiteId();
+		long packageId = publishPackage.getId();
+		switch (publishPackage.getPackageType()) {
+			case INITIAL_PUBLISH -> {
+				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
+				doInitialPublish(publishPackage, stagingEnabled);
+			}
+			case PUBLISH_ALL -> {
+				logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, stagingEnabled);
+			}
+			case ITEM_LIST -> {
+				logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, stagingEnabled);
+			}
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				publishPackage.getPackageType(), packageId, siteId));
+		}
+	}
+
+	private String auditOperation(final PublishPackage.PackageType packageType, final long packageId, final String siteId)
+			throws ServiceLayerException {
+		return switch (packageType) {
+			case INITIAL_PUBLISH -> OPERATION_INITIAL_PUBLISH;
+			case PUBLISH_ALL -> OPERATION_PUBLISH_ALL;
+			case ITEM_LIST -> OPERATION_ITEM_LIST_PUBLISHED;
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				packageType, packageId, siteId));
+		};
+	}
+
+	/**
+	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST).
+	 * When {@code stagingEnabled} is true and the package target is live, staging is published first.
+	 */
+	protected void doPublishItemList(final PublishPackage publishPackage,
+					 final Collection<PublishItem> publishItems,
+					 final TargetPublisherFunction targetPublisher,
+					 final boolean stagingEnabled) throws SiteNotFoundException {
+		String siteId = publishPackage.getSite().getSiteId();
+		String target = publishPackage.getTarget();
+		boolean isLiveTarget = CS.equals(servicesConfig.getLiveEnvironment(siteId), target);
+		if (isLiveTarget && stagingEnabled) {
+			String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
+			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
+		}
+		runTargetPublisher(publishPackage, publishItems, targetPublisher, isLiveTarget, target);
 	}
 
 	/**
@@ -462,21 +504,19 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process an initial publish package
+	 * Process an initial publish package. The caller has already read {@code stagingEnabled} while holding the
+	 * enable-staging and published-repo locks.
 	 */
-	private void doInitialPublish(final PublishPackage publishPackage) throws SiteNotFoundException {
+	private void doInitialPublish(final PublishPackage publishPackage, final boolean stagingEnabled) throws SiteNotFoundException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
 		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
-		boolean stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
 		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
-
 		Map<String, PublishItem> failedItems = new HashMap<>();
 		if (stagingEnabled) {
 			runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, false),
 				false, stagingTarget);
 		}
-
 		runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, true),
 			true, liveTarget);
 
