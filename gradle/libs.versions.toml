@@ -14,7 +14,7 @@
 #
 
 [versions]
-craftercms = "4.7.1-SNAPSHOT"
+craftercms = "4.7.1"
 java = "21"
 spring = "7.0.10"
 commons-lang3 = "3.21.0"
