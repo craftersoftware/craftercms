@@ -25,7 +25,7 @@ import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Popper from '@mui/material/Popper';
-import { SplitButtonUIProps } from './utils';
+import { optionColor, SplitButtonUIProps } from './utils';
 
 export function SplitButtonUI(props: SplitButtonUIProps) {
 	const {
@@ -54,18 +54,20 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 		}
 	}, [fullWidth, anchorRef, open]);
 
+	const selectedColor = optionColor(options[selectedIndex]);
+
 	return (
 		<>
 			<ButtonGroup
 				disabled={disabled}
 				variant="contained"
-				color={options[selectedIndex]?.color ?? 'primary'}
+				color={selectedColor}
 				ref={anchorRef}
 				aria-label="split button"
 				fullWidth={fullWidth}
 			>
 				<Button
-					color={options[selectedIndex]?.color ?? 'primary'}
+					color={selectedColor}
 					variant="contained"
 					loading={loading}
 					startIcon={options[selectedIndex]?.icon}
@@ -76,7 +78,7 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 				{options.length > 1 && (
 					<Button
 						disabled={loading}
-						color={options[selectedIndex]?.color ?? 'primary'}
+						color={selectedColor}
 						size="small"
 						aria-controls={open ? 'split-button-menu' : undefined}
 						aria-expanded={open ? 'true' : undefined}
