@@ -47,6 +47,7 @@ import { popDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import type { SaveFormResult } from '../lib/useSaveForm';
 import type { ApiResponse } from '../../../models/ApiResponse';
+import { saveButtonTip, type MinimumRequirementsNotice } from '../lib/minimumSaveRequirements';
 
 const messages = defineMessages({
 	saveReadFailed: { defaultMessage: 'The form could not be checked before saving.' },
@@ -61,7 +62,10 @@ const messages = defineMessages({
 	keepLockWarning: {
 		defaultMessage: "Others can't edit it until you release the lock."
 	},
-	noChanges: { defaultMessage: 'No changes detected' }
+	noChanges: { defaultMessage: 'No changes detected' },
+	addFileNameAndInternalName: { defaultMessage: 'Add a {fileName} and {internalName} to save' },
+	addFileName: { defaultMessage: 'Add a {fileName} to save' },
+	addInternalName: { defaultMessage: 'Add an {internalName} to save' }
 });
 
 type AfterSaving = 'stay' | 'minimize' | 'close';
@@ -151,6 +155,11 @@ export interface SaveCardProps {
 	/** From the form's existing validation alert. Not a second validity subscription. */
 	validationErrorCount?: number;
 	/**
+	 * Set when a save, even a draft, would be refused for lack of a file name or internal name.
+	 * Disables saving and says why. Unset for repeat items, which have neither.
+	 */
+	minimumRequirements?: MinimumRequirementsNotice;
+	/**
 	 * Runs the save. `revealed` opened a hidden field and wrote nothing.
 	 * `invalid` is the cannot-proceed dialog. `saved` started a write.
 	 * `auto` is the main button: draft when the fresh read is invalid, else the remembered choice.
@@ -159,7 +168,7 @@ export interface SaveCardProps {
 }
 
 export function SaveCard(props: SaveCardProps) {
-	const { isEmbedded, isStackedForm, isRepeatMode, onSave, validationErrorCount = 0 } = props;
+	const { isEmbedded, isStackedForm, isRepeatMode, onSave, validationErrorCount = 0, minimumRequirements } = props;
 	const stableFormContext = useContext(StableFormContext);
 	const formAtoms = props.atoms ?? stableFormContext.atoms;
 	const isSubmitting = useAtomValue(formAtoms.isSubmitting);
@@ -176,10 +185,18 @@ export function SaveCard(props: SaveCardProps) {
 	const showVersionComment = (!isEmbedded || !isStackedForm) && !isRepeatMode;
 	const showSaveOptions = !isEmbedded && !isRepeatMode;
 	const { formatMessage } = useIntl();
-	// Idle forms are disabled by the empty comment while nothing is pending. The tip explains
-	// that case only: not while submitting, and not when pending edits are blocked by the comment.
-	const noChangesMessage = formatMessage(messages.noChanges);
-	const showNoChangesTip = disableSave && !isSubmitting && !hasPendingChanges;
+	// The minimum requirements outrank the empty comment: filling the comment would not allow the save.
+	// The idle tip covers an empty comment with nothing pending, not an edited form that waits on its comment.
+	const blockedByMinimum = minimumRequirements != null;
+	const saveTip = saveButtonTip({ blocked: blockedByMinimum, disableSave, isSubmitting, hasPendingChanges });
+	const saveTipMessage = (() => {
+		if (saveTip === 'noChanges') return formatMessage(messages.noChanges);
+		if (saveTip !== 'minimumRequirements' || !minimumRequirements) return '';
+		const { copy, fileName, internalName } = minimumRequirements;
+		if (copy === 'both') return formatMessage(messages.addFileNameAndInternalName, { fileName, internalName });
+		if (copy === 'fileName') return formatMessage(messages.addFileName, { fileName });
+		return formatMessage(messages.addInternalName, { internalName });
+	})();
 	// Same surface as a form section: default paper in light, elevation 2 in dark.
 	const sectionElevation = useIsDarkModeTheme() ? 2 : undefined;
 	const afterSavingLabels: Record<AfterSaving, string> = {
@@ -252,7 +269,7 @@ export function SaveCard(props: SaveCardProps) {
 		<SplitButton
 			fullWidth
 			loading={isSubmitting}
-			disabled={disableSave}
+			disabled={disableSave || blockedByMinimum}
 			selectedId={showDraft ? 'saveDraft' : 'save'}
 			onClick={(e) => handleSave(e, 'auto')}
 			onSelect={(id) => {
@@ -305,9 +322,9 @@ export function SaveCard(props: SaveCardProps) {
 							onFocus={(e) => e.target.select()}
 						/>
 					)}
-					<Tooltip title={showNoChangesTip ? noChangesMessage : ''} describeChild>
+					<Tooltip title={saveTipMessage} describeChild>
 						{/* Disabled buttons do not emit hover or focus, so the tip listens on this span. */}
-						<Box component="span" tabIndex={showNoChangesTip ? 0 : undefined} sx={{ display: 'block', width: '100%' }}>
+						<Box component="span" tabIndex={saveTipMessage ? 0 : undefined} sx={{ display: 'block', width: '100%' }}>
 							{saveButton}
 						</Box>
 					</Tooltip>
@@ -356,6 +373,7 @@ export function SaveCard(props: SaveCardProps) {
 						ref={setGroup}
 						exclusive
 						fullWidth
+						disabled={blockedByMinimum}
 						size="small"
 						color="primary"
 						value={afterSaving}

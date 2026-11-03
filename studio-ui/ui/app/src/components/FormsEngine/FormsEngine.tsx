@@ -188,6 +188,8 @@ import {
 import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
+import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
+import { firstBlockingFieldId, minimumRequirementsNotice, validationAlertVariant } from './lib/minimumSaveRequirements';
 
 export interface FormSavePromiseResult {
 	close: boolean;
@@ -1196,6 +1198,17 @@ function FormOrchestrator(props: FormsEngineProps) {
 		undefined,
 		parentEntry?.fieldUpdates$
 	);
+	// What the save refuses to write without. A selected-fields item form saves through its parent,
+	// so it reports the parent's requirements, by the parent's own mode.
+	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded }, fieldUpdates$);
+	const parentMinimum = useMinimumSaveRequirements(
+		itemMode === 'selected' ? parentAtoms : null,
+		{
+			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
+		},
+		parentEntry?.fieldUpdates$
+	);
 	// region Workflow item updates
 	useEffect(() => {
 		const events = [
@@ -1468,7 +1481,34 @@ function FormOrchestrator(props: FormsEngineProps) {
 		return fields?.[validationErrors.fieldId]?.name;
 	})();
 	const useParentSaveCard = itemMode === 'selected' && parentAtoms != null;
+	const missingMinimum = useParentSaveCard ? parentMinimum : localMinimum;
+	const minimumContentType = useParentSaveCard ? parentEntry?.itemMeta.contentType : contentType;
+	const minimumNotice = minimumRequirementsNotice(missingMinimum, minimumContentType?.fields);
+	const alertVariant = validationAlertVariant({
+		missing: missingMinimum,
+		errorCount: validationErrors?.count ?? 0
+	});
+	const blockingFieldId = minimumNotice
+		? firstBlockingFieldId(missingMinimum, useParentSaveCard ? parentFieldOrder : countFieldIds)
+		: undefined;
 	const showValidationField = () => {
+		if (alertVariant === 'minimumRequirements') {
+			if (!blockingFieldId) return;
+			if (!useParentSaveCard) {
+				const reveal = showValidationError({
+					visibility: store.get(atoms.formVisibility),
+					fieldId: blockingFieldId,
+					irrelevantFieldPaths,
+					parentPath: repeat?.fieldId
+				});
+				commitFormVisibility(store.set, atoms, reveal.state, reveal.fieldId);
+				return;
+			}
+			const reveal = revealField(store.get(parentAtoms.formVisibility), blockingFieldId);
+			commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
+			contextApi.popForm();
+			return;
+		}
 		if (!validationErrors) return;
 		if (validationErrors.where === 'local') {
 			const reveal = showValidationError({
@@ -1877,11 +1917,18 @@ function FormOrchestrator(props: FormsEngineProps) {
 									</>
 								) : (
 									<>
-										{validationErrors && (
+										{alertVariant && (
 											<ValidationErrorsAlert
-												count={validationErrors.count}
-												fieldName={validationFieldName}
+												count={validationErrors?.count ?? 0}
+												fieldName={
+													minimumNotice
+														? blockingFieldId === XmlKeys.fileName
+															? minimumNotice.fileName
+															: minimumNotice.internalName
+														: validationFieldName
+												}
 												willSaveAsDraft
+												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
 											/>
 										)}
@@ -1891,6 +1938,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 											isRepeatMode={useParentSaveCard ? false : isRepeatMode}
 											atoms={useParentSaveCard ? parentAtoms : undefined}
 											validationErrorCount={validationErrors?.count ?? 0}
+											minimumRequirements={minimumNotice ?? undefined}
 											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
 										/>
 										{showReleaseLockControl && (

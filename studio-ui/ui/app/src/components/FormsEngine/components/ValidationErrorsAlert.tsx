@@ -19,12 +19,41 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { FormattedMessage, useIntl } from 'react-intl';
+import type { MinimumRequirementsNotice } from '../lib/minimumSaveRequirements';
+
+function MinimumRequirementsMessage({ notice }: { notice: MinimumRequirementsNotice }) {
+	switch (notice.copy) {
+		case 'both':
+			return (
+				<FormattedMessage
+					defaultMessage="Add a {fileName} and {internalName} to save this content."
+					values={{ fileName: notice.fileName, internalName: notice.internalName }}
+				/>
+			);
+		case 'fileName':
+			return (
+				<FormattedMessage
+					defaultMessage="Add a {fileName} to save this content."
+					values={{ fileName: notice.fileName }}
+				/>
+			);
+		default:
+			return (
+				<FormattedMessage
+					defaultMessage="Add an {internalName} to save this content."
+					values={{ internalName: notice.internalName }}
+				/>
+			);
+	}
+}
 
 export function ValidationErrorsAlert(props: {
 	count: number;
 	fieldName?: string;
 	/** The main save action will store a draft until these errors are fixed. */
 	willSaveAsDraft?: boolean;
+	/** Set when no save, not even a draft, would be written. Replaces the draft wording. */
+	minimumRequirements?: MinimumRequirementsNotice;
 	onShow(): void;
 }) {
 	const { formatMessage } = useIntl();
@@ -34,7 +63,9 @@ export function ValidationErrorsAlert(props: {
 	return (
 		<Alert role="status" severity="warning">
 			<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-				{props.willSaveAsDraft ? (
+				{props.minimumRequirements ? (
+					<MinimumRequirementsMessage notice={props.minimumRequirements} />
+				) : props.willSaveAsDraft ? (
 					<FormattedMessage
 						defaultMessage="{count, plural, one {The form has a validation error. This will save as a draft until the error is fixed.} other {The form has # validation errors. This will save as a draft until the errors are fixed.}}"
 						values={{ count: props.count }}

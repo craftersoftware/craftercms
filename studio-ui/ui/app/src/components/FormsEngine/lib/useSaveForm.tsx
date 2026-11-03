@@ -370,6 +370,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+					// Same safety net as the full form below, for a stacked embedded form too.
 					if (!isInternalNameValid(values)) {
 						setIsSubmitting(false);
 						return showAlert({
@@ -513,6 +514,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 				};
 
 				// Validate minimum requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
+				// The Save card disables itself on the same rule (minimumSaveRequirements). This stays for a read that is
+				// a moment behind, and for a value `onBeforeSave` changed.
 				const minimumRequirementsFullfilled = await checkMinimumSaveRequirementsFulfilled(
 					jotai.get(stableFormContext.atoms.validationByFieldId[XmlKeys['fileName']]),
 					values

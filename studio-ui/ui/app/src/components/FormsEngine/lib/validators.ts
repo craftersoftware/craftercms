@@ -18,6 +18,7 @@ import ContentType, { type ContentTypeField } from '../../../models/ContentType'
 import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
+import { isInternalNameFilled, missingMinimumSaveRequirements } from './minimumSaveRequirements';
 import { defineMessage, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
@@ -368,8 +369,15 @@ export async function checkMinimumSaveRequirementsFulfilled(
 	fileNameValidation: Promise<FieldValidityState>,
 	values: LookupTable<unknown>
 ): Promise<boolean> {
-	const { isValid: isFileNameValid } = await fileNameValidation;
-	return isFileNameValid && isInternalNameValid(values);
+	const { isValid: fileNameValid } = await fileNameValidation;
+	return (
+		missingMinimumSaveRequirements({
+			isRepeatMode: false,
+			isEmbedded: false,
+			fileNameValid,
+			internalName: values[XmlKeys.internalName]
+		}).length === 0
+	);
 }
 
 /**
@@ -380,7 +388,7 @@ export async function checkMinimumSaveRequirementsFulfilled(
  *
  */
 export function isInternalNameValid(values: LookupTable<unknown>): boolean {
-	return (values[XmlKeys.internalName]?.toString() ?? '').trim() !== '';
+	return isInternalNameFilled(values[XmlKeys.internalName]);
 }
 
 export function dateTimeValidator(
