@@ -605,6 +605,9 @@ function FormBootstrap(props: FormsEngineProps) {
 					// Run atomValueCreator for each field considering the additional fields
 					Object.keys(values).forEach((fieldId) => {
 						const isAdditional = additionalFieldsIds.includes(fieldId);
+						// Children without a field (e.g. a taxonomy item's `unicode`) and item attributes have no atom.
+						// `writeItemToParent` keeps them on the stored item.
+						if (!repeatFieldLookup[fieldId] && !isAdditional) return;
 						atomValueCreator(fieldId, values[fieldId], isAdditional);
 					});
 				}

@@ -29,8 +29,8 @@ import {
 } from './formsEngineContext';
 import {
 	commitFormVisibility,
+	complementValuesWithSystemProps,
 	composePathForType,
-	createObjectWithSystemProps,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
@@ -42,7 +42,7 @@ import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
 import { XmlKeys } from './formConsts';
-import { fromString, getParsedField } from '../../../utils/xml';
+import { fromString } from '../../../utils/xml';
 import {
 	moveAndUpdateContent,
 	updateEmbeddedComponent,
@@ -56,7 +56,6 @@ import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import ContentType from '../../../models/ContentType';
 import { cancelPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -666,29 +665,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 	};
 
 	return { save };
-}
-
-function complementValuesWithSystemProps(
-	id: string,
-	values: LookupTable<unknown>,
-	contentObject: LookupTable<unknown>,
-	contentType: ContentType,
-	saveAsDraft: boolean
-): void {
-	const systemProps = createObjectWithSystemProps(contentType, {
-		[XmlKeys.modelId]: id,
-		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
-		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
-		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
-		[XmlKeys.savedAsDraft]: saveAsDraft
-	});
-
-	// Do not overwrite any existing value.
-	for (const key in systemProps) {
-		if (!(key in values)) {
-			values[key] = systemProps[key];
-		}
-	}
 }
 
 export default useSaveForm;
