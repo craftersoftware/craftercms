@@ -64,6 +64,13 @@ import static org.craftercms.deployer.impl.DeploymentConstants.PREVIOUS_COMMIT_I
  * deleted files, a missing manifest, a manifest from another commit, or a failed
  * commit-id update rebuild it from the local repository.
  * <p>
+ * The processor runs for every publish. {@code includeFiles} and {@code excludeFiles} can
+ * remove every changed file, and that publish still moves the commit. Those files are not
+ * in the manifest, so the file list is unchanged and only the stored commit id moves.
+ * Leaving the previous commit id in place would make the next publish that does change a
+ * listed file rebuild the manifest. A publish whose commit did not move leaves the manifest
+ * as it is.
+ * <p>
  * Runs after the S3 sync and before {@link S3DeploymentEventsProcessor}, so the
  * deployment-events signal is published only after the manifest is in place.
  * <p>
@@ -116,6 +123,9 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	protected void doInit(Configuration config) throws ConfigurationException {
 		super.doInit(config);
 		ignoreBlobs = getBooleanProperty(config, CONFIG_KEY_IGNORE_BLOBS, true);
+		// Include/exclude can drop every file. The commit id in the manifest still has to
+		// move, or the next publish that changes a listed file rebuilds it.
+		alwaysRun = true;
 	}
 
 	@Override
@@ -126,6 +136,15 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 	@Override
 	protected ChangeSet doMainProcess(Deployment deployment, ProcessorExecution execution, ChangeSet filteredChangeSet,
 					  ChangeSet originalChangeSet) throws DeployerException {
+		if (commitUnchanged(deployment, filteredChangeSet, originalChangeSet)) {
+			logger.info("Skipping content store manifest update for s3://{}/{} because the deployment commit is unchanged",
+				getBucket(), getS3Key(ContentStoreManifest.FILE_NAME));
+			return null;
+		}
+
+		// filteredChangeSet is the listed files from originalChangeSet. It is empty when
+		// include/exclude removed every path. Created or deleted listed files change the
+		// manifest. Anything else only moves the stored commit id.
 		if (!manifestFileListChanged(filteredChangeSet)) {
 			String previousCommitId = getCommitId(deployment, PREVIOUS_COMMIT_ID_PARAM_NAME);
 			// The HEAD check and the metadata copy share this client.
@@ -180,6 +199,20 @@ public class S3ContentStoreManifestProcessor extends AbstractS3Processor {
 		}
 
 		return null;
+	}
+
+	/**
+	 * A deployment with no calculated change set and the same commit has nothing to record.
+	 * This processor runs on that deployment because it always runs. Rebuilding here would
+	 * rewrite the manifest on every scheduled publish that changed no files.
+	 */
+	private boolean commitUnchanged(Deployment deployment, ChangeSet filteredChangeSet, ChangeSet originalChangeSet) {
+		if (filteredChangeSet != null || originalChangeSet != null) {
+			return false;
+		}
+		String previousCommitId = getCommitId(deployment, PREVIOUS_COMMIT_ID_PARAM_NAME);
+		String latestCommitId = getCommitId(deployment, LATEST_COMMIT_ID_PARAM_NAME);
+		return previousCommitId != null && previousCommitId.equals(latestCommitId);
 	}
 
 	/**

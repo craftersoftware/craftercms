@@ -15,6 +15,7 @@
  */
 package org.craftercms.deployer.impl.processors.aws;
 
+import org.apache.commons.configuration2.BaseConfiguration;
 import org.craftercms.deployer.api.ChangeSet;
 import org.craftercms.deployer.api.Deployment;
 import org.craftercms.deployer.api.exceptions.DeployerException;
@@ -297,6 +298,40 @@ public class S3ContentStoreManifestProcessorTest {
 		verify(client).putObject(argThat((PutObjectRequest request) ->
 			LATEST_COMMIT_ID.name().equals(request.metadata().get(MANIFEST_COMMIT_ID_METADATA))), any(RequestBody.class));
 		verify(client, never()).copyObject(any(CopyObjectRequest.class));
+	}
+
+	@Test
+	public void testExcludedFilesOnlyAdvancesCommitId() throws Exception {
+		when(client.headObject(any(HeadObjectRequest.class))).thenReturn(HeadObjectResponse.builder()
+			.contentType("application/gzip")
+			.metadata(Map.of(MANIFEST_COMMIT_ID_METADATA, PREVIOUS_COMMIT_ID.name())).build());
+		when(client.utilities()).thenReturn(S3Utilities.builder().region(Region.US_EAST_1).build());
+
+		S3ContentStoreManifestProcessor processor = processor(Path.of("/tmp/missing-manifest-repo"));
+		BaseConfiguration config = new BaseConfiguration();
+		config.setProperty("url", "s3://test-bucket/sites/acme/");
+		config.setProperty("includeFiles", "^/site/.*$");
+		processor.init(config);
+
+		Deployment deployment = deployment(PREVIOUS_COMMIT_ID, LATEST_COMMIT_ID);
+		deployment.start();
+		deployment.setChangeSet(new ChangeSet(List.of("/sources/app.js"), List.of(), List.of()));
+		processor.execute(deployment);
+
+		verify(client).copyObject(argThat((CopyObjectRequest request) ->
+			LATEST_COMMIT_ID.name().equals(request.metadata().get(MANIFEST_COMMIT_ID_METADATA))));
+		verify(client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+	}
+
+	@Test
+	public void testUnchangedCommitLeavesManifest() throws Exception {
+		S3ContentStoreManifestProcessor processor = processor(Path.of("/tmp/missing-manifest-repo"));
+
+		assertNull(processor.doMainProcess(deployment(PREVIOUS_COMMIT_ID, PREVIOUS_COMMIT_ID), null, null, null));
+
+		verify(client, never()).headObject(any(HeadObjectRequest.class));
+		verify(client, never()).copyObject(any(CopyObjectRequest.class));
+		verify(client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
 	}
 
 	@Test
