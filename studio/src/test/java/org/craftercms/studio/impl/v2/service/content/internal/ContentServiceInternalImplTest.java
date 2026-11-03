@@ -89,6 +89,8 @@ import org.craftercms.studio.model.rest.content.order.ItemOrder;
 import org.craftercms.studio.model.rest.content.order.ReorderItemRequest;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
@@ -501,6 +503,28 @@ public class ContentServiceInternalImplTest {
 
 		// Call the method
 		serviceInternal.move(SITE_ID, "/existing/file.jpg", "/new/path.txt");
+	}
+
+	@Test
+	public void testCopyIdsAreReadAndWrittenOnTheRoot() throws DocumentException {
+		Element root = DocumentHelper.parseText("<component><header_o item-list=\"true\"><item><component>"
+				+ "<objectId>c646ba89-0000</objectId><objectGroupId>c646</objectGroupId></component></item></header_o>"
+				+ "<objectId>af023d71-0000</objectId></component>").getRootElement();
+
+		assertEquals(new ContentServiceInternalImpl.ContentItemIds("af023d71-0000", "af02"), serviceInternal.extractContentIds(root));
+
+		serviceInternal.updateObjectIds(root, new ContentServiceInternalImpl.ContentItemIds("1111aaaa-0000"));
+		assertEquals("1111aaaa-0000", root.elementText("objectId"));
+		assertEquals("1111", root.elementText("objectGroupId"));
+		assertEquals("c646ba89-0000", root.selectSingleNode("header_o/item/component/objectId").getText());
+	}
+
+	@Test
+	public void testReplaceContentIdsInPathWithoutGroupId() throws DocumentException {
+		Element root = DocumentHelper.parseText("<page><objectId>0123abcd-0000</objectId></page>").getRootElement();
+		assertEquals("/static-assets/item/pages/1111/1111aaaa-0000",
+				serviceInternal.replaceContentIdsInPath("/static-assets/item/pages/0123/0123abcd-0000",
+						serviceInternal.extractContentIds(root), new ContentServiceInternalImpl.ContentItemIds("1111aaaa-0000")));
 	}
 
 	@Test
