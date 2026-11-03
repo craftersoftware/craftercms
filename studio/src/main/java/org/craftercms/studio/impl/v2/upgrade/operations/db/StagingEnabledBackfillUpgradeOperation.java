@@ -110,7 +110,7 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 					if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
 						itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
 					}
-					contentRepository.copyBlobs(siteId, liveBranch, stagingBranch);
+					contentRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
 				}
 			} else {
 				logger.info("Site '{}' is not published to live. The staging branch and blobs will be created on the first publish", siteId);
