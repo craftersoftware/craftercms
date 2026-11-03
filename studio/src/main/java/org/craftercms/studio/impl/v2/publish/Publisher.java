@@ -69,6 +69,8 @@ import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.task.TaskProgress.Stage;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import org.craftercms.studio.impl.v2.utils.DateUtils;
 import org.craftercms.studio.impl.v2.utils.PublishUtils;
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
@@ -235,7 +237,9 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST)
+	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST).
+	 * A live package waits for enable-staging to finish, then reads the staging flag while holding the published-repo lock.
+	 * A package that observed staging as off and then blocked while enable ran still publishes to staging.
 	 */
 	protected void doPublishItemList(final PublishPackage publishPackage,
 					 final Collection<PublishItem> publishItems,
@@ -244,19 +248,35 @@ public class Publisher implements ApplicationEventPublisherAware {
 		String target = publishPackage.getTarget();
 
 		boolean isLiveTarget = CS.equals(servicesConfig.getLiveEnvironment(siteId), target);
-
-		if (isLiveTarget && servicesConfig.isStagingEnvironmentEnabled(siteId)) {
-			String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
-			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
+		if (!isLiveTarget) {
+			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, target);
+			return;
 		}
-		runTargetPublisher(publishPackage, publishItems, targetPublisher, isLiveTarget, target);
+
+		String enableLockKey = getEnableStagingLockKey(siteId);
+		generalLockService.lock(enableLockKey);
+		try {
+			String publishedRepoLockKey = getPublishedRepoLockKey(siteId);
+			generalLockService.lock(publishedRepoLockKey);
+			try {
+				if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+					String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
+					runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
+				}
+				runTargetPublisher(publishPackage, publishItems, targetPublisher, true, target);
+			} finally {
+				generalLockService.unlock(publishedRepoLockKey);
+			}
+		} finally {
+			generalLockService.unlock(enableLockKey);
+		}
 	}
 
 	/**
 	 * Helper function to run the "target publisher" and handle exception.
 	 * On exception, it will update the package and its PublishItems with the target-aware failing state
 	 */
-	private void runTargetPublisher(final PublishPackage publishPackage,
+	protected void runTargetPublisher(final PublishPackage publishPackage,
 					final Collection<PublishItem> publishItems,
 					final TargetPublisherFunction targetPublisher,
 					final boolean isLiveTarget,

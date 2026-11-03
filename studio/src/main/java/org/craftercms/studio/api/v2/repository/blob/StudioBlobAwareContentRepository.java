@@ -39,7 +39,7 @@ public interface StudioBlobAwareContentRepository extends GitContentRepository, 
 
 	/**
 	 * Copy published blob-store assets from one publishing target to another in the same site.
-	 * Sites with no blob stores are skipped.
+	 * Paths are listed from {@code sourceEnvironment}. Sites with no blob stores are skipped.
 	 *
 	 * @param siteId            the site id
 	 * @param sourceEnvironment the publishing target to copy from
@@ -47,6 +47,19 @@ public interface StudioBlobAwareContentRepository extends GitContentRepository, 
 	 * @throws ServiceLayerException if an error occurs during the operation
 	 */
 	void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment) throws ServiceLayerException;
+
+	/**
+	 * Copy published blob-store assets from one publishing target to another in the same site.
+	 * Paths are listed from {@code revision}. Blob bytes are read from {@code sourceEnvironment}.
+	 * Sites with no blob stores are skipped.
+	 *
+	 * @param siteId            the site id
+	 * @param sourceEnvironment the publishing target to copy bytes from
+	 * @param targetEnvironment the publishing target to copy bytes to
+	 * @param revision          git revision whose tree lists the blobs to copy
+	 * @throws ServiceLayerException if an error occurs during the operation
+	 */
+	void copyBlobs(String siteId, String sourceEnvironment, String targetEnvironment, String revision) throws ServiceLayerException;
 
 	/**
 	 * Execute initial publish for given site

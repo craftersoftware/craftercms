@@ -185,6 +185,26 @@ public abstract class StudioUtils {
 	}
 
 	/**
+	 * Get the key for published repository git operations.
+	 *
+	 * @param siteId the site id
+	 * @return the lock key
+	 */
+	public static String getPublishedRepoLockKey(final String siteId) {
+		return SITE_PUBLISHED_REPOSITORY_GIT_LOCK.replaceAll(PATTERN_SITE, siteId);
+	}
+
+	/**
+	 * Get the key for the lock held for a whole enable-staging operation.
+	 *
+	 * @param siteId the site id
+	 * @return the lock key
+	 */
+	public static String getEnableStagingLockKey(final String siteId) {
+		return SITE_ENABLE_STAGING_LOCK.replaceAll(PATTERN_SITE, siteId);
+	}
+
+	/**
 	 * Get the key for the lock used to ensure exclusive access to a publish package
 	 *
 	 * @param packageId the package id
