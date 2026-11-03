@@ -124,7 +124,7 @@ export interface ValidatorContext {
 	/**
 	 * Aborted when this validation run is superseded before it settles: any re-run, such as the value changing,
 	 * a field read through `getValue` changing, or the form's relevance changing.
-	 * Pass it to `fetch` and similar.
+	 * Pass it to `fetch` and similar. The result of a superseded run is discarded: the host uses the latest run's.
 	 */
 	readonly signal: AbortSignal;
 	readonly siteId: string;

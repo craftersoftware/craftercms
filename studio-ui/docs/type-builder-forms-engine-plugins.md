@@ -71,7 +71,7 @@ interface PluginDescriptor {
 	/** FE2 DS modules — keyed by DS type id; installed by registerPlugin. */
 	dataSources?: Record<string, DataSourceModule>;
 	/** FE2 controls — keyed by control type id (= field.type); installed by registerPlugin. */
-	controls?: Record<string, ControlPluginContribution>;
+	controls?: Record<string, ControlPluginContribution<AnyValue>>;
 }
 ```
 
@@ -223,7 +223,7 @@ However:
 - current FE resolves control/DS implementations from `PluginDescriptor.controls` / `.dataSources`, not from the global widget registry;
 - putting FE controls only under `widgets` does not make them available to Forms Engine.
 
-Treat this example as an experiment illustrating a registry-based direction; use `samples/fe2-control-plugin.example.mjs` / `samples/fe2-datasource-plugin.example.mjs` for the current FE2 contribution contract.
+Treat this example as an experiment illustrating a registry-based direction; use section 6 (FE2 controls) and section 9.3 for the current FE2 contribution contract.
 
 ### 4.3 Other examples in the same repo
 
@@ -303,9 +303,9 @@ export default {
 
 Plugin bundles can read the host contract at runtime from `craftercms.formsEngine.controls.apiVersion` (`CONTROL_API_VERSION` on `formsEngineControlsHost`), the same way data-source bundles read `craftercms.formsEngine.dataSources.apiVersion`. When to bump that integer: [§10](#10-plugin-api-versioning).
 
-Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSerializersLookup` / `validatorsMap` first (`Object.hasOwn`), then plugin contribution for `field.type`. Required/empty checks stay in `validateFieldValue` (host). FE preloads all `field.properties.plugin` locators via `preloadControlPluginsForFields` (1) before form value parse at bootstrap and (2) again in `useSaveForm` before `buildContentXml`, walking current values so embeds added after open still register serializers. Bootstrap failures are recorded on `StableFormContext.affectedPluginControlFields`; save-time failures update that list and hard-block save (avoids writing unconverted XML shapes).
+Lookup order for IO and validators: built-in `valueRetrieverLookup` / `valueSerializersLookup` / the built-in validator table first (`Object.hasOwn`), then plugin contribution for `field.type`. A control type owned by a built-in Forms Engine control or a Type Builder control (such as `variable`, `rte` or `string`) cannot be contributed: `registerPlugin` refuses it, because its hooks would never be used. Required/empty checks stay in `validateFieldValue` (host). FE preloads all `field.properties.plugin` locators via `preloadControlPluginsForFields` (1) before form value parse at bootstrap and (2) again in `useSaveForm` before `buildContentXml`, walking current values so embeds added after open still register serializers. Bootstrap failures are recorded on `StableFormContext.affectedPluginControlFields`; save-time failures update that list and hard-block save (avoids writing unconverted XML shapes).
 
-Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component). Host also exposes `getValueRetriever` / `getValueSerializer` / `getValidator` for inspection.
+Eager alternative for UMD loaders: `craftercms.formsEngine.controls.registerDataSourceBindings(type, bindings)` (bindings only; prefer `descriptor.controls` for the component). The form uses the bindings the contribution declares. A contribution that declares none uses the ones registered for its type, in either order: `registerPlugin` does not overwrite them with an empty list. Host also exposes `getValueRetriever` / `getValueSerializer` / `getValidator` for inspection.
 
 **Field chrome.** The host wraps every plugin control in `FormsEngineField` by default, the same component built-in controls use. It reads the field's validity atom and renders the label, the required/invalid indicator, validator messages, the field menu and the inheritance notice. The control renders only its input.
 
@@ -335,25 +335,31 @@ function MyPicker({ field, inputId, labelId, value, setValue }) {
 
 `FormsEngineField` props that are stable for plugins (everything else is host-internal and can change):
 
-| Prop                | Type                             | Notes                                                                                          |
-| ------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `field`             | `Readonly<ContentTypeField>`     | Required. Drives the label, required marker, validity and help text.                           |
-| `children`          | `ReactNode`                      | The input.                                                                                     |
-| `htmlFor`           | `string`                         | Id of the input the label points at. Pass `inputId`.                                           |
-| `labelId`           | `string`                         | Id of the label element. Pass `labelId`.                                                       |
-| `length`, `max`     | `number`                         | Shows a `length/max` counter.                                                                  |
-| `action`            | `ReactNode`                      | Rendered in the label row.                                                                     |
-| `menu`              | `false`                          | Hides the field menu.                                                                          |
-| `menuOptions`       | `Array<{ id, text, icon? } \| 'divider'>` | Extra field menu entries.                                                          |
-| `onMenuOptionClick` | `(e, optionId, closeMenu) => void` | Called when an extra menu entry is chosen.                                                   |
-| `sx`                | MUI `SxProps<Theme>`             | Object, function or array. Applied after the host's own styles.                                |
-| `className`         | `string`                         | Class name on the wrapper element.                                                             |
+| Prop                | Type                                      | Notes                                                                |
+| ------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| `field`             | `Readonly<ContentTypeField>`              | Required. Drives the label, required marker, validity and help text. |
+| `children`          | `ReactNode`                               | The input.                                                           |
+| `htmlFor`           | `string`                                  | Id of the input the label points at. Pass `inputId`.                 |
+| `labelId`           | `string`                                  | Id of the label element. Pass `labelId`.                             |
+| `length`, `max`     | `number`                                  | Shows a `length/max` counter.                                        |
+| `action`            | `ReactNode`                               | Rendered in the label row.                                           |
+| `menu`              | `false`                                   | Hides the field menu.                                                |
+| `menuOptions`       | `Array<{ id, text, icon? } \| 'divider'>` | Extra field menu entries.                                            |
+| `onMenuOptionClick` | `(e, optionId, closeMenu) => void`        | Called when an extra menu entry is chosen.                           |
+| `sx`                | MUI `SxProps<Theme>`                      | Object, function or array. Applied after the host's own styles.      |
+| `className`         | `string`                                  | Class name on the wrapper element.                                   |
 
 The default wrapper takes its `sx` from `fieldSx` on the contribution.
 
 ### Control, hook and XML contracts
 
-Everything below is public contract. `ControlProps` and every hook context may gain members. Existing members and their meaning stay stable. `field` and `contentType` are `Readonly`; treat them as read only.
+Everything below is public contract. `ControlProps` and every hook context may gain members. Existing members and their meaning stay stable. `field` and `contentType` are `Readonly` and, for the hooks, frozen at runtime: assigning to a field definition throws.
+
+The types are exported, type-only, from `@craftercms/studio-ui/models` (and `models/PluginDescriptor`): `ControlProps`, `ControlPluginContribution`, `ValueRetriever`, `ValueSerializer`, `Validator`, `ValidatorContext`, `ValidatorResult`, `FieldValidityMessage` and `FormsEngineFieldPublicProps`. Anything else under `components/FormsEngine` is host-internal.
+
+```ts
+import type { ControlProps, Validator } from '@craftercms/studio-ui/models';
+```
 
 `ControlProps<V = unknown>`: `value: V`, `setValue(newValue: V)`, `field`, `contentType`, `readonly`, `autoFocus`, `inputId`, `labelId`, and optional `dataSources`. Type a control with its value type, for example `ControlProps<string>`. Built-in props follow the same pattern, such as `NodeSelectorProps` for `ControlProps<NodeSelectorItem[]>`.
 
@@ -374,31 +380,34 @@ export default {
 };
 ```
 
-| Hook              | Signature                                                          | Context (`ctx`)                                                                                                  |
-| ----------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `valueRetriever`  | `(value, ctx) => V`. Synchronous.                                  | `{ field }`                                                                                                      |
-| `valueSerializer` | `(value, ctx) => unknown`. Synchronous. Returns an XML builder shape. | `{ field, contentTypesById }`                                                                                  |
-| `validator`       | `(value, ctx) => { valid, messages? }`. May be async.              | `{ field, signal, siteId, getValue }`                                                                            |
+| Hook              | Signature                                                             | Context (`ctx`)                       |
+| ----------------- | --------------------------------------------------------------------- | ------------------------------------- |
+| `valueRetriever`  | `(value, ctx) => V`. Synchronous.                                     | `{ field }`                           |
+| `valueSerializer` | `(value, ctx) => unknown`. Synchronous. Returns an XML builder shape. | `{ field, contentTypesById }`         |
+| `validator`       | `(value, ctx) => { valid, messages? }`. May be async.                 | `{ field, signal, siteId, getValue }` |
 
 A validator returns `{ valid: boolean, messages?: FieldValidityMessage[] }` and never mutates an argument. The field is valid only when `valid === true`. A result of any other shape is reported in the console and treated as invalid. That includes `messages` that is not an array, or an entry that is not one of the message forms below. Messages show under the field in the order given. A `FieldValidityMessage` is a string, an `react-intl` `MessageDescriptor`, or `[MessageDescriptor, values]`.
 
 A string is shown as is. A descriptor is formatted with `react-intl`, and `values` fills its placeholders. Studio's build adds the `id` to descriptors written in its own source, but a plugin bundle may not use that transform, and `react-intl` refuses to format a descriptor with no `id`. So the host accepts a descriptor with a missing or empty `id` as long as it has a `defaultMessage`. It gives the descriptor an `id` derived from the `defaultMessage`, and the user sees the default message with its values filled in. Give the descriptor an `id` of your own to let it be translated. A descriptor with neither a non-empty `id` nor a `defaultMessage`, with a non-string `id` or `defaultMessage`, or a tuple whose `values` is not an object, is malformed. A malformed message never reaches the field. The whole result is treated as a failed validator, described below.
 
-- `ctx.signal` is an `AbortSignal` that aborts when this validation run is superseded before it settles. This can happen when the value changes, when a value read through `getValue` changes, or when the form's relevance changes. So `signal.aborted` can be `true` while your own value is unchanged. Pass it to `fetch` or any abortable call.
+- `ctx.signal` is an `AbortSignal` that aborts when this validation run is superseded before it settles. This can happen when the value changes, when a value read through `getValue` changes, or when the form's relevance changes. So `signal.aborted` can be `true` while your own value is unchanged. Pass it to `fetch` or any abortable call. The result of a superseded run is discarded: the field shows, and a save waits for, the result of the latest run, so a validator that stops when aborted never leaves the field invalid.
 - `ctx.getValue(fieldId)` returns the current value of a field that lives next to the one being validated, or `undefined` for an id that level does not have. For a top-level field that is the open form's fields. For a field inside a repeat item it is that item's fields, and for a field inside an embedded component it is that component's fields. A nested field never sees the page's values, so the same data gets the same verdict whether the item is validated from its parent or in its own form. Reading a field makes this field validate again when that field changes.
 - A validator that throws, rejects, or returns a malformed result is treated as invalid, so a failed request does not break form validation. The detail goes to the console and the user sees a generic message under the field: "This value couldn't be validated. Try again or contact your administrator." An intentional `{ valid: false }` is not a failure and shows only the messages you return. An `AbortError` is neither logged nor shown only when `ctx.signal` aborted: that run was superseded and its outcome is discarded. A validator that aborts its own controller is still logged and shown.
+- A `valueRetriever` that throws is reported in the console, naming the plugin and the field, and that field alone gets its raw value, so the rest of the form still loads. A `valueSerializer` that throws is not recovered from, because a fallback would write XML that does not hold what the author entered: the save stops with an error that names the field and the plugin.
+- The `field` a hook receives, and the `contentTypesById` a serializer receives, are frozen. The host objects published on `craftercms.formsEngine` (`controls`, `dataSources`, `formControllers`) are frozen too, and `getControl`, `getDataSourceBindings` and `dataSources.get` / `getAll` return read-only entries, so one plugin cannot change what another plugin or a built-in sees.
+- A message descriptor you do not give an `id` gets one derived from its `defaultMessage` (a 32-bit hash). Do not rely on that id staying the same across releases. Give the descriptor your own `id` if it must be translated or referenced.
 - Required and empty checks run first and are host-owned. The validator does not run for a required field that is empty.
 - The host passes plugins nothing else. Internals such as the form controller's relevance deny-list are not part of the context.
 
 Serializers return the shape the XML builder renders. The special keys it reads are exported constants, and the host publishes them at `craftercms.formsEngine.controls.xmlKeys` for bundles that cannot import host modules. If the XML parser changes, the host maps these keys, so plugin code keeps working.
 
-| Constant (`lib/controlValueTypes.ts`) | Runtime (`xmlKeys.`) | Value         | Meaning                                                                       |
-| ------------------------------------- | -------------------- | ------------- | ----------------------------------------------------------------------------- |
-| `XML_ATTRIBUTE_PREFIX`                | `attributePrefix`    | `'@:'`        | Key prefix that renders an attribute. `{ '@:inline': true }` gives `inline="true"`. |
-| `XML_CDATA_KEY`                       | `cdata`              | `'__cdata__'` | The value is emitted in a CDATA section. `{ __cdata__: html }`.               |
-| `XML_TEXT_KEY`                        | `text`               | `'#text'`     | The text node next to attributes. `{ '@:flag': true, '#text': 'x' }`.         |
-| `XML_LIST_ITEM_KEY`                   | `listItem`           | `'item'`      | An array under this key renders repeated `<item>` elements. `{ item: [...] }`. |
-| `XML_ITEM_LIST_ATTRIBUTE`             | `itemListAttribute`  | `'@:item-list'` | Marks a `{ item: [...] }` list as an item list.                             |
+| Constant (`lib/controlValueTypes.ts`) | Runtime (`xmlKeys.`) | Value           | Meaning                                                                             |
+| ------------------------------------- | -------------------- | --------------- | ----------------------------------------------------------------------------------- |
+| `XML_ATTRIBUTE_PREFIX`                | `attributePrefix`    | `'@:'`          | Key prefix that renders an attribute. `{ '@:inline': true }` gives `inline="true"`. |
+| `XML_CDATA_KEY`                       | `cdata`              | `'__cdata__'`   | The value is emitted in a CDATA section. `{ __cdata__: html }`.                     |
+| `XML_TEXT_KEY`                        | `text`               | `'#text'`       | The text node next to attributes. `{ '@:flag': true, '#text': 'x' }`.               |
+| `XML_LIST_ITEM_KEY`                   | `listItem`           | `'item'`        | An array under this key renders repeated `<item>` elements. `{ item: [...] }`.      |
+| `XML_ITEM_LIST_ATTRIBUTE`             | `itemListAttribute`  | `'@:item-list'` | Marks a `{ item: [...] }` list as an item list.                                     |
 
 Missing for a complete extension contract:
 
@@ -431,7 +440,6 @@ FE2 ships the platform and built-in modules under `components/FormsEngine/dataSo
 - **plugin control types** are contributed on `PluginDescriptor.controls`; same `importPlugin` → `registerPlugin` path. `controlPluginLoader` demand-loads then looks up by `field.type`;
 - host registry surface: `window.craftercms.formsEngine.dataSources` / `.controls` — for built-ins/tests/UMD; plugin authors export a descriptor;
 - platform ops for modules: `ctx.services` = `DataSourceServices` (browse/search/upload/createContent) — closed host API;
-- examples: `samples/fe2-datasource-plugin.example.mjs`, `samples/fe2-control-plugin.example.mjs`.
 
 Most modules return actions whose `run(ctx, { target? })` calls shared services. The host groups standard actions by binding + intent, but every concrete `DataSourceActionChoice` retains its resolved owning action. One choice runs immediately; multiple choices open a picker. Custom React `MenuItem`/`Dialog` actions remain standalone instead of being flattened into standard groups.
 
@@ -511,8 +519,6 @@ Examples:
 - `/Users/rart/Workspace/authoring-ui-plugin-examples/examples/component-library/`
 - `/Users/rart/Workspace/authoring-ui-plugin-examples/examples/forms-engine/`
 - `/Users/rart/Workspace/authoring-ui-plugin-examples/authoring/`
-- `samples/fe2-datasource-plugin.example.mjs` — `PluginDescriptor` + `dataSources` example
-- `samples/fe2-control-plugin.example.mjs` — `PluginDescriptor` + `controls` example
 - `docs/fe2-control-plugin-single-model-implementation.md` — control convergence handoff (implemented)
 
 ## 9. Design: single plugin model, lib plugins, FE contributions
@@ -558,11 +564,11 @@ interface PluginDescriptor {
 	stylesheets?: Array<string | object>;
 	utils?: Record<string, unknown>; // stored on register; host publish/eager-load TBD
 	dataSources?: Record<string, DataSourceModule>; // key = DS type id — installed by registerPlugin ✓
-	controls?: Record<string, ControlPluginContribution>; // key = control type id (= field.type) — installed by registerPlugin ✓
+	controls?: Record<string, ControlPluginContribution<AnyValue>>; // key = control type id (= field.type) — installed by registerPlugin ✓
 }
 
 interface ControlPluginContribution<V = unknown> {
-	apiVersion?: 1; // optional; missing counts as 1 (CONTROL_API_VERSION). Any other value is refused.
+	apiVersion?: typeof CONTROL_API_VERSION; // optional; missing counts as CONTROL_API_VERSION (1). Any other value is refused.
 	Component: ComponentType<ControlProps<V>>;
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
 	fieldChrome?: boolean; // optional; default true wraps Component in FormsEngineField
@@ -619,6 +625,7 @@ Handoff (historical): [`fe2-control-plugin-single-model-implementation.md`](fe2-
 - Plugins do not inject into `DataSourceServices`.
 - No `eval` of util strings; utils are JS exports from the trusted plugin origin.
 - Eager lib lists (when added) are site admin configuration (same trust class as `ui.xml` widgets).
+- Plugins are trusted code from the plugin origin. Frozen hosts, read-only registry entries and frozen field definitions protect against accidents and one plugin changing what another sees. They are not a security boundary.
 
 ### 9.8 Remaining implementation
 
