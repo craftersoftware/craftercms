@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-10-30
+Last updated: 2026-11-04
 
 ## 1. Why plugins are part of the core design
 
@@ -265,7 +265,7 @@ These FE1 implementations are not source-compatible with FE2 React controls. New
 
 ### FE2 controls: functional (single plugin model)
 
-For a field with `field.properties.plugin`, `ControlWrapper` (`controlHelpers.tsx`):
+For a field with `field.properties.plugin`, `ControlWrapper` (`renderControl.tsx`):
 
 1. creates a plugin locator from `type`, `name`, `filename`, `pluginId`;
 2. loads via `controlPluginLoader` → `importPlugin` → `descriptor.controls[field.type]`;
@@ -504,7 +504,7 @@ Studio:
 - `ui/app/src/components/Widget/Widget.tsx`
 - `ui/app/src/models/PluginDescriptor.ts`
 - `ui/app/src/models/PluginFileBuilder.ts`
-- `ui/app/src/components/FormsEngine/lib/controlHelpers.tsx`
+- `ui/app/src/components/FormsEngine/lib/renderControl.tsx`
 - `ui/app/src/components/FormsEngine/dataSources/*`
 - `ui/app/src/components/FormsEngine/dataSourceHooks/*`
 - `ui/app/src/components/ContentTypeManagement/components/EditTypeView.tsx`

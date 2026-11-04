@@ -22,7 +22,7 @@ import SecondaryButton from '../../SecondaryButton';
 import { FormattedMessage } from 'react-intl';
 import Box from '@mui/material/Box';
 import { StableFormContext } from '../lib/formsEngineContext';
-import { processPopulateExpression, validateTimePopulateExpression } from '../lib/controlHelpers';
+import { processPopulateExpression, validateTimePopulateExpression } from '../lib/dateExpressions';
 import { getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
 
 export type TimeProps = ControlProps<string | null>;

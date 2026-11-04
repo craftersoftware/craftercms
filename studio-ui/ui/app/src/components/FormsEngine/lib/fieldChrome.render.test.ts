@@ -40,7 +40,7 @@ const { atom } = await import('jotai');
 const { registerPlugin } = await import('../../../services/plugin.ts');
 const { getRegisteredControlContribution } = await import('../controls/registry.ts');
 const { toLoadedControlPlugin } = await import('./controlPluginLoader.ts');
-const { ResolvedControlRenderer } = await import('./controlHelpers.tsx');
+const { ResolvedControlRenderer } = await import('./renderControl.tsx');
 const { FormsEngineField } = await import('../components/FormsEngineField.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('./formsEngineContext.ts');

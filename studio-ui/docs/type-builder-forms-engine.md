@@ -84,7 +84,9 @@ FormsEngine/
   lib/
     formsEngineContext.ts  # React contexts
     formUtils.tsx          # atoms, load/save prep, locks
-    controlHelpers.tsx     # renderFieldControl
+    renderControl.tsx      # ControlWrapper, renderFieldControl
+    mediaDialogs.tsx       # show*Dialog, image restrictions
+    dateExpressions.ts     # date/time populate expressions (pure)
     controlMap.ts / dataSourceMap.ts
     valueRetrievers.ts / valueSerializers.ts / validators.ts
     useSaveForm.tsx
@@ -259,7 +261,7 @@ The checked-in `ContentTypeManagement/site-config-tools.xml` is a legacy/referen
 
 #### Controls
 
-New FE has two resolution paths in `controlHelpers.tsx` / `controlPluginLoader.ts`:
+New FE has two resolution paths in `renderControl.tsx` / `controlPluginLoader.ts`:
 
 - built-in: static `controlMap` → React component, plus static `controlDataSourceBindings[field.type]`
 - plugin field (`field.properties.plugin`): `importPlugin(locator)` → `registerPlugin` installs `descriptor.controls[field.type]` → render component + bindings. Control lookup key is **`field.type`** (not widget id). Descriptor-only: no bare React component as `default`.
@@ -680,7 +682,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
 | Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                 | `lib/controlHelpers.tsx`, `lib/controlMap.ts`, `controls/*`                                           |
+| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
 | Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
 | New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
 | Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
