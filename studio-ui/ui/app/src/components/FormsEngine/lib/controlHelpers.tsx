@@ -152,7 +152,7 @@ export function ResolvedControlRenderer({
 	// refetch, socket event) doesn't give every field a new `expandPath` and re-render it.
 	const expandPath = useCallback(
 		(path: string) => {
-			const item = stableForm?.getItem?.();
+			const item = stableForm?.getItem();
 			const itemMeta = stableForm?.itemMeta;
 			return processPathMacros({
 				path,

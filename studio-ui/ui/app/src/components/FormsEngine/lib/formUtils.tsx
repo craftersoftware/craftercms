@@ -525,6 +525,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		state: null,
 		affectedPluginControlFields: [],
 		formControllerState: null,
+		getItem: () => null,
 		...mixin
 	};
 	return data;
