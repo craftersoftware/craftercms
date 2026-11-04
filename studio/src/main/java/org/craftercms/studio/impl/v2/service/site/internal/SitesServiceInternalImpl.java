@@ -1115,9 +1115,11 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * Blobs are copied from live only when this call creates the staging branch. The paths come from that new
 	 * branch, which points at the live commit captured when the branch was created. An existing branch is left
 	 * as published, so a retry does not revert staging-only assets. {@code createStagingTarget} is
-	 * create-if-not-exists, so repeating it is safe. On failure, only the branch, item targets, and deployer
-	 * target this call created are removed. There is no blob-prefix delete; deleting the new branch lets the
-	 * next attempt create it again and copy blobs.
+	 * create-if-not-exists, so repeating it is safe. The deployer-target flag is set before that call: a
+	 * client failure can happen after Deployer has already created the target. Compensation then deletes it,
+	 * and a missing target is not a failure. Item targets and the branch are removed only when this call
+	 * created them. There is no blob-prefix delete; deleting the new branch lets the next attempt create it
+	 * again and copy blobs.
 	 */
 	protected void doEnableStaging(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -1146,8 +1148,8 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 						stagingBranch, siteId);
 				}
 			}
-			deployer.createStagingTarget(siteId);
 			createdDeployerTarget = true;
+			deployer.createStagingTarget(siteId);
 			int updated = retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingEnabled(siteId));
 			if (updated == 0) {
 				throw new StagingAlreadyEnabledException(siteId);
@@ -1214,9 +1216,9 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	}
 
 	/**
-	 * Remove the staging deployer target, item targets, and branch created by a failed enable so the flag stays off
-	 * and the call can be retried. Only resources this call created are removed. Blobs are not deleted; removing the
-	 * new branch makes the next attempt create it again and copy them.
+	 * Remove the staging deployer target after a create attempt, and the item targets and branch this call created,
+	 * so the flag stays off and the call can be retried. A missing deployer target is ignored. Blobs are not
+	 * deleted; removing the new branch makes the next attempt create it again and copy them.
 	 */
 	protected void compensateEnableStaging(String siteId, long siteNumericId, String stagingBranch, boolean createdBranch,
 										   boolean insertedTargets, boolean createdDeployerTarget) {

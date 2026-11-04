@@ -439,7 +439,7 @@ public class SitesServiceInternalImplTest {
 		verify(siteDAO, never()).setStagingEnabled(SITE_ID);
 		verify(itemTargetDao).deleteForTarget(0L, "staging");
 		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
-		verify(deployer, never()).deleteStagingTarget(SITE_ID);
+		verify(deployer).deleteStagingTarget(SITE_ID);
 		verifyEnableStagingLockReleased();
 	}
 
