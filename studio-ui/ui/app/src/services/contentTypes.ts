@@ -469,6 +469,7 @@ function parseLegacyFormDefinitionFields(
 			case 'textarea':
 			case 'numeric-input':
 			case 'image-picker':
+			case 'file-name':
 				field.validations = {
 					...field.validations,
 					...getFieldValidations(propertyProp),

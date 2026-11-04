@@ -33,7 +33,7 @@ import { applyContentNameRules } from '../../utils/content';
 
 export interface RenameContentDialogContainerProps extends Pick<
 	RenameContentDialogProps,
-	'path' | 'value' | 'onRenamed' | 'onClose' | 'validRenameValue'
+	'path' | 'value' | 'onRenamed' | 'onClose' | 'validRenameValue' | 'maxLength'
 > {
 	dependantItems: LightItem[];
 	fetchingDependantItems: boolean;
@@ -46,6 +46,7 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 		path,
 		value,
 		validRenameValue = '',
+		maxLength,
 		onRenamed,
 		onClose,
 		fetchDependant,
@@ -59,7 +60,8 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 	const { isSubmitting, updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
 	const [name, setName] = useState(itemName);
 	const [itemExists, setItemExists] = useState(false);
-	const isValid = !isBlank(name) && !itemExists && name !== itemName;
+	const exceedsMaxLength = maxLength != null && name.length > maxLength;
+	const isValid = !isBlank(name) && !itemExists && !exceedsMaxLength && name !== itemName;
 	const [confirmBrokenReferences, setConfirmBrokenReferences] = useState(false);
 	const renameDisabled =
 		isSubmitting || !isValid || fetchingDependantItems || (dependantItems?.length > 0 && !confirmBrokenReferences);
@@ -91,6 +93,7 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 					name={name}
 					disabled={renameDisabled}
 					newNameExists={itemExists}
+					maxLength={maxLength}
 					fetchDependant={fetchDependant}
 					dependantItems={dependantItems}
 					isSubmitting={isSubmitting}
@@ -103,6 +106,11 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 					helperText={
 						itemExists ? (
 							<FormattedMessage defaultMessage="An item with that name already exists." />
+						) : exceedsMaxLength ? (
+							<FormattedMessage
+								defaultMessage="The value is greater than the allowed maximum ({maxLength})."
+								values={{ maxLength }}
+							/>
 						) : (
 							<FormattedMessage defaultMessage="Consisting of lowercase letters without accents, numbers, dash (-) and underscore (_)." />
 						)
