@@ -73,18 +73,22 @@ describe('useLoadableAtom', () => {
 
 	it('keeps the previous data while the atom runs again, with no loading flash', async () => {
 		const source = atom('a');
+		const releases: Record<string, () => void> = {};
 		const slow = atom(async (get) => {
 			const value = get(source);
-			await pause(10);
+			await new Promise<void>((resolve) => (releases[value] = resolve));
 			return value;
 		});
 		const { store, states } = await renderLoadable(slow);
-		await act(async () => pause(40));
+		await act(async () => releases.a());
 		const settled = states.length;
 		assert.equal(states[settled - 1], 'data:a');
 
 		await act(async () => store.set(source, 'b'));
-		await act(async () => pause(40));
+		await act(async () => pause(20));
+		assert.equal(states[states.length - 1], 'data:a', 'the previous data stays while the rerun is pending');
+
+		await act(async () => releases.b());
 		const afterChange = states.slice(settled);
 		assert.equal(afterChange.includes('loading'), false, afterChange.join(','));
 		assert.equal(states[states.length - 1], 'data:b');
