@@ -482,7 +482,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: 'basic-properties',
 					color: null,
 					title: 'Basic Properties',
 					description: '',
