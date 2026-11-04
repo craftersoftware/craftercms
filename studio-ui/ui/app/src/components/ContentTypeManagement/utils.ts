@@ -301,8 +301,6 @@ export function reverseTypeFieldValuesObject(
 				}
 				const fieldDescriptor = datasourceFields[property];
 				if (!fieldDescriptor) {
-					// TODO: remove - development purposes
-					console.log('Warning: property not found in descriptor', property, field.id);
 					// Drop unknown/obsolete property not present in descriptor
 					continue;
 				}
