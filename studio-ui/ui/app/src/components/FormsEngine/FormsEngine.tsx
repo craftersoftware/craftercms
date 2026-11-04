@@ -186,6 +186,7 @@ import {
 	stackedFormsClosedByReload
 } from './lib/formVisibility';
 import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
+import { notifyChangedFieldIds } from './lib/changedFieldAtoms';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
@@ -446,6 +447,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			setValuesCheckpoint(values: LookupTable<unknown>) {
 				stableFormContextRef.current.originalValues = values;
 				stableFormContextRef.current.changedFieldIds.clear();
+				notifyChangedFieldIds(store.set, stableFormContextRef.current.changedFieldIds);
 			}
 		};
 		return api;

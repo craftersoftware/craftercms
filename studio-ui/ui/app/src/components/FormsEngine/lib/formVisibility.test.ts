@@ -1386,6 +1386,23 @@ describe('stacked form guards', () => {
 		assert.equal(fullChanged.size, 1);
 	});
 
+	// The field markers read these Sets through atoms, so each Set the save mutates is reported.
+	it('reports each changed-field set it mutates', () => {
+		const selectedChanged = new Set(['icon_s']);
+		const fullChanged = new Set(['url_s']);
+		const parentChanged = new Set<string>();
+		const reported: Array<Set<string>> = [];
+		clearStackPendingFlags(
+			[
+				{ selected: true, changedFieldIds: selectedChanged, setPending() {} },
+				{ selected: false, changedFieldIds: fullChanged, setPending() {} }
+			],
+			parentChanged,
+			(set) => reported.push(set)
+		);
+		assert.deepEqual(reported, [selectedChanged]);
+	});
+
 	// An edit during the save stays dirty. A field that matches the saved checkpoint is dropped, and the parent repeat is marked.
 	it('keeps a selected item dirty when it changed during the parent save', () => {
 		const changed = new Set(['icon_s', 'url_s']);

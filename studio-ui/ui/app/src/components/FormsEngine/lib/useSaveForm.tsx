@@ -73,6 +73,7 @@ import {
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 import { applySavedRenameToLock } from './unlockOnClose';
+import { notifyChangedFieldIds } from './changedFieldAtoms';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -248,7 +249,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 								}
 							};
 						});
-						clearStackPendingFlags(entries, stableFormContext.changedFieldIds);
+						clearStackPendingFlags(entries, stableFormContext.changedFieldIds, (changedFieldIds) =>
+							notifyChangedFieldIds(jotai.set, changedFieldIds)
+						);
 						if (entries.some((entry) => entry.selected && entry.changedFieldIds.size > 0)) {
 							setHasPendingChanges(true);
 						}

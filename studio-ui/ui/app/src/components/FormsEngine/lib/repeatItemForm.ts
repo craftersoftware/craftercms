@@ -168,6 +168,7 @@ export function selectedItemPendingAfterSave(args: { selected: boolean; savedIte
  * Only those entries are cleared, and their checkpoint becomes the saved item.
  * An edit made after the snapshot keeps its pending flag, and its repeat field is recorded on the parent.
  * Changed ids that match the new checkpoint are dropped. A full-mode or pencil item is left alone.
+ * `onChangedFieldIds` is called after a set is mutated so the field markers can update.
  */
 export function clearStackPendingFlags(
 	entries: readonly {
@@ -180,7 +181,8 @@ export function clearStackPendingFlags(
 		fieldId?: string;
 		setCheckpoint?(values: Record<string, unknown>): void;
 	}[],
-	parentChangedFieldIds?: Set<string>
+	parentChangedFieldIds?: Set<string>,
+	onChangedFieldIds?: (changedFieldIds: Set<string>) => void
 ): void {
 	for (const entry of entries) {
 		const decision = selectedItemPendingAfterSave({
@@ -199,12 +201,16 @@ export function clearStackPendingFlags(
 		} else if (decision.clearPending) {
 			entry.changedFieldIds.clear();
 		}
+		onChangedFieldIds?.(entry.changedFieldIds);
 		if (entry.changedFieldIds.size === 0) {
 			entry.setPending(false);
 			continue;
 		}
 		entry.setPending(true);
-		if (entry.fieldId) parentChangedFieldIds?.add(entry.fieldId);
+		if (entry.fieldId) {
+			parentChangedFieldIds?.add(entry.fieldId);
+			if (parentChangedFieldIds) onChangedFieldIds?.(parentChangedFieldIds);
+		}
 	}
 }
 

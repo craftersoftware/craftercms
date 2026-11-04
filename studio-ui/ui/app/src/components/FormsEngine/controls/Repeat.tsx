@@ -29,7 +29,7 @@ import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import Tooltip from '@mui/material/Tooltip';
-import { lazy, MouseEvent as ReactMouseEvent, Suspense, useContext, useEffect, useMemo, useState } from 'react';
+import { lazy, MouseEvent as ReactMouseEvent, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
 import { StackedButton } from '../components/StackedButton';
 import { isTouchDevice } from '../lib/sortableListUtil';
@@ -41,7 +41,14 @@ import FieldBox from '../components/FieldBox';
 import { buttonClasses } from '@mui/material/Button';
 import { repeatIndexOutOfRangeWarning, visibleRepeatItems } from '../lib/formVisibility';
 import { repeatItemFormProps } from '../lib/repeatItemForm';
-import { getRepeatItemSummary, getRepeatItemTitle, repeatDisplayFieldIds, repeatSortItems } from './repeatItemDisplay';
+import {
+	getRepeatItemSummary,
+	getRepeatItemTitle,
+	reorderRepeatItems,
+	repeatDisplayFieldIds,
+	repeatSortItems
+} from './repeatItemDisplay';
+import { createRepeatItemKeys, removeRepeatItem, type RepeatItemKeys } from '../lib/repeatItemKeys';
 import {
 	countLimitValue,
 	getRepeatMinimum,
@@ -74,6 +81,11 @@ export function Repeat(props: RepeatProps) {
 	const store = useJotaiStore();
 	const formAtoms = useContext(StableFormContext).atoms;
 	const valueAtom = formAtoms.valueByFieldId[field.id];
+	const itemKeysRef = useRef<RepeatItemKeys<RepeatItem>>(undefined);
+	itemKeysRef.current ??= createRepeatItemKeys<RepeatItem>();
+	const itemKeys = itemKeysRef.current;
+	// Read at click time. `value` is the render-time array and can be behind an item form save.
+	const getStoredItems = () => (valueAtom ? ((store.get(valueAtom) as RepeatItem[]) ?? []) : value);
 	const openItemForm = (index?: number, item?: RepeatItem) => {
 		if (!valueAtom) return;
 		api.pushForm(
@@ -81,8 +93,12 @@ export function Repeat(props: RepeatProps) {
 				fieldId: field.id,
 				index,
 				values: item,
-				getItems: () => (store.get(valueAtom) as RepeatItem[]) ?? [],
-				setItems: (next) => setValue(next)
+				getItems: getStoredItems,
+				setItems: (next) => {
+					// An edit stores a new object for the item. Its row keeps the key it had.
+					if (index !== undefined) itemKeys.carry(getStoredItems()[index], next[index]);
+					setValue(next);
+				}
 			})
 		);
 	};
@@ -116,9 +132,7 @@ export function Repeat(props: RepeatProps) {
 	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
-		const nextValue = value.concat();
-		nextValue.splice(index, 1);
-		setValue(nextValue);
+		setValue(removeRepeatItem(getStoredItems(), index));
 	};
 	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem, index: number) => {
 		openItemForm(index, item);
@@ -133,7 +147,9 @@ export function Repeat(props: RepeatProps) {
 		() => (sortMode ? repeatSortItems(value, displayFieldIds) : []),
 		[sortMode, value, displayFieldIds]
 	);
-	const onSortChange = (newList: TItem<RepeatItem>[]) => setValue(newList.map((i) => i.data));
+	const onSortChange = (newList: TItem<RepeatItem>[]) => {
+		setValue(reorderRepeatItems(getStoredItems(), newList));
+	};
 	return (
 		<>
 			<Dialog open={sortMode} onClose={handleCancelReorder} maxWidth="xs" fullWidth>
@@ -185,7 +201,7 @@ export function Repeat(props: RepeatProps) {
 						<List dense>
 							{visibleItems.map(({ item, index }, position) => (
 								<ListItemButton
-									key={index}
+									key={itemKeys.keyOf(item) ?? index}
 									divider={position !== visibleItems.length - 1}
 									onClick={(e) => handleEditItem(e, item, index)}
 								>

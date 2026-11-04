@@ -87,6 +87,7 @@ import {
 	type LaunchFieldsLookup,
 	visibilityFromLaunch
 } from './formVisibility';
+import { notifyChangedFieldIds } from './changedFieldAtoms';
 import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
@@ -309,7 +310,12 @@ type FieldTrackingContext = Pick<
  * `file-name` is compared to the original path; every other field is compared to `originalValues`.
  * Callers pass the value just written. Does not emit — the writer does that once.
  */
-function trackFieldChange(field: ContentTypeField, value: unknown, formContext: FieldTrackingContext): void {
+function trackFieldChange(
+	field: ContentTypeField,
+	value: unknown,
+	formContext: FieldTrackingContext,
+	set: Parameters<typeof notifyChangedFieldIds>[0]
+): void {
 	if (field.id === XmlKeys.fileName) {
 		const currentFileName = value as string;
 		const originalPath = formContext.itemMeta.path;
@@ -336,6 +342,7 @@ function trackFieldChange(field: ContentTypeField, value: unknown, formContext: 
 	} else {
 		formContext.changedFieldIds.delete(field.id);
 	}
+	notifyChangedFieldIds(set, formContext.changedFieldIds);
 }
 
 function applyAtomUpdate<T>(
@@ -369,7 +376,7 @@ function createTrackedFileNameAtom(
 			}
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
-			trackFieldChange(field, next, formContext);
+			trackFieldChange(field, next, formContext, set);
 			formContext.fieldUpdates$.next(XmlKeys.fileName);
 		}
 	);
@@ -400,7 +407,7 @@ export function createFieldAtoms(
 				}
 				return;
 			}
-			trackFieldChange(field, next, formContext);
+			trackFieldChange(field, next, formContext, set);
 			formContext.fieldUpdates$.next(field.id);
 		}
 	);

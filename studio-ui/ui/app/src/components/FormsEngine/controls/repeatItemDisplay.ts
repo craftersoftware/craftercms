@@ -64,3 +64,25 @@ export function repeatSortItems(
 ): Array<{ key: string; value: string; data: RepeatItem }> {
 	return items.map((item, index) => ({ key: String(index), value: getRepeatItemTitle(item, fieldIds), data: item }));
 }
+
+/**
+ * The array to store after a reorder, built from `current` (the stored array) and not from the items the sort list was
+ * rendered with. Each sorted row's `key` is the index it had when the list was built. An item added since is kept at the end.
+ */
+export function reorderRepeatItems(
+	current: readonly RepeatItem[],
+	sorted: ReadonlyArray<{ key: string }>
+): RepeatItem[] {
+	const used = new Set<number>();
+	const next: RepeatItem[] = [];
+	for (const { key } of sorted) {
+		const index = Number(key);
+		if (!Number.isInteger(index) || index < 0 || index >= current.length || used.has(index)) continue;
+		used.add(index);
+		next.push(current[index]);
+	}
+	current.forEach((item, index) => {
+		if (!used.has(index)) next.push(item);
+	});
+	return next;
+}
