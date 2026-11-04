@@ -87,7 +87,6 @@ FormsEngine/
     renderControl.tsx      # ControlWrapper, renderFieldControl
     mediaDialogs.tsx       # show*Dialog, image restrictions
     dateExpressions.ts     # date/time populate expressions (pure)
-    controlHelpers.tsx     # re-export barrel of the three above
     controlMap.ts / dataSourceMap.ts
     valueRetrievers.ts / valueSerializers.ts / validators.ts
     useSaveForm.tsx

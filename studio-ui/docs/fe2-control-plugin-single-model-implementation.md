@@ -169,7 +169,7 @@ Flow:
 
 ### 4.5 Update `renderControl.tsx`
 
-`lib/controlHelpers.tsx` is now a re-export barrel; `PluginControlRenderer` lives in `lib/renderControl.tsx`.
+`PluginControlRenderer` lives in `lib/renderControl.tsx` (split out of the former control helpers module in #9341).
 
 `PluginControlRenderer` currently calls:
 
