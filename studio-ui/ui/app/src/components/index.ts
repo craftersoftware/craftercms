@@ -139,7 +139,6 @@ export * from './LauncherSiteCard';
 export * from './LauncherTile';
 export * from './LegacyConcierge';
 export * from './LegacyDashboardFrame';
-export * from './LegacyFormDialog';
 export * from './LegacyIFrame';
 export * from './LegacySiteToolsFrame';
 export * from './LoadingIconButton';
