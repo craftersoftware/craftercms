@@ -15,7 +15,9 @@
  */
 package org.craftercms.studio.impl.v2.deployment;
 
+import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.commons.rest.RestTemplate;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.craftercms.studio.model.deployer.DuplicateTargetRequest;
@@ -25,7 +27,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +47,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -82,6 +89,7 @@ public class ServerlessDeliveryDeployerTest {
 		when(studioConfiguration.getProperty(PREVIEW_DUPLICATE_TARGET_URL)).thenReturn(DUPLICATE_URL);
 		when(studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN)).thenReturn("token");
 		when(servicesConfig.getStagingEnvironment(SITE)).thenReturn("staging");
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenReturn(true);
 		deployer = new ServerlessDeliveryDeployer(studioConfiguration, restTemplate) {
 			@Override
 			protected Map<String, Object> getSourceTemplateParams(String sourceSiteId) {
@@ -139,6 +147,79 @@ public class ServerlessDeliveryDeployerTest {
 		verify(restTemplate, times(2)).exchange(captor.capture(), eq(Map.class));
 		assertTrue(captor.getAllValues().get(0).getUrl().toString().endsWith("/serverless-delivery/" + SITE));
 		assertTrue(captor.getAllValues().get(1).getUrl().toString().endsWith("/serverless-delivery/" + STAGING_SITE));
+	}
+
+	@Test
+	public void deleteTargetsSkipsStagingWhenStagingDisabled() throws Exception {
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenReturn(false);
+
+		deployer.deleteTargets(SITE);
+
+		ArgumentCaptor<RequestEntity<?>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate).exchange(captor.capture(), eq(Map.class));
+		assertTrue(captor.getValue().getUrl().toString().endsWith("/serverless-delivery/" + SITE));
+	}
+
+	@Test
+	public void deleteTargetsRemovesStagingWhenSiteRecordIsGone() throws Exception {
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenThrow(new SiteNotFoundException(SITE));
+
+		deployer.deleteTargets(SITE);
+
+		ArgumentCaptor<RequestEntity<?>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate, times(2)).exchange(captor.capture(), eq(Map.class));
+		assertTrue(captor.getAllValues().get(1).getUrl().toString().endsWith("/serverless-delivery/" + STAGING_SITE));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsIgnoresMissingStagingTarget() throws Exception {
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenThrow(new SiteNotFoundException(SITE));
+		when(restTemplate.exchange(any(), eq(Map.class))).thenAnswer(invocation -> {
+			RequestEntity<?> request = invocation.getArgument(0);
+			if (request.getUrl().toString().endsWith(STAGING_SITE)) {
+				throw new RestServiceException(HttpStatus.NOT_FOUND, "Target not found");
+			}
+			return null;
+		});
+
+		deployer.deleteTargets(SITE);
+
+		verify(restTemplate, times(2)).exchange(any(), eq(Map.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsIgnoresHttpNotFoundForMissingStagingTarget() {
+		when(restTemplate.exchange(any(), eq(Map.class))).thenAnswer(invocation -> {
+			RequestEntity<?> request = invocation.getArgument(0);
+			if (request.getUrl().toString().endsWith(STAGING_SITE)) {
+				throw HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Target not found",
+					HttpHeaders.EMPTY, new byte[0], null);
+			}
+			return null;
+		});
+
+		deployer.deleteTargets(SITE);
+
+		verify(restTemplate, times(2)).exchange(any(), eq(Map.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsPropagatesStagingDeleteFailure() {
+		RestServiceException deployerError = new RestServiceException(HttpStatus.INTERNAL_SERVER_ERROR, "Deployer is down");
+		when(restTemplate.exchange(any(), eq(Map.class))).thenAnswer(invocation -> {
+			RequestEntity<?> request = invocation.getArgument(0);
+			if (request.getUrl().toString().endsWith(STAGING_SITE)) {
+				throw deployerError;
+			}
+			return null;
+		});
+
+		RestClientException error = assertThrows(RestClientException.class, () -> deployer.deleteTargets(SITE));
+
+		assertEquals(deployerError, error);
 	}
 
 	@Test
