@@ -41,6 +41,8 @@ import java.util.concurrent.Executors;
  * The staging-enabled backfill used to call Deployer while that upgrade was still running. The upgrade blocks
  * Studio from becoming ready, and with serverless delivery a down or slow Deployer failed it. Sites are marked
  * ready during the sites upgrade, which runs after the system is already up. This class creates the target then.
+ * The sites upgrade calls {@link #ensureStagingTarget(String)} as soon as a site is marked ready, including a task
+ * that finishes after the upgrade timeout. {@link #ensureForReadySites()} runs when that upgrade attempt ends.
  * Create-if-not-exists makes a repeat safe. A failed attempt is retried on the next publish and the next startup.
  * The Deployer call runs on a background thread so a slow Deployer does not block publishing or bootstrap.
  */

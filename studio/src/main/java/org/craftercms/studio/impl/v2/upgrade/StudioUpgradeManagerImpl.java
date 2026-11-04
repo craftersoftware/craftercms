@@ -37,6 +37,7 @@ import org.craftercms.studio.api.v2.service.system.InstanceService;
 import org.craftercms.studio.api.v2.upgrade.StudioUpgradeManager;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.craftercms.studio.api.v2.utils.spring.context.SiteBootstrapStateProvider;
+import org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer;
 import org.craftercms.studio.impl.v2.utils.spring.event.SitesUpgradeFinishedEvent;
 import org.craftercms.studio.impl.v2.utils.spring.event.StartSitesUpgradeEvent;
 import org.craftercms.studio.impl.v2.utils.spring.event.StartSystemUpgradeEvent;
@@ -91,12 +92,13 @@ public class StudioUpgradeManagerImpl extends AbstractUpgradeManager<String> imp
 	protected final InstanceService instanceService;
 	protected final RetryingRepositoryOperationFacade retryingRepositoryOperationFacade;
 	protected final SiteBootstrapStateProvider siteBootstrapStateProvider;
+	protected final StagingDeployerTargetEnsurer stagingDeployerTargetEnsurer;
 	protected final int executorThreadCount;
 	protected final int executorTimeoutSeconds;
 
 	@ConstructorProperties({"dbVersionProvider", "dbPipelineFactory", "bpPipelineFactory", "configurationProvider",
 			"dataSource", "integrityValidator", "contentRepository", "studioConfiguration", "instanceService",
-			"retryingRepositoryOperationFacade", "siteBootstrapStateProvider",
+			"retryingRepositoryOperationFacade", "siteBootstrapStateProvider", "stagingDeployerTargetEnsurer",
 			"executorThreadCount", "executorTimeoutSeconds"})
 	public StudioUpgradeManagerImpl(VersionProvider dbVersionProvider,
 									UpgradePipelineFactory<String> dbPipelineFactory,
@@ -105,6 +107,7 @@ public class StudioUpgradeManagerImpl extends AbstractUpgradeManager<String> imp
 									GitContentRepository contentRepository, StudioConfiguration studioConfiguration,
 									InstanceService instanceService,
 									RetryingRepositoryOperationFacade retryingRepositoryOperationFacade, SiteBootstrapStateProvider siteBootstrapStateProvider,
+									StagingDeployerTargetEnsurer stagingDeployerTargetEnsurer,
 									int executorThreadCount, int executorTimeoutSeconds) {
 		this.dbVersionProvider = dbVersionProvider;
 		this.dbPipelineFactory = dbPipelineFactory;
@@ -117,6 +120,7 @@ public class StudioUpgradeManagerImpl extends AbstractUpgradeManager<String> imp
 		this.instanceService = instanceService;
 		this.retryingRepositoryOperationFacade = retryingRepositoryOperationFacade;
 		this.siteBootstrapStateProvider = siteBootstrapStateProvider;
+		this.stagingDeployerTargetEnsurer = stagingDeployerTargetEnsurer;
 		this.executorThreadCount = executorThreadCount;
 		this.executorTimeoutSeconds = executorTimeoutSeconds;
 	}
@@ -239,6 +243,8 @@ public class StudioUpgradeManagerImpl extends AbstractUpgradeManager<String> imp
 					try {
 						upgrade(site);
 						siteBootstrapStateProvider.markSiteAsReady(site);
+						// A task can finish after the upgrade timeout, once the finished event has already run.
+						stagingDeployerTargetEnsurer.ensureStagingTarget(site);
 					} catch (Exception e) {
 						logger.error("Failed to upgrade site '{}'", site, e);
 						upgradeException.addSuppressed(e);
@@ -347,8 +353,8 @@ public class StudioUpgradeManagerImpl extends AbstractUpgradeManager<String> imp
 		try {
 			upgradeExistingSites();
 		} finally {
-			// Sites that finished are already marked ready. Publish even when another site failed, so staging
-			// delivery targets can be created without calling Deployer from the database upgrade.
+			// Sites that finished are already marked ready and have scheduled a staging target.
+			// Publish even when another site failed so the remaining ready sites are covered.
 			applicationContext.publishEvent(new SitesUpgradeFinishedEvent(this));
 		}
 	}

@@ -53,6 +53,7 @@
 				</constructor-arg>
 			</bean>
 		</constructor-arg>
+		<constructor-arg name="stagingDeployerTargetEnsurer" ref="stagingDeployerTargetEnsurer"/>
 		<constructor-arg name="executorThreadCount" value="#{studioConfiguration.getProperty('studio.upgrade.sites.threadCount')}"/>
 		<constructor-arg name="executorTimeoutSeconds" value="#{studioConfiguration.getProperty('studio.upgrade.sites.timeoutSeconds')}"/>
 	</bean>
