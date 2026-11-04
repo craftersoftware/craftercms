@@ -15,7 +15,6 @@
  */
 
 const path = require('path');
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const publicPath = '/studio/static-assets/libs/monaco/';
 const pkg = require('../../package.json');
@@ -31,7 +30,8 @@ module.exports = {
 	output: {
 		publicPath,
 		path: targetPath,
-		filename: `monaco.${pkg.dependencies['monaco-editor']}.js`
+		filename: `monaco.${pkg.dependencies['monaco-editor']}.js`,
+		globalObject: 'self'
 	},
 	module: {
 		rules: [
@@ -41,30 +41,8 @@ module.exports = {
 			},
 			{
 				test: /\.ttf$/,
-				use: ['file-loader']
+				type: 'asset/resource'
 			}
 		]
-	},
-	plugins: [
-		new MonacoWebpackPlugin({
-			publicPath,
-			languages: [
-				'css',
-				'dockerfile',
-				'graphql',
-				'handlebars',
-				'html',
-				'java',
-				'javascript',
-				'json',
-				'less',
-				'markdown',
-				'scss',
-				'shell',
-				'typescript',
-				'xml',
-				'yaml'
-			]
-		})
-	]
+	}
 };

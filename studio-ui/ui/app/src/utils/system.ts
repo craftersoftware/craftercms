@@ -76,7 +76,7 @@ export function withMonaco(onReady: (api: Monaco) => void): void {
 	if (!monaco$) {
 		monaco$ = new ReplaySubject(1);
 		const script = document.createElement('script');
-		script.src = '/studio/static-assets/libs/monaco/monaco.0.54.0.js';
+		script.src = '/studio/static-assets/libs/monaco/monaco.0.57.0.js';
 		script.onload = () => {
 			// @ts-ignore
 			monaco$.next(window.monaco);

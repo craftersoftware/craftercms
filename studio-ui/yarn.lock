@@ -2141,14 +2141,12 @@ __metadata:
     bootstrap: "npm:^5.3.8"
     build-if-changed: "npm:^1.5.5"
     css-loader: "npm:^7.1.5"
-    file-loader: "npm:^6.2.0"
     grunt: "npm:^1.6.3"
     jquery: "npm:^3.7.1"
     jquery-ui: "npm:^1.14.2"
     jquery-ui-css: "npm:^1.11.5"
     js-yaml: "npm:^5.5.0"
-    monaco-editor: "npm:0.54.0"
-    monaco-editor-webpack-plugin: "npm:^7.1.1"
+    monaco-editor: "npm:0.57.0"
     npm-run-all: "npm:^4.1.5"
     rimraf: "npm:^6.1.3"
     style-loader: "npm:^4.0.0"
@@ -2265,7 +2263,8 @@ __metadata:
     marked: "npm:^18.1.2"
     marked-highlight: "npm:^2.2.4"
     moment-timezone: "npm:^0.6.6"
-    monaco-graphql: "npm:^1.9.0"
+    monaco-editor: "npm:0.57.0"
+    monaco-graphql: "npm:2.0.1"
     nanoid: "npm:^6.0.2"
     ncp: "npm:^2.0.0"
     notistack: "npm:3.0.2"
@@ -2296,7 +2295,6 @@ __metadata:
     uppy: "npm:^6.0.5"
     uuid: "npm:^14.0.3"
     vite: "npm:^8.3.5"
-    vite-plugin-monaco-editor: "npm:^1.1.0"
     zxcvbn: "npm:^4.4.2"
   languageName: unknown
   linkType: soft
@@ -3355,6 +3353,13 @@ __metadata:
   version: 0.4.3
   resolution: "@humanwhocodes/retry@npm:0.4.3"
   checksum: 10/0b32cfd362bea7a30fbf80bb38dcaf77fee9c2cae477ee80b460871d03590110ac9c77d654f04ec5beaf71b6f6a89851bdf6c1e34ccdf2f686bd86fcd97d9e61
+  languageName: node
+  linkType: hard
+
+"@isaacs/nonrecursive-glob-match@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "@isaacs/nonrecursive-glob-match@npm:1.0.3"
+  checksum: 10/b163380c2a4eab632b180c3dace65443e3064ebb58e228b5eab5630ceafd4581356aa63eb624d5634876c729e0797c45462ef2ef3ef35df0bb1bddbda6380447
   languageName: node
   linkType: hard
 
@@ -5924,7 +5929,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.8":
+"@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10/1a3c3e06236e4c4aab89499c428d585527ce50c24fe8259e8b3926d3df4cfbbbcf306cfc73ddfb66cbafc973116efd15967020b0f738f63e09e64c7d260519e7
@@ -7403,15 +7408,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv-keywords@npm:^3.5.2":
-  version: 3.5.2
-  resolution: "ajv-keywords@npm:3.5.2"
-  peerDependencies:
-    ajv: ^6.9.1
-  checksum: 10/d57c9d5bf8849bddcbd801b79bc3d2ddc736c2adb6b93a6a365429589dd7993ddbd5d37c6025ed6a7f89c27506b80131d5345c5b1fa6a97e40cd10a96bcd228c
-  languageName: node
-  linkType: hard
-
 "ajv-keywords@npm:^5.1.0":
   version: 5.1.0
   resolution: "ajv-keywords@npm:5.1.0"
@@ -7423,7 +7419,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^6.12.5, ajv@npm:^6.14.0":
+"ajv@npm:^6.14.0":
   version: 6.14.0
   resolution: "ajv@npm:6.14.0"
   dependencies:
@@ -7759,13 +7755,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"big.js@npm:^5.2.2":
-  version: 5.2.2
-  resolution: "big.js@npm:5.2.2"
-  checksum: 10/c04416aeb084f4aa1c5857722439c327cc0ada9bd99ab80b650e3f30e2e4f1b92a04527ed1e7df8ffcd7c0ea311745a04af12d53e2f091bf09a06f1292003827
-  languageName: node
-  linkType: hard
-
 "binary-extensions@npm:^2.0.0":
   version: 2.2.0
   resolution: "binary-extensions@npm:2.2.0"
@@ -7843,7 +7832,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"brace-expansion@npm:^5.0.2, brace-expansion@npm:^5.0.8":
+"brace-expansion@npm:^5.0.12, brace-expansion@npm:^5.0.2, brace-expansion@npm:^5.0.8":
   version: 5.0.12
   resolution: "brace-expansion@npm:5.0.12"
   dependencies:
@@ -8809,10 +8798,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:3.1.7":
-  version: 3.1.7
-  resolution: "dompurify@npm:3.1.7"
-  checksum: 10/dc637a064306f83cf911caa267ffe1f973552047602020e3b6723c90f67962813edf8a65a0b62e8c9bc13fcd173a2691212a3719bc116226967f46bcd6181277
+"dompurify@npm:3.4.15":
+  version: 3.4.15
+  resolution: "dompurify@npm:3.4.15"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10/159f592307578405c5217ba40ab467d4ac35f23eb20abc7f32b85698b8c1aff92f71b00c80779f891a8e463edafab05d9a4db53052d5c67005240ac4fff7fc72
   languageName: node
   linkType: hard
 
@@ -8868,13 +8862,6 @@ __metadata:
   version: 10.6.0
   resolution: "emoji-regex@npm:10.6.0"
   checksum: 10/98cc0b0e1daed1ed25afbf69dcb921fee00f712f51aab93aa1547e4e4e8171725cc4f0098aaa645b4f611a19da11ec9f4623eb6ff2b72314b39a8f2ae7c12bf2
-  languageName: node
-  linkType: hard
-
-"emojis-list@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "emojis-list@npm:3.0.0"
-  checksum: 10/114f47d6d45612621497d2b1556c8f142c35332a591780a54e863e42d281e72d6c7d7c419f2e419319d4eb7f6ebf1db82d9744905d90f275db20d06a763b5e19
   languageName: node
   linkType: hard
 
@@ -9622,18 +9609,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-loader@npm:^6.2.0":
-  version: 6.2.0
-  resolution: "file-loader@npm:6.2.0"
-  dependencies:
-    loader-utils: "npm:^2.0.0"
-    schema-utils: "npm:^3.0.0"
-  peerDependencies:
-    webpack: ^4.0.0 || ^5.0.0
-  checksum: 10/3a854be3a7501bdb0fd8a1c0d45c156c0dc8f0afced07cbdac0b13a79c2f2a03f7770d68cb555ff30b5ea7c20719df34e1b2bd896c93e3138ee31f0bdc560310
-  languageName: node
-  linkType: hard
-
 "file-type@npm:^21.3.0, file-type@npm:^21.3.4":
   version: 21.3.4
   resolution: "file-type@npm:21.3.4"
@@ -10302,6 +10277,18 @@ __metadata:
   bin:
     graphql: dist/temp-bin.js
   checksum: 10/7e0620aa09910326b0ab81da54bb4571d09e5de08816efd26740f3daa977abf0cbc4ee1145d4b57f32b580be88a80fb66eebf315b7fe9e6c504bf8730843b824
+  languageName: node
+  linkType: hard
+
+"graphql-language-service@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "graphql-language-service@npm:6.0.1"
+  dependencies:
+    debounce-promise: "npm:^3.1.2"
+    vscode-languageserver-types: "npm:^3.18.5"
+  peerDependencies:
+    graphql: ^16.11.0 || ^17.0.0
+  checksum: 10/9d82e6f24a88de6d8348946736fdc2b986addd99aceaaded0cbc724ad71c32d7ab53bb59805c2de0fc43f437a2eec9e9cd97365e08558faca71cf8ed706827ea
   languageName: node
   linkType: hard
 
@@ -11459,7 +11446,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json5@npm:^2.1.2, json5@npm:^2.2.3":
+"json5@npm:^2.2.3":
   version: 2.2.3
   resolution: "json5@npm:2.2.3"
   bin:
@@ -11697,17 +11684,6 @@ __metadata:
     pify: "npm:^3.0.0"
     strip-bom: "npm:^3.0.0"
   checksum: 10/8f5d6d93ba64a9620445ee9bde4d98b1eac32cf6c8c2d20d44abfa41a6945e7969456ab5f1ca2fb06ee32e206c9769a20eec7002fe290de462e8c884b6b8b356
-  languageName: node
-  linkType: hard
-
-"loader-utils@npm:^2.0.0, loader-utils@npm:^2.0.2":
-  version: 2.0.4
-  resolution: "loader-utils@npm:2.0.4"
-  dependencies:
-    big.js: "npm:^5.2.2"
-    emojis-list: "npm:^3.0.0"
-    json5: "npm:^2.1.2"
-  checksum: 10/28bd9af2025b0cb2fc6c9c2d8140a75a3ab61016e5a86edf18f63732216e985a50bf2479a662555beb472a54d12292e380423705741bfd2b54cab883aa067f18
   languageName: node
   linkType: hard
 
@@ -12139,6 +12115,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"minimatch@npm:^11.0.3":
+  version: 11.0.4
+  resolution: "minimatch@npm:11.0.4"
+  dependencies:
+    "@isaacs/nonrecursive-glob-match": "npm:^1.0.3"
+    brace-expansion: "npm:^5.0.12"
+  checksum: 10/a6f56790748cfa06e20ce0fd718fc311cb862415d5ece7b7e09f9e83c9d594e070570eee1d32b3e0dbf9656b7def66d9aba3ab1567f5fe091377132ba813e39a
+  languageName: node
+  linkType: hard
+
 "minimatch@npm:^3.0.2, minimatch@npm:^3.0.4, minimatch@npm:^3.1.1, minimatch@npm:^3.1.5":
   version: 3.1.5
   resolution: "minimatch@npm:3.1.5"
@@ -12313,18 +12299,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor-webpack-plugin@npm:^7.1.1":
-  version: 7.1.1
-  resolution: "monaco-editor-webpack-plugin@npm:7.1.1"
-  dependencies:
-    loader-utils: "npm:^2.0.2"
-  peerDependencies:
-    monaco-editor: ">= 0.31.0"
-    webpack: ^4.5.0 || 5.x
-  checksum: 10/633ce250ac28008eb8fa0ce617655793fa014547f5b26f18210b5385365d96a967e799c3c16cf90ea01325fd8fd26d68d0b7995e6b1e5062984e72ee1bd3abd2
-  languageName: node
-  linkType: hard
-
 "monaco-editor@npm:0.52.2":
   version: 0.52.2
   resolution: "monaco-editor@npm:0.52.2"
@@ -12332,13 +12306,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor@npm:0.54.0":
-  version: 0.54.0
-  resolution: "monaco-editor@npm:0.54.0"
+"monaco-editor@npm:0.57.0":
+  version: 0.57.0
+  resolution: "monaco-editor@npm:0.57.0"
   dependencies:
-    dompurify: "npm:3.1.7"
+    dompurify: "npm:3.4.15"
     marked: "npm:14.0.0"
-  checksum: 10/654aa19e8ed859627f8c545026e41955fd015eeac4a26330a5176b955e0afbcd590bbfba06fa9f22fa1bc97d7a33100059e26c754f9541b64d753379a6396711
+  checksum: 10/190a681cb01c8b862875803ca4fedcd6a945c90c09dad3c8c8932d37b9510ccb82991cab0177b8c98be7deb74d49e4727fb6d43c2fc6ed94f712beb9fb1ccec3
+  languageName: node
+  linkType: hard
+
+"monaco-graphql@npm:2.0.1":
+  version: 2.0.1
+  resolution: "monaco-graphql@npm:2.0.1"
+  dependencies:
+    graphql-language-service: "npm:^6.0.1"
+    minimatch: "npm:^11.0.3"
+  peerDependencies:
+    graphql: ^16.11.0 || ^17.0.0
+    monaco-editor: ">=0.56.0 <0.58.0"
+    prettier: ^2.8.0 || ^3.0.0
+  checksum: 10/aac5d5e05fb750c4381555bf1a8b4f6401b27ed317b3a29aeac800c81b8256fa388afb9f876ff46f946bf4be8acddb282bb6afad848e33505fddac54cbd7a309
   languageName: node
   linkType: hard
 
@@ -14675,17 +14663,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"schema-utils@npm:^3.0.0":
-  version: 3.3.0
-  resolution: "schema-utils@npm:3.3.0"
-  dependencies:
-    "@types/json-schema": "npm:^7.0.8"
-    ajv: "npm:^6.12.5"
-    ajv-keywords: "npm:^3.5.2"
-  checksum: 10/2c7bbb1da967fdfd320e6cea538949006ec6e8c13ea560a4f94ff2c56809a8486fa5ec419e023452501a6befe1ca381e409c2798c24f4993c7c4094d97fdb258
-  languageName: node
-  linkType: hard
-
 "schema-utils@npm:^4.6.0, schema-utils@npm:^4.8.1":
   version: 4.8.1
   resolution: "schema-utils@npm:4.8.1"
@@ -16147,15 +16124,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-monaco-editor@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "vite-plugin-monaco-editor@npm:1.1.0"
-  peerDependencies:
-    monaco-editor: ">=0.33.0"
-  checksum: 10/46ac2b301b42d0903c6eb8f165e672912b4f55e947b8d55a8c4e85d38632adc7dc450ff28012727f02a411f2e736c12c90515dcbbd95bd3345093b317db33253
-  languageName: node
-  linkType: hard
-
 "vite@npm:^8.3.5":
   version: 8.3.5
   resolution: "vite@npm:8.3.5"
@@ -16217,6 +16185,13 @@ __metadata:
   version: 3.17.3
   resolution: "vscode-languageserver-types@npm:3.17.3"
   checksum: 10/b2032b9c4be2f04690eddf8ba5a6962ca6a850edf88915326754eafab593d863c32f733283b287460d8204425a8a986865851c9f8812706e85b90c6d73bee257
+  languageName: node
+  linkType: hard
+
+"vscode-languageserver-types@npm:^3.18.5":
+  version: 3.18.5
+  resolution: "vscode-languageserver-types@npm:3.18.5"
+  checksum: 10/d2ffa55219ee0b51545e204f7e6653d0d7c88cf6e429a805d199f859e833804750376dbd698fd6d5546d3008115ce358698e1282e6ccb51cf88e3c4f5f8bc852
   languageName: node
   linkType: hard
 
