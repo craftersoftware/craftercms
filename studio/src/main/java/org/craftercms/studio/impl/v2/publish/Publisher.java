@@ -56,6 +56,7 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
+import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.PublishEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
@@ -79,6 +80,7 @@ import org.craftercms.studio.model.task.PublishTask.PublishTaskId;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.event.EventListener;
@@ -107,10 +109,11 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
 	private final SqlSessionFactory sqlSessionFactory;
+	private final Deployer deployer;
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "sqlSessionFactory"})
+		"activityService", "taskManager", "sqlSessionFactory", "deployer"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -120,7 +123,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final PlatformTransactionManager transactionManager,
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
-			 final SqlSessionFactory sqlSessionFactory) {
+			 final SqlSessionFactory sqlSessionFactory,
+			 @Qualifier("allDeployers") final Deployer deployer) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
 		this.auditService = auditService;
@@ -132,6 +136,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.activityService = activityService;
 		this.taskManager = taskManager;
 		this.sqlSessionFactory = sqlSessionFactory;
+		this.deployer = deployer;
 	}
 
 	@Async
@@ -224,22 +229,47 @@ public class Publisher implements ApplicationEventPublisherAware {
 	 * on. When staging is on, the package publishes while holding the published-repo lock. A live package also
 	 * publishes to staging. When staging is off, the package is for live: it waits for enable-staging to finish and
 	 * reads the flag again under the published-repo lock, so a package that blocked while enable ran still publishes
-	 * to staging.
+	 * to staging. After the locks are released, the serverless staging target is created when the staging branch
+	 * exists. That call is idempotent and a deployer outage leaves the completed Git publish in place.
 	 */
 	private void publishPackage(final PublishPackage publishPackage, final Collection<PublishItem> publishItems)
 			throws ServiceLayerException {
 		String siteId = publishPackage.getSite().getSiteId();
 		if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
 			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, true);
-			return;
+		} else {
+			String enableLockKey = getEnableStagingLockKey(siteId);
+			generalLockService.lock(enableLockKey);
+			try {
+				publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, false);
+			} finally {
+				generalLockService.unlock(enableLockKey);
+			}
 		}
+		ensureStagingDeployerTarget(siteId);
+	}
 
-		String enableLockKey = getEnableStagingLockKey(siteId);
-		generalLockService.lock(enableLockKey);
+	/**
+	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} is
+	 * create-if-not-exists, so every later staging publish retries it until deployer accepts the target.
+	 * A timeout or outage is logged and does not fail the Git publish that already completed.
+	 */
+	private void ensureStagingDeployerTarget(String siteId) {
 		try {
-			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, false);
-		} finally {
-			generalLockService.unlock(enableLockKey);
+			if (!servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+				return;
+			}
+			String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+			if (!contentRepository.publishedRepositoryExists(siteId)
+					|| !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				logger.debug("Staging branch '{}' is not published yet for site '{}'. The deployer target will be created after the branch is published",
+					stagingBranch, siteId);
+				return;
+			}
+			deployer.createStagingTarget(siteId);
+		} catch (Exception e) {
+			logger.error("Failed to create the staging deployer target for site '{}'. The next staging publish will try again",
+				siteId, e);
 		}
 	}
 

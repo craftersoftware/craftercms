@@ -20,7 +20,6 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
-import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
@@ -33,7 +32,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.web.client.RestClientException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -81,8 +79,6 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 	@Mock
 	private ItemTargetDAO itemTargetDao;
 	@Mock
-	private Deployer deployer;
-	@Mock
 	private StudioUpgradeContext context;
 	@Mock
 	private Connection connection;
@@ -96,7 +92,7 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		when(studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE)).thenReturn("default");
 		when(studioConfiguration.getProperty(CONFIGURATION_SITE_GENERAL_CONFIG_FILE_NAME)).thenReturn(CONFIG_FILE);
 		operation = new StagingEnabledBackfillUpgradeOperation(studioConfiguration, sitesService, configurationService,
-			servicesConfig, contentRepository, itemTargetDao, deployer);
+			servicesConfig, contentRepository, itemTargetDao);
 	}
 
 	@Test
@@ -106,11 +102,11 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 
 		operation.doExecute(context);
 
-		verifyNoInteractions(configurationService, servicesConfig, contentRepository, itemTargetDao, deployer, context);
+		verifyNoInteractions(configurationService, servicesConfig, contentRepository, itemTargetDao, context);
 	}
 
 	@Test
-	public void retryCreatesTheTargetWithoutCopyingBlobsWhenTheBranchAlreadyExists() throws Exception {
+	public void retrySkipsBlobCopyWhenTheBranchAlreadyExists() throws Exception {
 		Site finished = site("finished", 1, true);
 		Site pending = site("pending", 2, false);
 		when(sitesService.getAllSites()).thenReturn(List.of(finished, pending));
@@ -127,10 +123,9 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		operation.doExecute(context);
 
 		verify(contentRepository, never()).copyBlobs(any(), any(), any());
+		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
 		verify(itemTargetDao, never()).initStaging(anyLong(), any(), any());
 		verify(contentRepository, never()).publishedRepositoryExists("finished");
-		verify(deployer).createStagingTarget("pending");
-		verify(deployer, never()).createStagingTarget("finished");
 		verify(statement).setString(1, "pending");
 		verify(connection).commit();
 	}
@@ -139,7 +134,7 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 	public void failureStopsTheUpgradeBeforeLaterSites() throws Exception {
 		Site broken = site("broken", 3, false);
 		Site later = site("later", 4, false);
-		RestClientException deployerFailure = new RestClientException("deployer down");
+		ServiceLayerException blobCopyFailure = new ServiceLayerException("blob copy failed");
 		when(sitesService.getAllSites()).thenReturn(List.of(broken, later));
 		stubEnabledConfig("broken");
 		when(servicesConfig.getLiveEnvironment("broken")).thenReturn(LIVE);
@@ -148,14 +143,14 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		when(contentRepository.isTargetPublished("broken", LIVE)).thenReturn(true);
 		when(contentRepository.createStagingBranchFromLive("broken", LIVE, STAGING)).thenReturn(true);
 		when(itemTargetDao.targetExists(3L, STAGING)).thenReturn(false);
-		doThrow(deployerFailure).when(deployer).createStagingTarget("broken");
+		doThrow(blobCopyFailure).when(contentRepository).copyBlobs("broken", LIVE, STAGING, STAGING);
 
 		try {
 			operation.doExecute(context);
 			fail("expected the upgrade to fail");
 		} catch (UpgradeException e) {
 			assertEquals("Failed to backfill staging for site 'broken'", e.getMessage());
-			assertSame(deployerFailure, e.getCause());
+			assertSame(blobCopyFailure, e.getCause());
 		}
 
 		verify(contentRepository).deletePublishedBranch("broken", STAGING);
