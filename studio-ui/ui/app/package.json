@@ -77,8 +77,10 @@
 		"@types/ace": "^0.0.52",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
-		"@types/video.js": "^7.3.58",
 		"@uppy/progress-bar": "^4.3.2",
+		"@videojs/dash-video": "10.3.0",
+		"@videojs/hlsjs-video": "10.3.0",
+		"@videojs/react": "10.3.0",
 		"autosuggest-highlight": "^3.3.4",
 		"clsx": "^2.1.1",
 		"diff": "^9.0.0",
@@ -120,7 +122,6 @@
 		"unique-names-generator": "^4.7.1",
 		"uppy": "^6.0.5",
 		"uuid": "^14.0.3",
-		"video.js": "8.24.1",
 		"zxcvbn": "^4.4.2"
 	},
 	"devDependencies": {

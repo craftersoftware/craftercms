@@ -14,9 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef } from 'react';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
+import React, { CSSProperties } from 'react';
+import '@videojs/react/video/skin.css';
+import { VideoPlayer as Player, VideoSkin, Video } from '@videojs/react/video';
+import { HlsJsVideo } from '@videojs/react/media/hlsjs-video';
+import { DashVideo } from '@videojs/react/media/dash-video';
 
 export interface VideoPlayerProps {
 	src: string;
@@ -35,34 +37,47 @@ const SourceTypes = {
 	mpd: 'application/dash+xml'
 };
 
+const HLS_TYPES = new Set(['application/x-mpegURL', 'application/vnd.apple.mpegurl']);
+const DASH_TYPES = new Set(['application/dash+xml']);
+
 const extensionRegex = /(?:\.([^.]+))?$/;
 
+function resolveSourceType(src: string, type?: string): string | undefined {
+	if (type) {
+		return type;
+	}
+	const extension = extensionRegex.exec(src)?.[1];
+	return extension ? SourceTypes[extension] : undefined;
+}
+
 function VideoPlayer(props: VideoPlayerProps) {
-	const videoNode = useRef(null);
-	const player = useRef(null);
+	const { src, autoplay, controls, height, width, muted, poster, type } = props;
+	const sourceType = resolveSourceType(src, type);
+	const mediaProps = {
+		src,
+		autoPlay: autoplay,
+		muted,
+		poster,
+		height,
+		width,
+		playsInline: true as const
+	};
 
-	useEffect(() => {
-		const extension = extensionRegex.exec(props.src)[1];
-		player.current = videojs(videoNode.current, {
-			autoplay: props.autoplay,
-			controls: props.controls,
-			height: props.height,
-			width: props.width,
-			muted: props.muted,
-			poster: props.poster,
-			sources: [
-				{
-					src: props.src,
-					type: props.type ?? SourceTypes[extension]
-				}
-			]
-		});
-		return () => {
-			player.current.dispose();
-		};
-	}, [props.autoplay, props.controls, props.height, props.width, props.muted, props.poster, props.src, props.type]);
+	let media: React.ReactElement;
+	if (sourceType && HLS_TYPES.has(sourceType)) {
+		media = <HlsJsVideo {...mediaProps} />;
+	} else if (sourceType && DASH_TYPES.has(sourceType)) {
+		media = <DashVideo {...mediaProps} />;
+	} else {
+		media = <Video {...mediaProps} />;
+	}
 
-	return <video ref={videoNode} className="video-js" />;
+	const skinStyle: CSSProperties = {
+		...(width != null ? { width } : { width: '100%' }),
+		...(height != null ? { height } : { aspectRatio: '16 / 9' })
+	};
+
+	return <Player poster={poster}>{controls ? <VideoSkin style={skinStyle}>{media}</VideoSkin> : media}</Player>;
 }
 
 export default VideoPlayer;
