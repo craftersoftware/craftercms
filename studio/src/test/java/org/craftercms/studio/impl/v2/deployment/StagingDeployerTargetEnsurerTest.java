@@ -28,9 +28,13 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.web.client.RestClientException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -92,6 +96,37 @@ public class StagingDeployerTargetEnsurerTest {
 
 		verify(deployer, times(2)).createStagingTarget("first");
 		verify(deployer).createStagingTarget("second");
+	}
+
+	@Test
+	public void skipsDuplicatePendingWork() throws Exception {
+		List<Runnable> pendingTasks = new ArrayList<>();
+		ensurer = new StagingDeployerTargetEnsurer(sitesService, servicesConfig, siteBootstrapStateProvider, deployer,
+			pendingTasks::add);
+		when(servicesConfig.isStagingEnvironmentEnabled(READY_SITE)).thenReturn(true);
+
+		ensurer.ensureStagingTarget(READY_SITE);
+		ensurer.ensureStagingTarget(READY_SITE);
+
+		assertEquals(1, pendingTasks.size());
+		pendingTasks.get(0).run();
+
+		verify(deployer).createStagingTarget(READY_SITE);
+	}
+
+	@Test
+	public void rejectedSubmissionIsRetried() {
+		AtomicInteger submissionAttempts = new AtomicInteger();
+		Executor rejecting = command -> {
+			submissionAttempts.incrementAndGet();
+			throw new RejectedExecutionException("executor stopped");
+		};
+		ensurer = new StagingDeployerTargetEnsurer(sitesService, servicesConfig, siteBootstrapStateProvider, deployer, rejecting);
+
+		ensurer.ensureStagingTarget(READY_SITE);
+		ensurer.ensureStagingTarget(READY_SITE);
+
+		assertEquals(2, submissionAttempts.get());
 	}
 
 	@Test

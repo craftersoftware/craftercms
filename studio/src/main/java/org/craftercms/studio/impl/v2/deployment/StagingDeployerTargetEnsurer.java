@@ -54,6 +54,7 @@ public class StagingDeployerTargetEnsurer {
 	private final Deployer deployer;
 	private final Executor executor;
 	private final Set<String> ensuredSites = ConcurrentHashMap.newKeySet();
+	private final Set<String> pendingSites = ConcurrentHashMap.newKeySet();
 
 	@ConstructorProperties({"sitesService", "servicesConfig", "siteBootstrapStateProvider", "deployer", "executor"})
 	public StagingDeployerTargetEnsurer(SitesService sitesService, ServicesConfig servicesConfig,
@@ -106,9 +107,19 @@ public class StagingDeployerTargetEnsurer {
 		if (StringUtils.isEmpty(siteId) || ensuredSites.contains(siteId)) {
 			return;
 		}
+		if (!pendingSites.add(siteId)) {
+			return;
+		}
 		try {
-			executor.execute(() -> createTarget(siteId));
+			executor.execute(() -> {
+				try {
+					createTarget(siteId);
+				} finally {
+					pendingSites.remove(siteId);
+				}
+			});
 		} catch (RuntimeException e) {
+			pendingSites.remove(siteId);
 			logger.warn("Failed to schedule the staging deployer target for site '{}'", siteId, e);
 		}
 	}
