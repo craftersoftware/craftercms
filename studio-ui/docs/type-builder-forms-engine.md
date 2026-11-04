@@ -190,7 +190,7 @@ For the pre-removal sources and behavior, use the last commit that still had the
 
 ### 5.3 Legacy Forms Engine: runtime controls and data sources — removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)
 
-**History only.** Legacy FE (`forms-engine.js`) — control/DS script loading, `getPluginInfo` / `Module` transport, and Blob-backed form-controller execution — was removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197). Those files are not on this branch.
+**History only.** Legacy FE (`forms-engine.js`) — control/DS script loading, `getPluginInfo`-based plugin transport, and Blob-backed form-controller execution — was removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197). Those files are not on this branch. The `Module` protocol itself remains in `cstudio-common/common-api.js` (see §7).
 
 For the pre-removal runtime, use [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms) — especially [`forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js). Current FE runtime is §5.5 / §5.9 (`FormsEngine/`, `formControllers/`).
 
