@@ -626,6 +626,8 @@ export async function repeatGroupValidator(
 		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item) };
 		Object.values(fields).forEach((subField) => {
 			if (isFieldPathIrrelevant(meta.irrelevantFieldPaths, subField.id, field.id)) return;
+			// `file-name` belongs to the page being edited. A nested item has none to validate.
+			if (subField.id === XmlKeys.fileName) return;
 			const id = subField.id;
 			const value = item[id];
 			const validationPromise = validateFieldValue(subField, value, childMeta);
@@ -781,6 +783,8 @@ export async function nodeSelectorValidator(
 		};
 		Object.values(fields).forEach((embeddedField) => {
 			if (isFieldPathIrrelevant(denyList, embeddedField.id)) return;
+			// An embedded component has no file name of its own. See the repeat item note above.
+			if (embeddedField.id === XmlKeys.fileName) return;
 			const value = component[embeddedField.id];
 			const validationPromise = validateFieldValue(embeddedField, value, childMeta);
 			validationPromises.push(validationPromise);

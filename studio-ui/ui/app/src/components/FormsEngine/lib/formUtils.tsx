@@ -801,6 +801,21 @@ export function commitFormVisibility(
 }
 
 /**
+ * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
+ * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
+ * untouched form would rename the item. Values with no `file-name` (repeat items, embedded components) are returned as is.
+ */
+export function withPathFileName(
+	values: LookupTable<unknown>,
+	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
+	path?: string | null
+): LookupTable<unknown> {
+	return atoms?.fileName && XmlKeys.fileName in values
+		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
+		: values;
+}
+
+/**
  * Creates the value and validity atoms for a field and sets them on to the target object.
  *
  * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
@@ -860,9 +875,12 @@ export function setFieldAtoms(
 	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
 	// never uses.
-	// Decision: the path wins. On edit the form shows and validates the path-derived name, and a differing XML
-	// `file-name` is overwritten on the next save.
-	const initialValue = fieldId === XmlKeys.fileName && atomsTarget.fileName ? fileNameFromItemPath(itemPath) : value;
+	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
+	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
+	// again only on a copy collision.
+	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
+	const initialValue =
+		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
 	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;

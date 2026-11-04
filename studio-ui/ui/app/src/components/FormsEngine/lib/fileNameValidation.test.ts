@@ -67,7 +67,17 @@ function createForm(path: string | undefined, fields: ContentTypeField[]) {
 		fields: Object.fromEntries(all.map((field) => [field.id, field]))
 	} as never;
 	all.forEach((field) =>
-		setFieldAtoms(formContextRef, contentType, contentType.fields, field.id, atoms, 'xml value', undefined, false, path)
+		setFieldAtoms(
+			formContextRef,
+			contentType,
+			contentType.fields,
+			field.id,
+			atoms,
+			'xml value',
+			undefined,
+			false,
+			path ?? ''
+		)
 	);
 	const store = createStore();
 	const settle = async () => {

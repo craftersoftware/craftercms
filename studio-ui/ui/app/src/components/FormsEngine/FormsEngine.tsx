@@ -115,7 +115,8 @@ import {
 	setFieldAtoms,
 	useStackSubmitting,
 	useUnlockOnClose,
-	useValidateFormProps
+	useValidateFormProps,
+	withPathFileName
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/controlHelpers';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
@@ -500,7 +501,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			stableFormContextRef.current.originalValues = values;
+			stableFormContextRef.current.originalValues = withPathFileName(values, atoms, itemMeta.path);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
 				const affected = collectAffectedPluginControlFields(
@@ -750,7 +751,8 @@ function FormBootstrap(props: FormsEngineProps) {
 							atoms,
 							value,
 							validatorsData,
-							isAdditional
+							isAdditional,
+							''
 						);
 					},
 					customControls
