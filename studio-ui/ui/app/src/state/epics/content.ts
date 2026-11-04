@@ -79,7 +79,7 @@ import {
 } from '../../utils/path';
 import { getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
 import { validateActionPolicy } from '../../services/sites';
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue } from 'react-intl';
 import { CrafterCMSEpic } from '../store';
 import StandardAction from '../../models/StandardAction';
 import { asArray } from '../../utils/array';
@@ -93,25 +93,38 @@ import { createComponentId, showContentFormAction, pushConfirmDialog, pushErrorD
 import type { ContentItem } from '../../models';
 import { popCodeEditorDialog, showItemMegaMenu } from '../actions/dialogs';
 
-export const sitePolicyMessages = defineMessages({
-	itemPastePolicyConfirm: {
-		id: 'pastePolicy.confirm',
-		defaultMessage:
-			'The selected {action} target goes against project policies for the destination directory ({detail}). • Original path: "{path}", • Suggested path is: "{modifiedPath}". Would you like to use the suggested path?'
-	},
-	itemPastePolicyError: {
-		id: 'pastePolicy.error',
-		defaultMessage: 'The selected {action} target goes against project policies for the destination directory: {detail}'
-	},
-	itemPasteValidating: {
-		id: 'words.validating',
-		defaultMessage: 'Validating'
-	},
-	duplicate: {
-		id: 'words.duplicate',
-		defaultMessage: 'Duplicate'
-	}
-});
+export const sitePolicyMessages = {
+	...defineMessages({
+		itemPasteValidating: {
+			id: 'words.validating',
+			defaultMessage: 'Validating'
+		},
+		duplicate: {
+			id: 'words.duplicate',
+			defaultMessage: 'Duplicate'
+		}
+	}),
+	...defineMessages<{
+		itemPastePolicyConfirm: {
+			readonly action: MessageValue;
+			readonly detail: MessageValue;
+			readonly modifiedPath: MessageValue;
+			readonly path: MessageValue;
+		};
+		itemPastePolicyError: { readonly action: MessageValue; readonly detail: MessageValue };
+	}>({
+		itemPastePolicyConfirm: {
+			id: 'pastePolicy.confirm',
+			defaultMessage:
+				'The selected {action} target goes against project policies for the destination directory ({detail}). • Original path: "{path}", • Suggested path is: "{modifiedPath}". Would you like to use the suggested path?'
+		},
+		itemPastePolicyError: {
+			id: 'pastePolicy.error',
+			defaultMessage:
+				'The selected {action} target goes against project policies for the destination directory: {detail}'
+		}
+	})
+};
 
 export const itemFailureMessages = defineMessages({
 	itemPasteToChildNotAllowed: {

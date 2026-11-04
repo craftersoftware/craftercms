@@ -337,7 +337,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 					}}
 				>
 					<Typography className="text-margin" variant="subtitle1">
-						{formatMessage(translations.encryptMarked)} asd
+						{formatMessage(translations.encryptMarked)}
 					</Typography>
 					<Typography className="text-margin" variant="body2">
 						{formatMessage(translations.encryptHintPt1)}

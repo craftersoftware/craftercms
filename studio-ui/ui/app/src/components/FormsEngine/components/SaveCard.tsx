@@ -15,7 +15,7 @@
  */
 
 import { useAtom, useAtomValue } from 'jotai';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { MouseEvent, useCallback, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import { StableFormContext } from '../lib/formsEngineContext';
 import Box from '@mui/material/Box';
@@ -49,24 +49,32 @@ import type { SaveFormResult } from '../lib/useSaveForm';
 import type { ApiResponse } from '../../../models/ApiResponse';
 import { saveButtonTip, type MinimumRequirementsNotice } from '../lib/minimumSaveRequirements';
 
-const messages = defineMessages({
-	saveReadFailed: { defaultMessage: 'The form could not be checked before saving.' },
-	afterSaving: { defaultMessage: 'Save and…' },
-	afterSavingHelp: {
-		defaultMessage: 'Choose what happens after you save: stay in the form, minimize it, or close it.'
-	},
-	stay: { defaultMessage: 'Stay' },
-	minimize: { defaultMessage: 'Minimize' },
-	close: { defaultMessage: 'Close' },
-	releaseLockOnClose: { defaultMessage: 'Release lock when closing' },
-	keepLockWarning: {
-		defaultMessage: "Others can't edit it until you release the lock."
-	},
-	noChanges: { defaultMessage: 'No changes detected' },
-	requiredFileNameAndInternalName: { defaultMessage: '{fileName} and {internalName} are required to save' },
-	requiredFileName: { defaultMessage: '{fileName} is required to save' },
-	requiredInternalName: { defaultMessage: '{internalName} is required to save' }
-});
+const messages = {
+	...defineMessages({
+		saveReadFailed: { defaultMessage: 'The form could not be checked before saving.' },
+		afterSaving: { defaultMessage: 'Save and…' },
+		afterSavingHelp: {
+			defaultMessage: 'Choose what happens after you save: stay in the form, minimize it, or close it.'
+		},
+		stay: { defaultMessage: 'Stay' },
+		minimize: { defaultMessage: 'Minimize' },
+		close: { defaultMessage: 'Close' },
+		releaseLockOnClose: { defaultMessage: 'Release lock when closing' },
+		keepLockWarning: {
+			defaultMessage: "Others can't edit it until you release the lock."
+		},
+		noChanges: { defaultMessage: 'No changes detected' }
+	}),
+	...defineMessages<{
+		requiredFileNameAndInternalName: { readonly fileName: MessageValue; readonly internalName: MessageValue };
+		requiredFileName: { readonly fileName: MessageValue };
+		requiredInternalName: { readonly internalName: MessageValue };
+	}>({
+		requiredFileNameAndInternalName: { defaultMessage: '{fileName} and {internalName} are required to save' },
+		requiredFileName: { defaultMessage: '{fileName} is required to save' },
+		requiredInternalName: { defaultMessage: '{internalName} is required to save' }
+	})
+};
 
 type AfterSaving = 'stay' | 'minimize' | 'close';
 

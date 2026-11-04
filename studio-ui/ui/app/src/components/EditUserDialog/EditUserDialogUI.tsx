@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
@@ -48,24 +48,30 @@ import {
 } from '../UserManagement/utils';
 import Box from '@mui/material/Box';
 
-const translations = defineMessages({
-	externallyManaged: {
-		id: 'userInfoDialog.externallyManaged',
-		defaultMessage: 'Managed externally'
-	},
-	siteName: {
-		id: 'userInfoDialog.siteName',
-		defaultMessage: 'Project name'
-	},
-	roles: {
-		id: 'words.roles',
-		defaultMessage: 'Roles'
-	},
-	invalidMinLength: {
-		id: 'userInfoDialog.invalidMinLength',
-		defaultMessage: 'Min {length} characters'
-	}
-});
+const translations = {
+	...defineMessages({
+		externallyManaged: {
+			id: 'userInfoDialog.externallyManaged',
+			defaultMessage: 'Managed externally'
+		},
+		siteName: {
+			id: 'userInfoDialog.siteName',
+			defaultMessage: 'Project name'
+		},
+		roles: {
+			id: 'words.roles',
+			defaultMessage: 'Roles'
+		}
+	}),
+	...defineMessages<{
+		invalidMinLength: { readonly length: MessageValue };
+	}>({
+		invalidMinLength: {
+			id: 'userInfoDialog.invalidMinLength',
+			defaultMessage: 'Min {length} characters'
+		}
+	})
+};
 
 export function EditUserDialogUI(props: EditUserDialogUIProps) {
 	const { formatMessage } = useIntl();

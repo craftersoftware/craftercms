@@ -18,7 +18,7 @@ import { MergeStrategy, Repository } from '../../../models/Repository';
 import RepoGridUI from './RepoGridUI';
 import React, { useState } from 'react';
 import PullDialog from '../PullDialog';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import PushDialog from '../PushDialog';
 import { deleteRemote as deleteRemoteService, PullResponse } from '../../../services/repositories';
 import { showSystemNotification } from '../../../state/actions/system';
@@ -44,36 +44,42 @@ export interface RepoGridProps {
 	fetchRepositories(): void;
 }
 
-const messages = defineMessages({
-	mergeStrategyNone: {
-		id: 'repositories.mergeStrategyNone',
-		defaultMessage: 'None'
-	},
-	mergeStrategyOurs: {
-		id: 'repositories.mergeStrategyOurs',
-		defaultMessage: 'Accept Ours'
-	},
-	mergeStrategyTheirs: {
-		id: 'repositories.mergeStrategyTheirs',
-		defaultMessage: 'Accept Theirs'
-	},
-	remoteDeleteSuccessMessage: {
-		id: 'repositories.remoteDeleteSuccessMessage',
-		defaultMessage: 'Remote repository deleted successfully.'
-	},
-	pullSuccessMessage: {
-		id: 'repositories.pullSuccessMessage',
-		defaultMessage: 'Successfully pulled {numberOfCommits} commits. Would you like to publish this now?'
-	},
-	pullSuccessNoChangesMessage: {
-		id: 'repositories.pullSuccessNoChangesMessage',
-		defaultMessage: 'Pull successful: already up to date.'
-	},
-	pushSuccessMessage: {
-		id: 'repositories.pushSuccessMessage',
-		defaultMessage: 'Successfully pushed.'
-	}
-});
+const messages = {
+	...defineMessages({
+		mergeStrategyNone: {
+			id: 'repositories.mergeStrategyNone',
+			defaultMessage: 'None'
+		},
+		mergeStrategyOurs: {
+			id: 'repositories.mergeStrategyOurs',
+			defaultMessage: 'Accept Ours'
+		},
+		mergeStrategyTheirs: {
+			id: 'repositories.mergeStrategyTheirs',
+			defaultMessage: 'Accept Theirs'
+		},
+		remoteDeleteSuccessMessage: {
+			id: 'repositories.remoteDeleteSuccessMessage',
+			defaultMessage: 'Remote repository deleted successfully.'
+		},
+		pullSuccessNoChangesMessage: {
+			id: 'repositories.pullSuccessNoChangesMessage',
+			defaultMessage: 'Pull successful: already up to date.'
+		},
+		pushSuccessMessage: {
+			id: 'repositories.pushSuccessMessage',
+			defaultMessage: 'Successfully pushed.'
+		}
+	}),
+	...defineMessages<{
+		pullSuccessMessage: { readonly numberOfCommits: MessageValue };
+	}>({
+		pullSuccessMessage: {
+			id: 'repositories.pullSuccessMessage',
+			defaultMessage: 'Successfully pulled {numberOfCommits} commits. Would you like to publish this now?'
+		}
+	})
+};
 
 export function RepoGrid(props: RepoGridProps) {
 	const { repositories, disableActions, onPullSuccess: onPullSuccessProp, onPullError, fetchRepositories } = props;

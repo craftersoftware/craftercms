@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { darken, lighten, styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -55,48 +55,56 @@ const StyledTableCell = styled(TableCell)(() => ({
 	padding: '5px'
 }));
 
-const translations = defineMessages({
-	tokenCreated: {
-		id: 'tokenManagement.created',
-		defaultMessage: 'Token created and copied to clipboard'
-	},
-	tokenCopied: {
-		id: 'tokenManagement.copied',
-		defaultMessage: 'Token copied to clipboard'
-	},
-	tokenDeleted: {
-		id: 'tokenManagement.deleted',
-		defaultMessage: '{count, plural, one {Token deleted} other {The selected tokens were deleted}}'
-	},
-	tokenUpdated: {
-		id: 'tokenManagement.updated',
-		defaultMessage: 'Token updated'
-	},
-	never: {
-		id: 'words.never',
-		defaultMessage: 'Never'
-	},
-	confirmHelperText: {
-		id: 'tokenManagement.helperText',
-		defaultMessage: 'Delete "{label}" token?'
-	},
-	confirmOk: {
-		id: 'words.yes',
-		defaultMessage: 'Yes'
-	},
-	confirmCancel: {
-		id: 'words.no',
-		defaultMessage: 'No'
-	},
-	deletedSelected: {
-		id: 'tokenManagement.deletedSelected',
-		defaultMessage: 'Delete Selected'
-	},
-	clearSelected: {
-		id: 'tokenManagement.clearSelected',
-		defaultMessage: 'Clear Selected ({count})'
-	}
-});
+const translations = {
+	...defineMessages({
+		tokenCreated: {
+			id: 'tokenManagement.created',
+			defaultMessage: 'Token created and copied to clipboard'
+		},
+		tokenCopied: {
+			id: 'tokenManagement.copied',
+			defaultMessage: 'Token copied to clipboard'
+		},
+		tokenUpdated: {
+			id: 'tokenManagement.updated',
+			defaultMessage: 'Token updated'
+		},
+		never: {
+			id: 'words.never',
+			defaultMessage: 'Never'
+		},
+		confirmOk: {
+			id: 'words.yes',
+			defaultMessage: 'Yes'
+		},
+		confirmCancel: {
+			id: 'words.no',
+			defaultMessage: 'No'
+		},
+		deletedSelected: {
+			id: 'tokenManagement.deletedSelected',
+			defaultMessage: 'Delete Selected'
+		}
+	}),
+	...defineMessages<{
+		tokenDeleted: { readonly count: number | bigint };
+		confirmHelperText: { readonly label: MessageValue };
+		clearSelected: { readonly count: MessageValue };
+	}>({
+		tokenDeleted: {
+			id: 'tokenManagement.deleted',
+			defaultMessage: '{count, plural, one {Token deleted} other {The selected tokens were deleted}}'
+		},
+		confirmHelperText: {
+			id: 'tokenManagement.helperText',
+			defaultMessage: 'Delete "{label}" token?'
+		},
+		clearSelected: {
+			id: 'tokenManagement.clearSelected',
+			defaultMessage: 'Clear Selected ({count})'
+		}
+	})
+};
 
 export function TokenManagement() {
 	const dispatch = useDispatch();

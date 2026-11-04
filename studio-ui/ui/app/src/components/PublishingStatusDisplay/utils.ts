@@ -15,100 +15,108 @@
  */
 
 import { PublishingStatus, PublishingStatusCodes } from '../../models/Publishing';
-import { defineMessages, IntlShape } from 'react-intl';
+import { defineMessages, IntlShape, type MessageValue } from 'react-intl';
 import { nnou, nou } from '../../utils/object';
 
-export const publishingStatusMessages = defineMessages({
-	ready: {
-		id: 'words.ready',
-		defaultMessage: 'Ready'
-	},
-	processing: {
-		id: 'words.processing',
-		defaultMessage: 'Processing'
-	},
-	publishing: {
-		id: 'words.publishing',
-		defaultMessage: 'Publishing'
-	},
-	queued: {
-		id: 'words.queued',
-		defaultMessage: 'Queued'
-	},
-	stopped: {
-		id: 'words.stopped',
-		defaultMessage: 'Stopped'
-	},
-	error: {
-		id: 'words.error',
-		defaultMessage: 'Error'
-	},
-	readyWithErrors: { defaultMessage: 'Ready' },
-	disabled: {
-		id: 'words.disabled',
-		defaultMessage: 'Disabled'
-	},
-	unknown: {
-		id: 'words.unknown',
-		defaultMessage: 'Unknown'
-	},
-	publishingMessage: {
-		id: 'publishingStatusMessages.publishingMessage',
-		defaultMessage: 'Publishing items. Package id is {submissionId}.'
-	},
-	stoppedMessage: {
-		id: 'publishingStatusMessages.stoppedMessage',
-		defaultMessage: 'The publisher was stopped by an administrator.'
-	},
-	errorMessage: {
-		id: 'publishingStatusMessages.errorMessage',
-		defaultMessage: 'The publisher was stopped due to an error.'
-	},
-	refresh: {
-		id: 'words.refresh',
-		defaultMessage: 'Refresh'
-	},
-	unlock: {
-		id: 'words.unlock',
-		defaultMessage: 'Unlock'
-	},
-	start: {
-		id: 'words.start',
-		defaultMessage: 'Start'
-	},
-	stop: {
-		id: 'words.stop',
-		defaultMessage: 'Stop'
-	},
-	publishingStatus: {
-		id: 'publishingStatusMessages.publishingStatus',
-		defaultMessage: 'Publishing Status'
-	},
-	lockOwner: {
-		id: 'publishingStatusMessages.lockOwnerDisplayMessage',
-		defaultMessage: 'Locked by {lockOwner}'
-	},
-	lockTTL: {
-		id: 'publishingStatusMessages.lockTTLMessage',
-		defaultMessage: 'TTL {lockTTL}'
-	},
-	disabledMessage: {
-		id: 'publishingStatusMessages.isDisabledMessage',
-		defaultMessage: 'The publisher is disabled.'
-	},
-	yes: {
-		id: 'words.yes',
-		defaultMessage: 'Yes'
-	},
-	no: {
-		id: 'words.no',
-		defaultMessage: 'No'
-	},
-	confirmUnlockPublisher: {
-		id: 'publishingStatusMessages.confirmUnlockPublisher',
-		defaultMessage: 'Confirm you wish to unlock the publisher?'
-	}
-});
+export const publishingStatusMessages = {
+	...defineMessages({
+		ready: {
+			id: 'words.ready',
+			defaultMessage: 'Ready'
+		},
+		processing: {
+			id: 'words.processing',
+			defaultMessage: 'Processing'
+		},
+		publishing: {
+			id: 'words.publishing',
+			defaultMessage: 'Publishing'
+		},
+		queued: {
+			id: 'words.queued',
+			defaultMessage: 'Queued'
+		},
+		stopped: {
+			id: 'words.stopped',
+			defaultMessage: 'Stopped'
+		},
+		error: {
+			id: 'words.error',
+			defaultMessage: 'Error'
+		},
+		readyWithErrors: { defaultMessage: 'Ready' },
+		disabled: {
+			id: 'words.disabled',
+			defaultMessage: 'Disabled'
+		},
+		unknown: {
+			id: 'words.unknown',
+			defaultMessage: 'Unknown'
+		},
+		stoppedMessage: {
+			id: 'publishingStatusMessages.stoppedMessage',
+			defaultMessage: 'The publisher was stopped by an administrator.'
+		},
+		errorMessage: {
+			id: 'publishingStatusMessages.errorMessage',
+			defaultMessage: 'The publisher was stopped due to an error.'
+		},
+		refresh: {
+			id: 'words.refresh',
+			defaultMessage: 'Refresh'
+		},
+		unlock: {
+			id: 'words.unlock',
+			defaultMessage: 'Unlock'
+		},
+		start: {
+			id: 'words.start',
+			defaultMessage: 'Start'
+		},
+		stop: {
+			id: 'words.stop',
+			defaultMessage: 'Stop'
+		},
+		publishingStatus: {
+			id: 'publishingStatusMessages.publishingStatus',
+			defaultMessage: 'Publishing Status'
+		},
+		disabledMessage: {
+			id: 'publishingStatusMessages.isDisabledMessage',
+			defaultMessage: 'The publisher is disabled.'
+		},
+		yes: {
+			id: 'words.yes',
+			defaultMessage: 'Yes'
+		},
+		no: {
+			id: 'words.no',
+			defaultMessage: 'No'
+		},
+		confirmUnlockPublisher: {
+			id: 'publishingStatusMessages.confirmUnlockPublisher',
+			defaultMessage: 'Confirm you wish to unlock the publisher?'
+		}
+	}),
+	...defineMessages<{
+		publishingMessage: { readonly submissionId: MessageValue };
+		lockOwner: { readonly lockOwner: MessageValue };
+		lockTTL: { readonly lockTTL: MessageValue };
+	}>({
+		publishingMessage: {
+			id: 'publishingStatusMessages.publishingMessage',
+			defaultMessage: 'Publishing items. Package id is {submissionId}.'
+		},
+		lockOwner: {
+			id: 'publishingStatusMessages.lockOwnerDisplayMessage',
+			defaultMessage: 'Locked by {lockOwner}'
+		},
+		lockTTL: {
+			id: 'publishingStatusMessages.lockTTLMessage',
+			defaultMessage: 'TTL {lockTTL}'
+		}
+	})
+};
 
 export function getPublishingStatusState(status: PublishingStatus): string {
 	let publishingStatusState: string;
