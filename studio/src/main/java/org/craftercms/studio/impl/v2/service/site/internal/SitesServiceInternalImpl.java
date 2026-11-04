@@ -1117,12 +1117,14 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * The enable lock is held for the whole call so two requests cannot delete each other's branch or deployer
 	 * target. The published repository lock is not held across blob copy or the deployer call. Branch create and
 	 * delete take that lock themselves.
-	 * Blobs are copied from live only when this call creates the staging branch. The paths come from that new
-	 * branch, which points at the live commit captured when the branch was created. An existing branch is left
-	 * as published, so a retry does not revert staging-only assets. {@code createStagingTarget} is
-	 * create-if-not-exists, so repeating it is safe. On failure, only the branch, item targets, and deployer
-	 * target this call created are removed. There is no blob-prefix delete; deleting the new branch lets the
-	 * next attempt create it again and copy blobs.
+	 * Blobs are copied from live when this call creates the staging branch, and when a previous attempt left
+	 * {@code staging_blobs_copied} false. The flag is stored false before item targets and the blob copy, so a
+	 * retry that finds the branch still there copies instead of treating it as already published. An existing
+	 * branch whose flag is already true is left as published. The paths come from that branch, which points at
+	 * the live commit captured when the branch was created. {@code createStagingTarget} is create-if-not-exists,
+	 * so repeating it is safe. On failure, only the branch, item targets, and deployer target this call created
+	 * are removed. There is no blob-prefix delete; deleting the new branch lets the next attempt create it again
+	 * and copy blobs. The pending flag is left false when the branch cannot be deleted.
 	 */
 	protected void doEnableStaging(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -1137,14 +1139,19 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		boolean createdBranch = false;
 		boolean insertedTargets = false;
 		boolean createdDeployerTarget = false;
+		boolean blobsPending = !site.isStagingBlobsCopied();
 		try {
 			if (publishedToLive(siteId, liveBranch)) {
 				createdBranch = blobAwareRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+				if (createdBranch) {
+					retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, false));
+					blobsPending = true;
+				}
 				if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
 					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch));
 					insertedTargets = true;
 				}
-				if (createdBranch) {
+				if (blobsPending) {
 					blobAwareRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
 				} else {
 					logger.info("Staging branch '{}' already exists for site '{}'. Leaving existing blobs in place",

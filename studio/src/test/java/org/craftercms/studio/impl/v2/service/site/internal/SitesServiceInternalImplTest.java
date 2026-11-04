@@ -122,6 +122,8 @@ public class SitesServiceInternalImplTest {
 	@Mock
 	protected GeneralLockService generalLockService;
 
+	private Site site;
+
 	@Before
 	public void setUp() throws IOException, ServiceLayerException {
 		sitesServiceInternal.setApplicationContext(applicationContext);
@@ -132,11 +134,12 @@ public class SitesServiceInternalImplTest {
 		sitesServiceInternal.setConfigurationService(configurationService);
 		sitesServiceInternal.setUpgradeManager(upgradeManager);
 		sitesServiceInternal.setContentService(contentService);
-		Site site = new Site();
+		site = new Site();
 		site.setSiteId(SITE_ID);
 		site.setName("Site 1");
 		site.setSiteUuid(UUID.randomUUID().toString());
 		site.setState(Site.State.READY);
+		site.setStagingBlobsCopied(true);
 		when(siteDAO.getSite(SITE_ID)).thenReturn(site);
 
 		Site rootSite = new Site();
@@ -374,9 +377,11 @@ public class SitesServiceInternalImplTest {
 
 		sitesServiceInternal.enableStaging(SITE_ID);
 
-		verify(contentRepository).createStagingBranchFromLive(SITE_ID, "live", "staging");
-		verify(itemTargetDao).initStaging(0L, "staging", "live");
-		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		InOrder inOrder = inOrder(siteDAO, itemTargetDao, contentRepository);
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
+		inOrder.verify(itemTargetDao).initStaging(0L, "staging", "live");
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
 		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
 		verify(deployer).createStagingTarget(SITE_ID);
 		verify(siteDAO).setStagingEnabled(SITE_ID);
@@ -397,9 +402,31 @@ public class SitesServiceInternalImplTest {
 
 		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString());
 		verify(contentRepository, never()).copyBlobs(anyString(), anyString(), anyString(), anyString());
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, false);
 		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(itemTargetDao, never()).initStaging(anyLong(), anyString(), anyString());
 		verify(deployer).createStagingTarget(SITE_ID);
+		verify(siteDAO).setStagingEnabled(SITE_ID);
+		verifyEnableStagingLockReleased();
+	}
+
+	@Test
+	public void enableStagingRetryCopiesBlobsWhenTheFlagIsPending() throws Exception {
+		site.setStagingBlobsCopied(false);
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn("live");
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn("staging");
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, "live")).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive(SITE_ID, "live", "staging")).thenReturn(false);
+		when(itemTargetDao.targetExists(0L, "staging")).thenReturn(true);
+		when(siteDAO.setStagingEnabled(SITE_ID)).thenReturn(1);
+
+		sitesServiceInternal.enableStaging(SITE_ID);
+
+		verify(contentRepository).copyBlobs(SITE_ID, "live", "staging", "staging");
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, false);
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(siteDAO).setStagingEnabled(SITE_ID);
 		verifyEnableStagingLockReleased();
 	}
@@ -416,6 +443,8 @@ public class SitesServiceInternalImplTest {
 
 		assertThrows(ServiceLayerException.class, () -> sitesServiceInternal.enableStaging(SITE_ID));
 
+		verify(siteDAO).setStagingBlobsCopied(SITE_ID, false);
+		verify(siteDAO, never()).setStagingBlobsCopied(SITE_ID, true);
 		verify(contentRepository).deletePublishedBranch(SITE_ID, "staging");
 		verify(itemTargetDao).deleteForTarget(0L, "staging");
 		verify(deployer, never()).createStagingTarget(SITE_ID);
