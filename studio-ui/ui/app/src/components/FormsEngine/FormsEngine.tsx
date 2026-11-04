@@ -117,7 +117,7 @@ import {
 	useUnlockOnClose,
 	useValidateFormProps
 } from './lib/formUtils';
-import { renderFieldControl } from './lib/controlHelpers';
+import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import {
 	ContentTypeNotFoundError,

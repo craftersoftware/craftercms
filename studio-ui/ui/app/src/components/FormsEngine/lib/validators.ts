@@ -34,7 +34,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
-import { validateDatePopulateExpression } from './controlHelpers';
+import { validateDatePopulateExpression } from './dateExpressions';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { AnyValue } from '../types';
 import type { RepeatItem } from '../controls/Repeat';

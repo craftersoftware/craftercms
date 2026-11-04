@@ -40,7 +40,7 @@ import {
 	getImageRestrictionMessages,
 	ImageRestrictionSubtitle,
 	showImageCropDialog
-} from '../lib/controlHelpers';
+} from '../lib/mediaDialogs';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import Skeleton from '@mui/material/Skeleton';
 import { nnou, nou } from '../../../utils/object';
