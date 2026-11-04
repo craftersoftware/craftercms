@@ -65,13 +65,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 			{/* region Submission details */}
 			<Box sx={{ display: 'block' }}>
 				<Typography variant="subtitle1" gutterBottom sx={{ mb: 1, fontWeight: 'bold' }}>
-					<FormattedMessage defaultMessage="Submission details" />
+					<FormattedMessage defaultMessage="Submission Details" />
 				</Typography>
 				<Paper sx={{ p: 1.5 }}>
 					<Grid container spacing={2}>
 						<Grid size={6}>
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-								<FormattedMessage defaultMessage="Package title" />
+								<FormattedMessage defaultMessage="Package Title" />
 							</Typography>
 							<Typography>{publishPackage.title}</Typography>
 						</Grid>
@@ -144,7 +144,7 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							mb: 1
 						}}
 					>
-						<FormattedMessage defaultMessage="Review details" />
+						<FormattedMessage defaultMessage="Review Details" />
 					</Typography>
 					<Paper sx={{ p: 1.5 }}>
 						<Grid container spacing={2}>

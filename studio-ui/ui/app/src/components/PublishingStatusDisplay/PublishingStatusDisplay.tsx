@@ -44,7 +44,7 @@ const getStateText = (state: currentTaskStage['state']) => {
 		case 'READY':
 			return <FormattedMessage defaultMessage="Ready" />;
 		case 'IN_PROGRESS':
-			return <FormattedMessage defaultMessage="In progress" />;
+			return <FormattedMessage defaultMessage="In Progress" />;
 		case 'COMPLETED':
 			return <FormattedMessage defaultMessage="Completed" />;
 		default:
@@ -146,9 +146,9 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
 								</Typography>
 								<Link onClick={() => setShowTaskDetails(!showTaskDetails)} sx={{ cursor: 'pointer' }}>
 									{showTaskDetails ? (
-										<FormattedMessage defaultMessage="Hide details" />
+										<FormattedMessage defaultMessage="Hide Details" />
 									) : (
-										<FormattedMessage defaultMessage="View details" />
+										<FormattedMessage defaultMessage="View Details" />
 									)}
 								</Link>
 							</Box>

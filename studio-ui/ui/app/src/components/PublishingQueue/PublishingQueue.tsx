@@ -105,11 +105,11 @@ const messages = defineMessages({
 	},
 	previous: {
 		id: 'publishingDashboard.previous',
-		defaultMessage: 'Previous page'
+		defaultMessage: 'Previous Page'
 	},
 	next: {
 		id: 'publishingDashboard.next',
-		defaultMessage: 'Next page'
+		defaultMessage: 'Next Page'
 	}
 });
 
