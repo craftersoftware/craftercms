@@ -17,12 +17,18 @@ package org.craftercms.studio.impl.v2.deployment;
 
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.tree.ImmutableNode;
+import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.commons.rest.RestTemplate;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
@@ -40,6 +46,8 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
 public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
 	public static final String STAGING_TARGET_SUFFIX = "-staging";
+
+	private static final Logger logger = LoggerFactory.getLogger(ServerlessDeliveryDeployer.class);
 
 	private ServicesConfig servicesConfig;
 
@@ -74,11 +82,62 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
 	@Override
 	public void deleteTargets(String site) throws RestClientException {
-		if (isServerlessDeliveryEnabled()) {
-			String environment = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV);
-			doDeleteTarget(site, environment);
-			doDeleteTarget(stagingSiteName(site), environment);
+		if (!isServerlessDeliveryEnabled()) {
+			return;
 		}
+		String environment = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV);
+		doDeleteTarget(site, environment);
+		if (shouldDeleteStagingTarget(site)) {
+			deleteStagingTargetIfExists(site, environment);
+		}
+	}
+
+	/**
+	 * A staging target exists only when staging is enabled.
+	 * Failed site creation rolls the site row back before cleanup, so a missing site can still have a staging
+	 * target. Attempt the delete in that case. {@link #deleteStagingTargetIfExists} ignores a 404 when it was
+	 * never created.
+	 */
+	protected boolean shouldDeleteStagingTarget(String site) {
+		try {
+			if (servicesConfig.isStagingEnvironmentEnabled(site)) {
+				return true;
+			}
+			logger.debug("Skip staging deployer target delete for site '{}'. Staging is not enabled", site);
+			return false;
+		} catch (SiteNotFoundException e) {
+			logger.debug("Site '{}' was not found while deleting deployer targets. The staging target will be removed if it exists",
+				site, e);
+			return true;
+		}
+	}
+
+	/**
+	 * Delete the staging target. A 404 means it was never created, which is expected for a failed site creation
+	 * that did not get that far and must not fail site deletion or cleanup.
+	 */
+	protected void deleteStagingTargetIfExists(String site, String environment) {
+		try {
+			doDeleteTarget(stagingSiteName(site), environment);
+		} catch (RestClientException e) {
+			if (!isNotFound(e)) {
+				throw e;
+			}
+			logger.debug("Staging deployer target for site '{}' does not exist", site);
+		}
+	}
+
+	/**
+	 * The deployer client reports HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
+	 */
+	protected boolean isNotFound(RestClientException exception) {
+		HttpStatusCode status = null;
+		if (exception instanceof RestServiceException restServiceException) {
+			status = restServiceException.getResponseStatus();
+		} else if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
+			status = httpStatusCodeException.getStatusCode();
+		}
+		return status != null && status.isSameCodeAs(HttpStatus.NOT_FOUND);
 	}
 
 	@Override
