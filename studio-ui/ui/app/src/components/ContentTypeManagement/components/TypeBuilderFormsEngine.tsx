@@ -118,6 +118,16 @@ interface BaseProps extends Partial<FieldModeProps & SectionModeProps & DataSour
 
 export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | SectionModeProps | DataSourceModeProps);
 
+let hasWarnedMissingSectionId = false;
+function getSectionKey(typeId: string, section: ContentTypeSection, sectionIndex: number): string {
+	if (section.id) return `${typeId}-${section.id}`;
+	if (!hasWarnedMissingSectionId) {
+		hasWarnedMissingSectionId = true;
+		console.warn(`Section "${section.title}" has no id. Falling back to its index (${sectionIndex}) as the React key.`);
+	}
+	return `${typeId}-index-${sectionIndex}`;
+}
+
 function FieldFormViewBody(props: FieldFormViewProps) {
 	const { virtualType, isPanelReady = true, onClose } = props;
 	const containerRef = useRef<HTMLDivElement>(undefined);
@@ -181,7 +191,7 @@ function FieldFormViewBody(props: FieldFormViewProps) {
 				{isPanelReady &&
 					virtualType.sections.map((section, sectionIndex) => (
 						<SectionAccordion
-							key={`${typeId}-${section.title}`}
+							key={getSectionKey(typeId, section, sectionIndex)}
 							section={section}
 							colorize={false}
 							renderControl={(fieldId, fieldIndex) => {
