@@ -448,7 +448,7 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
 	return (
 		<Paper elevation={2}>
 			{showHeader && (
-				<DialogHeader title={<FormattedMessage id="publishOnDemand.title" defaultMessage="Publish On Demand" />} />
+				<DialogHeader title={<FormattedMessage id="publishOnDemand.title" defaultMessage="Publish on Demand" />} />
 			)}
 			<Box sx={{ backgroundColor: (theme) => theme.palette.background.default, padding: '16px' }}>
 				{hasInitialPublish ? (
@@ -491,7 +491,7 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
 															defaultMessage="Publish changes made via direct git actions against the repository or pulled from a remote repository"
 														/>
 													}
-													secondary={<FormattedMessage defaultMessage="By Tags Or Commit Ids" />}
+													secondary={<FormattedMessage defaultMessage="By Tags or Commit IDs" />}
 												/>
 											}
 										/>
