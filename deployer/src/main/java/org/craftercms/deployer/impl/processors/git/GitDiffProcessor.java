@@ -157,6 +157,13 @@ public class GitDiffProcessor extends AbstractMainDeploymentProcessor {
 
 			// Make the new commit id available for other processors
 			deployment.addParam(LATEST_COMMIT_ID_PARAM_NAME, latestCommitId);
+			// Downstream processors can use this to determine whether their existing output
+			// represents the repository state before this deployment's changes.
+			if (previousCommitId != null) {
+				deployment.addParam(PREVIOUS_COMMIT_ID_PARAM_NAME, previousCommitId);
+			} else {
+				deployment.removeParam(PREVIOUS_COMMIT_ID_PARAM_NAME);
+			}
 
 			if (updateCommitStore && regularPublish) {
 				processedCommitsStore.store(targetId, latestCommitId);
