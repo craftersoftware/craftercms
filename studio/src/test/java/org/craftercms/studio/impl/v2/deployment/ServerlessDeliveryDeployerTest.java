@@ -51,6 +51,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -137,6 +138,50 @@ public class ServerlessDeliveryDeployerTest {
 			assertEquals(CREATE_URL, request.getUrl().toString());
 			assertEquals(false, request.getBody().get("replace"));
 		});
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void createStagingTargetDoesNotUseConfiguredReplace() {
+		lenient().when(studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE, Boolean.class, false))
+			.thenReturn(true);
+
+		deployer.createStagingTarget(SITE);
+
+		ArgumentCaptor<RequestEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate).exchange(captor.capture(), eq(Map.class));
+		assertEquals(false, captor.getValue().getBody().get("replace"));
+	}
+
+	@Test
+	public void createStagingTargetTreatsExistingTargetAsSuccess() {
+		when(restTemplate.exchange(any(), eq(Map.class)))
+			.thenThrow(new RestServiceException(HttpStatus.CONFLICT, "Target already exists"));
+
+		deployer.createStagingTarget(SITE);
+
+		verify(restTemplate).exchange(any(), eq(Map.class));
+	}
+
+	@Test
+	public void createStagingTargetTreatsHttpConflictAsSuccess() {
+		when(restTemplate.exchange(any(), eq(Map.class)))
+			.thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "Target already exists",
+				HttpHeaders.EMPTY, new byte[0], null));
+
+		deployer.createStagingTarget(SITE);
+
+		verify(restTemplate).exchange(any(), eq(Map.class));
+	}
+
+	@Test
+	public void createStagingTargetPropagatesDeployerFailure() {
+		RestServiceException deployerError = new RestServiceException(HttpStatus.INTERNAL_SERVER_ERROR, "Deployer is down");
+		when(restTemplate.exchange(any(), eq(Map.class))).thenThrow(deployerError);
+
+		RestClientException error = assertThrows(RestClientException.class, () -> deployer.createStagingTarget(SITE));
+
+		assertEquals(deployerError, error);
 	}
 
 	@Test

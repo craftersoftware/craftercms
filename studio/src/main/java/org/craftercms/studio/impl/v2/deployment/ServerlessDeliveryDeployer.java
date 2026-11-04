@@ -131,15 +131,33 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 	 * The deployer client reports HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
 	 */
 	protected boolean isNotFound(RestClientException exception) {
+		return hasStatus(exception, HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Deployer returns 409 when {@code replace} is false and the target is already there.
+	 */
+	protected boolean isConflict(RestClientException exception) {
+		return hasStatus(exception, HttpStatus.CONFLICT);
+	}
+
+	/**
+	 * The deployer client reports HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
+	 */
+	protected boolean hasStatus(RestClientException exception, HttpStatusCode expected) {
 		HttpStatusCode status = null;
 		if (exception instanceof RestServiceException restServiceException) {
 			status = restServiceException.getResponseStatus();
 		} else if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
 			status = httpStatusCodeException.getStatusCode();
 		}
-		return status != null && status.isSameCodeAs(HttpStatus.NOT_FOUND);
+		return status != null && status.isSameCodeAs(expected);
 	}
 
+	/**
+	 * Create the staging target if it is missing. {@code replace} stays false even when the live-target setting is
+	 * true, so a later publish does not rebuild the target. An existing target (409) is success.
+	 */
 	@Override
 	public void createStagingTarget(String site) throws RestClientException {
 		if (!isServerlessDeliveryEnabled()) {
@@ -149,13 +167,18 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 		String localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH, stagingSiteName);
 		String repoUrl = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REMOTE_REPO_URL, site);
 		String template = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE);
-		boolean replace = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE,
-			Boolean.class, false);
 		HierarchicalConfiguration<ImmutableNode> templateParams =
 			studioConfiguration.getSubConfig(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE_PARAMS);
 
-		doCreateTarget(stagingSiteName, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV),
-			template, replace, false, localRepoPath, repoUrl, stagingBranch(site), templateParams);
+		try {
+			doCreateTarget(stagingSiteName, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV),
+				template, false, false, localRepoPath, repoUrl, stagingBranch(site), templateParams);
+		} catch (RestClientException e) {
+			if (!isConflict(e)) {
+				throw e;
+			}
+			logger.debug("Staging deployer target for site '{}' already exists", site);
+		}
 	}
 
 	@Override
