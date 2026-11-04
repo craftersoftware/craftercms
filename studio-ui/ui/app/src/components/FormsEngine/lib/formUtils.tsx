@@ -803,14 +803,18 @@ export function commitFormVisibility(
 /**
  * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
  * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
- * untouched form would rename the item. Values with no `file-name` (repeat items, embedded components) are returned as is.
+ * untouched form would rename the item.
+ *
+ * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
+ * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
+ * own value and is returned as is. Values with no `file-name` are returned as is too.
  */
 export function withPathFileName(
 	values: LookupTable<unknown>,
 	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
 	path?: string | null
 ): LookupTable<unknown> {
-	return atoms?.fileName && XmlKeys.fileName in values
+	return atoms?.fileName && path != null && XmlKeys.fileName in values
 		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
 		: values;
 }

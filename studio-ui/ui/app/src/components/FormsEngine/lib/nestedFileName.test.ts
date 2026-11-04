@@ -177,6 +177,34 @@ describe('rollback of an untouched page whose xml file-name differs from the pat
 		assert.equal(form.formContextRef.current.changedFieldIds.has('file-name'), false);
 	});
 
+	it('keeps a repeat item form file-name as its own value, since a nested scope has no path', () => {
+		const formContextRef = { current: createFormStackData() };
+		const atoms = createFormsEngineAtoms('author', {
+			lockResult: atom({ locked: true, lockError: null, affectedPackages: null }),
+			readonly: atom(false),
+			fileName: createFileNameAtom('', formContextRef)
+		});
+		formContextRef.current.atoms = atoms;
+		// A repeat item form carries its parent's path.
+		formContextRef.current.itemMeta = { path: aboutPath, pathInSite: aboutPath } as never;
+		const repeatValues = { 'file-name': 'row-name', title_s: 'a' };
+		const contentType = { id: '/page/article', name: 'Article', fields: { 'file-name': fileNameField } } as never;
+		setFieldAtoms(formContextRef, contentType, contentType.fields, 'file-name', atoms, 'row-name');
+		const originalValues = withPathFileName(repeatValues, atoms, undefined);
+		assert.equal(originalValues, repeatValues);
+		assert.equal(withPathFileName(repeatValues, atoms, null), repeatValues);
+
+		const store = createStore();
+		store.set(atoms.valueByFieldId['file-name'], 'edited');
+		store.set(atoms.valueByFieldId['file-name'], originalValues['file-name']);
+		assert.equal(store.get(atoms.valueByFieldId['file-name']), 'row-name');
+	});
+
+	it('normalizes a create form to a blank name', () => {
+		const values = { 'file-name': 'default-name' };
+		assert.deepEqual(withPathFileName(values, { fileName: atom('') }, ''), { 'file-name': '' });
+	});
+
 	it('returns values with no file-name, or no file-name atom, as they are', () => {
 		const values = { title_s: 'a' };
 		assert.equal(withPathFileName(values, { fileName: atom('') }, aboutPath), values);
