@@ -35,6 +35,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 
 import static org.craftercms.studio.api.v1.constant.StudioConstants.MODULE_STUDIO;
@@ -126,7 +127,33 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
 		verify(itemTargetDao, never()).initStaging(anyLong(), any(), any());
 		verify(contentRepository, never()).publishedRepositoryExists("finished");
-		verify(statement).setString(1, "pending");
+		verify(statement).setInt(1, 1);
+		verify(statement).setString(2, "pending");
+		verify(connection).commit();
+	}
+
+	@Test
+	public void createdBranchLeavesBlobCopyForTheNextPublish() throws Exception {
+		Site pending = site("pending", 2, false);
+		when(sitesService.getAllSites()).thenReturn(List.of(pending));
+		stubEnabledConfig("pending");
+		when(servicesConfig.getLiveEnvironment("pending")).thenReturn(LIVE);
+		when(servicesConfig.getStagingEnvironment("pending")).thenReturn(STAGING);
+		when(contentRepository.publishedRepositoryExists("pending")).thenReturn(true);
+		when(contentRepository.isTargetPublished("pending", LIVE)).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive("pending", LIVE, STAGING)).thenReturn(true);
+		when(itemTargetDao.targetExists(2L, STAGING)).thenReturn(false);
+		when(context.getConnection()).thenReturn(connection);
+		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.UPDATE_STAGING_ENABLED)).thenReturn(statement);
+		when(statement.executeUpdate()).thenReturn(1);
+
+		operation.doExecute(context);
+
+		verify(itemTargetDao).initStaging(2L, STAGING, LIVE);
+		verify(contentRepository, never()).copyBlobs(any(), any(), any());
+		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
+		verify(statement).setInt(1, 0);
+		verify(statement).setString(2, "pending");
 		verify(connection).commit();
 	}
 
@@ -134,7 +161,7 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 	public void failureStopsTheUpgradeBeforeLaterSites() throws Exception {
 		Site broken = site("broken", 3, false);
 		Site later = site("later", 4, false);
-		ServiceLayerException blobCopyFailure = new ServiceLayerException("blob copy failed");
+		SQLException updateFailure = new SQLException("update failed");
 		when(sitesService.getAllSites()).thenReturn(List.of(broken, later));
 		stubEnabledConfig("broken");
 		when(servicesConfig.getLiveEnvironment("broken")).thenReturn(LIVE);
@@ -143,20 +170,22 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		when(contentRepository.isTargetPublished("broken", LIVE)).thenReturn(true);
 		when(contentRepository.createStagingBranchFromLive("broken", LIVE, STAGING)).thenReturn(true);
 		when(itemTargetDao.targetExists(3L, STAGING)).thenReturn(false);
-		doThrow(blobCopyFailure).when(contentRepository).copyBlobs("broken", LIVE, STAGING, STAGING);
+		when(context.getConnection()).thenReturn(connection);
+		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.UPDATE_STAGING_ENABLED)).thenReturn(statement);
+		when(statement.executeUpdate()).thenThrow(updateFailure);
 
 		try {
 			operation.doExecute(context);
 			fail("expected the upgrade to fail");
 		} catch (UpgradeException e) {
 			assertEquals("Failed to backfill staging for site 'broken'", e.getMessage());
-			assertSame(blobCopyFailure, e.getCause());
+			assertSame(updateFailure, e.getCause());
 		}
 
 		verify(contentRepository).deletePublishedBranch("broken", STAGING);
-		verify(contentRepository).copyBlobs("broken", LIVE, STAGING, STAGING);
+		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
 		verify(configurationService, never()).getConfigurationAsDocument(eq("later"), any(), any(), any());
-		verify(context, never()).getConnection();
+		verify(connection, never()).commit();
 	}
 
 	private void stubEnabledConfig(String siteId) throws DocumentException, ServiceLayerException {

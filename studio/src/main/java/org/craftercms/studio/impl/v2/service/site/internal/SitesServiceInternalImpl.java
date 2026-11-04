@@ -643,6 +643,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 					}
 				}
 			}
+			if (enableStaging) {
+				boolean blobsCopied = !sourceSite.isStagingEnabled() || sourceSite.isStagingBlobsCopied();
+				retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, blobsCopied));
+			}
 
 			auditSiteDuplicate(sourceSiteId, siteId, siteName);
 
@@ -963,6 +967,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		site.setPublishingStatus(PublishStatus.READY);
 		site.setSandboxBranch(request.getSandboxBranch());
 		site.setStagingEnabled(request.isEnableStaging());
+		site.setStagingBlobsCopied(true);
 		siteDao.createSite(site);
 		return site;
 	}
@@ -1164,6 +1169,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 			}
 			deployer.createStagingTarget(siteId);
 			createdDeployerTarget = true;
+			retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, true));
 			int updated = retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingEnabled(siteId));
 			if (updated == 0) {
 				throw new StagingAlreadyEnabledException(siteId);

@@ -297,6 +297,9 @@ public class Publisher implements ApplicationEventPublisherAware {
 				   final boolean stagingEnabled) throws ServiceLayerException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
+		if (stagingEnabled) {
+			copyStagingBlobsFromLive(siteId);
+		}
 		switch (publishPackage.getPackageType()) {
 			case INITIAL_PUBLISH -> {
 				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
@@ -312,6 +315,31 @@ public class Publisher implements ApplicationEventPublisherAware {
 			}
 			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
 				publishPackage.getPackageType(), packageId, siteId));
+		}
+	}
+
+	/**
+	 * Copy the live blob-store assets onto the staging branch created during upgrade, before this package publishes
+	 * its staging delta. The copy is skipped once {@code staging_blobs_copied} is set. A failure leaves the flag
+	 * false and stops the package, so the next publish request copies again.
+	 */
+	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
+		Site site = siteDao.getSite(siteId);
+		if (site == null || site.isStagingBlobsCopied()) {
+			return;
+		}
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		try {
+			if (!contentRepository.publishedRepositoryExists(siteId) || !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				siteDao.setStagingBlobsCopied(siteId, true);
+				return;
+			}
+			logger.info("Copy blobs for site '{}' from '{}' to '{}' before publishing the staging delta", siteId, liveBranch, stagingBranch);
+			contentRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
+			siteDao.setStagingBlobsCopied(siteId, true);
+		} catch (IOException e) {
+			throw new ServiceLayerException(format("Failed to copy live blobs to staging for site '%s'", siteId), e);
 		}
 	}
 
