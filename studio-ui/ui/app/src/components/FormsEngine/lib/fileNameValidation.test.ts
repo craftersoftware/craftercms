@@ -66,7 +66,9 @@ function createForm(path: string | undefined, fields: ContentTypeField[]) {
 		name: 'Article',
 		fields: Object.fromEntries(all.map((field) => [field.id, field]))
 	} as never;
-	all.forEach((field) => setFieldAtoms(formContextRef, contentType, contentType.fields, field.id, atoms, 'xml value'));
+	all.forEach((field) =>
+		setFieldAtoms(formContextRef, contentType, contentType.fields, field.id, atoms, 'xml value', undefined, false, path)
+	);
 	const store = createStore();
 	const settle = async () => {
 		for (const validation of Object.values(atoms.validationByFieldId)) await store.get(validation);

@@ -37,7 +37,7 @@ import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
-import { atom, Atom, createStore, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import React, {
 	ReactNode,
 	RefObject,
@@ -456,7 +456,8 @@ export function createFileNameAtom(
 export const rootPagePath = '/site/website/index.xml';
 
 /**
- * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given.
+ * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given, and
+ * {@link setFieldAtoms} starts the `file-name` field's value from it, so the two cannot drift.
  * The home page, and a form that has no path yet, are blank.
  */
 export function fileNameFromItemPath(path?: string | null): string {
@@ -801,6 +802,9 @@ export function commitFormVisibility(
 
 /**
  * Creates the value and validity atoms for a field and sets them on to the target object.
+ *
+ * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
+ * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -810,7 +814,8 @@ export function setFieldAtoms(
 	atomsTarget: FormsEngineAtoms,
 	value: unknown,
 	validatorsData?: ValidatorsData,
-	isAdditional?: boolean
+	isAdditional?: boolean,
+	itemPath?: string | null
 ): void {
 	let field = fieldLookup[fieldId];
 	if (!field) {
@@ -849,10 +854,15 @@ export function setFieldAtoms(
 			return;
 		}
 	}
-	// The file-name value starts from the file-name atom, the name derived from the item path. The validator
-	// reads only this value, so it must not start from the xml value, which can differ from the path.
-	const initialValue =
-		fieldId === XmlKeys.fileName && atomsTarget.fileName ? createStore().get(atomsTarget.fileName) : value;
+	// The file-name field has two sources: the `file-name` element in the XML, and the item path, which the
+	// file-name atom, rename and save use. They can disagree at load, for example on legacy or migrated content,
+	// after a rename done outside the form, or when the element is missing.
+	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
+	// context), so the value must start from the path. Starting from the XML would validate a name that save
+	// never uses.
+	// Decision: the path wins. On edit the form shows and validates the path-derived name, and a differing XML
+	// `file-name` is overwritten on the next save.
+	const initialValue = fieldId === XmlKeys.fileName && atomsTarget.fileName ? fileNameFromItemPath(itemPath) : value;
 	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;

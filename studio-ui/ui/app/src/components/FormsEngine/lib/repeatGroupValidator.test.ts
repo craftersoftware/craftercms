@@ -304,7 +304,7 @@ describe('fileNameValidator', () => {
 		formContextRef.current.itemMeta = { path: aboutPath } as never;
 		const stored = fileNameField(true);
 		const contentType = { id: '/page/article', name: 'Article', fields: { 'file-name': stored } } as never;
-		setFieldAtoms(formContextRef, contentType, contentType.fields, 'file-name', atoms, '');
+		setFieldAtoms(formContextRef, contentType, contentType.fields, 'file-name', atoms, '', undefined, false, aboutPath);
 		assert.equal(isFieldRequired(stored), true);
 
 		const store = createStore();
@@ -313,6 +313,44 @@ describe('fileNameValidator', () => {
 		const validity = await store.get(atoms.validationByFieldId['file-name']);
 		assert.equal(validity.isValid, true);
 		assert.deepEqual(validity.messages, []);
+	});
+
+	// Given an edit of /site/website/about/index.xml whose xml file-name says something else, the path wins: the value atom starts from the path-derived name and the validator validates that name.
+	it('starts the file-name value from the path, not from a differing xml file-name', async () => {
+		const formContextRef = { current: createFormStackData() };
+		const atoms = createFormsEngineAtoms('author', {
+			lockResult: atom({ locked: true, lockError: null, affectedPackages: null }),
+			readonly: atom(false),
+			fileName: createFileNameAtom(aboutPath, formContextRef)
+		});
+		formContextRef.current.atoms = atoms;
+		formContextRef.current.itemMeta = { path: aboutPath } as never;
+		const stored = fileNameField(true);
+		const contentType = { id: '/page/article', name: 'Article', fields: { 'file-name': stored } } as never;
+		setFieldAtoms(
+			formContextRef,
+			contentType,
+			contentType.fields,
+			'file-name',
+			atoms,
+			'legacy-name',
+			undefined,
+			false,
+			aboutPath
+		);
+
+		const store = createStore();
+		assert.equal(store.get(atoms.valueByFieldId['file-name']), 'about');
+		assert.equal(store.get(atoms.valueByFieldId['file-name']), store.get(atoms.fileName));
+		const validity = await store.get(atoms.validationByFieldId['file-name']);
+		assert.equal(validity.isValid, true);
+		// The validator checks the value it is given, so the path-derived name is what is validated.
+		assert.equal(
+			(await validateFieldValue(stored, store.get(atoms.valueByFieldId['file-name']), nameMeta(aboutPath))).isValid,
+			true
+		);
+		const blank = await validateFieldValue(stored, '', nameMeta(aboutPath));
+		assert.equal(blank.isValid, false);
 	});
 
 	// Given a create form, there is no path yet, so the file-name atom starts blank and the name is invalid.

@@ -545,7 +545,8 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 
 /**
  * File-name rules: required, then uniqueness.
- * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync.
+ * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
+ * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
  *
  * @param {string} currentValue - The file name being validated.
