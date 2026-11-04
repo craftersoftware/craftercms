@@ -100,6 +100,7 @@ import { popDialog, pushDialog, updateDialogState } from '../state/actions/dialo
 import { createComponentId, showContentFormAction, pushConfirmDialog, pushErrorDialog } from './system';
 import { checkAndCancelAffectedPackages } from '../components/ViewPackagesDialog/utils';
 import { fetchAllowedTypes } from '../services/contentTypes';
+import { getNormalizedFolderPathForApi1GetTypes } from './contentType';
 
 export type ContextMenuOptionDescriptor<ID extends string = string> = {
 	id: ID;
@@ -581,9 +582,10 @@ export const itemActionDispatcher = ({
 			}
 			case 'createContent': {
 				const id = nanoid();
+				const path = getNormalizedFolderPathForApi1GetTypes(item);
 
 				dispatch(blockUI({ progress: 'indeterminate' }));
-				fetchAllowedTypes(site, item.path).subscribe({
+				fetchAllowedTypes(site, path).subscribe({
 					next(contentTypesIds) {
 						if (contentTypesIds?.length === 1) {
 							const contentTypeId = contentTypesIds[0];
