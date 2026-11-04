@@ -46,7 +46,8 @@ function resolveSourceType(src: string, type?: string): string | undefined {
 	if (type) {
 		return type;
 	}
-	const extension = extensionRegex.exec(src)?.[1];
+	const path = src.split(/[?#]/, 1)[0];
+	const extension = extensionRegex.exec(path)?.[1]?.toLowerCase();
 	return extension ? SourceTypes[extension] : undefined;
 }
 
