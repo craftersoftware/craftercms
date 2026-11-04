@@ -121,7 +121,7 @@ Alternate registration paths also exist:
 
 ### 2.3 FE control/DS plugin
 
-Legacy FE plugins do **not** use the modern `PluginDescriptor`/widget registry. Their `<plugin>` record is an asset locator embedded in the TB catalog and later copied into `form-definition.xml`:
+Legacy FE plugins (FE1, removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197); see [Appendix A](type-builder-forms-engine.md#appendix-a--legacy-fe1tb1-reference-historical-removed-in-9197) of the main doc) do **not** use the modern `PluginDescriptor`/widget registry. Their `<plugin>` record is an asset locator embedded in the TB catalog and later copied into `form-definition.xml`:
 
 ```xml
 <plugin>
@@ -464,7 +464,7 @@ The runtime retains the source datasource on the resolved action/choice. Node-se
 
 ## 6.1 FE1 → FE2 data-source migration notes
 
-Legacy YUI data sources (`CStudioForms.Datasources.*`) are **not** loadable as FE2 modules. Migrate by rewriting behavior as a `DataSourceModule`:
+Legacy YUI data sources (`CStudioForms.Datasources.*`) are **not** loadable as FE2 modules. Migrate by rewriting behavior as a `DataSourceModule` (how FE1 loaded and used them: [Appendix A.2](type-builder-forms-engine.md#a2-fe1-runtime-controls-data-sources-load-quirks) of the main doc; overall mapping: [A.5](type-builder-forms-engine.md#a5-fe1-to-fe2-parity-map)):
 
 | FE1 concern                | FE2 equivalent                                                               |
 | -------------------------- | ---------------------------------------------------------------------------- |
@@ -507,11 +507,10 @@ Studio:
 - `ui/app/src/components/FormsEngine/lib/renderControl.tsx` (`lib/controlHelpers.tsx` is a re-export barrel)
 - `ui/app/src/components/FormsEngine/dataSources/*`
 - `ui/app/src/components/FormsEngine/dataSourceHooks/*`
-- `ui/app/src/components/FormsEngine/fe-control-plugin.js` — local FE1 control/DS examples and catalog XML snippets
 - `ui/app/src/components/ContentTypeManagement/components/EditTypeView.tsx`
 - `ui/app/src/components/ContentTypeManagement/proposal.xml`
-- `static-assets/components/cstudio-common/common-api.js`
-- `static-assets/components/cstudio-forms/forms-engine.js`
+- `static-assets/components/cstudio-common/common-api.js` — shared `Module` protocol
+- Legacy FE/TB sources (removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)): explained in [Appendix A](type-builder-forms-engine.md#appendix-a--legacy-fe1tb1-reference-historical-removed-in-9197) of the main doc (see also its §2 / §5.2 / §5.3). The last commit that still had the files is [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) (`forms-engine.js`, `content-types.js`, `cstudio-forms/{controls,data-sources}/*`)
 
 Examples:
 

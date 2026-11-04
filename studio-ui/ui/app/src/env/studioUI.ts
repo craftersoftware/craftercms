@@ -187,7 +187,6 @@ export const components = {
 	LauncherTile: lazy(() => import('../components/LauncherTile')),
 	LegacyConcierge: lazy(() => import('../components/LegacyConcierge')),
 	LegacyDashboardFrame: lazy(() => import('../components/LegacyDashboardFrame')),
-	LegacyFormDialog: lazy(() => import('../components/LegacyFormDialog')),
 	LegacyIFrame: lazy(() => import('../components/LegacyIFrame')),
 	LegacySiteToolsFrame: lazy(() => import('../components/LegacySiteToolsFrame')),
 	LoadingIconButton: lazy(() => import('../components/LoadingIconButton')),

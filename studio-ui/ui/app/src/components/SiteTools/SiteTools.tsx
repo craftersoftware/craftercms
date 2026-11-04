@@ -67,6 +67,7 @@ export interface SiteToolsProps {
 	onWidthChange(width: number): void;
 	onNavItemClick(url: string): void;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
+	onClose?: () => void;
 	onMinimize?: () => void;
 }
 
@@ -87,6 +88,7 @@ export function SiteTools(props: SiteToolsProps) {
 		onNavItemClick,
 		showAppsButton,
 		onSubmittingAndOrPendingChange,
+		onClose,
 		onMinimize,
 		sx
 	} = props;
@@ -218,6 +220,7 @@ export function SiteTools(props: SiteToolsProps) {
 									mountMode,
 									showAppsButton,
 									onSubmittingAndOrPendingChange,
+									onClose,
 									onMinimize
 								}}
 							/>
