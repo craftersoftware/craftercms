@@ -50,10 +50,10 @@ import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
-import type GlobalState from '../../../models/GlobalState';
 
 function createLengthBlock({ length, max }: { length: number; max: number }) {
 	const pieces = [];
@@ -145,7 +145,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const sourcePath = fieldId !== XmlKeys['fileName'] ? sourceMap?.[fieldId] : undefined;
 	// Subscribe to the one source item's label rather than the whole `itemsByPath` slice, so unrelated item updates
 	// don't re-render every field.
-	const sourceLabel = useSelector<GlobalState, string | undefined>((state) =>
+	const sourceLabel = useSelection<string | undefined>((state) =>
 		sourcePath ? state.content.itemsByPath[sourcePath]?.label : undefined
 	);
 	const labelRef = useRef<HTMLLabelElement>(null);
