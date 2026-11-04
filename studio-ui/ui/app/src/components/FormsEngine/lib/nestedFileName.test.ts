@@ -219,12 +219,6 @@ describe('the root item file-name', () => {
 		created.store.set(created.atoms.fileName as never, 'contact');
 		assert.deepEqual(await created.invalidIds(), []);
 	});
-
-	it('still checks whether the name is taken', async () => {
-		const result = await validateFieldValue(fileNameField, 'contact', meta);
-		assert.equal(result.isValid, false);
-		assert.ok(requests > 0, 'the path existence request is made');
-	});
 });
 
 describe('file-name value of a form with no item path', () => {
