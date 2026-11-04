@@ -27,6 +27,7 @@ export type DescriptorControlType =
 	| 'type-controller-selector'
 	| 'key-value-map'
 	| 'type-destination-paths-selector'
+	| 'type-allowed-roles-selector'
 	| 'path-with-macro-creator'
 	| 'merge-strategy-selector'
 	| 'variable'
@@ -71,6 +72,7 @@ export const controlMap: Record<DescriptorControlType, ElementType> = {
 	'type-controller-selector': lazy(() => import('./controls/TypeControllerSelector')),
 	'key-value-map': lazy(() => import('./controls/KeyValueMap')),
 	'type-destination-paths-selector': lazy(() => import('./controls/TypeDestinationPathsSelector')),
+	'type-allowed-roles-selector': lazy(() => import('./controls/TypeAllowedRolesSelector')),
 	'path-with-macro-creator': lazy(() => import('./controls/PathWithMacroCreator')),
 	'merge-strategy-selector': lazy(() => import('./controls/MergeStrategySelector')),
 	variable: lazy(() => import('./controls/Variable')),

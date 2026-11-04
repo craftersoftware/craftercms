@@ -31,11 +31,11 @@ interface Dependency {
 	target: string;
 }
 
-export interface CopyDependenciesProps extends ControlProps {
-	value: {
-		'copy-dependency': Dependency[];
-	};
+interface CopyDependenciesValue {
+	'copy-dependency': Dependency[];
 }
+
+export type CopyDependenciesProps = ControlProps<CopyDependenciesValue>;
 
 export function CopyDependencies(props: CopyDependenciesProps) {
 	const { field, value, setValue } = props;

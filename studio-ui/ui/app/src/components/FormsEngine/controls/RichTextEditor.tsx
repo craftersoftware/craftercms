@@ -41,8 +41,7 @@ import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceAct
 import type { DataSourceFieldContext, DataSourceSelection, ResolvedDataSourceAction } from '../dataSources/types';
 import { FormattedMessage } from 'react-intl';
 
-export interface RichTextEditorProps extends ControlProps {
-	value: string;
+export interface RichTextEditorProps extends ControlProps<string> {
 	defaultInitOptions?: Editor['props']['init'];
 }
 

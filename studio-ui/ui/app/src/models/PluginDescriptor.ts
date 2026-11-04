@@ -15,19 +15,61 @@
  */
 
 import type { ComponentType } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import WidgetRecord from './WidgetRecord';
 import type { DataSourceBinding, DataSourceModule } from '../components/FormsEngine/dataSources/types';
-import type { ControlProps } from '../components/FormsEngine/types';
-import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
-import type { ValidatorFunctionDef } from '../components/FormsEngine/lib/validators';
+import type { AnyValue, CONTROL_API_VERSION, ControlProps } from '../components/FormsEngine/types';
+import type {
+	ValueRetriever,
+	ValueRetrieverContext,
+	ValueSerializer,
+	ValueSerializerContext
+} from '../components/FormsEngine/lib/controlValueTypes';
+import type {
+	FieldValidityMessage,
+	Validator,
+	ValidatorContext,
+	ValidatorResult
+} from '../components/FormsEngine/lib/validators';
+import type { FormsEngineFieldPublicProps } from '../components/FormsEngine/components/FormsEngineField';
+
+/**
+ * The types a FE2 control plugin is written against, importable from `@craftercms/studio-ui/models`.
+ * They are type-only. Anything else under `components/FormsEngine` is host-internal.
+ */
+export type {
+	ControlProps,
+	FieldValidityMessage,
+	FormsEngineFieldPublicProps,
+	Validator,
+	ValidatorContext,
+	ValidatorResult,
+	ValueRetriever,
+	ValueRetrieverContext,
+	ValueSerializer,
+	ValueSerializerContext
+};
 
 /**
  * FE2 control contribution on a PluginDescriptor.
  * Map keys on `controls` must equal the control type id (`field.type`).
  */
-export interface ControlPluginContribution {
+export interface ControlPluginContribution<V = unknown> {
+	/**
+	 * Contract version this control implements. Currently {@link CONTROL_API_VERSION}.
+	 * A missing value counts as that version. Any other value is refused at registration.
+	 */
+	apiVersion?: typeof CONTROL_API_VERSION;
 	/** React control component; must accept ControlProps. */
-	Component: ComponentType<ControlProps>;
+	Component: ComponentType<ControlProps<V>>;
+	/**
+	 * Whether the host wraps `Component` in `FormsEngineField` (label, required and invalid state, validity
+	 * messages, field menu). Defaults to `true`. Set `false` to render the component bare and wrap it yourself
+	 * with `craftercms.formsEngine.controls.FormsEngineField`, using the `inputId` and `labelId` props.
+	 */
+	fieldChrome?: boolean;
+	/** `sx` for the default `FormsEngineField` wrapper. Ignored when `fieldChrome` is `false`. */
+	fieldSx?: SxProps<Theme>;
 	/** Optional; same shapes as built-in `controlDataSourceBindings` entries. */
 	dataSourceBindings?: DataSourceBinding | readonly DataSourceBinding[];
 	/**
@@ -35,18 +77,18 @@ export interface ControlPluginContribution {
 	 * Must be registered before form bootstrap parses content (FE preloads plugin locators).
 	 * Falls back to identity (pass-through) when omitted.
 	 */
-	valueRetriever?: ValueRetriever;
+	valueRetriever?: ValueRetriever<V>;
 	/**
 	 * Optional form value → XML-serialiser shape for this control type.
 	 * Used on save via `valueSerializers`; falls back to pass-through when omitted.
 	 */
-	valueSerializer?: ValueSerializer;
+	valueSerializer?: ValueSerializer<V>;
 	/**
 	 * Optional type-specific validator for this control type.
 	 * Required/empty checks remain host-owned in `validateFieldValue`.
 	 * FE preloads plugin locators before form bootstrap so validators are registered in time.
 	 */
-	validator?: ValidatorFunctionDef;
+	validator?: Validator<V>;
 }
 
 export interface PluginDescriptor {
@@ -75,8 +117,10 @@ export interface PluginDescriptor {
 	/**
 	 * FE2 control contributions, keyed by control type id (`field.type`).
 	 * `registerPlugin` validates and installs each into the control contribution registry.
+	 * The map holds contributions of different value types, so it does not tie an entry's `V` to its component
+	 * and hooks. Check an entry with `satisfies ControlPluginContribution<V>`.
 	 */
-	controls?: Record<string, ControlPluginContribution>;
+	controls?: Record<string, ControlPluginContribution<AnyValue>>;
 	// themes: Array<{ id: string; name: string; themeOptions: ThemeOptions[] }>;
 }
 

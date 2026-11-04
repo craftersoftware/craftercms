@@ -49,6 +49,17 @@ const meta = {
 	itemMeta: { path: '/site/website/index.xml' }
 };
 
+/** The context a built-in validator receives. */
+function ctxFor(field: ContentTypeField, metaData: typeof meta = meta) {
+	return {
+		field,
+		signal: new AbortController().signal,
+		siteId: metaData.siteId,
+		getValue: () => undefined,
+		meta: metaData
+	};
+}
+
 function repeatField(validations: ContentTypeField['validations']): ContentTypeField {
 	return {
 		id: 'articles_o',
@@ -79,30 +90,30 @@ describe('repeatGroupValidator', () => {
 			maxCount: validation('maxCount', 3)
 		});
 
-		const below = [];
-		assert.equal(await repeatGroupValidator(field, [{}], below, meta), false);
-		assert.deepEqual(below.map(messageOf), [
+		const below = await repeatGroupValidator([{}], ctxFor(field));
+		assert.equal(below.valid, false);
+		assert.deepEqual(below.messages.map(messageOf), [
 			{ text: 'At least {minCount, plural, one {# item is} other {# items are}} required.', values: { minCount: 2 } }
 		]);
 
-		const above = [];
-		assert.equal(await repeatGroupValidator(field, [{}, {}, {}, {}], above, meta), false);
-		assert.deepEqual(above.map(messageOf), [
+		const above = await repeatGroupValidator([{}, {}, {}, {}], ctxFor(field));
+		assert.equal(above.valid, false);
+		assert.deepEqual(above.messages.map(messageOf), [
 			{ text: 'No more than {maxCount, plural, one {# item is} other {# items are}} allowed.', values: { maxCount: 3 } }
 		]);
 
-		const onBound = [];
-		assert.equal(await repeatGroupValidator(field, [{}, {}], onBound, meta), true);
-		assert.deepEqual(onBound, []);
-		assert.equal(await repeatGroupValidator(field, [{}, {}, {}], [], meta), true);
+		const onBound = await repeatGroupValidator([{}, {}], ctxFor(field));
+		assert.equal(onBound.valid, true);
+		assert.deepEqual(onBound.messages, []);
+		assert.equal((await repeatGroupValidator([{}, {}, {}], ctxFor(field))).valid, true);
 	});
 
 	// Given only a required constraint and no minCount, an empty repeat is valid. Required is not a minimum.
 	it('does not treat a required constraint as a minimum', async () => {
 		const field = repeatField({ required: validation('required', true) });
-		const messages = [];
-		assert.equal(await repeatGroupValidator(field, [], messages, meta), true);
-		assert.deepEqual(messages, []);
+		const result = await repeatGroupValidator([], ctxFor(field));
+		assert.equal(result.valid, true);
+		assert.deepEqual(result.messages, []);
 	});
 
 	// Given minCount 1 and an empty value, the only message is the occurrence message, not "This field is required."
@@ -146,16 +157,14 @@ describe('nodeSelectorValidator', () => {
 			false
 		);
 
-		const atMax = await nodeSelectorValidator(selector({ maxCount: validation('maxCount', 1) }), [{}], [], meta);
-		assert.equal(atMax, true);
+		const atMax = await nodeSelectorValidator([{}], ctxFor(selector({ maxCount: validation('maxCount', 1) })));
+		assert.equal(atMax.valid, true);
 
 		const unlimited = await nodeSelectorValidator(
-			selector({ minCount: validation('minCount', 0), maxCount: validation('maxCount', 0) }),
 			[{}, {}, {}],
-			[],
-			meta
+			ctxFor(selector({ minCount: validation('minCount', 0), maxCount: validation('maxCount', 0) }))
 		);
-		assert.equal(unlimited, true);
+		assert.equal(unlimited.valid, true);
 
 		const empty = await validateFieldValue(
 			selector({
@@ -196,8 +205,8 @@ describe('checkboxGroupValidator', () => {
 			false
 		);
 
-		const atMin = checkboxGroupValidator(group(1), ['a'], []);
-		assert.equal(atMin, true);
+		const atMin = checkboxGroupValidator(['a'], ctxFor(group(1)));
+		assert.equal(atMin.valid, true);
 
 		const unlimited = await validateFieldValue(group(0), [], meta);
 		assert.equal(unlimited.isValid, true);

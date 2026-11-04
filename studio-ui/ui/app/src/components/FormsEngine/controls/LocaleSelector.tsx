@@ -31,9 +31,7 @@ import { FormattedMessage } from 'react-intl';
 import { isFieldReadOnly } from '../lib/formUtils';
 import { Subscription } from 'rxjs';
 
-export interface LocaleSelectorProps extends ControlProps {
-	value: string;
-}
+export type LocaleSelectorProps = ControlProps<string>;
 
 export function LocaleSelector(props: LocaleSelectorProps) {
 	const { field, value, setValue, autoFocus, readonly: formReadonly } = props;

@@ -19,16 +19,16 @@ import ContentType, { ContentTypeField } from '../../../models/ContentType';
 import type { BuiltInControlType } from './controlMap';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
-import { getPluginControlValueRetriever } from '../controls/registry';
-import { systemFieldsNotInType, XmlKeys } from './formConsts';
-import { deserialize, unescapeXml } from '../../../utils/xml';
+import { getPluginControlValueRetriever, getRegisteredControlContribution } from '../controls/registry';
+import { freezeForPlugin } from './pluginHooks';
+import { preservedElements, systemFieldsNotInType, xmlAttributePrefix, XmlKeys } from './formConsts';
+import { deserialize, getParsedField, unescapeXml } from '../../../utils/xml';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import { nnou } from '../../../utils/object';
 import { v4 as uuid } from 'uuid';
-import { Matcher } from 'path-expression-matcher';
 import { getAdditionalFieldsIdsFromDescriptor, resolveControlDescriptors } from './formUtils';
-import type { ValueRetriever } from './controlValueTypes';
+import type { ValueRetriever, ValueRetrieverContext } from './controlValueTypes';
 
 export type { ValueRetriever } from './controlValueTypes';
 
@@ -72,6 +72,7 @@ export const valueRetrieverLookup: Record<BuiltInControlType | DescriptorControl
 	'type-controller-selector': textFieldExtractor,
 	'key-value-map': (value) => objectArrayExtractor(value as string),
 	'type-destination-paths-selector': null,
+	'type-allowed-roles-selector': null,
 	'path-with-macro-creator': textFieldExtractor,
 	'merge-strategy-selector': textFieldExtractor,
 	'datasource:image': (value) => stringArrayExtractor(value as string),
@@ -111,8 +112,9 @@ export function createParsedValuesObject(
 ): LookupTable<unknown> {
 	const values = {};
 	systemFieldsNotInType.forEach((systemFieldId) => {
-		if (systemFieldId in xmlDeserializedValues) {
-			values[systemFieldId] = xmlDeserializedValues[systemFieldId] ?? '';
+		const rawValue = getParsedField(xmlDeserializedValues, systemFieldId);
+		if (rawValue !== undefined) {
+			values[systemFieldId] = rawValue ?? '';
 			fieldCallback?.(systemFieldId, values[systemFieldId]);
 		}
 	});
@@ -129,14 +131,23 @@ export function createParsedValuesObject(
 				defaultValue: undefined
 			};
 			values[additionalFieldId] = createParsedValueForField(
-				xmlDeserializedValues[additionalFieldId],
+				getParsedField(xmlDeserializedValues, additionalFieldId),
 				additionalField,
 				contentTypesLookup
 			);
 			fieldCallback?.(additionalFieldId, values[additionalFieldId], true);
 		});
-		values[field.id] = createParsedValueForField(xmlDeserializedValues[field.id], field, contentTypesLookup);
+		values[field.id] = createParsedValueForField(
+			getParsedField(xmlDeserializedValues, field.id),
+			field,
+			contentTypesLookup
+		);
 		fieldCallback?.(field.id, values[field.id]);
+	});
+	preservedElements.forEach((elementId) => {
+		if (!(elementId in values) && nnou(xmlDeserializedValues[elementId])) {
+			values[elementId] = xmlDeserializedValues[elementId];
+		}
 	});
 	return values;
 }
@@ -157,9 +168,18 @@ export function createParsedValueForField<T = unknown>(
 	const controlType = field.type as BuiltInControlType;
 	switch (controlType) {
 		case 'repeat': {
-			return (value as Array<RepeatItem>).map((item) =>
-				createParsedValuesObject(field.fields ?? ({} as LookupTable<ContentTypeField>), item, contentTypesLookup)
-			) as T;
+			const childFields = field.fields ?? ({} as LookupTable<ContentTypeField>);
+			// Item children without a field are kept, as FE1 did, e.g. a taxonomy item's `unicode`.
+			// A child the parser renamed (e.g. `valueOf` read as `__valueOf`) is a field, not an unknown child.
+			return (value as Array<RepeatItem>).map((item) => {
+				const unknownChildren = { ...item };
+				Object.keys(childFields).forEach((fieldId) => {
+					if (!Object.hasOwn(item, fieldId) && getParsedField(item, fieldId) !== undefined) {
+						delete unknownChildren[`__${fieldId}`];
+					}
+				});
+				return { ...unknownChildren, ...createParsedValuesObject(childFields, item, contentTypesLookup) };
+			}) as T;
 		}
 		case 'node-selector': {
 			return (value as Array<NodeSelectorItem>).map((item) => {
@@ -187,7 +207,8 @@ export function createParsedValueForField<T = unknown>(
 export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: unknown): T {
 	// Prefer the built-in map when the type is known there (including explicit `null` = no conversion).
 	// Only consult plugin contributions for types absent from the built-in map.
-	const retriever: ValueRetriever<T> | null | undefined = Object.hasOwn(valueRetrieverLookup, field.type)
+	const isBuiltIn = Object.hasOwn(valueRetrieverLookup, field.type);
+	const retriever: ValueRetriever<T> | null | undefined = isBuiltIn
 		? (valueRetrieverLookup[field.type] as ValueRetriever<T> | null)
 		: (getPluginControlValueRetriever(field.type) as ValueRetriever<T> | undefined);
 	const defaultValue = field.defaultValue as string;
@@ -197,21 +218,50 @@ export function retrieveFieldValue<T = unknown>(field: ContentTypeField, value: 
 	if (!retriever) {
 		return fieldValue as T;
 	}
-	return retriever(fieldValue, field);
+	if (isBuiltIn) {
+		return retriever(fieldValue, { field });
+	}
+	// A plugin's retriever fails on its own field only. The rest of the form still loads.
+	try {
+		return retriever(fieldValue, { field: freezeForPlugin(field) });
+	} catch (error) {
+		console.error(
+			`The valueRetriever of plugin "${getRegisteredControlContribution(field.type)?.pluginId}" for field ` +
+				`"${field.id}" (control type "${field.type}") threw. The raw value is used for that field.`,
+			error
+		);
+		return fieldValue as T;
+	}
 }
 
 /** Takes in the CrafterCMS content XML and returns a JS object with the values */
 export function deserializeContentDoc(contentDom: XMLDocument | Element): LookupTable<unknown> {
 	if (!contentDom) return null;
-	return deserialize(contentDom, {
-		ignoreAttributes: true,
-		// Ideally, we would extract all collection types (item selector, repeat) that have
-		// this sort of syntax to avoid false positives.
-		// e.g.collectionFieldIds.map((fieldId) => `${rootTagName}.${fieldId}.item`).includes(jPath);
-		isArray: (tagName: string, jPathOrMatcher: string | Matcher) => {
-			return typeof jPathOrMatcher === 'string' && jPathOrMatcher.endsWith('.item');
+	try {
+		return deserialize(contentDom, {
+			// Values are text. Typed fields convert theirs in their value retriever.
+			parseTagValue: false,
+			// Only collection item attributes (e.g. `datasource`) are kept, so other values stay plain.
+			ignoreAttributes: (attributeName, jPathOrMatcher) =>
+				typeof jPathOrMatcher !== 'string' || !jPathOrMatcher.endsWith('.item'),
+			attributeNamePrefix: xmlAttributePrefix,
+			// Ideally, we would extract all collection types (item selector, repeat) that have
+			// this sort of syntax to avoid false positives.
+			// e.g.collectionFieldIds.map((fieldId) => `${rootTagName}.${fieldId}.item`).includes(jPath);
+			isArray: (tagName, jPathOrMatcher) => {
+				return typeof jPathOrMatcher === 'string' && jPathOrMatcher.endsWith('.item');
+			}
+		})[(contentDom as XMLDocument).documentElement?.tagName ?? (contentDom as Element).tagName];
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (message.includes('[SECURITY] Invalid name')) {
+			throw new Error(
+				`Cannot read this content document: an element or attribute is named constructor, prototype, or __proto__. ${message}`,
+				{ cause: error }
+			);
 		}
-	})[(contentDom as XMLDocument).documentElement?.tagName ?? (contentDom as Element).tagName];
+		throw error;
+	}
 }
 
 export function stringArrayExtractor(value: string): string[] {
@@ -223,8 +273,8 @@ export function arrayFieldExtractor(value: unknown): unknown[] {
 	return Array.isArray(value) ? value : ((value as Record<'item', unknown[]>)?.item ?? []);
 }
 
-export function textFieldExtractor(value: unknown, field?: ContentTypeField): string {
-	const escapeContent = (field?.properties?.escapeContent?.value as boolean) ?? false;
+export function textFieldExtractor(value: unknown, ctx?: ValueRetrieverContext): string {
+	const escapeContent = (ctx?.field?.properties?.escapeContent?.value as boolean) ?? false;
 	const rawValue: string = nnou(value) ? (value as string) : '';
 	return escapeContent ? unescapeXml(rawValue) : rawValue;
 }
@@ -234,7 +284,7 @@ export function textOrNullExtractor(value: unknown): string | null {
 }
 
 export function numberFieldExtractor(value: unknown): number | null {
-	return nnou(value) ? Number(value) : null;
+	return nnou(value) && value !== '' ? Number(value) : null;
 }
 
 /** Handles boolean values that may come as actual booleans or as strings. An empty string or null/undefined becomes (no value set). */

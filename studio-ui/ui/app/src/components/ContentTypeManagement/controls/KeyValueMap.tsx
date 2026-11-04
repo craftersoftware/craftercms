@@ -25,12 +25,12 @@ import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutl
 import Tooltip from '@mui/material/Tooltip';
 import { TypeBuilderControl } from '../utils';
 
-export interface KeyValueMapProps extends TypeBuilderControl {
-	value: {
-		key: string;
-		value: string;
-	}[];
+interface KeyValueEntry {
+	key: string;
+	value: string;
 }
+
+export type KeyValueMapProps = TypeBuilderControl<KeyValueEntry[]>;
 /**
  * Displays a list of key/value pairs, allowing the user to add, remove, and edit them.
  */

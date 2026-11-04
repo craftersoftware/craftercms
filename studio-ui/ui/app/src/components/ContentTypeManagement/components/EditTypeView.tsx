@@ -1515,7 +1515,7 @@ function updateTypeFromDataSourceUpdate(
 		const field = descriptorFields[key];
 		const fieldType = field?.type;
 		const serializer = fieldType ? valueSerializersLookup[fieldType] : undefined;
-		serializedValues[key] = serializer ? serializer(field, value) : value;
+		serializedValues[key] = serializer ? serializer(value, { field, contentTypesById: {} }) : value;
 	});
 	const nextDataSource = { ...selectedDataSource };
 	// When updating a new data source, we need to exclude NEW prop from the new datasource content
@@ -1866,7 +1866,6 @@ export default EditTypeView;
 //  - Can we move display-template, no-template-required and merge-strategy to the root of the type def? If so, update BE, UI and UM
 //    - If not moved, drop `label` & `type`?
 //  - Should we rename the root tag on form-def.xml from `form` to something like `type`, `contentType` or so?
-//  - Can we drop iceId?
 // 	- Should we use UM to remove from maxlength property and move into constraints? Also fix spelling to `maxLength`
 // 	- Can we add created, modified, createdBy and modifiedBy to the XML?
 //  - Assess removal of internalName/disabled controls.

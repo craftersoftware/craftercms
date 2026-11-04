@@ -34,6 +34,11 @@ export function defineDataSourceModule(module: DataSourceModule): DataSourceModu
 type InstanceExtras = Pick<DataSourceInstance, 'getActions'> &
 	Partial<Pick<DataSourceInstance, 'interfaces' | 'capabilities' | 'list' | 'edit' | 'refreshItem' | 'flags'>>;
 
+/** Each instance gets its own lists, so one instance changing them can't affect the module or later instances. */
+function copyList<T>(list: readonly T[]): readonly T[] {
+	return Array.isArray(list) ? [...list] : list;
+}
+
 /**
  * Builds a {@link DataSourceInstance} from the form-definition record + module metadata.
  *
@@ -51,8 +56,8 @@ export function createInstanceFromRecord(
 		id: record.id,
 		type: module.type,
 		title: record.title,
-		interfaces: extras.interfaces ?? module.interfaces,
-		capabilities: extras.capabilities ?? module.capabilities,
+		interfaces: copyList(extras.interfaces ?? module.interfaces),
+		capabilities: copyList(extras.capabilities ?? module.capabilities),
 		getActions: extras.getActions,
 		list: extras.list,
 		edit: extras.edit,

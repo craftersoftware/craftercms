@@ -23,9 +23,7 @@ import ListSubheader from '@mui/material/ListSubheader';
 import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions, type DataSourceListOptionGroup } from '../dataSourceHooks/useDataSourceListOptions';
 
-export interface DropdownProps extends ControlProps {
-	value: string;
-}
+export type DropdownProps = ControlProps<string>;
 
 export function Dropdown(props: DropdownProps) {
 	const { field, value, setValue, readonly, autoFocus, dataSources } = props;

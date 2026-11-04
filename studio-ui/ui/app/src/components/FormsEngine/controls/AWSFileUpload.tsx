@@ -35,9 +35,7 @@ export interface AwsFile {
 	url: string;
 }
 
-export interface AwsFileUploadProps extends ControlProps {
-	value: AwsFile;
-}
+export type AwsFileUploadProps = ControlProps<AwsFile>;
 
 export function AwsFileUpload(props: AwsFileUploadProps) {
 	const { field, value, setValue, readonly: formReadonly } = props;

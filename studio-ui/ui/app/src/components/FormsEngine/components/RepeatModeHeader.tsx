@@ -20,33 +20,25 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage } from 'react-intl';
 import { FormsEngineProps } from '../FormsEngine';
-import Collapse from '@mui/material/Collapse';
+import { formHeaderTitleMinHeight } from './formHeaderMetrics';
 
-export function RepeatModeHeader({
-	repeat,
-	collapse = false
-}: {
-	repeat: FormsEngineProps['repeat'];
-	collapse?: boolean;
-}) {
+export function RepeatModeHeader({ repeat }: { repeat: FormsEngineProps['repeat'] }) {
 	const { contentType } = useContext(ItemMetaContext);
 	return (
 		<Container sx={{ py: 1 }}>
-			<Typography variant="h6" component="h3">
+			<Typography variant="h6" component="h3" sx={{ minHeight: formHeaderTitleMinHeight }}>
 				{repeat.index === undefined ? (
 					<FormattedMessage defaultMessage="New Repeat Item" />
 				) : (
 					<FormattedMessage defaultMessage="Item # {number}" values={{ number: repeat.index + 1 }} />
 				)}
 			</Typography>
-			<Collapse in={!collapse}>
-				<Typography variant="body2" color="textSecondary">
-					<FormattedMessage
-						defaultMessage="{name} Repeat Group"
-						values={{ name: contentType.fields[repeat.fieldId].name }}
-					/>
-				</Typography>
-			</Collapse>
+			<Typography variant="body2" color="textSecondary">
+				<FormattedMessage
+					defaultMessage="{name} Repeat Group"
+					values={{ name: contentType.fields[repeat.fieldId].name }}
+				/>
+			</Typography>
 		</Container>
 	);
 }

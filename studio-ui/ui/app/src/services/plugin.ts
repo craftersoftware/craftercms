@@ -16,10 +16,11 @@
 
 import { isValidElementType } from 'react-is';
 import type { ComponentType } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import LookupTable from '../models/LookupTable';
 import { augmentTranslations } from '../utils/i18n';
 import { components, plugins } from '../utils/constants';
-import PluginDescriptor from '../models/PluginDescriptor';
+import type PluginDescriptor from '../models/PluginDescriptor';
 import PluginFileBuilder from '../models/PluginFileBuilder';
 import { WidgetRecord } from '../models/WidgetRecord';
 import type PluginDescriptorWithSource from '../models/PluginDescriptorWithSource';
@@ -34,19 +35,22 @@ import {
 	registerControlContribution
 } from '../components/FormsEngine/controls/registry';
 import { controlMap } from '../components/FormsEngine/lib/controlMap';
+import { controlMap as descriptorControlMap } from '../components/ContentTypeManagement/controlMap';
 import type { ValueRetriever, ValueSerializer } from '../components/FormsEngine/lib/controlValueTypes';
-import type { ControlProps } from '../components/FormsEngine/types';
-import type { ValidatorFunctionDef } from '../components/FormsEngine/lib/validators';
+import { CONTROL_API_VERSION, type AnyValue, type ControlProps } from '../components/FormsEngine/types';
+import type { Validator } from '../components/FormsEngine/lib/validators';
 
 const DEFAULT_FILE_NAME = 'index.js';
 
 type ControlContributionCommit = {
 	typeKey: string;
-	Component: ComponentType<ControlProps>;
+	Component: ComponentType<ControlProps<AnyValue>>;
 	bindings: readonly DataSourceBinding[];
-	valueRetriever?: ValueRetriever;
-	valueSerializer?: ValueSerializer;
-	validator?: ValidatorFunctionDef;
+	fieldChrome?: boolean;
+	fieldSx?: SxProps<Theme>;
+	valueRetriever?: ValueRetriever<AnyValue>;
+	valueSerializer?: ValueSerializer<AnyValue>;
+	validator?: Validator<AnyValue>;
 };
 
 function isPluginFileBuilder(target: any): target is PluginFileBuilder {
@@ -173,7 +177,9 @@ export function isPluginRegistered(plugin: PluginDescriptor): boolean {
  * `plugin.id` was already registered (e.g. widget host loaded first without FE contributions).
  *
  * FE contributions are fully preflighted before any registry write so a mid-flight failure leaves
- * no partial DS/control state. Returns `false` if the id already existed; merges contributions onto
+ * no partial DS/control state. A control or data-source `apiVersion` other than the current
+ * contract (a missing value counts as that version) throws here, same as any other invalid contribution.
+ * Returns `false` if the id already existed; merges contributions onto
  * the stored descriptor. Prefer this over calling FE registries directly from plugin code.
  */
 export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuilder): boolean {
@@ -185,14 +191,14 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 	const dsToCommit: DataSourceModule[] = [];
 	if (dataSources) {
 		for (const [typeKey, module] of Object.entries(dataSources)) {
-			validateDataSourceModule(module);
+			validateDataSourceModule(module, { pluginId: plugin.id, type: typeKey });
 			if (module.type !== typeKey) {
 				throw new TypeError(
 					`Plugin "${plugin.id}" dataSources key "${typeKey}" does not match module.type "${module.type}".`
 				);
 			}
 			const existing = dataSourceModuleRegistry.get(module.type);
-			if (existing && existing !== module) {
+			if (existing && !dataSourceModuleRegistry.isRegisteredFrom(module)) {
 				throw new Error(
 					`Plugin "${plugin.id}" cannot register data-source type "${module.type}": a different module is already registered.`
 				);
@@ -209,7 +215,9 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 			if (!typeKey) {
 				throw new TypeError(`Plugin "${plugin.id}" controls map contains an empty type key.`);
 			}
-			if (typeKey in controlMap) {
+			// Both maps hold types a form can carry in `field.type`, and both own their retriever, serializer and
+			// validator, so a plugin claiming one of them would render but never have its hooks used.
+			if (typeKey in controlMap || typeKey in descriptorControlMap) {
 				throw new Error(
 					`Plugin "${plugin.id}" cannot register control type "${typeKey}": it collides with a built-in control.`
 				);
@@ -217,9 +225,25 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 			if (!entry || typeof entry !== 'object') {
 				throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" must be a ControlPluginContribution object.`);
 			}
+			// Omitted apiVersion is the current contract. Anything else is refused before registry writes,
+			// the same as a missing Component or any other invalid control contribution.
+			const reportedVersion = (entry as { apiVersion?: unknown }).apiVersion;
+			if ((reportedVersion ?? CONTROL_API_VERSION) !== CONTROL_API_VERSION) {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" reports unsupported apiVersion (got ${typeof reportedVersion} "${String(reportedVersion)}"; expected the number ${CONTROL_API_VERSION}).`
+				);
+			}
 			if (!isValidElementType(entry.Component)) {
 				throw new TypeError(
 					`Plugin "${plugin.id}" control "${typeKey}" must declare a valid React Component on ControlPluginContribution.Component.`
+				);
+			}
+			if (entry.fieldChrome != null && typeof entry.fieldChrome !== 'boolean') {
+				throw new TypeError(`Plugin "${plugin.id}" control "${typeKey}" fieldChrome must be a boolean when provided.`);
+			}
+			if (entry.fieldSx != null && typeof entry.fieldSx !== 'object' && typeof entry.fieldSx !== 'function') {
+				throw new TypeError(
+					`Plugin "${plugin.id}" control "${typeKey}" fieldSx must be an sx object, array or function when provided.`
 				);
 			}
 			if (entry.valueRetriever != null && typeof entry.valueRetriever !== 'function') {
@@ -253,6 +277,8 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 				typeKey,
 				Component: entry.Component,
 				bindings,
+				fieldChrome: entry.fieldChrome,
+				fieldSx: entry.fieldSx,
 				valueRetriever: entry.valueRetriever,
 				valueSerializer: entry.valueSerializer,
 				validator: entry.validator
@@ -264,17 +290,22 @@ export function registerPlugin(plugin: PluginDescriptor, source?: PluginFileBuil
 	dsToCommit.forEach((module) => {
 		dataSourceModuleRegistry.register(module);
 	});
-	controlsToCommit.forEach(({ typeKey, Component, bindings, valueRetriever, valueSerializer, validator }) => {
-		registerControlContribution(typeKey, {
-			Component,
-			bindings,
-			pluginId: plugin.id,
-			valueRetriever,
-			valueSerializer,
-			validator
-		});
-		registerControlDataSourceBindings(typeKey, bindings);
-	});
+	controlsToCommit.forEach(
+		({ typeKey, Component, bindings, fieldChrome, fieldSx, valueRetriever, valueSerializer, validator }) => {
+			registerControlContribution(typeKey, {
+				Component,
+				bindings,
+				fieldChrome,
+				fieldSx,
+				pluginId: plugin.id,
+				valueRetriever,
+				valueSerializer,
+				validator
+			});
+			// A control that declares no bindings keeps whatever `registerDataSourceBindings` registered for the type.
+			if (bindings.length) registerControlDataSourceBindings(typeKey, bindings);
+		}
+	);
 
 	if (alreadyRegistered) {
 		const existing = plugins.get(plugin.id);

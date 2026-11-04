@@ -192,6 +192,11 @@ export function getControllerPath(type: SystemType): string {
 	return `/scripts/${type === 'page' ? 'pages' : 'components'}`;
 }
 
+/** The `objectGroupId` of an item: the first 4 characters of its `objectId`. */
+export function createObjectGroupId(objectId: string): string {
+	return objectId.substring(0, 4);
+}
+
 // For nested embedded components, parentPath will be the last non-embedded (shared) path, meaning that the parent
 // path will always be a 'physical' path.
 const availableMacrosRegex = /{(objectId|objectGroupId|objectGroupId2|year|month|yyyy|mm|dd|parentPath(\[[0-9]+])?)}/;
@@ -219,7 +224,7 @@ export function processPathMacros(dependencies: {
 
 	// The objectGroupId is the first 4 characters of the objectId, so compute if not provided.
 	if (objectGroupId === undefined && objectId) {
-		objectGroupId = objectId.substring(0, 4);
+		objectGroupId = createObjectGroupId(objectId);
 	}
 
 	if (processedPath.includes('{objectId}')) {
