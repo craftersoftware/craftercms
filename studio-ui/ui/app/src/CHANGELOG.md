@@ -194,7 +194,7 @@
   * Updated `Clipboard` interface: removed `paths` property, added `includeChildren` property.
 * [common-api.js]
   * Removed `CStudioAuthoring.Operations.uploadCMISAsset` and `CStudioAuthoring.Operations.openCMISUploadDialog`.
-  * Removed legacy Forms Engine entry points: `CStudioAuthoring.Operations.openContentWebForm`, `openContentWebFormWithPermission`, `openContentWebFormLegacyFormServer`, `performSimpleIceEdit`, `createNewContent`, `createNewContentForType`, `editContent`, `viewContent`, `addMetadata`, `reorderServiceCreatePanel`, and `CStudioAuthoring.Operations.form` (`getPluginInfo`, `getPluginError`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
+  * Removed legacy Forms Engine entry points: `CStudioAuthoring.Operations.openContentWebForm`, `openContentWebFormWithPermission`, `openContentWebFormLegacyFormServer`, `performSimpleIceEdit`, `createNewContent`, `createNewContentForType`, `editContent`, `viewContent`, `addMetadata`; `CStudioAuthoring.Service.reorderServiceCreatePanel`; and `CStudioAuthoring.Utils.form` (`getPluginInfo`, `getPluginError`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * Removed `CStudioAuthoring.ChildFormManager` and `CStudioAuthoring.InContextEdit`.
   * Removed `CStudioAuthoring.Constants.CONTROL_URL` and `CStudioAuthoring.Constants.DATASOURCE_URL` (legacy FE1 control/datasource script roots).
 * Removed the legacy Forms Engine runtime (`forms-engine.js`, `cstudio-forms` controls/datasources) and Type Builder (`content-types.js`, content-type-propsheet). Custom FE1 controls/datasources and the legacy Type Builder no longer load.
