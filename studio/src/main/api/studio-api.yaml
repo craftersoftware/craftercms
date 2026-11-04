@@ -10991,9 +10991,6 @@ components:
                 imageThumbnail:
                     type: string
                     description: Path or URL to the thumbnail image.
-                noThumbnail:
-                    type: boolean
-                    description: Whether the content type has no thumbnail.
                 pathIncludes:
                     type: array
                     items:
