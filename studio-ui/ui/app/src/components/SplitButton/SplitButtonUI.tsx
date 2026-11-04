@@ -97,7 +97,7 @@ export function SplitButtonUI(props: SplitButtonUIProps) {
 				role={undefined}
 				transition
 				disablePortal={disablePortal}
-				sx={{ zIndex: 2 }}
+				sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
 			>
 				{({ TransitionProps, placement }) => (
 					<Grow

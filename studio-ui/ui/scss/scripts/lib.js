@@ -19,7 +19,6 @@ const fs = require('fs'),
 	OUT_DIR = '../../static-assets/styles',
 	FILES = [
 		'temp',
-		'forms-engine',
 		{ input: 'user-dashboard/user-dashboard', output: 'main' },
 		'search',
 		'uppy',

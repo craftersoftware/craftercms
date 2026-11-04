@@ -58,7 +58,7 @@ import SystemType from '../../models/SystemType';
 import { PathNavigatorTreeItemProps } from './PathNavigatorTreeItem';
 import { UNDEFINED } from '../../utils/constants';
 import SimpleAjaxError from '../../models/SimpleAjaxError';
-import { createComponentId, pickShowContentFormAction } from '../../utils/system';
+import { createComponentId, showContentFormAction } from '../../utils/system';
 import { pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
@@ -313,7 +313,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 
 	const onPreview = (item: ContentItem) => {
 		if (isEditableViaFormEditor(item)) {
-			dispatch(pickShowContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
+			dispatch(showContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
 		} else if (isMediaContent(item.mimeType) || isPdfDocument(item.mimeType)) {
 			dispatch(
 				pushDialog({
