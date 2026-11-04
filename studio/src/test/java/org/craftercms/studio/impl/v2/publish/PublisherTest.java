@@ -30,6 +30,7 @@ import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
+import org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -88,6 +89,9 @@ public class PublisherTest {
 	ActivityStreamService activityService;
 
 	@Mock
+	StagingDeployerTargetEnsurer stagingDeployerTargetEnsurer;
+
+	@Mock
 	ApplicationEventPublisher eventPublisher;
 
 	@Spy
@@ -142,6 +146,33 @@ public class PublisherTest {
 
 		verify(site2).getState();
 		verify(publisher, never()).lockAndPublish(anyLong(), anyLong());
+		verify(stagingDeployerTargetEnsurer, never()).ensureStagingTarget(anyString());
+	}
+
+	@Test
+	public void publishEnsuresStagingTargetAfterThePublishingLockIsReleased() throws ServiceLayerException {
+		when(generalLockService.tryLock(StudioUtils.getPublishingLockKey(SITE_ID))).thenReturn(true);
+		when(generalLockService.tryLock(StudioUtils.getPublishPackageLockKey(PACKAGE_ID))).thenReturn(true);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doNothing().when(publisher).doPublish(any());
+
+		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
+
+		InOrder inOrder = inOrder(generalLockService, stagingDeployerTargetEnsurer);
+		inOrder.verify(generalLockService).unlock(StudioUtils.getPublishingLockKey(SITE_ID));
+		inOrder.verify(stagingDeployerTargetEnsurer).ensureStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void publishSkipsStagingTargetWhenStagingIsDisabled() throws ServiceLayerException {
+		when(generalLockService.tryLock(StudioUtils.getPublishingLockKey(SITE_ID))).thenReturn(true);
+		when(generalLockService.tryLock(StudioUtils.getPublishPackageLockKey(PACKAGE_ID))).thenReturn(true);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).doPublish(any());
+
+		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
+
+		verify(stagingDeployerTargetEnsurer, never()).ensureStagingTarget(anyString());
 	}
 
 	@Test

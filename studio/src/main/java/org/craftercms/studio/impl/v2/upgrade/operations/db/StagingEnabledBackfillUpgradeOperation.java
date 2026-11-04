@@ -20,7 +20,6 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
-import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
 import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
@@ -30,7 +29,6 @@ import org.craftercms.studio.impl.v2.upgrade.StudioUpgradeContext;
 import org.craftercms.studio.impl.v2.upgrade.operations.AbstractUpgradeOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.client.RestClientException;
 
 import java.beans.ConstructorProperties;
 import java.io.IOException;
@@ -46,9 +44,14 @@ import static java.lang.String.format;
  * into {@code site.staging_enabled}. A site whose flag is already set is skipped, so a retry does not
  * touch a site that finished on an earlier attempt. Item targets and blob-store assets are copied from
  * live only when this attempt creates the staging branch. A branch that already exists is left as
- * published, and the deployer target and flag are still written. If a later step fails, that new branch
+ * published, and the flag is still written. If a later step fails, that new branch
  * is deleted, the flag stays unset, and this upgrade fails so the version does not advance. Runs before
  * the site-config upgrade removes the element.
+ * <p>
+ * Deployer is not called here. This upgrade runs while Studio is still starting, and with serverless
+ * delivery a down or slow Deployer would fail it and block startup.
+ * {@link org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer} creates the staging
+ * target after the site is ready, and a later publish retries that call if it failed.
  */
 public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOperation {
 
@@ -62,21 +65,18 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 	private final ServicesConfig servicesConfig;
 	private final StudioBlobAwareContentRepository contentRepository;
 	private final ItemTargetDAO itemTargetDao;
-	private final Deployer deployer;
 
 	@ConstructorProperties({"studioConfiguration", "sitesService", "configurationService", "servicesConfig",
-		"contentRepository", "itemTargetDao", "deployer"})
+		"contentRepository", "itemTargetDao"})
 	public StagingEnabledBackfillUpgradeOperation(StudioConfiguration studioConfiguration, SitesService sitesService,
 												  ConfigurationService configurationService, ServicesConfig servicesConfig,
-												  StudioBlobAwareContentRepository contentRepository, ItemTargetDAO itemTargetDao,
-												  Deployer deployer) {
+												  StudioBlobAwareContentRepository contentRepository, ItemTargetDAO itemTargetDao) {
 		super(studioConfiguration);
 		this.sitesService = sitesService;
 		this.configurationService = configurationService;
 		this.servicesConfig = servicesConfig;
 		this.contentRepository = contentRepository;
 		this.itemTargetDao = itemTargetDao;
-		this.deployer = deployer;
 	}
 
 	@Override
@@ -91,7 +91,7 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 				if (StudioUtils.isLegacyStagingEnabled(site.getSiteId(), studioConfiguration, configurationService)) {
 					enableStaging(context, site);
 				}
-			} catch (ServiceLayerException | IOException | SQLException | RestClientException e) {
+			} catch (ServiceLayerException | IOException | SQLException e) {
 				throw new UpgradeException(format("Failed to backfill staging for site '%s'", site.getSiteId()), e);
 			}
 		}
@@ -115,7 +115,6 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 			} else {
 				logger.info("Site '{}' is not published to live. The staging branch and blobs will be created on the first publish", siteId);
 			}
-			deployer.createStagingTarget(siteId);
 			try (Connection connection = context.getConnection();
 				 PreparedStatement statement = connection.prepareStatement(UPDATE_STAGING_ENABLED)) {
 				statement.setString(1, siteId);

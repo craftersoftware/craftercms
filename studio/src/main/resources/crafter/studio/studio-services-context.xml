@@ -856,6 +856,18 @@
 		</constructor-arg>
 	</bean>
 
+	<bean id="stagingDeployerTargetEnsurer"
+	      class="org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer">
+		<constructor-arg name="sitesService" ref="sitesService"/>
+		<constructor-arg name="servicesConfig" ref="cstudioServicesConfig"/>
+		<constructor-arg name="siteBootstrapStateProvider" ref="siteBootstrapStateProvider"/>
+		<constructor-arg name="deployer" ref="allDeployers"/>
+		<constructor-arg name="executor">
+			<bean class="org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer"
+			      factory-method="daemonExecutor" destroy-method="shutdownNow"/>
+		</constructor-arg>
+	</bean>
+
 	<!-- ////////////////////////////////////// -->
 	<!--         Dependencies                   -->
 	<!-- ////////////////////////////////////// -->

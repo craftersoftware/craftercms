@@ -71,6 +71,7 @@ import org.craftercms.studio.api.v2.task.TaskProgress.Stage;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
+import org.craftercms.studio.impl.v2.deployment.StagingDeployerTargetEnsurer;
 import org.craftercms.studio.impl.v2.utils.DateUtils;
 import org.craftercms.studio.impl.v2.utils.PublishUtils;
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
@@ -107,10 +108,11 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
 	private final SqlSessionFactory sqlSessionFactory;
+	private final StagingDeployerTargetEnsurer stagingDeployerTargetEnsurer;
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "sqlSessionFactory"})
+		"activityService", "taskManager", "sqlSessionFactory", "stagingDeployerTargetEnsurer"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -120,7 +122,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final PlatformTransactionManager transactionManager,
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
-			 final SqlSessionFactory sqlSessionFactory) {
+			 final SqlSessionFactory sqlSessionFactory,
+			 final StagingDeployerTargetEnsurer stagingDeployerTargetEnsurer) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
 		this.auditService = auditService;
@@ -132,6 +135,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.activityService = activityService;
 		this.taskManager = taskManager;
 		this.sqlSessionFactory = sqlSessionFactory;
+		this.stagingDeployerTargetEnsurer = stagingDeployerTargetEnsurer;
 	}
 
 	@Async
@@ -163,6 +167,21 @@ public class Publisher implements ApplicationEventPublisherAware {
 			}
 		} finally {
 			generalLockService.unlock(lockKey);
+			ensureStagingTargetAfterPublish(siteId);
+		}
+	}
+
+	/**
+	 * The staging backfill does not create the delivery target during startup. Retry that after the publish
+	 * locks are released, once a first publish has had a chance to create the staging branch.
+	 */
+	private void ensureStagingTargetAfterPublish(String siteId) {
+		try {
+			if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+				stagingDeployerTargetEnsurer.ensureStagingTarget(siteId);
+			}
+		} catch (Exception e) {
+			logger.warn("Failed to schedule the staging deployer target for site '{}'", siteId, e);
 		}
 	}
 
