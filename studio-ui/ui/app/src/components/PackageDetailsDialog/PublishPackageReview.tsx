@@ -30,7 +30,7 @@ import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
-import { PACKAGE_APPROVED, PACKAGE_REJECTED } from '../../utils/constants';
+import { PACKAGE_APPROVED, PACKAGE_REJECTED, PACKAGE_SUBMITTED } from '../../utils/constants';
 
 export interface PublishPackageReviewProps {
 	publishPackage: PublishPackage;
@@ -190,7 +190,7 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 											)}
 										</Typography>
 									</>
-								) : (
+								) : publishPackage.approvalState === PACKAGE_REJECTED ? (
 									<>
 										<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 											<FormattedMessage defaultMessage="Reason" />
@@ -199,7 +199,16 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 											{publishPackage.reviewerComment || <FormattedMessage defaultMessage="No reason provided" />}
 										</Typography>
 									</>
-								)}
+								) : publishPackage.approvalState === PACKAGE_SUBMITTED ? (
+									<>
+										<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+											<FormattedMessage defaultMessage="Comment" />
+										</Typography>
+										<Typography variant="body1" sx={{ mb: 2 }}>
+											{publishPackage.reviewerComment || <FormattedMessage defaultMessage="No comment provided" />}
+										</Typography>
+									</>
+								) : null}
 							</Grid>
 						</Grid>
 					</Paper>
