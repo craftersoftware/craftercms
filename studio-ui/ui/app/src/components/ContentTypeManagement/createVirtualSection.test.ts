@@ -18,7 +18,12 @@ import '../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-const { createVirtualSection } = await import('./utils.ts');
+const { commonPropertiesSectionId, createVirtualSection, createVirtualTypeForDataSource, createVirtualTypeForField } =
+	await import('./utils.ts');
+const { controlDescriptors } = await import('./descriptors/controls/index.ts');
+const { dataSourceDescriptors } = await import('./descriptors/dataSources/index.ts');
+
+const formatMessage = ((descriptor: { defaultMessage?: string }) => descriptor.defaultMessage) as never;
 
 describe('createVirtualSection ids', () => {
 	it('gives new sections unique ids, even when they share a title', () => {
@@ -28,15 +33,43 @@ describe('createVirtualSection ids', () => {
 		assert.equal(new Set(ids).size, sections.length);
 	});
 
-	it('gives a duplicated section a new id and keeps the rest of its data', () => {
-		const original = createVirtualSection({ title: 'Details', fields: ['a', 'b'] });
-		const copy = createVirtualSection({ ...original, id: undefined });
-		assert.notEqual(copy.id, original.id);
-		assert.equal(copy.title, original.title);
-		assert.deepEqual(copy.fields, original.fields);
+	it('keeps an id that was provided, including when the section is spread into the call', () => {
+		const original = createVirtualSection({ title: 'Details', fields: ['a'] });
+		assert.equal(createVirtualSection({ id: 'section-3', title: 'Details', fields: [] }).id, 'section-3');
+		assert.equal(createVirtualSection({ ...original }).id, original.id);
 	});
 
-	it('keeps an id that was provided', () => {
-		assert.equal(createVirtualSection({ id: 'section-3', title: 'Details', fields: [] }).id, 'section-3');
+	it('generates an id when the data has an undefined, null or empty one', () => {
+		for (const id of [undefined, null, '']) {
+			const section = createVirtualSection({ id, title: 'Details', fields: [] });
+			assert.equal(typeof section.id, 'string');
+			assert.ok(section.id.length > 0, `id ${String(id)} is replaced`);
+		}
+	});
+});
+
+describe('section ids in descriptor-derived virtual types', () => {
+	const descriptorsByName = {
+		...Object.fromEntries(Object.entries(controlDescriptors).map(([name, d]) => [`field ${name}`, d])),
+		...Object.fromEntries(Object.entries(dataSourceDescriptors).map(([name, d]) => [`data source ${name}`, d]))
+	};
+
+	it('are unique within every field and data source panel', () => {
+		const repeated: string[] = [];
+		for (const [name, descriptor] of Object.entries(descriptorsByName)) {
+			const virtualType = name.startsWith('field ')
+				? createVirtualTypeForField(descriptor, formatMessage)
+				: createVirtualTypeForDataSource(descriptor, formatMessage);
+			const ids = virtualType.sections.map((section) => section.id);
+			if (new Set(ids).size !== ids.length) repeated.push(`${name}: ${ids.join(', ')}`);
+		}
+		assert.deepEqual(repeated, []);
+	});
+
+	it('use a Basic Properties section id that no descriptor declares for itself', () => {
+		for (const [name, descriptor] of Object.entries(descriptorsByName)) {
+			const own = (descriptor.sections ?? []).map((section) => section.id);
+			assert.ok(!own.includes(commonPropertiesSectionId), `${name} declares ${commonPropertiesSectionId}`);
+		}
 	});
 });

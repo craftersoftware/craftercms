@@ -491,6 +491,27 @@ function parseLegacyFormDefinitionFields(
 	});
 }
 
+/**
+ * Resolves the id of each section. Saved ids are kept so they stay stable across save and reload. A section with no
+ * saved id, or one that repeats an earlier section's id, gets a positional id that doesn't collide with any other.
+ */
+function resolveLegacySectionIds(legacySections: Array<{ id?: string }>): string[] {
+	const used = new Set<string>();
+	const ids = legacySections.map((legacySection) => {
+		const savedId = legacySection.id == null ? '' : String(legacySection.id).trim();
+		if (!savedId || used.has(savedId)) return null;
+		used.add(savedId);
+		return savedId;
+	});
+	return ids.map((id, index) => {
+		if (id) return id;
+		let candidate = `section-${index}`;
+		for (let suffix = 1; used.has(candidate); suffix++) candidate = `section-${index}-${suffix}`;
+		used.add(candidate);
+		return candidate;
+	});
+}
+
 /** Maps a form-definition document into the Forms Engine content-type model. */
 export function parseLegacyFormDefinition(definition: LegacyFormDefinition): ContentType {
 	// A missing document parses as an empty form. `{}` has no sections and must not throw.
@@ -536,7 +557,9 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 	});
 
 	// Parse Sections & Fields
-	asArray<LegacyFormDefinitionSection>(definition.sections?.section).forEach((legacySection, index) => {
+	const legacySections = asArray<LegacyFormDefinitionSection & { id?: string }>(definition.sections?.section);
+	const sectionIds = resolveLegacySectionIds(legacySections);
+	legacySections.forEach((legacySection, index) => {
 		const fieldIds = [];
 		parseLegacyFormDefinitionFields(
 			legacySection.fields?.field,
@@ -548,7 +571,7 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 		);
 
 		sections.push({
-			id: `section-${index}`,
+			id: sectionIds[index],
 			title: legacySection.title,
 			color: legacySection.color ?? toColor(legacySection.title, 0.7),
 			description: legacySection.description,

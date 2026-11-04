@@ -118,14 +118,17 @@ interface BaseProps extends Partial<FieldModeProps & SectionModeProps & DataSour
 
 export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | SectionModeProps | DataSourceModeProps);
 
-let hasWarnedMissingSectionId = false;
-function getSectionKey(typeId: string, section: ContentTypeSection, sectionIndex: number): string {
+const typesWarnedAboutMissingSectionIds = new WeakSet<ContentType>();
+const fallbackKeysBySection = new WeakMap<ContentTypeSection, string>();
+function getSectionKey(typeId: string, virtualType: ContentType, section: ContentTypeSection): string {
 	if (section.id) return `${typeId}-${section.id}`;
-	if (!hasWarnedMissingSectionId) {
-		hasWarnedMissingSectionId = true;
-		console.warn(`Section "${section.title}" has no id. Falling back to its index (${sectionIndex}) as the React key.`);
+	if (!typesWarnedAboutMissingSectionIds.has(virtualType)) {
+		typesWarnedAboutMissingSectionIds.add(virtualType);
+		console.warn(`Section "${section.title}" has no id. Using a generated key for it instead.`);
 	}
-	return `${typeId}-index-${sectionIndex}`;
+	// Tied to the section object rather than its position, so reordering sections doesn't remount them.
+	if (!fallbackKeysBySection.has(section)) fallbackKeysBySection.set(section, nanoid());
+	return `${typeId}-${fallbackKeysBySection.get(section)}`;
 }
 
 function FieldFormViewBody(props: FieldFormViewProps) {
@@ -191,7 +194,7 @@ function FieldFormViewBody(props: FieldFormViewProps) {
 				{isPanelReady &&
 					virtualType.sections.map((section, sectionIndex) => (
 						<SectionAccordion
-							key={getSectionKey(typeId, section, sectionIndex)}
+							key={getSectionKey(typeId, virtualType, section)}
 							section={section}
 							colorize={false}
 							renderControl={(fieldId, fieldIndex) => {
