@@ -22,9 +22,10 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it } from 'node:test';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
+import type { PrimitiveAtom } from 'jotai';
 
 const React = await import('react');
 const { act } = await import('react');
@@ -32,12 +33,18 @@ const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider: ReduxProvider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
-const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
+const { atom, createStore, useAtomValue, Provider: JotaiProvider } = await import('jotai');
 const { Repeat } = await import('./Repeat.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('../lib/formsEngineContext.ts');
 const { createFormVisibilityAtoms } = await import('../lib/formVisibility.ts');
 const { valueSerializersLookup } = await import('../lib/valueSerializers.ts');
+const { carryReplacedItem, repeatItemKeysFor } = await import('../lib/repeatItemKeys.ts');
+const { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } =
+	await import('../lib/repeatItemForm.ts');
+
+// MUI's dialog focus trap checks `instanceof ShadowRoot`, which the shared DOM setup does not expose.
+Object.defineProperty(globalThis, 'ShadowRoot', { value: window.ShadowRoot, configurable: true, writable: true });
 
 type Item = Record<string, unknown>;
 
@@ -74,6 +81,7 @@ const deleteButton = (row: HTMLElement) =>
 interface Mounted {
 	host: HTMLElement;
 	jotai: ReturnType<typeof createStore>;
+	valueAtom: PrimitiveAtom<unknown>;
 	pushed: Array<{ onSave(result: { values: Item }): Promise<unknown> }>;
 	setValueCalls: Item[][];
 	/** What the parent form holds. The Repeat gets it as `value`. */
@@ -88,7 +96,7 @@ afterEach(async () => {
 });
 
 /** Mounts Repeat the way the form does: `value` comes from the field atom, and `setValue` writes to it. */
-async function mount(initial: Item[]): Promise<Mounted> {
+async function mount(initial: Item[], options: { live?: boolean } = {}): Promise<Mounted> {
 	const jotai = createStore();
 	const valueAtom = atom<unknown>(initial);
 	const pushed: Mounted['pushed'] = [];
@@ -111,7 +119,11 @@ async function mount(initial: Item[]): Promise<Mounted> {
 	};
 	const globalApi = { pushForm: (props: Mounted['pushed'][number]) => pushed.push(props) };
 	function Host() {
-		const [value, setRendered] = React.useState<Item[]>(initial);
+		const [local, setRendered] = React.useState<Item[]>(initial);
+		const stored = useAtomValue(valueAtom) as Item[];
+		// Live is how the form renders: the control's value follows the field atom. Otherwise it only changes through
+		// setValue, which stands for a render that has not happened yet when the store is written directly.
+		const value = options.live ? stored : local;
 		rerender = setRendered;
 		return React.createElement(Repeat, {
 			field,
@@ -165,6 +177,7 @@ async function mount(initial: Item[]): Promise<Mounted> {
 	const mounted: Mounted = {
 		host,
 		jotai,
+		valueAtom,
 		pushed,
 		setValueCalls,
 		async setStored(next, options = {}) {
@@ -241,18 +254,158 @@ describe('Repeat row keys', () => {
 	});
 });
 
+/** What the Experience Builder launch in FormsEngine builds: its own props, writing to the store, with the shared keys. */
+const launchProps = (mounted: Mounted, index: number) =>
+	repeatItemFormProps<Item>({
+		fieldId: 'rows_o',
+		index,
+		getItems: () => (mounted.jotai.get(mounted.valueAtom) as Item[]) ?? [],
+		keys: repeatItemKeysFor<Item>(mounted.valueAtom),
+		setItems: (next) => mounted.jotai.set(mounted.valueAtom, next)
+	});
+
+describe('Repeat row keys on the other item-replacing paths', () => {
+	it('keeps the row of an item saved from the Experience Builder launch', async () => {
+		const mounted = await mount([a(), { name_s: 'b' }, { name_s: 'c' }], { live: true });
+		const { host } = mounted;
+		const rowB = rowFor(host, 'b');
+		await act(async () => {
+			await launchProps(mounted, 1).onSave({ values: { name_s: 'b2' } });
+		});
+		assert.deepEqual(titles(host), ['a', 'b2', 'c']);
+		sameRow(rowFor(host, 'b2'), rowB, 'b2');
+	});
+
+	it('keeps the row on each selected-fields write, which merges into a new object every time', async () => {
+		const mounted = await mount([a(), { name_s: 'b' }, { name_s: 'c' }], { live: true });
+		const { host } = mounted;
+		const rowB = rowFor(host, 'b');
+		// FormsEngine writes the open item into the parent on entry and on each edit.
+		for (const name of ['b1', 'b2']) {
+			await act(async () => {
+				const current = mounted.jotai.get(mounted.valueAtom) as Item[];
+				const next = writeItemToParent(current, 1, { name_s: name });
+				carryReplacedItem(repeatItemKeysFor<Item>(mounted.valueAtom), current, next, 1);
+				mounted.jotai.set(mounted.valueAtom, next);
+			});
+			sameRow(rowFor(host, name), rowB, name);
+		}
+	});
+
+	it('keeps the row when closing the item form restores the opened values', async () => {
+		const mounted = await mount([a(), { name_s: 'b' }, { name_s: 'c' }], { live: true });
+		const { host } = mounted;
+		const rowB = rowFor(host, 'b');
+		await act(async () => {
+			const current = mounted.jotai.get(mounted.valueAtom) as Item[];
+			const edited = writeItemToParent(current, 1, { name_s: 'b-edited' });
+			carryReplacedItem(repeatItemKeysFor<Item>(mounted.valueAtom), current, edited, 1);
+			mounted.jotai.set(mounted.valueAtom, edited);
+		});
+		assert.deepEqual(titles(host), ['a', 'b-edited', 'c']);
+		await act(async () => {
+			const current = mounted.jotai.get(mounted.valueAtom) as Item[];
+			const next = stackedRepeatItemAfterClose({
+				wasSelectedItemForm: true,
+				items: current,
+				index: 1,
+				checkpoint: { name_s: 'b' },
+				parentCheckpoint: undefined
+			});
+			carryReplacedItem(repeatItemKeysFor<Item>(mounted.valueAtom), current, next as Item[], 1);
+			mounted.jotai.set(mounted.valueAtom, next as Item[]);
+		});
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+		sameRow(rowFor(host, 'b'), rowB, 'b');
+	});
+});
+
 describe('Repeat remove', () => {
 	it('removes from the stored array, so an item form save after the render is not lost', async () => {
 		const mounted = await mount([a(), { name_s: 'b' }, { name_s: 'c' }]);
 		const { host } = mounted;
 		// The save lands in the store. The Repeat still renders the three original items.
-		const savedB = { name_s: 'b-saved' };
-		await mounted.setStored([a(), savedB, { name_s: 'c' }]);
+		await act(async () => {
+			await launchProps(mounted, 1).onSave({ values: { name_s: 'b-saved' } });
+		});
 		assert.deepEqual(titles(host), ['a', 'b', 'c']);
 		await act(async () => deleteButton(rowFor(host, 'a')).click());
 		const next = mounted.setValueCalls.at(-1);
 		assert.deepEqual(names(next), ['b-saved', 'c']);
-		assert.equal(next[0], savedB);
 		await mounted.unmount();
+	});
+
+	it('removes the item the row shows when the stored array shifted after the render', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		const { host } = mounted;
+		// Stored now has one more item in front. The row for "b" was index 1 when it rendered.
+		await mounted.setStored([{ name_s: 'new' }, ia, ib, ic]);
+		await act(async () => deleteButton(rowFor(host, 'b')).click());
+		const next = mounted.setValueCalls.at(-1);
+		assert.deepEqual(names(next), ['new', 'a', 'c']);
+		assert.ok(next[1] === ia && next[2] === ic);
+	});
+
+	it('removes nothing when the item is no longer stored', async () => {
+		const [ia, ib] = [a(), { name_s: 'b' }];
+		const mounted = await mount([ia, ib]);
+		await mounted.setStored([ia]);
+		await act(async () => deleteButton(rowFor(mounted.host, 'b')).click());
+		assert.equal(mounted.setValueCalls.length, 0);
+	});
+});
+
+describe('Repeat reorder', () => {
+	const touchListMoves = () =>
+		Array.from(document.body.querySelectorAll('[data-testid="KeyboardArrowDownRoundedIcon"]')).map(
+			(icon) => icon.closest('button') as HTMLButtonElement
+		);
+
+	/** Opens the reorder dialog with the touch list, which has buttons where the drag list has drag handles. */
+	async function openReorder(mounted: Mounted) {
+		await act(async () => {
+			mounted.host.querySelector<HTMLElement>('[data-testid="MoreVertRoundedIcon"]').closest('button').click();
+		});
+		const entry = Array.from(document.body.querySelectorAll('li')).find((li) => li.textContent === 'Reorder Items');
+		await act(async () => entry.click());
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+	}
+
+	// The control decides on a touch list when it mounts.
+	beforeEach(() => {
+		(window as unknown as Record<string, unknown>).ontouchstart = null;
+	});
+	afterEach(() => {
+		delete (window as unknown as Record<string, unknown>).ontouchstart;
+	});
+
+	it('reorders the latest stored array, not the one the list was built from', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		await openReorder(mounted);
+		assert.equal(touchListMoves().length, 3);
+		// A save lands after the list was built: "b" is replaced by an edited object that carried its key.
+		const editedB = { name_s: 'b-saved' };
+		repeatItemKeysFor<Item>(mounted.valueAtom).carry(ib, editedB);
+		await mounted.setStored([ia, editedB, ic]);
+		await act(async () => touchListMoves()[0].click());
+		const next = mounted.setValueCalls.at(-1);
+		assert.deepEqual(names(next), ['b-saved', 'a', 'c']);
+		assert.equal(next[0], editedB);
+	});
+
+	it('moves the item the row shows when the stored array shifted after the list was built', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		await openReorder(mounted);
+		const added = { name_s: 'added' };
+		await mounted.setStored([added, ia, ib, ic]);
+		// Move "a" (second row of the list) down one place.
+		await act(async () => touchListMoves()[0].click());
+		const next = mounted.setValueCalls.at(-1);
+		assert.deepEqual(names(next), ['b', 'a', 'c', 'added']);
 	});
 });

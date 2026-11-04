@@ -1403,6 +1403,24 @@ describe('stacked form guards', () => {
 		assert.deepEqual(reported, [selectedChanged]);
 	});
 
+	// An in-flight edit marks the repeat on the parent. The parent is reported once, after the entries.
+	it('reports the parent set once, after the entries', () => {
+		const first = new Set(['a']);
+		const second = new Set(['b']);
+		const parentChanged = new Set<string>();
+		const reported: Array<Set<string>> = [];
+		const inFlight = (changedFieldIds: Set<string>) => ({
+			selected: true,
+			changedFieldIds,
+			fieldId: 'rows_o',
+			savedItem: { a: 'saved', b: 'saved' },
+			currentItem: { a: 'edited', b: 'edited' },
+			setPending() {}
+		});
+		clearStackPendingFlags([inFlight(first), inFlight(second)], parentChanged, (set) => reported.push(set));
+		assert.deepEqual(reported, [first, second, parentChanged]);
+	});
+
 	// An edit during the save stays dirty. A field that matches the saved checkpoint is dropped, and the parent repeat is marked.
 	it('keeps a selected item dirty when it changed during the parent save', () => {
 		const changed = new Set(['icon_s', 'url_s']);

@@ -87,7 +87,7 @@ import {
 	type LaunchFieldsLookup,
 	visibilityFromLaunch
 } from './formVisibility';
-import { notifyChangedFieldIds } from './changedFieldAtoms';
+import { notifyChangedFieldIds, type Setter } from './changedFieldAtoms';
 import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
@@ -314,7 +314,7 @@ function trackFieldChange(
 	field: ContentTypeField,
 	value: unknown,
 	formContext: FieldTrackingContext,
-	set: Parameters<typeof notifyChangedFieldIds>[0]
+	set: Setter
 ): void {
 	if (field.id === XmlKeys.fileName) {
 		const currentFileName = value as string;
@@ -343,6 +343,17 @@ function trackFieldChange(
 		formContext.changedFieldIds.delete(field.id);
 	}
 	notifyChangedFieldIds(set, formContext.changedFieldIds);
+}
+
+/** Makes `values` the checkpoint that edits are compared with, and clears every changed marker. */
+export function applyValuesCheckpoint(
+	context: Pick<StableFormContextProps, 'originalValues' | 'changedFieldIds'>,
+	values: LookupTable<unknown>,
+	set: Setter
+): void {
+	context.originalValues = values;
+	context.changedFieldIds.clear();
+	notifyChangedFieldIds(set, context.changedFieldIds);
 }
 
 function applyAtomUpdate<T>(

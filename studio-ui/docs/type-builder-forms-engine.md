@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 ---
 
@@ -84,6 +84,8 @@ FormsEngine/
     controlMap.ts / dataSourceMap.ts
     valueRetrievers.ts / valueSerializers.ts / validators.ts
     useSaveForm.tsx
+    repeatItemKeys.ts      # row keys per repeat field (WeakMap, never saved); carry on every item replacement
+    changedFieldAtoms.ts   # per-field changed flag atom; whoever mutates changedFieldIds must call notifyChangedFieldIds
     formConsts.ts          # XmlKeys, errors
 ```
 

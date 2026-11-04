@@ -49,6 +49,45 @@ export function createRepeatItemKeys<T>(): RepeatItemKeys<T> {
 	};
 }
 
+// One RepeatItemKeys per repeat field, found from the field's value atom. The repeat control and the item form
+// (a separate FormsEngine instance) write to the same array, so they must share the keys.
+const registry = new WeakMap<object, RepeatItemKeys<any>>();
+
+/** The keys of the repeat field that owns `owner` (its value atom). */
+export function repeatItemKeysFor<T>(owner: object): RepeatItemKeys<T> {
+	let keys = registry.get(owner);
+	if (!keys) {
+		keys = createRepeatItemKeys<T>();
+		registry.set(owner, keys);
+	}
+	return keys;
+}
+
+/**
+ * The one place an in-place item replacement keeps its row: `next[index]` is a new object for the item that was
+ * `previous[index]`. Call it with the arrays before and after the write, from every path that replaces an item.
+ */
+export function carryReplacedItem<T>(
+	keys: RepeatItemKeys<T> | undefined,
+	previous: readonly T[] | null | undefined,
+	next: readonly T[] | null | undefined,
+	index: number | undefined
+): void {
+	if (!keys || index === undefined || !previous || !next) return;
+	keys.carry(previous[index], next[index]);
+}
+
+/**
+ * Where `item` is in `items` now. The same object wins. An item an edit replaced is found by its carried key.
+ * -1 when the item is no longer there.
+ */
+export function findRepeatItemIndex<T>(items: readonly T[], item: T, keys: RepeatItemKeys<T>): number {
+	const index = items.indexOf(item);
+	if (index !== -1) return index;
+	const key = keys.keyOf(item);
+	return key === undefined ? -1 : items.findIndex((candidate) => keys.keyOf(candidate) === key);
+}
+
 /** Removes the item at `index` from the current array. */
 export function removeRepeatItem<T>(items: readonly T[], index: number): T[] {
 	const next = items.concat();

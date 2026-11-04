@@ -48,7 +48,7 @@ import {
 	repeatDisplayFieldIds,
 	repeatSortItems
 } from './repeatItemDisplay';
-import { createRepeatItemKeys, removeRepeatItem, type RepeatItemKeys } from '../lib/repeatItemKeys';
+import { findRepeatItemIndex, removeRepeatItem, repeatItemKeysFor, type RepeatItemKeys } from '../lib/repeatItemKeys';
 import {
 	countLimitValue,
 	getRepeatMinimum,
@@ -66,6 +66,18 @@ export type RepeatItem = Record<string, unknown>;
 
 export type RepeatProps = ControlProps<RepeatItem[]>;
 
+let warnedUnkeyedItem = false;
+/** The stable key of a row. Items are objects, so a missing key means the value is malformed. */
+function rowKey(keys: RepeatItemKeys<RepeatItem>, item: RepeatItem, index: number): string | number {
+	const key = keys.keyOf(item);
+	if (key !== undefined) return key;
+	if (!warnedUnkeyedItem) {
+		warnedUnkeyedItem = true;
+		console.warn('A repeat item is not an object, so its row is keyed by position.');
+	}
+	return index;
+}
+
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
@@ -81,9 +93,9 @@ export function Repeat(props: RepeatProps) {
 	const store = useJotaiStore();
 	const formAtoms = useContext(StableFormContext).atoms;
 	const valueAtom = formAtoms.valueByFieldId[field.id];
-	const itemKeysRef = useRef<RepeatItemKeys<RepeatItem>>(undefined);
-	itemKeysRef.current ??= createRepeatItemKeys<RepeatItem>();
-	const itemKeys = itemKeysRef.current;
+	// Keys are per repeat field, and the item form (another FormsEngine) writes to the same array. See repeatItemKeysFor.
+	const fallbackOwner = useRef({});
+	const itemKeys = repeatItemKeysFor<RepeatItem>(valueAtom ?? fallbackOwner.current);
 	// Read at click time. `value` is the render-time array and can be behind an item form save.
 	const getStoredItems = () => (valueAtom ? ((store.get(valueAtom) as RepeatItem[]) ?? []) : value);
 	const openItemForm = (index?: number, item?: RepeatItem) => {
@@ -94,11 +106,8 @@ export function Repeat(props: RepeatProps) {
 				index,
 				values: item,
 				getItems: getStoredItems,
-				setItems: (next) => {
-					// An edit stores a new object for the item. Its row keeps the key it had.
-					if (index !== undefined) itemKeys.carry(getStoredItems()[index], next[index]);
-					setValue(next);
-				}
+				keys: itemKeys,
+				setItems: (next) => setValue(next)
 			})
 		);
 	};
@@ -129,10 +138,14 @@ export function Repeat(props: RepeatProps) {
 			? formatMessage(repeatMessages.minRequired, { min: minimum })
 			: formatMessage(repeatMessages.deleteItem);
 	/** Removes one item unless the repeat is already at its minimum. */
-	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
+	const handleRemoveItem = (event: ReactMouseEvent, item: RepeatItem) => {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
-		setValue(removeRepeatItem(getStoredItems(), index));
+		const stored = getStoredItems();
+		// The row's item, found in the stored array. Its position may have moved since the render.
+		const index = findRepeatItemIndex(stored, item, itemKeys);
+		if (index === -1) return;
+		setValue(removeRepeatItem(stored, index));
 	};
 	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem, index: number) => {
 		openItemForm(index, item);
@@ -144,11 +157,11 @@ export function Repeat(props: RepeatProps) {
 	};
 	const displayFieldIds = useMemo(() => repeatDisplayFieldIds(field.fields), [field.fields]);
 	const sortList = useMemo<Array<TItem<RepeatItem>>>(
-		() => (sortMode ? repeatSortItems(value, displayFieldIds) : []),
-		[sortMode, value, displayFieldIds]
+		() => (sortMode ? repeatSortItems(value, displayFieldIds, itemKeys) : []),
+		[sortMode, value, displayFieldIds, itemKeys]
 	);
 	const onSortChange = (newList: TItem<RepeatItem>[]) => {
-		setValue(reorderRepeatItems(getStoredItems(), newList));
+		setValue(reorderRepeatItems(getStoredItems(), newList, itemKeys));
 	};
 	return (
 		<>
@@ -201,7 +214,7 @@ export function Repeat(props: RepeatProps) {
 						<List dense>
 							{visibleItems.map(({ item, index }, position) => (
 								<ListItemButton
-									key={itemKeys.keyOf(item) ?? index}
+									key={rowKey(itemKeys, item, index)}
 									divider={position !== visibleItems.length - 1}
 									onClick={(e) => handleEditItem(e, item, index)}
 								>
@@ -230,7 +243,7 @@ export function Repeat(props: RepeatProps) {
 														<IconButton
 															size="small"
 															disabled={isRemoveDisabled}
-															onClick={(e) => handleRemoveItem(e, index)}
+															onClick={(e) => handleRemoveItem(e, item)}
 														>
 															<DeleteOutlined fontSize="small" />
 														</IconButton>

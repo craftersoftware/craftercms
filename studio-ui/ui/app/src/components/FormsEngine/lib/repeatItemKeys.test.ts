@@ -23,8 +23,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { createRepeatItemKeys, removeRepeatItem } = await import('./repeatItemKeys.ts');
-const { reorderRepeatItems } = await import('../controls/repeatItemDisplay.ts');
+const { carryReplacedItem, createRepeatItemKeys, findRepeatItemIndex, removeRepeatItem, repeatItemKeysFor } =
+	await import('./repeatItemKeys.ts');
+const { reorderRepeatItems, repeatSortItems } = await import('../controls/repeatItemDisplay.ts');
 
 describe('createRepeatItemKeys', () => {
 	it('gives each item its own key and returns the same one for the same object', () => {
@@ -81,30 +82,109 @@ describe('removeRepeatItem', () => {
 	});
 });
 
-describe('reorderRepeatItems', () => {
-	const sorted = (...keys: string[]) => keys.map((key) => ({ key }));
+describe('repeatItemKeysFor', () => {
+	it('is one instance per owner', () => {
+		const owner = {};
+		assert.equal(repeatItemKeysFor(owner), repeatItemKeysFor(owner));
+		assert.notEqual(repeatItemKeysFor(owner), repeatItemKeysFor({}));
+	});
+});
 
-	it('orders the stored items by the sorted keys', () => {
-		const [a, b, c] = [{ n: 'a' }, { n: 'b' }, { n: 'c' }];
-		assert.deepEqual(reorderRepeatItems([a, b, c], sorted('2', '0', '1')), [c, a, b]);
+describe('carryReplacedItem', () => {
+	it('moves the key of the replaced item to the new object', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const previous = [{ n: 'a' }, { n: 'b' }];
+		const next = [previous[0], { n: 'b2' }];
+		const key = keys.keyOf(previous[1]);
+		carryReplacedItem(keys, previous, next, 1);
+		assert.equal(keys.keyOf(next[1]), key);
 	});
 
-	it('uses the stored items, so an edit made after the list was built is kept', () => {
+	it('does nothing without keys, an index or an array', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const previous = [{ n: 'a' }];
+		const next = [{ n: 'a2' }];
+		carryReplacedItem(undefined, previous, next, 0);
+		carryReplacedItem(keys, previous, next, undefined);
+		carryReplacedItem(keys, undefined, next, 0);
+		carryReplacedItem(keys, previous, undefined, 0);
+		assert.notEqual(keys.keyOf(next[0]), keys.keyOf(previous[0]));
+	});
+});
+
+describe('findRepeatItemIndex', () => {
+	it('finds the same object wherever it moved to', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const [a, b, c] = [{ n: 'a' }, { n: 'b' }, { n: 'c' }];
+		assert.equal(findRepeatItemIndex([c, a, b], b, keys), 2);
+	});
+
+	it('finds an item an edit replaced, by its carried key', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
 		const [a, b] = [{ n: 'a' }, { n: 'b' }];
 		const editedB = { n: 'b2' };
-		const next = reorderRepeatItems([a, editedB], sorted('1', '0'));
+		keys.keyOf(b);
+		keys.carry(b, editedB);
+		assert.equal(findRepeatItemIndex([a, editedB], b, keys), 1);
+	});
+
+	it('is -1 when the item is gone', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		assert.equal(findRepeatItemIndex([{ n: 'a' }], { n: 'gone' }, keys), -1);
+	});
+});
+
+describe('repeatSortItems and reorderRepeatItems', () => {
+	const setup = () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const items = [{ n: 'a' }, { n: 'b' }, { n: 'c' }];
+		const sortList = repeatSortItems(items, ['n'], keys);
+		return { keys, items, sortList, keyOf: (item: Record<string, unknown>) => keys.keyOf(item) };
+	};
+
+	it('labels each sort row with the key of its item, and keeps the item as data', () => {
+		const { items, sortList, keyOf } = setup();
+		assert.deepEqual(
+			sortList.map((row) => row.key),
+			items.map(keyOf)
+		);
+		assert.equal(sortList[1].data, items[1]);
+		assert.equal(sortList[1].value, 'b');
+	});
+
+	it('orders the stored items by the sorted keys', () => {
+		const { keys, items, sortList } = setup();
+		const next = reorderRepeatItems(items, [sortList[2], sortList[0], sortList[1]], keys);
+		assert.deepEqual(next, [items[2], items[0], items[1]]);
+	});
+
+	it('targets items by key when the stored array shifted after the list was built', () => {
+		const { keys, items, sortList } = setup();
+		const [a, b, c] = items;
+		// Stored now: a was removed and a new item was prepended. Positions no longer match the list.
+		const added = { n: 'added' };
+		const stored = [added, b, c];
+		const next = reorderRepeatItems(stored, [sortList[2], sortList[0], sortList[1]], keys);
+		// c first, the removed a is dropped, b follows, and the unknown item stays at the end.
+		assert.deepEqual(next, [c, b, added]);
+	});
+
+	it('uses the stored object when an edit replaced the item and carried its key', () => {
+		const { keys, items, sortList } = setup();
+		const editedB = { n: 'b2' };
+		keys.carry(items[1], editedB);
+		const next = reorderRepeatItems([items[0], editedB, items[2]], [sortList[1], sortList[0], sortList[2]], keys);
 		assert.equal(next[0], editedB);
-		assert.equal(next[1], a);
 	});
 
-	it('keeps an item added after the list was built, at the end', () => {
-		const [a, b, added] = [{ n: 'a' }, { n: 'b' }, { n: 'added' }];
-		assert.deepEqual(reorderRepeatItems([a, b, added], sorted('1', '0')), [b, a, added]);
+	it('returns the stored array itself when the order is unchanged', () => {
+		const { keys, items, sortList } = setup();
+		assert.equal(reorderRepeatItems(items, sortList, keys), items);
 	});
 
-	it('ignores a key that no longer points at a stored item', () => {
-		const [a, b] = [{ n: 'a' }, { n: 'b' }];
-		assert.deepEqual(reorderRepeatItems([a], sorted('1', '0', '0')), [a]);
-		assert.equal(reorderRepeatItems([a, b], sorted('x')).length, 2);
+	it('ignores a key that matches nothing and keeps every stored item', () => {
+		const { keys, items } = setup();
+		const next = reorderRepeatItems(items, [{ key: 'nope' }], keys);
+		assert.deepEqual(next, items);
 	});
 });

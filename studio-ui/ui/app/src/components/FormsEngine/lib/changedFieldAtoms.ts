@@ -16,7 +16,7 @@
 
 import { atom, type Atom, type PrimitiveAtom } from 'jotai';
 
-type Setter = (target: PrimitiveAtom<number>, update: (current: number) => number) => unknown;
+export type Setter = (target: PrimitiveAtom<number>, update: (current: number) => number) => unknown;
 
 interface Tracker {
 	version: PrimitiveAtom<number>;
@@ -25,6 +25,9 @@ interface Tracker {
 
 // Keyed by the Set so the mutable `changedFieldIds` can stay as is for its existing readers.
 const trackers = new WeakMap<Set<string>, Tracker>();
+
+// A context created without a Set (Type Builder's read-only chips) has nothing to track.
+const neverChanged: Atom<boolean> = atom(false);
 
 function trackerFor(changedFieldIds: Set<string>): Tracker {
 	let tracker = trackers.get(changedFieldIds);
@@ -41,6 +44,7 @@ function trackerFor(changedFieldIds: Set<string>): Tracker {
  * Whoever mutates the Set calls {@link notifyChangedFieldIds} afterwards.
  */
 export function changedFieldAtom(changedFieldIds: Set<string>, fieldId: string): Atom<boolean> {
+	if (!changedFieldIds) return neverChanged;
 	const tracker = trackerFor(changedFieldIds);
 	let fieldAtom = tracker.byFieldId.get(fieldId);
 	if (!fieldAtom) {
@@ -53,7 +57,13 @@ export function changedFieldAtom(changedFieldIds: Set<string>, fieldId: string):
 	return fieldAtom;
 }
 
-/** Tells subscribers of {@link changedFieldAtom} that `changedFieldIds` was mutated. `set` is a store's or an atom writer's `set`. */
+/**
+ * Tells subscribers of {@link changedFieldAtom} that `changedFieldIds` was mutated. `set` is a store's or an atom writer's `set`.
+ * Known tradeoff: this bumps one shared version, so every field atom of the Set recomputes on each call, including
+ * on every keystroke. That costs a few hundred microseconds on a large form and causes no extra renders, because an
+ * unchanged boolean does not notify. Bumping only the field that flipped would avoid it at the cost of more bookkeeping.
+ */
 export function notifyChangedFieldIds(set: Setter, changedFieldIds: Set<string>): void {
+	if (!changedFieldIds) return;
 	set(trackerFor(changedFieldIds).version, (current) => current + 1);
 }

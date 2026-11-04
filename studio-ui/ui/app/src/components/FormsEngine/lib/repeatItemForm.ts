@@ -184,6 +184,7 @@ export function clearStackPendingFlags(
 	parentChangedFieldIds?: Set<string>,
 	onChangedFieldIds?: (changedFieldIds: Set<string>) => void
 ): void {
+	let parentTouched = false;
 	for (const entry of entries) {
 		const decision = selectedItemPendingAfterSave({
 			selected: entry.selected,
@@ -207,11 +208,12 @@ export function clearStackPendingFlags(
 			continue;
 		}
 		entry.setPending(true);
-		if (entry.fieldId) {
-			parentChangedFieldIds?.add(entry.fieldId);
-			if (parentChangedFieldIds) onChangedFieldIds?.(parentChangedFieldIds);
+		if (entry.fieldId && parentChangedFieldIds) {
+			parentChangedFieldIds.add(entry.fieldId);
+			parentTouched = true;
 		}
 	}
+	if (parentTouched) onChangedFieldIds?.(parentChangedFieldIds);
 }
 
 /** Compares the form's own fields. Extra keys on the stored item are not an in-flight edit. */
@@ -227,7 +229,10 @@ export function repeatItemFormProps<T extends Record<string, unknown>>(args: {
 	/** Child fields to show. Omit it for the pencil and for a whole-item launch. */
 	fieldIds?: readonly string[] | null;
 	getItems(): readonly T[];
-	setItems(next: T[]): void;
+	/** `previous` is the array `onSave` read to build `next`. */
+	setItems(next: T[], previous: readonly T[]): void;
+	/** The repeat field's row keys. An edit carries the key of the item it replaces to the new object. */
+	keys?: { carry(previous: T | undefined, next: T | undefined): void };
 }): {
 	repeat: { fieldId: string; index?: number; values?: T };
 	fieldIds?: string[];
@@ -240,7 +245,11 @@ export function repeatItemFormProps<T extends Record<string, unknown>>(args: {
 		repeat,
 		...(args.fieldIds?.length ? { fieldIds: [...args.fieldIds] } : {}),
 		onSave(result) {
-			args.setItems(writeItemToParent(args.getItems(), args.index, result.values));
+			const previous = args.getItems();
+			const next = writeItemToParent(previous, args.index, result.values);
+			// Same rule as `carryReplacedItem`. This file stays free of imports so its tests need no loader.
+			if (args.index !== undefined) args.keys?.carry(previous[args.index], next[args.index]);
+			args.setItems(next, previous);
 			return Promise.resolve({ close: true });
 		}
 	};

@@ -60,6 +60,7 @@ import {
 	typePropsToEdit
 } from '../utils';
 import { extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
+import { notifyChangedFieldIds } from '../../FormsEngine/lib/changedFieldAtoms';
 import TypeBuilderFormsEngine, { FieldFormViewProps } from './TypeBuilderFormsEngine';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
@@ -305,6 +306,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			updatedType = updateTypeProps(currentType, values as TypePropsToEdit);
 		}
 		formContext.changedFieldIds.clear();
+		notifyChangedFieldIds(jotai.set, formContext.changedFieldIds);
 		stateRef.current.formFieldsChanged = false;
 		setType(updatedType);
 		return updatedType;

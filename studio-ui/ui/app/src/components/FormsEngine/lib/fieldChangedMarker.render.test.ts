@@ -61,25 +61,37 @@ afterEach(async () => {
 	for (const mounted of mountedRoots.splice(0)) await mounted.unmount();
 });
 
-/** A field whose atoms are the real ones, so a write goes through the same dirty tracking as the form's. */
-async function mount() {
+const fieldOf = (id: string) => ({ id, name: id, type: 'input', validations: {}, helpText: '' }) as ContentTypeField;
+
+/** Fields whose atoms are the real ones, so a write goes through the same dirty tracking as the form's. */
+async function mount(fieldIds: string[] = ['title_s'], options: { changedFieldIds?: Set<string> | null } = {}) {
 	const jotai = createStore();
 	const stable = {
 		atoms: { valueByFieldId: {}, validationByFieldId: {}, ...createFormVisibilityAtoms() } as Record<string, unknown>,
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: 'changedFieldIds' in options ? options.changedFieldIds : new Set<string>(),
 		fieldUpdates$: new Subject<string>(),
 		itemMeta: { sourceMap: null, path: '/site/components/thing.xml' },
-		originalValues: { title_s: 'original' },
+		originalValues: Object.fromEntries(fieldIds.map((id) => [id, 'original'])),
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
 		formControllerState: null
 	};
-	const [valueAtom, validationAtom] = createFieldAtoms(field, 'original', { current: stable } as never);
-	(stable.atoms.valueByFieldId as Record<string, unknown>).title_s = valueAtom;
-	(stable.atoms.validationByFieldId as Record<string, unknown>).title_s = validationAtom;
-	function Probe() {
-		return React.createElement(FormsEngineField, { field, isValid: true });
+	const valueAtoms: Record<string, ReturnType<typeof createFieldAtoms>[0]> = {};
+	for (const id of fieldIds) {
+		const [valueAtom, validationAtom] = createFieldAtoms(fieldOf(id), 'original', { current: stable } as never);
+		valueAtoms[id] = valueAtom;
+		(stable.atoms.valueByFieldId as Record<string, unknown>)[id] = valueAtom;
+		(stable.atoms.validationByFieldId as Record<string, unknown>)[id] = validationAtom;
+	}
+	// The Profiler reports every commit under a field, so it counts the renders that field was part of.
+	const commits: Record<string, number> = Object.fromEntries(fieldIds.map((id) => [id, 0]));
+	function Probe({ id }: { id: string }) {
+		return React.createElement(
+			React.Profiler,
+			{ id, onRender: () => void commits[id]++ },
+			React.createElement(FormsEngineField, { field: fieldOf(id), isValid: true })
+		);
 	}
 	const host = document.createElement('div');
 	document.body.appendChild(host);
@@ -106,8 +118,12 @@ async function mount() {
 									{ value: { sourceMap: null } as never },
 									React.createElement(
 										FormsEngineFormContextApi.Provider,
-										{ value: { rollbackField: () => jotai.set(valueAtom, 'original') } as never },
-										React.createElement(Probe)
+										{
+											value: {
+												rollbackField: (id: string) => jotai.set(valueAtoms[id], 'original')
+											} as never
+										},
+										fieldIds.map((id) => React.createElement(Probe, { key: id, id }))
 									)
 								)
 							)
@@ -117,16 +133,19 @@ async function mount() {
 			)
 		);
 	});
-	await act(async () =>
-		host.querySelector<HTMLButtonElement>('[data-testid="MoreVertRoundedIcon"]').closest('button').click()
-	);
-	const hasRollback = () =>
-		Array.from(document.body.querySelectorAll('li')).some((li) => li.textContent === 'Rollback changes');
+	const wrapperOf = (id: string) => host.querySelector(`[data-field-id="${id}"]`);
 	const mounted = {
 		jotai,
-		valueAtom,
+		valueAtoms,
 		stable,
-		hasRollback,
+		commits,
+		async openMenu(id: string) {
+			await act(async () =>
+				wrapperOf(id).querySelector<HTMLElement>('[data-testid="MoreVertRoundedIcon"]').closest('button').click()
+			);
+		},
+		hasRollback: () =>
+			Array.from(document.body.querySelectorAll('li')).some((li) => li.textContent === 'Rollback changes'),
 		async unmount() {
 			if (!host.isConnected) return;
 			await act(async () => root.unmount());
@@ -140,25 +159,45 @@ async function mount() {
 describe('field changed marker', () => {
 	it('shows on edit and goes away on rollback', async () => {
 		const m = await mount();
+		await m.openMenu('title_s');
 		assert.equal(m.hasRollback(), false);
-		await act(async () => m.jotai.set(m.valueAtom, 'edited'));
+		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
 		assert.equal(m.hasRollback(), true);
 		assert.equal(m.stable.changedFieldIds.has('title_s'), true);
-		await act(async () => m.jotai.set(m.valueAtom, 'original'));
+		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'original'));
 		assert.equal(m.hasRollback(), false);
 		assert.equal(m.stable.changedFieldIds.has('title_s'), false);
-		await m.unmount();
 	});
 
-	it('follows the Set when it changes without a value write', async () => {
+	// Type Builder's commit (EditTypeView) clears the Set and then notifies, with no value write. Without the notify the
+	// marker would stay, because the field no longer reads the Set while rendering.
+	it('follows the Set when it is cleared without a value write', async () => {
 		const m = await mount();
-		await act(async () => m.jotai.set(m.valueAtom, 'edited'));
+		await m.openMenu('title_s');
+		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
 		assert.equal(m.hasRollback(), true);
 		await act(async () => {
 			m.stable.changedFieldIds.clear();
 			notifyChangedFieldIds(m.jotai.set, m.stable.changedFieldIds);
 		});
 		assert.equal(m.hasRollback(), false);
-		await m.unmount();
+	});
+
+	it('does not re-render a field when a sibling field changes', async () => {
+		const m = await mount(['title_s', 'other_s']);
+		const before = m.commits.title_s;
+		await act(async () => m.jotai.set(m.valueAtoms.other_s, 'edited'));
+		assert.equal(m.stable.changedFieldIds.has('other_s'), true);
+		assert.equal(m.commits.title_s, before);
+		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
+		assert.ok(m.commits.title_s > before);
+		await m.openMenu('title_s');
+		assert.equal(m.hasRollback(), true);
+	});
+
+	it('renders when the form has no changed-field Set', async () => {
+		const m = await mount(['title_s'], { changedFieldIds: null });
+		await m.openMenu('title_s');
+		assert.equal(m.hasRollback(), false);
 	});
 });

@@ -113,6 +113,7 @@ import {
 	prepareEmbeddedItemForm,
 	scrollToFieldWhenSettled,
 	setFieldAtoms,
+	applyValuesCheckpoint,
 	useStackSubmitting,
 	useUnlockOnClose,
 	useValidateFormProps
@@ -186,7 +187,7 @@ import {
 	stackedFormsClosedByReload
 } from './lib/formVisibility';
 import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
-import { notifyChangedFieldIds } from './lib/changedFieldAtoms';
+import { carryReplacedItem, repeatItemKeysFor } from './lib/repeatItemKeys';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
 import { useMinimumSaveRequirements } from './lib/useMinimumSaveRequirements';
@@ -445,9 +446,7 @@ function FormBootstrap(props: FormsEngineProps) {
 				internalRollbackValue(getInitialValues(), fieldId);
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {
-				stableFormContextRef.current.originalValues = values;
-				stableFormContextRef.current.changedFieldIds.clear();
-				notifyChangedFieldIds(store.set, stableFormContextRef.current.changedFieldIds);
+				applyValuesCheckpoint(stableFormContextRef.current, values, store.set);
 			}
 		};
 		return api;
@@ -1288,7 +1287,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 					checkpoint: childEntry.originalValues ?? undefined,
 					parentCheckpoint: Array.isArray(parentList) ? parentList : undefined
 				});
-				if (next) store.set(itemsAtom, next);
+				if (next) {
+					carryReplacedItem(repeatItemKeysFor(itemsAtom), current as unknown[], next as unknown[], repeat?.index);
+					store.set(itemsAtom, next);
+				}
 			}
 		}
 		contextApi.popForm();
@@ -1432,6 +1434,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 				values: items[visibleLaunch.index] as Record<string, unknown>,
 				fieldIds: visibleLaunch.fieldIds,
 				getItems: () => (store.get(valueAtom) as Record<string, unknown>[]) ?? [],
+				keys: repeatItemKeysFor(valueAtom),
 				setItems: (next) => store.set(valueAtom, next)
 			}),
 			// A whole item uses the parent Save card too. The pencil and Add leave this unset.
@@ -1451,7 +1454,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 			const current = store.get(valueAtom);
 			if (!Array.isArray(current)) return;
 			const next = writeItemToParent(current, index, extractAtomValues(store, atoms.valueByFieldId));
-			if (next !== current) store.set(valueAtom, next);
+			if (next === current) return;
+			carryReplacedItem(repeatItemKeysFor(valueAtom), current, next, index);
+			store.set(valueAtom, next);
 		};
 		write();
 		const subscription = fieldUpdates$.subscribe(write);
