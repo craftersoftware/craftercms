@@ -37,7 +37,7 @@ const SourceTypes = {
 	mpd: 'application/dash+xml'
 };
 
-const HLS_TYPES = new Set(['application/x-mpegURL', 'application/vnd.apple.mpegurl']);
+const HLS_TYPES = new Set(['application/x-mpegurl', 'application/vnd.apple.mpegurl']);
 const DASH_TYPES = new Set(['application/dash+xml']);
 
 const extensionRegex = /(?:\.([^.]+))?$/;
@@ -64,9 +64,10 @@ function VideoPlayer(props: VideoPlayerProps) {
 	};
 
 	let media: React.ReactElement;
-	if (sourceType && HLS_TYPES.has(sourceType)) {
+	const normalizedType = sourceType?.toLowerCase();
+	if (normalizedType && HLS_TYPES.has(normalizedType)) {
 		media = <HlsJsVideo {...mediaProps} />;
-	} else if (sourceType && DASH_TYPES.has(sourceType)) {
+	} else if (normalizedType && DASH_TYPES.has(normalizedType)) {
 		media = <DashVideo {...mediaProps} />;
 	} else {
 		media = <Video {...mediaProps} />;
