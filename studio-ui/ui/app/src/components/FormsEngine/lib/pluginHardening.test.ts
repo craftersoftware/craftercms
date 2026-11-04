@@ -43,7 +43,7 @@ const { getControlDataSourceBindings, registerControlDataSourceBindings } = awai
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
 const Component = (() => null) as ComponentType<AnyValue>;
-const meta = { siteId: 'editorial', fileName: 'index.xml', itemMeta: { path: '/site/website/index.xml' } };
+const meta = { siteId: 'editorial', itemMeta: { path: '/site/website/index.xml' } };
 
 function field(id: string, type: string, extra: Partial<ContentTypeField> = {}): ContentTypeField {
 	return { id, name: id, type, validations: {}, ...extra } as ContentTypeField;
