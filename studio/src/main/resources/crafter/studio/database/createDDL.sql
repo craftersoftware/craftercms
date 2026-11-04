@@ -287,6 +287,7 @@ CREATE TABLE IF NOT EXISTS `site` (
 	`sandbox_branch`                  VARCHAR(255)  NOT NULL DEFAULT 'master',
 	`published_repo_created`          INT           NOT NULL DEFAULT 0,
 	`staging_enabled`                 INT           NOT NULL DEFAULT 0,
+	`staging_blobs_copied`            INT           NOT NULL DEFAULT 1,
 	`state`                           VARCHAR(50)   NOT NULL DEFAULT 'INITIALIZING',
 	PRIMARY KEY (`id`),
 	UNIQUE INDEX `id_unique` (`id` ASC),

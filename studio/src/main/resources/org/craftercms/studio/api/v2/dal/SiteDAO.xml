@@ -32,6 +32,7 @@
 		<result property="sandboxBranch" column="sandbox_branch"/>
 		<result property="publishedRepoCreated" column="published_repo_created" javaType="Boolean" jdbcType="INTEGER"/>
 		<result property="stagingEnabled" column="staging_enabled" javaType="Boolean" jdbcType="INTEGER"/>
+		<result property="stagingBlobsCopied" column="staging_blobs_copied" javaType="Boolean" jdbcType="INTEGER"/>
 		<result property="state" column="state"/>
 	</resultMap>
 
@@ -112,8 +113,8 @@
 	</select>
 
 	<insert id="createSite" parameterType="org.craftercms.studio.api.v2.dal.Site" flushCache="true" useGeneratedKeys="true" keyProperty="id">
-		INSERT INTO site (site_uuid, site_id, name, description, publishing_status, sandbox_branch, staging_enabled)
-		VALUES (#{siteUuid}, #{siteId}, #{name}, #{description}, #{publishingStatus}, #{sandboxBranch}, #{stagingEnabled})
+		INSERT INTO site (site_uuid, site_id, name, description, publishing_status, sandbox_branch, staging_enabled, staging_blobs_copied)
+		VALUES (#{siteUuid}, #{siteId}, #{name}, #{description}, #{publishingStatus}, #{sandboxBranch}, #{stagingEnabled}, #{stagingBlobsCopied})
 	</insert>
 
 	<update id="setSiteState">
@@ -143,6 +144,13 @@
 		WHERE site_id = #{siteId}
 		  AND deleted = 0
 		  AND staging_enabled = 0
+	</update>
+
+	<update id="setStagingBlobsCopied">
+		UPDATE site
+		SET staging_blobs_copied = #{copied}
+		WHERE site_id = #{siteId}
+		  AND deleted = 0
 	</update>
 
 	<update id="updatePublishingStatus">

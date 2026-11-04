@@ -110,6 +110,7 @@ public class PublisherTest {
 		when(site2.getPublishingEnabled()).thenReturn(true);
 		when(site2.getSiteId()).thenReturn(SITE_ID);
 		when(site2.getId()).thenReturn(SITE_NUMERIC_ID);
+		when(site2.isStagingBlobsCopied()).thenReturn(true);
 
 		when(siteDAO.getSite(SITE_ID)).thenReturn(site2);
 		when(site2.getState()).thenReturn(READY);
@@ -336,6 +337,44 @@ public class PublisherTest {
 
 		verify(deployer, never()).createStagingTarget(any());
 		verify(contentRepository, never()).isTargetPublished(any(), any());
+	}
+
+	@Test
+	public void stagingPublishCopiesLiveBlobsBeforeTheStagingDelta() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, contentRepository, siteDAO, publisher);
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+	}
+
+	@Test
+	public void blobCopyFailureStopsTheStagingAndLivePublish() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+
+		assertThrows(ServiceLayerException.class, () -> publisher.doPublish(publishPackage));
+
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
 	}
 
 	@Test

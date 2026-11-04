@@ -34,6 +34,7 @@ public class Site {
 	protected String sandboxBranch;
 	protected boolean publishedRepoCreated;
 	protected boolean stagingEnabled;
+	protected boolean stagingBlobsCopied;
 	protected String state;
 
 	public long getId() {
@@ -138,6 +139,14 @@ public class Site {
 
 	public void setStagingEnabled(boolean stagingEnabled) {
 		this.stagingEnabled = stagingEnabled;
+	}
+
+	public boolean isStagingBlobsCopied() {
+		return stagingBlobsCopied;
+	}
+
+	public void setStagingBlobsCopied(boolean stagingBlobsCopied) {
+		this.stagingBlobsCopied = stagingBlobsCopied;
 	}
 
 	public String getState() {

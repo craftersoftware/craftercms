@@ -462,6 +462,7 @@ public class SitesServiceInternalImplTest {
 		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
 
 		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, true);
 		verify(contentRepository).createStagingBranchFromLive(NEW_SITE_ID, "live", "staging");
 		verify(itemTargetDao).initStaging(0L, "staging", "live");
 		verify(deployer).createStagingTarget(NEW_SITE_ID);
@@ -483,6 +484,7 @@ public class SitesServiceInternalImplTest {
 		verify(contentRepository).deletePublishedBranch(NEW_SITE_ID, "staging");
 		verify(itemTargetDao).deleteForTarget(0L, "staging");
 		verify(siteDAO, never()).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
 		verify(deployer, never()).createStagingTarget(anyString());
 		verify(deployer, never()).duplicateStagingTarget(anyString(), anyString());
 	}
@@ -493,12 +495,14 @@ public class SitesServiceInternalImplTest {
 		sourceSite.setPublishingEnabled(true);
 		sourceSite.setSandboxBranch(SOURCE_SANDBOX_BRANCH);
 		sourceSite.setStagingEnabled(true);
+		sourceSite.setStagingBlobsCopied(true);
 		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
 		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
 
 		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
 
 		verify(siteDAO).setStagingEnabled(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, true);
 		verify(contentRepository, never()).createStagingBranchFromLive(anyString(), anyString(), anyString());
 		verify(contentRepository, never()).deletePublishedBranch(anyString(), anyString());
 		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
@@ -520,6 +524,7 @@ public class SitesServiceInternalImplTest {
 
 		verify(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
 		verify(deployer).createStagingTarget(NEW_SITE_ID);
+		verify(siteDAO).setStagingBlobsCopied(NEW_SITE_ID, false);
 	}
 
 	@Test
