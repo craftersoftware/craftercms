@@ -301,7 +301,11 @@ export function reverseTypeFieldValuesObject(
 				}
 				const fieldDescriptor = datasourceFields[property];
 				if (!fieldDescriptor) {
-					// Drop unknown/obsolete property not present in descriptor
+					// Drop unknown/obsolete property not present in descriptor. The stored property is no longer defined by the
+					// control, so there is nothing to serialize it with; it is dropped on purpose, and silently.
+					// Known lossy collision: a stored property named like one of commonControlFieldsDescriptors (title, id,
+					// description, help, defaultValue) is also a form value, so it reaches this branch and is deleted on save.
+					// Tracked under #9288 (RT-1).
 					continue;
 				}
 				properties[property] = { ...mergedProperties[property] };
