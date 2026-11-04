@@ -31,7 +31,8 @@ import {
 	processAdditionalFieldMacro,
 	rootPagePath
 } from './formUtils';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './dateExpressions';
@@ -552,11 +553,47 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 	return isInternalNameFilled(values[XmlKeys.internalName]);
 }
 
+/** How long the file-name uniqueness check waits after the latest value before calling the server. */
+const fileNameExistenceDebounceMs = 300;
+
+/** Resolves after `ms`, or rejects with AbortError when `signal` aborts (including if already aborted). */
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+	if (signal.aborted) {
+		return Promise.reject(new DOMException('Aborted', 'AbortError'));
+	}
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			signal.removeEventListener('abort', onAbort);
+			resolve();
+		}, ms);
+		const onAbort = () => {
+			clearTimeout(timer);
+			reject(new DOMException('Aborted', 'AbortError'));
+		};
+		signal.addEventListener('abort', onAbort);
+	});
+}
+
+/** Errors with AbortError when `signal` aborts, so an in-flight Observable unsubscribes. */
+function aborted$(signal: AbortSignal): Observable<never> {
+	return new Observable((subscriber) => {
+		if (signal.aborted) {
+			subscriber.error(new DOMException('Aborted', 'AbortError'));
+			return;
+		}
+		const onAbort = () => subscriber.error(new DOMException('Aborted', 'AbortError'));
+		signal.addEventListener('abort', onAbort);
+		return () => signal.removeEventListener('abort', onAbort);
+	});
+}
+
 /**
  * File-name rules: required, then uniqueness.
  * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
  * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
+ * Required and unchanged-path checks stay synchronous. The path-existence request is debounced and tied to
+ * `ctx.signal` so a newer value cancels the wait and any in-flight check.
  *
  * @param {string} currentValue - The file name being validated.
  * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID and item context.
@@ -564,7 +601,7 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
  *
  */
 export async function fileNameValidator(currentValue: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
-	const { field, meta } = ctx;
+	const { field, meta, signal } = ctx;
 	const siteId: string = meta.siteId;
 	const blank = isEmptyValue(field, currentValue);
 	const storedRequired = Boolean(field.validations?.required?.value);
@@ -582,11 +619,17 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 	if (initialPath === newPath || nou(siteId)) return { valid: true };
 
 	try {
-		const exists = await firstValueFrom(checkPathExistence(siteId, newPath));
+		// Wait so rapid keystrokes only hit the server for the latest value. Abort cancels the wait.
+		await wait(fileNameExistenceDebounceMs, signal);
+		const exists = await firstValueFrom(checkPathExistence(siteId, newPath).pipe(takeUntil(aborted$(signal))));
 		return exists
 			? { valid: false, messages: [[defineMessage({ defaultMessage: 'An item with that name already exists.' })]] }
 			: { valid: true };
-	} catch {
+	} catch (error) {
+		// Superseded run: the host discards this result. Match plugin AbortError handling (no user message).
+		if (signal.aborted || (error as Error | undefined)?.name === 'AbortError') {
+			return { valid: false, messages: [] };
+		}
 		return { valid: false };
 	}
 }
