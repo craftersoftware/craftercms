@@ -29,6 +29,7 @@ import type { AffectedPluginControlField } from './controlPluginLoader';
 import type { FormControllerState } from '../formControllers/types';
 import type { FormVisibilityState } from './formVisibility';
 import type { FormLockReleaseSession } from './unlockOnClose';
+import type { DataSourceServices } from '../dataSources/types';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -179,6 +180,17 @@ export interface StableFormContextProps {
 	 * Repeat entries may hold only a deny-list (`irrelevantFieldPaths`) and no controller.
 	 */
 	formControllerState: FormControllerState | null;
+	/**
+	 * Reads the form's current content item (the live Redux item, so it follows renames and moves) without
+	 * subscribing to it. Callbacks that only need the item at call time use this instead of `ItemContext`, so an item
+	 * update doesn't re-render every field. Set by `FormsEngine` while the form is mounted.
+	 */
+	getItem?(): ContentItem;
+	/**
+	 * Services that bridge data-source dialogs and `pushForm` into promises. Created once per form by `FormsEngine`
+	 * rather than once per field.
+	 */
+	dataSourceServices?: DataSourceServices;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(

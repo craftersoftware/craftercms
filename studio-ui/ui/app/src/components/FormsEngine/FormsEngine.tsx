@@ -73,6 +73,7 @@ import LookupTable from '../../models/LookupTable';
 import { RepeatItem } from './controls/Repeat';
 import SecondaryButton from '../SecondaryButton';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { createDataSourceServices } from './dataSources/services';
 import { Fade } from '@mui/material';
 import AlertTitle from '@mui/material/AlertTitle';
 import { pushDialog } from '../../state/actions/dialogStack';
@@ -457,6 +458,16 @@ function FormBootstrap(props: FormsEngineProps) {
 			? null
 			: state.content.itemsByPath[effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path]
 	);
+
+	const liveUpdatedItemRef = useUpdateRefs(liveUpdatedItem);
+	const getItem = useCallback(() => liveUpdatedItemRef.current, [liveUpdatedItemRef]);
+	// Created once per form, so fields don't each build their own and an item update doesn't invalidate them.
+	const dataSourceServices = useMemo(
+		() => createDataSourceServices({ dispatch, siteId, formsApi: api }),
+		[dispatch, siteId, api]
+	);
+	stableFormContextRef.current.getItem = getItem;
+	stableFormContextRef.current.dataSourceServices = dataSourceServices;
 
 	api.updateProps(stackIndex, effectiveProps);
 

@@ -29,7 +29,7 @@ import { ControlSkeleton } from '../components/ControlSkeleton';
 import { ContentTypeField } from '../../../models';
 import ContentType from '../../../models/ContentType';
 import FormsEngineField from '../components/FormsEngineField';
-import { FormsEngineAtoms, ItemContext, ItemMetaContext, StableGlobalContext } from './formsEngineContext';
+import { FormsEngineAtoms, StableFormContext, StableGlobalContext } from './formsEngineContext';
 import { getFileNameFromPath } from '../../../utils/path';
 import { isExternalMediaUrl, resolveMediaUrl } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
@@ -133,22 +133,34 @@ export function ResolvedControlRenderer({
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypes = useContentTypes();
-	const item = useContext(ItemContext);
-	const itemMeta = useContext(ItemMetaContext);
+	const stableForm = useContext(StableFormContext);
 	const stableGlobal = useContext(StableGlobalContext);
-	const services = useMemo(
+	// Forms build these once; the fallback only serves a form context that doesn't provide them.
+	const fallbackServices = useMemo(
 		() =>
-			createDataSourceServices({
-				dispatch,
-				siteId,
-				formsApi: stableGlobal?.api ?? { pushForm: () => undefined }
-			}),
-		[dispatch, siteId, stableGlobal]
+			stableForm?.dataSourceServices
+				? undefined
+				: createDataSourceServices({
+						dispatch,
+						siteId,
+						formsApi: stableGlobal?.api ?? { pushForm: () => undefined }
+					}),
+		[dispatch, siteId, stableGlobal, stableForm]
 	);
+	const services = stableForm?.dataSourceServices ?? fallbackServices;
+	// The item and its meta are read when a macro is expanded, not subscribed to, so an item update (lock, workflow
+	// refetch, socket event) doesn't give every field a new `expandPath` and re-render it.
 	const expandPath = useCallback(
-		(path: string) =>
-			processPathMacros({ path, objectId: itemMeta?.id, fullParentPath: item?.path ?? itemMeta?.pathInSite }),
-		[item, itemMeta]
+		(path: string) => {
+			const item = stableForm?.getItem?.();
+			const itemMeta = stableForm?.itemMeta;
+			return processPathMacros({
+				path,
+				objectId: itemMeta?.id,
+				fullParentPath: item?.path ?? itemMeta?.pathInSite
+			});
+		},
+		[stableForm]
 	);
 	// A max of 0 is unlimited for every control. See utils/countLimits.ts.
 	const maxCount = countLimitValue(field.validations?.maxCount?.value);
