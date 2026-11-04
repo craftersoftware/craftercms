@@ -265,7 +265,7 @@ These FE1 implementations are not source-compatible with FE2 React controls. New
 
 ### FE2 controls: functional (single plugin model)
 
-For a field with `field.properties.plugin`, `ControlWrapper` (`controlHelpers.tsx`):
+For a field with `field.properties.plugin`, `ControlWrapper` (`renderControl.tsx`; `controlHelpers.tsx` is a re-export barrel):
 
 1. creates a plugin locator from `type`, `name`, `filename`, `pluginId`;
 2. loads via `controlPluginLoader` → `importPlugin` → `descriptor.controls[field.type]`;
@@ -504,7 +504,7 @@ Studio:
 - `ui/app/src/components/Widget/Widget.tsx`
 - `ui/app/src/models/PluginDescriptor.ts`
 - `ui/app/src/models/PluginFileBuilder.ts`
-- `ui/app/src/components/FormsEngine/lib/controlHelpers.tsx`
+- `ui/app/src/components/FormsEngine/lib/renderControl.tsx` (`lib/controlHelpers.tsx` is a re-export barrel)
 - `ui/app/src/components/FormsEngine/dataSources/*`
 - `ui/app/src/components/FormsEngine/dataSourceHooks/*`
 - `ui/app/src/components/FormsEngine/fe-control-plugin.js` — local FE1 control/DS examples and catalog XML snippets

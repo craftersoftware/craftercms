@@ -167,7 +167,9 @@ Flow:
 
 **Remove:** `getPluginModuleExport`, raw `import(/* @vite-ignore */ url)`, legacy `ControlPluginModule` type, `ControlPluginNoDefaultExportError` (or repurpose as “control type not in descriptor”).
 
-### 4.5 Update `controlHelpers.tsx`
+### 4.5 Update `renderControl.tsx`
+
+`lib/controlHelpers.tsx` is now a re-export barrel; `PluginControlRenderer` lives in `lib/renderControl.tsx`.
 
 `PluginControlRenderer` currently calls:
 
@@ -247,7 +249,7 @@ export default plugin;
 | `ui/app/src/services/plugin.ts`                                | `registerPluginControls`, tighten `importPlugin` |
 | `ui/app/src/components/FormsEngine/controls/registry.ts`       | **New** control contribution registry            |
 | `ui/app/src/components/FormsEngine/lib/controlPluginLoader.ts` | Rewrite to `importPlugin` + registry lookup      |
-| `ui/app/src/components/FormsEngine/lib/controlHelpers.tsx`     | Adjust loader call signature                     |
+| `ui/app/src/components/FormsEngine/lib/renderControl.tsx`      | Adjust loader call signature                     |
 | `ui/app/src/components/FormsEngine/dataSources/host.ts`        | Optional `getControl` on host                    |
 | `ui/app/src/components/FormsEngine/dataSources/bindings.ts`    | Reuse; no behavioral change expected             |
 | `ui/app/src/components/FormsEngine/dataSources/loader.ts`      | **Reference only** — do not duplicate logic      |
