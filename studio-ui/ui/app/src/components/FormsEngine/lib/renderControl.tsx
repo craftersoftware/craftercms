@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -19,7 +19,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { countLimitValue } from '../../../utils/countLimits';
 import Alert from '@mui/material/Alert';
 import { FormattedMessage } from 'react-intl';
-import React, { ElementType, memo, Suspense, useCallback, useContext, useId, useMemo } from 'react';
+import { ElementType, memo, Suspense, useCallback, useContext, useId, useMemo } from 'react';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { Atom, useAtom } from 'jotai';
 import { controlMap } from './controlMap';

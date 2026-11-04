@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,29 +15,21 @@
  */
 
 import { FormattedMessage } from 'react-intl';
-import React from 'react';
 import { getFileNameFromPath } from '../../../utils/path';
 import { isExternalMediaUrl, resolveMediaUrl } from '../../../utils/string';
 import { Dispatch as ReduxDispatch } from 'redux';
-import { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
+import type { BrowseFilesDialogProps } from '../../BrowseFilesDialog';
 import type { BrowseExternalAssetDialogProps } from '../../BrowseS3Dialog';
 import type { ExternalAssetUploadDialogProps } from '../../ExternalAssetUploadDialog';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog, pushNonDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
-import { SearchProps } from '../../Search';
+import type { SearchProps } from '../../Search';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
 import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import type { FileUploadResult } from '../../SingleFileUpload';
 
-/** Returns menu options for media controls based on allowed paths. The options are categorized into "Browse", "Search",
- * and "Upload".
- *
- * @param dataSourceSummary - Summary of allowed paths for browsing, searching, and uploading media.
- * @param handleDataSourceOptionClick - Callback function to handle clicks on the menu options.
- * @param readonly - If true, the menu options will be disabled.
- * @returns An array of JSX elements representing the menu options.
- * */
+/** Triggers a browser download of the media at `url`, resolved against `base`. */
 export function downloadMedia(base: string, url: string) {
 	const link = document.createElement('a');
 	link.href = resolveMediaUrl(base, url);

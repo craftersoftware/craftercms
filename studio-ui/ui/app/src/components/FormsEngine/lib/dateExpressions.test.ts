@@ -20,16 +20,34 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import '../../../../test/registerTsLoader.mjs';
 
-const { processPopulateExpression, validateDatePopulateExpression, validateTimePopulateExpression } =
-	await import('./dateExpressions.ts');
+const dateExpressions = await import('./dateExpressions.ts');
+const { processPopulateExpression, validateDatePopulateExpression, validateTimePopulateExpression } = dateExpressions;
 
 // Wednesday, 4 Nov 2026 10:30:15.250 local time. Every assertion below builds its expected value in local time too.
 const NOW = new Date(2026, 10, 4, 10, 30, 15, 250);
 
 const local = (y: number, mo: number, d: number, h = 0, mi = 0, s = 0, ms = 0) => new Date(y, mo - 1, d, h, mi, s, ms);
+
+describe('dateExpressions module', () => {
+	it('stays pure: it has no imports of any kind', () => {
+		const source = readFileSync(fileURLToPath(new URL('./dateExpressions.ts', import.meta.url)), 'utf8');
+		assert.doesNotMatch(source, /^\s*import[\s{*'"]/m);
+		assert.doesNotMatch(source, /\brequire\s*\(|\bimport\s*\(/);
+	});
+
+	it('exports exactly the three expression functions', () => {
+		assert.deepEqual(Object.keys(dateExpressions).sort(), [
+			'processPopulateExpression',
+			'validateDatePopulateExpression',
+			'validateTimePopulateExpression'
+		]);
+	});
+});
 
 describe('validateTimePopulateExpression', () => {
 	it('accepts now, with or without an hours or minutes offset', () => {
@@ -197,9 +215,17 @@ describe('processPopulateExpression', () => {
 			assert.equal(run('wed').getTime(), local(2026, 11, 11, 10, 30, 15, 250).getTime());
 		});
 
-		it('accepts abbreviations, any case and the braced form', () => {
+		it('resolves every abbreviation to the next occurrence of its weekday', () => {
+			const expected = { sun: 8, mon: 9, tue: 10, wed: 11, thu: 5, fri: 6, sat: 7 };
+			for (const [abbreviation, day] of Object.entries(expected)) {
+				assert.equal(run(abbreviation).getTime(), local(2026, 11, day, 10, 30, 15, 250).getTime(), abbreviation);
+			}
+		});
+
+		it('accepts abbreviations in any case and the braced form', () => {
 			assert.equal(run('FRI').getTime(), local(2026, 11, 6, 10, 30, 15, 250).getTime());
 			assert.equal(run('{sat}').getTime(), local(2026, 11, 7, 10, 30, 15, 250).getTime());
+			assert.equal(run('{Thu}').getTime(), local(2026, 11, 5, 10, 30, 15, 250).getTime());
 		});
 
 		it('crosses the month boundary', () => {

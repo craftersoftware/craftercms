@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-10-30
+Last updated: 2026-11-04
 
 ## 1. Why plugins are part of the core design
 
