@@ -250,9 +250,10 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} is
-	 * create-if-not-exists, so every later staging publish retries it until deployer accepts the target.
-	 * A timeout or outage is logged and does not fail the Git publish that already completed.
+	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} does not
+	 * replace an existing target, and an "already exists" response is success, so every later staging publish can
+	 * retry it until deployer accepts the target. A timeout or outage is logged and does not fail the Git publish
+	 * that already completed.
 	 */
 	private void ensureStagingDeployerTarget(String siteId) {
 		try {
