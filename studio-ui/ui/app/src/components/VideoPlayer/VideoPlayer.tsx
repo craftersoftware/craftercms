@@ -67,7 +67,7 @@ function VideoPlayer(props: VideoPlayerProps) {
 	let media: React.ReactElement;
 	const normalizedType = sourceType?.toLowerCase();
 	if (normalizedType && HLS_TYPES.has(normalizedType)) {
-		media = <HlsJsVideo {...mediaProps} />;
+		media = <HlsJsVideo {...mediaProps} source={{ src, type: sourceType }} />;
 	} else if (normalizedType && DASH_TYPES.has(normalizedType)) {
 		media = <DashVideo {...mediaProps} />;
 	} else {
