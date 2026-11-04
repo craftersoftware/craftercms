@@ -30,6 +30,7 @@ import org.dom4j.DocumentHelper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -48,6 +49,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -85,6 +87,8 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 	private Connection connection;
 	@Mock
 	private PreparedStatement statement;
+	@Mock
+	private PreparedStatement pendingStatement;
 
 	private StagingEnabledBackfillUpgradeOperation operation;
 
@@ -130,6 +134,32 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		verify(statement).setInt(1, 1);
 		verify(statement).setString(2, "pending");
 		verify(connection).commit();
+		verify(connection, never()).prepareStatement(StagingEnabledBackfillUpgradeOperation.MARK_STAGING_BLOBS_PENDING);
+	}
+
+	@Test
+	public void retryKeepsBlobCopyPendingWhenTheFlagIsAlreadyFalse() throws Exception {
+		Site pending = site("pending", 2, false, false);
+		when(sitesService.getAllSites()).thenReturn(List.of(pending));
+		stubEnabledConfig("pending");
+		when(servicesConfig.getLiveEnvironment("pending")).thenReturn(LIVE);
+		when(servicesConfig.getStagingEnvironment("pending")).thenReturn(STAGING);
+		when(contentRepository.publishedRepositoryExists("pending")).thenReturn(true);
+		when(contentRepository.isTargetPublished("pending", LIVE)).thenReturn(true);
+		when(contentRepository.createStagingBranchFromLive("pending", LIVE, STAGING)).thenReturn(false);
+		when(itemTargetDao.targetExists(2L, STAGING)).thenReturn(true);
+		when(context.getConnection()).thenReturn(connection);
+		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.UPDATE_STAGING_ENABLED)).thenReturn(statement);
+		when(statement.executeUpdate()).thenReturn(1);
+
+		operation.doExecute(context);
+
+		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
+		verify(itemTargetDao, never()).initStaging(anyLong(), any(), any());
+		verify(connection, never()).prepareStatement(StagingEnabledBackfillUpgradeOperation.MARK_STAGING_BLOBS_PENDING);
+		verify(statement).setInt(1, 0);
+		verify(statement).setString(2, "pending");
+		verify(connection).commit();
 	}
 
 	@Test
@@ -144,17 +174,23 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		when(contentRepository.createStagingBranchFromLive("pending", LIVE, STAGING)).thenReturn(true);
 		when(itemTargetDao.targetExists(2L, STAGING)).thenReturn(false);
 		when(context.getConnection()).thenReturn(connection);
+		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.MARK_STAGING_BLOBS_PENDING)).thenReturn(pendingStatement);
 		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.UPDATE_STAGING_ENABLED)).thenReturn(statement);
+		when(pendingStatement.executeUpdate()).thenReturn(1);
 		when(statement.executeUpdate()).thenReturn(1);
 
 		operation.doExecute(context);
 
-		verify(itemTargetDao).initStaging(2L, STAGING, LIVE);
+		InOrder inOrder = inOrder(pendingStatement, connection, itemTargetDao, statement);
+		inOrder.verify(pendingStatement).setString(1, "pending");
+		inOrder.verify(pendingStatement).executeUpdate();
+		inOrder.verify(connection).commit();
+		inOrder.verify(itemTargetDao).initStaging(2L, STAGING, LIVE);
+		inOrder.verify(statement).setInt(1, 0);
+		inOrder.verify(statement).setString(2, "pending");
+		inOrder.verify(connection).commit();
 		verify(contentRepository, never()).copyBlobs(any(), any(), any());
 		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
-		verify(statement).setInt(1, 0);
-		verify(statement).setString(2, "pending");
-		verify(connection).commit();
 	}
 
 	@Test
@@ -171,7 +207,9 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 		when(contentRepository.createStagingBranchFromLive("broken", LIVE, STAGING)).thenReturn(true);
 		when(itemTargetDao.targetExists(3L, STAGING)).thenReturn(false);
 		when(context.getConnection()).thenReturn(connection);
+		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.MARK_STAGING_BLOBS_PENDING)).thenReturn(pendingStatement);
 		when(connection.prepareStatement(StagingEnabledBackfillUpgradeOperation.UPDATE_STAGING_ENABLED)).thenReturn(statement);
+		when(pendingStatement.executeUpdate()).thenReturn(1);
 		when(statement.executeUpdate()).thenThrow(updateFailure);
 
 		try {
@@ -182,10 +220,12 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 			assertSame(updateFailure, e.getCause());
 		}
 
+		verify(pendingStatement).setString(1, "broken");
+		verify(connection).commit();
+		verify(itemTargetDao).initStaging(3L, STAGING, LIVE);
 		verify(contentRepository).deletePublishedBranch("broken", STAGING);
 		verify(contentRepository, never()).copyBlobs(any(), any(), any(), any());
 		verify(configurationService, never()).getConfigurationAsDocument(eq("later"), any(), any(), any());
-		verify(connection, never()).commit();
 	}
 
 	private void stubEnabledConfig(String siteId) throws DocumentException, ServiceLayerException {
@@ -194,10 +234,15 @@ public class StagingEnabledBackfillUpgradeOperationTest {
 	}
 
 	private static Site site(String siteId, long id, boolean stagingEnabled) {
+		return site(siteId, id, stagingEnabled, true);
+	}
+
+	private static Site site(String siteId, long id, boolean stagingEnabled, boolean blobsCopied) {
 		Site site = new Site();
 		site.setId(id);
 		site.setSiteId(siteId);
 		site.setStagingEnabled(stagingEnabled);
+		site.setStagingBlobsCopied(blobsCopied);
 		return site;
 	}
 }

@@ -42,13 +42,13 @@ import static java.lang.String.format;
 /**
  * Copies the legacy {@code enable-staging-environment} flag from each site's {@code site-config.xml}
  * into {@code site.staging_enabled}. A site whose flag is already set is skipped, so a retry does not
- * touch a site that finished on an earlier attempt. Item targets are copied from live only when this
- * attempt creates the staging branch. Blob-store assets are not copied here. {@code staging_blobs_copied}
- * stays true when the staging branch already exists or the site is not published to live, and is set
- * false when this attempt creates the branch. The next staging publish copies the blobs and fails the
- * package if the copy fails. A branch that already exists is left as published. If a later step fails,
- * that new branch is deleted, the flags stay unchanged, and this upgrade fails so the version does not
- * advance. The serverless staging target is created on a later staging publish, after the branch exists.
+ * touch a site that finished on an earlier attempt. Blob-store assets are not copied here. When this
+ * attempt creates the staging branch, {@code staging_blobs_copied} is committed false before item targets
+ * are copied, so a retry that finds the branch still there keeps the copy pending. A branch that already
+ * existed keeps the stored flag: true when staging was already published, false when an earlier attempt
+ * created the branch and failed. The next staging publish copies the blobs and fails the package if the
+ * copy fails. If a later step fails, the new branch is deleted and this upgrade fails so the version does
+ * not advance. The serverless staging target is created on a later staging publish, after the branch exists.
  * Runs before the site-config upgrade removes the element.
  */
 public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOperation {
@@ -57,6 +57,9 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 
 	protected static final String UPDATE_STAGING_ENABLED =
 		"UPDATE site SET staging_enabled = 1, staging_blobs_copied = ? WHERE site_id = ? AND deleted = 0 AND staging_enabled = 0";
+
+	protected static final String MARK_STAGING_BLOBS_PENDING =
+		"UPDATE site SET staging_blobs_copied = 0 WHERE site_id = ? AND deleted = 0 AND staging_enabled = 0";
 
 	private final SitesService sitesService;
 	private final ConfigurationService configurationService;
@@ -100,16 +103,17 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
 		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
 		boolean createdBranch = false;
-		boolean blobsCopied = true;
+		boolean blobsCopied = site.isStagingBlobsCopied();
 		try {
 			if (contentRepository.publishedRepositoryExists(siteId) && contentRepository.isTargetPublished(siteId, liveBranch)) {
 				createdBranch = contentRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
 				if (createdBranch) {
 					logger.info("Created staging branch '{}' from '{}' for site '{}'", stagingBranch, liveBranch, siteId);
 					blobsCopied = false;
-					if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
-						itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
-					}
+					markStagingBlobsPending(context, siteId);
+				}
+				if (!blobsCopied && !itemTargetDao.targetExists(site.getId(), stagingBranch)) {
+					itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch);
 				}
 			} else {
 				logger.info("Site '{}' is not published to live. The staging branch and blobs will be created on the first publish", siteId);
@@ -131,8 +135,21 @@ public class StagingEnabledBackfillUpgradeOperation extends AbstractUpgradeOpera
 	}
 
 	/**
+	 * Commit the pending blob copy before item targets are copied. A retry loads this value when the branch
+	 * created here is still present.
+	 */
+	private void markStagingBlobsPending(StudioUpgradeContext context, String siteId) throws SQLException {
+		try (Connection connection = context.getConnection();
+			 PreparedStatement statement = connection.prepareStatement(MARK_STAGING_BLOBS_PENDING)) {
+			statement.setString(1, siteId);
+			statement.executeUpdate();
+			connection.commit();
+		}
+	}
+
+	/**
 	 * Delete the staging branch created by this attempt so the next upgrade can create it again.
-	 * A branch that already existed is left in place. Blob copy stays pending until a staging publish.
+	 * A branch that already existed is left in place. A committed pending blob copy stays pending.
 	 */
 	private void deleteCreatedStagingBranch(String siteId, String stagingBranch, boolean createdBranch) {
 		if (!createdBranch) {
