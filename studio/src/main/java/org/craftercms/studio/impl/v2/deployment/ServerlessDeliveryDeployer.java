@@ -21,8 +21,12 @@ import org.craftercms.commons.rest.RestTemplate;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
@@ -40,6 +44,8 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
 public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
 	public static final String STAGING_TARGET_SUFFIX = "-staging";
+
+	private static final Logger logger = LoggerFactory.getLogger(ServerlessDeliveryDeployer.class);
 
 	private ServicesConfig servicesConfig;
 
@@ -75,9 +81,10 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 	@Override
 	public void deleteTargets(String site) throws RestClientException {
 		if (isServerlessDeliveryEnabled()) {
-			String environment = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV);
-			doDeleteTarget(site, environment);
-			doDeleteTarget(stagingSiteName(site), environment);
+			doDeleteTarget(site, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV));
+			if (stagingTargetMayExist(site)) {
+				deleteStagingTarget(site);
+			}
 		}
 	}
 
@@ -101,8 +108,33 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
 	@Override
 	public void deleteStagingTarget(String site) throws RestClientException {
-		if (isServerlessDeliveryEnabled()) {
+		if (!isServerlessDeliveryEnabled()) {
+			return;
+		}
+		try {
 			doDeleteTarget(stagingSiteName(site), studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV));
+		} catch (RestClientException e) {
+			if (isNotFound(e)) {
+				logger.debug("Staging deployer target for site '{}' does not exist", site);
+				return;
+			}
+			throw e;
+		}
+	}
+
+	private static boolean isNotFound(RestClientException e) {
+		return e instanceof HttpStatusCodeException status && status.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * A staging delivery target is created only when staging is enabled.
+	 * After a failed create rolls the site row back, the target can still exist, so try to remove it.
+	 */
+	protected boolean stagingTargetMayExist(String site) {
+		try {
+			return servicesConfig.isStagingEnvironmentEnabled(site);
+		} catch (SiteNotFoundException e) {
+			return true;
 		}
 	}
 

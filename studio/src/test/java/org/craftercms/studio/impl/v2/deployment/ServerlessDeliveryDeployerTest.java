@@ -16,6 +16,7 @@
 package org.craftercms.studio.impl.v2.deployment;
 
 import org.craftercms.commons.rest.RestTemplate;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.craftercms.studio.model.deployer.DuplicateTargetRequest;
@@ -25,7 +26,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +46,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -82,6 +88,7 @@ public class ServerlessDeliveryDeployerTest {
 		when(studioConfiguration.getProperty(PREVIEW_DUPLICATE_TARGET_URL)).thenReturn(DUPLICATE_URL);
 		when(studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN)).thenReturn("token");
 		when(servicesConfig.getStagingEnvironment(SITE)).thenReturn("staging");
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenReturn(true);
 		deployer = new ServerlessDeliveryDeployer(studioConfiguration, restTemplate) {
 			@Override
 			protected Map<String, Object> getSourceTemplateParams(String sourceSiteId) {
@@ -142,6 +149,61 @@ public class ServerlessDeliveryDeployerTest {
 	}
 
 	@Test
+	public void deleteTargetsSkipsStagingWhenStagingDisabled() throws Exception {
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenReturn(false);
+
+		deployer.deleteTargets(SITE);
+
+		ArgumentCaptor<RequestEntity<?>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate).exchange(captor.capture(), eq(Map.class));
+		assertTrue(captor.getValue().getUrl().toString().endsWith("/serverless-delivery/" + SITE));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsIgnoresMissingStagingTarget() {
+		when(restTemplate.exchange(any(), eq(Map.class)))
+			.thenReturn(null)
+			.thenThrow(targetNotFound());
+
+		deployer.deleteTargets(SITE);
+
+		verify(restTemplate, times(2)).exchange(any(), eq(Map.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsRemovesStagingWhenSiteRecordIsMissing() throws Exception {
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE)).thenThrow(new SiteNotFoundException());
+		when(restTemplate.exchange(any(), eq(Map.class))).thenReturn(null).thenThrow(targetNotFound());
+
+		deployer.deleteTargets(SITE);
+
+		ArgumentCaptor<RequestEntity<?>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate, times(2)).exchange(captor.capture(), eq(Map.class));
+		assertTrue(captor.getAllValues().get(1).getUrl().toString().endsWith("/serverless-delivery/" + STAGING_SITE));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsPropagatesStagingDeleteFailure() {
+		when(restTemplate.exchange(any(), eq(Map.class)))
+			.thenReturn(null)
+			.thenThrow(new RestClientException("Deployer is down"));
+
+		assertThrows(RestClientException.class, () -> deployer.deleteTargets(SITE));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsPropagatesLiveTargetNotFound() {
+		when(restTemplate.exchange(any(), eq(Map.class))).thenThrow(targetNotFound());
+
+		assertThrows(RestClientException.class, () -> deployer.deleteTargets(SITE));
+		verify(restTemplate).exchange(any(), eq(Map.class));
+	}
+
+	@Test
 	public void duplicateStagingTargetUsesStagingSiteNames() throws Exception {
 		when(servicesConfig.getStagingEnvironment("the-copy")).thenReturn("staging");
 
@@ -152,5 +214,9 @@ public class ServerlessDeliveryDeployerTest {
 		assertTrue(captor.getValue().getUrl().toString().contains("/serverless-delivery/" + STAGING_SITE));
 		assertEquals("the-copy-staging", captor.getValue().getBody().getSiteName());
 		assertEquals("staging", captor.getValue().getBody().getTemplateParams().get("repo_branch"));
+	}
+
+	private static HttpClientErrorException targetNotFound() {
+		return HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Target not found", HttpHeaders.EMPTY, new byte[0], null);
 	}
 }
