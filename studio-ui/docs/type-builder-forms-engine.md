@@ -84,10 +84,29 @@ FormsEngine/
     controlMap.ts / dataSourceMap.ts
     valueRetrievers.ts / valueSerializers.ts / validators.ts
     useSaveForm.tsx
+    formItem.ts            # useFormItem*: the form's content item, subscribed at the leaf
+    useFormEntryWiring.ts  # item gate; getItem / dataSourceServices published on the stable entry
     formConsts.ts          # XmlKeys, errors
 ```
 
 State: Jotai atoms + React context (`StableFormContext`, `ItemMetaContext`, …). Redux for site/content-types catalog and dialogs.
+
+#### FE2 subscription rules
+
+A form has dozens to thousands of fields, so what a component subscribes to decides how much re-renders when an item changes (a lock, a workflow refetch, a socket event, a save). Rules, in order of preference:
+
+- **The content item is not in a form-wide context.** There is no `ItemContext`. `FormItemKeyContext` holds the `itemsByPath` key of the form's item (`null` in create mode); it changes only when the form moves to another path (a saved rename), never when the item's content changes.
+- **Render it where it is shown.** `useFormItem()` (whole item), `useFormItemPath()`, `useFormItemLabel()` or `useFormItemSelector(selector, equalityFn)` (`lib/formItem.ts`) subscribe the calling component only. Use `useFormItem()` in leaf components that render item metadata (`EditModeHeader`, `EditModeMetadata`, the embedded rows of `NodeSelector`); otherwise select what you read.
+- **Read it when it runs.** Callbacks and effect bodies that need the item only when they execute (lock/unlock, save, `expandPath` macros, opening a dialog) call `StableFormContext.getItem()`. It reads the live Redux item with the current key, so it is fresh immediately after a dispatch and follows a rename, and its identity never changes. It returns `null` when the form has no item. Don't read the item into render just to use it in a callback, and don't put it in an effect's dependencies when only its path matters (`useAffectedPackagesRefetch` reads the path when the event arrives).
+- **Never subscribe to a whole slice from a field or control.** `useItemsByPath()` re-renders on any item change. Select the paths you show: `useItemsByPaths(paths)` (shallow-equal, per-path) or a one-path selector with `useSelection`.
+- **The wrapper watches existence only.** `FormBootstrap` (in `FormsEngine.tsx`) selects `Boolean(item exists)` through `useFormItemGate`, which also takes the form out of `ready` when the key's item is missing (a rename landing before the new path is stored) so prep runs again. It does not re-render for item content updates, and neither does the orchestrator's tree except through its own atoms.
+
+The stable form entry (`StableFormContextProps`) carries two members the host publishes for fields, both from `useFormEntryProvisioning` in a layout effect (not during render):
+
+- `getItem()`: required. `createFormStackData` and the Type Builder's virtual form default it to `() => null`.
+- `dataSourceServices`: optional, created once per form (rebuilt only if the dispatcher, site or forms API change), so every `ResolvedControlRenderer` shares one object. This is the seam for per-form services. A form context that doesn't provide it, such as the Type Builder's virtual form (`ContentTypeManagement/utils.ts`), makes each `ResolvedControlRenderer` build its own as a fallback.
+
+`ResolvedControlRenderer` (today in `lib/controlHelpers.tsx`; moves to `lib/renderControl.tsx` with #9341) reads both from the stable entry and keeps `expandPath` identity-stable, so an item update re-renders neither the field nor its data-source context. Tests: `lib/formItem.render.test.ts`, `lib/fieldSubscriptions.render.test.ts`, `controls/NodeSelector.render.test.ts`, `hooks/useItemsByPaths.render.test.ts`, with the harness in `lib/formItemTestHarness.ts`.
 
 ### TB (ContentTypeManagement) layout (high signal)
 
@@ -753,6 +772,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | Legacy DS runtime                 | `forms-engine.js` (`_loadDatasources`), `cstudio-forms/data-sources/*`                                |
 | New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
 | Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
+| Item reads, subscriptions         | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
 | Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
 | New TB catalog configuration      | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
 | Type XML out                      | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
@@ -808,6 +828,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-04** — FE2 form item reads are granular (#9336, #9353). `ItemContext`/`useItemContext` are gone: `FormItemKeyContext` carries the item's store key, `useFormItem*` hooks subscribe at the leaf that renders item data, and `getItem()` (store-backed, required on `StableFormContextProps`) serves callbacks. The `FormBootstrap` wrapper subscribes to item existence only (`useFormItemGate`), the workflow refetch reads the path when an event arrives (`useAffectedPackagesRefetch`), `NodeSelector` subscribes to the paths it shows (`useItemsByPaths`), and `getItem`/`dataSourceServices` are published on the stable entry from a layout effect (`useFormEntryProvisioning`). The Type Builder's virtual form has no item and uses the per-field data-source services fallback. Rules and rationale: "FE2 subscription rules" in §2.
 - **2026-11-03** — FE2 plugin hooks are isolated and the host state is read-only (#9306). A plugin `valueRetriever` that throws falls back to the raw value for its own field. A plugin `valueSerializer` that throws stops the save with an error naming the field and plugin. Hooks get frozen field definitions. The controls, data sources and form controller hosts are frozen, and registry reads return read-only entries. `registerPlugin` also refuses types owned by Type Builder controls, validates `fieldSx`, and keeps bindings registered with `registerDataSourceBindings`. The save gate uses the latest validation run. The plugin contract types are exported from `models`.
 - **2026-11-03** — Plugin validator messages are normalized before they reach the field (#9306). A descriptor with a missing or empty `id` and a `defaultMessage` gets an `id` derived from it, so it formats instead of crashing the field. A malformed message makes the result a failed validator. A validator that throws, rejects, or returns a malformed result now shows the user a generic "couldn't be validated" message, with the detail in the console only.
 - **2026-10-30** — FE2 plugin API settled (#9306). Hooks are value-first with one context object: retriever `(value, { field })`, serializer `(value, { field, contentTypesById })`, validator `(value, { field, signal, siteId, getValue }) => { valid, messages }` (async allowed, malformed result is invalid). The XML builder's special keys are exported constants and published at `craftercms.formsEngine.controls.xmlKeys`. `ControlProps<V>` is generic with read-only `field` / `contentType` and host-generated `inputId` / `labelId`. Plugin controls render inside `FormsEngineField` by default (`fieldChrome: false` opts out, `fieldSx` styles the wrapper); the load-error placeholder is not double-wrapped. `formControllers` `load` / `getCached` / `clearCache` moved under `__internal`. API versions stay at 1.
