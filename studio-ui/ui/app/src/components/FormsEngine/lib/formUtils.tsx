@@ -284,6 +284,8 @@ export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme:
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
 export type ValidatorsData = {
+	/** The fields belong to a nested scope (a repeat item form). See {@link ValidatorMetaData.nested}. */
+	nested?: boolean;
 	siteId?: string;
 	contentTypesById?: LookupTable<ContentType>;
 	siblingIds?: string[];
@@ -410,6 +412,7 @@ export function createFieldAtoms(
 		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
 		return validateFieldValue(field, value, {
+			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
 			siblingIds: validatorsData?.siblingIds,

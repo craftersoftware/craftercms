@@ -27,8 +27,14 @@ import '../../../../test/registerTsLoader.mjs';
 import type { ContentTypeField } from '../../../models/ContentType';
 
 const { validateFieldValue } = await import('./validators.ts');
-const { createFileNameAtom, createFormsEngineAtoms, createFormStackData, setFieldAtoms, withPathFileName } =
-	await import('./formUtils.tsx');
+const {
+	createFileNameAtom,
+	createFormsEngineAtoms,
+	createFormStackData,
+	readInvalidFieldIds,
+	setFieldAtoms,
+	withPathFileName
+} = await import('./formUtils.tsx');
 const { atom, createStore } = await import('jotai');
 
 const aboutPath = '/site/website/about/index.xml';
@@ -108,6 +114,116 @@ describe('repeat group with a file-name child', () => {
 			assert.equal(result.isValid, true, JSON.stringify(item));
 		}
 		assert.equal(requests, 0);
+	});
+});
+
+const required = { required: { id: 'required', value: true, level: 'required' as const } };
+
+describe('file-name child of a repeat group', () => {
+	const repeatWith = (child: ContentTypeField) =>
+		({
+			id: 'rows_o',
+			name: 'Rows',
+			type: 'repeat',
+			validations: {},
+			fields: { 'file-name': child }
+		}) as unknown as ContentTypeField;
+
+	/** The repeat item opened as its own form, as FormsEngine bootstraps it: a nested scope with the parent's path. */
+	async function openRepeatItem(child: ContentTypeField, value: unknown) {
+		const formContextRef = { current: createFormStackData() };
+		const atoms = createFormsEngineAtoms('author', {
+			lockResult: atom({ locked: true, lockError: null, affectedPackages: null }),
+			readonly: atom(false),
+			fileName: createFileNameAtom('', formContextRef)
+		});
+		formContextRef.current.atoms = atoms;
+		formContextRef.current.itemMeta = meta.itemMeta as never;
+		const contentType = { id: '/page/article', name: 'Article', fields: { 'file-name': child } } as never;
+		setFieldAtoms(formContextRef, contentType, contentType.fields, 'file-name', atoms, value, {
+			nested: true,
+			siteId: 'editorial'
+		});
+		const store = createStore();
+		return {
+			validity: () => store.get(atoms.validationByFieldId['file-name']),
+			invalidIds: () => readInvalidFieldIds(store, atoms.validationByFieldId, null, 'rows_o')
+		};
+	}
+
+	it('does not block save through the item file-name rules in an opened repeat item', async () => {
+		for (const value of ['', '   ', undefined, 'index.xml', 'about', 'some-name']) {
+			const form = await openRepeatItem(fileNameField, value);
+			assert.equal((await form.validity()).isValid, true, `value ${JSON.stringify(value)}`);
+			assert.deepEqual(await form.invalidIds(), [], `value ${JSON.stringify(value)}`);
+		}
+		assert.equal(requests, 0);
+	});
+
+	it('still applies a required constraint the content type declares, opened and inline', async () => {
+		const child = { ...fileNameField, validations: required } as ContentTypeField;
+		const blank = await openRepeatItem(child, '');
+		const validity = await blank.validity();
+		assert.equal(validity.isValid, false);
+		assert.deepEqual(await blank.invalidIds(), ['file-name']);
+		assert.equal((await (await openRepeatItem(child, 'row-name')).validity()).isValid, true);
+
+		const inlineBlank = await validateFieldValue(repeatWith(child), [{ 'file-name': '' }], meta);
+		assert.equal(inlineBlank.isValid, false);
+		const inlineSet = await validateFieldValue(repeatWith(child), [{ 'file-name': 'row-name' }], meta);
+		assert.equal(inlineSet.isValid, true);
+		assert.equal(requests, 0);
+	});
+
+	it('treats an input child with the id file-name like any other input, inline', async () => {
+		const child = { ...titleField, id: 'file-name', validations: required } as ContentTypeField;
+		assert.equal((await validateFieldValue(repeatWith(child), [{ 'file-name': '' }], meta)).isValid, false);
+		assert.equal((await validateFieldValue(repeatWith(child), [{ 'file-name': 'x' }], meta)).isValid, true);
+	});
+});
+
+describe('the root item file-name', () => {
+	async function openRoot(path: string, value: string) {
+		const formContextRef = { current: createFormStackData() };
+		const atoms = createFormsEngineAtoms('author', {
+			lockResult: atom({ locked: true, lockError: null, affectedPackages: null }),
+			readonly: atom(false),
+			fileName: createFileNameAtom(path, formContextRef)
+		});
+		formContextRef.current.atoms = atoms;
+		formContextRef.current.itemMeta = { path, pathInSite: path } as never;
+		const contentType = { id: '/page/article', name: 'Article', fields: { 'file-name': fileNameField } } as never;
+		setFieldAtoms(
+			formContextRef,
+			contentType,
+			contentType.fields,
+			'file-name',
+			atoms,
+			value,
+			{ siteId: undefined },
+			false,
+			path
+		);
+		const store = createStore();
+		return { atoms, store, invalidIds: () => readInvalidFieldIds(store, atoms.validationByFieldId, null) };
+	}
+
+	it('keeps its rules: blank is required, a name is accepted', async () => {
+		const edit = await openRoot(aboutPath, 'xml');
+		assert.deepEqual(await edit.invalidIds(), []);
+		edit.store.set(edit.atoms.fileName as never, '');
+		assert.deepEqual(await edit.invalidIds(), ['file-name']);
+
+		const created = await openRoot('', '');
+		assert.deepEqual(await created.invalidIds(), ['file-name']);
+		created.store.set(created.atoms.fileName as never, 'contact');
+		assert.deepEqual(await created.invalidIds(), []);
+	});
+
+	it('still checks whether the name is taken', async () => {
+		const result = await validateFieldValue(fileNameField, 'contact', meta);
+		assert.equal(result.isValid, false);
+		assert.ok(requests > 0, 'the path existence request is made');
 	});
 });
 

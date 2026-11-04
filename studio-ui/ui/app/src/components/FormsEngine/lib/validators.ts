@@ -89,6 +89,12 @@ export interface ValidatorMetaData {
 	getValue?(fieldId: string): unknown;
 	/** Aborted when the value being validated is superseded. Created per run when the caller has none. */
 	signal?: AbortSignal;
+	/**
+	 * The field is in a nested scope: a repeat item, inline or opened as its own form. The item's file-name rules
+	 * (implicit required, name format, path collision) belong to the root item only, so a `file-name` control here
+	 * is an ordinary field and only the constraints its content type declares apply. See {@link validateFieldValue}.
+	 */
+	nested?: boolean;
 }
 
 /**
@@ -403,14 +409,17 @@ export async function validateFieldValue(
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
 	// This control's validator applies required itself, against the value it actually edits.
-	const ownsRequired = validatorsOwningRequired.has(field.type as BuiltInControlType | DescriptorControlType);
+	// A nested `file-name` control has no item file-name semantics, so the host applies its declared required.
+	const nestedFileName = Boolean(meta.nested) && field.type === 'file-name';
+	const ownsRequired =
+		!nestedFileName && validatorsOwningRequired.has(field.type as BuiltInControlType | DescriptorControlType);
 
 	// A required constraint with an empty value is invalid. Types that own required decide that themselves.
 	if (!ownsRequired && requiredByConstraint && isEmpty && minimum == null) {
 		messages.push(defineMessage({ defaultMessage: 'This field is required.' }));
 		return Promise.resolve({ isValid: false, messages });
 	}
-	const validator = getFieldValidator(field.type);
+	const validator = nestedFileName ? undefined : getFieldValidator(field.type);
 	const ctx = createBuiltInContext(field, meta);
 	let isValid = true;
 	// The type validator runs for the control. Validation-key validators run only for keys this field has.
@@ -623,11 +632,9 @@ export async function repeatGroupValidator(
 	// Validate fields of each repeat group item. Min/max occurrence checks above still apply.
 	items.forEach((item) => {
 		// Sub-fields see their own item, not the page. See ValidatorContext.getValue.
-		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item) };
+		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item), nested: true };
 		Object.values(fields).forEach((subField) => {
 			if (isFieldPathIrrelevant(meta.irrelevantFieldPaths, subField.id, field.id)) return;
-			// `file-name` belongs to the page being edited. A nested item has none to validate.
-			if (subField.id === XmlKeys.fileName) return;
 			const id = subField.id;
 			const value = item[id];
 			const validationPromise = validateFieldValue(subField, value, childMeta);
@@ -779,11 +786,13 @@ export async function nodeSelectorValidator(
 			...meta,
 			irrelevantFieldPaths: denyList,
 			signal: ctx.signal,
-			getValue: scopeGetValue(component)
+			getValue: scopeGetValue(component),
+			nested: true
 		};
 		Object.values(fields).forEach((embeddedField) => {
 			if (isFieldPathIrrelevant(denyList, embeddedField.id)) return;
-			// An embedded component has no file name of its own. See the repeat item note above.
+			// An embedded component has no file name of its own: its content has no `file-name` key, so even a declared
+			// required would count it blank.
 			if (embeddedField.id === XmlKeys.fileName) return;
 			const value = component[embeddedField.id];
 			const validationPromise = validateFieldValue(embeddedField, value, childMeta);

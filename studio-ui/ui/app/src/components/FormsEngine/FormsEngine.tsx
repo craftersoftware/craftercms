@@ -575,6 +575,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			preloadControlPluginsForFields(siteId, repeatFieldsForLaunch, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
 				const validatorsData = {
+					nested: true,
 					siteId,
 					contentTypesById,
 					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
