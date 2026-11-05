@@ -26,6 +26,7 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import {
@@ -95,7 +96,10 @@ function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProp
 }
 
 export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
-	const { borderLeftColor = palette.teal.main } = props;
+	const theme = useTheme();
+	// A dark MUI Card paints #1E1E1E (elevation overlay), not bare paper #121212.
+	// teal.main is 3.31:1 on #1E1E1E and 2.29:1 on dialog paper #393939. The tint is 10.20:1 and 7.07:1.
+	const { borderLeftColor = theme.palette.mode === 'dark' ? palette.teal.tint : palette.teal.main } = props;
 	const site = useActiveSiteId();
 	const [{ stats, loading }, setState] = useSpreadState<DevContentOpsDashletState>({
 		stats: null,

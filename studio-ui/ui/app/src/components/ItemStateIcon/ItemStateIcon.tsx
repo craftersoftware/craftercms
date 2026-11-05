@@ -33,6 +33,10 @@ import { ContentItem, ItemStates } from '../../models/Item';
 import { SvgIconProps } from '@mui/material/SvgIcon';
 import { PartialSxRecord } from '../../models';
 import { useIntl } from 'react-intl';
+import { Theme } from '@mui/material/styles';
+
+// The light-mode mains are 3:1 or more on white but not on a dark dialog (#393939), so dark mode uses the tints.
+const modeColor = (light: string, dark: string) => (theme: Theme) => (theme.palette.mode === 'dark' ? dark : light);
 
 export type ItemStateIconClassKey =
 	| 'root'
@@ -64,7 +68,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 		if (item.systemType === 'folder') {
 			return {
 				Icon: NotInWorkflowIcon,
-				stateSpecificSx: { color: palette.gray.medium4, ...sxs?.stateNotInWorkflow }
+				stateSpecificSx: { color: palette.gray.medium3, ...sxs?.stateNotInWorkflow }
 			};
 		}
 		let map: { [key in ItemStates]: any };
@@ -72,12 +76,12 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 			new: {
 				Icon: NewStateIcon,
 				stateSpecificClass: classes?.stateNewIcon,
-				stateSpecificSx: { color: palette.teal.main, ...sxs?.stateNewIcon }
+				stateSpecificSx: { color: modeColor(palette.teal.main, palette.teal.tint), ...sxs?.stateNewIcon }
 			},
 			modified: {
 				Icon: EditedStateIcon,
 				stateSpecificClass: classes?.stateModifiedIcon,
-				stateSpecificSx: { color: palette.yellow.main, ...sxs?.stateModifiedIcon }
+				stateSpecificSx: { color: modeColor(palette.yellow.main, palette.yellow.tint), ...sxs?.stateModifiedIcon }
 			},
 			deleted: {
 				Icon: DeletedStateIcon,
@@ -87,36 +91,42 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 			locked: {
 				Icon: LockedStateIcon,
 				stateSpecificClass: classes?.stateLockedIcon,
-				stateSpecificSx: { color: palette.orange.main, ...sxs?.stateLockedIcon }
+				stateSpecificSx: { color: modeColor(palette.orange.main, palette.orange.tint), ...sxs?.stateLockedIcon }
 			},
 			systemProcessing: {
 				Icon: SystemProcessingStateIcon,
 				stateSpecificClass: classes?.stateSystemProcessingIcon,
 				stateSpecificSx: {
-					color: palette.indigo.main,
+					color: modeColor(palette.indigo.main, palette.indigo.tint),
 					...sxs?.stateSystemProcessingIcon
 				}
 			},
 			submitted: {
 				Icon: SubmittedStateIcon,
 				stateSpecificClass: classes?.stateSubmittedIcon,
-				stateSpecificSx: { color: palette.purple.main, ...sxs?.stateSubmittedIcon }
+				stateSpecificSx: {
+					color: modeColor(palette.purple.main, palette.purple.tint),
+					...sxs?.stateSubmittedIcon
+				}
 			},
 			scheduled: {
 				Icon: ScheduledStateIcon,
 				stateSpecificClass: classes?.stateScheduledIcon,
-				stateSpecificSx: { color: palette.green.main, ...sxs?.stateScheduledIcon }
+				stateSpecificSx: { color: modeColor(palette.green.main, palette.green.tint), ...sxs?.stateScheduledIcon }
 			},
 			publishing: {
 				Icon: CloudUploadOutlinedIcon,
 				stateSpecificClass: classes?.statePublishingIcon,
-				stateSpecificSx: { color: palette.indigo.main, ...sxs?.statePublishingIcon }
+				stateSpecificSx: {
+					color: modeColor(palette.indigo.main, palette.indigo.tint),
+					...sxs?.statePublishingIcon
+				}
 			},
 			submittedToStaging: {
 				Icon: item.stateMap.submitted ? SubmittedStateIcon : ScheduledStateIcon,
 				stateSpecificClass: classes?.stateSubmittedToStagingIcon,
 				stateSpecificSx: {
-					color: palette.blue.main,
+					color: modeColor(palette.blue.main, palette.blue.tint),
 					...sxs?.stateSubmittedToStagingIcon
 				}
 			},
@@ -124,7 +134,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 				Icon: item.stateMap.submitted ? SubmittedStateIcon : ScheduledStateIcon,
 				stateSpecificClass: classes?.stateSubmittedToLiveIcon,
 				stateSpecificSx: {
-					color: palette.green.main,
+					color: modeColor(palette.green.main, palette.green.tint),
 					...sxs?.stateSubmittedToLiveIcon
 				}
 			},
@@ -143,7 +153,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 			map[getItemStateId(item.stateMap)] ?? {
 				Icon: NotInWorkflowIcon,
 				stateSpecificClass: classes?.stateNotInWorkflow,
-				stateSpecificSx: { color: palette.gray.medium4, ...sxs?.stateNotInWorkflow }
+				stateSpecificSx: { color: palette.gray.medium3, ...sxs?.stateNotInWorkflow }
 			}
 		);
 	}, [sxs, classes, item]);

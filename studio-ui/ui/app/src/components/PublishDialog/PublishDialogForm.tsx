@@ -39,6 +39,7 @@ import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Link from '@mui/material/Link';
 import { fetchPublishingTargets, FetchPublishingTargetsResponse } from '../../services/publishing';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
+import palette from '../../styles/palette';
 
 const messages = defineMessages({
 	publishingTargetLoading: {
@@ -373,7 +374,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 							variant="body1"
 							component="span"
 							sx={{
-								border: '1px solid #ced4da',
+								border: `1px solid ${palette.gray.medium3}`,
 								padding: '10px 12px',
 								borderRadius: '4px',
 								width: '100%',
@@ -384,7 +385,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 						>
 							{formatMessage(messages[`publishingTarget${publishingTargetsStatus}`])}
 							{publishingTargetsStatus === 'Error' && (
-								<Link href="#" onClick={() => fetchPublishingTargetsFn()}>
+								<Link href="#" underline="always" onClick={() => fetchPublishingTargetsFn()}>
 									<FormattedMessage defaultMessage="retry" />
 								</Link>
 							)}

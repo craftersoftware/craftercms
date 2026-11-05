@@ -161,8 +161,10 @@ export function AuditGridSkeleton(props: AuditGridSkeletonProps) {
 					[`& .${gridClasses.cell}`]: {
 						display: 'flex',
 						alignItems: 'center',
-						'&:focus-within': {
-							outline: 'none !important'
+						'&:focus, &:focus-within': {
+							outline: '2px solid #FFFFFF',
+							outlineOffset: '-2px',
+							boxShadow: 'inset 0 0 0 4px #000000'
 						}
 					}
 				}}

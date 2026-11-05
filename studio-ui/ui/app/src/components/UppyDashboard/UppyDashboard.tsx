@@ -334,7 +334,7 @@ export function UppyDashboard(props: UppyDashboardProps) {
 					position: 'relative'
 				},
 				'& .uppy-dashboard-item-validating': {
-					color: 'rgba(0, 0, 0, 0.54)'
+					color: theme.palette.text.secondary
 				},
 				'& .uppy-dashboard-item-preview': {
 					width: '120px',
@@ -476,6 +476,11 @@ export function UppyDashboard(props: UppyDashboardProps) {
 					backgroundColor: 'transparent',
 					outline: 0,
 					border: 0,
+					'&:focus-visible': {
+						outline: '2px solid #FFFFFF',
+						outlineOffset: '2px',
+						boxShadow: '0 0 0 2px #000000'
+					},
 					margin: 0,
 					borderRadius: 0,
 					padding: 0,

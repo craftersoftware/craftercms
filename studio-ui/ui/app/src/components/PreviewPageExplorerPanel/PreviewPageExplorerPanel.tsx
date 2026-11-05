@@ -332,7 +332,12 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 					}}
 					onClick={() => handleScroll(node)}
 				>
-					<Icon sx={{ color: palette.teal.main }} />
+					<Icon
+						sx={{
+							// #357694 is 2.29:1 on #393939, 3.38:1 on #1C1C1E, 3.72:1 on #121212. The tint is 7.07 / 10.41 / 11.47.
+							color: (theme) => (theme.palette.mode === 'dark' ? palette.teal.tint : palette.teal.main)
+						}}
+					/>
 					<p title={node.name}>
 						{nodeName.length === 1 ? (
 							nodeName[0]

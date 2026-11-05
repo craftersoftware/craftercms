@@ -284,7 +284,12 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 									>
 										<ItemTypeIcon
 											item={item}
-											sx={{ fontSize: '1.4rem', marginRight: '5px', color: palette.teal.main }}
+											sx={{
+												fontSize: '1.4rem',
+												marginRight: '5px',
+												// This dialog’s dark paper is #393939. #357694 is 2.29:1 there; #70D7FF is 7.07:1.
+												color: (theme) => (theme.palette.mode === 'dark' ? palette.teal.tint : palette.teal.main)
+											}}
 										/>
 										<Typography>{contentType.name}</Typography>
 									</Box>

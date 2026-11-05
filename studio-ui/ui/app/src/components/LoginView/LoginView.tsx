@@ -38,7 +38,6 @@ import Snackbar from '@mui/material/Snackbar';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 import { passwordRequirementMessages } from '../../env/i18n-legacy';
 import { filter } from 'rxjs/operators';
-import palette from '../../styles/palette';
 import { buildStoredLanguageKey, dispatchLanguageChange, getCurrentLocale, setStoredLanguage } from '../../utils/i18n';
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LanguageRounded from '@mui/icons-material/LanguageRounded';
@@ -439,18 +438,18 @@ function HeaderView({ error, introMessage, classes }: any) {
 			sx={
 				error
 					? (theme) => ({
-							backgroundColor: palette.red.tint,
-							color: palette.white,
+							backgroundColor: theme.palette.error.main,
+							color: theme.palette.error.contrastText,
 							marginBottom: theme.spacing(1),
 							padding: theme.spacing(1),
 							borderRadius: theme.spacing(1),
-							border: `1px solid ${palette.red.main}`,
+							border: `1px solid ${theme.palette.error.dark}`,
 							display: 'flex',
 							placeContent: 'center',
 							lineHeight: 1.7,
 							'& .MuiSvgIcon-root': {
 								marginRight: theme.spacing(0.5),
-								color: palette.white
+								color: 'inherit'
 							}
 						})
 					: {

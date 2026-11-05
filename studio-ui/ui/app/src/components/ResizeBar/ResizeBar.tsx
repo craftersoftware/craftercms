@@ -16,7 +16,6 @@
 
 import React, { useCallback, useState } from 'react';
 import Box from '@mui/material/Box';
-import palette from '../../styles/palette';
 
 export interface ResizeBarProps {
 	onWidthChange(width: number): void;
@@ -60,13 +59,13 @@ export function ResizeBar(props: ResizeBarProps) {
 				margin: '0px 5px',
 				cursor: 'ew-resize',
 				padding: '4px 0 0',
-				backgroundColor: resizeActive ? palette.blue.tint : 'rgba(0, 0, 0, 0.12)',
+				backgroundColor: (theme) => (resizeActive ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.12)'),
 				transition: 'width 200ms',
 				visibility: resizeActive ? 'visible' : 'hidden',
 				'&:hover': {
 					width: '4px',
 					visibility: 'visible',
-					backgroundColor: palette.blue.tint
+					backgroundColor: (theme) => theme.palette.primary.main
 				}
 			}}
 		/>

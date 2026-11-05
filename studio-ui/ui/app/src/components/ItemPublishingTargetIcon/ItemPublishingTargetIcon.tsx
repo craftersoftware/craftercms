@@ -50,7 +50,7 @@ export function ItemPublishingTargetIcon(props: ItemPublishingTargetIconProps) {
 				aria-label={getItemPublishingTargetText(item.stateMap, formatMessage)}
 				aria-hidden={false}
 				sx={{
-					color: item.stateMap.live ? LIVE_COLOUR : item.stateMap.staged ? STAGING_COLOUR : palette.gray.medium2,
+					color: item.stateMap.live ? LIVE_COLOUR : item.stateMap.staged ? STAGING_COLOUR : palette.gray.medium3,
 					...sxs?.root
 				}}
 			/>

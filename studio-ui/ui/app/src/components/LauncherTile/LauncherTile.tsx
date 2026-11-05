@@ -72,7 +72,12 @@ function LauncherTile(props: LauncherTileProps) {
 								background: (theme) => theme.palette.action.selected
 							}
 						}
-					: {})
+					: {}),
+				// The hover/focus elevation above has the same specificity as the theme focus ring and comes later,
+				// so it replaced the black band of the ring. A white outline alone is invisible on a light page.
+				'&:focus-visible': {
+					boxShadow: (theme) => (active ? '0 0 0 4px #000000' : `0 0 0 4px #000000, ${theme.shadows[2]}`)
+				}
 			}}
 			href={disabled ? null : link}
 			onClick={(e) => (!disabled && onClick ? onClick(e) : null)}

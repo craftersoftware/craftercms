@@ -14,7 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { Theme } from '@mui/material/styles';
 import palette from '../../styles/palette';
 
-export const LIVE_COLOUR = palette.green.main;
-export const STAGING_COLOUR = palette.blue.main;
+// The light-mode mains are 4.5:1 on white but not on a dark dialog (#393939), so dark mode uses the tints.
+export const LIVE_COLOUR = (theme: Theme) => (theme.palette.mode === 'dark' ? palette.green.tint : palette.green.main);
+export const STAGING_COLOUR = (theme: Theme) => (theme.palette.mode === 'dark' ? palette.blue.tint : palette.blue.main);

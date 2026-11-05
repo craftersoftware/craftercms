@@ -62,6 +62,7 @@ export function renderActivity(
 			<em title={path as string}>{label}</em>
 		) : (
 			<Link
+				underline="always"
 				title={path as string}
 				sx={{ cursor: 'pointer' }}
 				onClick={(e) => onItemClick(previewUrl as unknown as ActivityItem, e)}
@@ -73,7 +74,7 @@ export function renderActivity(
 	const render_package_link = (message) => {
 		const activityPackage = activity.package;
 		return (
-			<Link sx={{ cursor: 'pointer' }} onClick={(e) => onPackageClick(activity.package, e)}>
+			<Link underline="always" sx={{ cursor: 'pointer' }} onClick={(e) => onPackageClick(activity.package, e)}>
 				{activityPackage?.title ?? message}
 			</Link>
 		);
