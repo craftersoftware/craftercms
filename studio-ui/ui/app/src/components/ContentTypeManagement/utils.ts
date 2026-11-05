@@ -37,6 +37,7 @@ import {
 } from '../FormsEngine/lib/formsEngineContext';
 import {
 	buildSectionExpandedStateAtoms,
+	createChangedFieldIdsAtom,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -545,6 +546,11 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
+/**
+ * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
+ * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
+ * share an existing event stream; otherwise a new one is created.
+ */
 export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,
@@ -558,7 +564,7 @@ export function createVirtualTypeFormContext(
 	const formValues: LookupTable<unknown> = {};
 	context.atoms.valueByFieldId = {};
 	context.atoms.validationByFieldId = {};
-	context.changedFieldIds = new Set();
+	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
 	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
 	Object.values(contentTypeFields).forEach((field) => {

@@ -162,7 +162,62 @@ export interface StableFormContextProps {
 	 * Null for the pencil and for Add.
 	 */
 	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
-	changedFieldIds: Set<string>;
+	/**
+	 * Source of truth for which fields differ from the last checkpoint (the values the form opened with, or the last
+	 * save). An atom holding an immutable set of field ids; the set's reference changes only when its membership does.
+	 * Null in Type Builder's read-only chips, which track nothing.
+	 *
+	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId)`, so only the field whose
+	 *   flag flips re-renders.
+	 * - Imperative code (save, Type Builder commit, pending-changes checks) reads with `store.get(changedFieldIds)`.
+	 * - Writers replace the set (`withChangedField`) and never mutate it. Clearing is setting `EMPTY_CHANGED_FIELD_IDS`.
+	 *
+	 * This is state. {@link StableFormContextProps.fieldUpdates$} is the matching event stream: it says an edit happened,
+	 * this says what is changed.
+	 *
+	 * @example
+	 * ```ts
+	 * // Imperative read, e.g. before closing the form
+	 * const hasEdits = store.get(stableFormContext.changedFieldIds).size > 0;
+	 * // Clear after a save (see `applyValuesCheckpoint`)
+	 * store.set(stableFormContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+	 * ```
+	 *
+	 * @see {@link StableFormContextProps.fieldUpdates$}
+	 */
+	changedFieldIds: PrimitiveAtom<ReadonlySet<string>> | null;
+	/**
+	 * Internal event stream of value writes for this form: one emission per write to a field's value atom, and one
+	 * per write to the file-name atom (the `file-name` field's own value atom mirrors it and does not emit twice).
+	 * Emitted synchronously, after the field's value is stored and {@link StableFormContextProps.changedFieldIds} is
+	 * updated, so a synchronous subscriber can read the new state with `store.get`.
+	 *
+	 * The payload is the id of the field that was written (`'file-name'` for the file name). A write inside a repeat reports the
+	 * root field's id. A write that does not change the changed-ids set still emits: this is a
+	 * stream of writes, not of changes.
+	 *
+	 * Nothing emits for clears or checkpoints (a save, a Type Builder commit, a stack rebuild): those set
+	 * {@link StableFormContextProps.changedFieldIds} directly, with no write behind them.
+	 *
+	 * Use it to react to the act of an edit: debounced side effects (the default version comment, background
+	 * validation), publishing pending state, or bridging to the form controller's `onFieldChange`. It is not a source
+	 * of truth. Do not accumulate state from it: read the value atoms and `changedFieldIds`.
+	 *
+	 * Internal to the host. Controllers and plugins use the public `onFieldChange` API on the controller context and
+	 * never receive this Subject. Only the field and file-name atom writers call `next`; no one else should.
+	 *
+	 * @example
+	 * ```ts
+	 * // Debounced side effect that reads state, not the payload
+	 * const sub = fieldUpdates$.pipe(debounceTime(300)).subscribe(() => {
+	 *   const changed = store.get(changedFieldIds);
+	 *   // ...build the default version comment from `changed`
+	 * });
+	 * return () => sub.unsubscribe();
+	 * ```
+	 *
+	 * @see {@link StableFormContextProps.changedFieldIds}
+	 */
 	fieldUpdates$: Subject<string>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;

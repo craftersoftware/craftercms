@@ -38,6 +38,7 @@ import { retrieveProperty } from '../../../utils/object';
 import { showSystemNotification } from '../../../state/actions/system';
 import { getFieldFromContentType, parseFieldValuePath } from './fieldPaths';
 import { childFields } from '../lib/formVisibility';
+import { carryReplacedItem, repeatItemKeysFor } from '../lib/repeatItemKeys';
 import {
 	collectRelevanceTargets,
 	createRelevanceContext,
@@ -69,6 +70,12 @@ export interface CreateFormControllerContextArgs {
 	getPath: () => string | null | undefined;
 	mode: FormControllerMode;
 	isEmbedded: boolean;
+	/**
+	 * The stack entry's internal stream of value writes (one emission per write, payload is the written field's id,
+	 * emitted after the value and changed-ids state are updated; clears never emit). `onFieldChange` is built on it,
+	 * so the controller sees `(fieldId, value)` per write and never the Subject, the store or the atoms.
+	 * See `StableFormContextProps.fieldUpdates$`.
+	 */
 	fieldUpdates$: Subject<string>;
 	dispatch: ReduxDispatch;
 	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
@@ -187,7 +194,13 @@ export function createFormControllerContext({
 			}
 			// Copy only containers along the path so sibling embeds keep object identity (and
 			// WeakMap committed relevance). Transfer the deny-list when a component is replaced.
-			store.set(rootAtom, setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value));
+			const nextRoot = setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value);
+			// A repeat row that was copied for this write stays the same row: it keeps its key (no remount).
+			const rowIndex = Number(parsed.nestedPath.split('.')[0]);
+			if (Array.isArray(root) && Array.isArray(nextRoot) && Number.isInteger(rowIndex)) {
+				carryReplacedItem(repeatItemKeysFor(rootAtom), root, nextRoot, rowIndex);
+			}
+			store.set(rootAtom, nextRoot);
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
