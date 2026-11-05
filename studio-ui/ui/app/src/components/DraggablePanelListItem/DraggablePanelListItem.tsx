@@ -26,22 +26,7 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { darken, useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import { getAvatarWithIconColors } from '../../utils/contentType';
-
-/** Keyboard ring that stays visible when the theme turns ripples off. */
-const focusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: 2
-	}
-};
-
-/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
-const rowFocusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: -2
-	}
-};
+import { focusVisibleInsetSx, focusVisibleSx } from '../../styles/focus';
 
 interface PanelListItemProps {
 	primaryText: string;
@@ -92,7 +77,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 					minWidth: 0,
 					pl: 1.5,
 					cursor: isBeingDragged ? 'grabbing' : 'grab',
-					...rowFocusVisibleSx
+					...focusVisibleInsetSx
 				}}
 			>
 				<ListItemAvatar sx={{ minWidth: 0 }}>

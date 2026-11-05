@@ -58,14 +58,7 @@ import { ContentItem } from '../../models';
 import Avatar from '@mui/material/Avatar';
 import { getAvatarWithIconColors } from '../../utils/contentType';
 import { darken, useTheme } from '@mui/material/styles';
-
-/** Keyboard ring that stays visible when the theme turns ripples off. */
-const focusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: 2
-	}
-};
+import { focusVisibleSx } from '../../styles/focus';
 
 const translations = defineMessages({
 	previewComponentsPanelTitle: {

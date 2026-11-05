@@ -36,14 +36,7 @@ import Button from '@mui/material/Button';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 
 import LookupTable from '../../models/LookupTable';
-
-/** Keyboard ring that stays visible when the theme turns ripples off. */
-const checkboxFocusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: 2
-	}
-};
+import { focusVisibleSx } from '../../styles/focus';
 
 /** Makes the item text a native label for its checkbox, so clicking the text toggles it. */
 const getItemLabelRootProps = (checkboxId: string, disabled: boolean) =>
@@ -109,7 +102,7 @@ export function SelectionList(props: SelectionListProps) {
 						indeterminate={isIndeterminate}
 						checked={isAllChecked || isIndeterminate || !onSelectAllClicked}
 						onChange={onSelectAllClicked}
-						sx={checkboxFocusVisibleSx}
+						sx={focusVisibleSx}
 						slotProps={{
 							input: {
 								'aria-labelledby': `${selectAllLabelId} ${titleId}`
@@ -160,7 +153,7 @@ export function SelectionList(props: SelectionListProps) {
 											edge="start"
 											id={checkboxId}
 											checked={!!selectedItems[item.path]}
-											sx={checkboxFocusVisibleSx}
+											sx={focusVisibleSx}
 											onChange={() => onItemClicked(null, item.path)}
 											disabled={itemDisabled}
 										/>
@@ -292,7 +285,7 @@ export function SelectionList(props: SelectionListProps) {
 												edge="start"
 												id={checkboxId}
 												checked={Boolean(selectedItems[path])}
-												sx={checkboxFocusVisibleSx}
+												sx={focusVisibleSx}
 												onChange={() => onItemClicked(null, path)}
 												disabled={pathDisabled}
 											/>

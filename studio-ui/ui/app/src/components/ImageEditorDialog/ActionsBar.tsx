@@ -70,6 +70,7 @@ export function ActionsBar(props: ActionsBarProps) {
 				<Tooltip title={cropLabel}>
 					<IconButton
 						color={currentMode === 'crop' ? 'primary' : 'default'}
+						aria-pressed={currentMode === 'crop'}
 						onClick={() => setEditorMode(currentMode !== 'crop' ? 'crop' : null)}
 					>
 						<CropIcon />
@@ -115,6 +116,7 @@ export function ActionsBar(props: ActionsBarProps) {
 					<Tooltip title={saturationLabel}>
 						<IconButton
 							color={currentMode === 'saturation' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'saturation'}
 							onClick={() => setEditorMode(currentMode !== 'saturation' ? 'saturation' : null)}
 						>
 							<SaturationIcon />
@@ -123,6 +125,7 @@ export function ActionsBar(props: ActionsBarProps) {
 					<Tooltip title={brightnessLabel}>
 						<IconButton
 							color={currentMode === 'brightness' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'brightness'}
 							onClick={() => setEditorMode(currentMode !== 'brightness' ? 'brightness' : null)}
 						>
 							<BrightnessIcon />
@@ -131,6 +134,7 @@ export function ActionsBar(props: ActionsBarProps) {
 					<Tooltip title={contrastLabel}>
 						<IconButton
 							color={currentMode === 'contrast' ? 'primary' : 'default'}
+							aria-pressed={currentMode === 'contrast'}
 							onClick={() => setEditorMode(currentMode !== 'contrast' ? 'contrast' : null)}
 						>
 							<ContrastIcon />

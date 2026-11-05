@@ -51,22 +51,7 @@ import Alert from '@mui/material/Alert';
 import { EmptyState } from '../EmptyState';
 import FormHelperText from '@mui/material/FormHelperText';
 import { LoadingState } from '../LoadingState';
-
-/** Keyboard ring that stays visible when the theme turns ripples off. */
-const focusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: 2
-	}
-};
-
-/** Same ring, drawn inside the box: a full-width row starts at the panel edge, where an outer ring is clipped. */
-const rowFocusVisibleSx = {
-	'&.Mui-focusVisible': {
-		outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: -2
-	}
-};
+import { focusVisibleInsetSx, focusVisibleSx } from '../../styles/focus';
 
 const translations = defineMessages({
 	dropTargetsPanel: {
@@ -302,7 +287,7 @@ function DropTargetsList(props: DropTargetsListProps) {
 		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
 			<ListItemButton
 				onClick={() => props.onSelectedDropZone(dropTarget)}
-				sx={{ flex: 1, minWidth: 0, ...rowFocusVisibleSx }}
+				sx={{ flex: 1, minWidth: 0, ...focusVisibleInsetSx }}
 			>
 				<ListItemIcon>
 					<ContentTypeField />

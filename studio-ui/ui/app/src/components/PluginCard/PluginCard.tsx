@@ -30,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
 
 interface PluginCardProps {
@@ -345,10 +346,12 @@ function PluginCard(props: PluginCardProps) {
 							disabled={!usePermission || inUse || beingInstalled}
 							loading={beingInstalled}
 							onClick={() => onPluginSelected(plugin, 1)}
-							aria-label={useLabel ? undefined : formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })}
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
+							<Box component="span" sx={visuallyHidden}>
+								{` ${pluginLabel}`}
+							</Box>
 						</SecondaryButton>
 					)}
 					<Button
