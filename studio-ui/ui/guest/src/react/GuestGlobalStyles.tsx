@@ -60,6 +60,19 @@ export interface GuestGlobalStylesProps {
 
 const overlayBackgroundColor = 'rgba(0, 0, 0, .4)';
 
+// White on the 40% scrim over a white page is 2.85:1. The chip is #1C1C1E (17.01:1 with white).
+// The white outline plus black ring stays visible on light and dark pages.
+const guestOverlayTextChip = {
+	color: '#FFFFFF',
+	backgroundColor: '#1C1C1E',
+	outline: '2px solid #FFFFFF',
+	boxShadow: '0 0 0 2px #000000',
+	width: 'auto',
+	height: 'auto',
+	right: 'auto',
+	bottom: 'auto'
+};
+
 export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 	const { styles } = props;
 	const { formatMessage } = useIntl();
@@ -154,18 +167,19 @@ export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 										content: `"${formatMessage({
 											id: 'globalStyles.contentHidden',
 											defaultMessage: 'Content hidden to enable dragging.'
-										})}"`
+										})}"`,
+										...guestOverlayTextChip
 									},
 									'> *': {
 										visibility: 'hidden'
 									}
 								},
 								[`&.${iceBypassKeyClass} [${eventCaptureOverlayAttribute}]:hover::before`]: {
-									backgroundColor: overlayBackgroundColor,
 									content: `"${formatMessage({
 										id: 'globalStyles.turnOffEditMode',
 										defaultMessage: 'Turn off edit mode to interact with this element.'
-									})}"`
+									})}"`,
+									...guestOverlayTextChip
 								},
 								[`[${eventCaptureOverlayAttribute}]`]: {
 									position: 'relative',
@@ -186,14 +200,14 @@ export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 									minWidth: '100px',
 									backgroundColor: overlayBackgroundColor,
 									'&::before': {
-										color: '#fff',
 										display: 'inline-block',
 										padding: '10px',
 										content: `"${formatMessage({
 											id: 'globalStyles.emptyTarget',
 											defaultMessage: 'Empty components target. Drag new or existing content items here to add them'
 										})}"`,
-										fontWeight: 'bold'
+										fontWeight: 'bold',
+										...guestOverlayTextChip
 									}
 								},
 								[`.${emptyFieldClass}`]: {
@@ -202,14 +216,14 @@ export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 									borderRadius: '5px',
 									backgroundColor: overlayBackgroundColor,
 									'&::before': {
-										color: '#fff',
 										display: 'inline-block',
 										padding: '10px',
 										content: `"${formatMessage({
 											id: 'globalStyles.clickToAddContent',
 											defaultMessage: 'Click to add content.'
 										})}"`,
-										fontWeight: 'bold'
+										fontWeight: 'bold',
+										...guestOverlayTextChip
 									}
 								}
 							},

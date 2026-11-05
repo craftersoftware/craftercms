@@ -57,6 +57,7 @@ export interface ZoneMarkerProps {
 	label: string;
 	inherited: boolean;
 	showZoneTooltip?: boolean;
+	hasFailedRequired?: boolean;
 	menuItems?: ReactNode;
 	lockInfo?: Person;
 	isStale?: boolean;
@@ -76,6 +77,9 @@ function getStyles(sx: ZoneMarkerPartialSx): ZoneMarkerFullSx {
 			boxSizing: 'border-box',
 			outline: (theme) => `2px solid ${theme.palette.success.main}`,
 			outlineOffset: '-2px',
+			// Black/white inset rings stay visible when the page behind the zone is unknown.
+			// #000 on #fff is 21:1; #fff on #121212 is 18.73:1.
+			boxShadow: 'inset 0 0 0 1px #FFFFFF, inset 0 0 0 3px #000000',
 			textAlign: 'center',
 			position: 'absolute',
 			zIndex: 'tooltip',
@@ -124,6 +128,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 		label,
 		classes,
 		inherited,
+		hasFailedRequired = false,
 		menuItems,
 		showZoneTooltip = true,
 		onPopperClick,
@@ -261,6 +266,11 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 									id="zoneMarker.modifiedItem"
 									defaultMessage="Item was modified. Refresh to enable editing."
 								/>
+							</Typography>
+						)}
+						{hasFailedRequired && !isLockedItem && isEditable && !isStale && (
+							<Typography noWrap variant="body2" component="div">
+								<FormattedMessage id="zoneMarker.required" defaultMessage="Required" />
 							</Typography>
 						)}
 						{menuItems && <Box sx={sx.menuItemsContainer}>{menuItems}</Box>}
