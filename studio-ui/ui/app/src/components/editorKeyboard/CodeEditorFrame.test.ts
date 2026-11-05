@@ -70,6 +70,35 @@ describe('CodeEditorFrame', () => {
 		assert.ok(hint.parentElement === frame, 'hint stays in the DOM so aria-describedby resolves');
 	});
 
+	it('shows the hint unclipped while the frame is focused, and hides it again after focus leaves', () => {
+		const { frame, host } = render({ onActivate: () => true });
+		const hint = document.getElementById(frame.getAttribute('aria-describedby'));
+		const hidden = getComputedStyle(hint);
+		assert.equal(hidden.clipPath, 'inset(50%)');
+		assert.equal(hidden.width, '1px');
+
+		act(() => {
+			frame.focus();
+		});
+		assert.equal(document.activeElement, frame, 'jsdom moves focus to the frame');
+		const shown = getComputedStyle(hint);
+		// visuallyHidden sets clipPath: inset(50%); both clipping properties must be cleared or the hint stays clipped.
+		assert.equal(shown.clipPath, 'none');
+		assert.equal(shown.clip, 'auto');
+		assert.equal(shown.overflow, 'visible');
+		assert.equal(shown.height, 'auto');
+		assert.equal(shown.width, 'auto');
+		assert.equal(shown.whiteSpace, 'normal');
+
+		act(() => {
+			frame.blur();
+		});
+		const hiddenAgain = getComputedStyle(hint);
+		assert.equal(hiddenAgain.clipPath, 'inset(50%)');
+		assert.equal(hiddenAgain.width, '1px');
+		assert.equal(hiddenAgain.height, '1px');
+	});
+
 	it('describes a read-only editor with the read-only sentence', () => {
 		const { frame, host } = render({ onActivate: () => true, readOnly: true });
 		const hint = document.getElementById(frame.getAttribute('aria-describedby'));

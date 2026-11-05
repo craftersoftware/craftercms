@@ -117,7 +117,9 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 						height: 'auto',
 						m: 0,
 						overflow: 'visible',
+						// Undo both clipping properties of the `visuallyHidden` defaults, or the hint stays clipped.
 						clip: 'auto',
+						clipPath: 'none',
 						whiteSpace: 'normal',
 						px: 1,
 						py: 0.5,

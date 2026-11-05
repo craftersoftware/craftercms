@@ -37,6 +37,7 @@ export const codeEditorKeyboardMessages = defineMessages({
 	},
 	gutterLabel: {
 		id: 'codeEditor.gutterLabel',
-		defaultMessage: 'Editor gutter. Press Enter to use the controls. Press Esc to leave the gutter.'
+		defaultMessage:
+			'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
 	}
 });

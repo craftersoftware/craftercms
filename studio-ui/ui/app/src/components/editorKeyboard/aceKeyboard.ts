@@ -23,6 +23,11 @@
  * that mode on once, then overlays a short accessible name, a described-by hint,
  * and localized gutter text.
  *
+ * The gutter stays out of the Tab order (A11Y-09, one tab stop per editor) but keeps
+ * its role, label and its annotation and fold children. Ace's own commands are the
+ * keyboard route to them: Alt+E and Alt+Shift+E move to the next and previous
+ * annotation, F2 toggles the fold on the cursor line.
+ *
  * TinyMCE dialogs close on Escape keyup. Ace moves focus to the scroller on
  * keydown, so the keyup lands on the scroller and would close the code dialog.
  * A capture keydown flag plus a keyup stopPropagation keeps that dialog open.
@@ -165,11 +170,13 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 
 	scroller?.setAttribute('aria-label', labels.name);
 	gutter?.setAttribute('aria-label', labels.gutterLabel);
-	// Ace's keyboard mode makes the gutter a second tab stop (for fold and annotation widgets).
-	// A11Y-09 asks for one tab stop per editor, so keep the scroller as the only one.
+	// Ace's keyboard mode makes the gutter a second tab stop. A11Y-09 asks for one tab stop per
+	// editor, so the scroller stays the only one. The gutter keeps its role, its label and its
+	// annotation and fold children, so screen readers still reach them; the label names the
+	// keyboard route to them (Ace's own Alt+E / Alt+Shift+E / F2 commands).
 	if (keyboardMode && gutter) {
 		gutter.tabIndex = -1;
-		gutter.setAttribute('aria-hidden', 'true');
+		gutter.removeAttribute('aria-hidden');
 	}
 	const textInput = aceEditor.textInput?.getElement();
 	textInput?.setAttribute('aria-label', labels.name);

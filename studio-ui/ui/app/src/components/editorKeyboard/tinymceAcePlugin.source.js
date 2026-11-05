@@ -38,7 +38,8 @@ tinymce.addI18n('en', {
 	'code-editor-name': 'Code editor',
 	'code-editor-instructions': 'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
 	'code-editor-instructions-readonly': 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.',
-	'code-editor-gutter': 'Editor gutter. Press Enter to use the controls. Press Esc to leave the gutter.'
+	'code-editor-gutter':
+		'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
 });
 tinymce.addI18n('es', {
 	'code-editor': 'Editor de Código',
@@ -50,7 +51,8 @@ tinymce.addI18n('es', {
 		'Pulse Esc y después Tab para salir del editor. Pulse Enter para editar. Tab sangra mientras edita.',
 	'code-editor-instructions-readonly':
 		'Pulse Esc y después Tab para salir del editor. Pulse Enter para entrar en el editor.',
-	'code-editor-gutter': 'Margen del editor. Pulse Enter para usar los controles. Pulse Esc para salir del margen.'
+	'code-editor-gutter':
+		'Margen del editor: problemas y controles de plegado. Desde el editor, Alt+E va al siguiente problema, Alt+Shift+E al anterior y F2 pliega o despliega.'
 });
 tinymce.addI18n('de', {
 	'code-editor': 'Code-Editor',
@@ -63,7 +65,7 @@ tinymce.addI18n('de', {
 	'code-editor-instructions-readonly':
 		'Drücken Sie Esc und dann Tab, um den Editor zu verlassen. Drücken Sie die Eingabetaste, um in den Editor zu wechseln.',
 	'code-editor-gutter':
-		'Editor-Randleiste. Drücken Sie die Eingabetaste, um die Steuerelemente zu verwenden. Drücken Sie Esc, um die Randleiste zu verlassen.'
+		'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt Alt+E zum nächsten Problem, Alt+Shift+E zum vorherigen und F2 klappt einen Block ein oder aus.'
 });
 tinymce.addI18n('ko_KR', {
 	'code-editor': '코드 편집기',
@@ -75,7 +77,8 @@ tinymce.addI18n('ko_KR', {
 		'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집하려면 Enter를 누르세요. 편집 중 Tab은 들여쓰기입니다.',
 	'code-editor-instructions-readonly':
 		'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집기로 들어가려면 Enter를 누르세요.',
-	'code-editor-gutter': '편집기 여백입니다. 컨트롤을 사용하려면 Enter를 누르세요. 여백을 나가려면 Esc를 누르세요.'
+	'code-editor-gutter':
+		'편집기 여백: 문제 및 접기 컨트롤입니다. 편집기에서 Alt+E는 다음 문제로, Alt+Shift+E는 이전 문제로 이동하며 F2는 접기를 전환합니다.'
 });
 
 tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {

@@ -119,7 +119,7 @@
 		gutter?.setAttribute('aria-label', labels.gutterLabel);
 		if (keyboardMode && gutter) {
 			gutter.tabIndex = -1;
-			gutter.setAttribute('aria-hidden', 'true');
+			gutter.removeAttribute('aria-hidden');
 		}
 		const textInput = aceEditor.textInput?.getElement();
 		textInput?.setAttribute('aria-label', labels.name);
@@ -197,7 +197,8 @@
 		'code-editor-instructions':
 			'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
 		'code-editor-instructions-readonly': 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.',
-		'code-editor-gutter': 'Editor gutter. Press Enter to use the controls. Press Esc to leave the gutter.'
+		'code-editor-gutter':
+			'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
 	});
 	tinymce.addI18n('es', {
 		'code-editor': 'Editor de C\xF3digo',
@@ -209,7 +210,8 @@
 			'Pulse Esc y despu\xE9s Tab para salir del editor. Pulse Enter para editar. Tab sangra mientras edita.',
 		'code-editor-instructions-readonly':
 			'Pulse Esc y despu\xE9s Tab para salir del editor. Pulse Enter para entrar en el editor.',
-		'code-editor-gutter': 'Margen del editor. Pulse Enter para usar los controles. Pulse Esc para salir del margen.'
+		'code-editor-gutter':
+			'Margen del editor: problemas y controles de plegado. Desde el editor, Alt+E va al siguiente problema, Alt+Shift+E al anterior y F2 pliega o despliega.'
 	});
 	tinymce.addI18n('de', {
 		'code-editor': 'Code-Editor',
@@ -222,7 +224,7 @@
 		'code-editor-instructions-readonly':
 			'Dr\xFCcken Sie Esc und dann Tab, um den Editor zu verlassen. Dr\xFCcken Sie die Eingabetaste, um in den Editor zu wechseln.',
 		'code-editor-gutter':
-			'Editor-Randleiste. Dr\xFCcken Sie die Eingabetaste, um die Steuerelemente zu verwenden. Dr\xFCcken Sie Esc, um die Randleiste zu verlassen.'
+			'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt Alt+E zum n\xE4chsten Problem, Alt+Shift+E zum vorherigen und F2 klappt einen Block ein oder aus.'
 	});
 	tinymce.addI18n('ko_KR', {
 		'code-editor': '\uCF54\uB4DC \uD3B8\uC9D1\uAE30',
@@ -235,7 +237,7 @@
 		'code-editor-instructions-readonly':
 			'\uD3B8\uC9D1\uAE30\uB97C \uB098\uAC00\uB824\uBA74 Esc\uB97C \uB204\uB978 \uB2E4\uC74C Tab\uC744 \uB204\uB974\uC138\uC694. \uD3B8\uC9D1\uAE30\uB85C \uB4E4\uC5B4\uAC00\uB824\uBA74 Enter\uB97C \uB204\uB974\uC138\uC694.',
 		'code-editor-gutter':
-			'\uD3B8\uC9D1\uAE30 \uC5EC\uBC31\uC785\uB2C8\uB2E4. \uCEE8\uD2B8\uB864\uC744 \uC0AC\uC6A9\uD558\uB824\uBA74 Enter\uB97C \uB204\uB974\uC138\uC694. \uC5EC\uBC31\uC744 \uB098\uAC00\uB824\uBA74 Esc\uB97C \uB204\uB974\uC138\uC694.'
+			'\uD3B8\uC9D1\uAE30 \uC5EC\uBC31: \uBB38\uC81C \uBC0F \uC811\uAE30 \uCEE8\uD2B8\uB864\uC785\uB2C8\uB2E4. \uD3B8\uC9D1\uAE30\uC5D0\uC11C Alt+E\uB294 \uB2E4\uC74C \uBB38\uC81C\uB85C, Alt+Shift+E\uB294 \uC774\uC804 \uBB38\uC81C\uB85C \uC774\uB3D9\uD558\uBA70 F2\uB294 \uC811\uAE30\uB97C \uC804\uD658\uD569\uB2C8\uB2E4.'
 	});
 	tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {
 		const aceModes = {
