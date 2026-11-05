@@ -108,9 +108,38 @@ function installDeferredXhr() {
 	} as unknown as typeof XMLHttpRequest;
 }
 
+/**
+ * RxJS `timer` schedules with `setInterval`. Node's mock `tick` puts an interval back on the queue after its
+ * callback has cleared it, so the next tick runs a cancelled debounce. Arm each interval with mocked `setTimeout`
+ * instead: `tick` drops that timeout when `clearTimeout` runs inside the callback.
+ */
+function installIntervalAsTimeout() {
+	const scheduleTimeout = globalThis.setTimeout;
+	const cancelTimeout = globalThis.clearTimeout;
+	type IntervalHandle = { cleared: boolean; timeout?: ReturnType<typeof setTimeout> };
+	globalThis.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+		const handle: IntervalHandle = { cleared: false };
+		const arm = () => {
+			handle.timeout = scheduleTimeout(() => {
+				if (handle.cleared) return;
+				(handler as (...params: unknown[]) => void)(...args);
+				if (!handle.cleared) arm();
+			}, timeout);
+		};
+		arm();
+		return handle as unknown as ReturnType<typeof setInterval>;
+	}) as typeof setInterval;
+	globalThis.clearInterval = ((handle?: IntervalHandle) => {
+		if (!handle) return;
+		handle.cleared = true;
+		if (handle.timeout !== undefined) cancelTimeout(handle.timeout);
+	}) as typeof clearInterval;
+}
+
 beforeEach(() => {
 	installDeferredXhr();
-	mock.timers.enable({ apis: ['setTimeout'] });
+	mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+	installIntervalAsTimeout();
 });
 
 afterEach(() => {

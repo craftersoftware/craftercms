@@ -31,7 +31,7 @@ import {
 	processAdditionalFieldMacro,
 	rootPagePath
 } from './formUtils';
-import { firstValueFrom, fromEvent, Observable } from 'rxjs';
+import { firstValueFrom, fromEvent, timer } from 'rxjs';
 import { switchMap, takeUntil } from 'rxjs/operators';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
@@ -556,17 +556,6 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 /** How long the file-name uniqueness check waits after the latest value before calling the server. */
 const fileNameExistenceDebounceMs = 300;
 
-/** Emits once after `ms`, then completes. Uses live `setTimeout` so Node mock timers can drive it in tests. */
-function after(ms: number): Observable<void> {
-	return new Observable((subscriber) => {
-		const id = setTimeout(() => {
-			subscriber.next();
-			subscriber.complete();
-		}, ms);
-		return () => clearTimeout(id);
-	});
-}
-
 /**
  * File-name rules: required, then uniqueness.
  * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
@@ -606,7 +595,7 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 	try {
 		// Debounce, then check existence. Abort completes the stream (takeUntil) so the wait and request cancel.
 		const exists = await firstValueFrom(
-			after(fileNameExistenceDebounceMs).pipe(
+			timer(fileNameExistenceDebounceMs).pipe(
 				switchMap(() => checkPathExistence(siteId, newPath)),
 				takeUntil(fromEvent(signal, 'abort'))
 			),
