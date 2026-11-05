@@ -16,7 +16,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { resolveInsertIndex } from './resolveInsertIndex';
+import { resolveInsertIndex } from './resolveInsertIndex.ts';
 
 /**
  * Where `Array.prototype.splice` lands when given the index `insertComponent`
