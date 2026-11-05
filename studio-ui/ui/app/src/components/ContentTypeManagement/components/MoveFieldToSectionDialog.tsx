@@ -34,7 +34,7 @@ import SortableList from '../../FormsEngine/components/SortableList';
 import ContentType, { ContentTypeField, ContentTypeSection } from '../../../models/ContentType';
 import { LookupTable } from '../../../models';
 import Box from '@mui/material/Box';
-import { isComposedPath, isRootOnlyControl } from '../utils';
+import { isComposedPath, isRootOnlyControl, readOnlyFieldsIds } from '../utils';
 import { EmptyState } from '../../EmptyState';
 
 export interface MoveFieldToSectionDialogProps extends EnhancedDialogProps {
@@ -126,7 +126,8 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 		const targets = [];
 		// Prefer the resolved descriptor (built-in or custom) so rootOnly metadata is honored.
 		// System fields (e.g. Internal Name) may store a remapped type (input/checkbox); check id too.
-		const isRootOnlyField = isRootOnlyControl(field.type, controlDescriptor) || isRootOnlyControl(field.id);
+		const isRootOnlyField =
+			isRootOnlyControl(field.type, controlDescriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
 		sections.forEach((section) => {
 			const repeatGroupsIdsForSection = getRepeatGroupsIdsForSection(section, typeRepeatGroups);
 			const sameFieldInType = Boolean(type.fields[field.id]);
