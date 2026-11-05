@@ -24,7 +24,7 @@ import React from 'react';
 import { PagedArray } from '../../models/PagedArray';
 import Pagination from '../Pagination';
 import Group from '../../models/Group';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
 import { EmptyState } from '../EmptyState';
@@ -65,30 +65,13 @@ export function GroupsGridUI(props: GroupsGridUIProps) {
 					<TableBody>
 						{groups?.length ? (
 							groups.map((group, i) => (
-								<GlobalAppGridRow
-									key={group.id}
-									tabIndex={0}
-									onClick={() => onRowClicked(group)}
-									onKeyDown={(event) => {
-										if (event.target !== event.currentTarget) {
-											return;
-										}
-										if (event.key === 'Enter' || event.key === ' ') {
-											event.preventDefault();
-											onRowClicked(group);
-										}
-									}}
-									sx={{
-										'&:focus-visible': {
-											outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-											outlineOffset: '-2px'
-										}
-									}}
-								>
+								<GlobalAppGridRow key={group.id} onClick={() => onRowClicked(group)}>
 									<GlobalAppGridCell align="left" className="width25">
-										<Typography variant="body2" noWrap title={group.name}>
-											{group.name}
-										</Typography>
+										<GlobalAppGridRowAction>
+											<Typography variant="body2" noWrap title={group.name}>
+												{group.name}
+											</Typography>
+										</GlobalAppGridRowAction>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left">
 										<Typography variant="body2" sx={{ wordWrap: 'break-word' }}>

@@ -16,7 +16,7 @@
 
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage } from 'react-intl';
@@ -100,24 +100,9 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 						{itemStates.map((item) => (
 							<GlobalAppGridRow
 								key={item.id}
-								tabIndex={0}
 								onClick={() => onRowSelected(item)}
-								onKeyDown={(event) => {
-									if (event.target !== event.currentTarget) {
-										return;
-									}
-									if (event.key === 'Enter' || event.key === ' ') {
-										event.preventDefault();
-										onRowSelected(item);
-									}
-								}}
 								sx={{
-									backgroundColor:
-										Boolean(selectedItems[item.path]) || allItemsSelected ? 'action.selected' : 'inherit',
-									'&:focus-visible': {
-										outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-										outlineOffset: '-2px'
-									}
+									backgroundColor: Boolean(selectedItems[item.path]) || allItemsSelected ? 'action.selected' : 'inherit'
 								}}
 							>
 								<GlobalAppGridCell align="center">
@@ -133,19 +118,22 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 								</GlobalAppGridCell>
 								<GlobalAppGridCell className="ellipsis maxWidth300 pl0">
 									<ItemDisplay item={item} />
-									<Typography
-										title={item.path}
-										variant="caption"
-										component="p"
-										sx={{
-											color: (theme) => theme.palette.text.secondary,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}
-									>
-										{item.path}
-									</Typography>
+									<GlobalAppGridRowAction>
+										<Typography
+											title={item.path}
+											variant="caption"
+											component="span"
+											sx={{
+												display: 'block',
+												color: (theme) => theme.palette.text.secondary,
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap'
+											}}
+										>
+											{item.path}
+										</Typography>
+									</GlobalAppGridRowAction>
 								</GlobalAppGridCell>
 								<GlobalAppGridCell>
 									<Typography variant="body2">

@@ -15,6 +15,7 @@
  */
 
 import { styled } from '@mui/material/styles';
+import ButtonBase from '@mui/material/ButtonBase';
 import TableRow from '@mui/material/TableRow';
 
 const GlobalAppGridRow = styled(TableRow)(({ theme }) => ({
@@ -25,6 +26,21 @@ const GlobalAppGridRow = styled(TableRow)(({ theme }) => ({
 	'&.hoverDisabled': {
 		cursor: 'inherit',
 		background: 'none'
+	}
+}));
+
+/**
+ * The keyboard and screen reader control for a clickable row. Place it in the name cell. Its click
+ * bubbles to the row's `onClick`, so it needs no handler of its own.
+ */
+export const GlobalAppGridRowAction = styled(ButtonBase)(({ theme }) => ({
+	display: 'block',
+	width: '100%',
+	font: 'inherit',
+	textAlign: 'inherit',
+	'&:focus-visible': {
+		outline: `2px solid ${theme.palette.primary.main}`,
+		outlineOffset: '-2px'
 	}
 }));
 

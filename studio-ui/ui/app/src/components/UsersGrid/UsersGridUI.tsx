@@ -25,7 +25,7 @@ import Avatar from '@mui/material/Avatar';
 import User from '../../models/User';
 import { PagedArray } from '../../models/PagedArray';
 import Pagination from '../Pagination';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -95,26 +95,7 @@ export function UsersGridUI(props: UsersGridUIProps) {
 					<TableBody>
 						{users?.length ? (
 							users.map((user) => (
-								<GlobalAppGridRow
-									key={user.id}
-									tabIndex={0}
-									onClick={() => onRowClicked(user)}
-									onKeyDown={(event) => {
-										if (event.target !== event.currentTarget) {
-											return;
-										}
-										if (event.key === 'Enter' || event.key === ' ') {
-											event.preventDefault();
-											onRowClicked(user);
-										}
-									}}
-									sx={{
-										'&:focus-visible': {
-											outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-											outlineOffset: '-2px'
-										}
-									}}
-								>
+								<GlobalAppGridRow key={user.id} onClick={() => onRowClicked(user)}>
 									<GlobalAppGridCell align="center" className="avatar">
 										<Avatar sx={{ margin: '0 auto' }}>
 											{user.firstName.charAt(0)}
@@ -122,7 +103,9 @@ export function UsersGridUI(props: UsersGridUIProps) {
 										</Avatar>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left" className="pl20 width20">
-										{user.firstName} {user.lastName}
+										<GlobalAppGridRowAction>
+											{user.firstName} {user.lastName}
+										</GlobalAppGridRowAction>
 									</GlobalAppGridCell>
 									<GlobalAppGridCell align="left" className="width20">
 										<Typography variant="body2" noWrap title={user.username}>
