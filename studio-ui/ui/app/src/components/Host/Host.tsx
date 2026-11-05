@@ -29,14 +29,15 @@ import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import Typography from '@mui/material/Typography';
 import { visuallyHidden } from '@mui/utils';
+import { useIntl } from 'react-intl';
+import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 
-export interface HostProps {
-	heading?: string;
-}
-
-export function Host(props: HostProps) {
-	const { heading } = props;
+export function Host() {
 	const site = useActiveSiteId();
+	const { formatMessage } = useIntl();
+	const previewItem = useCurrentPreviewItem();
+	const heading = previewItem?.label || formatMessage({ id: 'words.preview', defaultMessage: 'Preview' });
 	const { guestBase, previewLandingBase } = useEnv();
 	const {
 		hostSize,
@@ -52,6 +53,12 @@ export function Host(props: HostProps) {
 	const url = currentUrlPath === '' ? previewLandingBase : `${guestBase}${currentUrlPath}`;
 	const eitherSideBarOpen = leftSideBarOpen || rightSideBarOpen;
 	const refs = useUpdateRefs({ guest, iframeKeyAppend, url });
+
+	useEffect(() => {
+		if (site) {
+			document.title = studioDocumentTitle(heading);
+		}
+	}, [heading, site]);
 
 	useEffect(() => {
 		const g2h = fromEvent<MessageEvent>(window, 'message')
@@ -134,17 +141,15 @@ export function Host(props: HostProps) {
 						})
 			})}
 		>
-			{heading ? (
-				<Typography component="h1" sx={visuallyHidden}>
-					{heading}
-				</Typography>
-			) : null}
+			<Typography component="h1" sx={visuallyHidden}>
+				{heading}
+			</Typography>
 			<Box
 				key={`${site}_${iframeKeyAppend}`}
 				ref={iframeRef}
 				component="iframe"
 				id="crafterCMSPreviewIframe"
-				title={heading || 'Preview'}
+				title={heading}
 				sx={{
 					width: hostSize.width ?? '100%',
 					height: hostSize.height ?? '100%',

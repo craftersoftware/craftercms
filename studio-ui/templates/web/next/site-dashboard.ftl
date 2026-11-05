@@ -41,7 +41,7 @@
 					{},
 					createElement(Box, { sx: { display: 'flex', alignItems: 'center' } },
 						createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
-						createElement(Typography, { variant: 'h5' }, 'Site Dashboard')
+						createElement(Typography, { variant: 'h5', component: 'span' }, 'Site Dashboard')
 					),
 					createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
 				),

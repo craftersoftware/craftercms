@@ -53,7 +53,7 @@ import useTimer from '../../hooks/useTimer';
 import { nnou } from '../../utils/object';
 import moment from 'moment-timezone';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
-import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 export interface SystemLang {
 	id: string;
@@ -637,7 +637,6 @@ export function LoginViewContainer(props: LoginViewProps) {
 				}}
 				aria-labelledby="loginDialog"
 			>
-				<SkipToMainContent />
 				<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
 					<DialogTitle id="loginDialog" component="h1">
 						<Box component="span" sx={visuallyHidden}>

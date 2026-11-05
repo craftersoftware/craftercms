@@ -489,7 +489,6 @@
 	"global.about": "Über CrafterCMS",
 	"globalApp.pageNotFound": "Seite nicht gefunden",
 	"globalApp.routeNotFound": "Route nicht gefunden",
-	"globalAppToolbar.ariaLabel": "Werkzeugleiste",
 	"globalAppToolbar.toggleSidebar": "Seitenleiste umschalten",
 	"globalConfig.configSaved": "Konfiguration erfolgreich gespeichert.",
 	"globalConfig.confirmHelper": "Nicht gespeicherte Änderungen verwerfen?",

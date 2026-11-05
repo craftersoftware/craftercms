@@ -83,7 +83,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 					}
 				}}
 			>
-				<Box sx={{ display: 'flex', alignItems: 'center' }}>
+				<Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
 					{icon && (
 						<SystemIcon
 							icon={icon}

@@ -149,6 +149,12 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		}
 	];
 
+	const dockedProps = slotProps?.docked;
+	const dockedSlotProps: DrawerProps['slotProps']['docked'] =
+		typeof dockedProps === 'function'
+			? (ownerState) => ({ ...dockedProps(ownerState), inert: !open })
+			: { ...dockedProps, inert: !open };
+
 	return (
 		<Drawer
 			open={open}
@@ -170,10 +176,7 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 				// Slide sets visibility:hidden once the close transition has exited, which
 				// drops the controls from the tab order. `inert` covers the transition
 				// itself, while the paper is still translated and visible (WCAG 2.4.3 / 1.3.2).
-				docked: {
-					...(typeof slotProps?.docked === 'object' ? slotProps.docked : {}),
-					inert: !open
-				}
+				docked: dockedSlotProps
 			}}
 			{...rest}
 		>

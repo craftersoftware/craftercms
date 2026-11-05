@@ -89,7 +89,9 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 				{icon && (
 					<SystemIcon icon={icon} sx={{ marginRight: '10px', color: theme.palette.action.active, ...sxs?.icon }} />
 				)}
-				<Typography sx={sxs?.typography}>{title}</Typography>
+				<Typography component="span" sx={sxs?.typography}>
+					{title}
+				</Typography>
 			</AccordionSummary>
 			<AccordionDetails sx={{ padding: 0, ...sxs?.accordionDetails }}>
 				<WidgetsGrid

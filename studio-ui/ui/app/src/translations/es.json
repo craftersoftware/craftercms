@@ -489,7 +489,6 @@
 	"global.about": "Acerca de",
 	"globalApp.pageNotFound": "Página no encontrada",
 	"globalApp.routeNotFound": "Ruta no encontrada",
-	"globalAppToolbar.ariaLabel": "Barra de herramientas",
 	"globalAppToolbar.toggleSidebar": "Alternar barra lateral",
 	"globalConfig.configSaved": "Configuración guardada con éxito.",
 	"globalConfig.confirmHelper": "¿Descartar los cambios no guardados?",

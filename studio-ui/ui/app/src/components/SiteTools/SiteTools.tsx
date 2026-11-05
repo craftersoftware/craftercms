@@ -98,10 +98,14 @@ export function SiteTools(props: SiteToolsProps) {
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const projectToolsLabel = formatMessage({ id: 'siteTools.title', defaultMessage: 'Project Tools' });
 	const toolNotFoundLabel = formatMessage({ id: 'siteTools.toolNotFound', defaultMessage: 'Tool not found' });
-	const matchedTool = tools?.find((item) => item.url.replace(/^\//, '') === activeToolId.replace(/^\//, ''));
+	const isPage = mountMode === 'page';
+	const normalizedActiveToolId = activeToolId?.replace(/^\//, '');
+	const matchedTool = normalizedActiveToolId
+		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
+		: undefined;
 	const tool = matchedTool?.widget;
 	useEffect(() => {
-		if (mountMode !== 'page') {
+		if (!isPage) {
 			return;
 		}
 		// The tools reference arrives after the first paint. Don't flash "Tool not found" in the meantime.
@@ -115,7 +119,7 @@ export function SiteTools(props: SiteToolsProps) {
 				? translatedTitle
 				: toolNotFoundLabel;
 		document.title = studioDocumentTitle(pageTitle);
-	}, [activeToolId, formatMessage, matchedTool, mountMode, projectToolsLabel, toolNotFoundLabel, tools]);
+	}, [activeToolId, formatMessage, isPage, matchedTool, projectToolsLabel, toolNotFoundLabel, tools]);
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -126,7 +130,7 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
-			<SkipToMainContent />
+			{isPage && <SkipToMainContent />}
 			<ResizeableDrawer
 				landmark="nav"
 				landmarkLabel={projectToolsLabel}
@@ -173,7 +177,7 @@ export function SiteTools(props: SiteToolsProps) {
 								<MenuItem
 									onClick={() => onNavItemClick(tool.url)}
 									key={tool.url}
-									selected={`/${tool.url}` === activeToolId}
+									selected={tool.url.replace(/^\//, '') === normalizedActiveToolId}
 								>
 									<SystemIcon
 										sx={{ marginRight: '10px' }}
@@ -221,11 +225,9 @@ export function SiteTools(props: SiteToolsProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
-				component="main"
-				id={STUDIO_MAIN_CONTENT_ID}
-				tabIndex={-1}
+				{...(isPage ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
 				sx={[
-					mainLandmarkSx,
+					isPage && mainLandmarkSx,
 					{
 						height: '100%',
 						width: '100%',
@@ -265,14 +267,18 @@ export function SiteTools(props: SiteToolsProps) {
 							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
 								<LauncherOpenerButton />
 							</Box>
-							<EmptyState sxs={{ root: { height: '100%', margin: 0 } }} title={toolNotFoundLabel} titleComponent="h1" />
+							<EmptyState
+								sxs={{ root: { height: '100%', margin: 0 } }}
+								title={toolNotFoundLabel}
+								titleComponent={isPage ? 'h1' : 'h2'}
+							/>
 						</Box>
 					)
 				) : (
 					<EmptyState
 						sxs={{ root: { height: '100%', margin: 0 } }}
 						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						titleComponent="h1"
+						titleComponent={isPage ? 'h1' : 'h2'}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				)}

@@ -21,6 +21,7 @@ import useSiteUIConfig from '../../hooks/useSiteUIConfig';
 import useDashboardState from '../../hooks/useDashboardState';
 import useActiveUser from '../../hooks/useActiveUser';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
+import useActiveSite from '../../hooks/useActiveSite';
 import { useDispatch } from 'react-redux';
 import { initDashboardConfig } from '../../state/actions/dashboard';
 import { renderWidgets } from '../Widget/renderWidgets';
@@ -76,6 +77,7 @@ export function Dashboard(props: DashboardProps) {
 
 	const { formatMessage } = useIntl();
 	const dashboardLabel = formatMessage(launcherMessages.dashboard);
+	const siteName = useActiveSite()?.name || site;
 	useEffect(() => {
 		if (uiConfig.xml && !dashboard) {
 			dispatch(initDashboardConfig({ configXml: uiConfig.xml }));
@@ -85,8 +87,8 @@ export function Dashboard(props: DashboardProps) {
 		if (mountMode === 'dialog') {
 			return;
 		}
-		document.title = studioDocumentTitle(dashboardLabel);
-	}, [dashboardLabel, mountMode]);
+		document.title = studioDocumentTitle([dashboardLabel, siteName].filter(Boolean).join(' - '));
+	}, [dashboardLabel, mountMode, siteName]);
 	const height = 400;
 	return (
 		<SiteDashboardContext.Provider value={context}>
