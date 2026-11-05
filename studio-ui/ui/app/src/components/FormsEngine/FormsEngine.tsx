@@ -187,7 +187,12 @@ import {
 	stackedFormCloseAction,
 	stackedFormsClosedByReload
 } from './lib/formVisibility';
-import { repeatItemFormProps, stackedRepeatItemAfterClose, writeItemToParent } from './lib/repeatItemForm';
+import {
+	currentRepeatItemIndex,
+	repeatItemFormProps,
+	stackedRepeatItemAfterClose,
+	writeItemToParent
+} from './lib/repeatItemForm';
 import { carryReplacedItem, repeatItemKeysFor } from './lib/repeatItemKeys';
 import ValidationErrorsAlert from './components/ValidationErrorsAlert';
 import { useInvalidFieldIds } from './lib/useInvalidFieldIds';
@@ -377,7 +382,7 @@ function GlobalFormsState(props: FormsEngineProps) {
 	);
 }
 
-// Fetches the requirements for the form and sets up various contexts.
+/** Fetches the requirements for the form and sets up various contexts. */
 function FormBootstrap(props: FormsEngineProps) {
 	// When creating a new item. If we save the form, and do not close it, we need to update the 'mode' from create to update, using the path of the created item.
 	// effectiveProps are the props that are used to render the form, considering the scenario mentioned above.
@@ -949,7 +954,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	}
 }
 
-// Sets up the UI and renders the form.
+/** Sets up the UI and renders the form. */
 function FormOrchestrator(props: FormsEngineProps) {
 	// region const {...} = props
 	const {
@@ -1289,15 +1294,20 @@ function FormOrchestrator(props: FormsEngineProps) {
 			if (itemsAtom) {
 				const current = store.get(itemsAtom);
 				const parentList = repeat?.fieldId ? parentEntry?.originalValues?.[repeat.fieldId] : undefined;
+				const itemKeys = repeatItemKeysFor<unknown>(itemsAtom);
+				// The launch index can be behind the stored array. -1 (the item is gone) skips the restore.
+				const resolvedIndex = Array.isArray(current)
+					? currentRepeatItemIndex(current, repeat?.index, repeat?.values, itemKeys)
+					: repeat?.index;
 				const next = stackedRepeatItemAfterClose({
 					wasSelectedItemForm: childEntry.itemFormMode != null,
 					items: Array.isArray(current) ? current : undefined,
-					index: repeat?.index,
+					index: resolvedIndex === -1 ? undefined : resolvedIndex,
 					checkpoint: childEntry.originalValues ?? undefined,
 					parentCheckpoint: Array.isArray(parentList) ? parentList : undefined
 				});
 				if (next) {
-					carryReplacedItem(repeatItemKeysFor(itemsAtom), current as unknown[], next as unknown[], repeat?.index);
+					carryReplacedItem(itemKeys, current as unknown[], next as unknown[], resolvedIndex);
 					store.set(itemsAtom, next);
 				}
 			}
@@ -1458,19 +1468,31 @@ function FormOrchestrator(props: FormsEngineProps) {
 		if (itemMode !== 'selected' || !parentAtoms || repeat?.index === undefined) return;
 		const valueAtom = parentAtoms.valueByFieldId[repeat.fieldId];
 		if (!valueAtom) return;
-		const index = repeat.index;
+		const itemKeys = repeatItemKeysFor<Record<string, unknown>>(valueAtom);
 		const write = () => {
 			const current = store.get(valueAtom);
 			if (!Array.isArray(current)) return;
+			// The item may have moved since launch. If it is gone there is nothing to write into.
+			const index = currentRepeatItemIndex(current, repeat.index, repeat.values, itemKeys);
+			if (index === undefined || index === -1) return;
 			const next = writeItemToParent(current, index, extractAtomValues(store, atoms.valueByFieldId));
 			if (next === current) return;
-			carryReplacedItem(repeatItemKeysFor(valueAtom), current, next, index);
+			carryReplacedItem(itemKeys, current, next, index);
 			store.set(valueAtom, next);
 		};
 		write();
 		const subscription = fieldUpdates$.subscribe(write);
 		return () => subscription.unsubscribe();
-	}, [atoms.valueByFieldId, fieldUpdates$, itemMode, parentAtoms, repeat?.fieldId, repeat?.index, store]);
+	}, [
+		atoms.valueByFieldId,
+		fieldUpdates$,
+		itemMode,
+		parentAtoms,
+		repeat?.fieldId,
+		repeat?.index,
+		repeat?.values,
+		store
+	]);
 
 	const parentFieldOrder = useMemo(
 		() => parentEntry?.itemMeta.contentType.sections?.flatMap((section) => section.fields) ?? [],

@@ -23,6 +23,7 @@ export interface RepeatItemKeys<T> {
 	carry(previous: T | undefined, next: T | undefined): void;
 }
 
+/** Only objects can hold a row key. They are the WeakMap keys. */
 const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null;
 
 /**
@@ -43,8 +44,15 @@ export function createRepeatItemKeys<T>(): RepeatItemKeys<T> {
 		},
 		carry(previous, next) {
 			if (!isObject(previous) || !isObject(next) || previous === next) return;
-			const key = keys.get(previous);
-			if (key !== undefined && !keys.has(next)) keys.set(next, key);
+			if (keys.has(next)) return;
+			// An item nobody rendered yet (an Experience Builder launch) has no key until it is replaced. Mint it now so
+			// the open item form can still find its row afterwards.
+			let key = keys.get(previous);
+			if (key === undefined) {
+				key = nanoid();
+				keys.set(previous, key);
+			}
+			keys.set(next, key);
 		}
 	};
 }
@@ -77,16 +85,7 @@ export function carryReplacedItem<T>(
 	keys.carry(previous[index], next[index]);
 }
 
-/**
- * Where `item` is in `items` now. The same object wins. An item an edit replaced is found by its carried key.
- * -1 when the item is no longer there.
- */
-export function findRepeatItemIndex<T>(items: readonly T[], item: T, keys: RepeatItemKeys<T>): number {
-	const index = items.indexOf(item);
-	if (index !== -1) return index;
-	const key = keys.keyOf(item);
-	return key === undefined ? -1 : items.findIndex((candidate) => keys.keyOf(candidate) === key);
-}
+export { findRepeatItemIndex } from './repeatItemForm';
 
 /** Removes the item at `index` from the current array. */
 export function removeRepeatItem<T>(items: readonly T[], index: number): T[] {

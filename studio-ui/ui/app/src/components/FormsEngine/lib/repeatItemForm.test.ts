@@ -27,6 +27,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
 	commitRepeatItem,
+	currentRepeatItemIndex,
+	findRepeatItemIndex,
 	repeatItemFormProps,
 	repeatItemValueAfterDiscard,
 	restoreOpenedRepeatItem,
@@ -267,5 +269,138 @@ describe('repeatItemFormProps', () => {
 		});
 		await props.onSave({ values: { icon_s: 'old' } });
 		assert.equal(stored, items);
+	});
+});
+
+/** Row keys the way `repeatItemKeys.ts` keeps them. This file's helpers take them structurally. */
+function testKeys() {
+	const ids = new WeakMap<object, string>();
+	let next = 0;
+	return {
+		keyOf(item: object) {
+			if (!ids.has(item)) ids.set(item, `k${next++}`);
+			return ids.get(item);
+		},
+		carry(previous: object | undefined, replacement: object | undefined) {
+			if (!previous || !replacement || previous === replacement) return;
+			ids.set(replacement, this.keyOf(previous));
+		}
+	};
+}
+
+describe('currentRepeatItemIndex', () => {
+	it('is undefined for a new item, so the caller appends', () => {
+		assert.equal(currentRepeatItemIndex([{ id: 'a' }], undefined, undefined, testKeys()), undefined);
+	});
+
+	it('finds the launch item where it is stored now', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex([{ id: 'new' }, a, b], 1, b, testKeys()), 2);
+	});
+
+	it('finds an item that a write replaced, through its carried key', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const replaced = { id: 'b2' };
+		keys.carry(b, replaced);
+		assert.equal(currentRepeatItemIndex([{ id: 'new' }, a, replaced], 1, b, keys), 2);
+	});
+
+	it('is -1 when the item is gone', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex([a], 1, b, testKeys()), -1);
+		assert.equal(findRepeatItemIndex([a], b, testKeys()), -1);
+	});
+
+	it('keeps the launch index when it has no item or no keys to look with', () => {
+		const items = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex(items, 1, undefined, testKeys()), 1);
+		assert.equal(currentRepeatItemIndex(items, 1, items[1], undefined), 1);
+	});
+});
+
+describe('repeatItemFormProps with a shifted array', () => {
+	function open(items: Array<{ id: string }>, index: number) {
+		const keys = testKeys();
+		let stored = items;
+		let writes = 0;
+		const props = repeatItemFormProps({
+			fieldId: 'accounts_o',
+			index,
+			values: items[index],
+			getItems: () => stored,
+			keys,
+			setItems: (next) => {
+				writes++;
+				stored = next;
+			}
+		});
+		return {
+			keys,
+			props,
+			stored: () => stored,
+			shift: (next: Array<{ id: string }>) => (stored = next),
+			writes: () => writes
+		};
+	}
+
+	it('saves into the slot the item has now and carries its key to the replacement', async () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const form = open([a, b], 1);
+		const keyOfB = form.keys.keyOf(b);
+		form.shift([{ id: 'new' }, a, b]);
+		await form.props.onSave({ values: { id: 'b2' } });
+		assert.deepEqual(form.stored(), [{ id: 'new' }, { id: 'a' }, { id: 'b2' }]);
+		assert.equal(form.keys.keyOf(form.stored()[2]), keyOfB);
+	});
+
+	it('skips the write when the item is gone', async () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const form = open([a, b], 1);
+		form.shift([a]);
+		const warn = console.warn;
+		console.warn = () => undefined;
+		try {
+			const result = await form.props.onSave({ values: { id: 'b2' } });
+			assert.equal(result.close, true);
+		} finally {
+			console.warn = warn;
+		}
+		assert.equal(form.writes(), 0);
+		assert.deepEqual(form.stored(), [a]);
+	});
+});
+
+describe('item form close and selected-fields write with a resolved index', () => {
+	// FormsEngine resolves the index with `currentRepeatItemIndex` before it calls these.
+	it('restores the checkpoint into the slot the item has now', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b-edited' }];
+		const items = [{ id: 'new' }, a, b];
+		const index = currentRepeatItemIndex(items, 1, b, keys);
+		const next = stackedRepeatItemAfterClose({
+			wasSelectedItemForm: true,
+			items,
+			index: index === -1 ? undefined : index,
+			checkpoint: { id: 'b' },
+			parentCheckpoint: undefined
+		});
+		assert.deepEqual(next, [{ id: 'new' }, { id: 'a' }, { id: 'b' }]);
+	});
+
+	it('leaves the array alone when the item is gone', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b-edited' }];
+		const items = [a];
+		const index = currentRepeatItemIndex(items, 1, b, keys);
+		assert.equal(index, -1);
+		const next = stackedRepeatItemAfterClose({
+			wasSelectedItemForm: true,
+			items,
+			index: index === -1 ? undefined : index,
+			checkpoint: { id: 'b' },
+			parentCheckpoint: undefined
+		});
+		assert.equal(next, undefined);
 	});
 });

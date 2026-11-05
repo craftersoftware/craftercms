@@ -644,6 +644,10 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 	return ensureSingleSlash(`${basePath}/${fullFileName}`);
 };
 
+/**
+ * A new stack entry's data: no atoms yet, an empty changed-ids atom ({@link createChangedFieldIdsAtom}) and a new
+ * `fieldUpdates$` stream. `mixin` overrides any of the defaults.
+ */
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,
@@ -1391,6 +1395,10 @@ export function stackEntryAtoms(entry: { atoms: FormsEngineAtoms | null } | null
 	return hasFormAtoms(entry) ? entry.atoms : null;
 }
 
+/**
+ * The top stacked form's submit, pending-changes and readonly state, read from the store. Pending includes any changed
+ * field id, not only the `hasPendingChanges` flag. Readonly when the entry has no atoms yet.
+ */
 export function getCurrentChildFormStateSummary(
 	store: JotaiStore,
 	formsStackData: StableGlobalContextProps['formsStackData']

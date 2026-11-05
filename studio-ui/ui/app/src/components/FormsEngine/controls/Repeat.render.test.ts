@@ -34,6 +34,7 @@ const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider: ReduxProvider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, useAtomValue, Provider: JotaiProvider } = await import('jotai');
+const { createChangedFieldIdsAtom } = await import('../lib/formUtils.tsx');
 const { Repeat } = await import('./Repeat.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('../lib/formsEngineContext.ts');
@@ -96,7 +97,7 @@ afterEach(async () => {
 });
 
 /** Mounts Repeat the way the form does: `value` comes from the field atom, and `setValue` writes to it. */
-async function mount(initial: Item[], options: { live?: boolean } = {}): Promise<Mounted> {
+async function mount(initial: Item[], options: { live?: boolean; field?: ContentTypeField } = {}): Promise<Mounted> {
 	const jotai = createStore();
 	const valueAtom = atom<unknown>(initial);
 	const pushed: Mounted['pushed'] = [];
@@ -108,7 +109,7 @@ async function mount(initial: Item[], options: { live?: boolean } = {}): Promise
 			validationByFieldId: { rows_o: atom({ isValid: true }) },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: atom(new Set<string>()),
+		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},
@@ -126,7 +127,7 @@ async function mount(initial: Item[], options: { live?: boolean } = {}): Promise
 		const value = options.live ? stored : local;
 		rerender = setRendered;
 		return React.createElement(Repeat, {
-			field,
+			field: options.field ?? field,
 			value,
 			readonly: false,
 			autoFocus: false,
@@ -397,6 +398,23 @@ describe('Repeat reorder', () => {
 		assert.equal(next[0], editedB);
 	});
 
+	it('keeps the touch list row with its item through a move', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		await openReorder(mounted);
+		const listRow = (title: string) =>
+			Array.from(document.body.querySelectorAll('.MuiDialog-root li')).find(
+				(li) => li.textContent === title
+			) as HTMLElement;
+		const rows = { a: listRow('a'), b: listRow('b'), c: listRow('c') };
+		await act(async () => touchListMoves()[0].click());
+		const order = Array.from(document.body.querySelectorAll('.MuiDialog-root li')).map((li) => li.textContent);
+		assert.deepEqual(order, ['b', 'a', 'c']);
+		sameRow(listRow('a'), rows.a, 'a');
+		sameRow(listRow('b'), rows.b, 'b');
+		sameRow(listRow('c'), rows.c, 'c');
+	});
+
 	it('moves the item the row shows when the stored array shifted after the list was built', async () => {
 		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
 		const mounted = await mount([ia, ib, ic]);
@@ -407,5 +425,113 @@ describe('Repeat reorder', () => {
 		await act(async () => touchListMoves()[0].click());
 		const next = mounted.setValueCalls.at(-1);
 		assert.deepEqual(names(next), ['b', 'a', 'c', 'added']);
+	});
+});
+
+const addButton = (host: HTMLElement) =>
+	host.querySelector('[data-testid="AddRoundedIcon"]').closest('button') as HTMLButtonElement;
+const withLimits = (limits: { minCount?: number; maxCount?: number }) =>
+	({
+		...field,
+		validations: Object.fromEntries(Object.entries(limits).map(([key, value]) => [key, { value }]))
+	}) as unknown as ContentTypeField;
+
+describe('Repeat edit against the stored array', () => {
+	it('opens the form at the position the item has in the store, not at its render-time index', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		// A save landed in front of it after the render. "b" rendered at index 1 and is stored at index 2.
+		await mounted.setStored([{ name_s: 'new' }, ia, ib, ic]);
+		await act(async () => rowFor(mounted.host, 'b').click());
+		assert.equal(mounted.pushed.length, 1);
+		const props = mounted.pushed[0] as unknown as { repeat: { index: number; values: Item } };
+		assert.equal(props.repeat.index, 2);
+		assert.ok(props.repeat.values === ib);
+	});
+
+	it('opens no form for an item that is no longer stored', async () => {
+		const [ia, ib] = [a(), { name_s: 'b' }];
+		const mounted = await mount([ia, ib]);
+		await mounted.setStored([ia]);
+		await act(async () => rowFor(mounted.host, 'b').click());
+		assert.equal(mounted.pushed.length, 0);
+	});
+
+	it('saves into the slot the item has now when the store shifted after the form opened', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic], { live: true });
+		const rowB = rowFor(mounted.host, 'b');
+		await act(async () => rowB.click());
+		await mounted.setStored([{ name_s: 'new' }, ia, ib, ic]);
+		await act(async () => {
+			await mounted.pushed[0].onSave({ values: { name_s: 'b2' } });
+		});
+		const stored = mounted.jotai.get(mounted.valueAtom) as Item[];
+		assert.deepEqual(names(stored), ['new', 'a', 'b2', 'c']);
+		assert.ok(stored[1] === ia && stored[3] === ic);
+		sameRow(rowFor(mounted.host, 'b2'), rowB, 'b2');
+	});
+
+	it('finds the open item by its row key after a write replaced the object, then shifted', async () => {
+		const [ia, ib] = [a(), { name_s: 'b' }];
+		const mounted = await mount([ia, ib], { live: true });
+		await act(async () => rowFor(mounted.host, 'b').click());
+		// The selected-fields write-through replaces the item with a new object that carries its key.
+		const replaced = { name_s: 'b1' };
+		repeatItemKeysFor<Item>(mounted.valueAtom).carry(ib, replaced);
+		await mounted.setStored([{ name_s: 'new' }, ia, replaced]);
+		await act(async () => {
+			await mounted.pushed[0].onSave({ values: { name_s: 'b2' } });
+		});
+		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['new', 'a', 'b2']);
+	});
+
+	it('writes nothing when the item being edited is gone', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic]);
+		await act(async () => rowFor(mounted.host, 'b').click());
+		await mounted.setStored([ia, ic]);
+		const warn = console.warn;
+		const warnings: unknown[][] = [];
+		console.warn = (...args: unknown[]) => void warnings.push(args);
+		try {
+			await act(async () => {
+				await mounted.pushed[0].onSave({ values: { name_s: 'b2' } });
+			});
+		} finally {
+			console.warn = warn;
+		}
+		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['a', 'c']);
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(warnings.length, 1);
+	});
+});
+
+describe('Repeat limits against the stored array', () => {
+	it('does not remove below the minimum when the store is shorter than the render', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic], { field: withLimits({ minCount: 2 }) });
+		// The render shows three items, so delete is enabled. The store already has the minimum.
+		await mounted.setStored([ia, ib]);
+		await act(async () => deleteButton(rowFor(mounted.host, 'a')).click());
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['a', 'b']);
+	});
+
+	it('does not open the add form past the maximum when the store is longer than the render', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib], { field: withLimits({ maxCount: 3 }) });
+		await mounted.setStored([ia, ib, ic]);
+		await act(async () => addButton(mounted.host).click());
+		assert.equal(mounted.pushed.length, 0);
+	});
+
+	it('still removes and adds within the limits', async () => {
+		const [ia, ib, ic] = [a(), { name_s: 'b' }, { name_s: 'c' }];
+		const mounted = await mount([ia, ib, ic], { field: withLimits({ minCount: 2, maxCount: 4 }) });
+		await act(async () => addButton(mounted.host).click());
+		assert.equal(mounted.pushed.length, 1);
+		await act(async () => deleteButton(rowFor(mounted.host, 'a')).click());
+		assert.deepEqual(names(mounted.setValueCalls.at(-1)), ['b', 'c']);
 	});
 });

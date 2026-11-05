@@ -185,7 +185,7 @@ export interface StableFormContextProps {
 	 *
 	 * @see {@link StableFormContextProps.fieldUpdates$}
 	 */
-	changedFieldIds: PrimitiveAtom<ReadonlySet<string>>;
+	changedFieldIds: PrimitiveAtom<ReadonlySet<string>> | null;
 	/**
 	 * Internal event stream of value writes for this form: one emission per write to a field's value atom, and one
 	 * per write to the file-name atom (the `file-name` field's own value atom mirrors it and does not emit twice).

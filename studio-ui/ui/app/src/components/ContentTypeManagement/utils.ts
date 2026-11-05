@@ -546,6 +546,11 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
+/**
+ * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
+ * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
+ * share an existing event stream; otherwise a new one is created.
+ */
 export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,

@@ -222,3 +222,52 @@ describe('onFieldChange', () => {
 		for (const name of ['changedFieldIds', 'fieldUpdates$', 'store', 'atoms']) assert.equal(name in api, false);
 	});
 });
+
+describe('controller setValue on a repeat row', () => {
+	/** A controller context over a repeat field's value atom, the way the form hands it to a controller. */
+	async function repeatController() {
+		const { atom, createStore } = await import('jotai');
+		const { repeatItemKeysFor } = await import('./repeatItemKeys.ts');
+		const store = createStore();
+		const rows = [{ name_s: 'a' }, { name_s: 'b' }, { name_s: 'c' }];
+		const rowsAtom = atom<unknown>(rows);
+		const context = createFormControllerContext({
+			siteId: 'editorial',
+			store,
+			atoms: { valueByFieldId: { rows_o: rowsAtom }, validationByFieldId: {} } as never,
+			contentType: { id: '/component/thing', fields: {} } as never,
+			getPath: () => '/site/components/thing.xml',
+			mode: 'edit' as never,
+			isEmbedded: false,
+			fieldUpdates$: createFormStackData({ itemMeta: {} as never, originalValues: {} }).fieldUpdates$,
+			dispatch: (() => undefined) as never,
+			fieldChangeUnsubscribers: new Set(),
+			isDisposed: () => false
+		});
+		return { store, rows, rowsAtom, context, keys: repeatItemKeysFor<Record<string, unknown>>(rowsAtom) };
+	}
+
+	// The copy of the row is a new object. Without the carry it is a new row for React, and the row remounts.
+	it('keeps the row key of an item it copies to write a nested field', async () => {
+		const { store, rows, rowsAtom, context, keys } = await repeatController();
+		const keyOfB = keys.keyOf(rows[1]);
+		context.setValue('rows_o.1.name_s', 'b2');
+		const next = store.get(rowsAtom) as typeof rows;
+		assert.deepEqual(
+			next.map((row) => row.name_s),
+			['a', 'b2', 'c']
+		);
+		assert.notEqual(next[1], rows[1]);
+		assert.equal(keys.keyOf(next[1]), keyOfB);
+		// Rows that were not copied keep their object and key.
+		assert.ok(next[0] === rows[0] && next[2] === rows[2]);
+		assert.equal(keys.keyOf(next[2]), keys.keyOf(rows[2]));
+	});
+
+	it('keeps the key of a row it never rendered, so a later lookup still finds it', async () => {
+		const { store, rows, rowsAtom, context, keys } = await repeatController();
+		context.setValue('rows_o.0.name_s', 'a2');
+		const next = store.get(rowsAtom) as typeof rows;
+		assert.equal(keys.keyOf(next[0]), keys.keyOf(rows[0]));
+	});
+});

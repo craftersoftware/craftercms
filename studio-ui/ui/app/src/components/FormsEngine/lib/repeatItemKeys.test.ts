@@ -66,6 +66,15 @@ describe('createRepeatItemKeys', () => {
 		assert.equal(keys.keyOf(other), otherKey);
 	});
 
+	it('gives a replaced item that was never keyed one, so the open item can still be found', () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const original = { name: 'a' };
+		const edited = { name: 'a2' };
+		keys.carry(original, edited);
+		assert.equal(keys.keyOf(edited), keys.keyOf(original));
+		assert.equal(findRepeatItemIndex([edited], original, keys), 0);
+	});
+
 	it('has no key for a value that is not an object', () => {
 		const keys = createRepeatItemKeys<unknown>();
 		assert.equal(keys.keyOf(null), undefined);

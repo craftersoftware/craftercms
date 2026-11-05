@@ -142,17 +142,23 @@ export function Repeat(props: RepeatProps) {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
 		const stored = getStoredItems();
+		// The stored array can be shorter than this render's. Check the limit against it.
+		if (isRepeatRemoveDisabled(Boolean(readonly), stored.length, minCount)) return;
 		// The row's item, found in the stored array. Its position may have moved since the render.
 		const index = findRepeatItemIndex(stored, item, itemKeys);
 		if (index === -1) return;
 		setValue(removeRepeatItem(stored, index));
 	};
-	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem, index: number) => {
-		openItemForm(index, item);
+	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
+	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem) => {
+		const stored = getStoredItems();
+		const index = findRepeatItemIndex(stored, item, itemKeys);
+		if (index === -1) return;
+		openItemForm(index, stored[index]);
 	};
 	/** Opens a new repeat item unless adding is disabled. */
 	const handleAddItem: IconButtonProps['onClick'] = () => {
-		if (isAddDisabled) return;
+		if (isAddDisabled || isRepeatAddDisabled(Boolean(readonly), getStoredItems().length, maxCount)) return;
 		openItemForm();
 	};
 	const displayFieldIds = useMemo(() => repeatDisplayFieldIds(field.fields), [field.fields]);
@@ -160,6 +166,7 @@ export function Repeat(props: RepeatProps) {
 		() => (sortMode ? repeatSortItems(value, displayFieldIds, itemKeys) : []),
 		[sortMode, value, displayFieldIds, itemKeys]
 	);
+	/** Stores the new order, built from the latest stored array so an item saved since the list was built is kept. */
 	const onSortChange = (newList: TItem<RepeatItem>[]) => {
 		setValue(reorderRepeatItems(getStoredItems(), newList, itemKeys));
 	};
@@ -216,7 +223,7 @@ export function Repeat(props: RepeatProps) {
 								<ListItemButton
 									key={rowKey(itemKeys, item, index)}
 									divider={position !== visibleItems.length - 1}
-									onClick={(e) => handleEditItem(e, item, index)}
+									onClick={(e) => handleEditItem(e, item)}
 								>
 									<ListItemText
 										primary={getRepeatItemTitle(item, displayFieldIds)}

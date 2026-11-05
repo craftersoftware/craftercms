@@ -14,11 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * The one way to open a repeat item form: the pencil, Add, and an Experience Builder launch.
- * `onSave` reads the array at save time so an edit made after the form opened is not overwritten.
- */
-
+/** A copy of `items` with `nextItem` at `index`, or on the end when there is no index (Add). */
 export function commitRepeatItem<T>(items: readonly T[], index: number | undefined, nextItem: T): T[] {
 	if (index === undefined) return items.concat(nextItem);
 	const next = items.slice();
@@ -26,12 +22,14 @@ export function commitRepeatItem<T>(items: readonly T[], index: number | undefin
 	return next;
 }
 
+/** Whether `value` is a plain object (not an array, class instance or null). */
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
 	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
 	const proto = Object.getPrototypeOf(value);
 	return proto === Object.prototype || proto === null;
 }
 
+/** Structural equality for repeat items. An absent key and an undefined one are equal. */
 function sameItem(left: unknown, right: unknown): boolean {
 	if (Object.is(left, right)) return true;
 	if (Array.isArray(left) || Array.isArray(right)) {
@@ -48,6 +46,43 @@ function sameItem(left: unknown, right: unknown): boolean {
 		return true;
 	}
 	return false;
+}
+
+/** The row keys an item form needs: the key lookup and the carry of a replaced item's key. Matches `RepeatItemKeys`. */
+export interface OpenItemKeys<T> {
+	keyOf(item: T): string | undefined;
+	carry(previous: T | undefined, next: T | undefined): void;
+}
+
+/**
+ * Where `item` is in `items` now. The same object wins. An item an edit replaced is found by its carried key.
+ * -1 when the item is no longer there.
+ * Lives here, free of imports, so the item-form helpers and their tests need no loader. `repeatItemKeys.ts` re-exports it.
+ */
+export function findRepeatItemIndex<T>(items: readonly T[], item: T, keys: Pick<OpenItemKeys<T>, 'keyOf'>): number {
+	const index = items.indexOf(item);
+	if (index !== -1) return index;
+	const key = keys.keyOf(item);
+	return key === undefined ? -1 : items.findIndex((candidate) => keys.keyOf(candidate) === key);
+}
+
+/**
+ * The index of the item an open item form edits, in the array as stored now.
+ * The launch index is only a starting point: a save, a reorder or a delete since then moves the item. `launchItem` is
+ * the item the form was launched with, found again by identity or by its carried row key.
+ * - undefined for a new item (no launch index): the caller appends.
+ * - -1 when the item is gone: the caller skips the indexed write.
+ * - the launch index when there is no launch item or no keys to find it with.
+ */
+export function currentRepeatItemIndex<T>(
+	items: readonly T[],
+	launchIndex: number | undefined,
+	launchItem: T | undefined,
+	keys: Pick<OpenItemKeys<T>, 'keyOf'> | undefined
+): number | undefined {
+	if (launchIndex === undefined) return undefined;
+	if (launchItem === undefined || !keys) return launchIndex;
+	return findRepeatItemIndex(items, launchItem, keys);
 }
 
 /**
@@ -217,6 +252,7 @@ export function clearStackPendingFlags(
 	if (parent && parentChanged !== parent.changedFieldIds) parent.setChangedFieldIds(parentChanged);
 }
 
+/** Whether both sets hold the same ids. */
 function sameMembership(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
 	return left.size === right.size && Array.from(left).every((id) => right.has(id));
 }
@@ -227,6 +263,13 @@ function formFieldsMatchSaved(saved: unknown, current: unknown): boolean {
 	return Object.keys(current).every((key) => sameItem(current[key], saved[key]));
 }
 
+/**
+ * The one way to open a repeat item form: the pencil, Add, and an Experience Builder launch. Props for the item at
+ * `index`, or for a new one when `index` is undefined (Add).
+ * `onSave` reads the stored array when it runs, finds the open item in it (see {@link currentRepeatItemIndex}), writes
+ * with {@link writeItemToParent}, and carries the row key to the replacement. The item form is a separate
+ * FormsEngine, so `getItems` and `setItems` are how it reaches the repeat field's array.
+ */
 export function repeatItemFormProps<T extends Record<string, unknown>>(args: {
 	fieldId: string;
 	index?: number;
@@ -235,9 +278,12 @@ export function repeatItemFormProps<T extends Record<string, unknown>>(args: {
 	fieldIds?: readonly string[] | null;
 	getItems(): readonly T[];
 	/** `previous` is the array `onSave` read to build `next`. */
-	setItems(next: T[], previous: readonly T[]): void;
-	/** The repeat field's row keys. An edit carries the key of the item it replaces to the new object. */
-	keys?: { carry(previous: T | undefined, next: T | undefined): void };
+	setItems(next: T[]): void;
+	/**
+	 * The repeat field's row keys, shared with the repeat control. With `values` they find the open item again at save
+	 * time, and an edit carries the key of the item it replaces to the new object.
+	 */
+	keys?: OpenItemKeys<T>;
 }): {
 	repeat: { fieldId: string; index?: number; values?: T };
 	fieldIds?: string[];
@@ -251,10 +297,16 @@ export function repeatItemFormProps<T extends Record<string, unknown>>(args: {
 		...(args.fieldIds?.length ? { fieldIds: [...args.fieldIds] } : {}),
 		onSave(result) {
 			const previous = args.getItems();
-			const next = writeItemToParent(previous, args.index, result.values);
+			// The index at launch can be behind the stored array. Find the open item as it is stored now.
+			const index = currentRepeatItemIndex(previous, args.index, args.values, args.keys);
+			if (index === -1) {
+				console.warn(`Repeat "${args.fieldId}": the item being edited is no longer in the list. Nothing was saved.`);
+				return Promise.resolve({ close: true });
+			}
+			const next = writeItemToParent(previous, index, result.values);
 			// Same rule as `carryReplacedItem`. This file stays free of imports so its tests need no loader.
-			if (args.index !== undefined) args.keys?.carry(previous[args.index], next[args.index]);
-			args.setItems(next, previous);
+			if (index !== undefined) args.keys?.carry(previous[index], next[index]);
+			args.setItems(next);
 			return Promise.resolve({ close: true });
 		}
 	};

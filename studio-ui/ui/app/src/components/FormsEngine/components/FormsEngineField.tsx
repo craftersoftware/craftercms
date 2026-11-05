@@ -55,6 +55,7 @@ import { useDispatch } from 'react-redux';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 
+/** The `length/max` counter shown next to a field label, or null when there is neither. */
 function createLengthBlock({ length, max }: { length: number; max: number }) {
 	const pieces = [];
 	if (length != null) {

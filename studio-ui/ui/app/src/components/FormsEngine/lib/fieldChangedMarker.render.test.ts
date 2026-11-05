@@ -211,7 +211,7 @@ describe('field changed marker', () => {
 		assert.equal(m.hasRollback(), true);
 	});
 
-	it('renders when the form has no changed-field Set', async () => {
+	it('renders when the form has no changed-ids atom', async () => {
 		const m = await mount(['title_s'], { changedFieldIds: null });
 		await m.openMenu('title_s');
 		assert.equal(m.hasRollback(), false);
