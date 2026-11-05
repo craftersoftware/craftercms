@@ -17,7 +17,6 @@ package org.craftercms.studio.impl.v2.deployment;
 
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.tree.ImmutableNode;
-import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.commons.rest.RestTemplate;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
@@ -26,13 +25,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
 
+import static org.craftercms.commons.http.HttpUtils.isConflict;
+import static org.craftercms.commons.http.HttpUtils.isNotFound;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITEENV_VARIABLE;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITENAME_VARIABLE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
@@ -125,33 +123,6 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 			}
 			logger.debug("Staging deployer target for site '{}' does not exist", site);
 		}
-	}
-
-	/**
-	 * The deployer client reports HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
-	 */
-	protected boolean isNotFound(RestClientException exception) {
-		return hasStatus(exception, HttpStatus.NOT_FOUND);
-	}
-
-	/**
-	 * Deployer returns 409 when {@code replace} is false and the target is already there.
-	 */
-	protected boolean isConflict(RestClientException exception) {
-		return hasStatus(exception, HttpStatus.CONFLICT);
-	}
-
-	/**
-	 * The deployer client reports HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
-	 */
-	protected boolean hasStatus(RestClientException exception, HttpStatusCode expected) {
-		HttpStatusCode status = null;
-		if (exception instanceof RestServiceException restServiceException) {
-			status = restServiceException.getResponseStatus();
-		} else if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
-			status = httpStatusCodeException.getStatusCode();
-		}
-		return status != null && status.isSameCodeAs(expected);
 	}
 
 	/**
