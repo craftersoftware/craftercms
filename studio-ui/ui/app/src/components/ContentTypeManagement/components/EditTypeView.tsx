@@ -66,6 +66,7 @@ import dataSourceDescriptors from '../descriptors/dataSources';
 import type { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import TypeDetailsView, { TypeDetailsViewProps } from './TypeDetailsView';
 import {
+	FieldUpdate,
 	FormsEngineAtoms,
 	FormsEngineFormApiContextProps,
 	StableFormContextProps
@@ -154,11 +155,11 @@ export interface EditTypeAppProps {
 
 interface EditAppContextProps {
 	/**
-	 * The open form's internal stream of value writes (see `StableFormContextProps.fieldUpdates$`): one emission per
+	 * The open form's internal stream of value writes (a stream of `FieldUpdate`s, see `StableFormContextProps.fieldUpdates$`): one emission per
 	 * write, after the changed-ids atom is updated, never on a clear. Used to track dirty state synchronously and to
 	 * debounce background validation. It carries no state: read dirty from the form's `changedFieldIds` atom.
 	 */
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;
 	selectedField: ContentTypeField;
@@ -1202,9 +1203,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	);
 });
 
+/** Fresh Type Builder edit state. `fieldUpdates$` is the internal stream the open form emits {@link FieldUpdate}s on. */
 function createContextObject(): EditAppContextProps {
 	return {
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		formContextApi: createFieldFormContextApi(),
 		activeFormContext: null,
 		selectedField: null,

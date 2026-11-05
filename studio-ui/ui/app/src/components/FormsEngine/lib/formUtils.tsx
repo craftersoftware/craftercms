@@ -21,6 +21,7 @@ import validateFieldValue, { FieldValidityState } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
+	FieldUpdate,
 	FormRequirementsResponse,
 	FormsEngineAtoms,
 	FormsEngineEditContextProps,
@@ -500,7 +501,7 @@ function createTrackedFileNameAtom(
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
 			trackFieldChange(field, next, formContext, get, set);
-			formContext.fieldUpdates$.next(XmlKeys.fileName);
+			formContext.fieldUpdates$.next({ fieldId: XmlKeys.fileName });
 		}
 	);
 }
@@ -531,7 +532,7 @@ export function createFieldAtoms(
 				return;
 			}
 			trackFieldChange(field, next, formContext, get, set);
-			formContext.fieldUpdates$.next(field.id);
+			formContext.fieldUpdates$.next({ fieldId: field.id });
 		}
 	);
 	const validationAtom = atom(async (get, { signal }) => {
@@ -646,14 +647,14 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 
 /**
  * A new stack entry's data: no atoms yet, an empty changed-ids atom ({@link createChangedFieldIdsAtom}) and a new
- * `fieldUpdates$` stream. `mixin` overrides any of the defaults.
+ * `fieldUpdates$` stream of {@link FieldUpdate}s. `mixin` overrides any of the defaults.
  */
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,
 		itemFormMode: null,
 		changedFieldIds: createChangedFieldIdsAtom(),
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		itemMeta: null,
 		originalValues: null,
 		props: null,

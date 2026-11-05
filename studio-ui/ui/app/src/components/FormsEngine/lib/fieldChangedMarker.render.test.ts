@@ -25,6 +25,7 @@ import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import type { ContentTypeField } from '../../../models/ContentType';
+import type { FieldUpdate } from './formsEngineContext.ts';
 
 const React = await import('react');
 const { act } = await import('react');
@@ -69,7 +70,7 @@ async function mount(fieldIds: string[] = ['title_s'], options: { changedFieldId
 	const stable = {
 		atoms: { valueByFieldId: {}, validationByFieldId: {}, ...createFormVisibilityAtoms() } as Record<string, unknown>,
 		changedFieldIds: 'changedFieldIds' in options ? options.changedFieldIds : createChangedFieldIdsAtom(),
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		itemMeta: { sourceMap: null, path: '/site/components/thing.xml' },
 		originalValues: Object.fromEntries(fieldIds.map((id) => [id, 'original'])),
 		props: null,

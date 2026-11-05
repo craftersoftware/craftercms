@@ -30,6 +30,7 @@ import type LookupTable from '../../models/LookupTable';
 import type { ContentType, SerializeToXmlContentTypeStructure } from '../../models/ContentType';
 import { createLookupTable, noOp, pluckProps } from '../../utils/object';
 import {
+	FieldUpdate,
 	FormsEngineFormApiContextProps,
 	FormsEngineItemMetaContextProps,
 	StableFormContextProps,
@@ -551,7 +552,7 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 /**
  * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
  * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
- * share an existing event stream; otherwise a new one is created.
+ * share an existing stream of {@link FieldUpdate}s; otherwise a new one is created.
  */
 export function createVirtualTypeFormContext(
 	type: ContentType,
@@ -568,7 +569,7 @@ export function createVirtualTypeFormContext(
 	context.atoms.validationByFieldId = {};
 	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
+	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);

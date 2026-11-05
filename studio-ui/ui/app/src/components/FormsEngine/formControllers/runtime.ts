@@ -16,18 +16,19 @@
 
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
-import type { Subject } from 'rxjs';
+import { Observable, type Subject } from 'rxjs';
 import type { Dispatch as ReduxDispatch } from 'redux';
 import type { IntlShape } from 'react-intl';
 import type { JotaiStore } from '../types';
 import { XmlKeys } from '../lib/formConsts';
-import type { FormsEngineAtoms, StableFormContextProps } from '../lib/formsEngineContext';
+import type { FieldUpdate, FormsEngineAtoms, StableFormContextProps } from '../lib/formsEngineContext';
 import type { FormsEngineProps } from '../FormsEngine';
 import { loadFormController } from './loader';
 import {
 	createEmptyFormControllerState,
 	type FormController,
 	type FormControllerContext,
+	type FormFieldChange,
 	type FormControllerMode,
 	type FormControllerNotifySeverity,
 	type FormControllerState
@@ -71,15 +72,20 @@ export interface CreateFormControllerContextArgs {
 	mode: FormControllerMode;
 	isEmbedded: boolean;
 	/**
-	 * The stack entry's internal stream of value writes (one emission per write, payload is the written field's id,
-	 * emitted after the value and changed-ids state are updated; clears never emit). `onFieldChange` is built on it,
-	 * so the controller sees `(fieldId, value)` per write and never the Subject, the store or the atoms.
+	 * The stack entry's internal stream of value writes (one emission per write, payload is a `FieldUpdate` with the written field's id,
+	 * emitted after the value and changed-ids state are updated; clears never emit). `fieldChanges` and
+	 * `onFieldChange` are built on it, so the controller sees `(fieldId, value)` per write and never the Subject,
+	 * the store or the atoms.
 	 * See `StableFormContextProps.fieldUpdates$`.
 	 */
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	dispatch: ReduxDispatch;
-	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
-	fieldChangeUnsubscribers: Set<() => void>;
+	/**
+	 * Teardown callbacks for this stack entry's live field-change subscriptions (`onFieldChange` listeners are
+	 * built on the same stream). Running one completes that subscription's source subscriber; the host runs
+	 * them all on disposal.
+	 */
+	fieldChangeTeardowns: Set<() => void>;
 	/**
 	 * True once this context's form state was torn down or superseded. A pending `initialize` can
 	 * still hold the context, so writes and new listeners must be refused rather than reach the
@@ -103,7 +109,7 @@ export function createFormControllerContext({
 	isEmbedded,
 	fieldUpdates$,
 	dispatch,
-	fieldChangeUnsubscribers,
+	fieldChangeTeardowns,
 	isDisposed
 }: CreateFormControllerContextArgs): FormControllerContext {
 	const readValue = (fieldId: string): unknown => {
@@ -132,6 +138,26 @@ export function createFormControllerContext({
 			return undefined;
 		}
 	};
+
+	// The only door to `fieldUpdates$`. Subscribers get a fresh Observable, never the Subject, so
+	// controllers cannot push events. Disposal completes them through `fieldChangeTeardowns`.
+	const fieldChanges$ = new Observable<FormFieldChange>((subscriber) => {
+		if (isDisposed()) {
+			console.warn(disposedContextWarning);
+			subscriber.complete();
+			return;
+		}
+		const subscription = fieldUpdates$.subscribe((event) => {
+			if (isDisposed()) return;
+			subscriber.next(Object.freeze({ fieldId: event.fieldId, value: readValue(event.fieldId) }));
+		});
+		const complete = () => subscriber.complete();
+		fieldChangeTeardowns.add(complete);
+		return () => {
+			subscription.unsubscribe();
+			fieldChangeTeardowns.delete(complete);
+		};
+	});
 
 	return {
 		siteId,
@@ -210,17 +236,10 @@ export function createFormControllerContext({
 				console.warn(disposedContextWarning);
 				return () => undefined;
 			}
-			const subscription = fieldUpdates$.subscribe((fieldId) => {
-				if (isDisposed()) return;
-				listener(fieldId, readValue(fieldId));
-			});
-			const unsubscribe = () => {
-				subscription.unsubscribe();
-				fieldChangeUnsubscribers.delete(unsubscribe);
-			};
-			fieldChangeUnsubscribers.add(unsubscribe);
-			return unsubscribe;
+			const subscription = fieldChanges$.subscribe(({ fieldId, value }) => listener(fieldId, value));
+			return () => subscription.unsubscribe();
 		},
+		fieldChanges: fieldChanges$,
 		notify(message, severity: FormControllerNotifySeverity = 'info') {
 			if (isDisposed()) {
 				console.warn(disposedContextWarning);
@@ -328,16 +347,20 @@ function invokeCleanup(cleanup: (() => void) | null | undefined): void {
 	}
 }
 
-function unsubscribeFieldChangeListeners(state: FormControllerState | null | undefined): void {
-	if (!state?.fieldChangeUnsubscribers.size) return;
-	for (const unsubscribe of [...state.fieldChangeUnsubscribers]) {
+/**
+ * Runs and clears the field-change teardowns of `state`: each completes one `fieldChanges` subscription (and so
+ * removes the `onFieldChange` listener built on it). A teardown that throws is logged and does not stop the rest.
+ */
+function runFieldChangeTeardowns(state: FormControllerState | null | undefined): void {
+	if (!state?.fieldChangeTeardowns.size) return;
+	for (const teardown of [...state.fieldChangeTeardowns]) {
 		try {
-			unsubscribe();
+			teardown();
 		} catch (error) {
-			console.error('Form controller onFieldChange unsubscribe threw.', error);
+			console.error('Form controller field-change teardown threw.', error);
 		}
 	}
-	state.fieldChangeUnsubscribers.clear();
+	state.fieldChangeTeardowns.clear();
 }
 
 /**
@@ -349,7 +372,7 @@ function unsubscribeFieldChangeListeners(state: FormControllerState | null | und
 function detachFormControllerState(state: FormControllerState, cleanup: (() => void) | null = state.cleanup): void {
 	state.disposed = true;
 	state.cleanup = null;
-	unsubscribeFieldChangeListeners(state);
+	runFieldChangeTeardowns(state);
 	invokeCleanup(cleanup);
 }
 
@@ -528,7 +551,7 @@ export async function attachFormController(args: {
 		isEmbedded,
 		fieldUpdates$: stackEntry.fieldUpdates$,
 		dispatch,
-		fieldChangeUnsubscribers: state.fieldChangeUnsubscribers,
+		fieldChangeTeardowns: state.fieldChangeTeardowns,
 		// Not `stale()`: a remounted drawer slot restores this stack entry without re-attaching, so its
 		// context stays live. A superseded prep re-attaches, and that attach disposes this state.
 		isDisposed: () => state.disposed
@@ -577,7 +600,7 @@ export async function attachFormController(args: {
 	if (state.disposed || stale()) {
 		// Teardown already ran (or this attach was superseded). Honour the controller's cleanup once,
 		// but do not touch whatever state replaced this one.
-		unsubscribeFieldChangeListeners(state);
+		runFieldChangeTeardowns(state);
 		invokeCleanup(ownCleanup);
 		return;
 	}
