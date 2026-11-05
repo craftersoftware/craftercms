@@ -172,7 +172,7 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 };
 
 /** True when the control may only live at the content-type root (`metadata.rootOnly`). */
-export function isRootOnlyControl(descriptor?: Pick<DescriptorContentType, 'metadata'> | null): boolean {
+export function isRootOnlyControl(descriptor?: DescriptorContentType | null): boolean {
 	return Boolean(descriptor?.metadata?.rootOnly);
 }
 
@@ -368,8 +368,6 @@ export type DescriptorContentTypeMetadata = {
 
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
-	/** Preserved from the source descriptor (e.g. via applyTranslations); used for rootOnly and related checks. */
-	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorContentType = Pick<ContentType, 'id'> & {
