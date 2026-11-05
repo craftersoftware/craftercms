@@ -11,7 +11,8 @@ How to read the tables:
 - The token tables are computed from the theme. They cover the three surfaces a control can sit on: `paper` (cards, panels), `default` (page) and `dialog`.
 - "Measured component states" come from the rendered components in a harness that mounts `CrafterThemeProvider` (computed styles, composited). The worst case across the three surfaces is shown.
 - Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (282 text nodes, 0 failures), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
-- Focus ring: a 2px white outline with a 4px black ring around it, so the indicator has 3:1 or more on any light or dark surface (the better of the two bands is shown).
+- Focus ring: one brand-blue ring (`#0068DA` in light, `#54A6FF` in dark), a 2px outline drawn 2px outside the control. It is defined once in `ui/app/src/styles/focusRing.ts`, applied by the theme to every ButtonBase-based control, and used through a shared helper for the rest. `ui/scss/src/_focus-ring.scss` mirrors it for the legacy SCSS.
+- The `MuiSwitch` ring is drawn on the track (MUI v9 does that), and the `List`/`Menu` rows and grid cells use the inset variant.
 
 ## Light mode
 
@@ -45,16 +46,31 @@ Hovered label contrast, all 18 variant (contained, outlined, text) and colour co
 
 ### Non-text (SC 1.4.11, 3:1)
 
-| Token or state                                                     | Colour                | vs paper | vs default | vs dialog |
-| ------------------------------------------------------------------ | --------------------- | -------- | ---------- | --------- |
-| Form border, switch track, unchecked icon (`gray.medium3`)         | `#8E8E93`             | 3.26 yes | 3.12 yes   | 3.26 yes  |
-| primary.main as border, icon or indicator                          | `#0068DA`             | 5.26 yes | 5.04 yes   | 5.26 yes  |
-| secondary.main as border, icon or indicator                        | `#8944AB`             | 6.04 yes | 5.78 yes   | 6.04 yes  |
-| error.main as border, icon or indicator                            | `#D12E25`             | 5.09 yes | 4.87 yes   | 5.09 yes  |
-| warning.main as border, icon or indicator                          | `#A35F00`             | 5.01 yes | 4.8 yes    | 5.01 yes  |
-| info.main as border, icon or indicator                             | `#357694`             | 5.04 yes | 4.82 yes   | 5.04 yes  |
-| success.main as border, icon or indicator                          | `#217F39`             | 5.05 yes | 4.84 yes   | 5.05 yes  |
-| Focus ring (white outline over black ring; the better band counts) | `#FFFFFF` / `#000000` | 21 yes   | 20.12 yes  | 21 yes    |
+| Token or state                                               | Colour    | vs paper | vs default | vs dialog |
+| ------------------------------------------------------------ | --------- | -------- | ---------- | --------- |
+| `border.control` (form border, switch track, unchecked icon) | `#8E8E93` | 3.26 yes | 3.12 yes   | 3.26 yes  |
+| primary.main as border, icon or indicator                    | `#0068DA` | 5.26 yes | 5.04 yes   | 5.26 yes  |
+| secondary.main as border, icon or indicator                  | `#8944AB` | 6.04 yes | 5.78 yes   | 6.04 yes  |
+| error.main as icon or border                                 | `#D12E25` | 5.09 yes | 4.87 yes   | 5.09 yes  |
+| warning.main as icon or border                               | `#A35F00` | 5.01 yes | 4.8 yes    | 5.01 yes  |
+| info.main as icon or border                                  | `#357694` | 5.04 yes | 4.82 yes   | 5.04 yes  |
+| success.main as icon or border                               | `#217F39` | 5.05 yes | 4.84 yes   | 5.05 yes  |
+| yellow.main as icon or border                                | `#A88700` | 3.43 yes | 3.28 yes   | 3.43 yes  |
+| indigo.main as icon or border                                | `#5856D6` | 5.65 yes | 5.41 yes   | 5.65 yes  |
+| purple.main as icon or border                                | `#AF52DE` | 4.13 yes | 3.96 yes   | 4.13 yes  |
+| pink.main as icon or border                                  | `#FF2D55` | 3.65 yes | 3.49 yes   | 3.65 yes  |
+
+`yellow.main` is only used for icons, not text (3.28:1 on white). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
+
+### Keyboard focus ring (SC 2.4.7 and 1.4.11, 3:1)
+
+| Surface | Colour    | Ring ratio |
+| ------- | --------- | ---------- |
+| paper   | `#fff`    | 5.26 yes   |
+| default | `#FAFAFA` | 5.04 yes   |
+| dialog  | `#FFFFFF` | 5.26 yes   |
+
+The ring is `#0068DA` in light mode, a 2px outline 2px outside the control, defined once in `ui/app/src/styles/focusRing.ts`. It is always offset, because it is 1.00:1 against the primary fill: the gap shows the surface above, and the ring is measured against that. Inset rings are only used on rows and tree items. The full surface list, including the greys, is asserted in `focusRing.test.ts`.
 
 ## Dark mode
 
@@ -88,16 +104,31 @@ Hovered label contrast, all 18 variant (contained, outlined, text) and colour co
 
 ### Non-text (SC 1.4.11, 3:1)
 
-| Token or state                                                     | Colour                | vs paper  | vs default | vs dialog |
-| ------------------------------------------------------------------ | --------------------- | --------- | ---------- | --------- |
-| Form border, switch track, unchecked icon (`gray.medium3`)         | `#8E8E93`             | 5.75 yes  | 5.22 yes   | 3.54 yes  |
-| primary.main as border, icon or indicator                          | `#54A6FF`             | 7.38 yes  | 6.7 yes    | 4.55 yes  |
-| secondary.main as border, icon or indicator                        | `#9A98FF`             | 7.41 yes  | 6.73 yes   | 4.57 yes  |
-| error.main as border, icon or indicator                            | `#FF7A73`             | 7.39 yes  | 6.71 yes   | 4.56 yes  |
-| warning.main as border, icon or indicator                          | `#FFB340`             | 10.5 yes  | 9.54 yes   | 6.48 yes  |
-| info.main as border, icon or indicator                             | `#70D7FF`             | 11.47 yes | 10.41 yes  | 7.07 yes  |
-| success.main as border, icon or indicator                          | `#30DB5B`             | 10.18 yes | 9.24 yes   | 6.27 yes  |
-| Focus ring (white outline over black ring; the better band counts) | `#FFFFFF` / `#000000` | 18.73 yes | 17.01 yes  | 11.55 yes |
+| Token or state                                               | Colour    | vs paper  | vs default | vs dialog |
+| ------------------------------------------------------------ | --------- | --------- | ---------- | --------- |
+| `border.control` (form border, switch track, unchecked icon) | `#8E8E93` | 5.75 yes  | 5.22 yes   | 3.54 yes  |
+| primary.main as border, icon or indicator                    | `#54A6FF` | 7.38 yes  | 6.7 yes    | 4.55 yes  |
+| secondary.main as border, icon or indicator                  | `#9A98FF` | 7.41 yes  | 6.73 yes   | 4.57 yes  |
+| error.main as icon or border                                 | `#FF7A73` | 7.39 yes  | 6.71 yes   | 4.56 yes  |
+| warning.main as icon or border                               | `#FFB340` | 10.5 yes  | 9.54 yes   | 6.48 yes  |
+| info.main as icon or border                                  | `#70D7FF` | 11.47 yes | 10.41 yes  | 7.07 yes  |
+| success.main as icon or border                               | `#30DB5B` | 10.18 yes | 9.24 yes   | 6.27 yes  |
+| yellow.main as icon or border                                | `#FFD426` | 13.11 yes | 11.91 yes  | 8.08 yes  |
+| indigo.main as icon or border                                | `#9A98FF` | 7.41 yes  | 6.73 yes   | 4.57 yes  |
+| purple.main as icon or border                                | `#DA8FFF` | 8.34 yes  | 7.58 yes   | 5.14 yes  |
+| pink.main as icon or border                                  | `#FF2D55` | 5.14 yes  | 4.67 yes   | 3.17 yes  |
+
+`yellow.main` is only used for icons, not text (3.28:1 on white). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
+
+### Keyboard focus ring (SC 2.4.7 and 1.4.11, 3:1)
+
+| Surface | Colour    | Ring ratio |
+| ------- | --------- | ---------- |
+| paper   | `#121212` | 7.38 yes   |
+| default | `#1C1C1E` | 6.7 yes    |
+| dialog  | `#393939` | 4.55 yes   |
+
+The ring is `#54A6FF` in dark mode, a 2px outline 2px outside the control, defined once in `ui/app/src/styles/focusRing.ts`. It is always offset, because it is 1.00:1 against the primary fill: the gap shows the surface above, and the ring is measured against that. Inset rings are only used on rows and tree items. The full surface list, including the greys, is asserted in `focusRing.test.ts`.
 
 ## Measured component states
 
@@ -207,18 +238,18 @@ Measured from the rendered MUI components (computed styles, alpha composited, gr
 
 ## Guest overlay chips (experience builder)
 
-Zone marker label chips use `#121212` text on the `.light` variant of the guest theme colour, in both modes.
+Zone marker label chips use `palette.highlightText` (`#121212`) on the `.light` variant of the guest theme colour, in both modes.
 
-| Mode  | State              | Foreground | Background | Ratio | Pass |
-| ----- | ------------------ | ---------- | ---------- | ----- | ---- |
-| light | primary.light chip | `#121212`  | `#3386E1`  | 5.03  | yes  |
-| light | success.light chip | `#121212`  | `#4D9860`  | 5.33  | yes  |
-| light | error.light chip   | `#121212`  | `#DA5750`  | 4.87  | yes  |
-| light | warning.light chip | `#121212`  | `#B57F33`  | 5.4   | yes  |
-| dark  | primary.light chip | `#121212`  | `#76B7FF`  | 8.91  | yes  |
-| dark  | success.light chip | `#121212`  | `#59E27B`  | 11.23 | yes  |
-| dark  | error.light chip   | `#121212`  | `#FF948F`  | 8.82  | yes  |
-| dark  | warning.light chip | `#121212`  | `#FFC266`  | 11.74 | yes  |
+| Mode  | State              | Foreground                  | Background | Ratio | Pass |
+| ----- | ------------------ | --------------------------- | ---------- | ----- | ---- |
+| light | primary.light chip | `#121212` (`highlightText`) | `#3386E1`  | 5.03  | yes  |
+| light | success.light chip | `#121212` (`highlightText`) | `#4D9860`  | 5.33  | yes  |
+| light | error.light chip   | `#121212` (`highlightText`) | `#DA5750`  | 4.87  | yes  |
+| light | warning.light chip | `#121212` (`highlightText`) | `#B57F33`  | 5.4   | yes  |
+| dark  | primary.light chip | `#121212` (`highlightText`) | `#76B7FF`  | 8.91  | yes  |
+| dark  | success.light chip | `#121212` (`highlightText`) | `#59E27B`  | 11.23 | yes  |
+| dark  | error.light chip   | `#121212` (`highlightText`) | `#FF948F`  | 8.82  | yes  |
+| dark  | warning.light chip | `#121212` (`highlightText`) | `#FFC266`  | 11.74 | yes  |
 
 ## `error.main` evaluation
 
@@ -241,3 +272,5 @@ Candidates for light-mode `error.main` used as text (4.5:1) on the light surface
 - Disabled controls, divider lines and the 1px decorative borders of cards are exempt.
 - Text drawn over photographs or arbitrary images (for example the login page background) cannot be measured from the theme.
 - Surfaces outside the theme (TinyMCE and Ace editor chrome, legacy `.scss` views) were adjusted for the specific values listed in the pull request. They are not part of these tables.
+- The focus ring cannot be checked against a primary-filled control: a blue ring on a blue fill is 1.00:1. It is always offset so the gap shows the page, and it is never drawn inset on a fill. Coloured and unknown guest surfaces use the helper's `halo` option.
+- Text over the guest page and the preview cannot be measured from the theme; the guest overlay chips are measured separately (see the pull request).
