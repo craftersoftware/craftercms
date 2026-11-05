@@ -150,6 +150,7 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 					setConfirmBrokenReferences={setConfirmBrokenReferences}
 					onRename={onRenameSubmit}
 					onInputChanges={(event) => onInputChanges(applyAssetNameRules(event.target.value, { allowBraces }))}
+					nameInvalid={!isValid}
 					helperText={
 						assetExists ? (
 							<FormattedMessage

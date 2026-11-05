@@ -51,6 +51,7 @@ export interface RenameItemViewProps {
 	onInputChanges: (event: React.ChangeEvent<HTMLInputElement>) => void;
 	helperText?: ReactNode;
 	maxLength?: number;
+	nameInvalid: boolean;
 	fetchDependant(): void;
 }
 
@@ -69,7 +70,8 @@ export function RenameItemView(props: RenameItemViewProps) {
 		setConfirmBrokenReferences,
 		onRename,
 		onInputChanges,
-		fetchDependant
+		fetchDependant,
+		nameInvalid
 	} = props;
 	const { authoringBase } = useEnv();
 	const siteId = useActiveSiteId();
@@ -111,7 +113,7 @@ export function RenameItemView(props: RenameItemViewProps) {
 					value={name}
 					autoFocus
 					required
-					error={newNameExists || (maxLength != null && name.length > maxLength)}
+					error={nameInvalid}
 					helperText={helperText}
 					disabled={isSubmitting}
 					margin="normal"
