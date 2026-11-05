@@ -140,6 +140,11 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 */
 	protected final int inactivityTimeout;
 
+	/**
+	 * Maximum number of times a user can extend the session timeout before logging in again
+	 */
+	protected final int sessionMaxExtensions;
+
 	private NamedCookieManager refreshTokenCookieManager;
 	private NamedCookieManager previewCookieManager;
 
@@ -162,12 +167,12 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	protected final TextEncryptor previewTokenEncryptor;
 
 	@ConstructorProperties({"issuer", "validIssuers", "accessTokenExpiration", "signPassword", "encryptPassword",
-		"sessionTimeout", "inactivityTimeout", "securityDao", "instanceService", "auditService",
+		"sessionTimeout", "inactivityTimeout", "sessionMaxExtensions", "securityDao", "instanceService", "auditService",
 		"studioConfiguration", "siteService", "retryingDatabaseOperationFacade", "systemStatusProvider",
 		"previewTokenEncryptor", "userService"})
 	public AccessTokenServiceInternalImpl(String issuer, String[] validIssuers, int accessTokenExpiration,
 										  String signPassword, String encryptPassword, int sessionTimeout,
-										  int inactivityTimeout, SecurityDAO securityDao,
+										  int inactivityTimeout, int sessionMaxExtensions, SecurityDAO securityDao,
 										  InstanceService instanceService, AuditService auditService,
 										  StudioConfiguration studioConfiguration, SitesService siteService,
 										  RetryingDatabaseOperationFacade retryingDatabaseOperationFacade,
@@ -180,6 +185,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		this.encryptPassword = encryptPassword;
 		this.sessionTimeout = sessionTimeout;
 		this.inactivityTimeout = inactivityTimeout;
+		this.sessionMaxExtensions = sessionMaxExtensions;
 		this.securityDao = securityDao;
 		this.instanceService = instanceService;
 		this.auditService = auditService;
@@ -229,41 +235,60 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		refreshTokenCookieManager.addCookie(refreshToken, response);
 	}
 
+	@Override
+	public void resetSessionExtensions(Authentication auth) {
+		var userId = getUserId(auth);
+		retryingDatabaseOperationFacade.retry(() -> securityDao.resetSessionExtensions(userId));
+	}
+
 	/**
-	 * Restarts both the session and the inactivity time limits of the given user
+	 * Restarts the inactivity time limit and, unless the user already used all the extensions, the session time limit
 	 */
 	protected void extendSession(Authentication auth) {
 		var userId = getUserId(auth);
 		updateUserActivity(auth);
-		retryingDatabaseOperationFacade.retry(() -> securityDao.resetRefreshTokenCreatedOn(userId));
+		if (securityDao.extendSession(userId, sessionMaxExtensions) == 0) {
+			logger.debug("User '{}' can't extend the session any more", auth.getName());
+		}
 	}
 
 	/**
-	 * Gets the earliest moment at which the refresh token of the user can be deleted by the clean up, ignoring the
-	 * time limits that are 20 hours or longer.
+	 * Gets the earliest moment at which the refresh token of the user can be deleted because of the session time limit.
 	 *
-	 * @return the moment, or null if there is no time limit to warn about
+	 * @return the moment, or null if the limit is 20 hours or longer or the user has no refresh token
 	 */
-	protected Instant getSessionExpiration(Authentication auth) {
-		var userId = getUserId(auth);
-		Instant expiration = null;
-		if (sessionTimeout < SESSION_WARNING_MAX_MINUTES) {
-			// The clean up deletes the tokens that are older than the timeout in whole minutes
-			Long remainingSeconds = securityDao.getRefreshTokenRemainingSeconds(userId, sessionTimeout + 1);
-			if (remainingSeconds != null) {
-				expiration = now().plusSeconds(remainingSeconds);
-			}
+	protected Instant getSessionLimitExpiration(long userId) {
+		if (sessionTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
 		}
-		if (inactivityTimeout < SESSION_WARNING_MAX_MINUTES) {
-			Instant lastActivity = userActivity.getIfPresent(userId);
-			if (lastActivity != null) {
-				Instant inactivityExpiration = lastActivity.plus(inactivityTimeout + 1L, MINUTES);
-				if (expiration == null || inactivityExpiration.isBefore(expiration)) {
-					expiration = inactivityExpiration;
-				}
-			}
+		// The clean up deletes the tokens that are older than the timeout in whole minutes
+		Long remainingSeconds = securityDao.getRefreshTokenRemainingSeconds(userId, sessionTimeout + 1);
+		return remainingSeconds != null ? now().plusSeconds(remainingSeconds) : null;
+	}
+
+	/**
+	 * Gets the earliest moment at which the refresh token of the user can be deleted because of inactivity.
+	 *
+	 * @return the moment, or null if the limit is 20 hours or longer or there is no recorded activity
+	 */
+	protected Instant getInactivityExpiration(long userId) {
+		if (inactivityTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
 		}
-		return expiration;
+		Instant lastActivity = userActivity.getIfPresent(userId);
+		return lastActivity != null ? lastActivity.plus(inactivityTimeout + 1L, MINUTES) : null;
+	}
+
+	/**
+	 * Indicates if choosing to stay signed in would move the moment in which the session expires, which is not the
+	 * case when the session time limit is the next one to be reached and the user used all the extensions.
+	 */
+	protected boolean canExtendSession(long userId, Instant sessionLimit, Instant inactivityLimit) {
+		if (sessionLimit == null || (inactivityLimit != null && inactivityLimit.isBefore(sessionLimit))) {
+			return true;
+		}
+		Integer extensions = securityDao.getSessionExtensions(userId);
+		return extensions == null || extensions < sessionMaxExtensions;
 	}
 
 	@Override
@@ -355,7 +380,14 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		var accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setExpiresAt(expireAt);
-		accessToken.setSessionExpiresAt(getSessionExpiration(auth));
+		var userId = getUserId(auth);
+		var sessionLimit = getSessionLimitExpiration(userId);
+		var inactivityLimit = getInactivityExpiration(userId);
+		if (sessionLimit != null || inactivityLimit != null) {
+			accessToken.setSessionExpiresAt(sessionLimit == null || (inactivityLimit != null &&
+				inactivityLimit.isBefore(sessionLimit)) ? inactivityLimit : sessionLimit);
+		}
+		accessToken.setCanExtendSession(canExtendSession(userId, sessionLimit, inactivityLimit));
 
 		return accessToken;
 	}

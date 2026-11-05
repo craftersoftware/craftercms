@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
+import { extendSession, obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
 import StandardAction from './models/StandardAction';
 import {
 	logout,
@@ -105,7 +105,7 @@ function onmessage(event) {
 		// The user chose to stay signed in from the session timeout warning.
 		case sharedWorkerExtendSession.type:
 			log('App requested to extend the session');
-			retrieve(true);
+			retrieve(event.data.payload.xsrfToken);
 			break;
 		// The user logged out.
 		case logout.type:
@@ -174,11 +174,11 @@ function getNextRefreshDelay() {
 }
 
 let retries = 0;
-function retrieve(extendSession = false) {
+function retrieve(extendSessionXsrfToken?: string) {
 	clearTimeout(timeout);
 	if (!isRetrieving) {
 		isRetrieving = true;
-		return obtainAuthToken(extendSession).subscribe({
+		return (extendSessionXsrfToken ? extendSession(extendSessionXsrfToken) : obtainAuthToken()).subscribe({
 			next(response) {
 				retries = 0;
 				isRetrieving = false;

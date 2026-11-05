@@ -143,6 +143,7 @@
 	"authMonitor.passwordTextFieldLabel": "Contraseña",
 	"authMonitor.postSSOLoginMismatchMessage": "Parece que has iniciado sesión con un usuario diferente al propietario de esta sesión. Por razones de seguridad, su pantalla ahora se actualizará.",
 	"authMonitor.sessionExpiredMessage": "Su sesión ha caducado. Por favor, vuelva a iniciar sesión.",
+	"authMonitor.sessionExpiringFinalMessage": "Por su seguridad, su sesión caducará en {seconds, plural, one {# segundo} other {# segundos}} y ya no se puede prolongar. Cierre este mensaje y guarde su trabajo, luego vuelva a iniciar sesión.",
 	"authMonitor.sessionExpiringMessage": "Por su seguridad, su sesión caducará en {seconds, plural, one {# segundo} other {# segundos}}. Seleccione Mantener la sesión iniciada para seguir trabajando.",
 	"authMonitor.sessionExpiringTitle": "Su sesión está a punto de caducar",
 	"authMonitor.ssoOpenPopupMessage": "Asegúrese de que las ventanas emergentes no estén bloqueadas. Una vez que inicie sesión, regrese a esta ventana y haga clic en el botón \"Reanudar\" a continuación.",

@@ -41,6 +41,7 @@ import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
 import { SESSION_TIMEOUT_WARNING_MS } from '../../utils/constants';
+import { getXSRFToken } from '../../utils/auth';
 
 const translations = defineMessages({
 	sessionExpired: {
@@ -105,11 +106,13 @@ export function AuthMonitor() {
 	);
 }
 
-// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it.
+// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it. The number of
+// extensions is limited (server side), so the last warning only tells the user to save their work.
 function SessionTimeoutWarning() {
 	const dispatch = useDispatch();
-	const { active, sessionExpiresAt } = useSelection((state) => state.auth);
+	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
 	const [open, setOpen] = useState(false);
+	const [dismissed, setDismissed] = useState(false);
 	const [secondsLeft, setSecondsLeft] = useState(0);
 	useEffect(() => {
 		// The worker refreshes the token when the warning is due and updates `sessionExpiresAt`, which closes the
@@ -118,18 +121,22 @@ function SessionTimeoutWarning() {
 		const shouldWarn =
 			active && sessionExpiresAt != null && sessionExpiresAt - Date.now() <= SESSION_TIMEOUT_WARNING_MS;
 		setOpen(shouldWarn);
+		setDismissed(false);
 		if (shouldWarn) {
 			setSecondsLeft(getSecondsLeft());
 			const interval = setInterval(() => setSecondsLeft(getSecondsLeft()), 1000);
 			return () => clearInterval(interval);
 		}
 	}, [active, sessionExpiresAt]);
-	const onStaySignedIn = () => dispatch(messageSharedWorker(sharedWorkerExtendSession()));
+	const onStaySignedIn = () => dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
+	const onDismiss = () => setDismissed(true);
 	return (
 		<Dialog
-			open={open}
+			// Remounts when the user runs out of extensions so the new warning is announced.
+			key={canExtendSession ? 'extendable' : 'final'}
+			open={open && !dismissed}
 			// Escape or clicking outside keeps the user working rather than leaving them with a dismissed warning.
-			onClose={onStaySignedIn}
+			onClose={canExtendSession ? onStaySignedIn : onDismiss}
 			role="alertdialog"
 			aria-labelledby="sessionTimeoutWarningTitle"
 			aria-describedby="sessionTimeoutWarningMessage"
@@ -139,20 +146,34 @@ function SessionTimeoutWarning() {
 			</DialogTitle>
 			<DialogContent sx={{ width: '400px' }}>
 				<DialogContentText id="sessionTimeoutWarningMessage">
-					<FormattedMessage
-						id="authMonitor.sessionExpiringMessage"
-						defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}}. Select Stay signed in to keep working."
-						values={{ seconds: secondsLeft }}
-					/>
+					{canExtendSession ? (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}}. Select Stay signed in to keep working."
+							values={{ seconds: secondsLeft }}
+						/>
+					) : (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringFinalMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}} and it can't be extended any more. Close this message and save your work, then log in again."
+							values={{ seconds: secondsLeft }}
+						/>
+					)}
 				</DialogContentText>
 			</DialogContent>
 			<DialogActions>
 				<Button color="primary" variant="text" onClick={() => dispatch(logout())}>
 					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
 				</Button>
-				<Button autoFocus color="primary" variant="contained" onClick={onStaySignedIn}>
-					<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
-				</Button>
+				{canExtendSession ? (
+					<Button autoFocus color="primary" variant="contained" onClick={onStaySignedIn}>
+						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
+					</Button>
+				) : (
+					<Button autoFocus color="primary" variant="contained" onClick={onDismiss}>
+						<FormattedMessage id="words.close" defaultMessage="Close" />
+					</Button>
+				)}
 			</DialogActions>
 		</Dialog>
 	);

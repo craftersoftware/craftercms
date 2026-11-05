@@ -55,6 +55,13 @@ public interface AccessTokenService {
 	void updateRefreshToken(Authentication auth, HttpServletResponse response);
 
 	/**
+	 * Starts counting the extensions of the session timeout from zero
+	 *
+	 * @param auth the current authentication
+	 */
+	void resetSessionExtensions(Authentication auth);
+
+	/**
 	 * Creates the access &amp; refresh tokens for the given authentication
 	 *
 	 * @param auth     the current authentication

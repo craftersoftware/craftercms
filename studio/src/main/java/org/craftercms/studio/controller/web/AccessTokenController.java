@@ -21,7 +21,7 @@ import org.craftercms.studio.model.security.AccessToken;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,8 +51,21 @@ public class AccessTokenController {
 
 	@GetMapping(value = "/refresh", produces = APPLICATION_JSON_VALUE)
 	public AccessToken refreshToken(Authentication authentication, HttpServletRequest request,
-					HttpServletResponse response,
-					@RequestParam(required = false, defaultValue = "false") boolean extendSession) throws Exception {
+					HttpServletResponse response) throws Exception {
+		return refreshToken(authentication, request, response, false);
+	}
+
+	/**
+	 * Refreshes the tokens and extends the session, which changes state so it requires the CSRF token
+	 */
+	@PostMapping(value = "/refresh", produces = APPLICATION_JSON_VALUE)
+	public AccessToken extendSession(Authentication authentication, HttpServletRequest request,
+					 HttpServletResponse response) throws Exception {
+		return refreshToken(authentication, request, response, true);
+	}
+
+	protected AccessToken refreshToken(Authentication authentication, HttpServletRequest request,
+					   HttpServletResponse response, boolean extendSession) throws Exception {
 		// If the session has expired, return an empty response
 		if (authentication == null || authentication instanceof AnonymousAuthenticationToken ||
 			!accessTokenService.hasValidRefreshToken(authentication, request, response)) {

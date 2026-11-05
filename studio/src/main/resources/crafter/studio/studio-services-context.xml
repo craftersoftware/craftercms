@@ -1211,6 +1211,8 @@
 				 value="#{studioConfiguration.getProperty('studio.security.sessionTimeout')}"/>
 		<constructor-arg name="inactivityTimeout"
 				 value="#{studioConfiguration.getProperty('studio.security.inactivityTimeout')}"/>
+		<constructor-arg name="sessionMaxExtensions"
+				 value="#{studioConfiguration.getProperty('studio.security.sessionMaxExtensions')}"/>
 		<constructor-arg name="securityMapper" ref="securityDao"/>
 		<constructor-arg name="instanceService" ref="instanceService"/>
 		<constructor-arg name="auditService" ref="auditServiceInternal"/>

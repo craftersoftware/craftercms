@@ -40,6 +40,11 @@ public class AccessToken {
 	 */
 	protected Instant sessionExpiresAt;
 
+	/**
+	 * Indicates if the user can still extend the session before it expires
+	 */
+	protected boolean canExtendSession = true;
+
 	public void setToken(String token) {
 		this.token = token;
 	}
@@ -52,6 +57,10 @@ public class AccessToken {
 		this.sessionExpiresAt = sessionExpiresAt;
 	}
 
+	public void setCanExtendSession(boolean canExtendSession) {
+		this.canExtendSession = canExtendSession;
+	}
+
 	public String getToken() {
 		return token;
 	}
@@ -62,6 +71,10 @@ public class AccessToken {
 
 	public Instant getSessionExpiresAt() {
 		return sessionExpiresAt;
+	}
+
+	public boolean isCanExtendSession() {
+		return canExtendSession;
 	}
 
 }

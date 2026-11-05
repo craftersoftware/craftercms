@@ -51,6 +51,6 @@ export const sharedWorkerError = /*#__PURE__*/ createAction<{ status: number; me
 export const sharedWorkerConnect = /*#__PURE__*/ createAction<{ xsrfToken: string }>('CONNECT');
 export const sharedWorkerDisconnect = /*#__PURE__*/ createAction('DISCONNECT');
 export const sharedWorkerTimeout = /*#__PURE__*/ createAction('TIMEOUT');
-export const sharedWorkerExtendSession = /*#__PURE__*/ createAction('EXTEND_SESSION');
+export const sharedWorkerExtendSession = /*#__PURE__*/ createAction<{ xsrfToken: string }>('EXTEND_SESSION');
 
 // endregion

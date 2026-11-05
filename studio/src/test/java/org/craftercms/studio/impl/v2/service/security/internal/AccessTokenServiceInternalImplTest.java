@@ -28,9 +28,11 @@ import java.time.Instant;
 
 import static org.craftercms.studio.impl.v2.service.security.internal.AccessTokenServiceInternalImpl.ACTIVITY_CACHE_CONFIG_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -43,6 +45,7 @@ import static org.mockito.Mockito.when;
 public class AccessTokenServiceInternalImplTest {
 
 	private static final long USER_ID = 7;
+	private static final int MAX_EXTENSIONS = 10;
 
 	private final SecurityDAO securityDao = mock(SecurityDAO.class);
 	private final RetryingDatabaseOperationFacade retryingFacade = mock(RetryingDatabaseOperationFacade.class);
@@ -59,46 +62,34 @@ public class AccessTokenServiceInternalImplTest {
 			return null;
 		}).when(retryingFacade).retry(any(Runnable.class));
 		var service = new AccessTokenServiceInternalImpl(null, null, 5, "sign", "encrypt", sessionTimeout,
-			inactivityTimeout, securityDao, null, null, studioConfiguration, null, retryingFacade, null, null, null);
+			inactivityTimeout, MAX_EXTENSIONS, securityDao, null, null, studioConfiguration, null, retryingFacade, null,
+			null, null);
 		service.afterPropertiesSet();
 		return service;
 	}
 
 	@Test
-	public void expiresAtTheEarliestTimeLimit() {
-		var service = createService(480, 30);
-		when(securityDao.getRefreshTokenRemainingSeconds(USER_ID, 481)).thenReturn(3600L);
-		service.updateUserActivity(auth);
-
-		Instant expiration = service.getSessionExpiration(auth);
-
-		// Inactivity (31 minutes) comes before the session limit (1 hour)
-		assertNotNull(expiration);
-		assertTrue(Duration.between(Instant.now(), expiration).toMinutes() <= 31);
-		assertTrue(Duration.between(Instant.now(), expiration).toMinutes() >= 30);
-	}
-
-	@Test
-	public void sessionLimitCanComeBeforeInactivity() {
+	public void sessionLimitIsCountedInWholeMinutes() {
 		var service = createService(480, 30);
 		when(securityDao.getRefreshTokenRemainingSeconds(USER_ID, 481)).thenReturn(120L);
-		service.updateUserActivity(auth);
 
-		Instant expiration = service.getSessionExpiration(auth);
+		Instant expiration = service.getSessionLimitExpiration(USER_ID);
 
 		assertNotNull(expiration);
 		assertTrue(Duration.between(Instant.now(), expiration).getSeconds() <= 120);
 	}
 
 	@Test
-	public void inactivityIsIgnoredUntilThereIsActivity() {
+	public void inactivityLimitStartsWithTheActivity() {
 		var service = createService(480, 30);
-		when(securityDao.getRefreshTokenRemainingSeconds(USER_ID, 481)).thenReturn(600L);
+		assertNull(service.getInactivityExpiration(USER_ID));
 
-		Instant expiration = service.getSessionExpiration(auth);
+		service.updateUserActivity(auth);
+		Instant expiration = service.getInactivityExpiration(USER_ID);
 
 		assertNotNull(expiration);
-		assertTrue(Duration.between(Instant.now(), expiration).getSeconds() <= 600);
+		assertTrue(Duration.between(Instant.now(), expiration).toMinutes() <= 31);
+		assertTrue(Duration.between(Instant.now(), expiration).toMinutes() >= 30);
 	}
 
 	@Test
@@ -106,30 +97,77 @@ public class AccessTokenServiceInternalImplTest {
 		var service = createService(20 * 60, 20 * 60);
 		service.updateUserActivity(auth);
 
-		assertNull(service.getSessionExpiration(auth));
+		assertNull(service.getSessionLimitExpiration(USER_ID));
+		assertNull(service.getInactivityExpiration(USER_ID));
 		verify(securityDao, never()).getRefreshTokenRemainingSeconds(anyLong(), anyInt());
 	}
 
 	@Test
-	public void onlyTheLimitBelowTwentyHoursIsReported() {
-		var service = createService(20 * 60, 30);
-		service.updateUserActivity(auth);
-
-		Instant expiration = service.getSessionExpiration(auth);
-
-		assertNotNull(expiration);
-		assertTrue(Duration.between(Instant.now(), expiration).toMinutes() <= 31);
-		verify(securityDao, never()).getRefreshTokenRemainingSeconds(anyLong(), anyInt());
-	}
-
-	@Test
-	public void extendingRestartsBothTimeLimits() {
+	public void extendingRestartsTheSessionLimitWhileBelowTheCap() {
 		var service = createService(480, 30);
+		when(securityDao.extendSession(USER_ID, MAX_EXTENSIONS)).thenReturn(1);
 
 		service.extendSession(auth);
 
-		verify(securityDao).resetRefreshTokenCreatedOn(USER_ID);
+		verify(securityDao).extendSession(USER_ID, MAX_EXTENSIONS);
 		assertEquals(1, service.userActivity.size());
+	}
+
+	@Test
+	public void extendingIsRefusedOnceTheCapIsReached() {
+		var service = createService(480, 30);
+		// The query only updates the token when the extensions used are below the maximum
+		when(securityDao.extendSession(eq(USER_ID), eq(MAX_EXTENSIONS))).thenReturn(0);
+
+		service.extendSession(auth);
+
+		verify(securityDao).extendSession(USER_ID, MAX_EXTENSIONS);
+		verify(securityDao, never()).resetSessionExtensions(anyLong());
+	}
+
+	@Test
+	public void sessionCanBeExtendedBelowTheCap() {
+		var service = createService(480, 30);
+		var sessionLimit = Instant.now().plusSeconds(60);
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS - 1);
+
+		assertTrue(service.canExtendSession(USER_ID, sessionLimit, null));
+	}
+
+	@Test
+	public void sessionCanNotBeExtendedAtTheCapWhenTheSessionLimitIsNext() {
+		var service = createService(480, 30);
+		var sessionLimit = Instant.now().plusSeconds(60);
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS);
+
+		assertFalse(service.canExtendSession(USER_ID, sessionLimit, null));
+		assertFalse(service.canExtendSession(USER_ID, sessionLimit, sessionLimit.plusSeconds(30)));
+	}
+
+	@Test
+	public void sessionCanBeExtendedAtTheCapWhenInactivityIsNext() {
+		var service = createService(480, 30);
+		var sessionLimit = Instant.now().plusSeconds(600);
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS);
+
+		assertTrue(service.canExtendSession(USER_ID, sessionLimit, sessionLimit.minusSeconds(300)));
+	}
+
+	@Test
+	public void sessionCanBeExtendedWhenThereIsNoSessionLimit() {
+		var service = createService(20 * 60, 30);
+
+		assertTrue(service.canExtendSession(USER_ID, null, Instant.now().plusSeconds(60)));
+		verify(securityDao, never()).getSessionExtensions(anyLong());
+	}
+
+	@Test
+	public void loginStartsCountingExtensionsFromZero() {
+		var service = createService(480, 30);
+
+		service.resetSessionExtensions(auth);
+
+		verify(securityDao).resetSessionExtensions(USER_ID);
 	}
 
 }

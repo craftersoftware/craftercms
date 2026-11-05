@@ -143,6 +143,7 @@
 	"authMonitor.passwordTextFieldLabel": "Passwort",
 	"authMonitor.postSSOLoginMismatchMessage": "Sie haben sich anscheinend mit einem anderen Benutzer als dem Eigentümer dieser Sitzung angemeldet. Aus Sicherheitsgründen wird Ihr Bildschirm jetzt aktualisiert.",
 	"authMonitor.sessionExpiredMessage": "Deine Sitzung ist abgelaufen. Bitte melden Sie sich wieder an.",
+	"authMonitor.sessionExpiringFinalMessage": "Zu Ihrer Sicherheit läuft Ihre Sitzung in {seconds, plural, one {# Sekunde} other {# Sekunden}} ab und kann nicht mehr verlängert werden. Schließen Sie diese Meldung, speichern Sie Ihre Arbeit und melden Sie sich dann erneut an.",
 	"authMonitor.sessionExpiringMessage": "Zu Ihrer Sicherheit läuft Ihre Sitzung in {seconds, plural, one {# Sekunde} other {# Sekunden}} ab. Wählen Sie Angemeldet bleiben, um weiterzuarbeiten.",
 	"authMonitor.sessionExpiringTitle": "Ihre Sitzung läuft bald ab",
 	"authMonitor.ssoOpenPopupMessage": "Stellen Sie sicher, dass Popups nicht blockiert sind. Wenn Sie sich angemeldet haben, kehren Sie zu diesem Fenster zurück und klicken Sie unten auf die Schaltfläche \"Fortsetzen\".",

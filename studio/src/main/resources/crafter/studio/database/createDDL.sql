@@ -217,7 +217,7 @@ CREATE TABLE _meta (
 	PRIMARY KEY (`version`)
 ) ;
 
-INSERT INTO _meta (version, studio_id) VALUES ('5.0.0.26', UUID()) ;
+INSERT INTO _meta (version, studio_id) VALUES ('5.0.0.27', UUID()) ;
 
 CREATE TABLE IF NOT EXISTS `audit` (
 	`id`                        BIGINT(20)    NOT NULL AUTO_INCREMENT,
@@ -514,7 +514,8 @@ CREATE TABLE IF NOT EXISTS `refresh_token`
 	`user_id` BIGINT(20) PRIMARY KEY, -- Add FK
 	`token` VARCHAR(50) NOT NULL,
 	`last_updated_on` TIMESTAMP,
-	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	`created_on` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	`session_extensions` INT NOT NULL DEFAULT 0
 )
 	ENGINE = InnoDB
 	ROW_FORMAT = DYNAMIC ;
