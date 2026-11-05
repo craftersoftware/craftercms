@@ -19,6 +19,7 @@ import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 import { useIntl } from 'react-intl';
 import { focusStudioMainContent } from './studioMainContent';
+import { focusRingStyles } from '../../styles/focusRing';
 
 /**
  * First-focusable bypass for repeated shell chrome. Hidden until focused.
@@ -33,7 +34,7 @@ export function SkipToMainContent() {
 			onClick={() => {
 				focusStudioMainContent();
 			}}
-			sx={{
+			sx={(theme) => ({
 				...visuallyHidden,
 				// A button, not an anchor: the hash router would treat href="#studioMainContent"
 				// as a route, including on middle-click and "Open in new tab".
@@ -59,11 +60,9 @@ export function SkipToMainContent() {
 					backgroundColor: 'background.paper',
 					color: 'text.primary',
 					whiteSpace: 'normal',
-					outline: '2px solid',
-					outlineColor: 'primary.main',
-					outlineOffset: '2px'
+					...focusRingStyles(theme)
 				}
-			}}
+			})}
 		>
 			{formatMessage({ id: 'skipToMainContent.label', defaultMessage: 'Skip to main content' })}
 		</Box>

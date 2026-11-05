@@ -131,6 +131,65 @@ export function SiteTools(props: SiteToolsProps) {
 			elevation={0}
 		>
 			{isPage && <SkipToMainContent />}
+			<Box
+				{...(isPage ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
+				sx={[
+					isPage && mainLandmarkSx,
+					{
+						height: '100%',
+						width: '100%',
+						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('padding-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
+					})
+				]}
+			>
+				{activeToolId ? (
+					tool ? (
+						<Suspencified>
+							<Widget
+								{...tool}
+								overrideProps={{
+									embedded: false,
+									mountMode,
+									showAppsButton,
+									onSubmittingAndOrPendingChange,
+									onClose,
+									onMinimize
+								}}
+							/>
+						</Suspencified>
+					) : (
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
+							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+								<LauncherOpenerButton />
+							</Box>
+							<EmptyState
+								sxs={{ root: { height: '100%', margin: 0 } }}
+								title={toolNotFoundLabel}
+								titleComponent={isPage ? 'h1' : 'h2'}
+							/>
+						</Box>
+					)
+				) : (
+					<EmptyState
+						sxs={{ root: { height: '100%', margin: 0 } }}
+						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
+						titleComponent={isPage ? 'h1' : 'h2'}
+						image={`${baseUrl}/static-assets/images/choose_option.svg`}
+					/>
+				)}
+			</Box>
 			<ResizeableDrawer
 				landmark="nav"
 				landmarkLabel={projectToolsLabel}
@@ -224,65 +283,6 @@ export function SiteTools(props: SiteToolsProps) {
 					)}
 				</Box>
 			</ResizeableDrawer>
-			<Box
-				{...(isPage ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
-				sx={[
-					isPage && mainLandmarkSx,
-					{
-						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
-					},
-					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
-							easing: theme.transitions.easing.easeOut,
-							duration: theme.transitions.duration.enteringScreen
-						})
-					})
-				]}
-			>
-				{activeToolId ? (
-					tool ? (
-						<Suspencified>
-							<Widget
-								{...tool}
-								overrideProps={{
-									embedded: false,
-									mountMode,
-									showAppsButton,
-									onSubmittingAndOrPendingChange,
-									onClose,
-									onMinimize
-								}}
-							/>
-						</Suspencified>
-					) : (
-						<Box
-							sx={{
-								display: 'flex',
-								flexDirection: 'column',
-								height: '100%'
-							}}
-						>
-							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
-								<LauncherOpenerButton />
-							</Box>
-							<EmptyState
-								sxs={{ root: { height: '100%', margin: 0 } }}
-								title={toolNotFoundLabel}
-								titleComponent={isPage ? 'h1' : 'h2'}
-							/>
-						</Box>
-					)
-				) : (
-					<EmptyState
-						sxs={{ root: { height: '100%', margin: 0 } }}
-						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						titleComponent={isPage ? 'h1' : 'h2'}
-						image={`${baseUrl}/static-assets/images/choose_option.svg`}
-					/>
-				)}
-			</Box>
 		</Paper>
 	);
 }

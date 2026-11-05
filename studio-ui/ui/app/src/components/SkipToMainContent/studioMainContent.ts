@@ -16,17 +16,14 @@
 
 import { SystemStyleObject } from '@mui/system';
 import { Theme } from '@mui/material/styles';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 /** Target for the shell skip link. One per document (each Studio screen is its own page). */
 export const STUDIO_MAIN_CONTENT_ID = 'studioMainContent';
 
 export const mainLandmarkSx: SystemStyleObject<Theme> = {
 	outline: 'none',
-	'&:focus-visible': {
-		outline: '2px solid',
-		outlineColor: 'primary.main',
-		outlineOffset: -2
-	}
+	'&:focus-visible': getFocusRingSx({ inset: true })
 };
 
 export function focusStudioMainContent(): boolean {

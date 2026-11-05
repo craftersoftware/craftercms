@@ -30,22 +30,28 @@
 	document.addEventListener("CrafterCMS.CodebaseBridgeReady", () => {
 		const { createElement, Fragment } = craftercms.libs.React;
 		const { Typography, Box } = craftercms.libs.MaterialUI;
-		const { ViewToolbar, LauncherOpenerButton, SiteDashboard } = CrafterCMSNext.components;
+		const { ViewToolbar, LauncherOpenerButton, SiteDashboard, SkipToMainContent, StudioMainContent } =
+			CrafterCMSNext.components;
 		const CrafterCMSIcon = craftercms.icons.CrafterCMSIcon;
 		function Root() {
 			return createElement(
 				Fragment,
 				{},
+				createElement(SkipToMainContent),
 				createElement(
-					ViewToolbar,
-					{},
-					createElement(Box, { sx: { display: 'flex', alignItems: 'center' } },
-						createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
-						createElement(Typography, { variant: 'h5', component: 'span' }, 'Site Dashboard')
+					StudioMainContent,
+					null,
+					createElement(
+						ViewToolbar,
+						{},
+						createElement(Box, { sx: { display: 'flex', alignItems: 'center' } },
+							createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
+							createElement(Typography, { variant: 'h5', component: 'span' }, 'Site Dashboard')
+						),
+						createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
 					),
-					createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
-				),
-				createElement(SiteDashboard)
+					createElement(SiteDashboard)
+				)
 			);
 		}
 		CrafterCMSNext.render('#root', Root, {}, false);
