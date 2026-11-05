@@ -98,7 +98,6 @@ function PluginCard(props: PluginCardProps) {
 	const { formatMessage } = useIntl();
 	const pluginLabel =
 		typeof name === 'string' ? name : id === 'DUPLICATE' ? formatMessage({ defaultMessage: 'Duplicate Project' }) : id;
-	const selectLabel = formatMessage({ defaultMessage: 'Select {name}' }, { name: pluginLabel });
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
@@ -299,7 +298,6 @@ function PluginCard(props: PluginCardProps) {
 			)}
 			<CardActionArea
 				disabled={disableCardActionClick}
-				aria-label={isGitOrDuplicateCard ? undefined : selectLabel}
 				onClick={() => {
 					onPluginSelected(plugin, 1);
 				}}
