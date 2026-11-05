@@ -32,6 +32,8 @@ export interface ZoneAddress {
  */
 const FOCUS_FALLBACK_MS = 1500;
 const SETTLE_MS = 150;
+/** After the fallback leaves focus on the moved item, keep listening this long for a late re-render. */
+const HOLD_MS = 5000;
 
 interface PendingZoneFocus {
 	token: number;
@@ -44,6 +46,8 @@ interface PendingZoneFocus {
 	settled: boolean;
 	/** The origin item is being removed, so there is no moved item to wait for. */
 	removal: boolean;
+	/** The fallback expired with focus still on the moved item's button. Act only once that focus is lost. */
+	holding?: boolean;
 }
 
 let pending: PendingZoneFocus | null = null;
@@ -165,16 +169,7 @@ function focusIsAlreadyOnMovedItem(): boolean {
 	if (!(active instanceof HTMLElement) || !active.hasAttribute('data-craftercms-zone-button') || !pending) {
 		return false;
 	}
-	if (pending.iceId != null && active.getAttribute('data-craftercms-zone-button') === String(pending.iceId)) {
-		return true;
-	}
-	const target = itemAddresses()[0];
-	return (
-		target != null &&
-		active.getAttribute('data-craftercms-model-id') === target.modelId &&
-		active.getAttribute('data-craftercms-field-id') === target.fieldId &&
-		active.getAttribute('data-craftercms-index') === target.index
-	);
+	return pending.iceId != null && active.getAttribute('data-craftercms-zone-button') === String(pending.iceId);
 }
 
 function focusFallback() {
@@ -185,7 +180,20 @@ function focusFallback() {
 	// A move that never repaints still leaves focus on the moved item's zone button. Do not
 	// send that focus to the parent zone when the timeout expires.
 	if (focusIsAlreadyOnMovedItem()) {
-		clearPending();
+		// Keep the request for a bounded time. A slow re-render can still replace this button, and
+		// focus would fall to the body with nothing left to recover it.
+		const token = pending.token;
+		pending.holding = true;
+		// The 1500ms timer may still be armed when the settle path reaches this branch.
+		// Drop it before arming the hold, and clearPending() drops the hold when a new request replaces this one.
+		if (fallbackTimer !== undefined) {
+			window.clearTimeout(fallbackTimer);
+		}
+		fallbackTimer = window.setTimeout(() => {
+			if (pending?.token === token) {
+				clearPending();
+			}
+		}, HOLD_MS);
 		return;
 	}
 	const first = pending.addresses[0];
@@ -218,6 +226,9 @@ export function tryFocusPendingZone(): boolean {
 		return false;
 	}
 	if (pending.afterRegistryChange && !pending.sawRegistryChange) {
+		return false;
+	}
+	if (pending.holding && pending.originEl?.isConnected && document.activeElement === pending.originEl) {
 		return false;
 	}
 	const button = findTargetButton();
