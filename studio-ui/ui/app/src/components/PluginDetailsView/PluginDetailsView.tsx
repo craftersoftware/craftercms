@@ -150,7 +150,7 @@ export function PluginDetailsView(props: PluginDetailsViewProps) {
 							'&:focus-visible': {
 								outline: '2px solid #FFFFFF',
 								outlineOffset: '2px',
-								boxShadow: '0 0 0 2px #000000'
+								boxShadow: '0 0 0 4px #000000'
 							},
 							background: backgroundColor
 						}}
