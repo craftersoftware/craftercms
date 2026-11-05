@@ -225,7 +225,14 @@ function PluginCard(props: PluginCardProps) {
 								? formatMessage({ defaultMessage: 'View {description}' }, { description: item.description })
 								: formatMessage({ defaultMessage: 'View image {number}' }, { number: index + 1 })
 						}
-						sx={frameSx}
+						sx={{
+							...frameSx,
+							// Inset: the carousel clips overflow, so an outer outline would be cut off.
+							'&:focus-visible': {
+								outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+								outlineOffset: '-2px'
+							}
+						}}
 						onClick={(event) => onImageClick(event, index)}
 					>
 						{image}

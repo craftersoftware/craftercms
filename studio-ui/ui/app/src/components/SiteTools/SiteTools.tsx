@@ -152,8 +152,10 @@ export function SiteTools(props: SiteToolsProps) {
 								{tools.map((tool) => (
 									<ListItem key={tool.url} disablePadding>
 										<ListItemButton
-											selected={`/${tool.url}` === activeToolId}
-											aria-current={`/${tool.url}` === activeToolId ? 'page' : undefined}
+											selected={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '')}
+											aria-current={
+												tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '') ? 'page' : undefined
+											}
 											onClick={() => onNavItemClick(tool.url)}
 										>
 											<ListItemIcon sx={{ minWidth: 36 }}>

@@ -92,7 +92,7 @@ export const UnstyledMobileStepper = React.forwardRef<HTMLDivElement, MobileStep
 									key={index}
 									onClick={(e) => onDotClick(e, index)}
 									aria-label={formatMessage({ defaultMessage: 'Go to step {step}' }, { step: index + 1 })}
-									aria-current={index === activeStep ? 'true' : undefined}
+									aria-current={index === activeStep ? 'step' : undefined}
 									className={clsx(classes?.dot, mobileStepperClasses.dot, {
 										[mobileStepperClasses.dotActive]: index === activeStep
 									})}
