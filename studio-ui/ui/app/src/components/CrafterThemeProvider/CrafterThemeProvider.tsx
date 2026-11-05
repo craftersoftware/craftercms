@@ -53,8 +53,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 		const mode = prefersDarkMode ? 'dark' : 'light';
 		const auxTheme = createTheme({ palette: { mode } });
 		const defaultThemeOptions = createDefaultThemeOptions({ mode });
-		// #FF3B30 (palette.red.main) is 3.55:1 on white. #D12E25 is 4.58:1 or more on every light surface.
-		const errorMain = prefersDarkMode ? palette.red.tint : '#D12E25';
+		const errorMain = prefersDarkMode ? palette.red.tint : palette.red.main;
 		return createTheme({
 			...(props.themeOptions ?? defaultThemeOptions),
 			// Keyboard focus ring (2.4.7, 1.4.11): black against the control, white against the page, so one ring
@@ -126,7 +125,10 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 							'& .MuiSwitch-track': { opacity: 1, backgroundColor: palette.gray.medium3 },
 							'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
 								opacity: 1,
-								backgroundColor: theme.palette[ownerState.color ?? 'primary'].main
+								backgroundColor:
+									ownerState.color === 'default'
+										? theme.palette.text.secondary
+										: theme.palette[ownerState.color ?? 'primary'].main
 							}
 						}),
 						switchBase: ({ theme }) => ({
@@ -168,7 +170,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				MuiListItem: { styleOverrides: { root: selectedBar } },
 				MuiLink: {
 					defaultProps: {
-						underline: 'hover'
+						underline: 'always'
 					}
 				},
 				MuiOutlinedInput: {

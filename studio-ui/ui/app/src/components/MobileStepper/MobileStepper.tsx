@@ -18,7 +18,6 @@ import React, { ReactNode } from 'react';
 import clsx from 'clsx';
 import Paper from '@mui/material/Paper';
 import { LinearProgress, Theme } from '@mui/material';
-import { RedColor } from '../../styles/theme';
 import { capitalize } from '../../utils/string';
 import { SxProps } from '@mui/system';
 import { styled } from '@mui/material/styles';
@@ -148,7 +147,7 @@ export const MobileStepper = styled(UnstyledMobileStepper, { name: mobileStepper
 	},
 	/* Styles applied to a dot if `variant="dots"` and this is the active step. */
 	[`& .${mobileStepperClasses.dotActive}`]: {
-		backgroundColor: RedColor
+		backgroundColor: theme.palette.error.main
 	},
 	/* Styles applied to the Linear Progress component if `variant="progress"`. */
 	[`& .${mobileStepperClasses.progress}`]: {

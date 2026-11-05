@@ -36,8 +36,7 @@ export function useGuestTheme(styleConfig: ThemeOptions): Theme {
 						main: prefersDarkMode ? palette.orange.tint : palette.orange.main
 					},
 					error: {
-						// Same light-mode error as the studio theme (CrafterThemeProvider).
-						main: prefersDarkMode ? palette.red.tint : '#D12E25'
+						main: prefersDarkMode ? palette.red.tint : palette.red.main
 					},
 					success: {
 						main: prefersDarkMode ? palette.green.tint : palette.green.main

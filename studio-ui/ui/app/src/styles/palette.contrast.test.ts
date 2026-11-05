@@ -74,9 +74,9 @@ describe('palette contrast (WCAG 2.1 AA)', () => {
 		}
 	});
 
-	it('light-mode error #D12E25 is 4.5:1 on light surfaces and a #F3F3F3 panel', () => {
+	it('light-mode error (red.main) is 4.5:1 on light surfaces and a #F3F3F3 panel', () => {
 		for (const surface of [...LIGHT_SURFACES, '#F3F3F3']) {
-			assert.ok(ratio('#D12E25', surface) >= 4.5, `error on ${surface}`);
+			assert.ok(ratio(palette.red.main, surface) >= 4.5, `error on ${surface}`);
 		}
 	});
 });

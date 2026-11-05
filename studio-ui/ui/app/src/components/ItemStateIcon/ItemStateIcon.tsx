@@ -86,7 +86,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 			deleted: {
 				Icon: DeletedStateIcon,
 				stateSpecificClass: classes?.stateDeletedIcon,
-				stateSpecificSx: { color: palette.red.main, ...sxs?.stateDeletedIcon }
+				stateSpecificSx: { color: modeColor(palette.red.main, palette.red.tint), ...sxs?.stateDeletedIcon }
 			},
 			locked: {
 				Icon: LockedStateIcon,

@@ -29,7 +29,7 @@ const palette = {
 	orange: { tint: '#FFB340', main: '#A35F00', shade: '#C93400' },
 	pink: { tint: '#FF6482', main: '#FF2D55', shade: '#D30F45' },
 	purple: { tint: '#DA8FFF', main: '#AF52DE', shade: '#8944AB' },
-	red: { tint: '#FF7A73', main: '#FF3B30', shade: '#D70015', highlight: '#FFEBEA' },
+	red: { tint: '#FF7A73', main: '#D12E25', shade: '#D70015', highlight: '#FFEBEA' },
 	teal: { tint: '#70D7FF', main: '#357694', shade: '#0071A4' },
 	yellow: { tint: '#FFD426', main: '#A88700', shade: '#A05A00', highlight: '#FFFAE6' },
 	gray: {
