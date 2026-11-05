@@ -33,7 +33,7 @@ import MenuList from '@mui/material/MenuList';
 import { resolveMediaUrl } from '../../../utils/string';
 import useVideoInfo from '../../../hooks/useVideoInfo';
 import Skeleton from '@mui/material/Skeleton';
-import { downloadMedia } from '../lib/controlHelpers';
+import { downloadMedia } from '../lib/mediaDialogs';
 import Tooltip from '@mui/material/Tooltip';
 import { isFieldReadOnly } from '../lib/formUtils';
 import Menu from '@mui/material/Menu';

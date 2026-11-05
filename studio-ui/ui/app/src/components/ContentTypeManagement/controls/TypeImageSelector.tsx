@@ -29,7 +29,7 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { TypeBuilderControl } from '../utils';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
-import { showImageCropDialog } from '../../FormsEngine/lib/controlHelpers';
+import { showImageCropDialog } from '../../FormsEngine/lib/mediaDialogs';
 import { validateImageRestrictions } from '../../../utils/content';
 import { showSystemNotification } from '../../../state/actions/system';
 import { ensureSingleSlash } from '../../../utils/string';

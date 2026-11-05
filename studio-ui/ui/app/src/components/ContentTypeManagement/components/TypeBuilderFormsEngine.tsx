@@ -18,7 +18,6 @@ import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
 	FormsEngineFormApiContextProps,
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	StableFormContext,
 	StableFormContextProps,
@@ -44,7 +43,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ContentTypeFieldIcon from '../../../icons/ContentTypeField';
 import ListItemText from '@mui/material/ListItemText';
 import SectionAccordion from '../../FormsEngine/components/SectionAccordion';
-import { renderFieldControl } from '../../FormsEngine/lib/controlHelpers';
+import { renderFieldControl } from '../../FormsEngine/lib/renderControl';
 import FormBackToTop from '../../FormsEngine/components/FormBackToTop';
 import type {
 	ContentType,
@@ -217,11 +216,9 @@ export function TypeBuilderFormsEngine(props: FieldFormViewProps) {
 			<StableGlobalContext.Provider value={fooStableGlobalContext}>
 				<FormsEngineFormContextApi.Provider value={formApiContext}>
 					<StableFormContext.Provider value={stableFormContext}>
-						<ItemContext.Provider value={null}>
-							<ItemMetaContext.Provider value={itemMetaContext}>
-								{createElement(FieldFormViewBody, props)}
-							</ItemMetaContext.Provider>
-						</ItemContext.Provider>
+						<ItemMetaContext.Provider value={itemMetaContext}>
+							{createElement(FieldFormViewBody, props)}
+						</ItemMetaContext.Provider>
 					</StableFormContext.Provider>
 				</FormsEngineFormContextApi.Provider>
 			</StableGlobalContext.Provider>

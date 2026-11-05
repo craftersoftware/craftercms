@@ -35,7 +35,7 @@ import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { applyContentNameRules } from '../../../utils/content';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
-import { validateDatePopulateExpression } from './controlHelpers';
+import { validateDatePopulateExpression } from './dateExpressions';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
 import type { AnyValue } from '../types';
 import type { RepeatItem } from '../controls/Repeat';
@@ -62,7 +62,6 @@ import { freezeForPlugin } from './pluginHooks';
  */
 export interface ValidatorMetaData {
 	siteId: string;
-	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
 	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
@@ -91,6 +90,12 @@ export interface ValidatorMetaData {
 	getValue?(fieldId: string): unknown;
 	/** Aborted when the value being validated is superseded. Created per run when the caller has none. */
 	signal?: AbortSignal;
+	/**
+	 * The field is in a nested scope: a repeat item, inline or opened as its own form. The item's file-name rules
+	 * (implicit required, name format, path collision) belong to the root item only, so a `file-name` control here
+	 * is an ordinary field and only the constraints its content type declares apply. See {@link validateFieldValue}.
+	 */
+	nested?: boolean;
 }
 
 /**
@@ -389,7 +394,7 @@ function createBuiltInContext(field: ContentTypeField, meta: ValidatorMetaData):
  *
  * @param {ContentTypeField} field - The field metadata, including its type and validation rules.
  * @param {unknown} currentValue - The current value of the field to be validated.
- * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and file name.
+ * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and item meta.
  * @returns {Promise<FieldValidityState>} - A promise resolving to the validity state of the field,
  * including whether it is valid and any associated validation messages.
  *
@@ -405,14 +410,17 @@ export async function validateFieldValue(
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
 	// This control's validator applies required itself, against the value it actually edits.
-	const ownsRequired = validatorsOwningRequired.has(field.type as BuiltInControlType | DescriptorControlType);
+	// A nested `file-name` control has no item file-name semantics, so the host applies its declared required.
+	const nestedFileName = Boolean(meta.nested) && field.type === 'file-name';
+	const ownsRequired =
+		!nestedFileName && validatorsOwningRequired.has(field.type as BuiltInControlType | DescriptorControlType);
 
 	// A required constraint with an empty value is invalid. Types that own required decide that themselves.
 	if (!ownsRequired && requiredByConstraint && isEmpty && minimum == null) {
 		messages.push(defineMessage({ defaultMessage: 'This field is required.' }));
 		return Promise.resolve({ isValid: false, messages });
 	}
-	const validator = getFieldValidator(field.type);
+	const validator = nestedFileName ? undefined : getFieldValidator(field.type);
 	const ctx = createBuiltInContext(field, meta);
 	let isValid = true;
 	// The type validator runs for the control. Validation-key validators run only for keys this field has.
@@ -547,19 +555,18 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 
 /**
  * File-name rules: required, max length after {@link applyContentNameRules}, then uniqueness.
- * The name is {@link ValidatorMetaData.fileName}, the atom this control edits. The raw field value is not read.
+ * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
+ * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
  *
- * @param {string} _value - Unused. This control does not validate the raw field value.
- * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID, the file-name atom, and item context.
+ * @param {string} currentValue - The file name being validated.
+ * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID and item context.
  * @returns {Promise<ValidatorResult>} - Valid when the file name is allowed, otherwise invalid with the reason.
  *
  */
-export async function fileNameValidator(_value: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
+export async function fileNameValidator(currentValue: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
 	const { field, meta } = ctx;
 	const siteId: string = meta.siteId;
-	// Single source: the file-name atom. createFileNameAtom derives it from the path. The raw field value is ignored.
-	const currentValue = meta.fileName;
 	const blank = isEmptyValue(field, currentValue);
 	const storedRequired = Boolean(field.validations?.required?.value);
 	// Blank is invalid, except on the home page, where it is allowed unless the stored constraint requires it.
@@ -640,7 +647,7 @@ export async function repeatGroupValidator(
 	// Validate fields of each repeat group item. Min/max occurrence checks above still apply.
 	items.forEach((item) => {
 		// Sub-fields see their own item, not the page. See ValidatorContext.getValue.
-		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item) };
+		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item), nested: true };
 		Object.values(fields).forEach((subField) => {
 			if (isFieldPathIrrelevant(meta.irrelevantFieldPaths, subField.id, field.id)) return;
 			const id = subField.id;
@@ -794,10 +801,14 @@ export async function nodeSelectorValidator(
 			...meta,
 			irrelevantFieldPaths: denyList,
 			signal: ctx.signal,
-			getValue: scopeGetValue(component)
+			getValue: scopeGetValue(component),
+			nested: true
 		};
 		Object.values(fields).forEach((embeddedField) => {
 			if (isFieldPathIrrelevant(denyList, embeddedField.id)) return;
+			// An embedded component has no file name of its own: its content has no `file-name` key, so even a declared
+			// required would count it blank.
+			if (embeddedField.id === XmlKeys.fileName) return;
 			const value = component[embeddedField.id];
 			const validationPromise = validateFieldValue(embeddedField, value, childMeta);
 			validationPromises.push(validationPromise);

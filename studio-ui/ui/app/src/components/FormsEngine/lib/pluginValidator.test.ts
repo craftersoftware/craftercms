@@ -32,12 +32,12 @@ import type { Validator } from './validators.ts';
 
 const { registerPlugin } = await import('../../../services/plugin.ts');
 const { validateFieldValue, hasFieldValidator } = await import('./validators.ts');
-const { createFieldAtoms, readInvalidFieldIds } = await import('./formUtils.tsx');
+const { createChangedFieldIdsAtom, createFieldAtoms, readInvalidFieldIds } = await import('./formUtils.tsx');
 const { createStore, atom } = await import('jotai');
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
 const Component = (() => null) as ComponentType<AnyValue>;
-const meta = { siteId: 'editorial', fileName: 'index.xml', itemMeta: { path: '/site/website/index.xml' } };
+const meta = { siteId: 'editorial', itemMeta: { path: '/site/website/index.xml' } };
 
 let counter = 0;
 function plugin(validator: Validator<AnyValue>, validations: ContentTypeField['validations'] = {}) {
@@ -372,7 +372,7 @@ describe('getValue in nested runs', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: {} },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: createChangedFieldIdsAtom(),
 				originalValues: {}
 			}
 		};
@@ -401,7 +401,7 @@ describe('validation atom context', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: otherAtoms },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: createChangedFieldIdsAtom(),
 				originalValues: {}
 			}
 		};
@@ -495,7 +495,7 @@ describe('reading validity for the save gate', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: {} },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: createChangedFieldIdsAtom(),
 				originalValues: {}
 			}
 		};

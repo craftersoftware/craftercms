@@ -29,6 +29,7 @@ import type { AffectedPluginControlField } from './controlPluginLoader';
 import type { FormControllerState } from '../formControllers/types';
 import type { FormVisibilityState } from './formVisibility';
 import type { FormLockReleaseSession } from './unlockOnClose';
+import type { DataSourceServices } from '../dataSources/types';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -148,6 +149,20 @@ export interface StableGlobalContextProps {
 	lockReleaseSession: FormLockReleaseSession<StableFormContextProps>;
 }
 
+/**
+ * Payload of the internal `fieldUpdates$` stream: which field's value was just written.
+ *
+ * Internal to FE2 and Type Builder. It carries the field id only, with no `value` or `previousValue`:
+ * subscribers read the current value from the field's atom. Wrapping the id in an object lets the event
+ * grow later without changing every subscriber.
+ *
+ * Form controllers must not depend on this type. They use `FormControllerContext.fieldChanges` or
+ * `FormControllerContext.onFieldChange`, which deliver a read-only `FormFieldChange` with the value.
+ */
+export interface FieldUpdate {
+	readonly fieldId: string;
+}
+
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).
 export interface StableFormContextProps {
 	/**
@@ -162,8 +177,64 @@ export interface StableFormContextProps {
 	 * Null for the pencil and for Add.
 	 */
 	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
-	changedFieldIds: Set<string>;
-	fieldUpdates$: Subject<string>;
+	/**
+	 * Source of truth for which fields differ from the last checkpoint (the values the form opened with, or the last
+	 * save). An atom holding an immutable set of field ids; the set's reference changes only when its membership does.
+	 * Null in Type Builder's read-only chips, which track nothing.
+	 *
+	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId)`, so only the field whose
+	 *   flag flips re-renders.
+	 * - Imperative code (save, Type Builder commit, pending-changes checks) reads with `store.get(changedFieldIds)`.
+	 * - Writers replace the set (`withChangedField`) and never mutate it. Clearing is setting `EMPTY_CHANGED_FIELD_IDS`.
+	 *
+	 * This is state. {@link StableFormContextProps.fieldUpdates$} is the matching event stream: it says an edit happened,
+	 * this says what is changed.
+	 *
+	 * @example
+	 * ```ts
+	 * // Imperative read, e.g. before closing the form
+	 * const hasEdits = store.get(stableFormContext.changedFieldIds).size > 0;
+	 * // Clear after a save (see `applyValuesCheckpoint`)
+	 * store.set(stableFormContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+	 * ```
+	 *
+	 * @see {@link StableFormContextProps.fieldUpdates$}
+	 */
+	changedFieldIds: PrimitiveAtom<ReadonlySet<string>> | null;
+	/**
+	 * Internal event stream of value writes for this form: one emission per write to a field's value atom, and one
+	 * per write to the file-name atom (the `file-name` field's own value atom mirrors it and does not emit twice).
+	 * Emitted synchronously, after the field's value is stored and {@link StableFormContextProps.changedFieldIds} is
+	 * updated, so a synchronous subscriber can read the new state with `store.get`.
+	 *
+	 * The payload is a {@link FieldUpdate}: the id of the field that was written (`'file-name'` for the file name),
+	 * and nothing else (no `value` or `previousValue`). A write inside a repeat reports the root field's id. A write
+	 * that does not change the changed-ids set still emits: this is a stream of writes, not of changes.
+	 *
+	 * Nothing emits for clears or checkpoints (a save, a Type Builder commit, a stack rebuild): those set
+	 * {@link StableFormContextProps.changedFieldIds} directly, with no write behind them.
+	 *
+	 * Use it to react to the act of an edit: debounced side effects (the default version comment, background
+	 * validation), publishing pending state, or bridging to the form controller's `onFieldChange`. It is not a source
+	 * of truth. Do not accumulate state from it: read the value atoms and `changedFieldIds`.
+	 *
+	 * Internal to FE2 and Type Builder. Controllers and plugins never receive this Subject: they use the read-only
+	 * `fieldChanges` observable or `onFieldChange` on the controller context, which bridge from this stream and read
+	 * the current value themselves. Only the field and file-name atom writers call `next`; no one else should.
+	 *
+	 * @example
+	 * ```ts
+	 * // Debounced side effect that reads state, not the payload
+	 * const sub = fieldUpdates$.pipe(debounceTime(300)).subscribe(() => {
+	 *   const changed = store.get(changedFieldIds);
+	 *   // ...build the default version comment from `changed`
+	 * });
+	 * return () => sub.unsubscribe();
+	 * ```
+	 *
+	 * @see {@link StableFormContextProps.changedFieldIds}
+	 */
+	fieldUpdates$: Subject<FieldUpdate>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;
 	props: FormsEngineProps;
@@ -179,6 +250,20 @@ export interface StableFormContextProps {
 	 * Repeat entries may hold only a deny-list (`irrelevantFieldPaths`) and no controller.
 	 */
 	formControllerState: FormControllerState | null;
+	/**
+	 * Reads the form's current content item (the live Redux item, so it follows renames and moves) at call time,
+	 * without subscribing to it. Callbacks and effect bodies that only need the item when they run use this, so an item
+	 * update doesn't re-render them. Returns null when the form has no item (create mode) or none is stored yet.
+	 * `FormsEngine` publishes the real reader from a layout effect (see `useFormEntryProvisioning`); until then it
+	 * returns null.
+	 */
+	getItem(): ContentItem | null;
+	/**
+	 * Services that bridge data-source dialogs and `pushForm` into promises. Created once per form by `FormsEngine`
+	 * (`useFormEntryProvisioning`) rather than once per field. Optional: a form context that doesn't provide them, such
+	 * as the Type Builder's virtual form, makes each `ResolvedControlRenderer` build its own as a fallback.
+	 */
+	dataSourceServices?: DataSourceServices;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(
@@ -198,8 +283,14 @@ export type ReadyFormContext = StableFormContextProps & { atoms: FormsEngineAtom
 export const StableFormContext = /*#__PURE__*/ createContext<ReadyFormContext>(undefined);
 StableFormContext.displayName = 'StableFormContext';
 
-export const ItemContext = /*#__PURE__*/ createContext<ContentItem>(undefined);
-ItemContext.displayName = 'ItemContext';
+/**
+ * The store key (`itemsByPath` key) of the form's content item, or null when the form has no item (create mode). It
+ * changes only when the form moves to another path (e.g. a saved rename), never when the item's content changes, so
+ * providing it doesn't re-render consumers on item updates. Read the item with the `useFormItem*` hooks
+ * (lib/formItem.ts) where it is rendered, or with `StableFormContext.getItem()` in callbacks.
+ */
+export const FormItemKeyContext = /*#__PURE__*/ createContext<string | null>(null);
+FormItemKeyContext.displayName = 'FormItemKeyContext';
 
 export const ItemMetaContext = /*#__PURE__*/ createContext<FormsEngineItemMetaContextProps>(undefined);
 ItemMetaContext.displayName = 'ItemMetaContext';
@@ -234,8 +325,6 @@ export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (va
 	const [value, setValue] = useAtom(fieldAtom ?? (missingFieldAtom as PrimitiveAtom<T>));
 	return [fieldAtom ? value : undefined, fieldAtom ? setValue : noop, Boolean(fieldAtom)];
 }
-
-export const useItemContext = /*#__PURE__*/ createUseContextHook('useItemContext', ItemContext);
 
 export const useItemMetaContext = /*#__PURE__*/ createUseContextHook('useItemMetaContext', ItemMetaContext);
 

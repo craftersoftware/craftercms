@@ -21,7 +21,6 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import React, { useContext } from 'react';
 import {
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	RenamedPathContext,
 	StableFormContext,
@@ -31,6 +30,7 @@ import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
 	composePathForType,
+	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
@@ -41,6 +41,7 @@ import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
+import { repeatItemKeysFor } from './repeatItemKeys';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
 import {
@@ -92,6 +93,10 @@ const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEnginePro
 /** What `save` tells the Save card. A plugin or policy block returns void instead. */
 export type SaveFormResult = 'revealed' | 'invalid' | 'saved';
 
+/**
+ * The form's save flow: validation, the save request, and what follows (checkpoint, clearing the changed ids, and the
+ * pending state of stacked selected-fields item forms). Returns `{ save }`.
+ */
 export function useSaveForm(props: UseSaveFormProps) {
 	const jotai = useJotaiStore();
 	const store = useReduxStore<GlobalState>();
@@ -118,7 +123,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const onSave = wrapOnSaveProp(props.onSave);
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
-	const item = useContext(ItemContext);
 	const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
 	const readCurrentValidity = async () => {
 		// Out-of-scope fields stay in this list. Only controller-irrelevant fields are skipped.
@@ -234,11 +238,24 @@ export function useSaveForm(props: UseSaveFormProps) {
 					if (!isRepeatMode) {
 						const entries = formsStackData.map((entry) => {
 							const repeat = entry.props?.repeat;
+							const repeatAtom = repeat?.fieldId ? stableFormContext.atoms.valueByFieldId[repeat.fieldId] : undefined;
+							// The index at launch can be behind the saved array, so find the item by its row key.
+							const saved = repeatItemInValues(
+								values,
+								repeat?.fieldId,
+								repeat?.index,
+								repeat?.values,
+								repeatAtom ? repeatItemKeysFor<unknown>(repeatAtom) : undefined
+							);
 							return {
 								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
-								changedFieldIds: entry.changedFieldIds,
+								changedFieldIds: jotai.get(entry.changedFieldIds),
+								setChangedFieldIds(next: ReadonlySet<string>) {
+									jotai.set(entry.changedFieldIds, next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next);
+								},
 								fieldId: repeat?.fieldId,
-								savedItem: repeatItemInValues(values, repeat?.fieldId, repeat?.index),
+								savedItem: saved.item,
+								itemGone: saved.gone,
 								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
 								setCheckpoint(next: Record<string, unknown>) {
 									entry.originalValues = next;
@@ -248,8 +265,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 								}
 							};
 						});
-						clearStackPendingFlags(entries, stableFormContext.changedFieldIds);
-						if (entries.some((entry) => entry.selected && entry.changedFieldIds.size > 0)) {
+						clearStackPendingFlags(entries, {
+							changedFieldIds: jotai.get(stableFormContext.changedFieldIds),
+							setChangedFieldIds: (next) =>
+								jotai.set(stableFormContext.changedFieldIds, next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next)
+						});
+						// The sets were replaced, so read them again.
+						if (formsStackData.some((entry, i) => entries[i].selected && jotai.get(entry.changedFieldIds).size > 0)) {
 							setHasPendingChanges(true);
 						}
 					}
@@ -441,7 +463,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }
@@ -561,7 +583,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }

@@ -26,6 +26,7 @@ const { IntlProvider } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
+const { createChangedFieldIdsAtom } = await import('../../FormsEngine/lib/formUtils.tsx');
 const { TypeAllowedRolesSelector } = await import('./TypeAllowedRolesSelector.tsx');
 const { TypeDestinationPathsSelector } = await import('./TypeDestinationPathsSelector.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
@@ -52,7 +53,7 @@ function Harness(props: { children: React.ReactNode }) {
 			validationByFieldId: { allowedRoles: validationAtom, paths: validationAtom },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},
