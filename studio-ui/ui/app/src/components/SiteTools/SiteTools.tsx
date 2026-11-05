@@ -137,11 +137,11 @@ export function SiteTools(props: SiteToolsProps) {
 					isPage && mainLandmarkSx,
 					{
 						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+						width: 'auto',
+						marginLeft: openSidebar ? `${sidebarWidth}px` : 0
 					},
 					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
+						transition: theme.transitions.create('margin-left', {
 							easing: theme.transitions.easing.easeOut,
 							duration: theme.transitions.duration.enteringScreen
 						})

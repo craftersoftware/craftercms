@@ -26,7 +26,7 @@ import { filter, map } from 'rxjs/operators';
 import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
-import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { mainLandmarkOutsetSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import Typography from '@mui/material/Typography';
 import { visuallyHidden } from '@mui/utils';
 import { useIntl } from 'react-intl';
@@ -118,7 +118,7 @@ export function Host() {
 			id={STUDIO_MAIN_CONTENT_ID}
 			tabIndex={-1}
 			sx={(theme) => ({
-				...mainLandmarkSx,
+				...mainLandmarkOutsetSx,
 				flexGrow: 1,
 				display: 'flex',
 				justifyContent: 'center',

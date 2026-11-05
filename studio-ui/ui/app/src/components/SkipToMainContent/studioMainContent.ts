@@ -14,16 +14,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { SystemStyleObject } from '@mui/system';
 import { Theme } from '@mui/material/styles';
-import { getFocusRingSx } from '../../styles/focusRing';
+import { SystemStyleObject } from '@mui/system';
+import { focusRingStyles } from '../../styles/focusRing';
 
 /** Target for the shell skip link. One per document (each Studio screen is its own page). */
 export const STUDIO_MAIN_CONTENT_ID = 'studioMainContent';
 
+/**
+ * Ring overlay for a full-bleed `main`. Drawn inset on its own layer stacked above the positioned
+ * AppBar toolbar, which would otherwise paint over an outline set on `main` itself.
+ */
 export const mainLandmarkSx: SystemStyleObject<Theme> = {
 	outline: 'none',
-	'&:focus-visible': getFocusRingSx({ inset: true })
+	position: 'relative',
+	'&:focus-visible::after': (theme: Theme) => ({
+		content: '""',
+		position: 'absolute',
+		inset: 0,
+		pointerEvents: 'none',
+		zIndex: theme.zIndex.appBar + 1,
+		...focusRingStyles(theme, { inset: true })
+	})
+};
+
+/**
+ * Same overlay for a `main` framed by Studio chrome, such as the preview page and its panels. The ring
+ * goes outside the box so it sits on the app background instead of on the guest page, whose colours
+ * Studio does not control (a light site under the dark ring would be about 2.5:1).
+ */
+export const mainLandmarkOutsetSx: SystemStyleObject<Theme> = {
+	outline: 'none',
+	position: 'relative',
+	'&:focus-visible::after': (theme: Theme) => ({
+		content: '""',
+		position: 'absolute',
+		inset: 0,
+		pointerEvents: 'none',
+		zIndex: theme.zIndex.appBar + 1,
+		...focusRingStyles(theme)
+	})
 };
 
 export function focusStudioMainContent(): boolean {

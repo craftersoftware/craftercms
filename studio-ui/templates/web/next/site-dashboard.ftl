@@ -40,7 +40,8 @@
 				createElement(SkipToMainContent),
 				createElement(
 					StudioMainContent,
-					null,
+					// The dashboard sizes itself from its parent, so the landmark owns the page height.
+					{ sx: { height: '100%' } },
 					createElement(
 						ViewToolbar,
 						{},

@@ -35,7 +35,7 @@ import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
 import { visuallyHidden } from '@mui/utils';
-import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import SkipToMainContent, { mainLandmarkOutsetSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -199,7 +199,7 @@ function Preview() {
 						<ICEToolsPanel />
 					</>
 				) : (
-					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
+					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkOutsetSx}>
 						<Box component="h1" sx={visuallyHidden}>
 							{formatMessage({ id: 'words.preview', defaultMessage: 'Preview' })}
 						</Box>

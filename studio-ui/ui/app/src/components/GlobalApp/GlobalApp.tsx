@@ -180,11 +180,11 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					mainLandmarkSx,
 					{
 						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${width}px` : 0
+						width: 'auto',
+						marginLeft: openSidebar ? `${width}px` : 0
 					},
 					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
+						transition: theme.transitions.create('margin-left', {
 							easing: theme.transitions.easing.easeOut,
 							duration: theme.transitions.duration.enteringScreen
 						})
