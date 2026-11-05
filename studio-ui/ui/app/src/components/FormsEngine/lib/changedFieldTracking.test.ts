@@ -32,11 +32,13 @@ const {
 	changedFieldAtom,
 	createFieldAtoms,
 	createFormStackData,
-	generateDefaultChangesComment
+	generateDefaultChangesComment,
+	getCompanionFieldIds,
+	mapCompanionFieldsToParents
 } = await import('./formUtils.tsx');
 const { createFormControllerContext } = await import('../formControllers/runtime.ts');
 
-const fieldOf = (id: string, name = id) => ({ id, name, type: 'input', validations: {} }) as ContentTypeField;
+const fieldOf = (id: string, name = id, type = 'input') => ({ id, name, type, validations: {} }) as ContentTypeField;
 const fields = ['a_s', 'b_s', 'c_s'].map((id) => fieldOf(id, id.toUpperCase()));
 
 function openForm() {
@@ -133,6 +135,43 @@ describe('changed ids as one atom', () => {
 		const store = createStore();
 		assert.equal(store.get(changedFieldAtom(null, 'a_s')), false);
 		assert.equal(changedFieldAtom(null, 'a_s'), changedFieldAtom(undefined, 'b_s'));
+	});
+
+	it('lights a parent field atom when a related companion id is in the set', () => {
+		const { store, context } = openForm();
+		const placeInNav = changedFieldAtom(context.changedFieldIds, 'placeInNav', ['orderDefault_f']);
+		assert.equal(store.get(placeInNav), false);
+		store.set(context.changedFieldIds, new Set(['orderDefault_f']));
+		assert.equal(store.get(placeInNav), true);
+		store.set(context.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+		assert.equal(store.get(placeInNav), false);
+	});
+});
+
+describe('companion additional fields', () => {
+	const placeInNav = fieldOf('placeInNav', 'Place in Nav', 'page-nav-order');
+	const title = fieldOf('title_s', 'Title');
+
+	it('maps orderDefault_f to the Place in Nav parent from the page-nav-order descriptor', () => {
+		assert.deepEqual(getCompanionFieldIds(placeInNav), ['orderDefault_f']);
+		assert.equal(mapCompanionFieldsToParents([placeInNav, title]).orderDefault_f, placeInNav);
+	});
+
+	it('names the parent in the default version comment when only the companion changed', () => {
+		const byId = { placeInNav, title_s: title };
+		const comment = generateDefaultChangesComment(byId, [placeInNav, title], new Set(['orderDefault_f']), '');
+		assert.equal(comment, 'Updated Place in Nav');
+	});
+
+	it('dedupes the parent name when both the parent and companion are changed', () => {
+		const byId = { placeInNav, title_s: title };
+		const comment = generateDefaultChangesComment(
+			byId,
+			[placeInNav, title],
+			new Set(['placeInNav', 'orderDefault_f', 'title_s']),
+			''
+		);
+		assert.equal(comment, 'Updated Place in Nav and Title');
 	});
 });
 

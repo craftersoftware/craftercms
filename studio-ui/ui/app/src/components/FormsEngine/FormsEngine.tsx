@@ -103,6 +103,7 @@ import {
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
+	getCompanionFieldIds,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	isEmbeddedForm,
@@ -443,14 +444,21 @@ function FormBootstrap(props: FormsEngineProps) {
 				});
 			},
 			rollbackField(fieldId: string) {
-				internalRollbackValue(getInitialValues(), fieldId);
+				const initialValues = getInitialValues();
+				internalRollbackValue(initialValues, fieldId);
+				// Companions (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
+				const field = stableFormContextRef.current.itemMeta?.contentType?.fields?.[fieldId];
+				if (!field) return;
+				for (const companionId of getCompanionFieldIds(field, customControls)) {
+					internalRollbackValue(initialValues, companionId);
+				}
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {
 				applyValuesCheckpoint(stableFormContextRef.current, values, store.set);
 			}
 		};
 		return api;
-	}, [store]);
+	}, [store, customControls]);
 
 	// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
 	const itemKey = create ? null : (effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path ?? null);

@@ -182,8 +182,8 @@ export interface StableFormContextProps {
 	 * save). An atom holding an immutable set of field ids; the set's reference changes only when its membership does.
 	 * Null in Type Builder's read-only chips, which track nothing.
 	 *
-	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId)`, so only the field whose
-	 *   flag flips re-renders.
+	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId, companionIds)`, so only the
+	 *   field whose flag flips re-renders (companion writes light the parent control's chrome).
 	 * - Imperative code (save, Type Builder commit, pending-changes checks) reads with `store.get(changedFieldIds)`.
 	 * - Writers replace the set (`withChangedField`) and never mutate it. Clearing is setting `EMPTY_CHANGED_FIELD_IDS`.
 	 *
