@@ -278,7 +278,9 @@ Zone markers and drop markers are drawn over the page the developer authored, so
 | warn / orange   | `#A35F00`    | 4.19          | `#FFB340`   | 11.77         |
 | disabled / grey | `#8E8E93`    | 6.44          | `#8E8E93`   | 6.44          |
 
-The state colour is 2px and sits inside both bands, so the boundary reads white | black | state colour against whatever page is behind it. Measured on the rendered marker: page, white 1px, black 1px, state colour. The drop marker uses the same bands as a border plus a ring.
+The state colour is 2px and sits inside both bands, so the boundary reads white | black | state colour against whatever page is behind it. Measured on the rendered zone marker: page, white 1px, black 1px, state colour. Only the outer band touches the page; on a white page the white band merges and the black band is the visible edge at 21:1, and on a dark page the white band is the visible edge at 18.73:1.
+
+The drop marker is a filled line, so it has no outline to carry the state colour and the band order is reversed: page | white 1px | black 1px | state colour fill. The fill is then next to the black band, which is the neighbour it has to clear, because the light tints are only 1.78:1 to 2.54:1 on white. Measured on the rendered vertical line: page, white 1px, black 1px, fill, black 1px, white 1px, page — 4.13:1 (light `error.main`) and 8.28:1 (dark `red.tint`) against the black band, with the white band at 18.73:1 against a `#121212` page and the black band at 21:1 against a white page.
 
 ## `error.main` evaluation
 
