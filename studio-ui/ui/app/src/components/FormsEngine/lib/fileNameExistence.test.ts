@@ -235,6 +235,16 @@ describe('file-name path existence', () => {
 		assert.deepEqual((await store.get(validation)).messages, []);
 	});
 
+	it('rejects a name that is already taken', async () => {
+		const pendingResult = validateFieldValue(fileNameField, 'contact', meta);
+		await advanceDebounce();
+		assert.equal(pending.length, 1);
+		pending[0].respond(true);
+		const result = await pendingResult;
+		assert.equal(result.isValid, false);
+		assert.equal(result.messages.length, 1);
+	});
+
 	it('keeps required and unchanged-path checks immediate', async () => {
 		const required = await validateFieldValue(fileNameField, '', meta);
 		assert.equal(required.isValid, false);
