@@ -78,3 +78,12 @@
 		inset 0 0 0 2px #0b4f8a,
 		inset 0 0 0 4px #ffffff;
 }
+
+// Forced colours remove box-shadow, and outline is off above, so draw the ring as a border.
+@media (forced-colors: active) {
+	.ace_scroller.ace_keyboard-focus:focus::before,
+	.ace_gutter.ace_keyboard-focus:focus::before {
+		box-shadow: none;
+		border: 2px solid Highlight;
+	}
+}

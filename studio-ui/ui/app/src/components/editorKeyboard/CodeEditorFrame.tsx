@@ -107,6 +107,10 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 						zIndex: 20,
 						boxShadow: 'inset 0 0 0 2px #0b4f8a, inset 0 0 0 4px #ffffff'
 					},
+					// Forced colours remove box-shadow, so draw the ring as a border.
+					'@media (forced-colors: active)': {
+						'&:focus-visible::after': { boxShadow: 'none', border: '2px solid Highlight' }
+					},
 					'&:focus > [data-code-editor-hint]': {
 						position: 'absolute',
 						right: 0,

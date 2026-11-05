@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMount } from '../../hooks/useMount';
 import { useTheme } from '@mui/material/styles';
 import { useEnhancedDialogContext } from '../EnhancedDialog/useEnhancedDialogContext';
@@ -211,15 +211,21 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 		palette: { mode }
 	} = useTheme();
 	const { formatMessage } = useIntl();
-	const keyboardLabels = {
-		name: formatMessage(codeEditorKeyboardMessages.groupLabel),
-		instructions: formatMessage(codeEditorKeyboardMessages.instructions),
-		instructionsReadOnly: formatMessage(codeEditorKeyboardMessages.instructionsReadOnly),
-		gutterLabel: formatMessage(codeEditorKeyboardMessages.gutterLabel),
-		hintIdPrefix: 'craftercms-code-editor-hint-react'
-	};
+	const keyboardLabels = useMemo(
+		() => ({
+			name: formatMessage(codeEditorKeyboardMessages.groupLabel),
+			instructions: formatMessage(codeEditorKeyboardMessages.instructions),
+			instructionsReadOnly: formatMessage(codeEditorKeyboardMessages.instructionsReadOnly),
+			gutterLabel: formatMessage(codeEditorKeyboardMessages.gutterLabel),
+			hintIdPrefix: 'craftercms-code-editor-hint-react'
+		}),
+		[formatMessage]
+	);
+	// The editor is created asynchronously from the mount effect, so it reads the labels through a ref.
 	const keyboardLabelsRef = useRef(keyboardLabels);
-	keyboardLabelsRef.current = keyboardLabels;
+	useEffect(() => {
+		keyboardLabelsRef.current = keyboardLabels;
+	}, [keyboardLabels]);
 
 	options.theme = options.theme ?? `ace/theme/${mode === 'light' ? 'chrome' : 'tomorrow_night'}`;
 
@@ -328,12 +334,11 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 
 	// Re-apply after locale changes. Runs after the setOptions effect above so a
 	// caller option refresh cannot drop the localized labels.
-	const { name, instructions, instructionsReadOnly, gutterLabel } = keyboardLabels;
 	useEffect(() => {
 		if (initialized) {
-			applyAceKeyboardAccessibility(refs.current.ace, keyboardLabelsRef.current);
+			applyAceKeyboardAccessibility(refs.current.ace, keyboardLabels);
 		}
-	}, [initialized, name, instructions, instructionsReadOnly, gutterLabel, options?.readOnly]);
+	}, [initialized, keyboardLabels, options?.readOnly]);
 
 	// If the Editor is inside a dialog, resize when fullscreen changes
 	const isFullScreen = useEnhancedDialogContext()?.isFullScreen;

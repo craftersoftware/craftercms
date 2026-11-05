@@ -30,8 +30,9 @@
  * - static-assets/js/tinymce-plugins/ace/plugin.min.js
  *   (esbuild plugin.js --minify, run in the plugin directory)
  *
- * There is no CI job that diffs plugin.min.js. Run this script after changing
- * the sources above, and commit the outputs.
+ * Run this script after changing the sources above, and commit the outputs.
+ * `yarn check:editor-keyboard` (this script with `--check`) regenerates the outputs
+ * in place, restores the committed copies, and exits 1 when any of them was stale.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -45,7 +46,6 @@ const sass = require('sass');
 const esbuild = require('esbuild');
 
 const studioUi = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const esbuildBin = path.join(studioUi, 'node_modules/esbuild/bin/esbuild');
 const keyboardDir = path.join(studioUi, 'ui/app/src/components/editorKeyboard');
 const pluginDir = path.join(studioUi, 'static-assets/js/tinymce-plugins/ace');
 
@@ -102,16 +102,37 @@ function prettier(files) {
 	execFileSync(process.execPath, [bin, '--write', ...files], { cwd: studioUi, stdio: 'inherit' });
 }
 
-async function main() {
+const fallbackCssFile = path.join(keyboardDir, 'editorKeyboardFallbackCss.ts');
+const pluginJs = path.join(pluginDir, 'plugin.js');
+const pluginMinJs = path.join(pluginDir, 'plugin.min.js');
+
+async function build() {
 	writeFallbackCss();
-	const pluginJs = path.join(pluginDir, 'plugin.js');
 	await bundle(path.join(keyboardDir, 'tinymceAcePlugin.ignore.js'), pluginJs);
-	prettier([path.join(keyboardDir, 'editorKeyboardFallbackCss.ts'), pluginJs]);
-	execFileSync(esbuildBin, ['plugin.js', '--minify', '--outfile=plugin.min.js'], {
-		cwd: pluginDir,
-		stdio: 'inherit'
-	});
-	console.log('minified plugin.min.js');
+	prettier([fallbackCssFile, pluginJs]);
+	await esbuild.build({ entryPoints: [pluginJs], minify: true, outfile: pluginMinJs, logLevel: 'info' });
+}
+
+async function main() {
+	if (!process.argv.includes('--check')) {
+		await build();
+		return;
+	}
+	const outputs = [fallbackCssFile, pluginJs, pluginMinJs];
+	const committed = outputs.map((file) => fs.readFileSync(file, 'utf8'));
+	try {
+		await build();
+		const stale = outputs.filter((file, i) => fs.readFileSync(file, 'utf8') !== committed[i]);
+		if (stale.length) {
+			console.error(
+				`Stale generated files:\n${stale.map((file) => `  ${path.relative(studioUi, file)}`).join('\n')}\n` +
+					'Run `yarn build:editor-keyboard` and commit the result.'
+			);
+			process.exitCode = 1;
+		}
+	} finally {
+		outputs.forEach((file, i) => fs.writeFileSync(file, committed[i]));
+	}
 }
 
 main().catch((error) => {
