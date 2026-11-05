@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-11-04
+Last updated: 2026-11-05
 
 ---
 
@@ -92,10 +92,13 @@ FormsEngine/
     useSaveForm.tsx
     formItem.ts            # useFormItem*: the form's content item, subscribed at the leaf
     useFormEntryWiring.ts  # item gate; getItem / dataSourceServices published on the stable entry
+    repeatItemKeys.ts      # row keys per repeat field (WeakMap, never saved); carry on every item replacement (item form save, selected-fields write, close restore, controller `setValue`)
     formConsts.ts          # XmlKeys, errors
 ```
 
 State: Jotai atoms + React context (`StableFormContext`, `ItemMetaContext`, …). Redux for site/content-types catalog and dialogs.
+
+**Changed fields: state vs events.** Which fields differ from the checkpoint is _state_: `StableFormContext.changedFieldIds` is one Jotai atom holding an immutable `ReadonlySet<string>` (null in Type Builder's read-only chips). `changedFieldAtom(changedFieldIds, fieldId)` derives a cached per-field boolean, so a field re-renders only when its own flag flips. Replace the set to change it, never mutate it, and keep the same reference when membership does not change (`withChangedField`); insertion order is the order fields were first changed. Writers: value atoms (`trackFieldChange`, before they emit), `applyValuesCheckpoint` (save), `clearStackPendingFlags` (parent save with open item forms) and Type Builder's commit, which set a new set or `EMPTY_CHANGED_FIELD_IDS`. `fieldUpdates$` is the internal _event stream_ of value writes only: it fires after the set is updated and never for clears. The public controller `onFieldChange` is built on that stream but is decoupled from the mechanism (it fires once per value write with the new value, API version unchanged); controllers and plugins never see the store, the atoms or the Subject.
 
 #### FE2 subscription rules
 
@@ -869,6 +872,8 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-05** — Changed-field tracking is state in one atom, not a mutable `Set` plus a side-channel version atom (#9338). `changedFieldIds` is `PrimitiveAtom<ReadonlySet<string>>`, a write that leaves membership alone keeps the same set (so most keystrokes recompute nothing), clears (save checkpoint, stack rebuild, Type Builder commit) set a new set and do not emit on `fieldUpdates$`. `lib/changedFieldAtoms.ts` is gone. `onFieldChange` and `FORM_CONTROLLER_API_VERSION` are unchanged. See the _Changed fields_ note in §2.
+- **2026-11-05** — Open repeat item forms find their item again before every write (#9338). The launch index goes stale when a save, reorder or delete lands after the form opened, so the item form save, the selected-fields write-through and the close restore resolve the index from the launch item and the repeat field's shared row keys (`currentRepeatItemIndex`), and skip the write when the item is gone. The pencil does the same at click time, and Add/remove re-check minCount/maxCount against the stored array. A controller `setValue('rows_o.1.name_s', …)` now carries the row key to the copied item, so the row does not remount. `carry` mints a key for an item that never had one. `clearStackPendingFlags` empties to `EMPTY_CHANGED_FIELD_IDS`, and the touch sort list keys rows by `item.key`. A parent save also finds each selected item in the saved array by row key (`repeatItemInValues`), and an item that is gone keeps its pending flag and checkpoint (`itemGone`).
 - **2026-11-04** — FE2 form item reads are granular (#9336, #9353). `ItemContext`/`useItemContext` are gone: `FormItemKeyContext` carries the item's store key, `useFormItem*` hooks subscribe at the leaf that renders item data, and `getItem()` (store-backed, required on `StableFormContextProps`) serves callbacks. The `FormBootstrap` wrapper subscribes to item existence only (`useFormItemGate`), the workflow refetch reads the path when an event arrives (`useAffectedPackagesRefetch`), `NodeSelector` subscribes to the paths it shows (`useItemsByPaths`), and `getItem`/`dataSourceServices` are published on the stable entry from a layout effect (`useFormEntryProvisioning`). The Type Builder's virtual form has no item and uses the per-field data-source services fallback. Rules and rationale: "FE2 subscription rules" in §2.
 - **2026-11-04** — Editing the FE2 file name re-validates only the file-name field (#9327). `fileName` left the validator context and `ValidatorMetaData`. `fileNameValidator` validates the field's own value, and a validator that needs the name reads `getValue('file-name')`. On edit the `file-name` value starts from the item path, not the XML element, and the path wins when they disagree. `originalValues['file-name']` is seeded the same way, so rollback of an untouched page is not a rename. Embedded components skip `file-name` when validated, since they have none. In a repeat item, inline or opened, a `file-name` control is an ordinary field: it gets no item file-name rules, and only the constraints its content type declares apply. `useLoadableAtom` keeps the previous result while a field validates again.
 - **2026-11-04** — Restored the FE1/TB1 explanation removed with #9197 as Appendix A (catalog and plugin discovery, FE runtime, plugin transport, form controllers), with file/line permalinks pinned to `4a6b57d9`, plus an FE1 → FE2 parity map (A.5). §5.2, §5.3, §5.6, §5.8, §5.9 and the plugins companion now point to it. Fixed the stale `samples/site-config-tools.xml` path in the appendix (the real sample is `sample-site-config-tools.xml`) and corrected the plugin-control load description (plugin controls use dynamic `import()`, not `requireModule`).

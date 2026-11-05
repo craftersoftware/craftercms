@@ -43,7 +43,7 @@ import {
 } from '../lib/formsEngineContext';
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
-import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
+import { changedFieldAtom, commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
 import { FieldValidityMessages } from './FieldValidityMessages';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
@@ -55,6 +55,7 @@ import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 
+/** The `length/max` counter shown next to a field label, or null when there is neither. */
 function createLengthBlock({ length, max }: { length: number; max: number }) {
 	const pieces = [];
 	if (length != null) {
@@ -152,7 +153,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
-	const hasChanges = changedFieldIds.has(field.id);
+	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });

@@ -29,7 +29,7 @@ import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import Tooltip from '@mui/material/Tooltip';
-import { lazy, MouseEvent as ReactMouseEvent, Suspense, useContext, useEffect, useMemo, useState } from 'react';
+import { lazy, MouseEvent as ReactMouseEvent, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
 import { StackedButton } from '../components/StackedButton';
 import { isTouchDevice } from '../lib/sortableListUtil';
@@ -41,7 +41,14 @@ import FieldBox from '../components/FieldBox';
 import { buttonClasses } from '@mui/material/Button';
 import { repeatIndexOutOfRangeWarning, visibleRepeatItems } from '../lib/formVisibility';
 import { repeatItemFormProps } from '../lib/repeatItemForm';
-import { getRepeatItemSummary, getRepeatItemTitle, repeatDisplayFieldIds, repeatSortItems } from './repeatItemDisplay';
+import {
+	getRepeatItemSummary,
+	getRepeatItemTitle,
+	reorderRepeatItems,
+	repeatDisplayFieldIds,
+	repeatSortItems
+} from './repeatItemDisplay';
+import { findRepeatItemIndex, removeRepeatItem, repeatItemKeysFor, type RepeatItemKeys } from '../lib/repeatItemKeys';
 import {
 	countLimitValue,
 	getRepeatMinimum,
@@ -59,6 +66,18 @@ export type RepeatItem = Record<string, unknown>;
 
 export type RepeatProps = ControlProps<RepeatItem[]>;
 
+let warnedUnkeyedItem = false;
+/** The stable key of a row. Items are objects, so a missing key means the value is malformed. */
+function rowKey(keys: RepeatItemKeys<RepeatItem>, item: RepeatItem, index: number): string | number {
+	const key = keys.keyOf(item);
+	if (key !== undefined) return key;
+	if (!warnedUnkeyedItem) {
+		warnedUnkeyedItem = true;
+		console.warn('A repeat item is not an object, so its row is keyed by position.');
+	}
+	return index;
+}
+
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
@@ -74,6 +93,11 @@ export function Repeat(props: RepeatProps) {
 	const store = useJotaiStore();
 	const formAtoms = useContext(StableFormContext).atoms;
 	const valueAtom = formAtoms.valueByFieldId[field.id];
+	// Keys are per repeat field, and the item form (another FormsEngine) writes to the same array. See repeatItemKeysFor.
+	const fallbackOwner = useRef({});
+	const itemKeys = repeatItemKeysFor<RepeatItem>(valueAtom ?? fallbackOwner.current);
+	// Read at click time. `value` is the render-time array and can be behind an item form save.
+	const getStoredItems = () => (valueAtom ? ((store.get(valueAtom) as RepeatItem[]) ?? []) : value);
 	const openItemForm = (index?: number, item?: RepeatItem) => {
 		if (!valueAtom) return;
 		api.pushForm(
@@ -81,7 +105,8 @@ export function Repeat(props: RepeatProps) {
 				fieldId: field.id,
 				index,
 				values: item,
-				getItems: () => (store.get(valueAtom) as RepeatItem[]) ?? [],
+				getItems: getStoredItems,
+				keys: itemKeys,
 				setItems: (next) => setValue(next)
 			})
 		);
@@ -113,27 +138,38 @@ export function Repeat(props: RepeatProps) {
 			? formatMessage(repeatMessages.minRequired, { min: minimum })
 			: formatMessage(repeatMessages.deleteItem);
 	/** Removes one item unless the repeat is already at its minimum. */
-	const handleRemoveItem = (event: ReactMouseEvent, index: number) => {
+	const handleRemoveItem = (event: ReactMouseEvent, item: RepeatItem) => {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
-		const nextValue = value.concat();
-		nextValue.splice(index, 1);
-		setValue(nextValue);
+		const stored = getStoredItems();
+		// The stored array can be shorter than this render's. Check the limit against it.
+		if (isRepeatRemoveDisabled(Boolean(readonly), stored.length, minCount)) return;
+		// The row's item, found in the stored array. Its position may have moved since the render.
+		const index = findRepeatItemIndex(stored, item, itemKeys);
+		if (index === -1) return;
+		setValue(removeRepeatItem(stored, index));
 	};
-	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem, index: number) => {
-		openItemForm(index, item);
+	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
+	const handleEditItem = (event: ReactMouseEvent, item: RepeatItem) => {
+		const stored = getStoredItems();
+		const index = findRepeatItemIndex(stored, item, itemKeys);
+		if (index === -1) return;
+		openItemForm(index, stored[index]);
 	};
 	/** Opens a new repeat item unless adding is disabled. */
 	const handleAddItem: IconButtonProps['onClick'] = () => {
-		if (isAddDisabled) return;
+		if (isAddDisabled || isRepeatAddDisabled(Boolean(readonly), getStoredItems().length, maxCount)) return;
 		openItemForm();
 	};
 	const displayFieldIds = useMemo(() => repeatDisplayFieldIds(field.fields), [field.fields]);
 	const sortList = useMemo<Array<TItem<RepeatItem>>>(
-		() => (sortMode ? repeatSortItems(value, displayFieldIds) : []),
-		[sortMode, value, displayFieldIds]
+		() => (sortMode ? repeatSortItems(value, displayFieldIds, itemKeys) : []),
+		[sortMode, value, displayFieldIds, itemKeys]
 	);
-	const onSortChange = (newList: TItem<RepeatItem>[]) => setValue(newList.map((i) => i.data));
+	/** Stores the new order, built from the latest stored array so an item saved since the list was built is kept. */
+	const onSortChange = (newList: TItem<RepeatItem>[]) => {
+		setValue(reorderRepeatItems(getStoredItems(), newList, itemKeys));
+	};
 	return (
 		<>
 			<Dialog open={sortMode} onClose={handleCancelReorder} maxWidth="xs" fullWidth>
@@ -185,9 +221,9 @@ export function Repeat(props: RepeatProps) {
 						<List dense>
 							{visibleItems.map(({ item, index }, position) => (
 								<ListItemButton
-									key={index}
+									key={rowKey(itemKeys, item, index)}
 									divider={position !== visibleItems.length - 1}
-									onClick={(e) => handleEditItem(e, item, index)}
+									onClick={(e) => handleEditItem(e, item)}
 								>
 									<ListItemText
 										primary={getRepeatItemTitle(item, displayFieldIds)}
@@ -214,7 +250,7 @@ export function Repeat(props: RepeatProps) {
 														<IconButton
 															size="small"
 															disabled={isRemoveDisabled}
-															onClick={(e) => handleRemoveItem(e, index)}
+															onClick={(e) => handleRemoveItem(e, item)}
 														>
 															<DeleteOutlined fontSize="small" />
 														</IconButton>
