@@ -8,12 +8,13 @@ import {
 	sharedWorkerConnect,
 	sharedWorkerDisconnect,
 	sharedWorkerError,
+	sharedWorkerExtendSession,
 	sharedWorkerTimeout,
 	sharedWorkerToken,
 	sharedWorkerUnauthenticated
 } from './state/actions/auth';
 import { AjaxError } from 'rxjs/ajax';
-import { SHARED_WORKER_NAME, XSRF_TOKEN_HEADER_NAME } from './utils/constants';
+import { SESSION_TIMEOUT_WARNING_MS, SHARED_WORKER_NAME, XSRF_TOKEN_HEADER_NAME } from './utils/constants';
 import { Client, StompSubscription } from '@stomp/stompjs';
 import {
 	closeSiteSocket,
@@ -48,6 +49,8 @@ declare const self: SharedWorkerGlobalScope;
 export type SharedWorkerStatus = '' | 'active' | 'expired' | 'error';
 
 const refreshAtFactor = 0.5;
+// The server removes expired sessions once a minute, so they can outlive `sessionExpiresAt` by up to that long.
+const sessionCleanupGraceMs = 61 * 1000;
 let clients: MessagePort[] = [];
 let status: SharedWorkerStatus = '';
 let timeout: number;
@@ -99,6 +102,11 @@ function onmessage(event) {
 			openSocket({ site: null, xsrfToken: event.data.payload.xsrfToken });
 			retrieve();
 			break;
+		// The user chose to stay signed in from the session timeout warning.
+		case sharedWorkerExtendSession.type:
+			log('App requested to extend the session');
+			retrieve(true);
+			break;
 		// The user logged out.
 		case logout.type:
 		// The app received a 401 and it's reporting the session timeout.
@@ -148,12 +156,29 @@ function unauthenticated(excludeClient?: MessagePort) {
 	broadcast(sharedWorkerUnauthenticated(), excludeClient);
 }
 
+// Besides the regular refresh, checks the session again when the warning is due (so tabs warn based on up to date
+// information as the session may have been extended by activity) and after it should have expired.
+function getNextRefreshDelay() {
+	if (current.sessionExpiresAt) {
+		const now = Date.now();
+		// The extra second guarantees tabs see the session as inside the warning window even if the timer fires early.
+		const checkpoints = [
+			current.sessionExpiresAt - SESSION_TIMEOUT_WARNING_MS + 1000,
+			current.sessionExpiresAt + sessionCleanupGraceMs
+		].filter((checkpoint) => checkpoint > now);
+		if (checkpoints.length) {
+			return Math.min(refreshInterval, checkpoints[0] - now);
+		}
+	}
+	return refreshInterval;
+}
+
 let retries = 0;
-function retrieve() {
+function retrieve(extendSession = false) {
 	clearTimeout(timeout);
 	if (!isRetrieving) {
 		isRetrieving = true;
-		return obtainAuthToken().subscribe({
+		return obtainAuthToken(extendSession).subscribe({
 			next(response) {
 				retries = 0;
 				isRetrieving = false;
@@ -165,7 +190,7 @@ function retrieve() {
 					refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
 					if (clients.length) {
 						// If there are clients connected, keep the token refresh going
-						timeout = self.setTimeout(retrieve, refreshInterval);
+						timeout = self.setTimeout(retrieve, getNextRefreshDelay());
 					} else {
 						// Do SharedWorkers stop as soon as all their tabs are terminated?
 						clearTimeout(timeout);

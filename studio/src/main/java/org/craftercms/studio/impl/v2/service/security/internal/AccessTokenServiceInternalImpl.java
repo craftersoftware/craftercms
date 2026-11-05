@@ -95,6 +95,10 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	private static final String CRAFTER_SITE_COOKIE_NAME = "crafterSite";
 	private static final String JWE_ALGORITHM_HEADER_VALUE = PBES2_HS512_A256KW;
 	private static final String JWE_ENCRYPTION_METHOD_HEADER_VALUE = AES_256_CBC_HMAC_SHA_512;
+	/**
+	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1)
+	 */
+	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
 
 	/**
 	 * The issuer for generation access tokens
@@ -225,6 +229,43 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		refreshTokenCookieManager.addCookie(refreshToken, response);
 	}
 
+	/**
+	 * Restarts both the session and the inactivity time limits of the given user
+	 */
+	protected void extendSession(Authentication auth) {
+		var userId = getUserId(auth);
+		updateUserActivity(auth);
+		retryingDatabaseOperationFacade.retry(() -> securityDao.resetRefreshTokenCreatedOn(userId));
+	}
+
+	/**
+	 * Gets the earliest moment at which the refresh token of the user can be deleted by the clean up, ignoring the
+	 * time limits that are 20 hours or longer.
+	 *
+	 * @return the moment, or null if there is no time limit to warn about
+	 */
+	protected Instant getSessionExpiration(Authentication auth) {
+		var userId = getUserId(auth);
+		Instant expiration = null;
+		if (sessionTimeout < SESSION_WARNING_MAX_MINUTES) {
+			// The clean up deletes the tokens that are older than the timeout in whole minutes
+			Long remainingSeconds = securityDao.getRefreshTokenRemainingSeconds(userId, sessionTimeout + 1);
+			if (remainingSeconds != null) {
+				expiration = now().plusSeconds(remainingSeconds);
+			}
+		}
+		if (inactivityTimeout < SESSION_WARNING_MAX_MINUTES) {
+			Instant lastActivity = userActivity.getIfPresent(userId);
+			if (lastActivity != null) {
+				Instant inactivityExpiration = lastActivity.plus(inactivityTimeout + 1L, MINUTES);
+				if (expiration == null || inactivityExpiration.isBefore(expiration)) {
+					expiration = inactivityExpiration;
+				}
+			}
+		}
+		return expiration;
+	}
+
 	@Override
 	public void refreshPreviewCookie(final Authentication auth, final HttpServletRequest request, final HttpServletResponse response, boolean silent) throws ServiceLayerException {
 		String siteName = getCookieValue(CRAFTER_SITE_COOKIE_NAME, request);
@@ -297,7 +338,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	@Override
-	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException {
+	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+									boolean extendSession) throws ServiceLayerException {
 		logger.debug("Create tokens for '{}'", auth.getName());
 		var issuedAt = now();
 		var expireAt = issuedAt.plus(accessTokenExpiration, MINUTES);
@@ -305,11 +347,15 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		String token = createToken(issuedAt, expireAt, auth.getName(), null);
 
 		updateRefreshToken(auth, response);
+		if (extendSession) {
+			extendSession(auth);
+		}
 		refreshPreviewCookie(auth, request, response, true);
 
 		var accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setExpiresAt(expireAt);
+		accessToken.setSessionExpiresAt(getSessionExpiration(auth));
 
 		return accessToken;
 	}

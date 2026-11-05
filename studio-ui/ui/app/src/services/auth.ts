@@ -100,13 +100,21 @@ export function validatePasswordResetToken(token: string): Observable<boolean> {
 	);
 }
 
-export type ObtainAuthTokenResponse = { expiresAt: number; token: string };
+export type ObtainAuthTokenResponse = { expiresAt: number; token: string; sessionExpiresAt?: number };
 
-export function obtainAuthToken(): Observable<ObtainAuthTokenResponse> {
-	return get<ObtainAuthTokenResponse>('/studio/refresh.json').pipe(
+/**
+ * @param extendSession Restarts the session and inactivity time limits. `sessionExpiresAt` is the earliest time at which
+ * the session may expire (absent if there are no time limits shorter than 20 hours).
+ **/
+export function obtainAuthToken(extendSession = false): Observable<ObtainAuthTokenResponse> {
+	return get<ObtainAuthTokenResponse>(`/studio/refresh.json${extendSession ? '?extendSession=true' : ''}`).pipe(
 		map((response) => {
 			const auth = response?.response;
-			return { token: auth.token, expiresAt: new Date(auth.expiresAt).getTime() };
+			return {
+				token: auth.token,
+				expiresAt: new Date(auth.expiresAt).getTime(),
+				sessionExpiresAt: auth.sessionExpiresAt ? new Date(auth.sessionExpiresAt).getTime() : null
+			};
 		})
 	);
 }

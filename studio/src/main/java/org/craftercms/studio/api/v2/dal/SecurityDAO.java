@@ -30,6 +30,15 @@ public interface SecurityDAO {
 
 	boolean validateRefreshToken(@Param("userId") long userId, @Param("token") String token);
 
+	/**
+	 * Gets the seconds left until the refresh token of the user is older than the given minutes
+	 *
+	 * @return the seconds (negative if already older), or null if the user has no refresh token
+	 */
+	Long getRefreshTokenRemainingSeconds(@Param("userId") long userId, @Param("minutes") int minutes);
+
+	void resetRefreshTokenCreatedOn(@Param("userId") long userId);
+
 	void deleteRefreshToken(@Param("userId") long userId);
 
 	void deleteRefreshTokens(@Param("userIds") Collection<Long> userIds);

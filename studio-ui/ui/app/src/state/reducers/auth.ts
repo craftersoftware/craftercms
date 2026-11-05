@@ -32,6 +32,7 @@ export const initialState: GlobalState['auth'] = {
 	error: null,
 	active: false,
 	expiresAt: null,
+	sessionExpiresAt: null,
 	isFetching: false
 };
 
@@ -42,7 +43,8 @@ const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 		.addCase(storeInitialized, (state, { payload }) => ({
 			...state,
 			active: true,
-			expiresAt: payload.auth.expiresAt
+			expiresAt: payload.auth.expiresAt,
+			sessionExpiresAt: payload.auth.sessionExpiresAt ?? null
 		}))
 		.addCase(refreshAuthToken, (state) => ({
 			...state,
@@ -52,7 +54,8 @@ const reducer = createReducer<GlobalState['auth']>(initialState, (builder) => {
 			...state,
 			active: true,
 			isFetching: false,
-			expiresAt: payload.expiresAt
+			expiresAt: payload.expiresAt,
+			sessionExpiresAt: payload.sessionExpiresAt ?? null
 		}))
 		.addCase(refreshAuthTokenFailed, (state) => ({
 			...state,

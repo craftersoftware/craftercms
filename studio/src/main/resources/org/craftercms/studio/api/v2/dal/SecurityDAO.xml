@@ -43,6 +43,18 @@
 		  AND token = #{token}
 	</select>
 
+	<select id="getRefreshTokenRemainingSeconds" resultType="java.lang.Long">
+		SELECT #{minutes} * 60 - TIMESTAMPDIFF(SECOND, created_on, NOW())
+		FROM refresh_token
+		WHERE user_id = #{userId}
+	</select>
+
+	<update id="resetRefreshTokenCreatedOn">
+		UPDATE refresh_token
+		SET created_on = NOW()
+		WHERE user_id = #{userId}
+	</update>
+
 	<delete id="deleteRefreshToken">
 		DELETE
 		FROM refresh_token

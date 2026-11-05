@@ -16,6 +16,7 @@
 
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
+import DialogContentText from '@mui/material/DialogContentText';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
 import TextField from '@mui/material/TextField';
@@ -23,7 +24,8 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import React, { CSSProperties, PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { login, loginComplete, logout } from '../../state/actions/auth';
+import { login, loginComplete, logout, sharedWorkerExtendSession } from '../../state/actions/auth';
+import { messageSharedWorker } from '../../state/actions/system';
 import loginGraphicUrl from '../../assets/authenticate.svg';
 import { isBlank } from '../../utils/string';
 import Typography from '@mui/material/Typography';
@@ -38,6 +40,7 @@ import Box from '@mui/material/Box';
 import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
+import { SESSION_TIMEOUT_WARNING_MS } from '../../utils/constants';
 
 const translations = defineMessages({
 	sessionExpired: {
@@ -86,15 +89,71 @@ export function AuthMonitor() {
 		}
 	}, [active, dispatch, formatMessage, username]);
 	return (
-		<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
-			<AuthMonitorBody
-				isSSO={isSSO}
-				username={username}
-				logoutUrl={logoutUrl}
-				authoringUrl={authoringBase}
-				dispatch={dispatch}
-				formatMessage={formatMessage}
-			/>
+		<>
+			<SessionTimeoutWarning />
+			<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
+				<AuthMonitorBody
+					isSSO={isSSO}
+					username={username}
+					logoutUrl={logoutUrl}
+					authoringUrl={authoringBase}
+					dispatch={dispatch}
+					formatMessage={formatMessage}
+				/>
+			</Dialog>
+		</>
+	);
+}
+
+// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it.
+function SessionTimeoutWarning() {
+	const dispatch = useDispatch();
+	const { active, sessionExpiresAt } = useSelection((state) => state.auth);
+	const [open, setOpen] = useState(false);
+	const [secondsLeft, setSecondsLeft] = useState(0);
+	useEffect(() => {
+		// The worker refreshes the token when the warning is due and updates `sessionExpiresAt`, which closes the
+		// dialog if the session was extended in the meantime (e.g. activity on another tab).
+		const getSecondsLeft = () => Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000));
+		const shouldWarn =
+			active && sessionExpiresAt != null && sessionExpiresAt - Date.now() <= SESSION_TIMEOUT_WARNING_MS;
+		setOpen(shouldWarn);
+		if (shouldWarn) {
+			setSecondsLeft(getSecondsLeft());
+			const interval = setInterval(() => setSecondsLeft(getSecondsLeft()), 1000);
+			return () => clearInterval(interval);
+		}
+	}, [active, sessionExpiresAt]);
+	const onStaySignedIn = () => dispatch(messageSharedWorker(sharedWorkerExtendSession()));
+	return (
+		<Dialog
+			open={open}
+			// Escape or clicking outside keeps the user working rather than leaving them with a dismissed warning.
+			onClose={onStaySignedIn}
+			role="alertdialog"
+			aria-labelledby="sessionTimeoutWarningTitle"
+			aria-describedby="sessionTimeoutWarningMessage"
+		>
+			<DialogTitle id="sessionTimeoutWarningTitle">
+				<FormattedMessage id="authMonitor.sessionExpiringTitle" defaultMessage="Your session is about to expire" />
+			</DialogTitle>
+			<DialogContent sx={{ width: '400px' }}>
+				<DialogContentText id="sessionTimeoutWarningMessage">
+					<FormattedMessage
+						id="authMonitor.sessionExpiringMessage"
+						defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}}. Select Stay signed in to keep working."
+						values={{ seconds: secondsLeft }}
+					/>
+				</DialogContentText>
+			</DialogContent>
+			<DialogActions>
+				<Button color="primary" variant="text" onClick={() => dispatch(logout())}>
+					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
+				</Button>
+				<Button autoFocus color="primary" variant="contained" onClick={onStaySignedIn}>
+					<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
+				</Button>
+			</DialogActions>
 		</Dialog>
 	);
 }

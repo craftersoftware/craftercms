@@ -138,6 +138,7 @@ export interface GlobalState {
 		error: ApiResponse;
 		active: boolean;
 		expiresAt: number;
+		sessionExpiresAt: number;
 		isFetching: boolean;
 	};
 	user: EnhancedUser;

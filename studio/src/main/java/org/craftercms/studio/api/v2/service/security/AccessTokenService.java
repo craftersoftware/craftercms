@@ -60,10 +60,12 @@ public interface AccessTokenService {
 	 * @param auth     the current authentication
 	 * @param request  the request
 	 * @param response the response
+	 * @param extendSession true to restart the session and inactivity time limits of the user
 	 * @return the access token
 	 * @throws ServiceLayerException if there is any error creating the access token
 	 */
-	AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException;
+	AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+							 boolean extendSession) throws ServiceLayerException;
 
 	/**
 	 * Deletes the refresh token for the given user

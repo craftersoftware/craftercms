@@ -21,6 +21,7 @@ import org.craftercms.studio.model.security.AccessToken;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,7 +51,8 @@ public class AccessTokenController {
 
 	@GetMapping(value = "/refresh", produces = APPLICATION_JSON_VALUE)
 	public AccessToken refreshToken(Authentication authentication, HttpServletRequest request,
-					HttpServletResponse response) throws Exception {
+					HttpServletResponse response,
+					@RequestParam(required = false, defaultValue = "false") boolean extendSession) throws Exception {
 		// If the session has expired, return an empty response
 		if (authentication == null || authentication instanceof AnonymousAuthenticationToken ||
 			!accessTokenService.hasValidRefreshToken(authentication, request, response)) {
@@ -59,7 +61,7 @@ public class AccessTokenController {
 			return null;
 		}
 
-		return accessTokenService.createTokens(authentication, request, response);
+		return accessTokenService.createTokens(authentication, request, response, extendSession);
 	}
 
 	@GetMapping(value = "/authType", produces = APPLICATION_JSON_VALUE)
