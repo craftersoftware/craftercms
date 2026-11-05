@@ -23,6 +23,7 @@ import { AuditOptions } from '../../services/audit';
 import { fieldIdMapping, translations } from './AuditGridUI';
 import { rand } from '../PathNavigator/utils';
 import Skeleton from '@mui/material/Skeleton';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export interface AuditGridSkeletonProps {
 	numOfItems?: number;
@@ -161,11 +162,7 @@ export function AuditGridSkeleton(props: AuditGridSkeletonProps) {
 					[`& .${gridClasses.cell}`]: {
 						display: 'flex',
 						alignItems: 'center',
-						'&:focus, &:focus-within': {
-							outline: '2px solid #FFFFFF',
-							outlineOffset: '-2px',
-							boxShadow: 'inset 0 0 0 4px #000000'
-						}
+						'&:focus, &:focus-within': getFocusRingSx({ inset: true })
 					}
 				}}
 				disableRowSelectionOnClick

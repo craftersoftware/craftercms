@@ -34,6 +34,7 @@ import { defineMessages, FormattedMessage, type MessageDescriptor, useIntl } fro
 import { EditOffOutlined, EditOutlined } from '@mui/icons-material';
 import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
 import ItemPublishingTargetIcon from '../../ItemPublishingTargetIcon';
+import { getFocusRingSx } from '../../../styles/focusRing';
 import { getItemPublishingTargetText, getItemStateText } from '../../ItemDisplay/utils';
 import ItemStateIcon from '../../ItemStateIcon';
 import Tooltip from '@mui/material/Tooltip';
@@ -94,12 +95,7 @@ const copyableValueSx: SxProps<Theme> = {
 	'&:focus': {
 		outline: 'none'
 	},
-	'&:focus-visible': {
-		outlineStyle: 'solid',
-		outlineWidth: 2,
-		outlineColor: 'primary.main',
-		outlineOffset: (theme) => theme.spacing(0.25)
-	}
+	'&:focus-visible': getFocusRingSx()
 };
 
 // Width of the small icon button, its end margin, and the title-row column gap.

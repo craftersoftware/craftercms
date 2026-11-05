@@ -33,6 +33,7 @@ import { Button, Typography } from '@mui/material';
 import EmptyState from '../EmptyState/EmptyState';
 import AuditGridFilterPopover from '../AuditGridFilterPopover';
 import { useLocale } from '../../hooks/useLocale';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export interface AuditGridUIProps {
 	page: number;
@@ -358,11 +359,7 @@ export function AuditGridUI(props: AuditGridUIProps) {
 								color: (theme) => theme.palette.primary.main
 							}
 						},
-						'&:focus, &:focus-visible': {
-							outline: '2px solid #FFFFFF',
-							outlineOffset: '-2px',
-							boxShadow: 'inset 0 0 0 4px #000000'
-						}
+						'&:focus, &:focus-visible': getFocusRingSx({ inset: true })
 					},
 					[`& .${gridClasses.columnHeaderTitle}`]: {
 						textOverflow: 'ellipsis',
@@ -371,11 +368,7 @@ export function AuditGridUI(props: AuditGridUIProps) {
 					[`& .${gridClasses.cell}`]: {
 						display: 'flex',
 						alignItems: 'center',
-						'&:focus, &:focus-within': {
-							outline: '2px solid #FFFFFF',
-							outlineOffset: '-2px',
-							boxShadow: 'inset 0 0 0 4px #000000'
-						}
+						'&:focus, &:focus-within': getFocusRingSx({ inset: true })
 					}
 				}}
 				slots={{

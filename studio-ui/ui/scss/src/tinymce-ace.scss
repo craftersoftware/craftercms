@@ -16,6 +16,8 @@
  *
  */
 
+@import 'focus-ring';
+
 .tox-dialog {
 	&.acecode {
 		.tox-dialog__header {
@@ -182,9 +184,7 @@
 		box-sizing: content-box;
 
 		&:focus-visible {
-			outline: 2px solid #fff;
-			outline-offset: 2px;
-			box-shadow: 0 0 0 2px #000;
+			@include focus-ring;
 		}
 	}
 	.ace_searchbtn {

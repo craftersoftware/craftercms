@@ -18,7 +18,8 @@ import React, { PropsWithChildren, useMemo } from 'react';
 import { createTheme, Theme, ThemeOptions, ThemeProvider } from '@mui/material/styles';
 import { createDefaultThemeOptions } from '../../styles/theme';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import palette from '../../styles/palette';
+import palette, { getStudioPaletteOptions } from '../../styles/palette';
+import { getFocusRingThemeOptions } from '../../styles/focusRing';
 import { deepmerge } from '@mui/utils';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
@@ -35,7 +36,7 @@ tssCache.compat = true;
 muiCache.compat = true;
 
 const underlineBorder = ({ theme }: { theme: Theme }) =>
-	theme.palette.mode === 'light' && { '&::before': { borderBottomColor: palette.gray.medium3 } };
+	theme.palette.mode === 'light' && { '&::before': { borderBottomColor: theme.palette.border.control } };
 
 const selectedBar = {
 	'&.Mui-selected': {
@@ -53,18 +54,10 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 		const mode = prefersDarkMode ? 'dark' : 'light';
 		const auxTheme = createTheme({ palette: { mode } });
 		const defaultThemeOptions = createDefaultThemeOptions({ mode });
-		const errorMain = prefersDarkMode ? palette.red.tint : palette.red.main;
 		return createTheme({
+			// Keyboard focus ring for every ButtonBase-based control (2.4.7, 1.4.11). See styles/focusRing.ts.
+			...getFocusRingThemeOptions(mode),
 			...(props.themeOptions ?? defaultThemeOptions),
-			// Keyboard focus ring (2.4.7, 1.4.11): black against the control, white against the page, so one ring
-			// is 3:1 or more on any light or dark surface. The 4px shadow leaves a 2px black band inside the white outline.
-			focusVisible: {
-				outlineStyle: 'solid',
-				outlineColor: '#FFFFFF',
-				outlineWidth: 2,
-				outlineOffset: 2,
-				boxShadow: '0 0 0 4px #000000'
-			},
 			// Animations: Disable MUI JavaScript/CSS transition helpers
 			...(!enableAnimations && {
 				transitions: {
@@ -75,24 +68,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 			}),
 			palette: {
 				mode,
-				primary: {
-					main: prefersDarkMode ? palette.blue.tint : palette.blue.main
-				},
-				warning: {
-					main: prefersDarkMode ? palette.orange.tint : palette.orange.main
-				},
-				error: {
-					main: errorMain
-				},
-				success: {
-					main: prefersDarkMode ? palette.green.tint : palette.green.main
-				},
-				info: {
-					main: prefersDarkMode ? palette.teal.tint : palette.teal.main
-				},
-				secondary: {
-					main: prefersDarkMode ? palette.indigo.tint : palette.purple.shade
-				},
+				...getStudioPaletteOptions(mode),
 				action: {
 					selected: palette.blue.highlight
 				},
@@ -100,29 +76,18 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 					default: prefersDarkMode ? palette.gray.dark7 : palette.gray.light0
 				},
 				divider: prefersDarkMode ? 'rgba(59, 74, 89, 0.3)' : auxTheme.palette.divider,
+				// MUI picks every contrastText from this threshold (its default is 3, which yields white on
+				// #FF2D55 at 3.65:1). At 4.5 a label on a fill is AA without a per-component check.
+				contrastThreshold: 4.5,
 				...props.themeOptions?.palette
 			},
 			components: deepmerge((props.themeOptions ?? defaultThemeOptions).components ?? {}, {
-				MuiFormLabel: {
-					styleOverrides: {
-						asterisk: {
-							color: errorMain
-						}
-					}
-				},
-				MuiTabs: {
-					styleOverrides: {
-						indicator: {
-							backgroundColor: prefersDarkMode ? palette.blue.tint : palette.blue.main
-						}
-					}
-				},
-				// Switch root is overflow: hidden, so the outset ring is cut off top and bottom. Draw it inside the thumb area.
+				// Switch root is overflow: hidden, so MUI draws the theme ring inset on it (see styles/focusRing.ts).
 				MuiSwitch: {
 					styleOverrides: {
 						// The default 38% / 50% tracks are 2.2:1 to 2.7:1 on white. 1.4.11 needs 3:1.
 						root: ({ ownerState, theme }) => ({
-							'& .MuiSwitch-track': { opacity: 1, backgroundColor: palette.gray.medium3 },
+							'& .MuiSwitch-track': { opacity: 1, backgroundColor: theme.palette.border.control },
 							'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
 								opacity: 1,
 								backgroundColor:
@@ -132,11 +97,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 							}
 						}),
 						switchBase: ({ theme }) => ({
-							...(theme.palette.mode === 'dark' && { '&:not(.Mui-checked)': { color: '#FFFFFF' } }),
-							'&.Mui-focusVisible': {
-								outlineOffset: '-4px',
-								boxShadow: 'inset 0 0 0 4px #000000'
-							}
+							...(theme.palette.mode === 'dark' && { '&:not(.Mui-checked)': { color: palette.white } })
 						})
 					}
 				},
@@ -160,7 +121,8 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				MuiChip: {
 					styleOverrides: {
 						outlined: ({ ownerState, theme }) => ({
-							borderColor: ownerState.color === 'default' ? palette.gray.medium3 : theme.palette[ownerState.color].main
+							borderColor:
+								ownerState.color === 'default' ? theme.palette.border.control : theme.palette[ownerState.color].main
 						})
 					}
 				},
@@ -175,13 +137,9 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				},
 				MuiOutlinedInput: {
 					styleOverrides: {
-						root: {
-							backgroundColor: auxTheme.palette.background.paper
-						},
+						root: ({ theme }) => ({ backgroundColor: theme.palette.background.paper }),
 						// The default rgba(0,0,0,.23) border is 1.74:1 on white. 3:1 is needed on every surface, dialogs included.
-						notchedOutline: {
-							borderColor: palette.gray.medium3
-						}
+						notchedOutline: ({ theme }) => ({ borderColor: theme.palette.border.control })
 					}
 				},
 				MuiButtonBase: {
@@ -197,9 +155,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				MuiFilledInput: { styleOverrides: { underline: underlineBorder } },
 				MuiInputBase: {
 					styleOverrides: {
-						root: {
-							backgroundColor: auxTheme.palette.background.paper
-						},
+						root: ({ theme }) => ({ backgroundColor: theme.palette.background.paper }),
 						// The default placeholder is 42% (light) / 50% (dark) opacity, 2.7:1 on white.
 						input: ({ theme }) => ({
 							'&::placeholder, &:focus::placeholder': { opacity: 1, color: theme.palette.text.secondary }
