@@ -30,7 +30,7 @@
  * dialog does not close. Escape on the scroller itself still bubbles.
  *
  * The hint is the `aria-describedby` target of the scroller and the textarea. It is
- * the last child of the Ace node, visually hidden until focus is inside the editor
+ * the last child of the Ace node, visually hidden until the scroller or gutter has focus
  * (see `_editor-keyboard.scss`), and positioned over the editor edge so the editor
  * height never changes.
  *

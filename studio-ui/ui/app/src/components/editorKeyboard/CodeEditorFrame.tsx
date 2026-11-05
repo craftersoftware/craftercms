@@ -44,8 +44,8 @@ export interface CodeEditorFrameProps {
  * the tab order by `enforceMonacoKeyboardOptions`. Enter edits; Esc (handled on
  * the editor) returns here; Tab from this frame moves to the next control.
  * The hint is the `aria-describedby` target for the short frame name. It is
- * visually hidden until focus is inside the frame, then overlays the bottom
- * edge so the editor height never changes.
+ * visually hidden until the frame itself has focus (not while typing in the
+ * editor), then overlays the bottom edge so the editor height never changes.
  */
 export function CodeEditorFrame(props: CodeEditorFrameProps) {
 	const { frameRef, height = '100%', className, sx, children, onActivate, readOnly = false } = props;
@@ -107,7 +107,7 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 						zIndex: 20,
 						boxShadow: 'inset 0 0 0 2px #0b4f8a, inset 0 0 0 4px #ffffff'
 					},
-					'&:focus-within > [data-code-editor-hint]': {
+					'&:focus > [data-code-editor-hint]': {
 						position: 'absolute',
 						right: 0,
 						bottom: 0,

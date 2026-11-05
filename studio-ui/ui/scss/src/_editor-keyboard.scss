@@ -4,8 +4,8 @@
 // tinymce-ace.css is not already linked. Do not copy these rules into JS.
 
 // The hint is the aria-describedby target of the Ace scroller and textarea. It is visually
-// hidden until focus is inside the editor, then overlays the bottom edge so the editor does
-// not change size. The `.tox-dialog .ace_editor *` rules in tinymce-ace.scss would restyle
+// hidden until the scroller or gutter (the editor's tab stops) has focus, then overlays the
+// bottom edge so the editor does not change size. It is hidden again while typing in the textarea. The `.tox-dialog .ace_editor *` rules in tinymce-ace.scss would restyle
 // it, so the font and white-space declarations are !important.
 .ace_editor > .craftercms-code-editor-hint,
 .tox-dialog .ace_editor > .craftercms-code-editor-hint {
@@ -21,8 +21,8 @@
 	white-space: nowrap !important;
 }
 
-.ace_editor:focus-within > .craftercms-code-editor-hint,
-.tox-dialog .ace_editor:focus-within > .craftercms-code-editor-hint {
+.ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint,
+.tox-dialog .ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {
 	right: 0;
 	bottom: 0;
 	left: 0;
@@ -50,7 +50,7 @@
 	border-top: 1px solid #d0d0d0;
 }
 
-.ace_editor.ace_dark:focus-within > .craftercms-code-editor-hint {
+.ace_editor.ace_dark:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {
 	background: #252526;
 	color: #e6e6e6;
 	border-top-color: #3c3c3c;
