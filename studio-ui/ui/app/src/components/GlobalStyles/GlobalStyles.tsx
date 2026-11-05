@@ -23,7 +23,7 @@ import { useMemo } from 'react';
 import { Interpolation } from '@emotion/styled';
 import { typographyStyles } from './typography';
 import { focusRingOffset, focusRingStyles, focusRingWidth } from '../../styles/focusRing';
-import { TOAST_HOST_CLASS } from '../NotistackVariant/NotistackVariant';
+import { TOAST_HOST_CLASS } from '../../utils/a11y/toastHostClass';
 
 export interface GlobalStylesProps {
 	cssBaseline?: boolean;

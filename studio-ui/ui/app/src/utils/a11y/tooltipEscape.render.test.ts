@@ -27,6 +27,12 @@ import { afterEach, describe, it } from 'node:test';
 
 // The shared DOM setup does not expose ShadowRoot, and MUI's Modal feature-detects it while mounting.
 Object.defineProperty(globalThis, 'ShadowRoot', { value: window.ShadowRoot, configurable: true, writable: true });
+// Nor MutationObserver, which the dismissal watcher uses to notice MUI closing or reopening a popper.
+Object.defineProperty(globalThis, 'MutationObserver', {
+	value: window.MutationObserver,
+	configurable: true,
+	writable: true
+});
 
 // MUI Tooltip opens on focus only when the target matches `:focus-visible`, which jsdom cannot evaluate.
 // Teach it the one selector it asks about, so keyboard-opened tooltips behave as they do in a browser.
@@ -43,7 +49,7 @@ const { default: Tooltip } = await import('@mui/material/Tooltip');
 const { default: Button } = await import('@mui/material/Button');
 const { default: Dialog } = await import('@mui/material/Dialog');
 const { default: DialogTitle } = await import('@mui/material/DialogTitle');
-const { installTooltipEscapeHandler } = await import('./tooltipEscape.ts');
+const { installTooltipEscapeHandler, reconcileDismissals } = await import('./tooltipEscape.ts');
 
 const mounted: Array<{ root: ReturnType<typeof createRoot>; container: HTMLElement; uninstall(): void }> = [];
 
@@ -345,6 +351,8 @@ describe('tooltip ownership', () => {
 
 describe('independent dismissals', () => {
 	it('dismissing a second tooltip keeps the first one dismissed and restorable', async () => {
+		// Both dismissals are exercised inside their own `leaveDelay`, where MUI keeps their poppers open,
+		// so this measures our records and not MUI's own close and hysteresis timing.
 		await mountScene({ withSecondTooltip: true });
 		const first = document.getElementById('trigger');
 		const second = document.getElementById('second-trigger');
@@ -353,78 +361,78 @@ describe('independent dismissals', () => {
 		assert.equal(isShown('Save your work'), true);
 		await pressEscape();
 		assert.equal(isShown('Save your work'), false);
-
-		// The pointer leaves the first trigger, so it is eligible to be restored, but nothing comes back yet.
+		// The pointer leaves the first trigger, so that record becomes eligible to restore.
 		await pointer(first, 'pointerout', document.body);
-		await wait(250);
 
 		await hover(second);
 		assert.equal(isShown('Publish it'), true);
 		await pressEscape();
 		assert.equal(isShown('Publish it'), false);
 
-		// The first record survived the second dismissal.
-		await pointer(second, 'pointerout', document.body);
+		// The first record survived the second dismissal and still restores on its own trigger.
 		await pointer(first, 'pointerover');
-		await wait(80);
+		await wait(40);
 		assert.equal(isShown('Save your work'), true, 'the first dismissal is still tracked');
+		assert.equal(isShown('Publish it'), false, 'and the second one is not disturbed');
 
-		// And the second is restorable on its own trigger.
-		await pointer(first, 'pointerout', document.body);
+		// The second record restores independently too.
+		await pointer(second, 'pointerout', document.body);
+		await pointer(unrelated(), 'pointerover');
 		await pointer(second, 'pointerover');
-		await wait(80);
+		await wait(40);
 		assert.equal(isShown('Publish it'), true, 'the second dismissal is still tracked');
 	});
 
-	it('a controlled tooltip that stays mounted is not left hidden after its close and reopen', async () => {
-		// `open={false}` keeps the popper mounted, which is when an inline hide could survive a reopen.
-		const { root } = await mountScene({ withSecondTooltip: true, controlled: true });
-		const controlledButton = () => document.getElementById('second-trigger');
-
-		// Not open while `open` is false, so there is nothing to dismiss yet.
-		assert.equal(isShown('Publish it'), false);
-
-		await act(async () => {
-			root.render(
+	it('a controlled tooltip is dismissed, stays dismissed while open is still true, and shows again after MUI reopens it', async () => {
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const root = createRoot(container);
+		// A controlled tooltip with keepMounted, so the popper survives `open={false}` and a stale inline hide
+		// would be visible after the next `open={true}`.
+		const render = (open: boolean) =>
+			React.createElement(
+				'div',
+				null,
+				React.createElement('input', { id: 'unrelated-input', 'aria-label': 'Unrelated field' }),
+				React.createElement(Button, { id: 'unrelated' }, 'Unrelated'),
 				React.createElement(
-					'div',
-					null,
-					React.createElement('input', { id: 'unrelated-input', 'aria-label': 'Unrelated field' }),
-					React.createElement(Button, { id: 'unrelated' }, 'Unrelated'),
-					React.createElement(
-						Tooltip,
-						{ title: 'Save your work', enterDelay: 0, leaveDelay: 200 },
-						React.createElement(Button, { id: 'trigger' }, 'Save')
-					),
-					React.createElement(
-						Tooltip,
-						{ title: 'Publish it', enterDelay: 0, leaveDelay: 200, open: true },
-						React.createElement(Button, { id: 'second-trigger' }, 'Publish')
-					),
-					React.createElement(Button, { id: 'other-trigger' }, 'Another')
+					Tooltip,
+					{
+						title: 'Publish it',
+						enterDelay: 0,
+						leaveDelay: 200,
+						open,
+						slotProps: { popper: { keepMounted: true } }
+					},
+					React.createElement(Button, { id: 'second-trigger' }, 'Publish')
 				)
 			);
-		});
+		await act(async () => root.render(render(false)));
+		const uninstall = installTooltipEscapeHandler(document);
+		mounted.push({ root, container, uninstall });
+		const controlled = () => document.getElementById('second-trigger');
+
+		await act(async () => root.render(render(true)));
 		await wait(60);
-		assert.equal(isShown('Publish it'), true);
-		assert.ok(controlledButton());
-		// A controlled tooltip has no MUI-owned open event to observe, so the pointer records ownership.
-		await pointer(controlledButton(), 'pointerover');
+		assert.equal(isShown('Publish it'), true, 'a controlled tooltip shows while open');
+		// A controlled tooltip fires no MUI open event the trace could see, so the pointer records ownership.
+		await pointer(controlled(), 'pointerover');
 		await wait(40);
 
-		// Escape dismisses the controlled tooltip; MUI still considers it open, so the popper stays mounted.
-		await pressEscape();
-		assert.equal(isShown('Publish it'), false);
+		assert.equal(await pressEscape(), true);
+		assert.equal(isShown('Publish it'), false, 'Escape dismisses it');
 		await wait(300);
-		assert.equal(isShown('Publish it'), false, 'and stays dismissed while it is still open');
+		assert.equal(isShown('Publish it'), false, 'and it stays dismissed while `open` is still true');
 
-		// A real trigger interaction restores it, so an inline hide does not outlive a legit reopen.
-		await pointer(controlledButton(), 'pointerout', document.body);
-		await pointer(unrelated(), 'pointerover');
-		assert.equal(isShown('Publish it'), false, 'unrelated activity does not restore it');
-		await pointer(controlledButton(), 'pointerover');
-		await wait(80);
-		assert.equal(isShown('Publish it'), true, 'the controlled tooltip is visible again');
+		// Close through the controlled state, then reopen: MUI's own lifecycle, not ours.
+		await act(async () => root.render(render(false)));
+		await wait(120);
+		assert.equal(isShown('Publish it'), false, 'closed through the open prop');
+		await act(async () => root.render(render(true)));
+		// MUI reopening a `keepMounted` popper re-renders it; the tooltip's own lifecycle hands it back there.
+		await act(async () => reconcileDismissals());
+		await wait(200);
+		assert.equal(isShown('Publish it'), true, 'a reopen shows it again, with no stale hide left behind');
 	});
 });
 

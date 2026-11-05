@@ -15,7 +15,7 @@
  */
 
 /**
- * MUI Tooltip 9.4 listens for Escape on `document` in the bubble phase and does not
+ * MUI Tooltip (9.5.0 here) listens for Escape on `document` in the bubble phase and does not
  * stop the event. MUI Modal handles Escape on the dialog root during bubble and
  * calls `stopPropagation()`, so the tooltip listener never runs and the dialog
  * closes instead. A capture listener on `document` runs first: when a tooltip is
@@ -37,6 +37,8 @@
 
 const POPPER_SELECTOR = '.MuiTooltip-popper';
 const TOOLTIP_SELECTOR = '.MuiTooltip-tooltip';
+/** MUI adds this class to the popper while it considers the tooltip closed. */
+const POPPER_CLOSE_CLASS = 'MuiTooltip-popperClose';
 
 /** One dismissed tooltip, tracked independently of every other dismissal. */
 export interface DismissedTooltip {
@@ -46,6 +48,19 @@ export interface DismissedTooltip {
 	owner: Element | null;
 	/** Whether the pointer or focus has left the owner since the Escape. */
 	leftOwner: boolean;
+	/** True once MUI was seen to close the popper; only a close followed by an open is a real reopen. */
+	sawClose?: boolean;
+	/** Watches the popper's MUI classes while it is dismissed. */
+	observer?: MutationObserver;
+}
+
+/**
+ * Called by the toast and tooltip lifecycle to re-check dismissals. Exported so a component that re-renders a
+ * `keepMounted` popper can hand it back, which no pointer or focus event would otherwise signal.
+ */
+export function reconcileDismissals(): void {
+	pruneDismissals();
+	releaseReopenedDismissals();
 }
 
 /** True when `target` is `container` or inside it. */
@@ -58,10 +73,11 @@ function isInsidePopper(target: EventTarget | null): boolean {
 }
 
 /**
- * MUI 9.4 fades `.MuiTooltip-tooltip`, not the popper. `MuiTooltip-popperClose` is not
- * applied: the popper slot classes are `popper` and, when interactive, `popperInteractive`.
- * Grow writes inline opacity 0 as soon as the tooltip leaves, while computed opacity
- * stays above 0 for the fade. Escape during that fade must reach the parent dialog.
+ * Whether the tooltip is still painted. A closed tooltip gets `MuiTooltip-popperClose`, but the popper stays
+ * mounted while Grow fades it, and Grow writes inline opacity 0 as soon as it starts leaving while the
+ * computed opacity stays above 0. `popperClose` alone would therefore treat a tooltip that is still visible
+ * during that fade as closed, and an Escape then would reach the parent dialog. Escape during the fade must
+ * still belong to the tooltip, so the check looks at what is painted rather than at the class.
  */
 function isTooltipElementShown(node: HTMLElement): boolean {
 	const style = node.ownerDocument.defaultView?.getComputedStyle(node);
@@ -151,9 +167,50 @@ let dismissals: DismissedTooltip[] = [];
 let installs = 0;
 let removeListeners: (() => void) | null = null;
 
-/** Drops dismissals whose popper or owner has left the document, so nothing is retained. */
+/** Stops tracking one dismissal, including its class watcher. */
+function forgetDismissal(entry: DismissedTooltip): void {
+	entry.observer?.disconnect();
+	dismissals = dismissals.filter((other) => other !== entry);
+}
+
+/** Drops dismissals whose popper or owner has left the document, so nothing outlives its tooltip. */
 function pruneDismissals(): void {
-	dismissals = dismissals.filter((entry) => entry.popper.isConnected && (!entry.owner || entry.owner.isConnected));
+	for (const entry of dismissals.slice()) {
+		if (!entry.popper.isConnected || (entry.owner && !entry.owner.isConnected)) forgetDismissal(entry);
+	}
+}
+
+/**
+ * Watches the dismissed popper's classes, so MUI closing and reopening it is seen even when no pointer or
+ * focus event follows, which is how a controlled `open` and a `keepMounted` popper behave.
+ */
+function watchForReopen(entry: DismissedTooltip): void {
+	if (!entry.popper.isConnected) return;
+	entry.observer = new MutationObserver(() => releaseReopenedDismissal(entry));
+	entry.observer.observe(entry.popper, { attributes: true, attributeFilter: ['class'] });
+}
+
+/**
+ * Clears our inline hide once MUI has closed the popper and reopened it. `keepMounted` and controlled
+ * tooltips keep their popper, so the hide has to be lifted when MUI renders it open again, or the tooltip
+ * stays invisible. The close is remembered, because the Escape itself leaves MUI's own state open.
+ */
+function releaseReopenedDismissal(entry: DismissedTooltip): void {
+	if (!entry.popper.isConnected) {
+		forgetDismissal(entry);
+		return;
+	}
+	if (entry.popper.classList.contains(POPPER_CLOSE_CLASS)) {
+		entry.sawClose = true;
+		return;
+	}
+	if (!entry.sawClose) return;
+	restoreDismissedTooltip(entry);
+	forgetDismissal(entry);
+}
+
+function releaseReopenedDismissals(): void {
+	for (const entry of dismissals.slice()) releaseReopenedDismissal(entry);
 }
 
 /**
@@ -176,7 +233,7 @@ function restoreOwnerReturned(target: EventTarget | null): void {
 	for (const entry of dismissals) {
 		if (!entry.leftOwner || !isWithin(entry.owner, target)) continue;
 		restoreDismissedTooltip(entry);
-		dismissals = dismissals.filter((other) => other !== entry);
+		forgetDismissal(entry);
 	}
 }
 
@@ -188,7 +245,9 @@ export function onTooltipEscapeKeyDown(event: KeyboardEvent, doc: Document, trac
 	event.stopPropagation();
 	event.preventDefault();
 	pruneDismissals();
+	releaseReopenedDismissals();
 	dismissals.push(dismissed);
+	watchForReopen(dismissed);
 	return true;
 }
 
@@ -211,6 +270,7 @@ export function installTooltipEscapeHandler(doc: Document = document): () => voi
 				trace.lastPointerTarget = event.target as Element;
 				trace.lastPointerAt = clock += 1;
 			}
+			releaseReopenedDismissals();
 			restoreOwnerReturned(event.target);
 		};
 		const onPointerOut = (event: Event) => {
@@ -222,6 +282,7 @@ export function installTooltipEscapeHandler(doc: Document = document): () => voi
 				trace.lastFocusTarget = event.target as Element;
 				trace.lastFocusAt = clock += 1;
 			}
+			releaseReopenedDismissals();
 			restoreOwnerReturned(event.target);
 		};
 		const onFocusOut = (event: Event) => markOwnerLeft(event.target, (event as FocusEvent).relatedTarget);
@@ -237,6 +298,7 @@ export function installTooltipEscapeHandler(doc: Document = document): () => voi
 			doc.removeEventListener('focusin', onFocusIn, true);
 			doc.removeEventListener('focusout', onFocusOut, true);
 			// Nothing outlives the handler.
+			for (const entry of dismissals) entry.observer?.disconnect();
 			dismissals = [];
 			Object.assign(trace, emptyInteractionTrace());
 		};

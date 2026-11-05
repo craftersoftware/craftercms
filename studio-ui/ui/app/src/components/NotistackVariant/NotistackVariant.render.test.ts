@@ -32,11 +32,13 @@ const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
+const { IntlProvider, FormattedMessage } = await import('react-intl');
+
 const { default: Alert } = await import('@mui/material/Alert');
 const { default: Button } = await import('@mui/material/Button');
 const { getFocusRingThemeOptions, focusRingColor } = await import('../../styles/focusRing.ts');
-const { NotistackVariant, DefaultStatusSnackbar, SnackbarStatusRegion, TOAST_HOST_CLASS } =
-	await import('./NotistackVariant.tsx');
+const { NotistackVariant, DefaultStatusSnackbar, SnackbarStatusRegion } = await import('./NotistackVariant.tsx');
+const { TOAST_HOST_CLASS } = await import('../../utils/a11y/toastHostClass.ts');
 
 const mounted: Array<{ unmount(): Promise<void>; container: HTMLElement }> = [];
 afterEach(async () => {
@@ -63,21 +65,25 @@ async function mountToast(
 	await act(async () => {
 		root.render(
 			React.createElement(
-				ThemeProvider,
-				{ theme: themeFor(mode) },
+				IntlProvider,
+				{ locale: 'en', messages: {} },
 				React.createElement(
-					SnackbarStatusRegion,
-					null,
-					React.createElement(Content as never, {
-						id: 'toast-1',
-						variant: 'success',
-						message: 'Saved',
-						action: () => null,
-						// notistack's SnackbarItem always supplies these to its content component.
-						iconVariant: {},
-						hideIconVariant: true,
-						...props
-					})
+					ThemeProvider,
+					{ theme: themeFor(mode) },
+					React.createElement(
+						SnackbarStatusRegion,
+						null,
+						React.createElement(Content as never, {
+							id: 'toast-1',
+							variant: 'success',
+							message: 'Saved',
+							action: () => null,
+							// notistack's SnackbarItem always supplies these to its content component.
+							iconVariant: {},
+							hideIconVariant: true,
+							...props
+						})
+					)
 				)
 			)
 		);
@@ -87,6 +93,7 @@ async function mountToast(
 }
 
 const hosts = () => [...document.querySelectorAll<HTMLElement>(`.${TOAST_HOST_CLASS}`)];
+
 const hiddenRegion = () => document.querySelector<HTMLElement>('[role="status"][aria-atomic="false"]');
 
 describe('toast host markup', () => {
@@ -206,6 +213,55 @@ describe('the hidden announcement region', () => {
 		assert.equal((region?.textContent ?? '').trim(), '');
 		const alert = document.querySelector('[role="alert"]');
 		assert.ok(alert, 'errors stay alerts');
+	});
+});
+
+describe('a message built from a component', () => {
+	// `<FormattedMessage>` carries no text in its props: the text only exists once it renders. The announcement
+	// therefore has to come from the rendered message, which is the case the earlier props-walking code missed.
+	const projectCreated = () =>
+		React.createElement(FormattedMessage, {
+			id: 'project.created',
+			defaultMessage: 'Project "{siteId}" has been created.',
+			values: { siteId: 'editorial' }
+		});
+	const visibleMessageText = (container: HTMLElement) =>
+		(container.querySelector('.MuiAlert-message, #notistack-snackbar')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+	for (const [name, Content] of [
+		['NotistackVariant', NotistackVariant],
+		['DefaultStatusSnackbar', DefaultStatusSnackbar]
+	] as const) {
+		it(`announces the rendered FormattedMessage text through the region (${name})`, async () => {
+			const container = await mountToast('light', Content, { variant: 'success', message: projectCreated() });
+			const visible = visibleMessageText(container);
+			const region = hiddenRegion();
+
+			assert.equal(visible, 'Project "editorial" has been created.', 'the visible toast shows the formatted text');
+			assert.ok(region, 'the polite region is mounted');
+			assert.equal((region?.textContent ?? '').trim(), visible, 'the announcement equals the visible text');
+			assert.notEqual((region?.textContent ?? '').trim(), '', 'and is not empty');
+			assert.equal(region?.querySelectorAll('a, button, [tabindex]').length, 0, 'still nothing focusable in it');
+		});
+	}
+
+	it('announces a formatted title together with a formatted message, once', async () => {
+		await mountToast('light', NotistackVariant, {
+			variant: 'info',
+			alertTitle: React.createElement(FormattedMessage, {
+				id: 'tip.title',
+				defaultMessage: 'Heads {what}',
+				values: { what: 'up' }
+			}),
+			message: React.createElement(FormattedMessage, {
+				id: 'tip.body',
+				defaultMessage: 'Read <strong>the docs</strong> before you continue.',
+				values: { strong: (content: unknown[]) => React.createElement('strong', null, content[0] as string) }
+			})
+		});
+		const region = hiddenRegion();
+		assert.equal((region?.textContent ?? '').trim(), 'Heads up. Read the docs before you continue.');
+		assert.equal(region?.querySelectorAll('strong, a, button').length, 0, 'the bold text is not cloned');
 	});
 });
 

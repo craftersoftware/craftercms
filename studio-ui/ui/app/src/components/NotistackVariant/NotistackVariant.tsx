@@ -14,7 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { createContext, PropsWithChildren, ReactNode, useCallback, useContext, useState } from 'react';
+import React, {
+	createContext,
+	PropsWithChildren,
+	ReactNode,
+	useCallback,
+	useContext,
+	useLayoutEffect,
+	useState
+} from 'react';
 import { createPortal } from 'react-dom';
 import Alert, { AlertProps } from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
@@ -22,6 +30,7 @@ import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import visuallyHidden from '@mui/utils/visuallyHidden';
 import { CustomContentProps, MaterialDesignContent, SnackbarContent } from 'notistack';
+import { TOAST_HOST_CLASS } from '../../utils/a11y/toastHostClass';
 
 type AdditionalVariantProps = Partial<{
 	alertTitle: ReactNode;
@@ -40,23 +49,75 @@ declare module 'notistack' {
 }
 
 /**
- * Marks every toast surface, whichever content component drew it: notistack's default
- * (`MaterialDesignContent`, which adds `notistack-MuiContent`) and the Alert-based variants used for
- * error, warning, success and info (which add no such class). Styling that must reach all toasts, such
- * as the focus ring for native anchors in a message, keys on this instead of a notistack class.
- */
-export const TOAST_HOST_CLASS = 'crafter-toast';
-
-/**
  * A toast paints its own surface (#313131 for notistack's default content), so the theme focus ring would
  * sit on it: 2.47:1 for the light ring. Two things are needed, and neither works alone.
  * MUI's variable below reaches ButtonBase children (the action and close buttons); it supplies only the halo.
- * A native anchor in a toast message is not ButtonBase and draws nothing from it, so GlobalStyles rings
- * toast anchors from the same shared source, scoped by `TOAST_HOST_CLASS`. See styles/focusRing.ts.
+ * A native link in a toast message is not ButtonBase and draws nothing from it, so GlobalStyles rings
+ * toast links from the same shared source, scoped by `TOAST_HOST_CLASS`. See styles/focusRing.ts.
  */
 function useToastFocusHalo(): Record<string, string> {
 	const theme = useTheme();
 	return theme.focusVisible ? { '--_focusVisible-shadow': `0 0 0 4px ${theme.palette.background.paper}` } : undefined;
+}
+
+/** MUI renders the title and the message inside `.MuiAlert-message`; the action sits outside it. */
+const ALERT_ANNOUNCEMENT_BLOCKS = '.MuiAlert-message';
+/** notistack puts the message in `#notistack-snackbar`, with the action beside it. */
+const DEFAULT_ANNOUNCEMENT_BLOCKS = '#notistack-snackbar';
+
+/** The whitespace a rendered subtree carries collapsed. */
+const collapse = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+/**
+ * The text of one message block. MUI renders the title as its own block at the start of the message wrapper,
+ * directly against the body text, so a sentence break is inserted after it. Everything else is read whole,
+ * which keeps a message that mixes text and inline elements (`Read <strong>the docs</strong>`) intact.
+ */
+function blockText(node: Element): string {
+	const title = node.querySelector(':scope > .MuiAlertTitle-root');
+	const whole = collapse(node.textContent ?? '');
+	if (!title || !whole) return whole;
+	const titleText = collapse(title.textContent ?? '');
+	if (!titleText || !whole.startsWith(titleText)) return whole;
+	const body = whole.slice(titleText.length).trim();
+	return body ? `${titleText}. ${body}` : titleText;
+}
+
+/**
+ * The text a toast rendered. Only the outermost matched block is read, so a title nested inside the message
+ * wrapper is not announced twice.
+ */
+function renderedText(host: Element | null, blocks: string): string {
+	if (!host) return '';
+	const found = [...host.querySelectorAll(blocks)];
+	return found
+		.filter((node) => !found.some((other) => other !== node && other.contains(node)))
+		.map(blockText)
+		.filter(Boolean)
+		.join('. ');
+}
+
+/**
+ * The text a toast should announce, read from the DOM rather than from the message prop: a message can be a
+ * component (`FormattedMessage`, a display component, a plugin element) whose text only exists once rendered.
+ * `blocks` finds the message node inside `host`, the toast element.
+ */
+function useRenderedStatusText(host: Element | null, blocks: string, enabled: boolean): string {
+	const [text, setText] = useState('');
+	useLayoutEffect(() => {
+		if (!enabled || !host) return undefined;
+		const measure = () => {
+			const next = renderedText(host, blocks);
+			setText((current) => (current === next ? current : next));
+		};
+		measure();
+		// A formatted message or a late-loading element can settle after the first layout pass.
+		if (typeof MutationObserver === 'undefined') return undefined;
+		const observer = new MutationObserver(measure);
+		observer.observe(host, { childList: true, subtree: true, characterData: true });
+		return () => observer.disconnect();
+	}, [host, blocks, enabled]);
+	return text;
 }
 
 const StatusRegionContext = createContext<HTMLElement | null>(null);
@@ -77,15 +138,6 @@ export function SnackbarStatusRegion({ children }: PropsWithChildren) {
 	);
 }
 
-/** The text of a message that may contain markup, without any of its elements. */
-function messageText(message: ReactNode): string {
-	if (message == null || typeof message === 'boolean') return '';
-	if (typeof message === 'string' || typeof message === 'number') return String(message);
-	if (Array.isArray(message)) return message.map(messageText).join('');
-	if (React.isValidElement<{ children?: ReactNode }>(message)) return messageText(message.props.children);
-	return '';
-}
-
 /**
  * Announces `text` through the shared region. Only text is written: copying the rendered message would
  * put a second, clipped copy of its links and buttons inside the hidden region, and `visuallyHidden` does
@@ -93,7 +145,7 @@ function messageText(message: ReactNode): string {
  */
 function StatusMessage({ text }: { text: string }) {
 	const region = useContext(StatusRegionContext);
-	if (!region) return null;
+	if (!region || !text) return null;
 	return createPortal(<div>{text}</div>, region);
 }
 
@@ -105,10 +157,20 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 		// of their own. Without a region (e.g. a host that does not mount one) every toast keeps the Alert's default.
 		const isStatus = hasStatusRegion && variant !== 'error' && variant !== 'warning';
 		const halo = useToastFocusHalo();
-		// The title is part of the same message, so it is announced once with it rather than twice.
-		const announcement = [messageText(alertTitle), messageText(props.message)].filter(Boolean).join('. ');
+		const [host, setHost] = useState<HTMLDivElement | null>(null);
+		const setRef = useCallback(
+			(node: HTMLDivElement | null) => {
+				setHost(node);
+				if (typeof ref === 'function') ref(node);
+				else if (ref) ref.current = node;
+			},
+			[ref]
+		);
+		// MUI renders `.MuiAlert-message` around the title and the message, and puts the action outside it in
+		// `.MuiAlert-action`, so that one selector gives the whole announcement and none of the buttons.
+		const announcement = useRenderedStatusText(host, ALERT_ANNOUNCEMENT_BLOCKS, isStatus);
 		return (
-			<SnackbarContent ref={ref} className={TOAST_HOST_CLASS} style={halo as React.CSSProperties}>
+			<SnackbarContent ref={setRef} className={TOAST_HOST_CLASS} style={halo as React.CSSProperties}>
 				<Alert
 					role={isStatus ? 'none' : 'alert'}
 					action={typeof props.action === 'function' ? props.action(id) : props.action}
@@ -133,24 +195,27 @@ export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomCont
 	function DefaultStatusSnackbar(props, ref) {
 		const hasStatusRegion = useContext(StatusRegionContext) !== null;
 		const halo = useToastFocusHalo();
+		const [host, setHost] = useState<HTMLDivElement | null>(null);
 		const setRef = useCallback(
 			(node: HTMLDivElement | null) => {
-				if (!node) {
-					if (typeof ref === 'function') ref(null);
-					else if (ref) ref.current = null;
-					return;
-				}
-				node.classList.add(TOAST_HOST_CLASS);
-				if (hasStatusRegion) node.removeAttribute('role');
+				setHost(node);
+				if (node && hasStatusRegion) node.removeAttribute('role');
 				if (typeof ref === 'function') ref(node);
 				else if (ref) ref.current = node;
 			},
 			[ref, hasStatusRegion]
 		);
+		// notistack puts the message in `#notistack-snackbar` and the action beside it.
+		const announcement = useRenderedStatusText(host, DEFAULT_ANNOUNCEMENT_BLOCKS, hasStatusRegion);
 		return (
 			<>
-				<MaterialDesignContent ref={setRef} {...props} style={{ ...halo, ...props.style }} />
-				{hasStatusRegion && <StatusMessage text={messageText(props.message)} />}
+				<MaterialDesignContent
+					ref={setRef}
+					{...props}
+					className={[props.className, TOAST_HOST_CLASS].filter(Boolean).join(' ')}
+					style={{ ...halo, ...props.style }}
+				/>
+				{hasStatusRegion && <StatusMessage text={announcement} />}
 			</>
 		);
 	}
