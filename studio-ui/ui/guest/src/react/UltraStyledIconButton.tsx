@@ -16,6 +16,7 @@
 
 import { IconButton, styled } from '@mui/material';
 import { svgIconClasses } from '@mui/material/SvgIcon';
+import { focusRingStyles } from '@craftercms/studio-ui/styles/focusRing';
 
 // Since this button runs guest-side, there may be all sorts of styles that affect button styles.
 // The idea of this component is to be as specific as possible to avoid guest site styles to break ours.
@@ -29,12 +30,7 @@ export const UltraStyledIconButton = styled(IconButton)(({ theme }) => ({
 	[`& .${svgIconClasses.root}`]: {
 		fontSize: 21
 	},
-	'&:focus-visible': {
-		outline: `2px solid ${theme.palette.primary.main} !important`,
-		outlineOffset: '2px !important',
-		// The paper-coloured gap keeps the ring distinguishable on any site background.
-		boxShadow: `0 0 0 2px ${theme.palette.background.paper} !important`
-	}
+	'&:focus-visible': focusRingStyles(theme, { halo: true, important: true })
 }));
 
 export default UltraStyledIconButton;

@@ -19,6 +19,7 @@ import { styled } from '@mui/material/styles';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import OpenWithRounded from '@mui/icons-material/OpenWithRounded';
 import { defineMessages, useIntl } from 'react-intl';
+import { focusRingStyles } from '@craftercms/studio-ui/styles/focusRing';
 import { HighlightMode } from '../constants';
 import { elementRegistryChanges$, get, getElementRecords } from '../elementRegistry';
 import { getById, getMovableParentRecord } from '../iceRegistry';
@@ -85,7 +86,8 @@ const IceZoneButton = styled('button')(({ theme }) => ({
 		clipPath: 'none',
 		width: 'auto',
 		height: 'auto',
-		maxWidth: 240,
+		// Never wider than the guest viewport, so the pill and its ring stay on screen at high zoom.
+		maxWidth: 'min(240px, calc(100vw - 8px))',
 		margin: 0,
 		overflow: 'visible',
 		display: 'inline-flex',
@@ -98,10 +100,7 @@ const IceZoneButton = styled('button')(({ theme }) => ({
 		color: `${theme.palette.text.primary} !important`,
 		textAlign: 'left',
 		cursor: 'pointer !important',
-		// The paper-coloured gap keeps the ring distinguishable on any site background.
-		boxShadow: `0 0 0 2px ${theme.palette.background.paper}, ${theme.shadows[1]} !important`,
-		outline: `2px solid ${theme.palette.primary.main} !important`,
-		outlineOffset: '2px !important'
+		...focusRingStyles(theme, { halo: true, important: true, shadow: theme.shadows[1] })
 	}
 }));
 
@@ -312,10 +311,8 @@ export const IceKeyboardControls = memo(function IceKeyboardControls(props: IceK
 				cancelAnimationFrame(scrollFrame);
 				scrollFrame = requestAnimationFrame(repositionFocusedZoneButton);
 				window.clearTimeout(scrollEnd);
-				scrollEnd = window.setTimeout(() => {
-					cachedKey = '';
-					rebuild();
-				}, 200);
+				// collectZones keeps the previous array when the rounded positions did not change.
+				scrollEnd = window.setTimeout(rebuild, 200);
 			};
 			const onPointerDown = (event: PointerEvent) => {
 				if (event.pointerType === 'mouse') {
