@@ -201,7 +201,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const stateRef = useRef<EditAppContextProps>(null);
 	if (!stateRef.current) stateRef.current = createContextObject();
 
-	const [type, setType] = useState(() => ({ ...props.type })); // Working copy of the ContentType being edited.
+	// Deep-clone so nested fields/sections/dataSources are not shared with `props.type`
+	// (rollback baseline / diff source). A shallow spread would leak in-place mutations.
+	const [type, setType] = useState(() => structuredClone(props.type));
 	const typeRef = useRef(type);
 	typeRef.current = type;
 	// `<controller>` written straight to the saved form-definition this session. Rollback and diff
@@ -731,7 +733,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							),
 							onOk: () => {
 								resetSelection();
-								setType(withPersistedJsController(props.type));
+								setType(withPersistedJsController(structuredClone(props.type)));
 								dispatch(popDialog({ id }));
 							},
 							onCancel: () => dispatch(popDialog({ id }))
@@ -766,7 +768,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleInsertSection: TypeDetailsViewProps['onInsertSection'] = (section, position) => {
-		setType(insertSection(type, section, position));
+		setType((currentType) => insertSection(currentType, section, position));
 		onUpdateHasPendingChanges(true);
 		handleSectionSelected(section);
 	};
@@ -830,9 +832,11 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
 		setOpenDataSourceInserter(false);
-		const nextDataSources = type.dataSources?.concat() ?? [];
-		nextDataSources.splice(position, 0, newDataSource);
-		setType({ ...type, dataSources: nextDataSources });
+		setType((currentType) => {
+			const nextDataSources = currentType.dataSources?.concat() ?? [];
+			nextDataSources.splice(position, 0, newDataSource);
+			return { ...currentType, dataSources: nextDataSources };
+		});
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
 	};
@@ -852,8 +856,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const handleDeleteDataSource: FieldFormViewProps['onDeleteDataSource'] = (dataSourceId) => {
 		resetSelection();
 		onUpdateHasPendingChanges(true);
-		const nextDataSources = type.dataSources.filter((dataSource) => dataSource.id !== dataSourceId);
-		setType((currentType) => ({ ...currentType, dataSources: nextDataSources }));
+		setType((currentType) => ({
+			...currentType,
+			dataSources: currentType.dataSources.filter((dataSource) => dataSource.id !== dataSourceId)
+		}));
 	};
 	// endregion
 
@@ -1011,14 +1017,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
-		setType((currentType) => {
-			const newSections = sections.map((section) => {
-				return currentType.sections.find((s) => s.id === section.key);
-			});
-			const nextType = { ...currentType, sections: newSections };
-			handleEditTypeProperties(nextType);
-			return nextType;
-		});
+		const currentType = typeRef.current;
+		const nextType = {
+			...currentType,
+			sections: sections.map((section) => currentType.sections.find((s) => s.id === section.key))
+		};
+		setType(nextType);
+		handleEditTypeProperties(nextType);
 	};
 	// endregion
 
