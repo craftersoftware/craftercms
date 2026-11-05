@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+const previousGetWorker = self.MonacoEnvironment && self.MonacoEnvironment.getWorker;
+
 self.MonacoEnvironment = {
 	getWorker(_, label) {
 		switch (label) {
@@ -31,6 +33,10 @@ self.MonacoEnvironment = {
 			case 'javascript':
 				return new Worker(new URL('monaco-editor/language/typescript/ts.worker', import.meta.url));
 			default:
+				// Preserve workers from a prior factory (e.g. graphql from useMonacoLifecycle / setupMonacoWorkers).
+				if (typeof previousGetWorker === 'function') {
+					return previousGetWorker(_, label);
+				}
 				return new Worker(new URL('monaco-editor/editor/editor.worker', import.meta.url));
 		}
 	}
