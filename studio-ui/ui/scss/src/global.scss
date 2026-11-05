@@ -8,7 +8,7 @@ body.state-loading * {
 }
 
 .water-marked {
-	color: #767676;
+	color: $text-secondary-aa;
 }
 
 .dashlet-ident {
@@ -3282,7 +3282,7 @@ a:hover.non-previewable-link,
 a.non-previewable-edit,
 a:hover.non-previewable-edit {
 	cursor: default !important;
-	color: #6f6f6f !important;
+	color: $text-secondary-aa !important;
 	text-decoration: none;
 }
 
