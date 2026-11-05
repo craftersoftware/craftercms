@@ -41,7 +41,7 @@
 	},
 	"devDependencies": {
 		"@babel/cli": "^8.0.6",
-		"@babel/core": "^8",
+		"@babel/core": "^8.1.0",
 		"@babel/plugin-transform-private-methods": "^8.0.1",
 		"@babel/plugin-transform-react-jsx": "^8.0.1",
 		"@babel/preset-env": "^8.0.7",
