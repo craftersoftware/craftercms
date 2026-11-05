@@ -14,14 +14,5 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { expect, test as setup } from '@playwright/test';
-import { password, username } from './env';
-
-setup('log in', async ({ page }) => {
-	await page.goto('/studio/login');
-	await page.locator('input[name="username"]').fill(username);
-	await page.locator('input[name="password"]').fill(password);
-	await page.locator('button[type="submit"]').click();
-	await expect(page).not.toHaveURL(/\/login/);
-	await page.context().storageState({ path: '.auth/user.json' });
-});
+// The root config can't parse this workspace's TypeScript; it is checked with `yarn compile` and prettier instead.
+export default [{ ignores: ['**'] }];

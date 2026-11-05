@@ -19,8 +19,9 @@ import { checkA11y } from './axe';
 import { expect, settle, test } from './fixtures';
 import { previewPage, project } from './env';
 
-const leftPanel = (page: Page) => page.locator('.MuiDrawer-anchorLeft');
-const rightPanel = (page: Page) => page.locator('.MuiDrawer-anchorRight');
+// The drawer root is always laid out; the paper is what becomes hidden when the panel is closed.
+const leftPanel = (page: Page) => page.locator('.MuiDrawer-docked.MuiDrawer-anchorLeft > .MuiDrawer-paper');
+const rightPanel = (page: Page) => page.locator('.MuiDrawer-docked.MuiDrawer-anchorRight > .MuiDrawer-paper');
 
 async function openPreview(page: Page) {
 	await page.goto(`/studio/preview#/?page=${encodeURIComponent(previewPage)}&site=${project}`);
@@ -36,7 +37,7 @@ async function openItemMenuOption(page: Page, name: string) {
 	await settle(page);
 }
 
-/** Scans a tools panel as it opens and then every page its top level buttons lead to. */
+/** Scans a tools panel as it opens and then every page or dialog its top level buttons lead to. */
 async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y>[1], panel: Locator, name: string) {
 	await expect(panel).toBeVisible();
 	await settle(page);
@@ -50,13 +51,19 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 		await panel.locator('.MuiListItemButton-root', { hasText: label }).first().click();
 		await settle(page);
 		await checkA11y(page, testInfo, `${name} > ${label}`, 'preview');
+		const dialog = page.getByRole('dialog');
+		if (await dialog.count()) {
+			await page.keyboard.press('Escape');
+			await expect(dialog).toHaveCount(0);
+			continue;
+		}
 		const back = panel.getByRole('button', { name: 'Back' });
 		if (await back.count()) await back.first().click();
 	}
 }
 
 test.describe('Login', () => {
-	test.use({ storageState: { cookies: [], origins: [] } });
+	test.use({ authenticated: false });
 	test('login', async ({ page }, testInfo) => {
 		await page.goto('/studio/login');
 		await expect(page.locator('input[name="username"]')).toBeVisible();

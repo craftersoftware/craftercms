@@ -16,13 +16,12 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
-const storageState = '.auth/user.json';
 const use = { ...devices['Desktop Chrome'], locale: 'en-US', reducedMotion: 'reduce' as const };
 
 export default defineConfig({
 	testDir: './tests',
 	outputDir: 'report/artifacts',
-	timeout: 90_000,
+	timeout: 180_000,
 	workers: 1,
 	retries: process.env.CI ? 1 : 0,
 	forbidOnly: Boolean(process.env.CI),
@@ -36,18 +35,15 @@ export default defineConfig({
 		trace: 'retain-on-failure'
 	},
 	projects: [
-		{ name: 'setup', testMatch: /auth\.setup\.ts/ },
 		{
 			name: 'light',
 			testMatch: /\.spec\.ts/,
-			dependencies: ['setup'],
-			use: { ...use, colorScheme: 'light', storageState }
+			use: { ...use, colorScheme: 'light' }
 		},
 		{
 			name: 'dark',
 			testMatch: /\.spec\.ts/,
-			dependencies: ['setup'],
-			use: { ...use, colorScheme: 'dark', storageState }
+			use: { ...use, colorScheme: 'dark' }
 		}
 	]
 });

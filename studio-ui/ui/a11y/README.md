@@ -4,6 +4,10 @@ Playwright + `@axe-core/playwright` suite that visits the main Studio screens in
 serious or critical violations of the WCAG 2.0/2.1 A and AA rule tags (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`).
 It is isolated from the Studio build: nothing here is part of the app bundle.
 
+> **Scope:** the rule tags are WCAG 2.0 and 2.1 A and AA only. A green run is **not** evidence of WCAG 2.2
+> conformance (2.2 adds success criteria, and axe's `wcag22aa` tag is not enabled). Move to the 2.2 tags once this 2.1
+> gate is stable.
+
 Screens: login, global app (projects, users), create project dialog, dashboard, site tools, search, preview, preview
 tools panel (every top level page), preview edit mode tools panel (every top level page), edit form and publish
 dialog. Each runs once for the `light` and once for the `dark` Playwright project (`prefers-color-scheme`).
@@ -33,7 +37,8 @@ yarn workspace @craftercms/studio-a11y report     # opens the HTML report
 ## CI
 
 Same command, headless, with `CI=1` (enables one retry and forbids `test.only`). A non-zero exit code means at least
-one screen has a blocking violation. Publish `ui/a11y/report/` as the build artifact.
+one screen has a blocking violation. Publish `ui/a11y/report/` as the build artifact. No workflow runs the suite yet;
+wiring it into CI is a follow-up once the baseline is green.
 
 ```bash
 CI=1 STUDIO_URL=https://studio.example.com yarn test:a11y

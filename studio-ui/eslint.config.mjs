@@ -24,79 +24,81 @@ import { FlatCompat } from '@eslint/eslintrc';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({
-	baseDirectory: __dirname,
-	recommendedConfig: js.configs.recommended,
-	allConfig: js.configs.all
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all
 });
 
-export default [
-	{
-		ignores: [
-			'.git',
-			'**/*.ignore.*',
-			'**/build',
-			'**/node_modules',
-			'**/target',
-			'ui/models',
-			'ui/utils',
-			'ui/services',
-			'scripts/*',
-			'ui/a11y',
-			'ui/app/public/*',
-			'ui/app/build',
-			'ui/app/build_tsc',
-			'ui/guest/build',
-			'ui/guest/build_tsc',
-			'static-assets/libs/ace/*',
-			'static-assets/components/cstudio-common/amplify-core.js',
-			'static-assets/libs/*',
-			'static-assets/js/*',
-			'static-assets/modules/*',
-			'static-assets/scripts/craftercms-guest.umd.js',
-			'static-assets/scripts/craftercms-xb.umd.js',
-			'static-assets/scripts/preview-landing.umd.js',
-			'static-assets/yui/*',
-			'ui/scss/scripts/*',
-			'ui/uppy/types/*',
-			'ui/uppy/lib/*',
-			'ui/uppy/lib/**',
-			'**/*.js',
-			'**/*.mjs',
-			'**/*.d.ts'
-		]
-	},
-	...compat.extends('plugin:prettier/recommended').map((config) => ({
-		...config,
-		files: ['**/*.ts', '**/*.tsx']
-	})),
-	{
-		files: ['**/*.ts', '**/*.tsx'],
-		plugins: {
-			prettier
-		},
-		languageOptions: {
-			globals: {
-				...globals.browser
-			},
-			ecmaVersion: 2015,
-			sourceType: 'script'
-		},
-		rules: {
-			'prettier/prettier': ['error'],
-			'spaced-comment': [
-				'error',
-				'always',
-				{
-					line: {
-						markers: ['/', '#']
-					},
-					block: {
-						markers: ['!', '*', '#', 'function', 'const', 'if', 'export', 'interface', '#__PURE__', '@__PURE__'],
-						exceptions: ['!', '*', '#'],
-						balanced: false
-					}
-				}
-			]
-		}
-	}
-];
+export default [{
+  ignores: [
+    '.git',
+    '**/*.ignore.*',
+    '**/build',
+    '**/node_modules',
+    '**/target',
+    'ui/models',
+    'ui/utils',
+    'ui/services',
+    'scripts/*',
+    'ui/app/public/*',
+    'ui/app/build',
+    'ui/app/build_tsc',
+    'ui/guest/build',
+    'ui/guest/build_tsc',
+    'static-assets/libs/ace/*',
+    'static-assets/components/cstudio-common/amplify-core.js',
+    'static-assets/libs/*',
+    'static-assets/js/*',
+    'static-assets/modules/*',
+    'static-assets/scripts/craftercms-guest.umd.js',
+    'static-assets/scripts/craftercms-xb.umd.js',
+    'static-assets/scripts/preview-landing.umd.js',
+    'static-assets/yui/*',
+    'ui/scss/scripts/*',
+    'ui/uppy/types/*',
+    'ui/uppy/lib/*',
+    'ui/uppy/lib/**',
+    '**/*.js',
+    '**/*.mjs',
+    '**/*.d.ts'
+  ]
+}, ...compat.extends('plugin:prettier/recommended').map((config) => ({
+  ...config,
+  files: ['**/*.ts', '**/*.tsx']
+})), {
+  files: ['**/*.ts', '**/*.tsx'],
+  plugins: {
+    prettier
+  },
+  languageOptions: {
+    globals: {
+      ...globals.browser
+    },
+    ecmaVersion: 2015,
+    sourceType: 'script'
+  },
+  rules: {
+    'prettier/prettier': ['error'],
+    'spaced-comment': ['error', 'always', {
+      line: {
+        markers: ['/', '#']
+      },
+      block: {
+        markers: [
+          '!',
+          '*',
+          '#',
+          'function',
+          'const',
+          'if',
+          'export',
+          'interface',
+          '#__PURE__',
+          '@__PURE__'
+        ],
+        exceptions: ['!', '*', '#'],
+        balanced: false
+      }
+    }]
+  }
+}];
