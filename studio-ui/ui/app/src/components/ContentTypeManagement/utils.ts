@@ -636,7 +636,9 @@ export const createStableFormContextProps = (
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
-		formControllerState: null
+		formControllerState: null,
+		// The virtual form has no content item. It also leaves `dataSourceServices` unset, so each control builds its own.
+		getItem: () => null
 	};
 	if (createRootTypeSections) {
 		Object.assign(

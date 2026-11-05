@@ -29,6 +29,7 @@ import type { AffectedPluginControlField } from './controlPluginLoader';
 import type { FormControllerState } from '../formControllers/types';
 import type { FormVisibilityState } from './formVisibility';
 import type { FormLockReleaseSession } from './unlockOnClose';
+import type { DataSourceServices } from '../dataSources/types';
 
 export type FormsEngineSourceMap = LookupTable<string>;
 export type { AffectedPluginControlField };
@@ -234,6 +235,20 @@ export interface StableFormContextProps {
 	 * Repeat entries may hold only a deny-list (`irrelevantFieldPaths`) and no controller.
 	 */
 	formControllerState: FormControllerState | null;
+	/**
+	 * Reads the form's current content item (the live Redux item, so it follows renames and moves) at call time,
+	 * without subscribing to it. Callbacks and effect bodies that only need the item when they run use this, so an item
+	 * update doesn't re-render them. Returns null when the form has no item (create mode) or none is stored yet.
+	 * `FormsEngine` publishes the real reader from a layout effect (see `useFormEntryProvisioning`); until then it
+	 * returns null.
+	 */
+	getItem(): ContentItem | null;
+	/**
+	 * Services that bridge data-source dialogs and `pushForm` into promises. Created once per form by `FormsEngine`
+	 * (`useFormEntryProvisioning`) rather than once per field. Optional: a form context that doesn't provide them, such
+	 * as the Type Builder's virtual form, makes each `ResolvedControlRenderer` build its own as a fallback.
+	 */
+	dataSourceServices?: DataSourceServices;
 }
 
 export const FormsEngineDialogContext = /*#__PURE__*/ createContext<FormsEngineDialogContextProps | undefined>(
@@ -253,8 +268,14 @@ export type ReadyFormContext = StableFormContextProps & { atoms: FormsEngineAtom
 export const StableFormContext = /*#__PURE__*/ createContext<ReadyFormContext>(undefined);
 StableFormContext.displayName = 'StableFormContext';
 
-export const ItemContext = /*#__PURE__*/ createContext<ContentItem>(undefined);
-ItemContext.displayName = 'ItemContext';
+/**
+ * The store key (`itemsByPath` key) of the form's content item, or null when the form has no item (create mode). It
+ * changes only when the form moves to another path (e.g. a saved rename), never when the item's content changes, so
+ * providing it doesn't re-render consumers on item updates. Read the item with the `useFormItem*` hooks
+ * (lib/formItem.ts) where it is rendered, or with `StableFormContext.getItem()` in callbacks.
+ */
+export const FormItemKeyContext = /*#__PURE__*/ createContext<string | null>(null);
+FormItemKeyContext.displayName = 'FormItemKeyContext';
 
 export const ItemMetaContext = /*#__PURE__*/ createContext<FormsEngineItemMetaContextProps>(undefined);
 ItemMetaContext.displayName = 'ItemMetaContext';
@@ -289,8 +310,6 @@ export function useFieldValue<T = unknown>(fieldId: string): [T | undefined, (va
 	const [value, setValue] = useAtom(fieldAtom ?? (missingFieldAtom as PrimitiveAtom<T>));
 	return [fieldAtom ? value : undefined, fieldAtom ? setValue : noop, Boolean(fieldAtom)];
 }
-
-export const useItemContext = /*#__PURE__*/ createUseContextHook('useItemContext', ItemContext);
 
 export const useItemMetaContext = /*#__PURE__*/ createUseContextHook('useItemMetaContext', ItemMetaContext);
 

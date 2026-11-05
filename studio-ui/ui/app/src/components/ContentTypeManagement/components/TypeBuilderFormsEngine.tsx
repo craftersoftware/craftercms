@@ -18,7 +18,6 @@ import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
 	FormsEngineFormApiContextProps,
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	StableFormContext,
 	StableFormContextProps,
@@ -217,11 +216,9 @@ export function TypeBuilderFormsEngine(props: FieldFormViewProps) {
 			<StableGlobalContext.Provider value={fooStableGlobalContext}>
 				<FormsEngineFormContextApi.Provider value={formApiContext}>
 					<StableFormContext.Provider value={stableFormContext}>
-						<ItemContext.Provider value={null}>
-							<ItemMetaContext.Provider value={itemMetaContext}>
-								{createElement(FieldFormViewBody, props)}
-							</ItemMetaContext.Provider>
-						</ItemContext.Provider>
+						<ItemMetaContext.Provider value={itemMetaContext}>
+							{createElement(FieldFormViewBody, props)}
+						</ItemMetaContext.Provider>
 					</StableFormContext.Provider>
 				</FormsEngineFormContextApi.Provider>
 			</StableGlobalContext.Provider>
