@@ -59,7 +59,12 @@ import { LoadingState } from '../LoadingState';
 import { svgIconClasses, typographyClasses } from '@mui/material';
 import Box from '@mui/material/Box';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
-import { cancelTreeItemKey, isOwnTreeItemEvent, isTreeContextMenuKey } from '../../utils/treeKeyboard';
+import {
+	cancelTreeItemKey,
+	isOwnTreeItemEvent,
+	yieldKeyToNestedControl,
+	isTreeContextMenuKey
+} from '../../utils/treeKeyboard';
 
 const rootPrefix = '{root}_';
 
@@ -231,7 +236,6 @@ interface TreeItemCustomInterface {
 	isRootChild?: boolean;
 	keyword?: string;
 	level?: number;
-	selectedId?: string;
 
 	handleScroll?(node: RenderTree): void;
 
@@ -241,17 +245,7 @@ interface TreeItemCustomInterface {
 }
 
 function TreeItemCustom(props: TreeItemCustomInterface) {
-	const {
-		nodeLookup,
-		node,
-		handleScroll,
-		handleClick,
-		handleOptions,
-		isRootChild,
-		keyword,
-		level = 1,
-		selectedId
-	} = props;
+	const { nodeLookup, node, handleScroll, handleClick, handleOptions, isRootChild, keyword, level = 1 } = props;
 	const [over, setOver] = useState(false);
 	const labelId = useId();
 	const { formatMessage } = useIntl();
@@ -318,7 +312,6 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 			key={node.id}
 			itemId={node.id}
 			aria-level={level}
-			aria-selected={node.id === selectedId}
 			aria-labelledby={labelId}
 			onMouseOver={(e) => setOverState(e, true)}
 			onMouseOut={(e) => setOverState(e, false)}
@@ -335,7 +328,7 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 				handleScroll?.(node);
 			}}
 			onKeyDown={(event) => {
-				if (!isOwnTreeItemEvent(event)) {
+				if (!isOwnTreeItemEvent(event) || yieldKeyToNestedControl(event)) {
 					return;
 				}
 				// Page and component nodes drill in from the chevron. Enter does the same.
@@ -917,7 +910,6 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 										node={nodeLookup[String(childNodeId)]}
 										nodeLookup={nodeLookup}
 										keyword={keyword}
-										selectedId={selected}
 										level={1}
 										isRootChild={node.type === 'root'}
 										handleScroll={handleScroll}
@@ -947,7 +939,6 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 							node={node}
 							keyword={keyword}
 							nodeLookup={nodeLookup}
-							selectedId={selected}
 							level={1}
 							handleScroll={handleScroll}
 							handleClick={handleClick}
