@@ -35,6 +35,7 @@ import ErrorState from '../ErrorState/ErrorState';
 import { useSelection } from '../../hooks/useSelection';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
+import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
 
@@ -137,18 +138,18 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 								variant="body2"
 								role="alert"
 								sx={(theme) => ({
-									backgroundColor: theme.palette.error.main,
-									color: theme.palette.error.contrastText,
+									backgroundColor: palette.red.tint,
+									color: palette.white,
 									marginBottom: theme.spacing(2),
 									padding: theme.spacing(1),
 									borderRadius: theme.spacing(1),
-									border: `1px solid ${theme.palette.error.dark}`,
+									border: `1px solid ${palette.red.main}`,
 									display: 'flex',
 									placeContent: 'center',
 									lineHeight: 1.7,
 									'& .MuiSvgIcon-root': {
 										marginRight: theme.spacing(0.5),
-										color: 'inherit'
+										color: palette.white
 									}
 								})}
 							>
