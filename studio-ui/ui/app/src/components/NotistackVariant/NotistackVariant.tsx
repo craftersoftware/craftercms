@@ -19,6 +19,7 @@ import { createPortal } from 'react-dom';
 import Alert, { AlertProps } from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 import visuallyHidden from '@mui/utils/visuallyHidden';
 import { CustomContentProps, MaterialDesignContent, SnackbarContent } from 'notistack';
 
@@ -36,6 +37,16 @@ declare module 'notistack' {
 		success: AdditionalVariantProps;
 		info: AdditionalVariantProps;
 	}
+}
+
+/**
+ * A toast paints its own surface (#313131 for notistack's default content), so the theme focus ring would
+ * sit on it: 2.47:1 for the light ring. MUI gives children of filled Alerts, AppBars and Snackbars a paper
+ * halo through this variable; the toast hosts set it themselves. See styles/focusRing.ts.
+ */
+function useToastFocusHalo(): Record<string, string> {
+	const theme = useTheme();
+	return theme.focusVisible ? { '--_focusVisible-shadow': `0 0 0 4px ${theme.palette.background.paper}` } : undefined;
 }
 
 const StatusRegionContext = createContext<HTMLElement | null>(null);
@@ -75,14 +86,15 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 		// Errors and warnings interrupt. Success and info are announced through the status region, without a live role
 		// of their own. Without a region (e.g. a host that does not mount one) every toast keeps the Alert's default.
 		const isStatus = hasStatusRegion && variant !== 'error' && variant !== 'warning';
+		const halo = useToastFocusHalo();
 		return (
-			<SnackbarContent ref={ref}>
+			<SnackbarContent ref={ref} style={halo as React.CSSProperties}>
 				<Alert
 					role={isStatus ? 'none' : 'alert'}
 					action={typeof props.action === 'function' ? props.action(id) : props.action}
 					severity={variant}
 					variant={alertVariant}
-					sx={{ width: '100%', flexWrap: 'wrap', ...alertSx }}
+					sx={{ width: '100%', flexWrap: 'wrap', ...halo, ...(alertSx as object) }}
 				>
 					{alertTitle && <AlertTitle children={alertTitle} />}
 					{props.message}
@@ -100,6 +112,7 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomContentProps>(
 	function DefaultStatusSnackbar(props, ref) {
 		const hasStatusRegion = useContext(StatusRegionContext) !== null;
+		const halo = useToastFocusHalo();
 		const setRef = useCallback(
 			(node: HTMLDivElement | null) => {
 				if (hasStatusRegion) node?.removeAttribute('role');
@@ -110,7 +123,7 @@ export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomCont
 		);
 		return (
 			<>
-				<MaterialDesignContent ref={setRef} {...props} />
+				<MaterialDesignContent ref={setRef} {...props} style={{ ...halo, ...props.style }} />
 				{hasStatusRegion && <StatusMessage message={props.message} />}
 			</>
 		);
