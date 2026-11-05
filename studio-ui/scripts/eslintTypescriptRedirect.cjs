@@ -16,8 +16,15 @@
 
 // typescript-eslint needs the TypeScript JS API, which TypeScript 7 (the native compiler) doesn't provide and
 // typescript-eslint rejects (peer range >=4.8.4 <6.1.0). Until it supports TS 7, route the `typescript` requires made
-// by typescript-eslint and ts-api-utils to the TypeScript 5 copy installed as `typescript-eslint-compat`. Remove this
-// file, the `typescript-eslint-compat` devDependency and the imports in the eslint configs once it's no longer needed.
+// by typescript-eslint and ts-api-utils to the TypeScript 5 copy installed as `typescript-eslint-compat`.
+//
+// Upstream tracking issue: https://github.com/typescript-eslint/typescript-eslint/issues/10940
+// Proper fix: craftersoftware/craftercms-e#1441
+//
+// Remove once typescript-eslint supports TS 7, all together:
+// - this file
+// - the `typescript-eslint-compat` devDependency in studio-ui/package.json
+// - the `eslintTypescriptRedirect.cjs` imports in ui/app/eslint.config.mjs and ui/guest/eslint.config.mjs
 const Module = require('node:module');
 
 const compatTypescript = require.resolve('typescript-eslint-compat/package.json').replace(/package\.json$/, '');
