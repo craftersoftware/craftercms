@@ -31,6 +31,7 @@ export interface ZoneAddress {
  * staleness clock checked on every call, or an origin-vs-neighbour guess.
  */
 const FOCUS_FALLBACK_MS = 1500;
+const SETTLE_MS = 150;
 
 interface PendingZoneFocus {
 	token: number;
@@ -39,10 +40,15 @@ interface PendingZoneFocus {
 	afterRegistryChange: boolean;
 	originEl: HTMLElement | null;
 	sawRegistryChange: boolean;
+	/** The registry has been quiet for SETTLE_MS since its last change. */
+	settled: boolean;
+	/** The origin item is being removed, so there is no moved item to wait for. */
+	removal: boolean;
 }
 
 let pending: PendingZoneFocus | null = null;
 let fallbackTimer: number | undefined;
+let settleTimer: number | undefined;
 let nextToken = 0;
 let openedFromKeyboard = false;
 
@@ -50,6 +56,10 @@ function clearTimer() {
 	if (fallbackTimer !== undefined) {
 		window.clearTimeout(fallbackTimer);
 		fallbackTimer = undefined;
+	}
+	if (settleTimer !== undefined) {
+		window.clearTimeout(settleTimer);
+		settleTimer = undefined;
 	}
 }
 
@@ -129,7 +139,12 @@ function findTargetButton(): HTMLElement | null {
 		if (targetIndex != null && own.getAttribute('data-craftercms-index') === targetIndex) {
 			return own;
 		}
-		return null;
+		// Some re-renders keep this button's ice id for its old address and give the moved item a new
+		// one (the neighbour now owns the old address). Once the registry has been quiet, the button
+		// at the target address is the final one.
+		if (!pending.settled) {
+			return null;
+		}
 	}
 	// The origin button is gone (the item was removed). Match the replacement by address
 	// once the registry contains it.
@@ -145,8 +160,31 @@ function findTargetButton(): HTMLElement | null {
 	return null;
 }
 
+function focusIsAlreadyOnMovedItem(): boolean {
+	const active = document.activeElement;
+	if (!(active instanceof HTMLElement) || !active.hasAttribute('data-craftercms-zone-button') || !pending) {
+		return false;
+	}
+	if (pending.iceId != null && active.getAttribute('data-craftercms-zone-button') === String(pending.iceId)) {
+		return true;
+	}
+	const target = itemAddresses()[0];
+	return (
+		target != null &&
+		active.getAttribute('data-craftercms-model-id') === target.modelId &&
+		active.getAttribute('data-craftercms-field-id') === target.fieldId &&
+		active.getAttribute('data-craftercms-index') === target.index
+	);
+}
+
 function focusFallback() {
 	if (!pending || userMovedOn()) {
+		clearPending();
+		return;
+	}
+	// A move that never repaints still leaves focus on the moved item's zone button. Do not
+	// send that focus to the parent zone when the timeout expires.
+	if (focusIsAlreadyOnMovedItem()) {
 		clearPending();
 		return;
 	}
@@ -214,7 +252,9 @@ export function requestZoneFocus(target: {
 		addresses,
 		afterRegistryChange: Boolean(target.afterRegistryChange),
 		originEl,
-		sawRegistryChange: false
+		sawRegistryChange: false,
+		settled: false,
+		removal: target.focusCurrent === false
 	};
 	armFallback(token);
 	if (pending.afterRegistryChange && target.focusCurrent !== false && originEl) {
@@ -266,6 +306,18 @@ export function notifyZoneRegistryChange() {
 		return;
 	}
 	pending.sawRegistryChange = true;
+	const token = pending.token;
+	window.clearTimeout(settleTimer);
+	settleTimer = window.setTimeout(() => {
+		settleTimer = undefined;
+		if (pending?.token === token) {
+			pending.settled = true;
+			// A removed item with no neighbour left (the only item) has no address to wait for.
+			if (!tryFocusPendingZone() && pending?.removal) {
+				focusFallback();
+			}
+		}
+	}, SETTLE_MS);
 }
 
 /** Same index, then the previous item, then the next. Used after the current item is removed. */
