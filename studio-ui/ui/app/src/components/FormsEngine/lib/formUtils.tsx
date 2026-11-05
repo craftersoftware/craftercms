@@ -21,6 +21,7 @@ import validateFieldValue, { FieldValidityState } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
+	FieldUpdate,
 	FormRequirementsResponse,
 	FormsEngineAtoms,
 	FormsEngineEditContextProps,
@@ -372,7 +373,7 @@ function createTrackedFileNameAtom(
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
 			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(XmlKeys.fileName);
+			formContext.fieldUpdates$.next({ fieldId: XmlKeys.fileName });
 		}
 	);
 }
@@ -403,7 +404,7 @@ export function createFieldAtoms(
 				return;
 			}
 			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(field.id);
+			formContext.fieldUpdates$.next({ fieldId: field.id });
 		}
 	);
 	const validationAtom = atom(async (get, { signal }) => {
@@ -521,7 +522,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 		atoms: null,
 		itemFormMode: null,
 		changedFieldIds: new Set<string>(),
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		itemMeta: null,
 		originalValues: null,
 		props: null,

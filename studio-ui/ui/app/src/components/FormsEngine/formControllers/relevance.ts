@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { EMPTY } from 'rxjs';
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import { XmlKeys } from '../lib/formConsts';
@@ -96,7 +97,8 @@ export function createRelevanceContext({
 		onFieldChange() {
 			warn();
 			return () => undefined;
-		}
+		},
+		fieldChanges: EMPTY
 	});
 }
 

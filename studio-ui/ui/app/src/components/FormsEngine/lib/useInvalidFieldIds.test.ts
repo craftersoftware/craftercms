@@ -15,6 +15,7 @@
  */
 
 import assert from 'node:assert/strict';
+import type { FieldUpdate } from './formsEngineContext.ts';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
@@ -25,7 +26,7 @@ describe('invalid field updates', () => {
 	// The form used to debounce this read by 300ms. Without it, every keystroke re-checks every field.
 	it('reads once after typing pauses, not on every keystroke', () => {
 		const scheduler = new VirtualTimeScheduler();
-		const updates = new Subject<string>();
+		const updates = new Subject<FieldUpdate>();
 		const reads: number[] = [];
 		const subscription = watchInvalidFieldUpdates(
 			updates,
@@ -33,8 +34,8 @@ describe('invalid field updates', () => {
 			invalidFieldReadDebounceMs,
 			scheduler
 		);
-		updates.next('title_s');
-		updates.next('title_s');
+		updates.next({ fieldId: 'title_s' });
+		updates.next({ fieldId: 'title_s' });
 		scheduler.maxFrames = invalidFieldReadDebounceMs - 1;
 		scheduler.flush();
 		assert.deepEqual(reads, []);

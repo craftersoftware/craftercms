@@ -66,6 +66,7 @@ import dataSourceDescriptors from '../descriptors/dataSources';
 import type { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import TypeDetailsView, { TypeDetailsViewProps } from './TypeDetailsView';
 import {
+	FieldUpdate,
 	FormsEngineAtoms,
 	FormsEngineFormApiContextProps,
 	StableFormContextProps
@@ -153,7 +154,7 @@ export interface EditTypeAppProps {
 // - When a field is added/removed...
 
 interface EditAppContextProps {
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;
 	selectedField: ContentTypeField;
@@ -1199,7 +1200,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 function createContextObject(): EditAppContextProps {
 	return {
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		formContextApi: createFieldFormContextApi(),
 		activeFormContext: null,
 		selectedField: null,

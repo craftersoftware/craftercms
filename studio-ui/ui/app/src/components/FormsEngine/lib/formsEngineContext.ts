@@ -148,6 +148,14 @@ export interface StableGlobalContextProps {
 	lockReleaseSession: FormLockReleaseSession<StableFormContextProps>;
 }
 
+/**
+ * Payload of `fieldUpdates$`: which field's value was just written. Carries the id only, so the
+ * event can grow later without breaking subscribers. Read the value from the field's atom.
+ */
+export interface FieldUpdate {
+	readonly fieldId: string;
+}
+
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).
 export interface StableFormContextProps {
 	/**
@@ -163,7 +171,7 @@ export interface StableFormContextProps {
 	 */
 	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
 	changedFieldIds: Set<string>;
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;
 	props: FormsEngineProps;

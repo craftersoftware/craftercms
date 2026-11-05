@@ -30,6 +30,7 @@ import type LookupTable from '../../models/LookupTable';
 import type { ContentType, SerializeToXmlContentTypeStructure } from '../../models/ContentType';
 import { createLookupTable, noOp, pluckProps } from '../../utils/object';
 import {
+	FieldUpdate,
 	FormsEngineFormApiContextProps,
 	FormsEngineItemMetaContextProps,
 	StableFormContextProps,
@@ -560,7 +561,7 @@ export function createVirtualTypeFormContext(
 	context.atoms.validationByFieldId = {};
 	context.changedFieldIds = new Set();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
+	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);

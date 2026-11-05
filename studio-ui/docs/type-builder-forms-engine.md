@@ -57,10 +57,10 @@ Typical type folder contents:
 
 Last commit that still had the files: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) —
 
-| Module       | Historical entry                                                                 |
-| ------------ | -------------------------------------------------------------------------------- |
+| Module       | Historical entry                                                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Type Builder | [`cstudio-admin/mods/content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) |
-| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) |
+| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js)             |
 
 ### Next (React / `ui/app`)
 
@@ -486,6 +486,7 @@ export default {
  *   getValue / getValues / setValue  (dotted paths into repeats)
  *   getField(fieldId)
  *   onFieldChange(listener) → unsubscribe
+ *   fieldChanges — read-only stream of { fieldId, value }
  *   notify(message, severity?)
  *   siteId, contentType, path, mode ('create' | 'edit'), isEmbedded, readonly
  *
@@ -577,15 +578,46 @@ Why Blob instead of pointing `<script>` / `import()` at the API URL: that endpoi
 
 Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` or the full Jotai store:
 
-| Surface                                                           | Purpose                                                                                                                                                                         |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, `readonly` | Identity. `mode` is `'create' \| 'edit'`; `isEmbedded` is a separate axis. `path` and `readonly` are live getters.                                                              |
-| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)`  | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`)                                                                                                   |
-| `getField(fieldId)`                                               | Field metadata; dotted paths skip numeric (repeat index) segments                                                                                                               |
-| `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Fires on the value write, whether or not the field is rendered or its validation atom is read. Host also drops listeners on teardown. |
-| `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                                                                                          |
+| Surface                                                           | Purpose                                                                                                                                                                                   |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `siteId`, `contentType`, `path`, `mode`, `isEmbedded`, `readonly` | Identity. `mode` is `'create' \| 'edit'`; `isEmbedded` is a separate axis. `path` and `readonly` are live getters.                                                                        |
+| `getValues()` / `getValue(fieldId)` / `setValue(fieldId, value)`  | Read/write field atoms; dotted paths into repeats (e.g. `myRepeat.0.title_s`)                                                                                                             |
+| `getField(fieldId)`                                               | Field metadata; dotted paths skip numeric (repeat index) segments                                                                                                                         |
+| `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Fires on the value write, whether or not the field is rendered or its validation atom is read. Host also drops listeners on teardown.           |
+| `fieldChanges`                                                    | Read-only stream of `{ fieldId, value }` for the same writes `onFieldChange` reports, in the order they happen. Pipe it with the `craftercms.libs.rxjs` operators. Completes on teardown. |
+| `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                                                                                                    |
 
 `getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `onFieldChange` emits that root id. `getValues()` uses the same `file-name` atom as `getValue('file-name')`. `setValue('file-name', …)` writes both that dedicated atom and the `file-name` value atom. The XML `file-name` element and the item path can disagree at load (legacy or migrated content, a rename done outside the form, a missing element). The path wins: on edit the `file-name` value atom starts from the path-derived name, which is what the form shows and validates. Save leaves `file-name` out of the XML it builds, so a differing XML element is omitted on the next save, and the backend writes it again only on a copy collision. `originalValues['file-name']` holds the same path-derived name, so `rollback()` of an untouched form is not a rename. A change made from `onBeforeSave` is honoured by the save path: rename detection and path construction read the filename atom after the hook returns.
+
+**`fieldChanges`.** `onFieldChange` is the simple form: one listener, one unsubscribe function. `fieldChanges` is the same event stream as a read-only RxJS observable, for controllers that want to debounce, filter or combine changes. The name has no `$` (plugin-facing API does not use it) and the host never hands out its internal subject: there is no `next`, `error` or `complete` to call, and each subscription is independent. Every event is a read-only `FormFieldChange { readonly fieldId: string; readonly value: unknown }`. `value` is read when the event is delivered, exactly as `onFieldChange` does, and a nested `setValue` reports the root field id. Unsubscribing stops delivery. Tearing the form down (stack pop, unmount, replacement attach, failed `initialize`) **completes** every subscriber, so a pipeline needs no cleanup of its own. A subscription made after teardown completes immediately and warns. The `isFieldRelevant` context has no live form, so there `fieldChanges` completes immediately and never emits. The addition is backward compatible, so `FORM_CONTROLLER_API_VERSION` stays `1`.
+
+```js
+const { debounceTime, filter, map, distinctUntilChanged } = craftercms.libs.rxjs;
+
+export default {
+	initialize(ctx) {
+		// Runs 400ms after the author stops typing in the title; ends by itself when the form closes.
+		ctx.fieldChanges
+			.pipe(
+				filter((change) => change.fieldId === 'title_s'),
+				debounceTime(400),
+				map((change) => String(change.value ?? '')),
+				distinctUntilChanged()
+			)
+			.subscribe((title) => ctx.setValue('internal-name', title));
+	}
+};
+```
+
+Internally the host emits on the form's `fieldUpdates$` subject, and the controller bridge turns each event into a `FormFieldChange`. That subject carries a `FieldUpdate` object, declared once in `lib/formsEngineContext.ts`:
+
+```ts
+export interface FieldUpdate {
+	readonly fieldId: string;
+}
+```
+
+It is internal (the Type Builder form uses the same type), not part of the controller API. It holds the id only, with no `value` or `previousValue`: subscribers read the current value from the field's atom. Carrying an object rather than a bare string lets the event grow later without changing every subscriber.
 
 Look up other content types via the `craftercms` global (`craftercms.getStore().getState().contentTypes.byId`), not the form context.
 
@@ -617,7 +649,7 @@ The owning form resolves top-level fields and one level of repeat subfields in a
 
 Caveats: `isFieldRelevant` cannot tell _which_ repeat item is being resolved (FE1 could not either, [Appendix A.4](#a4-fe1-form-controllers)). While a repeat item form is open, the parent's repeat atom still holds pre-commit values, so `getValue('myRepeat.0.title_s')` reads stale until the item is saved back.
 
-The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. Once disposed, the context refuses further host calls: `onFieldChange` returns a no-op unsubscribe without subscribing, and `setValue` and `notify` are ignored (all three warn), so a late `initialize` cannot reach the form that replaced it. A failed `initialize` disposes that context before the stack entry drops it, with the same teardown as a stack pop. The identity check stays, so the failure cannot clear a controller a replacement attach already installed. There is no cancellation signal for other async work the controller started itself (timers, fetches); controllers that keep working after `initialize`'s first `await` should still guard that work.
+The host registers the form's controller state before calling `initialize`, so listeners handed out through `onFieldChange` are torn down, and `fieldChanges` subscribers completed, immediately on stack pop, unmount, or a replacement attach — including while `initialize` is still pending. A cleanup returned by an `initialize` that resolves after disposal is invoked once and does not replace the newer state. Once disposed, the context refuses further host calls: `onFieldChange` returns a no-op unsubscribe without subscribing, a `fieldChanges` subscription completes immediately, and `setValue` and `notify` are ignored (all four warn), so a late `initialize` cannot reach the form that replaced it. A failed `initialize` disposes that context before the stack entry drops it, with the same teardown as a stack pop. The identity check stays, so the failure cannot clear a controller a replacement attach already installed. There is no cancellation signal for other async work the controller started itself (timers, fetches); controllers that keep working after `initialize`'s first `await` should still guard that work.
 
 #### Integration points in FE2
 
@@ -678,21 +710,21 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### Quick “where do I look?”
 
-| Question                          | Start here                                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
-| Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
-| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
-| New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
-| Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
-| Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
-| New TB catalog configuration      | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
-| Type XML out                      | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
-| Control property forms            | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
-| config.xml merge plan             | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
-| Plugin packaging / runtime        | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
-| Plugin / listing design           | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
+| Question                         | Start here                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Author form shell / save / stack | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
+| Form controller                  | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
+| Control rendering                | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
+| Legacy module protocol           | `cstudio-common/common-api.js` (`Module`)                                                             |
+| New FE DS interpretation         | `FormsEngine/dataSourceHooks/*`                                                                       |
+| Content XML in/out               | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
+| Type list / edit UI              | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
+| New TB catalog configuration     | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
+| Type XML out                     | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
+| Control property forms           | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
+| config.xml merge plan            | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
+| Plugin packaging / runtime       | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
+| Plugin / listing design          | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
 
 ---
 
@@ -849,6 +881,7 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-05** — Form controllers get a read-only `fieldChanges` observable of `{ fieldId, value }` next to `onFieldChange` (#9369). It is built through the same host bridge, so controllers never receive the subject and cannot push events. Disposing the controller context completes every subscriber, and the relevance context's `fieldChanges` completes immediately. `onFieldChange` behaves as before, and `FORM_CONTROLLER_API_VERSION` stays `1`. Internally `fieldUpdates$` now carries `FieldUpdate { fieldId }` objects instead of bare strings (declared once in `formsEngineContext.ts`, no `value` or `previousValue`).
 - **2026-11-04** — Editing the FE2 file name re-validates only the file-name field (#9327). `fileName` left the validator context and `ValidatorMetaData`. `fileNameValidator` validates the field's own value, and a validator that needs the name reads `getValue('file-name')`. On edit the `file-name` value starts from the item path, not the XML element, and the path wins when they disagree. `originalValues['file-name']` is seeded the same way, so rollback of an untouched page is not a rename. Embedded components skip `file-name` when validated, since they have none. In a repeat item, inline or opened, a `file-name` control is an ordinary field: it gets no item file-name rules, and only the constraints its content type declares apply. `useLoadableAtom` keeps the previous result while a field validates again.
 - **2026-11-04** — Restored the FE1/TB1 explanation removed with #9197 as Appendix A (catalog and plugin discovery, FE runtime, plugin transport, form controllers), with file/line permalinks pinned to `4a6b57d9`, plus an FE1 → FE2 parity map (A.5). §5.2, §5.3, §5.6, §5.8, §5.9 and the plugins companion now point to it. Fixed the stale `samples/site-config-tools.xml` path in the appendix (the real sample is `sample-site-config-tools.xml`) and corrected the plugin-control load description (plugin controls use dynamic `import()`, not `requireModule`).
 - **2026-11-03** — FE2 plugin hooks are isolated and the host state is read-only (#9306). A plugin `valueRetriever` that throws falls back to the raw value for its own field. A plugin `valueSerializer` that throws stops the save with an error naming the field and plugin. Hooks get frozen field definitions. The controls, data sources and form controller hosts are frozen, and registry reads return read-only entries. `registerPlugin` also refuses types owned by Type Builder controls, validates `fieldSx`, and keeps bindings registered with `registerDataSourceBindings`. The save gate uses the latest validation run. The plugin contract types are exported from `models`.

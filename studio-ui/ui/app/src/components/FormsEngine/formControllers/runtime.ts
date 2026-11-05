@@ -16,18 +16,19 @@
 
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
-import type { Subject } from 'rxjs';
+import { Observable, type Subject } from 'rxjs';
 import type { Dispatch as ReduxDispatch } from 'redux';
 import type { IntlShape } from 'react-intl';
 import type { JotaiStore } from '../types';
 import { XmlKeys } from '../lib/formConsts';
-import type { FormsEngineAtoms, StableFormContextProps } from '../lib/formsEngineContext';
+import type { FieldUpdate, FormsEngineAtoms, StableFormContextProps } from '../lib/formsEngineContext';
 import type { FormsEngineProps } from '../FormsEngine';
 import { loadFormController } from './loader';
 import {
 	createEmptyFormControllerState,
 	type FormController,
 	type FormControllerContext,
+	type FormFieldChange,
 	type FormControllerMode,
 	type FormControllerNotifySeverity,
 	type FormControllerState
@@ -69,9 +70,12 @@ export interface CreateFormControllerContextArgs {
 	getPath: () => string | null | undefined;
 	mode: FormControllerMode;
 	isEmbedded: boolean;
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	dispatch: ReduxDispatch;
-	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */
+	/**
+	 * Set that owns the teardown callbacks of this stack entry's `onFieldChange` listeners and `fieldChanges`
+	 * subscribers. Running one completes that subscriber.
+	 */
 	fieldChangeUnsubscribers: Set<() => void>;
 	/**
 	 * True once this context's form state was torn down or superseded. A pending `initialize` can
@@ -125,6 +129,26 @@ export function createFormControllerContext({
 			return undefined;
 		}
 	};
+
+	// The only door to `fieldUpdates$`. Subscribers get a fresh Observable, never the Subject, so
+	// controllers cannot push events. Disposal completes them through `fieldChangeUnsubscribers`.
+	const fieldChanges = new Observable<FormFieldChange>((subscriber) => {
+		if (isDisposed()) {
+			console.warn(disposedContextWarning);
+			subscriber.complete();
+			return;
+		}
+		const subscription = fieldUpdates$.subscribe((event) => {
+			if (isDisposed()) return;
+			subscriber.next(Object.freeze({ fieldId: event.fieldId, value: readValue(event.fieldId) }));
+		});
+		const complete = () => subscriber.complete();
+		fieldChangeUnsubscribers.add(complete);
+		return () => {
+			subscription.unsubscribe();
+			fieldChangeUnsubscribers.delete(complete);
+		};
+	});
 
 	return {
 		siteId,
@@ -197,17 +221,10 @@ export function createFormControllerContext({
 				console.warn(disposedContextWarning);
 				return () => undefined;
 			}
-			const subscription = fieldUpdates$.subscribe((fieldId) => {
-				if (isDisposed()) return;
-				listener(fieldId, readValue(fieldId));
-			});
-			const unsubscribe = () => {
-				subscription.unsubscribe();
-				fieldChangeUnsubscribers.delete(unsubscribe);
-			};
-			fieldChangeUnsubscribers.add(unsubscribe);
-			return unsubscribe;
+			const subscription = fieldChanges.subscribe(({ fieldId, value }) => listener(fieldId, value));
+			return () => subscription.unsubscribe();
 		},
+		fieldChanges,
 		notify(message, severity: FormControllerNotifySeverity = 'info') {
 			if (isDisposed()) {
 				console.warn(disposedContextWarning);

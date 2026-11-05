@@ -17,6 +17,7 @@
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type { MaybePromise } from '../../../models/MaybePromise';
+import type { Observable } from 'rxjs';
 
 /** Form open mode exposed to content-type-local form controllers. */
 export type FormControllerMode = 'create' | 'edit';
@@ -28,6 +29,15 @@ export type FormControllerNotifySeverity = 'info' | 'success' | 'warning' | 'err
  * `false` or `{ ok: false }` vetoes save. `{ ok: false, message }` also shows the message to the author.
  */
 export type FormControllerSaveResult = boolean | { ok: boolean; message?: string };
+
+/**
+ * One field value write, as delivered by `fieldChanges`. `value` is read when the event is
+ * delivered, the same way `onFieldChange` reads it. A nested `setValue` reports the root field id.
+ */
+export interface FormFieldChange {
+	readonly fieldId: string;
+	readonly value: unknown;
+}
 
 /**
  * Read-only snapshot passed to `isFieldRelevant`. It is the same for an open form and for a parent
@@ -94,6 +104,14 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
 	/**
+	 * Read-only stream of the same field writes `onFieldChange` reports. Subscribe or `pipe` it with the
+	 * operators in `craftercms.libs.rxjs`. It cannot be used to push events: it has no `next`, `error` or
+	 * `complete`. It completes when the form this context belongs to is torn down, and a subscription
+	 * made after teardown completes immediately (with a warning). Not available to `isFieldRelevant`:
+	 * its context has no live form, so there the stream completes immediately.
+	 */
+	readonly fieldChanges: Observable<FormFieldChange>;
+	/**
 	 * Shows a snackbar notification. Use for informational messages; veto messaging can also go on the `onBeforeSave` return.
 	 * Ignored (with a warning) once this context was torn down, including when `initialize` failed.
 	 */
@@ -153,7 +171,7 @@ export interface FormControllerState {
 	controller: FormController | null;
 	context: FormControllerContext | null;
 	cleanup: (() => void) | null;
-	/** Unsubscribers for `onFieldChange` listeners handed out by this entry's context. */
+	/** Teardown callbacks for `onFieldChange` listeners and `fieldChanges` subscribers of this entry's context. */
 	fieldChangeUnsubscribers: Set<() => void>;
 	fileMissing: boolean;
 	loadFailed: boolean;

@@ -34,6 +34,7 @@ export const FORM_CONTROLLER_JS_STUB = `/**
  *   - Nested repeat fields via dotted paths: getValue('myRepeat.0.title_s')
  *   - getField(fieldId) — top-level id or dotted path (numeric indexes skipped)
  *   - onFieldChange(listener) — listener(fieldId, value); returns unsubscribe
+ *   - fieldChanges — read-only stream of { fieldId, value }; pipe it with craftercms.libs.rxjs operators
  *   - notify(message, severity?) — snackbar
  *   - siteId, contentType, path, mode ('create' | 'edit'), isEmbedded, readonly
  *
