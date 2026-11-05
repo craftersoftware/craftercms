@@ -33,6 +33,7 @@ import {
 } from './formUtils';
 import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
+import { applyContentNameRules } from '../../../utils/content';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './controlHelpers';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
@@ -545,7 +546,7 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 }
 
 /**
- * File-name rules: required, then uniqueness.
+ * File-name rules: required, max length after {@link applyContentNameRules}, then uniqueness.
  * The name is {@link ValidatorMetaData.fileName}, the atom this control edits. The raw field value is not read.
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
  *
@@ -566,6 +567,20 @@ export async function fileNameValidator(_value: string, ctx: BuiltInValidatorCon
 		return { valid: false, messages: [defineMessage({ defaultMessage: 'This field is required.' })] };
 	}
 	if (blank) return { valid: true };
+
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const normalizedName = applyContentNameRules(currentValue);
+	if (nnou(maxLength) && normalizedName.length > maxLength) {
+		return {
+			valid: false,
+			messages: [
+				[
+					defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
+					{ maxLength }
+				]
+			]
+		};
+	}
 
 	const initialPath = meta.itemMeta.path ?? meta.itemMeta.pathInSite;
 	const isPage = isPagePath(withIndex(initialPath));

@@ -225,12 +225,15 @@ describe('fileNameValidator', () => {
 	// A page under the site, so its file name is the folder "about". The root index has no editable file name.
 	const aboutPath = '/site/website/about/index.xml';
 
-	function fileNameField(required = false): ContentTypeField {
+	function fileNameField(required = false, maxLength?: number): ContentTypeField {
+		const validations: ContentTypeField['validations'] = {};
+		if (required) validations.required = validation('required', true);
+		if (maxLength != null) validations.maxLength = validation('maxLength', maxLength);
 		return {
 			id: 'file-name',
 			name: 'File Name',
 			type: 'file-name',
-			validations: required ? { required: validation('required', true) } : {}
+			validations
 		};
 	}
 
@@ -335,6 +338,24 @@ describe('fileNameValidator', () => {
 		const validity = await store.get(atoms.validationByFieldId['file-name']);
 		assert.equal(validity.isValid, false);
 		assert.deepEqual(validity.messages.map(messageOf), [{ text: 'This field is required.' }]);
+	});
+
+	// Max length is measured on the name after applyContentNameRules. Special characters that strip away do not count.
+	it('rejects a name longer than maxLength after content-name normalization', async () => {
+		const limited = fileNameField(false, 5);
+		const tooLong = await validateFieldValue(limited, '', nameMeta(aboutPath, 'abcdef'));
+		assert.equal(tooLong.isValid, false);
+		assert.deepEqual(tooLong.messages.map(messageOf), [
+			{ text: 'The value is greater than the allowed maximum ({maxLength}).', values: { maxLength: 5 } }
+		]);
+
+		// Same path as the atom, so uniqueness is skipped.
+		const withinLimit = await validateFieldValue(limited, '', nameMeta(aboutPath, 'about'));
+		assert.equal(withinLimit.isValid, true);
+
+		// "ab!!!c" normalizes to "abc" (length 3). Omit siteId so uniqueness is not attempted.
+		const afterRules = await validateFieldValue(limited, '', { ...nameMeta(aboutPath, 'ab!!!c'), siteId: undefined });
+		assert.equal(afterRules.isValid, true);
 	});
 });
 
