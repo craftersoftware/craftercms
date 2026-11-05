@@ -31,8 +31,8 @@ import {
 	processAdditionalFieldMacro,
 	rootPagePath
 } from './formUtils';
-import { firstValueFrom, Observable } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { firstValueFrom, fromEvent, Observable } from 'rxjs';
+import { switchMap, takeUntil } from 'rxjs/operators';
 import { isPagePath, withIndex } from '../../../utils/path';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './dateExpressions';
@@ -556,34 +556,14 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 /** How long the file-name uniqueness check waits after the latest value before calling the server. */
 const fileNameExistenceDebounceMs = 300;
 
-/** Resolves after `ms`, or rejects with AbortError when `signal` aborts (including if already aborted). */
-function wait(ms: number, signal: AbortSignal): Promise<void> {
-	if (signal.aborted) {
-		return Promise.reject(new DOMException('Aborted', 'AbortError'));
-	}
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => {
-			signal.removeEventListener('abort', onAbort);
-			resolve();
-		}, ms);
-		const onAbort = () => {
-			clearTimeout(timer);
-			reject(new DOMException('Aborted', 'AbortError'));
-		};
-		signal.addEventListener('abort', onAbort);
-	});
-}
-
-/** Errors with AbortError when `signal` aborts, so an in-flight Observable unsubscribes. */
-function aborted$(signal: AbortSignal): Observable<never> {
+/** Emits once after `ms`, then completes. Uses live `setTimeout` so Node mock timers can drive it in tests. */
+function after(ms: number): Observable<void> {
 	return new Observable((subscriber) => {
-		if (signal.aborted) {
-			subscriber.error(new DOMException('Aborted', 'AbortError'));
-			return;
-		}
-		const onAbort = () => subscriber.error(new DOMException('Aborted', 'AbortError'));
-		signal.addEventListener('abort', onAbort);
-		return () => signal.removeEventListener('abort', onAbort);
+		const id = setTimeout(() => {
+			subscriber.next();
+			subscriber.complete();
+		}, ms);
+		return () => clearTimeout(id);
 	});
 }
 
@@ -618,18 +598,31 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 
 	if (initialPath === newPath || nou(siteId)) return { valid: true };
 
+	// Already superseded: fromEvent('abort') will not re-emit a past abort.
+	if (signal.aborted) {
+		return { valid: false, messages: [] };
+	}
+
 	try {
-		// Wait so rapid keystrokes only hit the server for the latest value. Abort cancels the wait.
-		await wait(fileNameExistenceDebounceMs, signal);
-		const exists = await firstValueFrom(checkPathExistence(siteId, newPath).pipe(takeUntil(aborted$(signal))));
+		// Debounce, then check existence. Abort completes the stream (takeUntil) so the wait and request cancel.
+		const exists = await firstValueFrom(
+			after(fileNameExistenceDebounceMs).pipe(
+				switchMap(() => checkPathExistence(siteId, newPath)),
+				takeUntil(fromEvent(signal, 'abort'))
+			),
+			{ defaultValue: undefined }
+		);
+		// Superseded run: the host discards this result. Match plugin AbortError handling (no user message).
+		if (signal.aborted) {
+			return { valid: false, messages: [] };
+		}
+		if (exists === undefined) {
+			return { valid: false };
+		}
 		return exists
 			? { valid: false, messages: [[defineMessage({ defaultMessage: 'An item with that name already exists.' })]] }
 			: { valid: true };
-	} catch (error) {
-		// Superseded run: the host discards this result. Match plugin AbortError handling (no user message).
-		if (signal.aborted || (error as Error | undefined)?.name === 'AbortError') {
-			return { valid: false, messages: [] };
-		}
+	} catch {
 		return { valid: false };
 	}
 }
