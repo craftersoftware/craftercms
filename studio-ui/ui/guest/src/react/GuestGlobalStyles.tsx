@@ -60,13 +60,11 @@ export interface GuestGlobalStylesProps {
 
 const overlayBackgroundColor = 'rgba(0, 0, 0, .4)';
 
-// White on the 40% scrim over a white page is 2.85:1. The chip is #1C1C1E (17.01:1 with white).
-// The white outline plus black ring stays visible on light and dark pages.
+// White text on the 40% scrim over a white page is 2.85:1; the chip itself is gray.dark7, so it is 17.01:1.
+// It is a hover label with a solid background, so it needs no outline, and it is not a focus indicator.
 const guestOverlayTextChip = {
-	color: '#FFFFFF',
-	backgroundColor: '#1C1C1E',
-	outline: '2px solid #FFFFFF',
-	boxShadow: '0 0 0 2px #000000',
+	color: palette.white,
+	backgroundColor: palette.gray.dark7,
 	width: 'auto',
 	height: 'auto',
 	right: 'auto',

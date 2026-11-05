@@ -24,6 +24,7 @@ import FieldIcon from '@craftercms/studio-ui/icons/ContentTypeField';
 import LockedStateIcon from '@craftercms/studio-ui/icons/Lock';
 import Person from '@craftercms/studio-ui/models/Person';
 import { darken, styled } from '@mui/material/styles';
+import palette from '@craftercms/studio-ui/styles/palette';
 import LookupTable from '@craftercms/studio-ui/src/models/LookupTable';
 import AllowedContentTypesData from '@craftercms/studio-ui/models/AllowedContentTypesData';
 import { ContentType, ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
@@ -77,9 +78,9 @@ function getStyles(sx: ZoneMarkerPartialSx): ZoneMarkerFullSx {
 			boxSizing: 'border-box',
 			outline: (theme) => `2px solid ${theme.palette.success.main}`,
 			outlineOffset: '-2px',
-			// Black/white inset rings stay visible when the page behind the zone is unknown.
-			// #000 on #fff is 21:1; #fff on #121212 is 18.73:1.
-			boxShadow: 'inset 0 0 0 1px #FFFFFF, inset 0 0 0 3px #000000',
+			// Zone highlight, not a focus indicator: black/white inset bands stay visible when the page
+			// behind the zone is unknown. #000 on #fff is 21:1; #fff on #121212 is 18.73:1.
+			boxShadow: `inset 0 0 0 1px ${palette.white}, inset 0 0 0 3px ${palette.black}`,
 			textAlign: 'center',
 			position: 'absolute',
 			zIndex: 'tooltip',
