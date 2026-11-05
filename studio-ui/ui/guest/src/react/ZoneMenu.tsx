@@ -97,7 +97,7 @@ function containerCountLimits(field?: ContentTypeField | null): { minCount?: num
 
 const zoneActionLabels = defineMessages({
 	edit: { id: 'words.edit', defaultMessage: 'Edit' },
-	unlock: { id: 'zoneMenu.unlock', defaultMessage: 'Unlock' },
+	unlock: { id: 'words.unlock', defaultMessage: 'Unlock' },
 	editTemplate: { id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' },
 	editController: { id: 'zoneMenu.editController', defaultMessage: 'Edit controller' },
 	addItem: { id: 'zoneMenu.addItem', defaultMessage: 'Add new item' },
@@ -364,11 +364,9 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		const source = moveSource();
 		requestZoneFocus({
 			iceId: record.iceIds[0],
-			address: {
-				modelId: source.modelId,
-				fieldId: source.fieldId,
-				index: shiftedCollectionIndex(source.index, delta)
-			},
+			addresses: [
+				{ modelId: source.modelId, fieldId: source.fieldId, index: shiftedCollectionIndex(source.index, delta) }
+			],
 			afterRegistryChange: true
 		});
 	};
@@ -600,6 +598,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		onTrash,
 		doTrash,
 		onCancel,
+		closeMenu,
 		isFirstItem,
 		isLastItem,
 		isMovable,
@@ -613,7 +612,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
 			const keyTarget = e.target instanceof Element ? e.target : null;
-			const inZoneChrome = Boolean(keyTarget?.closest('[data-craftercms-zone-menu],[data-craftercms-ice-control]'));
+			// Only this menu and this zone's own button. Other zones' buttons stay rendered while a menu is open, and
+			// their arrow keys must not reorder the selected item.
+			const inZoneChrome =
+				Boolean(keyTarget?.closest('[data-craftercms-zone-menu]')) ||
+				keyTarget?.getAttribute('data-craftercms-zone-button') === String(refs.current.iceId);
 			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
 			// A click can leave focus on the document while this menu is still open.
 			const looseFocus = e.target === document.body || e.target === document.documentElement || e.target === document;
@@ -629,7 +632,8 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				return;
 			}
 			if (e.key === 'Escape') {
-				requestZoneFocus({ iceId: refs.current.iceId });
+				e.preventDefault();
+				refs.current.onCancel();
 				return;
 			}
 			if (e.defaultPrevented || submenuOpen || keyTarget?.closest('input,textarea,select,[contenteditable]')) {
@@ -676,7 +680,8 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				refs.current.closeSubmenus();
 				return;
 			}
-			refs.current.onCancel();
+			// Mouse path: focus stays wherever the user clicked.
+			refs.current.closeMenu();
 		};
 		document.addEventListener('keydown', onKeyDown, true);
 		document.addEventListener('click', onClickOut, false);

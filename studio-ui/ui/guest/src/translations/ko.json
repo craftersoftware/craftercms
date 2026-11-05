@@ -28,11 +28,11 @@
 	"ice.selectToMove": "이동할 {label} 선택",
 	"ice.zoneControls": "컨텍스트 내 편집",
 	"ice.untitledZone": "콘텐츠 영역",
-	"zoneMenu.unlock": "잠금 해제",
+	"words.unlock": "잠금 해제",
 	"zoneMenu.actionForZone": "{action}, {zone}",
 	"zoneMenu.moveUpName": "위로 이동",
 	"zoneMenu.moveDownName": "아래로 이동",
-	"zoneMenu.trashName": "삭제",
+	"zoneMenu.trashName": "쓰레기",
 	"zoneMenu.cancelName": "취소",
 	"ice.moved": "{label}을(를) 이동했습니다."
 }

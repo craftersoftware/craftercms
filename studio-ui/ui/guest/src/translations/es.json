@@ -28,11 +28,11 @@
 	"ice.selectToMove": "Seleccionar {label} para mover",
 	"ice.zoneControls": "Edición en contexto",
 	"ice.untitledZone": "Zona de contenido",
-	"zoneMenu.unlock": "Desbloquear",
+	"words.unlock": "Desbloquear",
 	"zoneMenu.actionForZone": "{action}, {zone}",
 	"zoneMenu.moveUpName": "Mover hacia arriba",
 	"zoneMenu.moveDownName": "Mover hacia abajo",
-	"zoneMenu.trashName": "Eliminar",
+	"zoneMenu.trashName": "Basura",
 	"zoneMenu.cancelName": "Cancelar",
 	"ice.moved": "Se movió {label}."
 }

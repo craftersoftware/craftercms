@@ -739,7 +739,10 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
 							modelId: null,
 							fieldId: [],
 							index: null,
-							coordinates: { x: event?.clientX ?? 0, y: event?.clientY ?? 0 }
+							// Keyboard selection has no pointer. Anchor the host menu at the zone's bottom-left instead of the origin.
+							coordinates: event
+								? { x: event.clientX ?? 0, y: event.clientY ?? 0 }
+								: (({ left, bottom }) => ({ x: left, y: bottom }))(record.element.getBoundingClientRect())
 						};
 						if (getById(record.iceIds[0]).recordType === 'node-selector-item') {
 							// When selecting the item on a node-selector the desired edit will be the item itself.

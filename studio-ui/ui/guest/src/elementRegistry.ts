@@ -45,8 +45,8 @@ import { Subject } from 'rxjs';
 
 let seq = 0;
 // Notifies React overlays when zones are registered or removed so keyboard controls stay current.
-const elementRegistryChangesSubject = new Subject<void>();
-export const elementRegistryChanges$ = elementRegistryChangesSubject.asObservable();
+const elementRegistryChangesSubject$ = new Subject<void>();
+export const elementRegistryChanges$ = elementRegistryChangesSubject$.asObservable();
 // Element record registry
 let db: LookupTable<ElementRecord> = {};
 // Lookup table of element record id arrays, indexed by iceId
@@ -229,7 +229,7 @@ export function completeDeferredRegistration(id: number, inheritanceParentModelI
 	}
 
 	db[id].complete = true;
-	elementRegistryChangesSubject.next();
+	elementRegistryChangesSubject$.next();
 }
 
 export function getElementRecords(): ElementRecord[] {
@@ -253,7 +253,7 @@ export function deregister(id: string | number): ElementRecord {
 			iceRegistry.deregister(iceId);
 		});
 		delete db[id];
-		elementRegistryChangesSubject.next();
+		elementRegistryChangesSubject$.next();
 	}
 	return record;
 }

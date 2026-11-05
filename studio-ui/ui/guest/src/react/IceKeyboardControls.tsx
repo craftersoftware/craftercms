@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import React, { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { styled } from '@mui/material/styles';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import OpenWithRounded from '@mui/icons-material/OpenWithRounded';
@@ -160,11 +160,11 @@ function isElementShown(element: HTMLElement): boolean {
 	return style.display !== 'none' && style.visibility !== 'hidden';
 }
 
-/** Identity only. Geometry is measured for the focused button, not for every zone. */
-function collectZones(active: boolean, getState: () => GuestState, moveMode: boolean): ZoneControl[] {
-	if (!active) {
-		return noZones;
-	}
+/**
+ * Builds the zone list, measuring every zone. Call it when the registry, scroll, mode or lock state change,
+ * never from a render or a snapshot read.
+ */
+function collectZones(getState: () => GuestState, moveMode: boolean): ZoneControl[] {
 	const state = getState();
 	const next: ZoneControl[] = [];
 	getElementRecords().forEach((record) => {
@@ -282,7 +282,7 @@ export interface IceKeyboardControlsProps {
  * Buttons stay visually hidden until :focus-visible and do not take pointer events until then.
  * Enter/Space (native button) selects the zone through the keyboard actions, not a fake pointer event.
  */
-export function IceKeyboardControls(props: IceKeyboardControlsProps) {
+export const IceKeyboardControls = memo(function IceKeyboardControls(props: IceKeyboardControlsProps) {
 	const { active, highlightMode } = props;
 	const dispatch = useDispatch();
 	const store = useStore();
@@ -293,12 +293,16 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 			if (!active) {
 				return () => undefined;
 			}
+			const rebuild = () => {
+				cachedZones = collectZones(store.getState, moveMode);
+				notify();
+			};
 			let frame = 0;
 			const schedule = () => {
 				cancelAnimationFrame(frame);
 				frame = requestAnimationFrame(() => {
 					notifyZoneRegistryChange();
-					notify();
+					rebuild();
 				});
 			};
 			// Per frame, only the focused pill is measured. A settled scroll refreshes the rest once.
@@ -310,7 +314,7 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 				window.clearTimeout(scrollEnd);
 				scrollEnd = window.setTimeout(() => {
 					cachedKey = '';
-					notify();
+					rebuild();
 				}, 200);
 			};
 			const onPointerDown = (event: PointerEvent) => {
@@ -318,26 +322,36 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 					clearZoneOpenedFromKeyboard();
 				}
 			};
+			// Lock and modified state decide which zones do anything, and nothing else re-reads them.
+			let { lockedPaths, externallyModifiedPaths } = store.getState();
+			const unsubscribeStore = store.subscribe(() => {
+				const state = store.getState();
+				if (state.lockedPaths !== lockedPaths || state.externallyModifiedPaths !== externallyModifiedPaths) {
+					({ lockedPaths, externallyModifiedPaths } = state);
+					schedule();
+				}
+			});
 			const subscription = elementRegistryChanges$.subscribe(schedule);
 			window.addEventListener('scroll', onScroll, true);
 			window.addEventListener('resize', onScroll);
 			document.addEventListener('pointerdown', onPointerDown, true);
-			schedule();
+			cachedZones = collectZones(store.getState, moveMode);
 			return () => {
 				cancelAnimationFrame(frame);
 				cancelAnimationFrame(scrollFrame);
 				window.clearTimeout(scrollEnd);
 				subscription.unsubscribe();
+				unsubscribeStore();
 				window.removeEventListener('scroll', onScroll, true);
 				window.removeEventListener('resize', onScroll);
 				document.removeEventListener('pointerdown', onPointerDown, true);
 			};
 		},
-		[active]
+		[active, moveMode, store]
 	);
 	const zones = useSyncExternalStore(
 		subscribe,
-		() => collectZones(active, () => store.getState(), moveMode),
+		() => (active ? cachedZones : noZones),
 		() => noZones
 	);
 	const zoneIdentity = zones.map((zone) => `${zone.iceId}:${zone.modelId}:${zone.fieldId}:${zone.index}`).join('|');
@@ -402,6 +416,6 @@ export function IceKeyboardControls(props: IceKeyboardControlsProps) {
 			})}
 		</div>
 	);
-}
+});
 
 export default IceKeyboardControls;

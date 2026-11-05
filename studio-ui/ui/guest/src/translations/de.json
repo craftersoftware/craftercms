@@ -28,7 +28,7 @@
 	"ice.selectToMove": "{label} zum Verschieben auswählen",
 	"ice.zoneControls": "Kontextbezogene Bearbeitung",
 	"ice.untitledZone": "Inhaltszone",
-	"zoneMenu.unlock": "Entsperren",
+	"words.unlock": "Freischalten",
 	"zoneMenu.actionForZone": "{action}, {zone}",
 	"zoneMenu.moveUpName": "Nach oben verschieben",
 	"zoneMenu.moveDownName": "Nach unten verschieben",
