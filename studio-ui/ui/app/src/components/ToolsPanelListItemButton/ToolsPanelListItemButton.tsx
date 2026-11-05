@@ -20,6 +20,7 @@ import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import ChevronRounded from '@mui/icons-material/ChevronRightRounded';
 import React from 'react';
+import { useIntl } from 'react-intl';
 import SystemIcon, { SystemIconDescriptor } from '../SystemIcon';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
 import TranslationOrText from '../../models/TranslationOrText';
@@ -30,6 +31,8 @@ export interface ToolsPanelListItemButtonProps extends Omit<ListItemButtonProps,
 	subtitle?: string;
 	icon?: SystemIconDescriptor;
 	secondaryActionIcon?: React.ReactNode;
+	/** Accessible name for the trailing action. Defaults to "Open {title}". */
+	secondaryActionLabel?: string;
 	onSecondaryActionClick?(): void;
 }
 
@@ -39,38 +42,54 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 		title,
 		subtitle,
 		onClick,
+		sx,
+		className,
 		secondaryActionIcon = <ChevronRounded />,
+		secondaryActionLabel,
 		onSecondaryActionClick,
 		...listItemButtonProps
 	} = props;
+	const { formatMessage } = useIntl();
+	const translatedTitle = usePossibleTranslation(title);
+	const trailingActionLabel =
+		secondaryActionLabel ?? formatMessage({ defaultMessage: 'Open {title}' }, { title: translatedTitle });
 	return (
-		<ListItemButton
-			component={ListItem}
-			{...listItemButtonProps}
-			onClick={onClick}
+		<ListItem
+			disablePadding
+			className={className}
+			sx={sx}
 			secondaryAction={
 				onSecondaryActionClick ? (
-					<IconButton size="small" onClick={onSecondaryActionClick}>
+					<IconButton
+						size="small"
+						aria-label={trailingActionLabel}
+						onClick={(event) => {
+							event.stopPropagation();
+							onSecondaryActionClick();
+						}}
+					>
 						{secondaryActionIcon}
 					</IconButton>
 				) : null
 			}
 		>
-			{icon && (
-				<ListItemIcon>
-					<SystemIcon icon={icon} fontIconProps={{ fontSize: 'small' }} />
-				</ListItemIcon>
-			)}
-			<ListItemText
-				primary={usePossibleTranslation(title)}
-				secondary={subtitle}
-				slotProps={{
-					primary: { noWrap: true },
-					secondary: { noWrap: true }
-				}}
-			/>
-			{!onSecondaryActionClick && <ChevronRounded />}
-		</ListItemButton>
+			<ListItemButton {...listItemButtonProps} onClick={onClick}>
+				{icon && (
+					<ListItemIcon>
+						<SystemIcon icon={icon} fontIconProps={{ fontSize: 'small' }} />
+					</ListItemIcon>
+				)}
+				<ListItemText
+					primary={translatedTitle}
+					secondary={subtitle}
+					slotProps={{
+						primary: { noWrap: true },
+						secondary: { noWrap: true }
+					}}
+				/>
+				{!onSecondaryActionClick && <ChevronRounded />}
+			</ListItemButton>
+		</ListItem>
 	);
 }
 

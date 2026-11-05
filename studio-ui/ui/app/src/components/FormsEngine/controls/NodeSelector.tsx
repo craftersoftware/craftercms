@@ -188,6 +188,7 @@ function getInitialCreatePickerValue(
 
 function NodeSelector(props: NodeSelectorProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -658,6 +659,10 @@ function NodeSelector(props: NodeSelectorProps) {
 	const maxCount = countLimitValue(field.validations?.maxCount?.value);
 	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
+	const addItemsLabel =
+		isAddDisabled && maxLimitReached
+			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
+			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
 	return (
 		<>
 			<Menu
@@ -762,6 +767,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
+								aria-label={addItemsLabel}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {

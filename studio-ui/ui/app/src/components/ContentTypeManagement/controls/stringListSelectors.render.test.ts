@@ -22,7 +22,7 @@ import { describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -45,6 +45,20 @@ const validationAtom = atom({ isValid: true });
 function field(id: string, name: string, type: string) {
 	return { id, name, type, defaultValue: [], validations: {}, helpText: '' };
 }
+// The app build gives every message an id. Without that transform, use the default message as its own id.
+function createTestIntl(messages: Record<string, string> = {}) {
+	const baseIntl = createIntl({ locale: 'en', messages, onError: () => undefined });
+	return {
+		...baseIntl,
+		formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
+			baseIntl.formatMessage(
+				{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
+				values as never
+			)
+	};
+}
+
+const intl = createTestIntl();
 
 function Harness(props: { children: React.ReactNode }) {
 	const stable = {
@@ -66,8 +80,8 @@ function Harness(props: { children: React.ReactNode }) {
 		Provider,
 		{ store },
 		React.createElement(
-			IntlProvider,
-			{ locale: 'en', messages: {} },
+			RawIntlProvider,
+			{ value: intl },
 			React.createElement(
 				StableGlobalContext.Provider,
 				{ value: { formsStackData: [], api: {} } },
