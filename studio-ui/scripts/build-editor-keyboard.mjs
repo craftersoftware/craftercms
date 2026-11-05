@@ -19,8 +19,8 @@
  *
  * Source of truth:
  * - Ace keyboard helper: ui/app/src/components/editorKeyboard/aceKeyboard.ts
- * - TinyMCE Ace plugin glue: ui/app/src/components/editorKeyboard/tinymceAcePlugin.ignore.js
- *   (the .ignore.js suffix keeps tsconfig.build.json from emitting it)
+ * - TinyMCE Ace plugin glue: ui/app/src/components/editorKeyboard/tinymceAcePlugin.source.js
+ *   (the .source.js suffix keeps tsconfig.build.json from emitting it)
  * - Hint and focus ring CSS: ui/scss/src/_editor-keyboard.scss
  *   (imported by ui/scss/src/tinymce-ace.scss)
  *
@@ -108,7 +108,7 @@ const pluginMinJs = path.join(pluginDir, 'plugin.min.js');
 
 async function build() {
 	writeFallbackCss();
-	await bundle(path.join(keyboardDir, 'tinymceAcePlugin.ignore.js'), pluginJs);
+	await bundle(path.join(keyboardDir, 'tinymceAcePlugin.source.js'), pluginJs);
 	prettier([fallbackCssFile, pluginJs]);
 	await esbuild.build({ entryPoints: [pluginJs], minify: true, outfile: pluginMinJs, logLevel: 'info' });
 }

@@ -15,10 +15,10 @@
  */
 
 /**
- * TinyMCE Ace plugin glue. Keyboard behaviour is applyAceKeyboardAccessibility
- * from aceKeyboard.ts, bundled into plugin.js by yarn build:editor-keyboard.
- * Do not copy that function here. This file is tinymceAcePlugin.ignore.js so
- * tsconfig.build.json does not emit it into the npm package.
+ * Source of static-assets/js/tinymce-plugins/ace/plugin.js: the TinyMCE Ace plugin glue.
+ * Keyboard behaviour is applyAceKeyboardAccessibility from aceKeyboard.ts, bundled in by
+ * `yarn build:editor-keyboard`; do not edit or copy either into plugin.js.
+ * The .source.js suffix keeps tsconfig.build.json from emitting this file into the npm package.
  *
  * The four translated sentences are also in editorKeyboard/messages.ts and the
  * es/de/ko catalogues. TinyMCE i18n cannot import react-intl, so this is the

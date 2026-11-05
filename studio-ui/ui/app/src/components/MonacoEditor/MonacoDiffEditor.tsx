@@ -104,6 +104,9 @@ export function MonacoDiffEditor(props: MonacoDiffEditorProps) {
 				if (!editorRef.current) {
 					return false;
 				}
+				// Deliberate: the frame is the one tab stop, and Enter opens the modified side, the one
+				// users act on. Reaching the original would need a second tab stop, which A11Y-09 rules
+				// out. Read-only diffs still expose it through Monaco's accessibility help (Alt+F1).
 				focusMonacoEditor(editorRef.current);
 				return true;
 			}}

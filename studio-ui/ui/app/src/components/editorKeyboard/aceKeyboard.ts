@@ -95,6 +95,7 @@ function refreshHintText(container: HTMLElement) {
 	}
 }
 
+/** Unique id per editor instance, so the React editor and the TinyMCE plugin never collide. */
 function createHintId(prefix: string) {
 	const random =
 		typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -103,6 +104,7 @@ function createHintId(prefix: string) {
 	return `${prefix}-${random}`;
 }
 
+/** Exit path for an Ace build without `enableKeyboardAccessibility`: the scroller is the tab stop. */
 function installLegacyExit(editor: AceKeyboardEditor, scroller: HTMLElement | undefined) {
 	if (applied.has(editor)) {
 		return;
@@ -163,6 +165,12 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 
 	scroller?.setAttribute('aria-label', labels.name);
 	gutter?.setAttribute('aria-label', labels.gutterLabel);
+	// Ace's keyboard mode makes the gutter a second tab stop (for fold and annotation widgets).
+	// A11Y-09 asks for one tab stop per editor, so keep the scroller as the only one.
+	if (keyboardMode && gutter) {
+		gutter.tabIndex = -1;
+		gutter.setAttribute('aria-hidden', 'true');
+	}
 	const textInput = aceEditor.textInput?.getElement();
 	textInput?.setAttribute('aria-label', labels.name);
 

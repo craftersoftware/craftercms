@@ -22,6 +22,7 @@ import { Theme } from '@mui/material';
 import visuallyHidden from '@mui/utils/visuallyHidden';
 import { useIntl } from 'react-intl';
 import { consolidateSx } from '../../utils/system';
+import { focusRingStyles } from '../../styles/focusRing';
 import { codeEditorKeyboardMessages } from './messages';
 
 export interface CodeEditorFrameProps {
@@ -96,21 +97,16 @@ export function CodeEditorFrame(props: CodeEditorFrameProps) {
 					'&:focus-visible': {
 						outline: 'none'
 					},
-					// Outer #0b4f8a is 8.4:1 on white. Inner white is 15:1 on #252526.
-					// The pair meets 3:1 on both light and dark editor and frame backgrounds.
-					'&:focus-visible::after': {
+					// The shared Studio ring (styles/focusRing.ts), inset because the editor clips its own edge.
+					'&:focus-visible::after': (theme) => ({
 						content: '""',
 						position: 'absolute',
 						inset: 0,
 						boxSizing: 'border-box',
 						pointerEvents: 'none',
 						zIndex: 20,
-						boxShadow: 'inset 0 0 0 2px #0b4f8a, inset 0 0 0 4px #ffffff'
-					},
-					// Forced colours remove box-shadow, so draw the ring as a border.
-					'@media (forced-colors: active)': {
-						'&:focus-visible::after': { boxShadow: 'none', border: '2px solid Highlight' }
-					},
+						...focusRingStyles(theme, { inset: true })
+					}),
 					'&:focus > [data-code-editor-hint]': {
 						position: 'absolute',
 						right: 0,

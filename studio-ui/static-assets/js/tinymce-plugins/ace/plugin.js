@@ -19,7 +19,7 @@
 (() => {
 	// ui/app/src/components/editorKeyboard/editorKeyboardFallbackCss.ts
 	var EDITOR_KEYBOARD_FALLBACK_CSS =
-		'.ace_editor > .craftercms-code-editor-hint,\n.tox-dialog .ace_editor > .craftercms-code-editor-hint {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  margin: -1px;\n  padding: 0;\n  border: 0;\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  clip-path: inset(50%);\n  white-space: nowrap !important;\n}\n.ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint,\n.tox-dialog .ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {\n  right: 0;\n  bottom: 0;\n  left: 0;\n  z-index: 25;\n  box-sizing: border-box;\n  width: auto;\n  height: auto;\n  margin: 0;\n  padding: 4px 8px;\n  overflow: visible;\n  clip: auto;\n  clip-path: none;\n  pointer-events: none;\n  font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 20px !important;\n  white-space: normal !important;\n  background: #f4f4f5;\n  color: #333333;\n  border-top: 1px solid #d0d0d0;\n}\n.ace_editor.ace_dark:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {\n  background: #252526;\n  color: #e6e6e6;\n  border-top-color: #3c3c3c;\n}\n.ace_scroller.ace_keyboard-focus:focus,\n.ace_gutter.ace_keyboard-focus:focus {\n  outline: none;\n}\n.ace_scroller.ace_keyboard-focus:focus::before,\n.ace_gutter.ace_keyboard-focus:focus::before {\n  content: "";\n  position: absolute;\n  inset: 0;\n  box-sizing: border-box;\n  pointer-events: none;\n  z-index: 20;\n  box-shadow: inset 0 0 0 2px #0b4f8a, inset 0 0 0 4px #ffffff;\n}\n@media (forced-colors: active) {\n  .ace_scroller.ace_keyboard-focus:focus::before,\n  .ace_gutter.ace_keyboard-focus:focus::before {\n    box-shadow: none;\n    border: 2px solid Highlight;\n  }\n}';
+		'.ace_editor > .craftercms-code-editor-hint,\n.tox-dialog .ace_editor > .craftercms-code-editor-hint {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  margin: -1px;\n  padding: 0;\n  border: 0;\n  overflow: hidden;\n  clip: rect(0 0 0 0);\n  clip-path: inset(50%);\n  white-space: nowrap !important;\n}\n.ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint,\n.tox-dialog .ace_editor:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {\n  right: 0;\n  bottom: 0;\n  left: 0;\n  z-index: 25;\n  box-sizing: border-box;\n  width: auto;\n  height: auto;\n  margin: 0;\n  padding: 4px 8px;\n  overflow: visible;\n  clip: auto;\n  clip-path: none;\n  pointer-events: none;\n  font-family: system-ui, -apple-system, "Segoe UI", sans-serif !important;\n  font-size: 12px !important;\n  font-weight: 400 !important;\n  line-height: 20px !important;\n  white-space: normal !important;\n  background: #f4f4f5;\n  color: #333333;\n  border-top: 1px solid #d0d0d0;\n}\n.ace_editor.ace_dark:has(> .ace_scroller:focus, > .ace_gutter:focus) > .craftercms-code-editor-hint {\n  background: #252526;\n  color: #e6e6e6;\n  border-top-color: #3c3c3c;\n}\n.ace_scroller.ace_keyboard-focus:focus,\n.ace_gutter.ace_keyboard-focus:focus {\n  outline: none;\n}\n.ace_scroller.ace_keyboard-focus:focus::before,\n.ace_gutter.ace_keyboard-focus:focus::before {\n  content: "";\n  position: absolute;\n  inset: 0;\n  box-sizing: border-box;\n  pointer-events: none;\n  z-index: 20;\n  outline: 2px solid #0068da;\n  outline-offset: -2px;\n}\n.ace_dark .ace_scroller.ace_keyboard-focus:focus::before, .ace_dark .ace_gutter.ace_keyboard-focus:focus::before {\n  outline-color: #54a6ff;\n}';
 
 	// ui/app/src/components/editorKeyboard/editorKeyboardStyles.ts
 	var EDITOR_KEYBOARD_STYLE_ID = 'craftercms-editor-keyboard-styles';
@@ -117,6 +117,10 @@
 		}
 		scroller?.setAttribute('aria-label', labels.name);
 		gutter?.setAttribute('aria-label', labels.gutterLabel);
+		if (keyboardMode && gutter) {
+			gutter.tabIndex = -1;
+			gutter.setAttribute('aria-hidden', 'true');
+		}
 		const textInput = aceEditor.textInput?.getElement();
 		textInput?.setAttribute('aria-label', labels.name);
 		if (!container) {
@@ -182,7 +186,7 @@
 		}
 	}
 
-	// ui/app/src/components/editorKeyboard/tinymceAcePlugin.ignore.js
+	// ui/app/src/components/editorKeyboard/tinymceAcePlugin.source.js
 	var PLUGIN_NAME = 'acecode';
 	tinymce.addI18n('en', {
 		'code-editor': 'Code Editor',

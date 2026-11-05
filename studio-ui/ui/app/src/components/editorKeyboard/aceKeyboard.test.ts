@@ -104,6 +104,9 @@ describe('applyAceKeyboardAccessibility labels', () => {
 		assert.equal(ace.scroller.getAttribute('aria-describedby'), hint.id);
 		assert.equal(ace.textarea.getAttribute('aria-describedby'), hint.id);
 		assert.equal(hint.hasAttribute('aria-hidden'), false);
+		// A11Y-09: one tab stop per editor. The gutter stays reachable from code, not by Tab.
+		assert.equal(ace.gutter.tabIndex, -1);
+		assert.equal(ace.gutter.getAttribute('aria-hidden'), 'true');
 	});
 
 	it('uses the read-only sentence for a read-only editor', () => {
