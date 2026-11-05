@@ -37,7 +37,12 @@ import { lookupItemByPath } from '../../utils/content';
 import { PathNavigatorTreeStateProps } from './PathNavigatorTree';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import { cancelTreeItemKey, isOwnTreeItemEvent, isTreeContextMenuKey } from '../../utils/treeKeyboard';
+import {
+	cancelTreeItemKey,
+	isOwnTreeItemEvent,
+	yieldKeyToNestedControl,
+	isTreeContextMenuKey
+} from '../../utils/treeKeyboard';
 
 export interface PathNavigatorTreeItemProps extends Pick<
 	PathNavigatorTreeStateProps,
@@ -95,6 +100,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		sxs
 	} = props;
 	const [over, setOver] = useState(false);
+	const [focused, setFocused] = useState(false);
 	const [showFilter, setShowFilter] = useState(Boolean(keywordByPath[path]));
 	const [keyword, setKeyword] = useState(keywordByPath[path] ?? '');
 	const { formatMessage } = useIntl();
@@ -141,8 +147,22 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 		}
 	};
 
+	// Options and Filter show on hover. They also show while this treeitem (not a nested one) has focus,
+	// so keyboard users can Tab from the item to them.
+	const isOwnFocus = (element: EventTarget | null, treeItem: Element) =>
+		(element as Element | null)?.closest?.('[role="treeitem"]') === treeItem;
+
+	const onItemFocus = (event: React.FocusEvent<HTMLElement>) =>
+		setFocused(isOwnFocus(event.target, event.currentTarget));
+
+	const onItemBlur = (event: React.FocusEvent<HTMLElement>) => {
+		if (!isOwnFocus(event.relatedTarget, event.currentTarget)) {
+			setFocused(false);
+		}
+	};
+
 	const onItemKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-		if (!isOwnTreeItemEvent(event)) {
+		if (!isOwnTreeItemEvent(event) || yieldKeyToNestedControl(event)) {
 			return;
 		}
 		// Enter activates the item. MUI's default Enter expands a parent instead.
@@ -191,7 +211,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 					itemId={`${path}::__more__`}
 					aria-level={level + 1}
 					onKeyDown={(event) => {
-						if (!isOwnTreeItemEvent(event)) {
+						if (!isOwnTreeItemEvent(event) || yieldKeyToNestedControl(event)) {
 							return;
 						}
 						if (event.key === 'Enter' || event.key === ' ') {
@@ -328,6 +348,8 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 			aria-selected={Boolean(active[path])}
 			aria-labelledby={labelId}
 			aria-describedby={item ? descriptionId : undefined}
+			aria-keyshortcuts={showItemMenu && onOpenItemMenu ? 'Shift+F10' : undefined}
+			slotProps={{ root: { onFocus: onItemFocus, onBlur: onItemBlur } }}
 			onKeyDown={onItemKeyDown}
 			onContextMenu={onContextMenu}
 			slots={{
@@ -367,11 +389,10 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							showPublishingTarget={showPublishingTarget}
 							showWorkflowState={showWorkflowState}
 						/>
-						{over && showItemMenu && onOpenItemMenu && (
+						{(over || focused) && showItemMenu && onOpenItemMenu && (
 							<Tooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
 								<IconButton
 									size="small"
-									tabIndex={-1}
 									sx={{ padding: '2px 3px' }}
 									data-item-menu
 									onClick={(e) => {
@@ -386,11 +407,10 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							</Tooltip>
 						)}
 						{/* If filter is active, or if mouse is over content (and item has children), show Icon */}
-						{(showFilter || (over && Boolean(item.childrenCount))) && (
+						{(showFilter || ((over || focused) && Boolean(item.childrenCount))) && (
 							<Tooltip title={<FormattedMessage id="words.filter" defaultMessage="Filter" />}>
 								<IconButton
 									size="small"
-									tabIndex={-1}
 									sx={{ padding: '2px 3px' }}
 									onClick={(e) => {
 										e.preventDefault();

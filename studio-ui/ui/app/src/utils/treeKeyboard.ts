@@ -44,3 +44,23 @@ export function isOwnTreeItemEvent(event: React.SyntheticEvent<Element>): boolea
 	}
 	return target.closest('[role="treeitem"]') === event.currentTarget;
 }
+
+const nestedControlSelector =
+	'a[href], button, input, select, textarea, summary, [contenteditable], [role="button"], [role="link"]';
+
+/**
+ * Call from a treeitem `onKeyDown` after `isOwnTreeItemEvent`. When the key comes from a control nested in
+ * the item (a button in the label), the control owns it: the item must not activate, and the tree must not
+ * turn Enter or Space into an expand or select that cancels the control's native click. Returns true when
+ * the event came from a nested control and the caller should return.
+ */
+export function yieldKeyToNestedControl(event: React.KeyboardEvent<Element>): boolean {
+	const control = (event.target as Element | null)?.closest?.(nestedControlSelector);
+	if (!control || control === event.currentTarget || !event.currentTarget.contains(control)) {
+		return false;
+	}
+	if (event.key === 'Enter' || event.key === ' ') {
+		(event as React.KeyboardEvent<Element> & { defaultMuiPrevented?: boolean }).defaultMuiPrevented = true;
+	}
+	return true;
+}
