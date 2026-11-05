@@ -439,7 +439,7 @@ export function createVirtualTypeForField(
 			},
 			sections: [
 				{
-					id: 'basic-properties',
+					id: 'field-basic-properties',
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -482,7 +482,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'basic-properties',
+					id: 'data-source-basic-properties',
 					color: null,
 					title: 'Basic Properties',
 					description: '',
