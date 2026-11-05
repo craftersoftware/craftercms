@@ -34,8 +34,11 @@ export type FormControllerSaveResult = boolean | { ok: boolean; message?: string
  * One field value write, as delivered by {@link FormControllerContext.fieldChanges}.
  *
  * @remarks
- * The object is frozen and its properties are read-only: a change is a report of something that
- * already happened, not a way to alter the form. Use {@link FormControllerContext.setValue} to write.
+ * Only the change object itself is frozen (shallow). `value` is the value the form holds, by reference: for a
+ * repeat, component or other object value it is the live object, and the host does not freeze or copy it.
+ * Treat it as read-only. Mutating it bypasses dirty tracking, validation and rendering, so the form can save
+ * a value the author never saw. Write with {@link FormControllerContext.setValue} instead, passing a new
+ * object rather than editing this one.
  *
  * `onFieldChange` listeners receive the same two pieces of data as `(fieldId, value)` arguments.
  *
@@ -43,7 +46,7 @@ export type FormControllerSaveResult = boolean | { ok: boolean; message?: string
  * ```js
  * ctx.fieldChanges.subscribe((change) => {
  *   // change.fieldId → 'title_s'
- *   // change.value   → the value of 'title_s' as of this delivery
+ *   // change.value   → the value of 'title_s' when this change was emitted
  *   console.log(change.fieldId, change.value);
  * });
  * ```
@@ -59,9 +62,12 @@ export interface FormFieldChange {
 	 */
 	readonly fieldId: string;
 	/**
-	 * The field's value, read when the event is delivered (not captured when it was queued), exactly as
-	 * {@link FormControllerRelevanceContext.getValue} would return it for `fieldId` at that moment. For a nested
-	 * write this is the whole root value (the repeat array or component object), not the changed leaf.
+	 * The field's value, read synchronously when the change is emitted (at the write), exactly as
+	 * {@link FormControllerRelevanceContext.getValue} would return it for `fieldId` at that moment. It is not
+	 * re-read later, so an operator that delays delivery (`delay`, `debounceTime`, `switchMap`) hands you the
+	 * value as of the write, which may be older than the field's current value. Call `ctx.getValue(fieldId)`
+	 * when you need the latest. For a nested write this is the whole root value (the repeat array or component
+	 * object), not the changed leaf. Treat it as read-only (see {@link FormFieldChange}).
 	 */
 	readonly value: unknown;
 }
@@ -107,6 +113,12 @@ export interface FormControllerRelevanceContext {
 	 * Accepts a top-level id or a dotted path; numeric segments (repeat indexes) are skipped.
 	 */
 	getField(fieldId: string): ContentTypeField | undefined;
+	/**
+	 * Always an observable that completes immediately without emitting: this context has no live form, so
+	 * there is nothing to observe. Subscribing is harmless but pointless. The live stream is on
+	 * {@link FormControllerContext.fieldChanges}, available from `initialize` and `onBeforeSave`.
+	 */
+	readonly fieldChanges: Observable<FormFieldChange>;
 }
 
 /**
@@ -137,7 +149,7 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * **What it delivers.** One call per value write, in the order the writes happen, including writes to a
 	 * field that is not rendered and writes made through {@link FormControllerContext.setValue} (so a listener
 	 * that writes back to the field it listens to will re-enter itself; guard against loops). `fieldId` is
-	 * the root field id (a nested path write reports its root). `value` is read when the listener is called.
+	 * the root field id (a nested path write reports its root). `value` is read when the write happens, just before the listener is called.
 	 * It is not called for the initial values, only for later writes.
 	 *
 	 * **Lifecycle.** The host removes every listener when the form this context belongs to is torn down
@@ -150,7 +162,7 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * If `listener` throws, the error is reported asynchronously (RxJS unhandled error reporting). It does not
 	 * stop other listeners and does not remove this one.
 	 *
-	 * @param listener - Called with the root field id and the value read at delivery time.
+	 * @param listener - Called with the root field id and the value read when the write happened.
 	 * @returns A function that removes the listener. Safe to call more than once.
 	 *
 	 * @example
@@ -178,7 +190,7 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * @remarks
 	 * **When to use it.** Pick `fieldChanges` when a plain callback gets awkward:
 	 * - filter to some fields (`filter`);
-	 * - wait for the author to pause typing (`debounceTime`) or skip repeats (`distinctUntilChanged`);
+	 * - wait for the author to pause typing (`debounceTime`) or skip repeated values (`map` to the value, then `distinctUntilChanged`);
 	 * - run async work and drop stale results when a newer edit arrives (`switchMap`);
 	 * - combine edits with other streams (`combineLatest`, `merge`, `withLatestFrom`);
 	 * - stop on a condition (`takeUntil`, `takeWhile`, `first`).
@@ -189,24 +201,39 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * **What it delivers.** The observable is cold and unicast per subscription: each `subscribe` is
 	 * independent, sees only changes written after it subscribed (no replay of the initial or latest value),
 	 * and emits synchronously on the write. It never errors. Read the field id and value off each
-	 * {@link FormFieldChange}; `value` is read when that subscriber receives the event.
+	 * {@link FormFieldChange}; `value` is read when the change is emitted, which is when each subscriber is
+	 * notified (a subscriber that writes a field is seen by the subscribers notified after it). Operators that
+	 * delay delivery pass along that value as of the write, not the field's current value.
 	 *
 	 * **Read-only.** The host never hands out its internal subject. The observable has no `next`, `error` or
 	 * `complete`, so a controller cannot push events into the form or end the stream for others.
 	 *
 	 * **Lifecycle.** The observable **completes** for every subscriber when the form this context belongs to
-	 * is torn down (stack pop, unmount, replacement attach, or a failed `initialize`). Completion tears down
-	 * the whole pipeline, so no cleanup is needed for subscriptions to it, and `takeUntil` / `finalize` /
-	 * the `complete` callback run at that point. Unsubscribe earlier to stop delivery sooner. Subscribing
-	 * after teardown logs a warning and completes immediately without emitting. In the `isFieldRelevant`
-	 * context (which has no live form) the property exists but completes immediately without emitting.
-	 * Stop any non-RxJS work you start from a subscription (timers, fetches) in your own cleanup.
+	 * is torn down (stack pop, unmount, replacement attach, or a failed `initialize`). A pipeline made only
+	 * of operators that pass completion straight through (`filter`, `map`, `distinctUntilChanged`, `take`...)
+	 * ends at that moment, and `takeUntil` / `finalize` / the `complete` callback run then. Two caveats:
+	 * - Operators that hold an inner observable (`switchMap`, `concatMap`, `mergeMap`, `exhaustMap`) only
+	 *   complete once that inner observable settles, so in-flight work (a fetch, a timer) keeps running past
+	 *   teardown. Keep the `Subscription` and unsubscribe it from the cleanup you return from `initialize`;
+	 *   the host runs that cleanup right after completing the subscribers.
+	 * - Operators that buffer, such as `debounceTime`, emit their pending value when the source completes. A
+	 *   `setValue` made from that last delivery is ignored with a warning, because the context is already
+	 *   disposed.
+	 *
+	 * Unsubscribe earlier to stop delivery sooner. Subscribing after teardown logs a warning and completes
+	 * immediately without emitting. In the `isFieldRelevant` context (which has no live form) the property
+	 * exists but completes immediately without emitting. Stop any non-RxJS work you start from a subscription
+	 * (timers, fetches) in your own cleanup.
 	 *
 	 * Like `onFieldChange`, it also fires for writes made through {@link FormControllerContext.setValue}, so
-	 * writing to a field you are observing can loop. Filter or `distinctUntilChanged` to break the cycle.
+	 * writing to a field you are observing can loop. Break the cycle by filtering the field out
+	 * (`filter((change) => change.fieldId !== 'slug_s')`), or by comparing values: `map((change) => change.value)`
+	 * then `distinctUntilChanged()`, or `distinctUntilChanged((a, b) => a.fieldId === b.fieldId && Object.is(a.value, b.value))`.
+	 * A bare `distinctUntilChanged()` on the changes never skips anything, because each change is a new object.
 	 *
 	 * @example
-	 * Debounce edits to one field, skip repeats and write a derived value.
+	 * Debounce edits to one field, skip repeated values and write a derived value. It never writes to
+	 * `title_s`, so it cannot feed itself.
 	 * ```js
 	 * const { filter, debounceTime, map, distinctUntilChanged } = craftercms.libs.rxjs;
 	 *
@@ -219,21 +246,25 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 *       distinctUntilChanged()
 	 *     )
 	 *     .subscribe((slug) => ctx.setValue('slug_s', slug));
-	 *   // No cleanup needed: the stream completes when the form closes.
+	 *   // Nothing to clean up: this pipeline completes when the form closes.
 	 * }
 	 * ```
 	 *
 	 * @example
-	 * Cancel stale async work with `switchMap`.
+	 * Cancel stale async work with `switchMap`. The returned cleanup unsubscribes, so a lookup still in
+	 * flight when the form closes is cancelled instead of writing to a form that is gone.
 	 * ```js
 	 * const { filter, switchMap, from } = craftercms.libs.rxjs;
 	 *
-	 * ctx.fieldChanges
-	 *   .pipe(
-	 *     filter((change) => change.fieldId === 'sku_s'),
-	 *     switchMap((change) => from(lookupProduct(change.value))) // a newer edit drops the pending lookup
-	 *   )
-	 *   .subscribe((product) => ctx.setValue('productName_s', product?.name ?? ''));
+	 * initialize(ctx) {
+	 *   const subscription = ctx.fieldChanges
+	 *     .pipe(
+	 *       filter((change) => change.fieldId === 'sku_s'),
+	 *       switchMap((change) => from(lookupProduct(change.value))) // a newer edit drops the pending lookup
+	 *     )
+	 *     .subscribe((product) => ctx.setValue('productName_s', product?.name ?? ''));
+	 *   return () => subscription.unsubscribe();
+	 * }
 	 * ```
 	 *
 	 * @see {@link FormControllerContext.onFieldChange} for the callback form of the same events.
@@ -301,7 +332,7 @@ export interface FormControllerState {
 	context: FormControllerContext | null;
 	cleanup: (() => void) | null;
 	/** Teardown callbacks for `onFieldChange` listeners and `fieldChanges` subscribers of this entry's context. */
-	fieldChangeUnsubscribers: Set<() => void>;
+	fieldChangeTeardowns: Set<() => void>;
 	fileMissing: boolean;
 	loadFailed: boolean;
 	/** Set when this state was torn down. A late `initialize` cleanup still runs, but changes no shared state. */
@@ -322,7 +353,7 @@ export function createEmptyFormControllerState(): FormControllerState {
 		controller: null,
 		context: null,
 		cleanup: null,
-		fieldChangeUnsubscribers: new Set(),
+		fieldChangeTeardowns: new Set(),
 		fileMissing: false,
 		loadFailed: false,
 		disposed: false,

@@ -26,16 +26,16 @@ describe('invalid field updates', () => {
 	// The form used to debounce this read by 300ms. Without it, every keystroke re-checks every field.
 	it('reads once after typing pauses, not on every keystroke', () => {
 		const scheduler = new VirtualTimeScheduler();
-		const updates = new Subject<FieldUpdate>();
+		const updates$ = new Subject<FieldUpdate>();
 		const reads: number[] = [];
 		const subscription = watchInvalidFieldUpdates(
-			updates,
+			updates$,
 			() => reads.push(reads.length),
 			invalidFieldReadDebounceMs,
 			scheduler
 		);
-		updates.next({ fieldId: 'title_s' });
-		updates.next({ fieldId: 'title_s' });
+		updates$.next({ fieldId: 'title_s' });
+		updates$.next({ fieldId: 'title_s' });
 		scheduler.maxFrames = invalidFieldReadDebounceMs - 1;
 		scheduler.flush();
 		assert.deepEqual(reads, []);

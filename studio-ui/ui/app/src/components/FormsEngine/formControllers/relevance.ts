@@ -89,7 +89,8 @@ export function createRelevanceContext({
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
-		}
+		},
+		fieldChanges: EMPTY
 	};
 	return Object.assign(ctx, {
 		setValue: warn,
@@ -97,8 +98,7 @@ export function createRelevanceContext({
 		onFieldChange() {
 			warn();
 			return () => undefined;
-		},
-		fieldChanges: EMPTY
+		}
 	});
 }
 
