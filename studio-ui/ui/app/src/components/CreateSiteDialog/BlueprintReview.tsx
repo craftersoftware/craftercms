@@ -83,10 +83,6 @@ const messages = defineMessages({
 		id: 'createSiteDialog.token',
 		defaultMessage: 'Token'
 	},
-	showPassword: {
-		id: 'passwordTextField.toggleVisibilityButtonText',
-		defaultMessage: 'Show password'
-	},
 	privateKey: {
 		id: 'createSiteDialog.privateKey',
 		defaultMessage: 'Private Key'
@@ -119,7 +115,7 @@ const messages = defineMessages({
 
 function BlueprintReview(props: BlueprintReviewProps) {
 	const { onGoTo, inputs, blueprint } = props;
-	const [passwordFields, setPasswordFields] = useState<Record<string, boolean>>({});
+	const [passwordFields, setPasswordFields] = useState(null);
 	const { formatMessage } = useIntl();
 	const idPrefix = useId();
 	const getParameterLabelId = (index: number) => `${idPrefix}-parameter-${index}`;
@@ -158,9 +154,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		} else if (inputs.blueprintFields[parameter.name] && parameter.type === 'PASSWORD') {
 			return (
 				<span>
-					{passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
+					{passwordFields && passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
 					<IconButton
 						edge="end"
+						aria-describedby={getParameterLabelId(index)}
 						sx={{
 							color: (theme) => theme.palette.primary.main,
 							padding: '1px',
@@ -169,15 +166,13 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label={formatMessage(messages.showPassword)}
-						aria-pressed={Boolean(passwordFields[parameter.name])}
-						aria-describedby={getParameterLabelId(index)}
+						aria-label="toggle password visibility"
 						onClick={() => {
 							showPassword(parameter);
 						}}
 						size="large"
 					>
-						{passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
+						{passwordFields && passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
 					</IconButton>
 				</span>
 			);

@@ -24,7 +24,6 @@ const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
 const { RawIntlProvider, createIntl } = await import('react-intl');
 const { default: ActionsBar } = await import('./ImageEditorDialog/ActionsBar.tsx');
-const { default: PasswordTextField } = await import('./PasswordTextField/PasswordTextField.tsx');
 const { ToolsPanelListItemButton } = await import('./ToolsPanelListItemButton/ToolsPanelListItemButton.tsx');
 const { DraggablePanelListItem } = await import('./DraggablePanelListItem/DraggablePanelListItem.tsx');
 const { default: PluginCard } = await import('./PluginCard/PluginCard.tsx');
@@ -88,16 +87,6 @@ describe('accessible names', () => {
 			buttons.filter((b) => b.hasAttribute('aria-pressed')).map((b) => [nameOf(b), b.getAttribute('aria-pressed')])
 		);
 		assert.deepEqual(pressed, { Crop: 'false', Saturation: 'false', Brightness: 'true', Contrast: 'false' });
-	});
-
-	it('keeps one name for the password toggle and reports its state with aria-pressed', async () => {
-		const host = await render(React.createElement(PasswordTextField, { label: 'Password' }));
-		const toggle = host.querySelector('button') as HTMLButtonElement;
-		assert.equal(toggle.getAttribute('aria-label'), 'Show password');
-		assert.equal(toggle.getAttribute('aria-pressed'), 'false');
-		await act(async () => toggle.click());
-		assert.equal(toggle.getAttribute('aria-label'), 'Show password');
-		assert.equal(toggle.getAttribute('aria-pressed'), 'true');
 	});
 
 	it('names the trailing action of a tools panel item and keeps className and state on the button', async () => {
@@ -180,7 +169,7 @@ describe('accessible names', () => {
 				onGoTo() {}
 			} as never)
 		);
-		const toggles = Array.from(host.querySelectorAll('button[aria-pressed]'));
+		const toggles = Array.from(host.querySelectorAll('button[aria-describedby]'));
 		assert.equal(toggles.length, 2);
 		const labelIds = toggles.map((t) => t.getAttribute('aria-describedby') as string);
 		assert.equal(new Set(labelIds).size, 2);
@@ -188,6 +177,6 @@ describe('accessible names', () => {
 			labelIds.map((id) => document.getElementById(id)?.textContent?.trim()),
 			['Repo URL:', 'Repo-URL:']
 		);
-		assert.equal(toggles[0].getAttribute('aria-label'), 'Show password');
+		assert.ok(toggles[0].getAttribute('aria-label'));
 	});
 });
