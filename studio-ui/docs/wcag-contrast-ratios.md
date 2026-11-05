@@ -10,9 +10,10 @@ How to read the tables:
 
 - The token tables are computed from the theme. They cover the three surfaces a control can sit on: `paper` (cards, panels), `default` (page) and `dialog`.
 - "Measured component states" come from the rendered components in a harness that mounts `CrafterThemeProvider` (computed styles, composited). The worst case across the three surfaces is shown.
-- Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (282 text nodes, 0 failures), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
+- Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (294 text nodes, 0 failures, filled alerts included), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
 - Focus ring: one brand-blue ring (`#0068DA` in light, `#54A6FF` in dark), a 2px outline drawn 2px outside the control. It is defined once in `ui/app/src/styles/focusRing.ts`, applied by the theme to every ButtonBase-based control, and used through a shared helper for the rest. `ui/scss/src/_focus-ring.scss` mirrors it for the legacy SCSS.
 - The `MuiSwitch` ring is drawn on the track (MUI v9 does that), and the `List`/`Menu` rows and grid cells use the inset variant.
+- The guest zone and drop markers are drawn on the authored page, not on a Studio surface, so their boundary is background-independent: a white and a black companion band carry the 3:1, and the state colour sits inside them. See `ui/app/src/styles/overlayStroke.ts` and the table below. This is separate from the focus ring.
 
 ## Light mode
 
@@ -251,6 +252,34 @@ Zone marker label chips use `palette.highlightText` (`#121212`) on the `.light` 
 | dark  | error.light chip   | `#121212` (`highlightText`) | `#FF948F`  | 8.82  | yes  |
 | dark  | warning.light chip | `#121212` (`highlightText`) | `#FFC266`  | 11.74 | yes  |
 
+## Guest overlay boundaries (experience builder)
+
+Zone markers and drop markers are drawn over the page the developer authored, so the Studio mode says nothing about the colour underneath. The boundary is therefore not the state colour: `ui/app/src/styles/overlayStroke.ts` stacks a white band, a black band and then the state colour inwards from the edge. One of the two bands is always at least 4.57:1 against the page (the worst case is a mid grey), and the state colour sits on the black band.
+
+| Authored page | white band | black band | Best band 3:1 |
+| ------------- | ---------- | ---------- | ------------- |
+| #FFFFFF       | 1          | 21         | yes           |
+| #FAFAFA       | 1.04       | 20.12      | yes           |
+| #F3F3F3       | 1.11       | 18.93      | yes           |
+| #E5E5EA       | 1.26       | 16.73      | yes           |
+| #8E8E93       | 3.26       | 6.44       | yes           |
+| #808080       | 3.95       | 5.32       | yes           |
+| #545456       | 7.56       | 2.78       | yes           |
+| #393939       | 11.55      | 1.82       | yes           |
+| #121212       | 18.73      | 1.12       | yes           |
+| #0068DA       | 5.26       | 3.99       | yes           |
+| #54A6FF       | 2.54       | 8.28       | yes           |
+
+| Zone state      | light studio | on black band | dark studio | on black band |
+| --------------- | ------------ | ------------- | ----------- | ------------- |
+| select / green  | `#217F39`    | 4.16          | `#30DB5B`   | 11.41         |
+| move / blue     | `#0068DA`    | 3.99          | `#54A6FF`   | 8.28          |
+| error / red     | `#D12E25`    | 4.13          | `#FF7A73`   | 8.28          |
+| warn / orange   | `#A35F00`    | 4.19          | `#FFB340`   | 11.77         |
+| disabled / grey | `#8E8E93`    | 6.44          | `#8E8E93`   | 6.44          |
+
+The state colour is 2px and sits inside both bands, so the boundary reads white | black | state colour against whatever page is behind it. Measured on the rendered marker: page, white 1px, black 1px, state colour. The drop marker uses the same bands as a border plus a ring.
+
 ## `error.main` evaluation
 
 Candidates for light-mode `error.main` used as text (4.5:1) on the light surfaces and on a `#F3F3F3` light-grey panel. `#D93229` fails on the grey panel and is only 0.03 above the limit on `#FAFAFA`, so `#D12E25` is used. `palette.red.main` is now `#D12E25`, and the studio and guest themes both read it from the token. Dark mode keeps `red.tint`.
@@ -265,10 +294,13 @@ Candidates for light-mode `error.main` used as text (4.5:1) on the light surface
 | -------------------- | -------- | ---------- | --------- |
 | #FF7A73 (`red.tint`) | 7.39 yes | 6.71 yes   | 4.56 yes  |
 
+## Fixed by a central rule, worth knowing
+
+- MUI `Alert` with `variant="filled"` used to fail in dark mode: MUI fills with `palette[severity].dark` but takes the label colour from `.main`, so the pair mixed two shades (3.96:1 for error). The theme now fills with `palette[severity].main` in both modes, and the label colour MUI derives from `.main` matches the fill. Measured error, warning, info and success: 5.01 to 5.09:1 in light mode, 7.23 to 10.65:1 in dark. This path is reachable through `NotistackVariant`'s `alertVariant` prop.
+
 ## Not a pass, and why
 
 - Selected list items, menu items and tree-like rows also get a tinted background. The tint alone is 1.1:1 to 1.3:1 and is not relied on. A 3px bar in the text colour marks the selected item (text colour on surface is at least 11:1).
-- MUI `Alert` with `variant="filled"` in dark mode (black text on the darkened fill, 3.95:1 on the error colour). The app does not use filled alerts.
 - Disabled controls, divider lines and the 1px decorative borders of cards are exempt.
 - Text drawn over photographs or arbitrary images (for example the login page background) cannot be measured from the theme.
 - Surfaces outside the theme (TinyMCE and Ace editor chrome, legacy `.scss` views) were adjusted for the specific values listed in the pull request. They are not part of these tables.
