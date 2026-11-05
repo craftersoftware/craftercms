@@ -189,7 +189,7 @@ function PublishingQueue(props: PublishingQueueProps) {
 	const { formatMessage } = useIntl();
 	// Announce what the loaded response contains, not the filters requested for a page that is still loading.
 	let queueRange = '';
-	if (packages) {
+	if (packages && !isFetchingPackages) {
 		queueRange =
 			packages.total > 0
 				? formatMessage(

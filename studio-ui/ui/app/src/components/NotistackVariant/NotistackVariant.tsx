@@ -49,7 +49,8 @@ export function SnackbarStatusRegion({ children }: PropsWithChildren) {
 	const [region, setRegion] = useState<HTMLElement | null>(null);
 	return (
 		<StatusRegionContext.Provider value={region}>
-			<Box ref={setRegion} role="status" sx={visuallyHidden} />
+			{/* aria-atomic="false" so a second toast doesn't re-read the ones still showing. */}
+			<Box ref={setRegion} role="status" aria-atomic="false" sx={visuallyHidden} />
 			{children}
 		</StatusRegionContext.Provider>
 	);

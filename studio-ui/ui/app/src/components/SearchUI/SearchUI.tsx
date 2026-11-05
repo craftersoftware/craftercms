@@ -132,14 +132,16 @@ export function SearchUI(props: SearchUIProps) {
 	// Stay silent while a search is in flight: `searchResults` still holds the previous response until it lands.
 	let resultsStatus = '';
 	if (searchResults != null && !isFetching) {
-		resultsStatus =
-			searchResults.total === 0
-				? formatMessage(translations.noResults)
-				: formatMessage(translations.resultsStatus, {
-						from: searchParameters.offset + 1,
-						to: Math.min(searchParameters.offset + searchParameters.limit, searchResults.total),
-						count: searchResults.total
-					});
+		if (searchResults.total === 0) {
+			resultsStatus = formatMessage(translations.noResults);
+		} else if (searchResults.items.length > 0) {
+			// Count the rows that are rendered, not the requested page window.
+			resultsStatus = formatMessage(translations.resultsStatus, {
+				from: searchParameters.offset + 1,
+				to: Math.min(searchParameters.offset + searchResults.items.length, searchResults.total),
+				count: searchResults.total
+			});
+		}
 	}
 
 	const container = useRef(undefined);

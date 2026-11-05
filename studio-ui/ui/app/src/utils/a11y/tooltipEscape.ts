@@ -19,8 +19,13 @@
  * stop the event. MUI Modal handles Escape on the dialog root during bubble and
  * calls `stopPropagation()`, so the tooltip listener never runs and the dialog
  * closes instead. A capture listener on `document` runs first: when a tooltip is
- * shown it hides that tooltip directly and swallows the Escape, so nothing else
- * (the dialog, other Escape listeners) reacts to it and focus does not move.
+ * shown it dismisses that tooltip and swallows the Escape, so nothing else (the
+ * dialog, other Escape listeners) reacts to it and focus does not move.
+ *
+ * Dismissal hides the popper, because MUI's open state is not reachable from outside
+ * the component. The next pointer or focus entry clears it, so the tooltip can show
+ * again: MUI cancels a pending close when the pointer re-enters within `leaveDelay`,
+ * which would otherwise leave the popper hidden while MUI still considers it open.
  */
 
 export interface TooltipEscapeNode {
@@ -67,10 +72,7 @@ export function findShownTooltip(root: TooltipEscapeRoot): TooltipEscapeNode | n
 	return null;
 }
 
-/**
- * Hides the shown tooltip's popper. MUI keeps its own open state until the pointer leaves or the trigger
- * blurs, which is when it closes normally; until then the tooltip stays dismissed.
- */
+/** Hides the shown tooltip. Returns whether one was showing. */
 export function dismissShownTooltip(root: TooltipEscapeRoot): boolean {
 	const popper = findShownTooltip(root)?.closest('.MuiTooltip-popper');
 	if (!popper?.style) return false;
@@ -78,27 +80,48 @@ export function dismissShownTooltip(root: TooltipEscapeRoot): boolean {
 	return true;
 }
 
+/** Lets a dismissed tooltip be shown by the next hover or focus. */
+export function clearTooltipDismissals(root: TooltipEscapeRoot): void {
+	const poppers = root.querySelectorAll('.MuiTooltip-popper');
+	for (let index = 0; index < poppers.length; index += 1) {
+		const popper = poppers[index];
+		if (popper.style?.display === 'none') popper.style.display = '';
+	}
+}
+
 export function onTooltipEscapeKeyDown(event: KeyboardEvent, doc: Document): void {
 	if (event.key !== 'Escape' || !dismissShownTooltip(doc as unknown as TooltipEscapeRoot)) return;
+	// Swallow this one Escape: the tooltip is dismissed and the dialog or menu behind it stays open.
 	event.stopPropagation();
 	event.preventDefault();
 }
 
 let installs = 0;
-let removeListener: (() => void) | null = null;
+let removeListeners: (() => void) | null = null;
 
+/**
+ * Installs the capture-phase Escape handling once for every mounted handler.
+ * Pointer and focus entry clear a dismissal, so the tooltip shows again on the next hover or focus.
+ */
 export function installTooltipEscapeHandler(doc: Document = document): () => void {
 	installs += 1;
 	if (installs === 1) {
-		const listener = (event: KeyboardEvent) => onTooltipEscapeKeyDown(event, doc);
-		doc.addEventListener('keydown', listener, true);
-		removeListener = () => doc.removeEventListener('keydown', listener, true);
+		const onKeyDown = (event: KeyboardEvent) => onTooltipEscapeKeyDown(event, doc);
+		const onEnter = () => clearTooltipDismissals(doc as unknown as TooltipEscapeRoot);
+		doc.addEventListener('keydown', onKeyDown, true);
+		doc.addEventListener('pointerover', onEnter, true);
+		doc.addEventListener('focusin', onEnter, true);
+		removeListeners = () => {
+			doc.removeEventListener('keydown', onKeyDown, true);
+			doc.removeEventListener('pointerover', onEnter, true);
+			doc.removeEventListener('focusin', onEnter, true);
+		};
 	}
 	return () => {
 		installs -= 1;
-		if (installs === 0 && removeListener) {
-			removeListener();
-			removeListener = null;
+		if (installs === 0 && removeListeners) {
+			removeListeners();
+			removeListeners = null;
 		}
 	};
 }

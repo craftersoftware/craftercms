@@ -73,6 +73,12 @@ export function CrafterCMSNextBridge(
 				autoHideDuration: autoHideDuration,
 				anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
 				action: (id) => <SnackbarCloseButton id={id} />,
+				classes: {
+					// Marked so the connection banner can lift bottom-anchored snackbars above itself.
+					containerAnchorOriginBottomLeft: 'studio-snackbar-bottom',
+					containerAnchorOriginBottomCenter: 'studio-snackbar-bottom',
+					containerAnchorOriginBottomRight: 'studio-snackbar-bottom'
+				},
 				Components: {
 					default: DefaultStatusSnackbar,
 					error: NotistackVariant,

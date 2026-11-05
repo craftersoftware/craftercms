@@ -17,8 +17,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+	clearTooltipDismissals,
 	dismissShownTooltip,
 	findShownTooltip,
+	installTooltipEscapeHandler,
 	type TooltipEscapeNode,
 	type TooltipEscapeRoot
 } from './tooltipEscape.ts';
@@ -55,8 +57,9 @@ function root(
 	return {
 		poppers: tips.map((entry) => entry.popper),
 		querySelectorAll(selector: string) {
-			if (selector !== '.MuiTooltip-tooltip') return [];
-			return tips.map((entry) => entry.tip);
+			if (selector === '.MuiTooltip-tooltip') return tips.map((entry) => entry.tip);
+			if (selector === '.MuiTooltip-popper') return tips.map((entry) => entry.popper);
+			return [];
 		},
 		defaultView: {
 			getComputedStyle(element: TooltipEscapeNode) {
@@ -88,4 +91,71 @@ test('dismissShownTooltip hides the shown popper once and ignores a tooltip that
 	assert.equal(dismissShownTooltip(shown), false);
 	assert.equal(dismissShownTooltip(root([{ opacity: '0' }])), false);
 	assert.equal(dismissShownTooltip(root([])), false);
+});
+
+test('a dismissed tooltip can show again once the pointer or focus moves', () => {
+	const shown = root([{}]);
+	assert.equal(dismissShownTooltip(shown), true);
+	assert.equal(shown.poppers[0].style?.display, 'none');
+	clearTooltipDismissals(shown);
+	assert.notEqual(shown.poppers[0].style?.display, 'none');
+	assert.ok(findShownTooltip(shown));
+});
+
+test('the installed listener re-shows a dismissed tooltip on the next pointer or focus entry', () => {
+	const shown = root([{}]);
+	const { doc } = fakeDocument(shown);
+	const uninstall = installTooltipEscapeHandler(doc as unknown as Document);
+	doc.fire('keydown', { key: 'Escape' });
+	assert.equal(shown.poppers[0].style?.display, 'none');
+	doc.fire('pointerover', {});
+	assert.notEqual(shown.poppers[0].style?.display, 'none');
+	uninstall();
+});
+
+/** Minimal document double for the installed capture listener: records listeners and delivers events. */
+function fakeDocument(shown: TooltipEscapeRoot) {
+	const listeners: Array<{ type: string; capture: boolean; listener: (event: unknown) => void }> = [];
+	const doc = {
+		...shown,
+		addEventListener(type: string, listener: (event: unknown) => void, capture?: boolean) {
+			listeners.push({ type, capture: Boolean(capture), listener });
+		},
+		removeEventListener(type: string, listener: (event: unknown) => void, capture?: boolean) {
+			const index = listeners.findIndex(
+				(entry) => entry.type === type && entry.listener === listener && entry.capture === Boolean(capture)
+			);
+			if (index >= 0) listeners.splice(index, 1);
+		},
+		fire(type: string, event: Record<string, unknown>) {
+			const entry = listeners.find((candidate) => candidate.type === type);
+			let stopped = false;
+			entry?.listener(Object.assign(event, { stopPropagation: () => (stopped = true), preventDefault: () => {} }));
+			return stopped;
+		}
+	};
+	return { doc, listeners };
+}
+
+test('the installed listener dismisses a shown tooltip and swallows that Escape', () => {
+	const shown = root([{}]);
+	const { doc, listeners } = fakeDocument(shown);
+	const uninstall = installTooltipEscapeHandler(doc as unknown as Document);
+	assert.equal(listeners.find((entry) => entry.type === 'keydown')?.capture, true);
+
+	assert.equal(doc.fire('keydown', { key: 'Escape' }), true);
+	assert.equal(shown.poppers[0].style?.display, 'none');
+
+	// Handled: the second Escape belongs to the dialog again.
+	assert.equal(doc.fire('keydown', { key: 'Escape' }), false);
+	uninstall();
+});
+
+test('the installed listener leaves Escape alone when no tooltip is shown', () => {
+	const { doc, listeners } = fakeDocument(root([]));
+	const uninstall = installTooltipEscapeHandler(doc as unknown as Document);
+	assert.equal(doc.fire('keydown', { key: 'Escape' }), false);
+	assert.equal(doc.fire('keydown', { key: 'Enter' }), false);
+	uninstall();
+	assert.equal(listeners.length, 0);
 });

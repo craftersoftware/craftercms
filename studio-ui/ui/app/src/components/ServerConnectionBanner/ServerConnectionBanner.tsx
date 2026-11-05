@@ -35,8 +35,8 @@ export interface ServerConnectionBannerProps {
 /**
  * Full-width bar docked to the viewport bottom. `#root` is `100vh` with
  * `border-box`, so padding-bottom reserves that strip inside the app shell.
- * Dialogs are portaled to `document.body`, so their root stops above the banner.
- * Styles live here, not in the shell.
+ * Dialogs, the minimized-dialog bar and bottom-anchored snackbars are portaled to
+ * `document.body`, so each is offset above the banner. Styles live here, not in the shell.
  */
 export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 	const { authoringBase, onDismiss } = props;
@@ -72,6 +72,15 @@ export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 					// keeps every dialog (full-screen and nested included) clear of it. `body` outranks MUI's own rule.
 					'body .MuiDialog-root': {
 						bottom: 'var(--studio-connection-banner-height, 0px)'
+					},
+					// Body-level overlays that also hug the viewport bottom: the minimized-dialog bar and
+					// bottom-anchored snackbars. Both use the same variable, so they clear the banner too.
+					// `body` and the extra class keep these ahead of the components' own single-class rules.
+					'body > .minimized-bar-portal-root': {
+						bottom: 'calc(20px + var(--studio-connection-banner-height, 0px))'
+					},
+					'body .notistack-SnackbarContainer.studio-snackbar-bottom': {
+						bottom: 'calc(14px + var(--studio-connection-banner-height, 0px))'
 					}
 				}}
 			/>
@@ -101,17 +110,10 @@ export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 								rel="noopener noreferrer"
 								size="small"
 								color="inherit"
-								sx={{ '&:focus-visible': { outline: '2px solid currentColor', outlineOffset: 2 } }}
 							>
 								<FormattedMessage defaultMessage="Learn more" />
 							</Button>
-							<IconButton
-								size="small"
-								color="inherit"
-								onClick={onDismiss}
-								aria-label={closeLabel}
-								sx={{ '&:focus-visible': { outline: '2px solid currentColor', outlineOffset: 2 } }}
-							>
+							<IconButton size="small" color="inherit" onClick={onDismiss} aria-label={closeLabel}>
 								<CloseRounded fontSize="small" />
 							</IconButton>
 						</>
