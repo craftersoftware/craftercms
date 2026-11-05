@@ -149,8 +149,14 @@ export interface StableGlobalContextProps {
 }
 
 /**
- * Payload of `fieldUpdates$`: which field's value was just written. Carries the id only, so the
- * event can grow later without breaking subscribers. Read the value from the field's atom.
+ * Payload of the internal `fieldUpdates$` stream: which field's value was just written.
+ *
+ * Internal to FE2 and Type Builder. It carries the field id only, with no `value` or `previousValue`:
+ * subscribers read the current value from the field's atom. Wrapping the id in an object lets the event
+ * grow later without changing every subscriber.
+ *
+ * Form controllers must not depend on this type. They use `FormControllerContext.fieldChanges` or
+ * `FormControllerContext.onFieldChange`, which deliver a read-only `FormFieldChange` with the value.
  */
 export interface FieldUpdate {
 	readonly fieldId: string;
@@ -171,6 +177,11 @@ export interface StableFormContextProps {
 	 */
 	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
 	changedFieldIds: Set<string>;
+	/**
+	 * Internal. Emits a {@link FieldUpdate} (the field id only) after each field value write, for FE2 and
+	 * Type Builder. It is a Subject, so never hand it to plugins or controllers: they get the read-only
+	 * `fieldChanges` / `onFieldChange` on the controller context, which bridge from this stream.
+	 */
 	fieldUpdates$: Subject<FieldUpdate>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;

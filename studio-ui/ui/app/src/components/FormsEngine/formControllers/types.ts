@@ -31,11 +31,38 @@ export type FormControllerNotifySeverity = 'info' | 'success' | 'warning' | 'err
 export type FormControllerSaveResult = boolean | { ok: boolean; message?: string };
 
 /**
- * One field value write, as delivered by `fieldChanges`. `value` is read when the event is
- * delivered, the same way `onFieldChange` reads it. A nested `setValue` reports the root field id.
+ * One field value write, as delivered by {@link FormControllerContext.fieldChanges}.
+ *
+ * @remarks
+ * The object is frozen and its properties are read-only: a change is a report of something that
+ * already happened, not a way to alter the form. Use {@link FormControllerContext.setValue} to write.
+ *
+ * `onFieldChange` listeners receive the same two pieces of data as `(fieldId, value)` arguments.
+ *
+ * @example
+ * ```js
+ * ctx.fieldChanges.subscribe((change) => {
+ *   // change.fieldId → 'title_s'
+ *   // change.value   → the value of 'title_s' as of this delivery
+ *   console.log(change.fieldId, change.value);
+ * });
+ * ```
+ *
+ * @see {@link FormControllerContext.fieldChanges}
+ * @see {@link FormControllerContext.onFieldChange}
  */
 export interface FormFieldChange {
+	/**
+	 * Id of the field whose value was written. A write to a nested path (for example
+	 * `setValue('myRepeat.0.title_s', …)`) reports the **root** field id (`myRepeat`), not the path.
+	 * Editing the file name reports `file-name`.
+	 */
 	readonly fieldId: string;
+	/**
+	 * The field's value, read when the event is delivered (not captured when it was queued), exactly as
+	 * {@link FormControllerRelevanceContext.getValue} would return it for `fieldId` at that moment. For a nested
+	 * write this is the whole root value (the repeat array or component object), not the changed leaf.
+	 */
 	readonly value: unknown;
 }
 
@@ -98,17 +125,119 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 */
 	setValue(fieldId: string, value: unknown): void;
 	/**
-	 * Registers a listener called whenever a field value is written, including a field that
-	 * is not rendered. Returns a function that removes it. The host also drops listeners registered here on form teardown.
-	 * After teardown, registering is refused: nothing subscribes and the returned function is a no-op.
+	 * Calls `listener` each time a field value is written. The simple way to react to edits: a callback in,
+	 * an unsubscribe function out, and no RxJS knowledge needed.
+	 *
+	 * @remarks
+	 * **When to use it.** Pick `onFieldChange` for a direct, per-change reaction: "when `title_s` changes,
+	 * update `slug_s`". If you need to filter by field, debounce, drop repeats, cancel stale async work,
+	 * combine edits with other streams or stop on a condition, use {@link FormControllerContext.fieldChanges}
+	 * instead. It is the same event stream, built for composition with the `craftercms.libs.rxjs` operators.
+	 *
+	 * **What it delivers.** One call per value write, in the order the writes happen, including writes to a
+	 * field that is not rendered and writes made through {@link FormControllerContext.setValue} (so a listener
+	 * that writes back to the field it listens to will re-enter itself; guard against loops). `fieldId` is
+	 * the root field id (a nested path write reports its root). `value` is read when the listener is called.
+	 * It is not called for the initial values, only for later writes.
+	 *
+	 * **Lifecycle.** The host removes every listener when the form this context belongs to is torn down
+	 * (stack pop, unmount, replacement attach, or a failed `initialize`), including while `initialize` is
+	 * still pending, so you do not have to unsubscribe in a cleanup. After teardown, registering is refused:
+	 * a warning is logged, nothing is subscribed, and the returned function is a no-op. There is no
+	 * completion callback; use {@link FormControllerContext.fieldChanges} if you need to know the form ended.
+	 * The `isFieldRelevant` context has no live form: it ignores this call with a warning.
+	 *
+	 * If `listener` throws, the error is reported asynchronously (RxJS unhandled error reporting). It does not
+	 * stop other listeners and does not remove this one.
+	 *
+	 * @param listener - Called with the root field id and the value read at delivery time.
+	 * @returns A function that removes the listener. Safe to call more than once.
+	 *
+	 * @example
+	 * ```js
+	 * initialize(ctx) {
+	 *   const unsubscribe = ctx.onFieldChange((fieldId, value) => {
+	 *     if (fieldId === 'title_s') {
+	 *       ctx.notify(`Title is now ${value ?? ''}`, 'info');
+	 *     }
+	 *   });
+	 *   // Optional: the host also removes the listener when the form closes.
+	 *   return unsubscribe;
+	 * }
+	 * ```
+	 *
+	 * @see {@link FormControllerContext.fieldChanges} for the observable form of the same events.
+	 * @see {@link FormFieldChange}
 	 */
 	onFieldChange(listener: (fieldId: string, value: unknown) => void): () => void;
 	/**
-	 * Read-only stream of the same field writes `onFieldChange` reports. Subscribe or `pipe` it with the
-	 * operators in `craftercms.libs.rxjs`. It cannot be used to push events: it has no `next`, `error` or
-	 * `complete`. It completes when the form this context belongs to is torn down, and a subscription
-	 * made after teardown completes immediately (with a warning). Not available to `isFieldRelevant`:
-	 * its context has no live form, so there the stream completes immediately.
+	 * Read-only observable of the same field writes {@link FormControllerContext.onFieldChange} reports, as
+	 * {@link FormFieldChange} objects. Use it when you want to compose changes with `craftercms.libs.rxjs`
+	 * operators.
+	 *
+	 * @remarks
+	 * **When to use it.** Pick `fieldChanges` when a plain callback gets awkward:
+	 * - filter to some fields (`filter`);
+	 * - wait for the author to pause typing (`debounceTime`) or skip repeats (`distinctUntilChanged`);
+	 * - run async work and drop stale results when a newer edit arrives (`switchMap`);
+	 * - combine edits with other streams (`combineLatest`, `merge`, `withLatestFrom`);
+	 * - stop on a condition (`takeUntil`, `takeWhile`, `first`).
+	 *
+	 * For a simple per-change reaction, {@link FormControllerContext.onFieldChange} is shorter and needs no
+	 * RxJS. Both are driven by the same events, in the same order, with the same values.
+	 *
+	 * **What it delivers.** The observable is cold and unicast per subscription: each `subscribe` is
+	 * independent, sees only changes written after it subscribed (no replay of the initial or latest value),
+	 * and emits synchronously on the write. It never errors. Read the field id and value off each
+	 * {@link FormFieldChange}; `value` is read when that subscriber receives the event.
+	 *
+	 * **Read-only.** The host never hands out its internal subject. The observable has no `next`, `error` or
+	 * `complete`, so a controller cannot push events into the form or end the stream for others.
+	 *
+	 * **Lifecycle.** The observable **completes** for every subscriber when the form this context belongs to
+	 * is torn down (stack pop, unmount, replacement attach, or a failed `initialize`). Completion tears down
+	 * the whole pipeline, so no cleanup is needed for subscriptions to it, and `takeUntil` / `finalize` /
+	 * the `complete` callback run at that point. Unsubscribe earlier to stop delivery sooner. Subscribing
+	 * after teardown logs a warning and completes immediately without emitting. In the `isFieldRelevant`
+	 * context (which has no live form) the property exists but completes immediately without emitting.
+	 * Stop any non-RxJS work you start from a subscription (timers, fetches) in your own cleanup.
+	 *
+	 * Like `onFieldChange`, it also fires for writes made through {@link FormControllerContext.setValue}, so
+	 * writing to a field you are observing can loop. Filter or `distinctUntilChanged` to break the cycle.
+	 *
+	 * @example
+	 * Debounce edits to one field, skip repeats and write a derived value.
+	 * ```js
+	 * const { filter, debounceTime, map, distinctUntilChanged } = craftercms.libs.rxjs;
+	 *
+	 * initialize(ctx) {
+	 *   ctx.fieldChanges
+	 *     .pipe(
+	 *       filter((change) => change.fieldId === 'title_s'),
+	 *       debounceTime(400),
+	 *       map((change) => String(change.value ?? '').toLowerCase().replace(/\s+/g, '-')),
+	 *       distinctUntilChanged()
+	 *     )
+	 *     .subscribe((slug) => ctx.setValue('slug_s', slug));
+	 *   // No cleanup needed: the stream completes when the form closes.
+	 * }
+	 * ```
+	 *
+	 * @example
+	 * Cancel stale async work with `switchMap`.
+	 * ```js
+	 * const { filter, switchMap, from } = craftercms.libs.rxjs;
+	 *
+	 * ctx.fieldChanges
+	 *   .pipe(
+	 *     filter((change) => change.fieldId === 'sku_s'),
+	 *     switchMap((change) => from(lookupProduct(change.value))) // a newer edit drops the pending lookup
+	 *   )
+	 *   .subscribe((product) => ctx.setValue('productName_s', product?.name ?? ''));
+	 * ```
+	 *
+	 * @see {@link FormControllerContext.onFieldChange} for the callback form of the same events.
+	 * @see {@link FormFieldChange}
 	 */
 	readonly fieldChanges: Observable<FormFieldChange>;
 	/**
