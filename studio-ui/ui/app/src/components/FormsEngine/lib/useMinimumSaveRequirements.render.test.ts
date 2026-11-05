@@ -17,18 +17,13 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import type { FieldUpdate } from './formsEngineContext.ts';
 import { afterEach, describe, it } from 'node:test';
 
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { Subject } = await import('rxjs');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
 const { useMinimumSaveRequirements } = await import('./useMinimumSaveRequirements.ts');
-
-const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const debounceWait = 400;
 
 function createFormAtoms(initial: { fileNameValid: boolean; internalName: unknown }) {
 	const fileName = atom(Promise.resolve({ isValid: initial.fileNameValid }));
@@ -55,12 +50,11 @@ afterEach(async () => {
 
 async function renderHook(
 	form: ReturnType<typeof createFormAtoms> | null,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean },
-	fieldUpdates$?: InstanceType<typeof Subject<FieldUpdate>>
+	flags: { isRepeatMode: boolean; isEmbedded: boolean }
 ) {
 	const results: string[][] = [];
 	function Probe() {
-		const missing = useMinimumSaveRequirements((form?.atoms ?? null) as never, flags, fieldUpdates$);
+		const missing = useMinimumSaveRequirements((form?.atoms ?? null) as never, flags);
 		results.push(missing);
 		return null;
 	}
@@ -122,39 +116,29 @@ describe('useMinimumSaveRequirements', () => {
 		assert.deepEqual(latest(), []);
 	});
 
-	it('re-reads after a field update once the edit pause has passed', async () => {
+	it('re-reads when the internal name atom changes', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: '' });
-		const fieldUpdates$ = new Subject<FieldUpdate>();
-		const { latest } = await renderHook(form, full, fieldUpdates$);
+		const { latest } = await renderHook(form, full);
 		assert.deepEqual(latest(), ['internalName']);
 
 		await act(async () => {
 			form.store.set(form.internalName, 'Home');
-			fieldUpdates$.next({ fieldId: 'internal-name' });
-		});
-		assert.deepEqual(latest(), ['internalName'], 'still the old read inside the pause');
-
-		await act(async () => {
-			await pause(debounceWait);
 		});
 		assert.deepEqual(latest(), []);
 
 		await act(async () => {
 			form.store.set(form.internalName, '  ');
-			fieldUpdates$.next({ fieldId: 'internal-name' });
-			await pause(debounceWait);
 		});
 		assert.deepEqual(latest(), ['internalName']);
 	});
 
 	it('keeps the same list when a re-read finds nothing new', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: '' });
-		const fieldUpdates$ = new Subject<FieldUpdate>();
-		const { latest } = await renderHook(form, full, fieldUpdates$);
+		const { latest } = await renderHook(form, full);
 		const before = latest();
 		await act(async () => {
-			fieldUpdates$.next({ fieldId: 'title' });
-			await pause(debounceWait);
+			// Still blank after trim; the missing list must not be replaced.
+			form.store.set(form.internalName, '   ');
 		});
 		assert.equal(latest(), before);
 	});
