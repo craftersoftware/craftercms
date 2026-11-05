@@ -153,6 +153,11 @@ export interface EditTypeAppProps {
 // - When a field is added/removed...
 
 interface EditAppContextProps {
+	/**
+	 * The open form's internal stream of value writes (see `StableFormContextProps.fieldUpdates$`): one emission per
+	 * write, after the changed-ids atom is updated, never on a clear. Used to track dirty state synchronously and to
+	 * debounce background validation. It carries no state: read dirty from the form's `changedFieldIds` atom.
+	 */
 	fieldUpdates$: Subject<string>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;

@@ -69,6 +69,12 @@ export interface CreateFormControllerContextArgs {
 	getPath: () => string | null | undefined;
 	mode: FormControllerMode;
 	isEmbedded: boolean;
+	/**
+	 * The stack entry's internal stream of value writes (one emission per write, payload is the written field's id,
+	 * emitted after the value and changed-ids state are updated; clears never emit). `onFieldChange` is built on it,
+	 * so the controller sees `(fieldId, value)` per write and never the Subject, the store or the atoms.
+	 * See `StableFormContextProps.fieldUpdates$`.
+	 */
 	fieldUpdates$: Subject<string>;
 	dispatch: ReduxDispatch;
 	/** Set that owns `onFieldChange` unsubscribers for this stack entry. */

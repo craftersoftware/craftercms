@@ -307,15 +307,51 @@ type FieldTrackingContext = Pick<
 >;
 
 /**
- * The set of changed field ids is state: one atom holding an immutable set. A write that does not change membership
- * keeps the same set, so it notifies nothing. `fieldUpdates$` is the separate event stream of value writes.
- * Insertion order is the order fields were first changed (`generateDefaultChangesComment` uses the last one).
- * The set is never mutated after it is stored. (Object.freeze does not make a Set read-only; the type does.)
+ * The shared "nothing changed" set. Set it on {@link ChangedFieldIdsAtom} to clear every changed marker (a save
+ * checkpoint, a Type Builder commit), and {@link withChangedField} returns it when the last id is removed, so
+ * "nothing changed" is always this one reference.
+ *
+ * Never add to it. `Object.freeze` does not stop a `Set` from being mutated; the `ReadonlySet` type is what keeps it
+ * empty, so treat every changed-ids set as immutable.
+ *
+ * @example
+ * ```ts
+ * store.set(stableFormContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+ * ```
  */
 export const EMPTY_CHANGED_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
 
+/**
+ * The atom behind {@link StableFormContextProps.changedFieldIds}: the source of truth for which fields differ from
+ * the last checkpoint. It holds an immutable set whose reference changes only when membership changes, so a write
+ * that leaves the membership alone notifies nothing. Insertion order is the order fields were first changed
+ * (`generateDefaultChangesComment` treats the last one as "last added").
+ *
+ * - Components: subscribe through the cached per-field {@link changedFieldAtom}, not by reading this atom, so only the
+ *   affected field re-renders.
+ * - Imperative code (save, Type Builder commit): `store.get(atom)`.
+ * - Writes: build the next set with {@link withChangedField}. Never mutate the stored set. Clear with
+ *   {@link EMPTY_CHANGED_FIELD_IDS}.
+ *
+ * This is state. The internal `fieldUpdates$` stream is the event side: it announces each value write after this atom
+ * is updated, and does not announce clears.
+ *
+ * @see {@link StableFormContextProps.fieldUpdates$}
+ */
 export type ChangedFieldIdsAtom = PrimitiveAtom<ReadonlySet<string>>;
 
+/**
+ * Creates a changed-ids atom, starting at {@link EMPTY_CHANGED_FIELD_IDS}. One per form stack entry. Atoms are not
+ * tied to a store, so creating one has no side effects.
+ *
+ * @example
+ * ```ts
+ * const changedFieldIds = createChangedFieldIdsAtom();
+ * store.get(changedFieldIds) === EMPTY_CHANGED_FIELD_IDS; // true
+ * ```
+ *
+ * @see {@link ChangedFieldIdsAtom}
+ */
 export function createChangedFieldIdsAtom(): ChangedFieldIdsAtom {
 	return atom(EMPTY_CHANGED_FIELD_IDS);
 }
@@ -325,8 +361,23 @@ const changedFieldAtomsByIds = new WeakMap<ChangedFieldIdsAtom, Map<string, Atom
 const neverChanged: Atom<boolean> = atom(false);
 
 /**
- * Whether `fieldId` is in the changed set. Derived and cached per field, like the value and validation atoms, so a
- * field only re-renders when its own flag flips.
+ * Whether `fieldId` differs from the last checkpoint: a derived boolean atom over the changed-ids atom. Cached per
+ * changed-ids atom and field id (like the value and validation atoms), so the same call returns the same atom, and
+ * a subscriber is notified only when its own flag flips, not when another field is added or removed.
+ *
+ * This is the way React components read the changed state. Imperative code reads the changed-ids atom with
+ * `store.get` instead. Pass `null` (Type Builder's read-only chips have no changed-ids atom) to get a constant
+ * `false` atom.
+ *
+ * @example
+ * ```tsx
+ * // In a component: re-renders only when this field's flag flips
+ * const hasChanges = useAtomValue(changedFieldAtom(stableForm.changedFieldIds, field.id));
+ * ```
+ *
+ * @param changedFieldIds The form's changed-ids atom, or null/undefined when the form tracks nothing.
+ * @param fieldId The field to watch.
+ * @see {@link ChangedFieldIdsAtom}
  */
 export function changedFieldAtom(
 	changedFieldIds: ChangedFieldIdsAtom | null | undefined,
@@ -346,7 +397,25 @@ export function changedFieldAtom(
 	return fieldAtom;
 }
 
-/** `ids` with `fieldId` added (last) or removed. `ids` itself when the membership already matches. */
+/**
+ * The next changed-ids set after `fieldId` was found changed or not. This is how a writer updates the set: it never
+ * mutates `ids`.
+ *
+ * Returns `ids` itself (same reference) when the membership already matches, so the caller can skip the write and
+ * nothing is notified. Otherwise returns a copy with `fieldId` added last (insertion order is preserved) or removed,
+ * and {@link EMPTY_CHANGED_FIELD_IDS} when the copy would be empty.
+ *
+ * @example
+ * ```ts
+ * const current = get(changedFieldIds);
+ * const next = withChangedField(current, field.id, value !== original);
+ * if (next !== current) set(changedFieldIds, next);
+ * ```
+ *
+ * @param ids The current set. Not modified.
+ * @param fieldId The field whose state was just evaluated.
+ * @param changed Whether the field now differs from the checkpoint.
+ */
 export function withChangedField(ids: ReadonlySet<string>, fieldId: string, changed: boolean): ReadonlySet<string> {
 	if (ids.has(fieldId) === changed) return ids;
 	const next = new Set(ids);
@@ -356,7 +425,8 @@ export function withChangedField(ids: ReadonlySet<string>, fieldId: string, chan
 }
 
 /**
- * Records whether `field` differs from the value it was opened with.
+ * Records whether `field` differs from the value it was opened with, by updating the changed-ids atom (only when the
+ * membership changes; see {@link withChangedField}).
  * `file-name` is compared to the original path; every other field is compared to `originalValues`.
  * Callers pass the value just written, and call this before emitting on `fieldUpdates$` so synchronous subscribers
  * read the new set. It does not emit — the writer does that once.
