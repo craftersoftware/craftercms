@@ -27,10 +27,12 @@ export type CredentialsErrorBannerProps = PropsWithChildren<{
 
 /**
  * Credential-failure banner shared by the login dialog and the session re-login dialog.
- * The fill is `theme.palette.error.main` and the text is `palette.common.black` when that reaches
- * 4.5:1 on the fill, `palette.common.white` otherwise. `theme.palette.error.contrastText` is not
- * used because it only guarantees `contrastThreshold` (3:1 by default), which picks black on the
- * light-mode error colour while it is still below 4.5:1.
+ * The fill is `theme.palette.error.main`. The text is `palette.common.black` when black reaches
+ * 4.5:1 on that fill, `palette.common.white` otherwise.
+ * `theme.palette.error.contrastText` cannot be used for this: `getContrastText` returns whichever of
+ * `text.primary` (white in light mode) or `text.secondary` (black at 87% alpha) first reaches
+ * `contrastThreshold`, 3:1 by default, and compares against those alphas rather than pure black and
+ * white. On develop's light `#FF3B30` it picks white at 3.55:1, which fails AA for body text.
  * There is no border. A border in the text colour is white in light mode and disappears on the fill.
  */
 export function CredentialsErrorBanner(props: CredentialsErrorBannerProps) {
