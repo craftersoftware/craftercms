@@ -38,6 +38,6 @@ export const codeEditorKeyboardMessages = defineMessages({
 	gutterLabel: {
 		id: 'codeEditor.gutterLabel',
 		defaultMessage:
-			'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
+			"Editor gutter: problems and fold controls. From the editor, '{next}' goes to the next problem, '{previous}' to the previous, and '{fold}' toggles a fold."
 	}
 });

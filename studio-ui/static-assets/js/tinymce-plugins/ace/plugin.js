@@ -46,6 +46,33 @@
 	// ui/app/src/components/editorKeyboard/aceKeyboard.ts
 	var ACE_HINT_CLASS = 'craftercms-code-editor-hint';
 	var HINT_ID_PREFIX = 'craftercms-code-editor-hint';
+	function boundKeys(editor, commandName) {
+		const bindings = editor.commands?.commandKeyBinding;
+		if (!bindings) {
+			return [];
+		}
+		return Object.keys(bindings).filter((key) => bindings[key]?.name === commandName);
+	}
+	function formatKey(key) {
+		return key
+			.split('-')
+			.map((part) =>
+				/^[a-z]$/.test(part) || /^f\d+$/.test(part) ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1)
+			)
+			.join('+');
+	}
+	function firstBoundKey(editor, commandName) {
+		const [key] = boundKeys(editor, commandName);
+		return key && formatKey(key);
+	}
+	function gutterText(editor, template) {
+		const keys = {
+			next: firstBoundKey(editor, 'goToNextError'),
+			previous: firstBoundKey(editor, 'goToPreviousError'),
+			fold: firstBoundKey(editor, 'toggleFoldWidget')
+		};
+		return template.replace(/\{(next|previous|fold)\}/g, (match, name) => keys[name] ?? match);
+	}
 	var applied = /* @__PURE__ */ new WeakSet();
 	var hintState = /* @__PURE__ */ new WeakMap();
 	function refreshHintText(container) {
@@ -116,7 +143,7 @@
 			installLegacyExit(aceEditor, scroller);
 		}
 		scroller?.setAttribute('aria-label', labels.name);
-		gutter?.setAttribute('aria-label', labels.gutterLabel);
+		gutter?.setAttribute('aria-label', gutterText(aceEditor, labels.gutterLabel));
 		if (keyboardMode && gutter) {
 			gutter.tabIndex = -1;
 			gutter.removeAttribute('aria-hidden');
@@ -198,7 +225,7 @@
 			'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
 		'code-editor-instructions-readonly': 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.',
 		'code-editor-gutter':
-			'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
+			'Editor gutter: problems and fold controls. From the editor, {next} goes to the next problem, {previous} to the previous, and {fold} toggles a fold.'
 	});
 	tinymce.addI18n('es', {
 		'code-editor': 'Editor de C\xF3digo',
@@ -211,7 +238,7 @@
 		'code-editor-instructions-readonly':
 			'Pulse Esc y despu\xE9s Tab para salir del editor. Pulse Enter para entrar en el editor.',
 		'code-editor-gutter':
-			'Margen del editor: problemas y controles de plegado. Desde el editor, Alt+E va al siguiente problema, Alt+Shift+E al anterior y F2 pliega o despliega.'
+			'Margen del editor: problemas y controles de plegado. Desde el editor, {next} va al siguiente problema, {previous} al anterior y {fold} pliega o despliega.'
 	});
 	tinymce.addI18n('de', {
 		'code-editor': 'Code-Editor',
@@ -224,7 +251,7 @@
 		'code-editor-instructions-readonly':
 			'Dr\xFCcken Sie Esc und dann Tab, um den Editor zu verlassen. Dr\xFCcken Sie die Eingabetaste, um in den Editor zu wechseln.',
 		'code-editor-gutter':
-			'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt Alt+E zum n\xE4chsten Problem, Alt+Shift+E zum vorherigen und F2 klappt einen Block ein oder aus.'
+			'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt {next} zum n\xE4chsten Problem, {previous} zum vorherigen und {fold} klappt einen Block ein oder aus.'
 	});
 	tinymce.addI18n('ko_KR', {
 		'code-editor': '\uCF54\uB4DC \uD3B8\uC9D1\uAE30',
@@ -237,7 +264,7 @@
 		'code-editor-instructions-readonly':
 			'\uD3B8\uC9D1\uAE30\uB97C \uB098\uAC00\uB824\uBA74 Esc\uB97C \uB204\uB978 \uB2E4\uC74C Tab\uC744 \uB204\uB974\uC138\uC694. \uD3B8\uC9D1\uAE30\uB85C \uB4E4\uC5B4\uAC00\uB824\uBA74 Enter\uB97C \uB204\uB974\uC138\uC694.',
 		'code-editor-gutter':
-			'\uD3B8\uC9D1\uAE30 \uC5EC\uBC31: \uBB38\uC81C \uBC0F \uC811\uAE30 \uCEE8\uD2B8\uB864\uC785\uB2C8\uB2E4. \uD3B8\uC9D1\uAE30\uC5D0\uC11C Alt+E\uB294 \uB2E4\uC74C \uBB38\uC81C\uB85C, Alt+Shift+E\uB294 \uC774\uC804 \uBB38\uC81C\uB85C \uC774\uB3D9\uD558\uBA70 F2\uB294 \uC811\uAE30\uB97C \uC804\uD658\uD569\uB2C8\uB2E4.'
+			'\uD3B8\uC9D1\uAE30 \uC5EC\uBC31: \uBB38\uC81C \uBC0F \uC811\uAE30 \uCEE8\uD2B8\uB864\uC785\uB2C8\uB2E4. \uD3B8\uC9D1\uAE30\uC5D0\uC11C {next}\uB294 \uB2E4\uC74C \uBB38\uC81C\uB85C, {previous}\uB294 \uC774\uC804 \uBB38\uC81C\uB85C \uC774\uB3D9\uD558\uBA70 {fold}\uB294 \uC811\uAE30\uB97C \uC804\uD658\uD569\uB2C8\uB2E4.'
 	});
 	tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {
 		const aceModes = {

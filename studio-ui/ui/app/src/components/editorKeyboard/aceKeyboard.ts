@@ -25,8 +25,11 @@
  *
  * The gutter stays out of the Tab order (A11Y-09, one tab stop per editor) but keeps
  * its role, label and its annotation and fold children. Ace's own commands are the
- * keyboard route to them: Alt+E and Alt+Shift+E move to the next and previous
- * annotation, F2 toggles the fold on the cursor line.
+ * keyboard route to them (goToNextError, goToPreviousError, toggleFoldWidget), and the
+ * label names the keys Ace actually binds for the current platform. Those are read from
+ * `commands.commandKeyBinding`, which Ace populates from each command's `bindKey` for
+ * `commands.platform`, so the label cannot drift from the bundled build. On Windows and
+ * Linux that is Alt+E / Alt+Shift+E; on macOS it is F4 / Shift+F4. F2 folds on both.
  *
  * TinyMCE dialogs close on Escape keyup. Ace moves focus to the scroller on
  * keydown, so the keyup lands on the scroller and would close the code dialog.
@@ -71,6 +74,8 @@ interface AceKeyboardEditor {
 	};
 	textInput?: { getElement(): HTMLTextAreaElement };
 	commands: {
+		platform?: 'win' | 'mac';
+		commandKeyBinding?: Record<string, { name?: string }>;
 		addCommand(command: {
 			name: string;
 			bindKey: { win: string; mac: string };
@@ -78,6 +83,49 @@ interface AceKeyboardEditor {
 			exec(editor: AceKeyboardEditor): void;
 		}): void;
 	};
+}
+
+/**
+ * The keys Ace binds to `commandName` in the running platform, from the command manager
+ * itself. Both the win and mac spellings are accepted so the lookup does not depend on
+ * which side of the key table Ace filled in.
+ */
+function boundKeys(editor: AceKeyboardEditor, commandName: string): string[] {
+	const bindings = editor.commands?.commandKeyBinding;
+	if (!bindings) {
+		return [];
+	}
+	return Object.keys(bindings).filter((key) => bindings[key]?.name === commandName);
+}
+
+/** Ace key names to the spellings the label uses: `alt-shift-e` -> `Alt+Shift+E`, `f4` -> `F4`. */
+function formatKey(key: string): string {
+	return key
+		.split('-')
+		.map((part) =>
+			/^[a-z]$/.test(part) || /^f\d+$/.test(part) ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1)
+		)
+		.join('+');
+}
+
+/** The first key Ace binds to a command, formatted for the label, or undefined when the build has none. */
+function firstBoundKey(editor: AceKeyboardEditor, commandName: string): string | undefined {
+	const [key] = boundKeys(editor, commandName);
+	return key && formatKey(key);
+}
+
+/**
+ * The gutter label with the platform's real keys filled in. The label template carries
+ * `{next}`, `{previous}` and `{fold}` placeholders, so translators never see the keys and
+ * the text follows whatever the bundled Ace binds.
+ */
+function gutterText(editor: AceKeyboardEditor, template: string): string {
+	const keys = {
+		next: firstBoundKey(editor, 'goToNextError'),
+		previous: firstBoundKey(editor, 'goToPreviousError'),
+		fold: firstBoundKey(editor, 'toggleFoldWidget')
+	};
+	return template.replace(/\{(next|previous|fold)\}/g, (match, name: keyof typeof keys) => keys[name] ?? match);
 }
 
 const applied = new WeakSet<object>();
@@ -169,7 +217,7 @@ export function applyAceKeyboardAccessibility(editor: AceAjax.Editor, labels: Ac
 	}
 
 	scroller?.setAttribute('aria-label', labels.name);
-	gutter?.setAttribute('aria-label', labels.gutterLabel);
+	gutter?.setAttribute('aria-label', gutterText(aceEditor, labels.gutterLabel));
 	// Ace's keyboard mode makes the gutter a second tab stop. A11Y-09 asks for one tab stop per
 	// editor, so the scroller stays the only one. The gutter keeps its role, its label and its
 	// annotation and fold children, so screen readers still reach them; the label names the

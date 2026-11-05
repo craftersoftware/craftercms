@@ -20,9 +20,12 @@
  * `yarn build:editor-keyboard`; do not edit or copy either into plugin.js.
  * The .source.js suffix keeps tsconfig.build.json from emitting this file into the npm package.
  *
- * The four translated sentences are also in editorKeyboard/messages.ts and the
+ * The five translated sentences are also in editorKeyboard/messages.ts and the
  * es/de/ko catalogues. TinyMCE i18n cannot import react-intl, so this is the
- * remaining copy. This plugin does not toggle Ace readOnly. The React editor
+ * remaining copy. The gutter sentence carries {next}, {previous} and {fold} slots
+ * (not the numeric {0} form, which TinyMCE would substitute); aceKeyboard.ts fills
+ * them from Ace's own key bindings. The React copy single-quotes them so ICU leaves
+ * them alone. This plugin does not toggle Ace readOnly. The React editor
  * re-applies when its readOnly prop changes. A direct setReadOnly() refreshes
  * the hint on the next focusin.
  */
@@ -39,7 +42,7 @@ tinymce.addI18n('en', {
 	'code-editor-instructions': 'Press Esc then Tab to leave the editor. Press Enter to edit. Tab indents while editing.',
 	'code-editor-instructions-readonly': 'Press Esc then Tab to leave the editor. Press Enter to move into the editor.',
 	'code-editor-gutter':
-		'Editor gutter: problems and fold controls. From the editor, Alt+E goes to the next problem, Alt+Shift+E to the previous, and F2 toggles a fold.'
+		'Editor gutter: problems and fold controls. From the editor, {next} goes to the next problem, {previous} to the previous, and {fold} toggles a fold.'
 });
 tinymce.addI18n('es', {
 	'code-editor': 'Editor de Código',
@@ -52,7 +55,7 @@ tinymce.addI18n('es', {
 	'code-editor-instructions-readonly':
 		'Pulse Esc y después Tab para salir del editor. Pulse Enter para entrar en el editor.',
 	'code-editor-gutter':
-		'Margen del editor: problemas y controles de plegado. Desde el editor, Alt+E va al siguiente problema, Alt+Shift+E al anterior y F2 pliega o despliega.'
+		'Margen del editor: problemas y controles de plegado. Desde el editor, {next} va al siguiente problema, {previous} al anterior y {fold} pliega o despliega.'
 });
 tinymce.addI18n('de', {
 	'code-editor': 'Code-Editor',
@@ -65,7 +68,7 @@ tinymce.addI18n('de', {
 	'code-editor-instructions-readonly':
 		'Drücken Sie Esc und dann Tab, um den Editor zu verlassen. Drücken Sie die Eingabetaste, um in den Editor zu wechseln.',
 	'code-editor-gutter':
-		'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt Alt+E zum nächsten Problem, Alt+Shift+E zum vorherigen und F2 klappt einen Block ein oder aus.'
+		'Editor-Randleiste: Probleme und Faltsteuerung. Im Editor springt {next} zum nächsten Problem, {previous} zum vorherigen und {fold} klappt einen Block ein oder aus.'
 });
 tinymce.addI18n('ko_KR', {
 	'code-editor': '코드 편집기',
@@ -78,7 +81,7 @@ tinymce.addI18n('ko_KR', {
 	'code-editor-instructions-readonly':
 		'편집기를 나가려면 Esc를 누른 다음 Tab을 누르세요. 편집기로 들어가려면 Enter를 누르세요.',
 	'code-editor-gutter':
-		'편집기 여백: 문제 및 접기 컨트롤입니다. 편집기에서 Alt+E는 다음 문제로, Alt+Shift+E는 이전 문제로 이동하며 F2는 접기를 전환합니다.'
+		'편집기 여백: 문제 및 접기 컨트롤입니다. 편집기에서 {next}는 다음 문제로, {previous}는 이전 문제로 이동하며 {fold}는 접기를 전환합니다.'
 });
 
 tinymce.PluginManager.add(PLUGIN_NAME, function (editor, url) {

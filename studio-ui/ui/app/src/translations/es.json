@@ -175,7 +175,7 @@
 	"cKn4Sy": "El elemento fue modificado, actualice para editarlo.",
 	"codeEditor.contentModel": "Modelo de contenido",
 	"codeEditor.groupLabel": "Editor de código",
-	"codeEditor.gutterLabel": "Margen del editor: problemas y controles de plegado. Desde el editor, Alt+E va al siguiente problema, Alt+Shift+E al anterior y F2 pliega o despliega.",
+	"codeEditor.gutterLabel": "Margen del editor: problemas y controles de plegado. Desde el editor, '{next}' va al siguiente problema, '{previous}' al anterior y '{fold}' pliega o despliega.",
 	"codeEditor.insertCode": "Insertar código",
 	"codeEditor.instructions": "Pulse Esc y después Tab para salir del editor. Pulse Enter para editar. Tab sangra mientras edita.",
 	"codeEditor.instructionsReadOnly": "Pulse Esc y después Tab para salir del editor. Pulse Enter para entrar en el editor.",
