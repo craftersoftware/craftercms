@@ -40,7 +40,6 @@ import { extractErrorPayload } from '../../utils/ajax';
 export interface RenameItemViewProps {
 	name: string;
 	disabled: boolean;
-	newNameExists: boolean;
 	dependantItems: LightItem[];
 	isSubmitting: boolean;
 	confirmBrokenReferences: boolean;
@@ -60,7 +59,6 @@ export function RenameItemView(props: RenameItemViewProps) {
 		name,
 		disabled,
 		dependantItems,
-		newNameExists,
 		isSubmitting,
 		confirmBrokenReferences,
 		fetchingDependantItems,

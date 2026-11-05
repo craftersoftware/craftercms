@@ -140,7 +140,6 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 				<RenameItemView
 					name={name}
 					disabled={renameDisabled}
-					newNameExists={assetExists}
 					fetchDependant={fetchDependant}
 					dependantItems={dependantItems}
 					isSubmitting={isSubmitting}

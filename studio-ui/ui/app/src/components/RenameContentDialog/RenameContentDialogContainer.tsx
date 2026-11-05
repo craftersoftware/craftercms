@@ -92,7 +92,6 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 				<RenameItemView
 					name={name}
 					disabled={renameDisabled}
-					newNameExists={itemExists}
 					maxLength={maxLength}
 					fetchDependant={fetchDependant}
 					dependantItems={dependantItems}
