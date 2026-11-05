@@ -10,7 +10,7 @@ How to read the tables:
 
 - The token tables are computed from the theme. They cover the three surfaces a control can sit on: `paper` (cards, panels), `default` (page) and `dialog`.
 - "Measured component states" come from the rendered components in a harness that mounts `CrafterThemeProvider` (computed styles, composited). The worst case across the three surfaces is shown.
-- Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (279 text nodes, 0 failures), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
+- Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (282 text nodes, 0 failures), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
 - Focus ring: a 2px white outline with a 4px black ring around it, so the indicator has 3:1 or more on any light or dark surface (the better of the two bands is shown).
 
 ## Light mode
@@ -145,7 +145,7 @@ Measured from the rendered MUI components (computed styles, alpha composited, gr
 | Outlined alert border ()                   | `rgb(93, 145, 169)`       | 3.3         | yes      |
 | State icon: New                            | `rgb(53, 118, 148)`       | 4.82        | yes      |
 | State icon: Modified                       | `rgb(168, 135, 0)`        | 3.28        | yes      |
-| State icon: Deleted                        | `rgb(255, 59, 48)`        | 3.4         | yes      |
+| State icon: Deleted                        | `rgb(209, 46, 37)`        | 4.87        | yes      |
 | State icon: Locked                         | `rgb(163, 95, 0)`         | 4.8         | yes      |
 | State icon: System Processing              | `rgb(88, 86, 214)`        | 5.41        | yes      |
 | State icon: Submitted                      | `rgb(175, 82, 222)`       | 3.96        | yes      |
@@ -196,7 +196,7 @@ Measured from the rendered MUI components (computed styles, alpha composited, gr
 | Outlined alert border ()                   | `rgb(255, 148, 143)`       | 5.43        | yes      |
 | State icon: New                            | `rgb(112, 215, 255)`       | 7.06        | yes      |
 | State icon: Modified                       | `rgb(255, 212, 38)`        | 8.07        | yes      |
-| State icon: Deleted                        | `rgb(255, 59, 48)`         | 3.25        | yes      |
+| State icon: Deleted                        | `rgb(255, 122, 115)`       | 4.55        | yes      |
 | State icon: Locked                         | `rgb(255, 179, 64)`        | 6.46        | yes      |
 | State icon: System Processing              | `rgb(154, 152, 255)`       | 4.56        | yes      |
 | State icon: Submitted                      | `rgb(218, 143, 255)`       | 5.14        | yes      |
@@ -222,7 +222,7 @@ Zone marker label chips use `#121212` text on the `.light` variant of the guest 
 
 ## `error.main` evaluation
 
-Candidates for light-mode `error.main` used as text (4.5:1) on the light surfaces and on a `#F3F3F3` light-grey panel. `#D93229` fails on the grey panel and is only 0.03 above the limit on `#FAFAFA`, so `#D12E25` is used. Dark mode keeps `red.tint`.
+Candidates for light-mode `error.main` used as text (4.5:1) on the light surfaces and on a `#F3F3F3` light-grey panel. `#D93229` fails on the grey panel and is only 0.03 above the limit on `#FAFAFA`, so `#D12E25` is used. `palette.red.main` is now `#D12E25`, and the studio and guest themes both read it from the token. Dark mode keeps `red.tint`.
 
 | Light candidate    | on #FFFFFF  | on #FAFAFA | on #F3F3F3  |
 | ------------------ | ----------- | ---------- | ----------- |
