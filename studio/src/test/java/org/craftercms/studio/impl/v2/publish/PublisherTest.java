@@ -27,6 +27,7 @@ import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
+import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
@@ -309,6 +310,29 @@ public class PublisherTest {
 	}
 
 	@Test
+	public void stagingPublishSkipsDeployerTargetAfterItIsEnsured() throws Exception {
+		prepareStagingDeployerTarget();
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, times(1)).createStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void siteDeletionClearsEnsuredStagingDeployerTarget() throws Exception {
+		prepareStagingDeployerTarget();
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+		publisher.onSiteDeleting(new SiteDeletingEvent(SITE_ID, "site-uuid"));
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, times(2)).createStagingTarget(SITE_ID);
+	}
+
+	@Test
 	public void stagingPublishRetriesDeployerTargetUntilItSucceeds() throws Exception {
 		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
 		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
@@ -420,6 +444,14 @@ public class PublisherTest {
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
 		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+	}
+
+	private void prepareStagingDeployerTarget() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
 	}
 
 	private void preparePackagePublish(PublishPackage.PackageType packageType, String target) throws SiteNotFoundException {

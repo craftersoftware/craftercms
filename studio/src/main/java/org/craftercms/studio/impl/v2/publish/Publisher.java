@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.ListUtils;
@@ -60,6 +61,7 @@ import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.PublishEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
+import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.ContentRepository;
 import org.craftercms.studio.api.v2.repository.PublishItemTO;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -110,6 +112,11 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final TaskManager taskManager;
 	private final SqlSessionFactory sqlSessionFactory;
 	private final Deployer deployer;
+	/**
+	 * Sites whose staging deployer target has already been accepted. A 409 from deployer is success, so remembering
+	 * the site avoids that round trip on later staging publishes.
+	 */
+	private final Set<String> ensuredStagingDeployerTargets = ConcurrentHashMap.newKeySet();
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
@@ -230,7 +237,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 	 * publishes to staging. When staging is off, the package is for live: it waits for enable-staging to finish and
 	 * reads the flag again under the published-repo lock, so a package that blocked while enable ran still publishes
 	 * to staging. After the locks are released, the serverless staging target is created when the staging branch
-	 * exists. That call is idempotent and a deployer outage leaves the completed Git publish in place.
+	 * exists. That call is skipped once deployer has accepted the target for the site. A deployer outage leaves
+	 * the completed Git publish in place.
 	 */
 	private void publishPackage(final PublishPackage publishPackage, final Collection<PublishItem> publishItems)
 			throws ServiceLayerException {
@@ -251,11 +259,15 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 	/**
 	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} does not
-	 * replace an existing target, and an "already exists" response is success, so every later staging publish can
-	 * retry it until deployer accepts the target. A timeout or outage is logged and does not fail the Git publish
-	 * that already completed.
+	 * replace an existing target, and an "already exists" response is success. After deployer accepts the target,
+	 * the site is remembered and later staging publishes skip the call. A timeout or outage is not remembered, so
+	 * the next staging publish tries again, and it does not fail the Git publish that already completed.
+	 * Site deletion forgets the site, so a recreated site creates the target again.
 	 */
 	private void ensureStagingDeployerTarget(String siteId) {
+		if (ensuredStagingDeployerTargets.contains(siteId)) {
+			return;
+		}
 		try {
 			if (!servicesConfig.isStagingEnvironmentEnabled(siteId)) {
 				return;
@@ -268,10 +280,20 @@ public class Publisher implements ApplicationEventPublisherAware {
 				return;
 			}
 			deployer.createStagingTarget(siteId);
+			ensuredStagingDeployerTargets.add(siteId);
 		} catch (Exception e) {
 			logger.error("Failed to create the staging deployer target for site '{}'. The next staging publish will try again",
 				siteId, e);
 		}
+	}
+
+	/**
+	 * Forget a remembered staging deployer target when site deletion starts. The target is removed with the site,
+	 * and a later site with the same id has to create it again.
+	 */
+	@EventListener
+	public void onSiteDeleting(SiteDeletingEvent event) {
+		ensuredStagingDeployerTargets.remove(event.getSiteId());
 	}
 
 	/**
