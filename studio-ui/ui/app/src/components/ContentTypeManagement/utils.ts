@@ -176,6 +176,14 @@ export function isRootOnlyControl(descriptor?: DescriptorContentType | null): bo
 	return Boolean(descriptor?.metadata?.rootOnly);
 }
 
+/** True when an existing field may only live at the content-type root: its control is rootOnly, or it uses a reserved system field id (system fields can be stored as plain input/checkbox). */
+export function isFieldRootOnly(
+	field: Pick<ContentTypeField, 'id'>,
+	descriptor?: DescriptorContentType | null
+): boolean {
+	return isRootOnlyControl(descriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+}
+
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {
 	return pluckProps(type, false, ...typePropsToEdit) as ContentTypeValuesObject;
 }

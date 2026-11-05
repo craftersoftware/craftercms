@@ -26,6 +26,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../test/registerTsLoader.mjs';
+import { isFieldRootOnly } from './utils.ts';
 
 const { isRootOnlyControl, readOnlyFieldsIds } = await import('./utils.ts');
 const { controlDescriptors } = await import('./descriptors/controls/index.ts');
@@ -41,10 +42,9 @@ describe('isRootOnlyControl', () => {
 	it('treats a remapped internal-name field as root-only via its reserved id', () => {
 		const remappedDescriptor = controlDescriptors['input'];
 		assert.equal(isRootOnlyControl(remappedDescriptor), false);
-		assert.equal(
-			isRootOnlyControl(remappedDescriptor) || (readOnlyFieldsIds as string[]).includes('internal-name'),
-			true
-		);
+		assert.equal(isFieldRootOnly({ id: 'internal-name' }, remappedDescriptor), true);
+		assert.equal(isFieldRootOnly({ id: 'placeInNav' }, controlDescriptors['checkbox']), true);
+		assert.equal(isFieldRootOnly({ id: 'title_s' }, remappedDescriptor), false);
 	});
 
 	// page-nav-order is root-only only through metadata.rootOnly on its descriptor.
