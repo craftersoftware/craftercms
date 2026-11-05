@@ -41,8 +41,10 @@ declare module 'notistack' {
 
 /**
  * A toast paints its own surface (#313131 for notistack's default content), so the theme focus ring would
- * sit on it: 2.47:1 for the light ring. MUI gives children of filled Alerts, AppBars and Snackbars a paper
- * halo through this variable; the toast hosts set it themselves. See styles/focusRing.ts.
+ * sit on it: 2.47:1 for the light ring. Two things are needed, and neither works alone.
+ * MUI's variable below reaches ButtonBase children (the action and close buttons); it supplies only the halo.
+ * A native anchor in a toast message is not ButtonBase and draws nothing from it, so GlobalStyles rings
+ * toast anchors from the same shared source. See styles/focusRing.ts for the contrast figures.
  */
 function useToastFocusHalo(): Record<string, string> {
 	const theme = useTheme();

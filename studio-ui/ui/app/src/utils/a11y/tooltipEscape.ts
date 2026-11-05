@@ -23,22 +23,22 @@
  * dialog, other Escape listeners) reacts to it and focus does not move.
  *
  * Dismissal hides the popper, because MUI's open state is not reachable from outside
- * the component. The next pointer or focus entry clears it, so the tooltip can show
- * again: MUI cancels a pending close when the pointer re-enters within `leaveDelay`,
- * which would otherwise leave the popper hidden while MUI still considers it open.
+ * the component. It is undone only by the dismissed tooltip's own trigger: the pointer
+ * or focus has to leave that trigger and come back. Unrelated pointer or focus activity
+ * leaves the tooltip dismissed. This covers a re-entry within `leaveDelay`, where MUI
+ * cancels its pending close and would otherwise keep the popper hidden while it still
+ * considers the tooltip open.
  */
 
-export interface TooltipEscapeNode {
-	closest(selector: string): TooltipEscapeNode | null;
-	/** Inline style. MUI Grow sets this opacity to 0 when the tooltip starts leaving. */
-	style?: { opacity?: string; display?: string };
-}
+/** MUI 9 wraps the tooltip in this popper and fades this child. */
+const POPPER_SELECTOR = '.MuiTooltip-popper';
+const TOOLTIP_SELECTOR = '.MuiTooltip-tooltip';
 
-export interface TooltipEscapeRoot {
-	querySelectorAll(selector: string): ArrayLike<TooltipEscapeNode>;
-	defaultView: {
-		getComputedStyle(element: TooltipEscapeNode): { display: string; visibility: string; opacity: string };
-	} | null;
+/** What a dismissal needs to undo itself. */
+export interface DismissedTooltip {
+	popper: HTMLElement;
+	/** The element the tooltip belongs to, when it can be identified. */
+	trigger: Element | null;
 }
 
 /**
@@ -47,74 +47,148 @@ export interface TooltipEscapeRoot {
  * Grow writes inline opacity 0 as soon as the tooltip leaves, while computed opacity
  * stays above 0 for the fade. Escape during that fade must reach the parent dialog.
  */
-function isTooltipElementShown(
-	node: TooltipEscapeNode,
-	style: { display: string; visibility: string; opacity: string }
-): boolean {
+function isTooltipElementShown(node: HTMLElement): boolean {
+	const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+	if (!style) return false;
 	if (style.display === 'none' || style.visibility === 'hidden') return false;
-	if (node.style?.opacity === '0') return false;
+	if (node.style.opacity === '0') return false;
 	return Number(style.opacity) !== 0;
 }
 
-export function findShownTooltip(root: TooltipEscapeRoot): TooltipEscapeNode | null {
-	const nodes = root.querySelectorAll('.MuiTooltip-tooltip');
-	for (let index = 0; index < nodes.length; index += 1) {
-		const node = nodes[index];
-		const popper = node.closest('.MuiTooltip-popper');
+/** The tooltip that is currently visible, if any. A dismissed one is hidden and skipped. */
+export function findShownTooltip(doc: Document): HTMLElement | null {
+	const tooltips = doc.querySelectorAll<HTMLElement>(TOOLTIP_SELECTOR);
+	for (let index = 0; index < tooltips.length; index += 1) {
+		const tooltip = tooltips[index];
+		const popper = tooltip.closest<HTMLElement>(POPPER_SELECTOR);
 		if (!popper) continue;
-		const view = root.defaultView;
-		if (!view) continue;
 		// A dismissed tooltip hides its popper, so check the popper too.
-		if (view.getComputedStyle(popper).display === 'none') continue;
-		if (!isTooltipElementShown(node, view.getComputedStyle(node))) continue;
-		return node;
+		if (getComputedStyle(popper).display === 'none') continue;
+		if (!isTooltipElementShown(tooltip)) continue;
+		return tooltip;
 	}
 	return null;
 }
 
-/** Hides the shown tooltip. Returns whether one was showing. */
-export function dismissShownTooltip(root: TooltipEscapeRoot): boolean {
-	const popper = findShownTooltip(root)?.closest('.MuiTooltip-popper');
-	if (!popper?.style) return false;
+/** True when `target` is `container` or inside it. */
+export function isWithin(container: Element | null, target: EventTarget | null): boolean {
+	return Boolean(container && target instanceof Element && container.contains(target));
+}
+
+/**
+ * The element a tooltip belongs to. MUI only references the popper from the trigger while the
+ * title is not a string, so fall back to what opened the tooltip: the focused element, or the
+ * control the pointer was last over.
+ */
+function resolveTrigger(doc: Document, popper: HTMLElement, lastPointerTarget: Element | null): Element | null {
+	const tooltip = popper.querySelector<HTMLElement>(TOOLTIP_SELECTOR);
+	const referenced = tooltip?.id
+		? doc.querySelector(`[aria-describedby~="${tooltip.id}"], [aria-labelledby~="${tooltip.id}"]`)
+		: null;
+	if (referenced && !popper.contains(referenced)) return referenced;
+	const active = doc.activeElement;
+	if (active && active !== doc.body && active !== doc.documentElement && !popper.contains(active)) return active;
+	if (lastPointerTarget && !isWithin(popper, lastPointerTarget)) {
+		return (
+			lastPointerTarget.closest('button, a, [role="button"], [tabindex], input, select, textarea') ?? lastPointerTarget
+		);
+	}
+	return null;
+}
+
+/**
+ * Hides the tooltip that is showing and reports which trigger can bring it back.
+ * `lastPointerTarget` is the deepest element the pointer was over, for pointer-opened tooltips.
+ */
+export function dismissShownTooltip(doc: Document, lastPointerTarget: Element | null = null): DismissedTooltip | null {
+	const popper = findShownTooltip(doc)?.closest<HTMLElement>(POPPER_SELECTOR);
+	if (!popper) return null;
+	const trigger = resolveTrigger(doc, popper, lastPointerTarget);
 	popper.style.display = 'none';
+	return { popper, trigger };
+}
+
+/** Undoes a dismissal so the tooltip can be shown again. */
+export function restoreDismissedTooltip(dismissed: DismissedTooltip): void {
+	// MUI unmounts the popper when it closes, so a detached one needs no restoring.
+	if (dismissed.popper.isConnected) dismissed.popper.style.display = '';
+}
+
+/** Stops one Escape from reaching the dialog behind the tooltip, and reports whether it did. */
+export function onTooltipEscapeKeyDown(
+	event: KeyboardEvent,
+	doc: Document,
+	lastPointerTarget: Element | null = null
+): boolean {
+	const dismissed = event.key === 'Escape' ? dismissShownTooltip(doc, lastPointerTarget) : null;
+	if (!dismissed) return false;
+	// Swallow this Escape: the tooltip is dismissed and the dialog or menu behind it stays open.
+	event.stopPropagation();
+	event.preventDefault();
+	lastDismissal = dismissed;
 	return true;
 }
 
-/** Lets a dismissed tooltip be shown by the next hover or focus. */
-export function clearTooltipDismissals(root: TooltipEscapeRoot): void {
-	const poppers = root.querySelectorAll('.MuiTooltip-popper');
-	for (let index = 0; index < poppers.length; index += 1) {
-		const popper = poppers[index];
-		if (popper.style?.display === 'none') popper.style.display = '';
-	}
-}
-
-export function onTooltipEscapeKeyDown(event: KeyboardEvent, doc: Document): void {
-	if (event.key !== 'Escape' || !dismissShownTooltip(doc as unknown as TooltipEscapeRoot)) return;
-	// Swallow this one Escape: the tooltip is dismissed and the dialog or menu behind it stays open.
-	event.stopPropagation();
-	event.preventDefault();
-}
-
+let lastDismissal: DismissedTooltip | null = null;
 let installs = 0;
 let removeListeners: (() => void) | null = null;
 
 /**
  * Installs the capture-phase Escape handling once for every mounted handler.
- * Pointer and focus entry clear a dismissal, so the tooltip shows again on the next hover or focus.
+ * A dismissal is undone only when the pointer or focus leaves that tooltip's trigger and returns.
  */
 export function installTooltipEscapeHandler(doc: Document = document): () => void {
 	installs += 1;
 	if (installs === 1) {
-		const onKeyDown = (event: KeyboardEvent) => onTooltipEscapeKeyDown(event, doc);
-		const onEnter = () => clearTooltipDismissals(doc as unknown as TooltipEscapeRoot);
+		let lastPointerTarget: Element | null = null;
+		// Whether the pointer or focus has left the dismissed tooltip's trigger since the Escape.
+		let leftTrigger = false;
+
+		const onKeyDown = (event: KeyboardEvent) => {
+			onTooltipEscapeKeyDown(event, doc, lastPointerTarget);
+			leftTrigger = false;
+		};
+		const onPointerOut = (event: Event) => {
+			if (
+				lastDismissal &&
+				isWithin(lastDismissal.trigger, event.target) &&
+				!isWithin(lastDismissal.trigger, (event as PointerEvent).relatedTarget)
+			) {
+				leftTrigger = true;
+			}
+		};
+		const onPointerOver = (event: Event) => {
+			const target = event.target;
+			if (target instanceof Element) lastPointerTarget = target;
+			if (lastDismissal && leftTrigger && isWithin(lastDismissal.trigger, target)) {
+				restoreDismissedTooltip(lastDismissal);
+				lastDismissal = null;
+				leftTrigger = false;
+			}
+		};
+		const onFocusOut = (event: Event) => {
+			if (lastDismissal && isWithin(lastDismissal.trigger, event.target)) leftTrigger = true;
+		};
+		const onFocusIn = (event: Event) => {
+			if (lastDismissal && leftTrigger && isWithin(lastDismissal.trigger, event.target)) {
+				restoreDismissedTooltip(lastDismissal);
+				lastDismissal = null;
+				leftTrigger = false;
+			}
+		};
+		// A new dismissal replaces the previous one, so nothing else needs clearing.
 		doc.addEventListener('keydown', onKeyDown, true);
-		doc.addEventListener('pointerover', onEnter, true);
-		doc.addEventListener('focusin', onEnter, true);
+		doc.addEventListener('pointerout', onPointerOut, true);
+		doc.addEventListener('pointerover', onPointerOver, true);
+		doc.addEventListener('focusout', onFocusOut, true);
+		doc.addEventListener('focusin', onFocusIn, true);
 		removeListeners = () => {
 			doc.removeEventListener('keydown', onKeyDown, true);
-			doc.removeEventListener('pointerover', onEnter, true);
-			doc.removeEventListener('focusin', onEnter, true);
+			doc.removeEventListener('pointerout', onPointerOut, true);
+			doc.removeEventListener('pointerover', onPointerOver, true);
+			doc.removeEventListener('focusout', onFocusOut, true);
+			doc.removeEventListener('focusin', onFocusIn, true);
+			lastDismissal = null;
 		};
 	}
 	return () => {
