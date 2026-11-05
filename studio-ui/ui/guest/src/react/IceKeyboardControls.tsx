@@ -85,7 +85,6 @@ const IceZoneButton = styled('button')(({ theme }) => ({
 		clipPath: 'none',
 		width: 'auto',
 		height: 'auto',
-		minHeight: '24px !important',
 		maxWidth: 240,
 		margin: 0,
 		overflow: 'visible',
@@ -99,7 +98,8 @@ const IceZoneButton = styled('button')(({ theme }) => ({
 		color: `${theme.palette.text.primary} !important`,
 		textAlign: 'left',
 		cursor: 'pointer !important',
-		boxShadow: theme.shadows[1],
+		// The paper-coloured gap keeps the ring distinguishable on any site background.
+		boxShadow: `0 0 0 2px ${theme.palette.background.paper}, ${theme.shadows[1]} !important`,
 		outline: `2px solid ${theme.palette.primary.main} !important`,
 		outlineOffset: '2px !important'
 	}

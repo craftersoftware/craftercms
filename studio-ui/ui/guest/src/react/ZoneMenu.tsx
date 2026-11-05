@@ -106,8 +106,7 @@ const zoneActionLabels = defineMessages({
 	moveDownName: { id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' },
 	trashName: { id: 'zoneMenu.trashName', defaultMessage: 'Trash' },
 	options: { id: 'words.options', defaultMessage: 'Options' },
-	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' },
-	drag: { id: 'zoneMenu.drag', defaultMessage: 'Drag {label}' }
+	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' }
 });
 
 const zoneMenuMessages = defineMessages({
@@ -116,7 +115,7 @@ const zoneMenuMessages = defineMessages({
 	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
 });
 
-type ZoneAction = keyof Omit<typeof zoneActionLabels, 'drag'>;
+type ZoneAction = keyof typeof zoneActionLabels;
 
 export interface ZoneMenuProps {
 	record: ElementRecord;
@@ -691,10 +690,6 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		};
 	}, []);
 
-	const dragLabel = formatMessage(zoneActionLabels.drag, {
-		label: zoneLabel || (formatMessage(zoneMenuMessages.untitledZone) as string)
-	}) as string;
-
 	return (
 		<Box ref={menuRef} data-craftercms-zone-menu="" sx={{ display: 'contents' }}>
 			<Box sx={{ display: 'flex' }}>
@@ -752,7 +747,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					(!isLockedItem || !isEmbedded) &&
 					!isOnlyItem && [
 						!isFirstItem && (
-							<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.moveUpName)} key="moveUp">
+							<UltraStyledTooltip
+								describeChild
+								title={<FormattedMessage id="zoneMenu.moveUp" defaultMessage="Move up/left (← or ↑)" />}
+								key="moveUp"
+							>
 								<UltraStyledIconButton
 									size="small"
 									aria-label={named('moveUpName')}
@@ -764,7 +763,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
 							</UltraStyledTooltip>
 						),
 						!isLastItem && (
-							<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.moveDownName)} key="moveDown">
+							<UltraStyledTooltip
+								describeChild
+								title={<FormattedMessage id="zoneMenu.moveDown" defaultMessage="Move down/right (→ or ↓)" />}
+								key="moveDown"
+							>
 								<UltraStyledIconButton
 									size="small"
 									aria-label={named('moveDownName')}
@@ -777,7 +780,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						)
 					]}
 				{isTrashable && !isLockedItem && (
-					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.trashName)} key="trash">
+					<UltraStyledTooltip
+						describeChild
+						title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />}
+						key="trash"
+					>
 						<UltraStyledIconButton
 							size="small"
 							aria-label={named('trashName')}
@@ -789,7 +796,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledTooltip>
 				)}
 				{isMovable && (!isLockedItem || !isEmbedded) && (
-					<UltraStyledTooltip title={dragLabel} key="move">
+					<UltraStyledTooltip title={<FormattedMessage id="words.move" defaultMessage="Move" />} key="move">
 						<UltraStyledIconButton
 							size="small"
 							draggable
@@ -812,7 +819,10 @@ export function ZoneMenu(props: ZoneMenuProps) {
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
-				<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.cancelName)}>
+				<UltraStyledTooltip
+					describeChild
+					title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}
+				>
 					<UltraStyledIconButton
 						size="small"
 						aria-label={named('cancelName')}

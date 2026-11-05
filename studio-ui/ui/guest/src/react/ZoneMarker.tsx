@@ -203,47 +203,34 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 											theme,
 											darken
 										);
-										const modeLabels = Object.keys(modes)
-											.map((mode) =>
-												dropTargetModesMessages[mode] ? formatMessage(dropTargetModesMessages[mode]) : mode
-											)
-											.join(', ');
-										const typeName = type?.name ?? '';
 										return (
 											<UltraStyledTooltip
 												key={id}
 												arrow
-												describeChild
 												title={
 													<FormattedMessage
 														id="zoneMarker.dropTargetInfo"
 														defaultMessage="Drop target compatible with {type} as {modes}"
 														values={{
-															type: typeName,
-															modes: modeLabels
+															type: type?.name ?? '',
+															modes: Object.keys(modes)
+																.map((mode) =>
+																	dropTargetModesMessages[mode] ? formatMessage(dropTargetModesMessages[mode]) : mode
+																)
+																.join(', ')
 														}}
 													/>
 												}
 											>
-												<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', mr: 0.5 }}>
-													<AllowedTypeCircle
-														aria-hidden
-														sx={{
-															backgroundColor,
-															// TODO: The border colour is meant to contrast background colour of
-															//  the *Paper*, which is not set here and can be customized by app developers.
-															//  At the moment, is being set to the known colour set on guest/src/styles/styles.ts.
-															borderColor: textColor
-														}}
-													/>
-													<UltraStyledTypography component="span" variant="caption" sx={{ fontSize: 11 }}>
-														<FormattedMessage
-															id="zoneMarker.dropTargetSummary"
-															defaultMessage="{type} ({modes})"
-															values={{ type: typeName, modes: modeLabels }}
-														/>
-													</UltraStyledTypography>
-												</Box>
+												<AllowedTypeCircle
+													sx={{
+														backgroundColor,
+														// TODO: The border colour is meant to contrast background colour of
+														//  the *Paper*, which is not set here and can be customized by app developers.
+														//  At the moment, is being set to the known colour set on guest/src/styles/styles.ts.
+														borderColor: textColor
+													}}
+												/>
 											</UltraStyledTooltip>
 										);
 									})}

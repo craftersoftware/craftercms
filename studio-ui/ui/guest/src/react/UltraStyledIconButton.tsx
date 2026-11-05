@@ -31,7 +31,9 @@ export const UltraStyledIconButton = styled(IconButton)(({ theme }) => ({
 	},
 	'&:focus-visible': {
 		outline: `2px solid ${theme.palette.primary.main} !important`,
-		outlineOffset: '2px !important'
+		outlineOffset: '2px !important',
+		// The paper-coloured gap keeps the ring distinguishable on any site background.
+		boxShadow: `0 0 0 2px ${theme.palette.background.paper} !important`
 	}
 }));
 

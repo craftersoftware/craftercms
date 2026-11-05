@@ -298,15 +298,6 @@ export function noteZoneButtonsRendered() {
 	tryFocusPendingZone();
 }
 
-/**
- * Previously counted identity changes to guess a stale neighbour button.
- * Callers may still invoke it after a zone-button render; the argument is ignored.
- */
-export function noteZoneFocusIdentity(identity?: string) {
-	void identity;
-	noteZoneButtonsRendered();
-}
-
 /** Called when ICE elements register or deregister. */
 export function notifyZoneRegistryChange() {
 	if (!pending) {
