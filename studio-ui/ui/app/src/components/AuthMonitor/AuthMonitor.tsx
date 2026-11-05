@@ -41,6 +41,7 @@ import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
 import { SESSION_TIMEOUT_WARNING_MS } from '../../utils/constants';
+import { useSessionTimeoutWarning } from '../../hooks/useSessionTimeoutWarning';
 import { getXSRFToken } from '../../utils/auth';
 
 const translations = defineMessages({
@@ -111,9 +112,11 @@ export function AuthMonitor() {
 function SessionTimeoutWarning() {
 	const dispatch = useDispatch();
 	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
-	const [open, setOpen] = useState(false);
-	const [dismissed, setDismissed] = useState(false);
-	const [secondsLeft, setSecondsLeft] = useState(0);
+	const { visible, secondsLeft, dismiss } = useSessionTimeoutWarning(
+		active,
+		sessionExpiresAt,
+		SESSION_TIMEOUT_WARNING_MS
+	);
 	const [extending, setExtending] = useState(false);
 	const [extendFailed, setExtendFailed] = useState(false);
 	useEffect(() => {
@@ -125,31 +128,9 @@ function SessionTimeoutWarning() {
 			return () => clearTimeout(timeout);
 		}
 	}, [extending]);
-
-	useEffect(() => {
-		// Watches the clock rather than waiting for `sessionExpiresAt` to change: the worker refreshes the token when
-		// the warning is due, and that refresh may well report the same expiry. Also closes the dialog if the session
-		// gets extended in the meantime (e.g. activity on another tab, which does change `sessionExpiresAt`).
-		if (!active || sessionExpiresAt == null) {
-			setOpen(false);
-			return;
-		}
-		const update = () => {
-			const secondsLeft = Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000));
-			const shouldWarn = sessionExpiresAt - Date.now() <= SESSION_TIMEOUT_WARNING_MS;
-			setSecondsLeft(secondsLeft);
-			setOpen(shouldWarn);
-			if (shouldWarn) {
-				setDismissed(false);
-			}
-		};
-		update();
-		const interval = setInterval(update, 1000);
-		return () => clearInterval(interval);
-	}, [active, sessionExpiresAt]);
 	useEffect(() => {
 		// Only a new session expiry (or the cap being reached) means the extend landed. A routine token refresh that
-		// lands first must not re-enable the button. The timeout below covers a failed request.
+		// lands first must not re-enable the button. The timeout above covers a failed request.
 		setExtending(false);
 		setExtendFailed(false);
 	}, [sessionExpiresAt, canExtendSession]);
@@ -160,14 +141,13 @@ function SessionTimeoutWarning() {
 			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
 		}
 	};
-	const onDismiss = () => setDismissed(true);
 	return (
 		<Dialog
 			// Remounts when the user runs out of extensions so the new warning is announced.
 			key={canExtendSession ? 'extendable' : 'final'}
-			open={open && !dismissed}
+			open={visible}
 			// Escape or clicking outside keeps the user working rather than leaving them with a dismissed warning.
-			onClose={canExtendSession ? onStaySignedIn : onDismiss}
+			onClose={canExtendSession ? onStaySignedIn : dismiss}
 			role="alertdialog"
 			aria-labelledby="sessionTimeoutWarningTitle"
 			aria-describedby="sessionTimeoutWarningMessage"
@@ -214,7 +194,7 @@ function SessionTimeoutWarning() {
 						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
 					</Button>
 				) : (
-					<Button autoFocus color="primary" variant="contained" onClick={onDismiss}>
+					<Button autoFocus color="primary" variant="contained" onClick={dismiss}>
 						<FormattedMessage id="words.close" defaultMessage="Close" />
 					</Button>
 				)}

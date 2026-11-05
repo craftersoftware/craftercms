@@ -22,7 +22,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it, mock } from 'node:test';
+import { after, before, describe, it, mock } from 'node:test';
 import {
 	createAuthTokenQueue,
 	getNextRefreshDelay,
@@ -48,7 +48,7 @@ function deferred() {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function createQueue(requests: { obtain: any[]; extend: any[] }) {
+function createQueue(requests: { obtain: any[]; extend: any[] }, onToken?: (token: any) => void) {
 	const events: string[] = [];
 	const logs: string[] = [];
 	const callbacks = {
@@ -64,7 +64,10 @@ function createQueue(requests: { obtain: any[]; extend: any[] }) {
 			events.push(`extend:${xsrfToken}`);
 			return request;
 		},
-		onToken: (newToken) => events.push(`token:${newToken.token}`),
+		onToken: (newToken) => {
+			events.push(`token:${newToken.token}`);
+			onToken?.(newToken);
+		},
 		onUnauthenticated: () => events.push('unauthenticated'),
 		onError: (error) => events.push(`error:${error.status}`),
 		log: (message) => logs.push(message)
@@ -102,7 +105,8 @@ describe('getNextRefreshDelay', () => {
 });
 
 describe('createAuthTokenQueue', () => {
-	beforeEach(() => mock.timers.reset());
+	before(() => mock.timers.enable({ apis: ['setInterval', 'Date'], now: 1_000_000 }));
+	after(() => mock.timers.reset());
 
 	it('runs an extend that arrives during an in-flight refresh right after it', async () => {
 		const inFlight = deferred();
@@ -220,14 +224,109 @@ describe('createAuthTokenQueue', () => {
 		assert.deepEqual(events, ['extend:xsrf-1', 'error:500', 'extend:xsrf-2', 'token:extended']);
 	});
 
-	it('logs a skipped extend so it is visible in the worker debug output', () => {
+	it('logs a queued extend so it is visible in the worker debug output', async () => {
 		const inFlight = deferred();
-		const { queue, logs } = createQueue({ obtain: [inFlight.promise], extend: [] });
+		const { queue, logs } = createQueue({ obtain: [inFlight.promise], extend: [Promise.resolve(token('extended'))] });
 
 		queue.retrieve();
 		queue.retrieve('xsrf-1');
 
 		assert.deepEqual(logs, ['Request in flight, the session extension will run after it']);
 		inFlight.resolve(token('refreshed'));
+		await flush();
+	});
+
+	it('drops an extend requested while an extend is in flight, so only one extension is used', async () => {
+		const inFlight = deferred();
+		const { queue, events, logs } = createQueue({
+			obtain: [],
+			extend: [inFlight.promise, Promise.resolve(token('second-extend'))]
+		});
+
+		queue.retrieve('xsrf-tab-1');
+		// A second tab clicks Stay signed in while the first extension is still in flight
+		queue.retrieve('xsrf-tab-2');
+		assert.equal(queue.getPendingExtend(), undefined);
+
+		inFlight.resolve(token('first-extend'));
+		await flush();
+
+		assert.deepEqual(events, ['extend:xsrf-tab-1', 'token:first-extend']);
+		assert.ok(logs.includes('The session extension already in flight will extend the session'));
+	});
+
+	it('counts consecutive failures, resets on success, and still retries afterwards', async () => {
+		const failures = [deferred(), deferred(), deferred(), deferred()];
+		const { queue, events } = createQueue({
+			obtain: [
+				failures[0].promise,
+				failures[1].promise,
+				failures[2].promise,
+				Promise.resolve(token('recovered')),
+				failures[3].promise
+			],
+			extend: []
+		});
+
+		for (let i = 0; i < 3; i++) {
+			assert.equal(queue.shouldRetry(), true, `retry allowed before failure ${i + 1}`);
+			queue.retrieve();
+			failures[i].reject({ status: 500 + i });
+			await flush();
+		}
+		assert.equal(queue.getRetries(), 3);
+		assert.equal(queue.shouldRetry(), false, 'not retried after 3 consecutive failures');
+
+		queue.retrieve();
+		await flush();
+		assert.equal(queue.getRetries(), 0, 'reset by the successful request');
+		assert.equal(queue.shouldRetry(), true);
+
+		queue.retrieve();
+		failures[3].reject({ status: 504 });
+		await flush();
+		assert.equal(queue.getRetries(), 1);
+		assert.equal(queue.shouldRetry(), true, 'still retried after a failure that follows a success');
+
+		assert.deepEqual(
+			events.filter((event) => event !== 'obtain'),
+			['error:500', 'error:501', 'error:502', 'token:recovered', 'error:504']
+		);
+	});
+
+	it('resets the failure count when the session is gone', async () => {
+		const first = deferred();
+		const second = deferred();
+		const { queue } = createQueue({ obtain: [first.promise, second.promise], extend: [] });
+
+		queue.retrieve();
+		first.reject({ status: 500 });
+		await flush();
+		assert.equal(queue.getRetries(), 1);
+
+		queue.retrieve();
+		second.reject({ status: 401 });
+		await flush();
+		assert.equal(queue.getRetries(), 0);
+		assert.equal(queue.shouldRetry(), true);
+	});
+
+	it('treats an exception thrown by onToken as a callback error, not a failed request', async () => {
+		const { queue, events, logs } = createQueue({ obtain: [Promise.resolve(token('first'))], extend: [] }, () => {
+			throw new Error('callback failed');
+		});
+
+		queue.retrieve();
+		await flush();
+
+		assert.equal(queue.isRetrieving(), false);
+		assert.equal(queue.getRetries(), 0, 'the request itself succeeded, so it is not a request error');
+		assert.deepEqual(
+			events.filter((event) => event !== 'obtain'),
+			['token:first'],
+			'onError was not called'
+		);
+		assert.equal(logs.length, 1);
+		assert.match(logs[0], /Token callback failed/);
 	});
 });

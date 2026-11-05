@@ -77,7 +77,16 @@ export interface AuthTokenQueue {
 	getPendingExtend: () => string;
 	/** Drops a queued extension, used when the session is gone. */
 	clearPendingExtend: () => void;
+	/** Number of consecutive failed requests since the last successful one. */
+	getRetries: () => number;
+	/** Indicates whether a failed request should be retried (up to `maxRetries` in a row). */
+	shouldRetry: () => boolean;
 }
+
+/**
+ * Number of consecutive failed requests after which requests are not retried until one succeeds.
+ */
+export const maxRetries = 3;
 
 /**
  * Serializes the requests for new tokens, so the warning checkpoint and an extension requested by the user don't
@@ -86,7 +95,10 @@ export interface AuthTokenQueue {
  */
 export function createAuthTokenQueue(callbacks: AuthTokenQueueCallbacks): AuthTokenQueue {
 	let isRetrieving = false;
+	let isRetrievingExtend = false;
 	let pendingExtendXsrfToken: string;
+	// Consecutive failures, reset whenever a request succeeds or the session is gone
+	let retries = 0;
 
 	const toPromise = (request: Promise<ObtainAuthTokenResponse> | { subscribe: Function }) =>
 		request instanceof Promise
@@ -104,40 +116,61 @@ export function createAuthTokenQueue(callbacks: AuthTokenQueueCallbacks): AuthTo
 	const retrieve = (extendXsrfToken?: string) => {
 		if (isRetrieving) {
 			if (extendXsrfToken) {
+				if (isRetrievingExtend) {
+					// Two extensions in a row would use two of the limited extensions, and the first one is enough
+					callbacks.log('The session extension already in flight will extend the session');
+					return;
+				}
 				callbacks.log('Request in flight, the session extension will run after it');
 				pendingExtendXsrfToken = extendXsrfToken;
 			}
 			return;
 		}
 		isRetrieving = true;
-		toPromise(extendXsrfToken ? callbacks.extend(extendXsrfToken) : callbacks.obtain())
-			.then((token) => {
+		isRetrievingExtend = extendXsrfToken != null;
+		toPromise(extendXsrfToken != null ? callbacks.extend(extendXsrfToken) : callbacks.obtain()).then(
+			(token) => {
 				isRetrieving = false;
+				isRetrievingExtend = false;
+				retries = 0;
 				if (token) {
-					callbacks.onToken(token);
+					// A failing callback must not look like a failed request, nor stop the queue
+					try {
+						callbacks.onToken(token);
+					} catch (callbackError) {
+						callbacks.log(`Token callback failed: ${callbackError}`);
+					}
 				} else {
 					pendingExtendXsrfToken = undefined;
 					callbacks.onUnauthenticated();
 				}
 				runPendingExtend();
-			})
-			.catch((error) => {
+			},
+			// The rejection handler as the second argument (not a catch), so an exception thrown by the callbacks is
+			// not treated as a failed request
+			(error) => {
 				isRetrieving = false;
+				isRetrievingExtend = false;
 				if (error?.status === 401) {
 					// The session is gone, so there is nothing to extend
+					retries = 0;
 					pendingExtendXsrfToken = undefined;
 					callbacks.onUnauthenticated();
 				} else {
+					retries++;
 					callbacks.onError(error);
 					runPendingExtend();
 				}
-			});
+			}
+		);
 	};
 
 	return {
 		retrieve,
 		isRetrieving: () => isRetrieving,
 		getPendingExtend: () => pendingExtendXsrfToken,
-		clearPendingExtend: () => (pendingExtendXsrfToken = undefined)
+		clearPendingExtend: () => (pendingExtendXsrfToken = undefined),
+		getRetries: () => retries,
+		shouldRetry: () => retries < maxRetries
 	};
 }

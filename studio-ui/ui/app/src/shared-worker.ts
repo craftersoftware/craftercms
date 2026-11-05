@@ -134,8 +134,6 @@ function onmessage(event) {
 	}
 }
 
-let retries = 0;
-
 const authTokenQueue = createAuthTokenQueue({
 	obtain: obtainAuthToken,
 	extend: extendSession,
@@ -165,7 +163,7 @@ const authTokenQueue = createAuthTokenQueue({
 		status = 'error';
 		broadcast(sharedWorkerError({ status: e.status, message: e.message }));
 		// If there are clients connected try again.
-		if (clients.length && retries++ < 3) {
+		if (clients.length && authTokenQueue.shouldRetry()) {
 			timeout = self.setTimeout(() => authTokenQueue.retrieve(), Math.floor(refreshInterval * 0.9));
 		}
 	},
