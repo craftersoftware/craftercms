@@ -26,22 +26,30 @@ const rightPanel = (page: Page) => page.locator('.MuiDrawer-docked.MuiDrawer-anc
 async function openPreview(page: Page) {
 	await page.goto(`/studio/preview#/?page=${encodeURIComponent(previewPage)}&site=${project}`);
 	await expect(page.getByRole('button', { name: 'Open tools panel' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Options (a)' })).toBeEnabled({ timeout: 30_000 });
-	await settle(page);
+	await settle(page, 'preview', page.getByRole('button', { name: 'Options (a)' }));
+	await expect(page.getByRole('button', { name: 'Options (a)' })).toBeEnabled();
 }
 
-async function openItemMenuOption(page: Page, name: string) {
+/**
+ * Opens an item menu entry that leads to a dialog. The dialog's `role="dialog"` node mounts before its body, so the
+ * ready condition is the dialog's own content: a heading, plus the first field for forms.
+ */
+async function openItemMenuOption(page: Page, name: string, screen: string, content: Locator) {
 	await page.getByRole('button', { name: 'Options (a)' }).click();
 	await page.getByRole('menuitem', { name, exact: true }).click();
-	await expect(page.getByRole('dialog')).toBeVisible();
-	await settle(page);
+	await settle(page, screen, content);
+}
+
+/** What a tools panel page shows once it has rendered: a dialog, or the page itself behind a Back button. */
+function panelPageReady(page: Page, panel: Locator) {
+	return page.getByRole('dialog').or(panel.getByRole('button', { name: 'Back' }));
 }
 
 /** Scans a tools panel as it opens and then every page or dialog its top level buttons lead to. */
 async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y>[1], panel: Locator, name: string) {
 	await expect(panel).toBeVisible();
-	await settle(page);
-	await checkA11y(page, testInfo, name, 'preview');
+	await settle(page, name, panel.locator('.MuiListItemButton-root').first());
+	await checkA11y(page, testInfo, name);
 	const buttons = panel.locator('.MuiListItemButton-root');
 	const labels: string[] = [];
 	for (let i = 0, count = await buttons.count(); i < count; i++) {
@@ -49,8 +57,10 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 	}
 	for (const label of labels) {
 		await panel.locator('.MuiListItemButton-root', { hasText: label }).first().click();
-		await settle(page);
-		await checkA11y(page, testInfo, `${name} > ${label}`, 'preview');
+		const screen = `${name} > ${label}`;
+		const body = panel.locator('section').last();
+		await settle(page, screen, panelPageReady(page, panel), body);
+		await checkA11y(page, testInfo, screen);
 		const dialog = page.getByRole('dialog');
 		if (await dialog.count()) {
 			await page.keyboard.press('Escape');
@@ -58,7 +68,10 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 			continue;
 		}
 		const back = panel.getByRole('button', { name: 'Back' });
-		if (await back.count()) await back.first().click();
+		if (await back.count()) {
+			await back.first().click();
+			await settle(page, name, panel.locator('.MuiListItemButton-root').first());
+		}
 	}
 }
 
@@ -66,8 +79,7 @@ test.describe('Login', () => {
 	test.use({ authenticated: false });
 	test('login', async ({ page }, testInfo) => {
 		await page.goto('/studio/login');
-		await expect(page.locator('input[name="username"]')).toBeVisible();
-		await settle(page);
+		await settle(page, 'login', page.locator('input[name="username"]'));
 		await checkA11y(page, testInfo, 'login');
 	});
 });
@@ -75,23 +87,20 @@ test.describe('Login', () => {
 test.describe('Global app', () => {
 	test('projects', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/projects');
-		await expect(page.getByRole('button', { name: 'Create Project' })).toBeVisible();
-		await settle(page);
+		await settle(page, 'projects', page.getByRole('button', { name: 'Create Project' }));
 		await checkA11y(page, testInfo, 'projects');
 	});
 
 	test('users', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/users');
-		await settle(page);
-		await expect(page.getByRole('grid').or(page.getByRole('table')).first()).toBeVisible();
+		await settle(page, 'users', page.getByRole('grid').or(page.getByRole('table')).first());
 		await checkA11y(page, testInfo, 'users');
 	});
 
 	test('create project', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/projects');
 		await page.getByRole('button', { name: 'Create Project' }).click();
-		await expect(page.getByRole('dialog')).toBeVisible();
-		await settle(page);
+		await settle(page, 'create project', page.getByRole('dialog'));
 		await checkA11y(page, testInfo, 'create project');
 	});
 });
@@ -99,19 +108,20 @@ test.describe('Global app', () => {
 test.describe('Project screens', () => {
 	test('dashboard', async ({ page }, testInfo) => {
 		await page.goto('/studio/site-dashboard');
-		await settle(page);
+		await settle(page, 'dashboard', page.getByText('Unpublished Work'));
 		await checkA11y(page, testInfo, 'dashboard');
 	});
 
 	test('site tools', async ({ page }, testInfo) => {
 		await page.goto('/studio/site-config');
-		await settle(page);
+		// The tool list is a menu; with no tools configured it holds the empty state instead.
+		await settle(page, 'site tools', page.getByRole('menu'));
 		await checkA11y(page, testInfo, 'site tools');
 	});
 
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
-		await settle(page);
+		await settle(page, 'search', page.getByRole('heading', { name: 'Search', level: 2 }));
 		await checkA11y(page, testInfo, 'search');
 	});
 });
@@ -140,13 +150,19 @@ test.describe('Preview', () => {
 
 	test('edit form', async ({ page }, testInfo) => {
 		await openPreview(page);
-		await openItemMenuOption(page, 'Edit');
+		const dialog = page.getByRole('dialog');
+		await openItemMenuOption(page, 'Edit', 'edit form', dialog.locator('[data-field-id]').first());
 		await checkA11y(page, testInfo, 'edit form');
 	});
 
 	test('publish dialog', async ({ page }, testInfo) => {
 		await openPreview(page);
-		await openItemMenuOption(page, 'Publish');
+		await openItemMenuOption(
+			page,
+			'Publish',
+			'publish dialog',
+			page.getByRole('heading', { name: 'Publish', level: 2 })
+		);
 		await checkA11y(page, testInfo, 'publish dialog');
 	});
 });

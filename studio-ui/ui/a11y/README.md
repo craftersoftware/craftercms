@@ -10,7 +10,11 @@ It is isolated from the Studio build: nothing here is part of the app bundle.
 
 Screens: login, global app (projects, users), create project dialog, dashboard, site tools, search, preview, preview
 tools panel (every top level page), preview edit mode tools panel (every top level page), edit form and publish
-dialog. Each runs once for the `light` and once for the `dark` Playwright project (`prefers-color-scheme`).
+dialog. Each runs once for the `light` and once for the `dark` Playwright project (`prefers-color-scheme`), giving 12
+tests per theme and 24 in total.
+
+On `develop`, before the a11y remediation PRs land, 20 of those 24 tests fail across 11 axe rules. Those findings are
+recorded in the allow-list below, so the suite passes on `develop` today and fails on a regression or a new finding.
 
 ## Run
 
@@ -46,7 +50,17 @@ CI=1 STUDIO_URL=https://studio.example.com yarn test:a11y
 
 ## Allow-list
 
-Known exceptions live in `tests/allow-list.ts`. Each entry names the axe `rule` and the `ticket`
-(`craftersoftware/craftercms-e#<number>`) that tracks the fix, and may be narrowed by `screens` (names used in
-`tests/screens.spec.ts`) and `selector`. Allow-listed findings do not fail the run but are attached to the report as
-`allow-listed ... .txt`. Remove the entry when its ticket is resolved.
+Known exceptions live in `tests/allow-list.ts`: one entry per axe rule per screen, where a screen is the key the test
+scans with (`login`, `dashboard`, `edit mode tools panel > Search`, ...). Each entry carries a `reason` citing the
+success criterion and a `ticket` (`craftersoftware/craftercms-e#<number>`, or `'TBD'` until the ticket is filed).
+Entries stay coarse on purpose: axe selectors contain generated class names and React ids that change between runs, so
+a selector-scoped entry would drift.
+
+The list is the baseline recorded on `develop` (20 of 24 tests failing, 11 axe rules). `clearedBy` marks the a11y PR
+whose combined run no longer reports the finding; delete those entries when that PR merges. A finding on a screen with
+no matching entry fails the run, so the gate is still a regression check everywhere the baseline is clean.
+
+`tests/fixtures.ts` exposes `settle(page, screen, ready?)`, which waits out Studio's loading state and then for a
+screen-specific element. Every wait throws `NotReadyError` naming the screen, so a scan can never be reported against
+a screen that did not render. There is no best-effort mode and `networkidle` is not used: Studio keeps long-lived
+connections open, so it returns before the UI has rendered.

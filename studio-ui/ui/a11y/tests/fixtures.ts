@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Locator, Page } from '@playwright/test';
 import { password, project, username } from './env';
 
 export { expect };
@@ -33,8 +33,12 @@ export const test = base.extend<{ authenticated: boolean }>({
 	// Set to false (`test.use({ authenticated: false })`) for screens that are visited logged out.
 	authenticated: [true, { option: true }],
 	context: async ({ context, baseURL }, use) => {
-		// Deterministic rendering: no animations or transitions while axe measures colors and sizes.
 		await context.addInitScript((user) => {
+			// Studio's legacy browser check reads `window.chrome`; the headless shell doesn't define it and would render
+			// the "unsupported browser" banner that no real Chrome or Firefox user sees.
+			if (!('chrome' in window))
+				Object.defineProperty(window, 'chrome', { value: { runtime: {} }, configurable: true });
+			// Deterministic rendering: no animations or transitions while axe measures colors and sizes.
 			window.localStorage.setItem(`craftercms.${user}.enableAnimations`, 'false');
 		}, username);
 		// Project-scoped screens (dashboard, search, project tools) read the active project from this cookie.
@@ -48,11 +52,57 @@ export const test = base.extend<{ authenticated: boolean }>({
 	}
 });
 
-/** Waits for loading indicators to go away so axe doesn't scan a half-rendered screen. */
-export async function settle(page: Page) {
-	// Studio keeps long-lived connections open, so network idle is only a best effort.
-	await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
-	await expect(page.locator('[role="progressbar"], .MuiSkeleton-root'))
-		.toHaveCount(0, { timeout: 5_000 })
-		.catch(() => undefined);
+/** Markup Studio renders while a panel, list or form is still loading (see `LoadingState`). */
+const LOADING_INDICATORS = '[role="progressbar"], .MuiSkeleton-root, svg[viewBox="0 0 264 202"]';
+
+/**
+ * Studio's transient notifications. They are app-level and outlive the screen that raised them, so they would otherwise
+ * be attributed to whichever screen happens to be scanned next.
+ */
+const NOTIFICATIONS = '.notistack-SnackbarContainer';
+
+/** Thrown when a readiness wait times out, so a scan is never reported against a screen that never rendered. */
+export class NotReadyError extends Error {
+	constructor(screen: string, detail: string) {
+		super(`${screen} was not ready to scan: ${detail}`);
+		this.name = 'NotReadyError';
+	}
+}
+
+/**
+ * Waits for a screen to be ready to scan, then optionally for its own content. Every wait fails the test with the
+ * screen's name instead of letting a scan run against a loading, half-rendered or already-notified state; there is no
+ * best-effort mode.
+ *
+ * Studio keeps long-lived connections open, so `networkidle` is not used: it returns before slow XHRs finish and is
+ * never a signal that the UI has rendered.
+ * @param screen Screen name, used in failure messages.
+ * @param ready Condition that proves the screen's own content is on the page (a heading, a row, a dialog, ...).
+ * @param stable Region whose text must stop changing, for panels that render their widgets asynchronously and show no
+ * loading indicator while they do.
+ */
+export async function settle(page: Page, screen: string, ready?: Locator, stable?: Locator) {
+	try {
+		await expect(page.locator(LOADING_INDICATORS).filter({ visible: true }), `${screen} is still loading`).toHaveCount(
+			0,
+			{ timeout: 20_000 }
+		);
+		if (ready) await expect(ready, `${screen} content did not render`).toBeVisible({ timeout: 20_000 });
+		if (stable) {
+			let previous = await stable.innerText();
+			for (let i = 0; i < 40; i++) {
+				await page.waitForTimeout(250);
+				const next = await stable.innerText();
+				if (next === previous && next.trim()) break;
+				previous = next;
+				if (i === 39) throw new Error(`${screen} content never stopped changing`);
+			}
+		}
+		// Notifications auto-dismiss after a few seconds; waiting them out keeps the scan on the screen itself.
+		await expect(page.locator(NOTIFICATIONS), `${screen} never settled: a notification is still up`).toHaveCount(0, {
+			timeout: 20_000
+		});
+	} catch (error) {
+		throw new NotReadyError(screen, error instanceof Error ? error.message.split('\n')[0] : String(error));
+	}
 }

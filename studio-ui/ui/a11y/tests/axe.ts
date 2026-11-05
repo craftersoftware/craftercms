@@ -17,25 +17,44 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, TestInfo } from '@playwright/test';
 import type { Result } from 'axe-core';
-import { allowList } from './allow-list';
+import { allowList, AllowListEntry } from './allow-list';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 const BLOCKING_IMPACTS = ['serious', 'critical'];
 
-function isAllowed(violation: Result, node: Result['nodes'][number], screen: string) {
-	return allowList.some(
+function entriesFor(violation: Result, screen: string, theme: string) {
+	return allowList.filter(
 		(entry) =>
 			entry.rule === violation.id &&
-			(!entry.screens || entry.screens.includes(screen)) &&
-			(!entry.selector || node.target.join(' ').includes(entry.selector))
+			entry.screens.includes(screen) &&
+			(!entry.themes || entry.themes.includes(theme as 'light' | 'dark'))
 	);
 }
 
-function summarize(violations: Result[]) {
+function isAllowed(violation: Result, screen: string, theme: string) {
+	return entriesFor(violation, screen, theme).length > 0;
+}
+
+function summarize(violations: Result[], screen: string = '', theme: string = '') {
 	return violations
+		.map(({ id, impact, help, nodes }) => {
+			const tickets = screen
+				? entriesFor({ id } as Result, screen, theme)
+						.map((entry) => `${entry.ticket}${entry.clearedBy ? ` (expected cleared by ${entry.clearedBy})` : ''}`)
+						.join(', ')
+				: '';
+			return `[${impact}] ${id}: ${help}${tickets ? ` [${tickets}]` : ''}\n${nodes
+				.map((n) => `  ${n.target.join(' ')}`)
+				.join('\n')}`;
+		})
+		.join('\n');
+}
+
+function summarizeAllowList(entries: AllowListEntry[]) {
+	return entries
 		.map(
-			({ id, impact, help, nodes }) =>
-				`[${impact}] ${id}: ${help}\n${nodes.map((n) => `  ${n.target.join(' ')}`).join('\n')}`
+			({ rule, ticket, clearedBy, reason }) =>
+				`${rule}\n  ticket: ${ticket}\n  clearedBy: ${clearedBy ?? 'n/a'}\n  ${reason}`
 		)
 		.join('\n');
 }
@@ -47,27 +66,32 @@ function summarize(violations: Result[]) {
  * @param screen Allow-list screen key; defaults to `name`.
  */
 export async function checkA11y(page: Page, testInfo: TestInfo, name: string, screen: string = name) {
+	const theme = testInfo.project.name;
 	// The preview iframe hosts the project's site, not Studio UI.
 	const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).exclude('#crafterCMSPreviewIframe').analyze();
 
 	const blocking: Result[] = [];
 	const allowed: Result[] = [];
+	// A screen with no allow-list entry for a rule is expected to be clean: any finding there is a regression.
 	results.violations
 		.filter((violation) => BLOCKING_IMPACTS.includes(violation.impact ?? ''))
 		.forEach((violation) => {
-			const nodes = violation.nodes.filter((node) => !isAllowed(violation, node, screen));
-			const allowedNodes = violation.nodes.filter((node) => isAllowed(violation, node, screen));
-			if (nodes.length) blocking.push({ ...violation, nodes });
-			if (allowedNodes.length) allowed.push({ ...violation, nodes: allowedNodes });
+			if (isAllowed(violation, screen, theme)) allowed.push(violation);
+			else blocking.push(violation);
 		});
 
 	const label = `${testInfo.project.name} - ${name}`;
+	const allowedEntries = [...new Set(results.violations.flatMap((v) => entriesFor(v, screen, theme)))];
 	await testInfo.attach(`axe ${label}.json`, {
-		body: JSON.stringify({ ...results, blocking, allowed }, null, 2),
+		body: JSON.stringify({ ...results, blocking, allowed, allowList: allowedEntries }, null, 2),
 		contentType: 'application/json'
 	});
 	if (allowed.length) {
-		await testInfo.attach(`allow-listed ${label}.txt`, { body: summarize(allowed), contentType: 'text/plain' });
+		// Name the tickets on every allow-listed finding so a reader can tell what is still expected to fail.
+		await testInfo.attach(`allow-listed ${label}.txt`, {
+			body: `${summarize(allowed, screen, theme)}\n\nApplied allow-list entries:\n${summarizeAllowList(allowedEntries)}`,
+			contentType: 'text/plain'
+		});
 	}
 	expect.soft(blocking.length, `${label}\n${summarize(blocking)}`).toBe(0);
 }
