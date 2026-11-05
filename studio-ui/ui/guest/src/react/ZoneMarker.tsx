@@ -24,7 +24,7 @@ import FieldIcon from '@craftercms/studio-ui/icons/ContentTypeField';
 import LockedStateIcon from '@craftercms/studio-ui/icons/Lock';
 import Person from '@craftercms/studio-ui/models/Person';
 import { darken, styled } from '@mui/material/styles';
-import palette from '@craftercms/studio-ui/styles/palette';
+import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import LookupTable from '@craftercms/studio-ui/src/models/LookupTable';
 import AllowedContentTypesData from '@craftercms/studio-ui/models/AllowedContentTypesData';
 import { ContentType, ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
@@ -73,20 +73,19 @@ export interface ZoneMarkerProps {
 }
 
 function getStyles(sx: ZoneMarkerPartialSx): ZoneMarkerFullSx {
+	// The boundary is drawn on the authored page, so it cannot follow the Studio mode (a dark-mode light
+	// blue is 2.54:1 on a white page). The companion bands make it background-independent; see
+	// styles/overlayStroke.ts. The default is the select-mode colour; src/styles/styles.ts sets each state.
+	// A list, not a spread: the state colour arrives as an sx callback, and spreading a callback yields {}.
+	const boxDefaults = {
+		boxSizing: 'border-box' as const,
+		textAlign: 'center' as const,
+		position: 'absolute' as const,
+		zIndex: 'tooltip',
+		pointerEvents: 'none' as const
+	};
 	return {
-		box: {
-			boxSizing: 'border-box',
-			outline: (theme) => `2px solid ${theme.palette.success.main}`,
-			outlineOffset: '-2px',
-			// Zone highlight, not a focus indicator: black/white inset bands stay visible when the page
-			// behind the zone is unknown. #000 on #fff is 21:1; #fff on #121212 is 18.73:1.
-			boxShadow: `inset 0 0 0 1px ${palette.white}, inset 0 0 0 3px ${palette.black}`,
-			textAlign: 'center',
-			position: 'absolute',
-			zIndex: 'tooltip',
-			pointerEvents: 'none',
-			...sx?.box
-		},
+		box: [boxDefaults, getOverlayBoundarySx((theme) => theme.palette.success.main), ...(sx?.box ? [sx.box] : [])],
 		paper: {
 			padding: [0.5, 1],
 			fontSize: '14px',

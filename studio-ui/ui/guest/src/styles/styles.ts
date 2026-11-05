@@ -17,6 +17,7 @@
 import { createTheme, Theme, ThemeOptions } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import palette, { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
+import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import { useMemo } from 'react';
 import { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
 import { SxProps } from '@mui/system';
@@ -61,9 +62,7 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 				// contrastText is computed for .main, not .light; highlightText is the readable colour for the .light chips.
 				color: palette.highlightText
 			},
-			box: {
-				outlineColor: 'success.main'
-			},
+			box: getOverlayBoundarySx((theme) => theme.palette.success.main),
 			icon: {
 				color: palette.highlightText
 			}
@@ -73,9 +72,7 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 				bgcolor: 'primary.light',
 				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.primary.main
-			},
+			box: getOverlayBoundarySx((theme) => theme.palette.primary.main),
 			icon: {
 				color: palette.highlightText
 			}
@@ -85,27 +82,21 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 				bgcolor: 'error.light',
 				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.error.main
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.error.main)
 		},
 		warnHighlight: {
 			paper: {
 				bgcolor: 'warning.light',
 				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.warning.main
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.warning.main)
 		},
 		disabledHighlight: {
 			paper: {
 				bgcolor: (theme) => theme.palette.grey[400],
 				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.border.control
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.border.control)
 		}
 	},
 	dropMarker: {
