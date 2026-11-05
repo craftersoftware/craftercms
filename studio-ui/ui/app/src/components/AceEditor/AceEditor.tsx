@@ -23,6 +23,9 @@ import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
+import { useIntl } from 'react-intl';
+import { applyAceKeyboardAccessibility } from '../editorKeyboard/aceKeyboard';
+import { codeEditorKeyboardMessages } from '../editorKeyboard/messages';
 
 // @see https://github.com/ajaxorg/ace/wiki/Configuring-Ace
 export interface AceOptions {
@@ -207,6 +210,16 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 	const {
 		palette: { mode }
 	} = useTheme();
+	const { formatMessage } = useIntl();
+	const keyboardLabels = {
+		name: formatMessage(codeEditorKeyboardMessages.groupLabel),
+		instructions: formatMessage(codeEditorKeyboardMessages.instructions),
+		instructionsReadOnly: formatMessage(codeEditorKeyboardMessages.instructionsReadOnly),
+		gutterLabel: formatMessage(codeEditorKeyboardMessages.gutterLabel),
+		hintIdPrefix: 'craftercms-code-editor-hint-react'
+	};
+	const keyboardLabelsRef = useRef(keyboardLabels);
+	keyboardLabelsRef.current = keyboardLabels;
 
 	options.theme = options.theme ?? `ace/theme/${mode === 'light' ? 'chrome' : 'tomorrow_night'}`;
 
@@ -235,6 +248,8 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 							fontSize: '15px',
 							fontFamily: "'Monaco', 'Menlo', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace"
 						});
+						// Tab still indents while editing. Esc returns to the scroller, then Tab leaves.
+						applyAceKeyboardAccessibility(aceEditor, keyboardLabelsRef.current);
 						autoFocus && aceEditor.focus();
 						if (refs.current.options.readOnly) {
 							// This setting of the cursor to not display is unnecessary as the
@@ -310,6 +325,15 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 			editor.renderer.$cursorLayer.element.style.display = options?.readOnly ? 'none' : '';
 		}
 	}, [initialized, options?.readOnly]);
+
+	// Re-apply after locale changes. Runs after the setOptions effect above so a
+	// caller option refresh cannot drop the localized labels.
+	const { name, instructions, instructionsReadOnly, gutterLabel } = keyboardLabels;
+	useEffect(() => {
+		if (initialized) {
+			applyAceKeyboardAccessibility(refs.current.ace, keyboardLabelsRef.current);
+		}
+	}, [initialized, name, instructions, instructionsReadOnly, gutterLabel, options?.readOnly]);
 
 	// If the Editor is inside a dialog, resize when fullscreen changes
 	const isFullScreen = useEnhancedDialogContext()?.isFullScreen;
