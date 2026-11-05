@@ -14,11 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, lazy, Suspense } from 'react';
 import '@videojs/react/video/skin.css';
 import { VideoPlayer as Player, VideoSkin, Video } from '@videojs/react/video';
-import { HlsJsVideo } from '@videojs/react/media/hlsjs-video';
-import { DashVideo } from '@videojs/react/media/dash-video';
 
 export interface VideoPlayerProps {
 	src: string;
@@ -30,6 +28,9 @@ export interface VideoPlayerProps {
 	poster?: string;
 	type?: string;
 }
+
+const HlsJsVideo = lazy(() => import('@videojs/react/media/hlsjs-video').then((m) => ({ default: m.HlsJsVideo })));
+const DashVideo = lazy(() => import('@videojs/react/media/dash-video').then((m) => ({ default: m.DashVideo })));
 
 const SourceTypes = {
 	mp4: 'video/mp4',
@@ -79,7 +80,13 @@ function VideoPlayer(props: VideoPlayerProps) {
 		...(height != null ? { height } : { aspectRatio: '16 / 9' })
 	};
 
-	return <Player poster={poster}>{controls ? <VideoSkin style={skinStyle}>{media}</VideoSkin> : media}</Player>;
+	const content = controls ? <VideoSkin style={skinStyle}>{media}</VideoSkin> : media;
+
+	return (
+		<Player poster={poster}>
+			<Suspense fallback="">{content}</Suspense>
+		</Player>
+	);
 }
 
 export default VideoPlayer;
