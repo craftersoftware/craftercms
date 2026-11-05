@@ -14,7 +14,6 @@
 * [components]
   * [SelectionList] `onItemClicked` is now `(event: MouseEvent | null, path: string)`. The event is always `null`; selection comes from the checkbox, which the item text labels.
   * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
-  * [ToolsPanelListItemButton] `sx` and `className` are now applied to the outer `ListItem` instead of the `ListItemButton`. Callers that style the button's padding, hover or selected state through `sx` need to target the button with a nested selector.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.
   * Removed `resource` prop from StoreProvider

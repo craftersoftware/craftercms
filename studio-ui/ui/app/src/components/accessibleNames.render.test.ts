@@ -100,24 +100,30 @@ describe('accessible names', () => {
 		assert.equal(toggle.getAttribute('aria-pressed'), 'true');
 	});
 
-	it('names the trailing action of a tools panel item and keeps sx and className on the outer item', async () => {
+	it('names the trailing action of a tools panel item and keeps className and state on the button', async () => {
 		let clicked = 0;
 		const host = await render(
 			React.createElement(ToolsPanelListItemButton, {
 				title: 'Templates',
 				className: 'custom-class',
+				selected: true,
 				onSecondaryActionClick: () => clicked++
 			})
 		);
 		const item = host.querySelector('li') as HTMLElement;
-		assert.equal(item.classList.contains('custom-class'), true);
+		const row = host.querySelector(
+			'li > [role="button"], li > button, li > div[class*="ListItemButton"]'
+		) as HTMLElement;
+		assert.equal(item.classList.contains('custom-class'), false);
+		assert.equal(row.classList.contains('custom-class'), true);
+		assert.equal(row.classList.contains('Mui-selected'), true);
 		const trailing = host.querySelector('button[aria-label="Open Templates"]') as HTMLButtonElement;
 		assert.ok(trailing);
 		await act(async () => trailing.click());
 		assert.equal(clicked, 1);
 	});
 
-	it('names the options button of a draggable panel item after the item', async () => {
+	it('names the options button of a draggable panel item and leaves the mouse-only row out of the tab order', async () => {
 		const host = await render(
 			React.createElement(DraggablePanelListItem, {
 				primaryText: 'Article',
@@ -126,6 +132,11 @@ describe('accessible names', () => {
 			} as never)
 		);
 		assert.ok(host.querySelector('button[aria-label="Options for Article"]'));
+		assert.equal(host.querySelectorAll('button').length, 1);
+		assert.equal(host.querySelectorAll('[role="button"], :not(button)[tabindex]').length, 0);
+		assert.ok(host.querySelector('[draggable="true"]'));
+		const withoutMenu = await render(React.createElement(DraggablePanelListItem, { primaryText: 'Article' } as never));
+		assert.equal(withoutMenu.querySelectorAll('button, [role="button"], [tabindex]').length, 0);
 	});
 
 	it('names the plugin card use button after the plugin, including an icon-only use label', async () => {

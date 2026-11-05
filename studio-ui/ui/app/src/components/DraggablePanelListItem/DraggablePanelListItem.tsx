@@ -24,9 +24,8 @@ import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { darken, useTheme } from '@mui/material/styles';
-import ListItemButton from '@mui/material/ListItemButton';
 import { getAvatarWithIconColors } from '../../utils/contentType';
-import { focusVisibleInsetSx, focusVisibleSx } from '../../styles/focus';
+import { focusVisibleSx } from '../../styles/focus';
 
 interface PanelListItemProps {
 	primaryText: string;
@@ -67,18 +66,22 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 				borderRadius: isBeingDragged ? 2 : 0
 			}}
 		>
-			<ListItemButton
-				disableRipple
+			<Box
 				draggable
 				onDragStart={onDragStart}
 				onDragEnd={onDragEnd}
-				sx={{
+				sx={(theme) => ({
+					display: 'flex',
+					alignItems: 'center',
 					flex: 1,
 					minWidth: 0,
+					py: 1,
 					pl: 1.5,
+					pr: 2,
 					cursor: isBeingDragged ? 'grabbing' : 'grab',
-					...focusVisibleInsetSx
-				}}
+					transition: theme.transitions.create('background-color', { duration: theme.transitions.duration.shortest }),
+					'&:hover': { backgroundColor: theme.palette.action.hover }
+				})}
 			>
 				<ListItemAvatar sx={{ minWidth: 0 }}>
 					<Avatar
@@ -102,7 +105,7 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 					</Avatar>
 				</ListItemAvatar>
 				<ListItemText primary={primaryText} secondary={secondaryText} />
-			</ListItemButton>
+			</Box>
 			{hasMenu && (
 				<Box sx={{ display: 'flex', flexShrink: 0, mr: 0.5 }}>
 					<IconButton

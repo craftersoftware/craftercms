@@ -42,8 +42,6 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 		title,
 		subtitle,
 		onClick,
-		sx,
-		className,
 		secondaryActionIcon = <ChevronRounded />,
 		secondaryActionLabel,
 		onSecondaryActionClick,
@@ -56,8 +54,6 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 	return (
 		<ListItem
 			disablePadding
-			className={className}
-			sx={sx}
 			secondaryAction={
 				onSecondaryActionClick ? (
 					<IconButton
