@@ -26,10 +26,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+	clearStackPendingFlags,
 	commitRepeatItem,
 	currentRepeatItemIndex,
 	findRepeatItemIndex,
 	repeatItemFormProps,
+	repeatItemInValues,
 	repeatItemValueAfterDiscard,
 	restoreOpenedRepeatItem,
 	selectedItemPendingAfterSave,
@@ -402,5 +404,95 @@ describe('item form close and selected-fields write with a resolved index', () =
 			parentCheckpoint: undefined
 		});
 		assert.equal(next, undefined);
+	});
+});
+
+describe('repeatItemInValues with a shifted saved array', () => {
+	it('finds the launch item where the saved array has it now', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const saved = { rows_o: [{ id: 'new' }, a, b] };
+		assert.deepEqual(repeatItemInValues(saved, 'rows_o', 1, b, keys), { item: b, gone: false });
+	});
+
+	it('finds an item a write replaced after the launch, by its carried key', () => {
+		const keys = testKeys();
+		const b = { id: 'b' };
+		const replaced = { id: 'b1' };
+		keys.carry(b, replaced);
+		const saved = { rows_o: [{ id: 'new' }, replaced] };
+		assert.deepEqual(repeatItemInValues(saved, 'rows_o', 1, b, keys), { item: replaced, gone: false });
+	});
+
+	it('reports a repeat item that is no longer saved as gone, not as another row', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.deepEqual(repeatItemInValues({ rows_o: [a] }, 'rows_o', 1, b, keys), { item: undefined, gone: true });
+	});
+
+	it('keeps the launch index without a launch item or keys, and has nothing for a non-item entry', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, 'rows_o', 1), { item: b, gone: false });
+		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, undefined, undefined), { item: undefined, gone: false });
+	});
+});
+
+describe('clearStackPendingFlags with a shifted saved array', () => {
+	/** An entry the way `useSaveForm` builds it: the saved item is looked up by row key. */
+	function entryFor(
+		saved: Record<string, unknown>,
+		keys: ReturnType<typeof testKeys>,
+		launchIndex: number,
+		launchItem: { id: string },
+		current: { id: string }
+	) {
+		const looked = repeatItemInValues(saved, 'rows_o', launchIndex, launchItem, keys);
+		const calls = {
+			checkpoint: undefined as unknown,
+			pending: undefined as boolean | undefined,
+			ids: undefined as unknown
+		};
+		return {
+			calls,
+			entry: {
+				selected: true,
+				changedFieldIds: new Set(['id']) as ReadonlySet<string>,
+				setChangedFieldIds(next: ReadonlySet<string>) {
+					calls.ids = next;
+				},
+				setPending(value: boolean) {
+					calls.pending = value;
+				},
+				fieldId: 'rows_o',
+				savedItem: looked.item,
+				itemGone: looked.gone,
+				currentItem: current,
+				setCheckpoint(values: Record<string, unknown>) {
+					calls.checkpoint = values;
+				}
+			}
+		};
+	}
+
+	it("stores each item's own saved row as its checkpoint, not the row at the launch index", () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		// Something was added in front after both forms opened. Launch indexes 0 and 1 now point at the wrong rows.
+		const saved = { rows_o: [{ id: 'new' }, a, b] };
+		const forA = entryFor(saved, keys, 0, a, { id: 'a' });
+		const forB = entryFor(saved, keys, 1, b, { id: 'b' });
+		clearStackPendingFlags([forA.entry, forB.entry]);
+		assert.ok(forA.calls.checkpoint === a);
+		assert.ok(forB.calls.checkpoint === b);
+		assert.equal(forA.calls.pending, false);
+		assert.equal(forB.calls.pending, false);
+	});
+
+	it('leaves the flags and checkpoint of an item that is no longer saved', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const gone = entryFor({ rows_o: [a] }, keys, 1, b, { id: 'b-edited' });
+		clearStackPendingFlags([gone.entry]);
+		assert.deepEqual(gone.calls, { checkpoint: undefined, pending: undefined, ids: undefined });
 	});
 });

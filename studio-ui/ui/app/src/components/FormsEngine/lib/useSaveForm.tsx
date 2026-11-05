@@ -42,6 +42,7 @@ import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
+import { repeatItemKeysFor } from './repeatItemKeys';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
 import {
@@ -239,6 +240,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 					if (!isRepeatMode) {
 						const entries = formsStackData.map((entry) => {
 							const repeat = entry.props?.repeat;
+							const repeatAtom = repeat?.fieldId ? stableFormContext.atoms.valueByFieldId[repeat.fieldId] : undefined;
+							// The index at launch can be behind the saved array, so find the item by its row key.
+							const saved = repeatItemInValues(
+								values,
+								repeat?.fieldId,
+								repeat?.index,
+								repeat?.values,
+								repeatAtom ? repeatItemKeysFor<unknown>(repeatAtom) : undefined
+							);
 							return {
 								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
 								changedFieldIds: jotai.get(entry.changedFieldIds),
@@ -246,7 +256,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 									jotai.set(entry.changedFieldIds, next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next);
 								},
 								fieldId: repeat?.fieldId,
-								savedItem: repeatItemInValues(values, repeat?.fieldId, repeat?.index),
+								savedItem: saved.item,
+								itemGone: saved.gone,
 								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
 								setCheckpoint(next: Record<string, unknown>) {
 									entry.originalValues = next;

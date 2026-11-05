@@ -168,15 +168,26 @@ export function stackedRepeatItemAfterClose<T>(args: {
 	});
 }
 
-/** The repeat item inside a saved content object, or undefined when this entry is not that item. */
-export function repeatItemInValues(
+/**
+ * The repeat item inside a saved content object. `item` is undefined when this entry is not a repeat item (nothing
+ * to look up). `gone` is true when it is a repeat item that is no longer in the saved array.
+ * The launch index is only a starting point: when the array shifted while the item form was open it points at another
+ * row. With `launchItem` and `keys` the item is found again in the saved array by identity or carried row key
+ * ({@link currentRepeatItemIndex}); without them the launch index is used as is.
+ */
+export function repeatItemInValues<T = unknown>(
 	values: Record<string, unknown> | null | undefined,
 	fieldId: string | undefined,
-	index: number | undefined
-): unknown {
-	if (!values || fieldId === undefined || index === undefined) return undefined;
+	index: number | undefined,
+	launchItem?: T,
+	keys?: Pick<OpenItemKeys<T>, 'keyOf'>
+): { item: unknown; gone: boolean } {
+	if (!values || fieldId === undefined || index === undefined) return { item: undefined, gone: false };
 	const list = values[fieldId];
-	return Array.isArray(list) ? list[index] : undefined;
+	if (!Array.isArray(list)) return { item: undefined, gone: false };
+	const current = currentRepeatItemIndex(list as T[], index, launchItem, keys);
+	if (current === -1) return { item: undefined, gone: true };
+	return { item: current === undefined ? undefined : list[current], gone: false };
 }
 
 /**
@@ -213,6 +224,8 @@ export function clearStackPendingFlags(
 		setChangedFieldIds(next: ReadonlySet<string>): void;
 		setPending(value: boolean): void;
 		savedItem?: unknown;
+		/** The item is no longer in the saved array. Its flags and checkpoint stay as they are. */
+		itemGone?: boolean;
 		currentItem?: unknown;
 		/** Repeat field on the parent. An in-flight edit records this id on the parent. */
 		fieldId?: string;
@@ -227,6 +240,7 @@ export function clearStackPendingFlags(
 			savedItem: entry.savedItem,
 			currentItem: entry.currentItem
 		});
+		if (entry.itemGone) continue;
 		if (decision.checkpoint) entry.setCheckpoint?.(decision.checkpoint);
 		if (!entry.selected) continue;
 		// Rebuild from the saved checkpoint. An undo during the save is not in the old id list.
