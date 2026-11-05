@@ -126,6 +126,18 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 						})
 					}
 				},
+				// MUI fills a dark-mode Alert with palette[severity].dark but takes the label colour from .main,
+				// so the pair mixes two shades (3.96:1 for error). Fill with .main in both modes, as Chip and
+				// Button already do, and the label colour MUI derives from .main matches the fill.
+				// Reachable through NotistackVariant's `alertVariant` prop, which plugins can pass.
+				MuiAlert: {
+					styleOverrides: {
+						filled: ({ ownerState, theme }) => {
+							const severity = ownerState.color ?? ownerState.severity;
+							return { backgroundColor: theme.palette[severity]?.main };
+						}
+					}
+				},
 				// A tinted background alone does not tell a selected item apart (1.4.1), so add a leading bar.
 				MuiListItemButton: { styleOverrides: { root: selectedBar } },
 				MuiMenuItem: { styleOverrides: { root: selectedBar } },
