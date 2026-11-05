@@ -252,6 +252,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		field,
 		fieldIdPath,
 		sectionId,
+		controlDescriptor,
 		onDeleteField,
 		onMoveFieldToSection,
 		type,
@@ -325,6 +326,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 				field={field}
 				sectionId={sectionId}
 				type={type}
+				controlDescriptor={controlDescriptor}
 				open={openMoveFieldDialog}
 				onClose={() => setOpenMoveFieldDialog(false)}
 				onMoveFieldToSection={handleMoveFieldToSection}

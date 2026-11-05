@@ -37,6 +37,9 @@ export const localeSelectorDescriptor: DescriptorContentType = {
 	fields: {
 		readonly: commonFieldPropertiesDescriptors['readonly'],
 		required: commonFieldPropertiesDescriptors['required']
+	},
+	metadata: {
+		rootOnly: true
 	}
 };
 

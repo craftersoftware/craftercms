@@ -174,6 +174,19 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 	// 'locale-selector: 'locale-selector' // This one doesn't have a pre-set id
 };
 
+/** True when the control may only live at the content-type root (`metadata.rootOnly`). */
+export function isRootOnlyControl(descriptor?: DescriptorContentType | null): boolean {
+	return Boolean(descriptor?.metadata?.rootOnly);
+}
+
+/** True when an existing field may only live at the content-type root: its control is rootOnly, or it uses a reserved system field id (system fields can be stored as plain input/checkbox). */
+export function isFieldRootOnly(
+	field: Pick<ContentTypeField, 'id'>,
+	descriptor?: DescriptorContentType | null
+): boolean {
+	return isRootOnlyControl(descriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+}
+
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {
 	return pluckProps(type, false, ...typePropsToEdit) as ContentTypeValuesObject;
 }
@@ -359,6 +372,13 @@ export function reverseTypeFieldValuesObject(
 	return fieldWithReversedValues;
 }
 
+export type DescriptorContentTypeMetadata = {
+	suffixes?: string[];
+	additionalFields?: string[];
+	/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+	rootOnly?: boolean;
+};
+
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
 };
@@ -370,12 +390,7 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	sections: DescriptorSection[];
 	fields: LookupTable<DescriptorField>;
 	type?: 'image' | 'item' | 'audio' | 'flash' | 'video' | 'transcoded-video';
-	metadata?: {
-		suffixes?: string[];
-		additionalFields?: string[];
-		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
-		rootOnly?: boolean;
-	};
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorSection = Omit<ContentTypeSection, 'title' | 'description'> & {
