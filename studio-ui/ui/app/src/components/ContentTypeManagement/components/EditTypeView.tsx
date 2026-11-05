@@ -98,6 +98,13 @@ import { fetchItemVersions } from '../../../state/actions/versions';
 import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
+import {
+	applyTypeStateUpdate,
+	createTypeWorkingCopy,
+	deleteDataSourceFromType,
+	insertDataSourceIntoType,
+	reorderTypeSections
+} from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
 import type { ReorderFieldsDialogProps } from './ReorderFieldsDialog';
@@ -203,7 +210,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	// Deep-clone so nested fields/sections/dataSources are not shared with `props.type`
 	// (rollback baseline / diff source). A shallow spread would leak in-place mutations.
-	const [type, setType] = useState(() => structuredClone(props.type));
+	const [type, setType] = useState(() => createTypeWorkingCopy(props.type));
 	const typeRef = useRef(type);
 	typeRef.current = type;
 	// `<controller>` written straight to the saved form-definition this session. Rollback and diff
@@ -630,7 +637,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
 				reportSubmittingOrPending({ isSubmitting: true });
-				const typeToSave = latestUpdate ?? type;
+				const typeToSave = latestUpdate ?? typeRef.current;
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
@@ -733,7 +740,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							),
 							onOk: () => {
 								resetSelection();
-								setType(withPersistedJsController(structuredClone(props.type)));
+								setType(withPersistedJsController(createTypeWorkingCopy(props.type)));
 								dispatch(popDialog({ id }));
 							},
 							onCancel: () => dispatch(popDialog({ id }))
@@ -832,11 +839,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
 		setOpenDataSourceInserter(false);
-		setType((currentType) => {
-			const nextDataSources = currentType.dataSources?.concat() ?? [];
-			nextDataSources.splice(position, 0, newDataSource);
-			return { ...currentType, dataSources: nextDataSources };
-		});
+		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
 	};
@@ -856,10 +859,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const handleDeleteDataSource: FieldFormViewProps['onDeleteDataSource'] = (dataSourceId) => {
 		resetSelection();
 		onUpdateHasPendingChanges(true);
-		setType((currentType) => ({
-			...currentType,
-			dataSources: currentType.dataSources.filter((dataSource) => dataSource.id !== dataSourceId)
-		}));
+		setType((currentType) => deleteDataSourceFromType(currentType, dataSourceId));
 	};
 	// endregion
 
@@ -911,7 +911,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the move runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -978,7 +978,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -995,7 +995,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Dialog keys are pre-commit; replace any id missing from type.fields with the
 		// committed selected field id (rename), preserving the requested order.
 		const renamedId = stateRef.current.selectedField?.id;
@@ -1017,13 +1017,12 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
-		const currentType = typeRef.current;
-		const nextType = {
-			...currentType,
-			sections: sections.map((section) => currentType.sections.find((s) => s.id === section.key))
-		};
-		setType(nextType);
-		handleEditTypeProperties(nextType);
+		applyTypeStateUpdate(
+			() => typeRef.current,
+			setType,
+			(currentType) => reorderTypeSections(currentType, sections),
+			handleEditTypeProperties
+		);
 	};
 	// endregion
 
