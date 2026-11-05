@@ -25,6 +25,7 @@ import org.springframework.security.core.Authentication;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Supplier;
 
 import static org.craftercms.studio.impl.v2.service.security.internal.AccessTokenServiceInternalImpl.ACTIVITY_CACHE_CONFIG_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,6 +62,7 @@ public class AccessTokenServiceInternalImplTest {
 			((Runnable) invocation.getArgument(0)).run();
 			return null;
 		}).when(retryingFacade).retry(any(Runnable.class));
+		when(retryingFacade.retry(any(Supplier.class))).thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
 		var service = new AccessTokenServiceInternalImpl(null, null, 5, "sign", "encrypt", sessionTimeout,
 			inactivityTimeout, MAX_EXTENSIONS, securityDao, null, null, studioConfiguration, null, retryingFacade, null,
 			null, null);

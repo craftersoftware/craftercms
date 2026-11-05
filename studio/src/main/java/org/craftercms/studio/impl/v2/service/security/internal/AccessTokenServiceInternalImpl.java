@@ -247,7 +247,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	protected void extendSession(Authentication auth) {
 		var userId = getUserId(auth);
 		updateUserActivity(auth);
-		if (securityDao.extendSession(userId, sessionMaxExtensions) == 0) {
+		int updated = retryingDatabaseOperationFacade.retry(() -> securityDao.extendSession(userId, sessionMaxExtensions));
+		if (updated == 0) {
 			logger.debug("User '{}' can't extend the session any more", auth.getName());
 		}
 	}

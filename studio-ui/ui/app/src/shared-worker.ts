@@ -149,6 +149,7 @@ function isExpired(time = Date.now()) {
 
 function unauthenticated(excludeClient?: MessagePort) {
 	log(`Auth has expired.`);
+	pendingExtendXsrfToken = undefined;
 	clearTimeout(timeout);
 	status = 'expired';
 	siteSocketClient?.deactivate();
@@ -174,9 +175,24 @@ function getNextRefreshDelay() {
 }
 
 let retries = 0;
+// An extend request received while another request is in flight, which runs as soon as that one finishes.
+let pendingExtendXsrfToken: string;
+function runPendingExtend() {
+	const xsrfToken = pendingExtendXsrfToken;
+	pendingExtendXsrfToken = undefined;
+	if (xsrfToken) {
+		retrieve(xsrfToken);
+	}
+}
+
 function retrieve(extendSessionXsrfToken?: string) {
 	clearTimeout(timeout);
-	if (!isRetrieving) {
+	if (isRetrieving) {
+		if (extendSessionXsrfToken) {
+			log('Request in flight, the session extension will run after it');
+			pendingExtendXsrfToken = extendSessionXsrfToken;
+		}
+	} else {
 		isRetrieving = true;
 		return (extendSessionXsrfToken ? extendSession(extendSessionXsrfToken) : obtainAuthToken()).subscribe({
 			next(response) {
@@ -198,6 +214,7 @@ function retrieve(extendSessionXsrfToken?: string) {
 				} else {
 					unauthenticated();
 				}
+				runPendingExtend();
 				return current;
 			},
 			error(e: AjaxError) {
@@ -214,6 +231,7 @@ function retrieve(extendSessionXsrfToken?: string) {
 					if (clients.length && retries++ < 3) {
 						timeout = self.setTimeout(retrieve, Math.floor(refreshInterval * 0.9));
 					}
+					runPendingExtend();
 				}
 			}
 		});

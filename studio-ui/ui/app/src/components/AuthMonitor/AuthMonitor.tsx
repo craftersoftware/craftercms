@@ -110,10 +110,11 @@ export function AuthMonitor() {
 // extensions is limited (server side), so the last warning only tells the user to save their work.
 function SessionTimeoutWarning() {
 	const dispatch = useDispatch();
-	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
+	const { active, expiresAt, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
 	const [open, setOpen] = useState(false);
 	const [dismissed, setDismissed] = useState(false);
 	const [secondsLeft, setSecondsLeft] = useState(0);
+	const [extending, setExtending] = useState(false);
 	useEffect(() => {
 		// The worker refreshes the token when the warning is due and updates `sessionExpiresAt`, which closes the
 		// dialog if the session was extended in the meantime (e.g. activity on another tab).
@@ -128,7 +129,22 @@ function SessionTimeoutWarning() {
 			return () => clearInterval(interval);
 		}
 	}, [active, sessionExpiresAt]);
-	const onStaySignedIn = () => dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
+	useEffect(() => {
+		// Any new token (or the timeout, if the request fails) means the request is over.
+		setExtending(false);
+	}, [expiresAt, sessionExpiresAt, canExtendSession]);
+	useEffect(() => {
+		if (extending) {
+			const timeout = setTimeout(() => setExtending(false), 10000);
+			return () => clearTimeout(timeout);
+		}
+	}, [extending]);
+	const onStaySignedIn = () => {
+		if (!extending) {
+			setExtending(true);
+			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
+		}
+	};
 	const onDismiss = () => setDismissed(true);
 	return (
 		<Dialog
@@ -166,7 +182,7 @@ function SessionTimeoutWarning() {
 					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
 				</Button>
 				{canExtendSession ? (
-					<Button autoFocus color="primary" variant="contained" onClick={onStaySignedIn}>
+					<Button autoFocus color="primary" variant="contained" loading={extending} onClick={onStaySignedIn}>
 						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
 					</Button>
 				) : (
