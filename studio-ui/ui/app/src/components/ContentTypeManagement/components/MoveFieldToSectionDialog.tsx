@@ -126,8 +126,7 @@ export function MoveFieldToSectionDialogBody(props: MoveFieldToSectionDialogProp
 		const targets = [];
 		// Prefer the resolved descriptor (built-in or custom) so rootOnly metadata is honored.
 		// System fields (e.g. Internal Name) may store a remapped type (input/checkbox); check id too.
-		const isRootOnlyField =
-			isRootOnlyControl(field.type, controlDescriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+		const isRootOnlyField = isRootOnlyControl(controlDescriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
 		sections.forEach((section) => {
 			const repeatGroupsIdsForSection = getRepeatGroupsIdsForSection(section, typeRepeatGroups);
 			const sameFieldInType = Boolean(type.fields[field.id]);

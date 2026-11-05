@@ -79,7 +79,6 @@ import { XmlKeys } from '../FormsEngine/lib/formConsts';
 import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { commonControlFieldsDescriptors, defaultDataSourcesSection } from './descriptors/controls/commonDescriptors';
-import { systemFieldsIds } from '../../utils/constants';
 
 // TODO: assess which of the utils here should go to utils/contentType.ts, or other places (serializers, etc.)
 
@@ -172,12 +171,9 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 	// 'locale-selector: 'locale-selector' // This one doesn't have a pre-set id
 };
 
-/** True when the control may only live at the content-type root (system fields and rootOnly controls). */
-export function isRootOnlyControl(
-	typeId: string,
-	descriptor?: Pick<DescriptorContentType, 'metadata'> | null
-): boolean {
-	return (systemFieldsIds as readonly string[]).includes(typeId) || Boolean(descriptor?.metadata?.rootOnly);
+/** True when the control may only live at the content-type root (`metadata.rootOnly`). */
+export function isRootOnlyControl(descriptor?: Pick<DescriptorContentType, 'metadata'> | null): boolean {
+	return Boolean(descriptor?.metadata?.rootOnly);
 }
 
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {

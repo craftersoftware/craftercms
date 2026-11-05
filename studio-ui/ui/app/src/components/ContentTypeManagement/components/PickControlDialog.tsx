@@ -77,7 +77,7 @@ export function PickControlDialog(props: PickControlDialogProps) {
 	// 1. Filter out the controls that are in the controlExclusions list.
 	// 2. Filter out OOB controls not in the configuration list.
 	// 3. Add the configDescriptors (plugins) to the list of controls.
-	// 4. Exclude rootOnly controls and system fields when inserting into a nested/repeat field path.
+	// 4. Exclude rootOnly controls when inserting into a nested/repeat field path.
 	const typesFullList = [
 		...types.filter((type) => {
 			return configControls?.[type.id] && !(controlExclusions ?? []).includes(type.id);
@@ -85,7 +85,7 @@ export function PickControlDialog(props: PickControlDialogProps) {
 		...(configDescriptors ?? [])
 	].filter((controlType) => {
 		if (!fieldIdPath) return true;
-		return !isRootOnlyControl(controlType.id, controlType);
+		return !isRootOnlyControl(controlType);
 	});
 
 	return (
