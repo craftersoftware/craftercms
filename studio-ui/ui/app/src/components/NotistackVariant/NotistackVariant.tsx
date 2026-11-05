@@ -14,10 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useCallback } from 'react';
 import Alert, { AlertProps } from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
-import { CustomContentProps, SnackbarContent } from 'notistack';
+import { CustomContentProps, MaterialDesignContent, SnackbarContent } from 'notistack';
 
 type AdditionalVariantProps = Partial<{
 	alertTitle: ReactNode;
@@ -41,6 +41,8 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 		return (
 			<SnackbarContent ref={ref}>
 				<Alert
+					// WCAG 4.1.3: errors and warnings interrupt, success and info are polite status messages.
+					role={variant === 'error' || variant === 'warning' ? 'alert' : 'status'}
 					action={typeof props.action === 'function' ? props.action(id) : props.action}
 					severity={variant}
 					variant={alertVariant}
@@ -51,6 +53,24 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 				</Alert>
 			</SnackbarContent>
 		);
+	}
+);
+
+/**
+ * notistack's default content hardcodes role="alert", which would interrupt for routine Save/Publish
+ * toasts. The role is corrected as the element mounts, before paint.
+ */
+export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomContentProps>(
+	function DefaultStatusSnackbar(props, ref) {
+		const setRef = useCallback(
+			(node: HTMLDivElement | null) => {
+				node?.setAttribute('role', 'status');
+				if (typeof ref === 'function') ref(node);
+				else if (ref) ref.current = node;
+			},
+			[ref]
+		);
+		return <MaterialDesignContent ref={setRef} {...props} />;
 	}
 );
 

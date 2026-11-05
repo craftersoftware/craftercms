@@ -14,10 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import StandardAction from '../../models/StandardAction';
 import { useDispatch } from 'react-redux';
-import { SnackbarKey, useSnackbar } from 'notistack';
+import { useSnackbar } from 'notistack';
 import { getHostToHostBus } from '../../utils/subjects';
 import { blockUI, newProjectReady, showSystemNotification, unblockUI } from '../../state/actions/system';
 import Launcher from '../Launcher/Launcher';
@@ -30,9 +30,8 @@ import useEnv from '../../hooks/useEnv';
 import { filter, map, switchMap } from 'rxjs/operators';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
 import { fetchAll as fetchSitesService } from '../../services/sites';
-import IconButton from '@mui/material/IconButton';
-import CloseRounded from '@mui/icons-material/CloseRounded';
 import useAuth from '../../hooks/useAuth';
+import ServerConnectionBanner from '../ServerConnectionBanner/ServerConnectionBanner';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { EnhancedDialogProps } from '../EnhancedDialog';
 import { DialogStackItem } from '../../models/GlobalState';
@@ -54,7 +53,8 @@ function GlobalDialogManager() {
 	const stack = useSelection((state) => state.dialogStack);
 	const contentTypesBranch = useSelection((state) => state.contentTypes);
 	const versionsBranch = useSelection((state) => state.versions);
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+	const { enqueueSnackbar } = useSnackbar();
+	const [connectionBannerOpen, setConnectionBannerOpen] = useState(false);
 	const dispatch = useDispatch();
 	const { authoringBase, socketConnected } = useEnv();
 	const { active: authActive } = useAuth();
@@ -119,7 +119,8 @@ function GlobalDialogManager() {
 	useEffect(() => {
 		const isIframe = window.location !== window.parent.location;
 		if (!isIframe && authActive && !socketConnected && activeSiteId !== null) {
-			let key: SnackbarKey;
+			let bannerShown = false;
+			let cancelled = false;
 			const timeout = setTimeout(() => {
 				fetch(`${authoringBase}/help/socket-connection-error`)
 					.then((r) => {
@@ -130,29 +131,13 @@ function GlobalDialogManager() {
 						}
 					})
 					.then(() => {
-						key = enqueueSnackbar(<FormattedMessage defaultMessage="Studio will continue to retry the connection." />, {
-							variant: 'warning',
-							persist: true,
-							anchorOrigin: { vertical: 'bottom', horizontal: 'center' },
-							alertTitle: <FormattedMessage defaultMessage="Connection with the server interrupted" />,
-							action: (key) => (
-								<>
-									<Button
-										href={`${authoringBase}/help/socket-connection-error`}
-										target="_blank"
-										size="small"
-										color="inherit"
-									>
-										<FormattedMessage defaultMessage="Learn more" />
-									</Button>
-									<IconButton size="small" color="inherit" onClick={() => closeSnackbar(key)}>
-										<CloseRounded />
-									</IconButton>
-								</>
-							)
-						});
+						if (!cancelled) {
+							bannerShown = true;
+							setConnectionBannerOpen(true);
+						}
 					})
 					.catch(() => {
+						if (cancelled) return;
 						dispatch(
 							blockUI({
 								title: formatMessage({ defaultMessage: 'Connection with the server interrupted' }),
@@ -165,27 +150,22 @@ function GlobalDialogManager() {
 					});
 			}, 5000);
 			return () => {
+				cancelled = true;
 				clearTimeout(timeout);
-				if (key) {
-					closeSnackbar(key);
+				if (bannerShown) {
+					setConnectionBannerOpen(false);
 				} else {
 					dispatch(unblockUI());
 				}
 			};
 		}
-	}, [
-		authoringBase,
-		authActive,
-		closeSnackbar,
-		enqueueSnackbar,
-		socketConnected,
-		dispatch,
-		formatMessage,
-		activeSiteId
-	]);
+	}, [authoringBase, authActive, socketConnected, dispatch, formatMessage, activeSiteId]);
 
 	return (
 		<>
+			{connectionBannerOpen && (
+				<ServerConnectionBanner authoringBase={authoringBase} onDismiss={() => setConnectionBannerOpen(false)} />
+			)}
 			{stack.ids.map((id) => (
 				<Suspense key={id} fallback={<UIBlocker open />}>
 					<DialogStackItemContainer {...(stack.byId[id] as DialogStackItem<EnhancedDialogProps>)} />

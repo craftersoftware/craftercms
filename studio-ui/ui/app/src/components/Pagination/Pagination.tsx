@@ -26,6 +26,7 @@ import { Theme } from '@mui/material';
 import { inputBaseClasses } from '@mui/material/InputBase';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { UNDEFINED } from '../../utils/constants';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
 
 export type PaginationClassKey = TablePaginationClassKey;
 
@@ -127,29 +128,40 @@ function getStyles(sx: PaginationPartialSx, props: PaginationProps): PaginationP
 export function Pagination(props: PaginationProps) {
 	const { formatMessage } = useIntl();
 	const { sxs, mode, showBottomBorder, ...tablePaginationProps } = props;
+	const { count, page, rowsPerPage } = tablePaginationProps;
+	const rangeStatus =
+		count > 0 && rowsPerPage > 0
+			? formatMessage(
+					{ defaultMessage: '{from}-{to} of {count}' },
+					{ from: page * rowsPerPage + 1, to: Math.min(count, (page + 1) * rowsPerPage), count }
+				)
+			: '';
 	return (
-		<TablePagination
-			component="div"
-			sx={getStyles(sxs, props)}
-			labelRowsPerPage={formatMessage(translations.itemsPerPage)}
-			{...tablePaginationProps}
-			rowsPerPageOptions={props.rowsPerPageOptions ?? [5, 10, 25, 50]}
-			labelDisplayedRows={({ from, to, count }) => (
-				<FormattedMessage defaultMessage="{from}-{to} of {count}" values={{ from, to, count }} />
-			)}
-			backIconButtonProps={{
-				'aria-label': formatMessage(translations.previousPage),
-				title: formatMessage(translations.previousPage),
-				size: 'small',
-				...props.backIconButtonProps
-			}}
-			nextIconButtonProps={{
-				'aria-label': formatMessage(translations.nextPage),
-				title: formatMessage(translations.nextPage),
-				size: 'small',
-				...props.nextIconButtonProps
-			}}
-		/>
+		<>
+			<PoliteStatus message={rangeStatus} />
+			<TablePagination
+				component="div"
+				sx={getStyles(sxs, props)}
+				labelRowsPerPage={formatMessage(translations.itemsPerPage)}
+				{...tablePaginationProps}
+				rowsPerPageOptions={props.rowsPerPageOptions ?? [5, 10, 25, 50]}
+				labelDisplayedRows={({ from, to, count }) => (
+					<FormattedMessage defaultMessage="{from}-{to} of {count}" values={{ from, to, count }} />
+				)}
+				backIconButtonProps={{
+					'aria-label': formatMessage(translations.previousPage),
+					title: formatMessage(translations.previousPage),
+					size: 'small',
+					...props.backIconButtonProps
+				}}
+				nextIconButtonProps={{
+					'aria-label': formatMessage(translations.nextPage),
+					title: formatMessage(translations.nextPage),
+					size: 'small',
+					...props.nextIconButtonProps
+				}}
+			/>
+		</>
 	);
 }
 
