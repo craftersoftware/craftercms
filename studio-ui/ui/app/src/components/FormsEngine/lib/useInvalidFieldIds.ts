@@ -26,7 +26,7 @@ const noInvalidFieldIds: string[] = [];
 
 /** Live ids of fields that fail validation, excluding controller-irrelevant fields. */
 export function useInvalidFieldIds(entry: StableFormContextProps | null | undefined, parentPath?: string): string[] {
-	const idsAtom = useMemo(() => invalidFieldIdsAtom(entry, parentPath), [entry, parentPath]);
+	const idsAtom = useMemo(() => invalidFieldIdsAtom(entry, parentPath), [entry, entry?.atoms, parentPath]);
 	const loadable = useLoadableAtom(idsAtom);
 	const [ids, setIds] = useState<string[]>([]);
 	const appliedInitial = useRef(false);

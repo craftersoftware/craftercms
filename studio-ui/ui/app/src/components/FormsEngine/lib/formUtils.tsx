@@ -772,7 +772,7 @@ export async function readInvalidFieldIds(
 }
 
 const emptyInvalidFieldIds: Atom<Promise<string[]>> = atom(Promise.resolve([] as string[]));
-const invalidFieldIdsAtomsByEntry = new WeakMap<StableFormContextProps, Map<string, Atom<Promise<string[]>>>>();
+const invalidFieldIdsAtomsByAtoms = new WeakMap<FormsEngineAtoms, Map<string, Atom<Promise<string[]>>>>();
 
 /**
  * Invalid field ids for a form entry, derived from its validation atoms. Cached per entry and `parentPath`
@@ -787,10 +787,11 @@ export function invalidFieldIdsAtom(
 ): Atom<Promise<string[]>> {
 	if (!entry?.atoms) return emptyInvalidFieldIds;
 	const pathKey = parentPath ?? '';
-	let byPath = invalidFieldIdsAtomsByEntry.get(entry);
+	const atoms = entry.atoms;
+	let byPath = invalidFieldIdsAtomsByAtoms.get(atoms);
 	if (!byPath) {
 		byPath = new Map();
-		invalidFieldIdsAtomsByEntry.set(entry, byPath);
+		invalidFieldIdsAtomsByAtoms.set(atoms, byPath);
 	}
 	let idsAtom = byPath.get(pathKey);
 	if (!idsAtom) {
