@@ -1101,7 +1101,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// Pending changes publish immediately. The version comment stays on the 300ms debounce.
 	useEffect(() => {
 		const pendingSub = fieldUpdates$.subscribe(() => {
-			const pending = changedFieldIds.size > 0;
+			const pending = store.get(changedFieldIds).size > 0;
 			setHasPendingChanges(pending);
 			// The dialog reads its own flag. Publish it here so a dismiss in the same turn still sees the edit.
 			if (!isStackedForm) {
@@ -1134,7 +1134,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 			const newMessage = generateDefaultChangesComment(
 				contentType.fields,
 				effectRefs.current.commentFields,
-				changedFieldIds,
+				store.get(changedFieldIds),
 				store.get(versionCommentAtom).trim()
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);

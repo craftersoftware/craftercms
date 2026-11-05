@@ -37,6 +37,7 @@ import {
 } from '../FormsEngine/lib/formsEngineContext';
 import {
 	buildSectionExpandedStateAtoms,
+	createChangedFieldIdsAtom,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -558,7 +559,7 @@ export function createVirtualTypeFormContext(
 	const formValues: LookupTable<unknown> = {};
 	context.atoms.valueByFieldId = {};
 	context.atoms.validationByFieldId = {};
-	context.changedFieldIds = new Set();
+	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
 	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
 	Object.values(contentTypeFields).forEach((field) => {

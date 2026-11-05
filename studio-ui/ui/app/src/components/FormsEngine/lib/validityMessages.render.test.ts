@@ -69,7 +69,7 @@ function Harness(props: { validity: FieldValidityState; messages: Record<string,
 			validationByFieldId: { thing_s: validationAtom },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: atom(new Set<string>()),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},

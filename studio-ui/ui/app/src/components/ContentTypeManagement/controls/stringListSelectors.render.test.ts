@@ -52,7 +52,7 @@ function Harness(props: { children: React.ReactNode }) {
 			validationByFieldId: { allowedRoles: validationAtom, paths: validationAtom },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: atom(new Set<string>()),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},

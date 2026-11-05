@@ -108,7 +108,7 @@ async function mount(initial: Item[], options: { live?: boolean } = {}): Promise
 			validationByFieldId: { rows_o: atom({ isValid: true }) },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: atom(new Set<string>()),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},

@@ -372,7 +372,7 @@ describe('getValue in nested runs', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: {} },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: atom(new Set<string>()),
 				originalValues: {}
 			}
 		};
@@ -401,7 +401,7 @@ describe('validation atom context', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: otherAtoms },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: atom(new Set<string>()),
 				originalValues: {}
 			}
 		};
@@ -495,7 +495,7 @@ describe('reading validity for the save gate', () => {
 				itemMeta: meta.itemMeta,
 				atoms: { valueByFieldId: {} },
 				fieldUpdates$: { next: () => undefined },
-				changedFieldIds: new Set<string>(),
+				changedFieldIds: atom(new Set<string>()),
 				originalValues: {}
 			}
 		};

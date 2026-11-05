@@ -73,7 +73,6 @@ import {
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 import { applySavedRenameToLock } from './unlockOnClose';
-import { notifyChangedFieldIds } from './changedFieldAtoms';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -237,7 +236,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 							const repeat = entry.props?.repeat;
 							return {
 								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
-								changedFieldIds: entry.changedFieldIds,
+								changedFieldIds: jotai.get(entry.changedFieldIds),
+								setChangedFieldIds(next: ReadonlySet<string>) {
+									jotai.set(entry.changedFieldIds, next);
+								},
 								fieldId: repeat?.fieldId,
 								savedItem: repeatItemInValues(values, repeat?.fieldId, repeat?.index),
 								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
@@ -249,10 +251,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 								}
 							};
 						});
-						clearStackPendingFlags(entries, stableFormContext.changedFieldIds, (changedFieldIds) =>
-							notifyChangedFieldIds(jotai.set, changedFieldIds)
-						);
-						if (entries.some((entry) => entry.selected && entry.changedFieldIds.size > 0)) {
+						clearStackPendingFlags(entries, {
+							changedFieldIds: jotai.get(stableFormContext.changedFieldIds),
+							setChangedFieldIds: (next) => jotai.set(stableFormContext.changedFieldIds, next)
+						});
+						// The sets were replaced, so read them again.
+						if (formsStackData.some((entry, i) => entries[i].selected && jotai.get(entry.changedFieldIds).size > 0)) {
 							setHasPendingChanges(true);
 						}
 					}

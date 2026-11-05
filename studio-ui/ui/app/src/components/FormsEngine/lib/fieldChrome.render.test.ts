@@ -109,7 +109,7 @@ function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 			validationByFieldId: Object.fromEntries(props.fieldIds.map((id) => [id, validationAtom])),
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: atom(new Set<string>()),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},

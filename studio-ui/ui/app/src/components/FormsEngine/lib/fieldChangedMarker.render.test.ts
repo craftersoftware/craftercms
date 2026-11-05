@@ -15,9 +15,9 @@
  */
 
 /**
- * The field's changed marker (the "Rollback changes" menu entry) comes from the `changedFieldIds` Set through an atom.
- * It follows an edit and a rollback made through the field's own atom, and a change to the Set that no value write
- * accompanies, such as the checkpoint after a save.
+ * The field's changed marker (the "Rollback changes" menu entry) is derived from the form's changed-ids atom.
+ * It follows an edit and a rollback made through the field's own atom, and a change to the set that no value write
+ * accompanies, such as the checkpoint after a save, and a field does not render for a sibling's edit.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
@@ -37,8 +37,8 @@ const { FormsEngineField } = await import('../components/FormsEngineField.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('./formsEngineContext.ts');
 const { createFormVisibilityAtoms } = await import('./formVisibility.ts');
-const { createFieldAtoms } = await import('./formUtils.tsx');
-const { notifyChangedFieldIds } = await import('./changedFieldAtoms.ts');
+const { EMPTY_CHANGED_FIELD_IDS, applyValuesCheckpoint, createChangedFieldIdsAtom, createFieldAtoms } =
+	await import('./formUtils.tsx');
 const { Subject } = await import('rxjs');
 
 const reduxStore = configureStore({
@@ -64,11 +64,11 @@ afterEach(async () => {
 const fieldOf = (id: string) => ({ id, name: id, type: 'input', validations: {}, helpText: '' }) as ContentTypeField;
 
 /** Fields whose atoms are the real ones, so a write goes through the same dirty tracking as the form's. */
-async function mount(fieldIds: string[] = ['title_s'], options: { changedFieldIds?: Set<string> | null } = {}) {
+async function mount(fieldIds: string[] = ['title_s'], options: { changedFieldIds?: null } = {}) {
 	const jotai = createStore();
 	const stable = {
 		atoms: { valueByFieldId: {}, validationByFieldId: {}, ...createFormVisibilityAtoms() } as Record<string, unknown>,
-		changedFieldIds: 'changedFieldIds' in options ? options.changedFieldIds : new Set<string>(),
+		changedFieldIds: 'changedFieldIds' in options ? options.changedFieldIds : createChangedFieldIdsAtom(),
 		fieldUpdates$: new Subject<string>(),
 		itemMeta: { sourceMap: null, path: '/site/components/thing.xml' },
 		originalValues: Object.fromEntries(fieldIds.map((id) => [id, 'original'])),
@@ -139,6 +139,7 @@ async function mount(fieldIds: string[] = ['title_s'], options: { changedFieldId
 		valueAtoms,
 		stable,
 		commits,
+		changed: () => jotai.get(stable.changedFieldIds),
 		async openMenu(id: string) {
 			await act(async () =>
 				wrapperOf(id).querySelector<HTMLElement>('[data-testid="MoreVertRoundedIcon"]').closest('button').click()
@@ -163,31 +164,46 @@ describe('field changed marker', () => {
 		assert.equal(m.hasRollback(), false);
 		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
 		assert.equal(m.hasRollback(), true);
-		assert.equal(m.stable.changedFieldIds.has('title_s'), true);
+		assert.equal(m.changed().has('title_s'), true);
 		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'original'));
 		assert.equal(m.hasRollback(), false);
-		assert.equal(m.stable.changedFieldIds.has('title_s'), false);
+		assert.equal(m.changed().has('title_s'), false);
 	});
 
-	// Type Builder's commit (EditTypeView) clears the Set and then notifies, with no value write. Without the notify the
-	// marker would stay, because the field no longer reads the Set while rendering.
-	it('follows the Set when it is cleared without a value write', async () => {
+	// What Type Builder's commit (EditTypeView) does: set the empty set, with no value write.
+	it('goes away when the changed ids are set to empty without a value write', async () => {
 		const m = await mount();
 		await m.openMenu('title_s');
 		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
 		assert.equal(m.hasRollback(), true);
-		await act(async () => {
-			m.stable.changedFieldIds.clear();
-			notifyChangedFieldIds(m.jotai.set, m.stable.changedFieldIds);
-		});
+		await act(async () => m.jotai.set(m.stable.changedFieldIds, EMPTY_CHANGED_FIELD_IDS));
 		assert.equal(m.hasRollback(), false);
+	});
+
+	it('goes away on the checkpoint a save makes', async () => {
+		const m = await mount();
+		await m.openMenu('title_s');
+		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
+		assert.equal(m.hasRollback(), true);
+		await act(async () => applyValuesCheckpoint(m.stable, { title_s: 'edited' }, m.jotai.set));
+		assert.equal(m.hasRollback(), false);
+	});
+
+	it('does not render a field again for a write that leaves the changed ids alone', async () => {
+		const m = await mount(['title_s', 'other_s']);
+		await act(async () => m.jotai.set(m.valueAtoms.other_s, 'edited'));
+		const ids = m.changed();
+		const before = { ...m.commits };
+		await act(async () => m.jotai.set(m.valueAtoms.other_s, 'edited again'));
+		assert.equal(m.changed(), ids);
+		assert.equal(m.commits.title_s, before.title_s);
 	});
 
 	it('does not re-render a field when a sibling field changes', async () => {
 		const m = await mount(['title_s', 'other_s']);
 		const before = m.commits.title_s;
 		await act(async () => m.jotai.set(m.valueAtoms.other_s, 'edited'));
-		assert.equal(m.stable.changedFieldIds.has('other_s'), true);
+		assert.equal(m.changed().has('other_s'), true);
 		assert.equal(m.commits.title_s, before);
 		await act(async () => m.jotai.set(m.valueAtoms.title_s, 'edited'));
 		assert.ok(m.commits.title_s > before);

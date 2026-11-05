@@ -162,7 +162,11 @@ export interface StableFormContextProps {
 	 * Null for the pencil and for Add.
 	 */
 	itemFormMode: PrimitiveAtom<'selected' | 'full'> | null;
-	changedFieldIds: Set<string>;
+	/**
+	 * The ids of the fields that differ from the checkpoint, as an immutable set in an atom. Read with `store.get` or
+	 * `changedFieldAtom`; replace the set to change it, never mutate it. Null in Type Builder's read-only chips.
+	 */
+	changedFieldIds: PrimitiveAtom<ReadonlySet<string>>;
 	fieldUpdates$: Subject<string>;
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;

@@ -37,7 +37,7 @@ import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
-import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, Atom, Getter, PrimitiveAtom, Setter, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import React, {
 	ReactNode,
 	RefObject,
@@ -87,7 +87,6 @@ import {
 	type LaunchFieldsLookup,
 	visibilityFromLaunch
 } from './formVisibility';
-import { notifyChangedFieldIds, type Setter } from './changedFieldAtoms';
 import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
@@ -308,43 +307,85 @@ type FieldTrackingContext = Pick<
 >;
 
 /**
+ * The set of changed field ids is state: one atom holding an immutable set. A write that does not change membership
+ * keeps the same set, so it notifies nothing. `fieldUpdates$` is the separate event stream of value writes.
+ * Insertion order is the order fields were first changed (`generateDefaultChangesComment` uses the last one).
+ * The set is never mutated after it is stored. (Object.freeze does not make a Set read-only; the type does.)
+ */
+export const EMPTY_CHANGED_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
+
+export type ChangedFieldIdsAtom = PrimitiveAtom<ReadonlySet<string>>;
+
+export function createChangedFieldIdsAtom(): ChangedFieldIdsAtom {
+	return atom(EMPTY_CHANGED_FIELD_IDS);
+}
+
+const changedFieldAtomsByIds = new WeakMap<ChangedFieldIdsAtom, Map<string, Atom<boolean>>>();
+// A context created without the atom (Type Builder's read-only chips) has nothing to track.
+const neverChanged: Atom<boolean> = atom(false);
+
+/**
+ * Whether `fieldId` is in the changed set. Derived and cached per field, like the value and validation atoms, so a
+ * field only re-renders when its own flag flips.
+ */
+export function changedFieldAtom(
+	changedFieldIds: ChangedFieldIdsAtom | null | undefined,
+	fieldId: string
+): Atom<boolean> {
+	if (!changedFieldIds) return neverChanged;
+	let byField = changedFieldAtomsByIds.get(changedFieldIds);
+	if (!byField) {
+		byField = new Map();
+		changedFieldAtomsByIds.set(changedFieldIds, byField);
+	}
+	let fieldAtom = byField.get(fieldId);
+	if (!fieldAtom) {
+		fieldAtom = atom((get) => get(changedFieldIds).has(fieldId));
+		byField.set(fieldId, fieldAtom);
+	}
+	return fieldAtom;
+}
+
+/** `ids` with `fieldId` added (last) or removed. `ids` itself when the membership already matches. */
+export function withChangedField(ids: ReadonlySet<string>, fieldId: string, changed: boolean): ReadonlySet<string> {
+	if (ids.has(fieldId) === changed) return ids;
+	const next = new Set(ids);
+	if (changed) next.add(fieldId);
+	else next.delete(fieldId);
+	return next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next;
+}
+
+/**
  * Records whether `field` differs from the value it was opened with.
  * `file-name` is compared to the original path; every other field is compared to `originalValues`.
- * Callers pass the value just written. Does not emit — the writer does that once.
+ * Callers pass the value just written, and call this before emitting on `fieldUpdates$` so synchronous subscribers
+ * read the new set. It does not emit — the writer does that once.
  */
 function trackFieldChange(
 	field: ContentTypeField,
 	value: unknown,
 	formContext: FieldTrackingContext,
+	get: Getter,
 	set: Setter
 ): void {
+	let changed: boolean;
 	if (field.id === XmlKeys.fileName) {
 		const currentFileName = value as string;
 		const originalPath = formContext.itemMeta.path;
-
 		if (nou(originalPath)) {
 			// If no originalPath exists => creating content
-			if (currentFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			changed = Boolean(currentFileName);
 		} else {
 			// If originalPath exists, validate if differs from original value
-			const isPage = isPagePath(originalPath);
-			const originalFileName = getFileNameValueFromPath(originalPath, isPage);
-			if (currentFileName !== originalFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			const originalFileName = getFileNameValueFromPath(originalPath, isPagePath(originalPath));
+			changed = currentFileName !== originalFileName;
 		}
-	} else if (value !== formContext.originalValues[field.id]) {
-		formContext.changedFieldIds.add(field.id);
 	} else {
-		formContext.changedFieldIds.delete(field.id);
+		changed = value !== formContext.originalValues[field.id];
 	}
-	notifyChangedFieldIds(set, formContext.changedFieldIds);
+	const current = get(formContext.changedFieldIds);
+	const next = withChangedField(current, field.id, changed);
+	if (next !== current) set(formContext.changedFieldIds, next);
 }
 
 /** Makes `values` the checkpoint that edits are compared with, and clears every changed marker. */
@@ -354,8 +395,7 @@ export function applyValuesCheckpoint(
 	set: Setter
 ): void {
 	context.originalValues = values;
-	context.changedFieldIds.clear();
-	notifyChangedFieldIds(set, context.changedFieldIds);
+	set(context.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
 }
 
 function applyAtomUpdate<T>(
@@ -389,7 +429,7 @@ function createTrackedFileNameAtom(
 			}
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
-			trackFieldChange(field, next, formContext, set);
+			trackFieldChange(field, next, formContext, get, set);
 			formContext.fieldUpdates$.next(XmlKeys.fileName);
 		}
 	);
@@ -420,7 +460,7 @@ export function createFieldAtoms(
 				}
 				return;
 			}
-			trackFieldChange(field, next, formContext, set);
+			trackFieldChange(field, next, formContext, get, set);
 			formContext.fieldUpdates$.next(field.id);
 		}
 	);
@@ -538,7 +578,7 @@ export function createFormStackData(mixin?: Partial<StableFormContextProps>): St
 	const data: StableFormContextProps = {
 		atoms: null,
 		itemFormMode: null,
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: new Subject<string>(),
 		itemMeta: null,
 		originalValues: null,
@@ -1198,7 +1238,7 @@ export function useUnlockOnClose(props: {
 export function generateDefaultChangesComment(
 	contentTypeFields: LookupTable<ContentTypeField>,
 	fields: ContentTypeField[],
-	changedFieldIds: Set<string>,
+	changedFieldIds: ReadonlySet<string>,
 	currentMessage: string
 ): string | undefined {
 	let namedFields = contentTypeFields;
@@ -1294,7 +1334,8 @@ export function getCurrentChildFormStateSummary(
 	return {
 		isSubmitting: store.get(atoms.isSubmitting),
 		hasPendingChanges:
-			store.get(atoms.hasPendingChanges) || formsStackData[formsStackData.length - 1].changedFieldIds.size > 0,
+			store.get(atoms.hasPendingChanges) ||
+			store.get(formsStackData[formsStackData.length - 1].changedFieldIds).size > 0,
 		readonly: store.get(atoms.readonly)
 	};
 }

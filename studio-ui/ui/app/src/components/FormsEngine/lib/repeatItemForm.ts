@@ -168,12 +168,14 @@ export function selectedItemPendingAfterSave(args: { selected: boolean; savedIte
  * Only those entries are cleared, and their checkpoint becomes the saved item.
  * An edit made after the snapshot keeps its pending flag, and its repeat field is recorded on the parent.
  * Changed ids that match the new checkpoint are dropped. A full-mode or pencil item is left alone.
- * `onChangedFieldIds` is called after a set is mutated so the field markers can update.
+ * Sets are replaced, not mutated: each rebuilt set goes to `setChangedFieldIds`, and the parent's gets the repeat field.
  */
 export function clearStackPendingFlags(
 	entries: readonly {
 		selected: boolean;
-		changedFieldIds: Set<string>;
+		changedFieldIds: ReadonlySet<string>;
+		/** Stores the rebuilt set. Not called when the membership did not change. */
+		setChangedFieldIds(next: ReadonlySet<string>): void;
 		setPending(value: boolean): void;
 		savedItem?: unknown;
 		currentItem?: unknown;
@@ -181,10 +183,9 @@ export function clearStackPendingFlags(
 		fieldId?: string;
 		setCheckpoint?(values: Record<string, unknown>): void;
 	}[],
-	parentChangedFieldIds?: Set<string>,
-	onChangedFieldIds?: (changedFieldIds: Set<string>) => void
+	parent?: { changedFieldIds: ReadonlySet<string>; setChangedFieldIds(next: ReadonlySet<string>): void }
 ): void {
-	let parentTouched = false;
+	let parentChanged = parent?.changedFieldIds;
 	for (const entry of entries) {
 		const decision = selectedItemPendingAfterSave({
 			selected: entry.selected,
@@ -194,26 +195,30 @@ export function clearStackPendingFlags(
 		if (decision.checkpoint) entry.setCheckpoint?.(decision.checkpoint);
 		if (!entry.selected) continue;
 		// Rebuild from the saved checkpoint. An undo during the save is not in the old id list.
+		let changed = entry.changedFieldIds;
 		if (decision.checkpoint && isPlainRecord(entry.currentItem)) {
-			entry.changedFieldIds.clear();
-			for (const id of Object.keys(entry.currentItem)) {
-				if (!sameItem(entry.currentItem[id], decision.checkpoint[id])) entry.changedFieldIds.add(id);
-			}
+			const currentItem = entry.currentItem;
+			const checkpoint = decision.checkpoint;
+			changed = new Set(Object.keys(currentItem).filter((id) => !sameItem(currentItem[id], checkpoint[id])));
 		} else if (decision.clearPending) {
-			entry.changedFieldIds.clear();
+			changed = new Set();
 		}
-		onChangedFieldIds?.(entry.changedFieldIds);
-		if (entry.changedFieldIds.size === 0) {
+		// The same set when nothing changed, so nothing downstream recomputes.
+		if (!sameMembership(changed, entry.changedFieldIds)) entry.setChangedFieldIds(changed);
+		if (changed.size === 0) {
 			entry.setPending(false);
 			continue;
 		}
 		entry.setPending(true);
-		if (entry.fieldId && parentChangedFieldIds) {
-			parentChangedFieldIds.add(entry.fieldId);
-			parentTouched = true;
+		if (entry.fieldId && parentChanged && !parentChanged.has(entry.fieldId)) {
+			parentChanged = new Set(parentChanged).add(entry.fieldId);
 		}
 	}
-	if (parentTouched) onChangedFieldIds?.(parentChangedFieldIds);
+	if (parent && parentChanged !== parent.changedFieldIds) parent.setChangedFieldIds(parentChanged);
+}
+
+function sameMembership(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+	return left.size === right.size && Array.from(left).every((id) => right.has(id));
 }
 
 /** Compares the form's own fields. Extra keys on the stored item are not an in-flight edit. */
