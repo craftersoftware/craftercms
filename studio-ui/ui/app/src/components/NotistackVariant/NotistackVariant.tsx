@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -40,11 +40,19 @@ declare module 'notistack' {
 }
 
 /**
+ * Marks every toast surface, whichever content component drew it: notistack's default
+ * (`MaterialDesignContent`, which adds `notistack-MuiContent`) and the Alert-based variants used for
+ * error, warning, success and info (which add no such class). Styling that must reach all toasts, such
+ * as the focus ring for native anchors in a message, keys on this instead of a notistack class.
+ */
+export const TOAST_HOST_CLASS = 'crafter-toast';
+
+/**
  * A toast paints its own surface (#313131 for notistack's default content), so the theme focus ring would
  * sit on it: 2.47:1 for the light ring. Two things are needed, and neither works alone.
  * MUI's variable below reaches ButtonBase children (the action and close buttons); it supplies only the halo.
  * A native anchor in a toast message is not ButtonBase and draws nothing from it, so GlobalStyles rings
- * toast anchors from the same shared source. See styles/focusRing.ts for the contrast figures.
+ * toast anchors from the same shared source, scoped by `TOAST_HOST_CLASS`. See styles/focusRing.ts.
  */
 function useToastFocusHalo(): Record<string, string> {
 	const theme = useTheme();
@@ -55,7 +63,7 @@ const StatusRegionContext = createContext<HTMLElement | null>(null);
 
 /**
  * Persistent polite live region (WCAG 4.1.3) for toasts. A snackbar mounts with its message already inside, and a
- * `role="status"` node inserted with its text is generally not announced. Status toasts render their message into
+ * `role="status"` node inserted with its text is generally not announced. Status toasts write their text into
  * this region instead, so it is announced as added content. Mount it around the SnackbarProvider.
  */
 export function SnackbarStatusRegion({ children }: PropsWithChildren) {
@@ -69,16 +77,24 @@ export function SnackbarStatusRegion({ children }: PropsWithChildren) {
 	);
 }
 
-function StatusMessage({ title, message }: { title?: ReactNode; message: ReactNode }) {
+/** The text of a message that may contain markup, without any of its elements. */
+function messageText(message: ReactNode): string {
+	if (message == null || typeof message === 'boolean') return '';
+	if (typeof message === 'string' || typeof message === 'number') return String(message);
+	if (Array.isArray(message)) return message.map(messageText).join('');
+	if (React.isValidElement<{ children?: ReactNode }>(message)) return messageText(message.props.children);
+	return '';
+}
+
+/**
+ * Announces `text` through the shared region. Only text is written: copying the rendered message would
+ * put a second, clipped copy of its links and buttons inside the hidden region, and `visuallyHidden` does
+ * not take them out of the tab order.
+ */
+function StatusMessage({ text }: { text: string }) {
 	const region = useContext(StatusRegionContext);
 	if (!region) return null;
-	return createPortal(
-		<>
-			{title && <div>{title}</div>}
-			<div>{message}</div>
-		</>,
-		region
-	);
+	return createPortal(<div>{text}</div>, region);
 }
 
 export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentProps & AdditionalVariantProps>(
@@ -89,8 +105,10 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 		// of their own. Without a region (e.g. a host that does not mount one) every toast keeps the Alert's default.
 		const isStatus = hasStatusRegion && variant !== 'error' && variant !== 'warning';
 		const halo = useToastFocusHalo();
+		// The title is part of the same message, so it is announced once with it rather than twice.
+		const announcement = [messageText(alertTitle), messageText(props.message)].filter(Boolean).join('. ');
 		return (
-			<SnackbarContent ref={ref} style={halo as React.CSSProperties}>
+			<SnackbarContent ref={ref} className={TOAST_HOST_CLASS} style={halo as React.CSSProperties}>
 				<Alert
 					role={isStatus ? 'none' : 'alert'}
 					action={typeof props.action === 'function' ? props.action(id) : props.action}
@@ -101,7 +119,7 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 					{alertTitle && <AlertTitle children={alertTitle} />}
 					{props.message}
 				</Alert>
-				{isStatus && <StatusMessage title={alertTitle} message={props.message} />}
+				{isStatus && <StatusMessage text={announcement} />}
 			</SnackbarContent>
 		);
 	}
@@ -109,7 +127,7 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 
 /**
  * notistack's default content hardcodes role="alert", which would interrupt for routine Save/Publish toasts.
- * Its message is announced through the status region instead.
+ * Its text is announced through the status region instead.
  */
 export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomContentProps>(
 	function DefaultStatusSnackbar(props, ref) {
@@ -117,7 +135,13 @@ export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomCont
 		const halo = useToastFocusHalo();
 		const setRef = useCallback(
 			(node: HTMLDivElement | null) => {
-				if (hasStatusRegion) node?.removeAttribute('role');
+				if (!node) {
+					if (typeof ref === 'function') ref(null);
+					else if (ref) ref.current = null;
+					return;
+				}
+				node.classList.add(TOAST_HOST_CLASS);
+				if (hasStatusRegion) node.removeAttribute('role');
 				if (typeof ref === 'function') ref(node);
 				else if (ref) ref.current = node;
 			},
@@ -126,7 +150,7 @@ export const DefaultStatusSnackbar = React.forwardRef<HTMLDivElement, CustomCont
 		return (
 			<>
 				<MaterialDesignContent ref={setRef} {...props} style={{ ...halo, ...props.style }} />
-				{hasStatusRegion && <StatusMessage message={props.message} />}
+				{hasStatusRegion && <StatusMessage text={messageText(props.message)} />}
 			</>
 		);
 	}
