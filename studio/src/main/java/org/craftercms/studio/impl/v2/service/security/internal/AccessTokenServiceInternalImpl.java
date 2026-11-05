@@ -99,6 +99,10 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1)
 	 */
 	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
+	/**
+	 * Limits that are this close are treated as simultaneous, as extending the session restarts both
+	 */
+	private static final long SESSION_LIMITS_TOLERANCE_SECONDS = 60;
 
 	/**
 	 * The issuer for generation access tokens
@@ -285,7 +289,9 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 * case when the session time limit is the next one to be reached and the user used all the extensions.
 	 */
 	protected boolean canExtendSession(long userId, Instant sessionLimit, Instant inactivityLimit) {
-		if (sessionLimit == null || (inactivityLimit != null && inactivityLimit.isBefore(sessionLimit))) {
+		if (sessionLimit == null ||
+			(inactivityLimit != null &&
+				inactivityLimit.plusSeconds(SESSION_LIMITS_TOLERANCE_SECONDS).isBefore(sessionLimit))) {
 			return true;
 		}
 		Integer extensions = securityDao.getSessionExtensions(userId);

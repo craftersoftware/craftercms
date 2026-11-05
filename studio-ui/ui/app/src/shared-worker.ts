@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { extendSession, obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
+import { createAuthTokenQueue, getNextRefreshDelay, refreshAtFactor } from './utils/authTokenQueue';
 import StandardAction from './models/StandardAction';
 import {
 	logout,
@@ -48,9 +49,6 @@ declare const self: SharedWorkerGlobalScope;
 
 export type SharedWorkerStatus = '' | 'active' | 'expired' | 'error';
 
-const refreshAtFactor = 0.5;
-// The server removes expired sessions once a minute, so they can outlive `sessionExpiresAt` by up to that long.
-const sessionCleanupGraceMs = 61 * 1000;
 let clients: MessagePort[] = [];
 let status: SharedWorkerStatus = '';
 let timeout: number;
@@ -59,7 +57,6 @@ let current: ObtainAuthTokenResponse = {
 	token: null
 };
 let refreshInterval;
-let isRetrieving = false;
 let isProduction = process.env.PRODUCTION !== 'development';
 let siteSocketClient: Client;
 let rootSocketClient: Client;
@@ -137,6 +134,49 @@ function onmessage(event) {
 	}
 }
 
+let retries = 0;
+
+const authTokenQueue = createAuthTokenQueue({
+	obtain: obtainAuthToken,
+	extend: extendSession,
+	onToken(token) {
+		log('New token received');
+		status = 'active';
+		current = token;
+		broadcast(sharedWorkerToken(current));
+		refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
+		if (clients.length) {
+			// If there are clients connected, keep the token refresh going
+			timeout = self.setTimeout(
+				() => authTokenQueue.retrieve(),
+				getNextRefreshDelay(current, refreshInterval, SESSION_TIMEOUT_WARNING_MS)
+			);
+		} else {
+			// Do SharedWorkers stop as soon as all their tabs are terminated?
+			clearTimeout(timeout);
+		}
+	},
+	onUnauthenticated() {
+		unauthenticated();
+	},
+	onError(e: AjaxError) {
+		clearTimeout(timeout);
+		log('Error retrieving token', e);
+		status = 'error';
+		broadcast(sharedWorkerError({ status: e.status, message: e.message }));
+		// If there are clients connected try again.
+		if (clients.length && retries++ < 3) {
+			timeout = self.setTimeout(() => authTokenQueue.retrieve(), Math.floor(refreshInterval * 0.9));
+		}
+	},
+	log
+});
+
+function retrieve(extendSessionXsrfToken?: string) {
+	clearTimeout(timeout);
+	authTokenQueue.retrieve(extendSessionXsrfToken);
+}
+
 function clearCurrent() {
 	status = '';
 	current.token = null;
@@ -149,93 +189,12 @@ function isExpired(time = Date.now()) {
 
 function unauthenticated(excludeClient?: MessagePort) {
 	log(`Auth has expired.`);
-	pendingExtendXsrfToken = undefined;
+	authTokenQueue.clearPendingExtend();
 	clearTimeout(timeout);
 	status = 'expired';
 	siteSocketClient?.deactivate();
 	rootSocketClient?.deactivate();
 	broadcast(sharedWorkerUnauthenticated(), excludeClient);
-}
-
-// Besides the regular refresh, checks the session again when the warning is due (so tabs warn based on up to date
-// information as the session may have been extended by activity) and after it should have expired.
-function getNextRefreshDelay() {
-	if (current.sessionExpiresAt) {
-		const now = Date.now();
-		// The extra second guarantees tabs see the session as inside the warning window even if the timer fires early.
-		const checkpoints = [
-			current.sessionExpiresAt - SESSION_TIMEOUT_WARNING_MS + 1000,
-			current.sessionExpiresAt + sessionCleanupGraceMs
-		].filter((checkpoint) => checkpoint > now);
-		if (checkpoints.length) {
-			return Math.min(refreshInterval, checkpoints[0] - now);
-		}
-	}
-	return refreshInterval;
-}
-
-let retries = 0;
-// An extend request received while another request is in flight, which runs as soon as that one finishes.
-let pendingExtendXsrfToken: string;
-function runPendingExtend() {
-	const xsrfToken = pendingExtendXsrfToken;
-	pendingExtendXsrfToken = undefined;
-	if (xsrfToken) {
-		retrieve(xsrfToken);
-	}
-}
-
-function retrieve(extendSessionXsrfToken?: string) {
-	clearTimeout(timeout);
-	if (isRetrieving) {
-		if (extendSessionXsrfToken) {
-			log('Request in flight, the session extension will run after it');
-			pendingExtendXsrfToken = extendSessionXsrfToken;
-		}
-	} else {
-		isRetrieving = true;
-		return (extendSessionXsrfToken ? extendSession(extendSessionXsrfToken) : obtainAuthToken()).subscribe({
-			next(response) {
-				retries = 0;
-				isRetrieving = false;
-				if (response) {
-					log('New token received');
-					status = 'active';
-					current = response;
-					broadcast(sharedWorkerToken(current));
-					refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
-					if (clients.length) {
-						// If there are clients connected, keep the token refresh going
-						timeout = self.setTimeout(retrieve, getNextRefreshDelay());
-					} else {
-						// Do SharedWorkers stop as soon as all their tabs are terminated?
-						clearTimeout(timeout);
-					}
-				} else {
-					unauthenticated();
-				}
-				runPendingExtend();
-				return current;
-			},
-			error(e: AjaxError) {
-				isRetrieving = false;
-				clearTimeout(timeout);
-				log('Error retrieving token', e);
-				if (e.status === 401) {
-					retries = 0;
-					unauthenticated();
-				} else {
-					status = 'error';
-					broadcast(sharedWorkerError({ status: e.status, message: e.message }));
-					// If there are clients connected try again.
-					if (clients.length && retries++ < 3) {
-						timeout = self.setTimeout(retrieve, Math.floor(refreshInterval * 0.9));
-					}
-					runPendingExtend();
-				}
-			}
-		});
-	}
 }
 
 function broadcast(message: StandardAction, excludedClient?: MessagePort) {

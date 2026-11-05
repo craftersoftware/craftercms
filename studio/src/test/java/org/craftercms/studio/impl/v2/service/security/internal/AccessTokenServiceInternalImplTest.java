@@ -147,6 +147,15 @@ public class AccessTokenServiceInternalImplTest {
 	}
 
 	@Test
+	public void sessionCanNotBeExtendedAtTheCapWhenBothLimitsAreAboutToExpire() {
+		var service = createService(480, 30);
+		var now = Instant.now();
+		when(securityDao.getSessionExtensions(USER_ID)).thenReturn(MAX_EXTENSIONS);
+
+		assertFalse(service.canExtendSession(USER_ID, now.plusSeconds(60), now.plusSeconds(59)));
+	}
+
+	@Test
 	public void sessionCanBeExtendedAtTheCapWhenInactivityIsNext() {
 		var service = createService(480, 30);
 		var sessionLimit = Instant.now().plusSeconds(600);

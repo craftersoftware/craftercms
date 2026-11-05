@@ -110,38 +110,53 @@ export function AuthMonitor() {
 // extensions is limited (server side), so the last warning only tells the user to save their work.
 function SessionTimeoutWarning() {
 	const dispatch = useDispatch();
-	const { active, expiresAt, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
+	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
 	const [open, setOpen] = useState(false);
 	const [dismissed, setDismissed] = useState(false);
 	const [secondsLeft, setSecondsLeft] = useState(0);
 	const [extending, setExtending] = useState(false);
-	useEffect(() => {
-		// The worker refreshes the token when the warning is due and updates `sessionExpiresAt`, which closes the
-		// dialog if the session was extended in the meantime (e.g. activity on another tab).
-		const getSecondsLeft = () => Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000));
-		const shouldWarn =
-			active && sessionExpiresAt != null && sessionExpiresAt - Date.now() <= SESSION_TIMEOUT_WARNING_MS;
-		setOpen(shouldWarn);
-		setDismissed(false);
-		if (shouldWarn) {
-			setSecondsLeft(getSecondsLeft());
-			const interval = setInterval(() => setSecondsLeft(getSecondsLeft()), 1000);
-			return () => clearInterval(interval);
-		}
-	}, [active, sessionExpiresAt]);
-	useEffect(() => {
-		// Any new token (or the timeout, if the request fails) means the request is over.
-		setExtending(false);
-	}, [expiresAt, sessionExpiresAt, canExtendSession]);
+	const [extendFailed, setExtendFailed] = useState(false);
 	useEffect(() => {
 		if (extending) {
-			const timeout = setTimeout(() => setExtending(false), 10000);
+			const timeout = setTimeout(() => {
+				setExtending(false);
+				setExtendFailed(true);
+			}, 10000);
 			return () => clearTimeout(timeout);
 		}
 	}, [extending]);
+
+	useEffect(() => {
+		// Watches the clock rather than waiting for `sessionExpiresAt` to change: the worker refreshes the token when
+		// the warning is due, and that refresh may well report the same expiry. Also closes the dialog if the session
+		// gets extended in the meantime (e.g. activity on another tab, which does change `sessionExpiresAt`).
+		if (!active || sessionExpiresAt == null) {
+			setOpen(false);
+			return;
+		}
+		const update = () => {
+			const secondsLeft = Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000));
+			const shouldWarn = sessionExpiresAt - Date.now() <= SESSION_TIMEOUT_WARNING_MS;
+			setSecondsLeft(secondsLeft);
+			setOpen(shouldWarn);
+			if (shouldWarn) {
+				setDismissed(false);
+			}
+		};
+		update();
+		const interval = setInterval(update, 1000);
+		return () => clearInterval(interval);
+	}, [active, sessionExpiresAt]);
+	useEffect(() => {
+		// Only a new session expiry (or the cap being reached) means the extend landed. A routine token refresh that
+		// lands first must not re-enable the button. The timeout below covers a failed request.
+		setExtending(false);
+		setExtendFailed(false);
+	}, [sessionExpiresAt, canExtendSession]);
 	const onStaySignedIn = () => {
 		if (!extending) {
 			setExtending(true);
+			setExtendFailed(false);
 			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
 		}
 	};
@@ -176,13 +191,26 @@ function SessionTimeoutWarning() {
 						/>
 					)}
 				</DialogContentText>
+				<Typography variant="body2" role="status">
+					{extending && (
+						<FormattedMessage id="authMonitor.sessionExtendingMessage" defaultMessage="Extending your session…" />
+					)}
+				</Typography>
+				{extendFailed && (
+					<Typography variant="body2" role="alert" sx={{ marginTop: (theme) => theme.spacing(1) }}>
+						<FormattedMessage
+							id="authMonitor.sessionExtendFailedMessage"
+							defaultMessage="Your session could not be extended. Select Stay signed in to try again."
+						/>
+					</Typography>
+				)}
 			</DialogContent>
 			<DialogActions>
 				<Button color="primary" variant="text" onClick={() => dispatch(logout())}>
 					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
 				</Button>
 				{canExtendSession ? (
-					<Button autoFocus color="primary" variant="contained" loading={extending} onClick={onStaySignedIn}>
+					<Button autoFocus color="primary" variant="contained" aria-disabled={extending} onClick={onStaySignedIn}>
 						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
 					</Button>
 				) : (
