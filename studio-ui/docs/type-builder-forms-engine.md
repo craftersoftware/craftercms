@@ -84,7 +84,9 @@ FormsEngine/
   lib/
     formsEngineContext.ts  # React contexts
     formUtils.tsx          # atoms, load/save prep, locks
-    controlHelpers.tsx     # renderFieldControl
+    renderControl.tsx      # ControlWrapper, renderFieldControl
+    mediaDialogs.tsx       # show*Dialog, image restrictions
+    dateExpressions.ts     # date/time populate expressions (pure)
     controlMap.ts / dataSourceMap.ts
     valueRetrievers.ts / valueSerializers.ts / validators.ts
     useSaveForm.tsx
@@ -136,7 +138,7 @@ FE loads this (via Studio APIs / content-type catalog) to build the author form.
 Root `<content-type>` with registry-ish metadata, e.g.:
 
 - Dupes of form-definition: `label`, `form`, thumbnail, quickCreate\*
-- Removal candidates (legacy noise): `form-path`, `model-instance-path`, `file-extension`, `content-as-folder`, `previewable`, `noThumbnail`
+- Removal candidates (legacy noise): `form-path`, `model-instance-path`, `file-extension`, `content-as-folder`, `previewable`
 - Move into form-definition: `controller`, `paths` (includes/excludes)
 
 Annotated working notes: `ui/app/src/components/ContentTypeManagement/config.xml`.
@@ -259,7 +261,7 @@ The checked-in `ContentTypeManagement/site-config-tools.xml` is a legacy/referen
 
 #### Controls
 
-New FE has two resolution paths in `controlHelpers.tsx` / `controlPluginLoader.ts`:
+New FE has two resolution paths in `renderControl.tsx` / `controlPluginLoader.ts`:
 
 - built-in: static `controlMap` → React component, plus static `controlDataSourceBindings[field.type]`
 - plugin field (`field.properties.plugin`): `importPlugin(locator)` → `registerPlugin` installs `descriptor.controls[field.type]` → render component + bindings. Control lookup key is **`field.type`** (not widget id). Descriptor-only: no bare React component as `default`.
@@ -583,7 +585,7 @@ Give controllers a narrow API over FE2 state — do not pass the raw YUI `form` 
 | `onFieldChange(listener)`                                         | `listener(fieldId, value)` → unsubscribe. Fires on the value write, whether or not the field is rendered or its validation atom is read. Host also drops listeners on teardown. |
 | `notify(message, severity?)`                                      | Snackbar (`info` \| `success` \| `warning` \| `error`)                                                                                                                          |
 
-`getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `onFieldChange` emits that root id. `getValues()` uses the same `file-name` atom as `getValue('file-name')`. `setValue('file-name', …)` writes both that dedicated atom and the `file-name` value atom. A change made from `onBeforeSave` is honoured by the save path: rename detection and path construction read the filename atom after the hook returns.
+`getValue` / `setValue` resolve a top-level atom id first. If none matches and the key contains `.`, they walk nested values (numeric segments = array indices). Nested `setValue` immutably updates the root atom; `onFieldChange` emits that root id. `getValues()` uses the same `file-name` atom as `getValue('file-name')`. `setValue('file-name', …)` writes both that dedicated atom and the `file-name` value atom. The XML `file-name` element and the item path can disagree at load (legacy or migrated content, a rename done outside the form, a missing element). The path wins: on edit the `file-name` value atom starts from the path-derived name, which is what the form shows and validates. Save leaves `file-name` out of the XML it builds, so a differing XML element is omitted on the next save, and the backend writes it again only on a copy collision. `originalValues['file-name']` holds the same path-derived name, so `rollback()` of an untouched form is not a rename. A change made from `onBeforeSave` is honoured by the save path: rename detection and path construction read the filename atom after the hook returns.
 
 Look up other content types via the `craftercms` global (`craftercms.getStore().getState().contentTypes.byId`), not the form context.
 
@@ -680,7 +682,7 @@ When validating XML shape changes, compare a live type folder + a saved content 
 | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
 | Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                 | `lib/controlHelpers.tsx`, `lib/controlMap.ts`, `controls/*`                                           |
+| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
 | Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
 | New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
 | Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
@@ -847,6 +849,7 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-04** — Editing the FE2 file name re-validates only the file-name field (#9327). `fileName` left the validator context and `ValidatorMetaData`. `fileNameValidator` validates the field's own value, and a validator that needs the name reads `getValue('file-name')`. On edit the `file-name` value starts from the item path, not the XML element, and the path wins when they disagree. `originalValues['file-name']` is seeded the same way, so rollback of an untouched page is not a rename. Embedded components skip `file-name` when validated, since they have none. In a repeat item, inline or opened, a `file-name` control is an ordinary field: it gets no item file-name rules, and only the constraints its content type declares apply. `useLoadableAtom` keeps the previous result while a field validates again.
 - **2026-11-04** — Restored the FE1/TB1 explanation removed with #9197 as Appendix A (catalog and plugin discovery, FE runtime, plugin transport, form controllers), with file/line permalinks pinned to `4a6b57d9`, plus an FE1 → FE2 parity map (A.5). §5.2, §5.3, §5.6, §5.8, §5.9 and the plugins companion now point to it. Fixed the stale `samples/site-config-tools.xml` path in the appendix (the real sample is `sample-site-config-tools.xml`) and corrected the plugin-control load description (plugin controls use dynamic `import()`, not `requireModule`).
 - **2026-11-03** — FE2 plugin hooks are isolated and the host state is read-only (#9306). A plugin `valueRetriever` that throws falls back to the raw value for its own field. A plugin `valueSerializer` that throws stops the save with an error naming the field and plugin. Hooks get frozen field definitions. The controls, data sources and form controller hosts are frozen, and registry reads return read-only entries. `registerPlugin` also refuses types owned by Type Builder controls, validates `fieldSx`, and keeps bindings registered with `registerDataSourceBindings`. The save gate uses the latest validation run. The plugin contract types are exported from `models`.
 - **2026-11-03** — Plugin validator messages are normalized before they reach the field (#9306). A descriptor with a missing or empty `id` and a `defaultMessage` gets an `id` derived from it, so it formats instead of crashing the field. A malformed message makes the result a failed validator. A validator that throws, rejects, or returns a malformed result now shows the user a generic "couldn't be validated" message, with the detail in the console only.

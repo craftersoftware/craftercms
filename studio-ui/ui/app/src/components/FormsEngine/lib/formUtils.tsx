@@ -284,6 +284,8 @@ export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme:
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
 export type ValidatorsData = {
+	/** The fields belong to a nested scope (a repeat item form). See {@link ValidatorMetaData.nested}. */
+	nested?: boolean;
 	siteId?: string;
 	contentTypesById?: LookupTable<ContentType>;
 	siblingIds?: string[];
@@ -410,6 +412,7 @@ export function createFieldAtoms(
 		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
 		return validateFieldValue(field, value, {
+			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
 			siblingIds: validatorsData?.siblingIds,
@@ -417,7 +420,6 @@ export function createFieldAtoms(
 			additionalFields: validatorsData?.additionalFields,
 			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms?.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
 			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
@@ -457,7 +459,8 @@ export function createFileNameAtom(
 export const rootPagePath = '/site/website/index.xml';
 
 /**
- * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given.
+ * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given, and
+ * {@link setFieldAtoms} starts the `file-name` field's value from it, so the two cannot drift.
  * The home page, and a form that has no path yet, are blank.
  */
 export function fileNameFromItemPath(path?: string | null): string {
@@ -801,7 +804,29 @@ export function commitFormVisibility(
 }
 
 /**
+ * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
+ * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
+ * untouched form would rename the item.
+ *
+ * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
+ * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
+ * own value and is returned as is. Values with no `file-name` are returned as is too.
+ */
+export function withPathFileName(
+	values: LookupTable<unknown>,
+	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
+	path?: string | null
+): LookupTable<unknown> {
+	return atoms?.fileName && path != null && XmlKeys.fileName in values
+		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
+		: values;
+}
+
+/**
  * Creates the value and validity atoms for a field and sets them on to the target object.
+ *
+ * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
+ * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -811,7 +836,8 @@ export function setFieldAtoms(
 	atomsTarget: FormsEngineAtoms,
 	value: unknown,
 	validatorsData?: ValidatorsData,
-	isAdditional?: boolean
+	isAdditional?: boolean,
+	itemPath?: string | null
 ): void {
 	let field = fieldLookup[fieldId];
 	if (!field) {
@@ -850,7 +876,19 @@ export function setFieldAtoms(
 			return;
 		}
 	}
-	const [valueAtom, validityAtom] = createFieldAtoms(field, value, stableFormContextRef, validatorsData);
+	// The file-name field has two sources: the `file-name` element in the XML, and the item path, which the
+	// file-name atom, rename and save use. They can disagree at load, for example on legacy or migrated content,
+	// after a rename done outside the form, or when the element is missing.
+	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
+	// context), so the value must start from the path. Starting from the XML would validate a name that save
+	// never uses.
+	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
+	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
+	// again only on a copy collision.
+	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
+	const initialValue =
+		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
+	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;
 }

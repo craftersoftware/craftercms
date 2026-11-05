@@ -293,7 +293,7 @@ export function PublishingPackage(props: PublishingPackageProps) {
 			</div>
 			<div className="files">
 				<PrimaryButton variant="outlined" onClick={() => onShowPackageDetails()}>
-					<FormattedMessage defaultMessage="Show package details" />
+					<FormattedMessage defaultMessage="Show Package Details" />
 				</PrimaryButton>
 			</div>
 			<CancelPackageDialog

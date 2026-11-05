@@ -85,7 +85,7 @@ import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
 import { xmlDataSourceAttribute, XmlKeys } from '../lib/formConsts';
 import { withDataSourceId } from '../lib/withDataSourceId';
-import { showBrowseFilesDialog, showSearchDialog } from '../lib/controlHelpers';
+import { showBrowseFilesDialog, showSearchDialog } from '../lib/mediaDialogs';
 import { Dispatch as ReduxDispatch } from 'redux';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import type { FileUploadResult } from '../../SingleFileUpload';

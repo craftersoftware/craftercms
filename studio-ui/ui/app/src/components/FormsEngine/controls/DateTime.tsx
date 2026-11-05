@@ -22,7 +22,7 @@ import SecondaryButton from '../../SecondaryButton';
 import { FormattedMessage } from 'react-intl';
 import Box from '@mui/material/Box';
 import { StableFormContext, useStableFormContext } from '../lib/formsEngineContext';
-import { processPopulateExpression, validateDatePopulateExpression } from '../lib/controlHelpers';
+import { processPopulateExpression, validateDatePopulateExpression } from '../lib/dateExpressions';
 import { getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
 import { PrimitiveAtom, useAtom } from 'jotai';
 
