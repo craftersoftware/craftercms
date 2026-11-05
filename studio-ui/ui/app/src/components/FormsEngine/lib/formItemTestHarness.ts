@@ -31,7 +31,7 @@ const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
-const { ResolvedControlRenderer } = await import('./controlHelpers');
+const { ResolvedControlRenderer } = await import('./renderControl');
 const { FormItemKeyContext, FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('./formsEngineContext');
 const { useFormEntryProvisioning, useFormItemGate } = await import('./useFormEntryWiring');

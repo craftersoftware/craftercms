@@ -43,7 +43,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ContentTypeFieldIcon from '../../../icons/ContentTypeField';
 import ListItemText from '@mui/material/ListItemText';
 import SectionAccordion from '../../FormsEngine/components/SectionAccordion';
-import { renderFieldControl } from '../../FormsEngine/lib/controlHelpers';
+import { renderFieldControl } from '../../FormsEngine/lib/renderControl';
 import FormBackToTop from '../../FormsEngine/components/FormBackToTop';
 import type {
 	ContentType,

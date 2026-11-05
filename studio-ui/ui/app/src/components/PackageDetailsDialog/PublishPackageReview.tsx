@@ -30,7 +30,7 @@ import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
-import { PACKAGE_APPROVED, PACKAGE_REJECTED } from '../../utils/constants';
+import { PACKAGE_APPROVED, PACKAGE_REJECTED, PACKAGE_SUBMITTED } from '../../utils/constants';
 
 export interface PublishPackageReviewProps {
 	publishPackage: PublishPackage;
@@ -65,13 +65,13 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 			{/* region Submission details */}
 			<Box sx={{ display: 'block' }}>
 				<Typography variant="subtitle1" gutterBottom sx={{ mb: 1, fontWeight: 'bold' }}>
-					<FormattedMessage defaultMessage="Submission details" />
+					<FormattedMessage defaultMessage="Submission Details" />
 				</Typography>
 				<Paper sx={{ p: 1.5 }}>
 					<Grid container spacing={2}>
 						<Grid size={6}>
 							<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-								<FormattedMessage defaultMessage="Package title" />
+								<FormattedMessage defaultMessage="Package Title" />
 							</Typography>
 							<Typography>{publishPackage.title}</Typography>
 						</Grid>
@@ -144,28 +144,32 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 							mb: 1
 						}}
 					>
-						<FormattedMessage defaultMessage="Review details" />
+						<FormattedMessage defaultMessage="Review Details" />
 					</Typography>
 					<Paper sx={{ p: 1.5 }}>
 						<Grid container spacing={2}>
-							<Grid size={6}>
-								<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-									<FormattedMessage defaultMessage="Status" />
-								</Typography>
-								<Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-									{publishPackage.approvalState === PACKAGE_APPROVED ? (
-										<>
-											<VerifiedUserOutlinedIcon color="success" fontSize="small" sx={{ mr: 1 }} />
-											<FormattedMessage defaultMessage="Approved" />
-										</>
-									) : (
-										<>
-											<BlockOutlinedIcon color="error" fontSize="small" sx={{ mr: 1 }} />
-											<FormattedMessage defaultMessage="Rejected" />
-										</>
-									)}
-								</Box>
-							</Grid>
+							{/* Show the status if the package has been approved or rejected. At this point a package may be submitted (already approved edited package). */}
+							{(publishPackage.approvalState === PACKAGE_APPROVED ||
+								publishPackage.approvalState === PACKAGE_REJECTED) && (
+								<Grid size={6}>
+									<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+										<FormattedMessage defaultMessage="Status" />
+									</Typography>
+									<Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+										{publishPackage.approvalState === PACKAGE_APPROVED ? (
+											<>
+												<VerifiedUserOutlinedIcon color="success" fontSize="small" sx={{ mr: 1 }} />
+												<FormattedMessage defaultMessage="Approved" />
+											</>
+										) : (
+											<>
+												<BlockOutlinedIcon color="error" fontSize="small" sx={{ mr: 1 }} />
+												<FormattedMessage defaultMessage="Rejected" />
+											</>
+										)}
+									</Box>
+								</Grid>
+							)}
 							<Grid size={6}>
 								<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 									<FormattedMessage defaultMessage="Reviewer" />
@@ -186,7 +190,7 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 											)}
 										</Typography>
 									</>
-								) : (
+								) : publishPackage.approvalState === PACKAGE_REJECTED ? (
 									<>
 										<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
 											<FormattedMessage defaultMessage="Reason" />
@@ -195,7 +199,16 @@ export function PublishPackageReview(props: PublishPackageReviewProps) {
 											{publishPackage.reviewerComment || <FormattedMessage defaultMessage="No reason provided" />}
 										</Typography>
 									</>
-								)}
+								) : publishPackage.approvalState === PACKAGE_SUBMITTED ? (
+									<>
+										<Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+											<FormattedMessage defaultMessage="Comment" />
+										</Typography>
+										<Typography variant="body1" sx={{ mb: 2 }}>
+											{publishPackage.reviewerComment || <FormattedMessage defaultMessage="No comment provided" />}
+										</Typography>
+									</>
+								) : null}
 							</Grid>
 						</Grid>
 					</Paper>

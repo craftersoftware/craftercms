@@ -46,7 +46,7 @@ const { createFormVisibilityAtoms } = await import('./formVisibility.ts');
 
 const source = { site: 'editorial', type: 'control', name: 'example', file: 'index.js' };
 const Component = (() => null) as ComponentType<AnyValue>;
-const meta = { siteId: 'editorial', fileName: 'index.xml', itemMeta: { path: '/site/website/index.xml' } };
+const meta = { siteId: 'editorial', itemMeta: { path: '/site/website/index.xml' } };
 const fallbackText = "This value couldn't be validated. Try again or contact your administrator.";
 const store = configureStore({ reducer: { content: (state = { itemsByPath: {} }) => state } });
 

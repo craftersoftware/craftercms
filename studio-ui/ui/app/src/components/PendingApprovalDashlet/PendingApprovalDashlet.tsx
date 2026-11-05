@@ -333,7 +333,7 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 									e.stopPropagation();
 									onPackageDetailsClick(pkg);
 								}}
-								aria-label={formatMessage({ defaultMessage: 'Package details' })}
+								aria-label={formatMessage({ defaultMessage: 'Package Details' })}
 							>
 								<ChevronRightRoundedIcon />
 							</IconButton>

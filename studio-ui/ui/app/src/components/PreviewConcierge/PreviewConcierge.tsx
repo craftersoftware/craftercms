@@ -200,7 +200,7 @@ import StandardAction from '../../models/StandardAction';
 import { createComponentId, showContentFormAction } from '../../utils/system';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { ImageRestrictionSubtitle } from '../FormsEngine/lib/controlHelpers';
+import { ImageRestrictionSubtitle } from '../FormsEngine/lib/mediaDialogs';
 import { getCurrentLocale } from '../../utils/i18n';
 import Dialog from '@mui/material/Dialog';
 import MenuList from '@mui/material/MenuList';

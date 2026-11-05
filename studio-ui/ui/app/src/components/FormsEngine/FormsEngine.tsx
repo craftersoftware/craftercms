@@ -117,9 +117,10 @@ import {
 	setFieldAtoms,
 	useStackSubmitting,
 	useUnlockOnClose,
-	useValidateFormProps
+	useValidateFormProps,
+	withPathFileName
 } from './lib/formUtils';
-import { renderFieldControl } from './lib/controlHelpers';
+import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import {
 	ContentTypeNotFoundError,
@@ -488,7 +489,12 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			stableFormContextRef.current.originalValues = values;
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form has none yet: `''`.
+			stableFormContextRef.current.originalValues = withPathFileName(
+				values,
+				atoms,
+				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? '')
+			);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
 				const affected = collectAffectedPluginControlFields(
@@ -557,6 +563,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			preloadControlPluginsForFields(siteId, repeatFieldsForLaunch, seedValues, contentTypesById).then((failures) => {
 				if (disposed) return;
 				const validatorsData = {
+					nested: true,
 					siteId,
 					contentTypesById,
 					resolveEmbeddedRelevance: createEmbeddedRelevanceResolver(siteId)
@@ -738,7 +745,8 @@ function FormBootstrap(props: FormsEngineProps) {
 							atoms,
 							value,
 							validatorsData,
-							isAdditional
+							isAdditional,
+							''
 						);
 					},
 					customControls
@@ -845,7 +853,8 @@ function FormBootstrap(props: FormsEngineProps) {
 									atoms,
 									value,
 									validatorsData,
-									isAdditional
+									isAdditional,
+									requirements.item.path
 								);
 							},
 							customControls
