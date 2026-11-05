@@ -119,7 +119,7 @@ const messages = defineMessages({
 
 function BlueprintReview(props: BlueprintReviewProps) {
 	const { onGoTo, inputs, blueprint } = props;
-	const [passwordFields, setPasswordFields] = useState(null);
+	const [passwordFields, setPasswordFields] = useState<Record<string, boolean>>({});
 	const { formatMessage } = useIntl();
 
 	useEffect(() => {
@@ -156,7 +156,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		} else if (inputs.blueprintFields[parameter.name] && parameter.type === 'PASSWORD') {
 			return (
 				<span>
-					{passwordFields && passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
+					{passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
 					<IconButton
 						edge="end"
 						sx={{
@@ -168,13 +168,13 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							}
 						}}
 						aria-label={formatMessage(messages.showPassword)}
-						aria-pressed={Boolean(passwordFields && passwordFields[parameter.name])}
+						aria-pressed={Boolean(passwordFields[parameter.name])}
 						onClick={() => {
 							showPassword(parameter);
 						}}
 						size="large"
 					>
-						{passwordFields && passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
+						{passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
 					</IconButton>
 				</span>
 			);

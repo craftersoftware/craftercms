@@ -300,11 +300,9 @@ function RecoverView(props: SubViewProps) {
 				},
 				error(failure) {
 					onSubmit(false);
-					const payload = failure?.response?.response ?? failure?.response ?? failure;
-					const code = typeof payload === 'object' ? payload?.code : undefined;
-					const message = typeof payload === 'string' ? payload : (payload?.message ?? failure?.message ?? '');
-					setUsernameInvalid(recoverInputErrorCodes.includes(code));
-					setError(message);
+					// sendPasswordRecovery already unwraps to the API response ({ code, message }) or rethrows the AjaxError.
+					setUsernameInvalid(recoverInputErrorCodes.includes(failure?.code));
+					setError(failure?.message ?? '');
 				}
 			});
 		}
@@ -327,7 +325,11 @@ function RecoverView(props: SubViewProps) {
 					error={usernameInvalid}
 					type="text"
 					value={username}
-					onChange={(e: any) => setUsername(e.target.value)}
+					onChange={(e: any) => {
+						setUsername(e.target.value);
+						setUsernameInvalid(false);
+						setError('');
+					}}
 					className={classes?.username}
 					label={<FormattedMessage id="loginView.usernameTextFieldLabel" defaultMessage="Username" />}
 					slotProps={{
