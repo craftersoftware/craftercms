@@ -20,7 +20,7 @@ import { svgIconClasses } from '@mui/material/SvgIcon';
 // Since this button runs guest-side, there may be all sorts of styles that affect button styles.
 // The idea of this component is to be as specific as possible to avoid guest site styles to break ours.
 
-export const UltraStyledIconButton = styled(IconButton)({
+export const UltraStyledIconButton = styled(IconButton)(({ theme }) => ({
 	boxShadow: 'none !important',
 	border: 'none !important',
 	color: 'inherit !important',
@@ -28,7 +28,11 @@ export const UltraStyledIconButton = styled(IconButton)({
 	width: 'inherit !important',
 	[`& .${svgIconClasses.root}`]: {
 		fontSize: 21
+	},
+	'&:focus-visible': {
+		outline: `2px solid ${theme.palette.primary.main} !important`,
+		outlineOffset: '2px !important'
 	}
-});
+}));
 
 export default UltraStyledIconButton;
