@@ -58,7 +58,6 @@ import { ContentItem } from '../../models';
 import Avatar from '@mui/material/Avatar';
 import { getAvatarWithIconColors } from '../../utils/contentType';
 import { darken, useTheme } from '@mui/material/styles';
-import { focusVisibleSx } from '../../styles/focus';
 
 const translations = defineMessages({
 	previewComponentsPanelTitle: {
@@ -257,7 +256,6 @@ export function PreviewComponentsPanel() {
 											aria-label={formatMessage({
 												defaultMessage: 'Compatible types are configured in the content model.'
 											})}
-											sx={focusVisibleSx}
 										>
 											<InfoRounded fontSize="small" />
 										</IconButton>
@@ -380,7 +378,6 @@ export function PreviewComponentsPanel() {
 														aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: type.name })}
 														size="small"
 														onClick={(e) => onMenuButtonClickHandler(e, type)}
-														sx={focusVisibleSx}
 													>
 														<MoreVertRounded />
 													</IconButton>

@@ -51,7 +51,6 @@ import Alert from '@mui/material/Alert';
 import { EmptyState } from '../EmptyState';
 import FormHelperText from '@mui/material/FormHelperText';
 import { LoadingState } from '../LoadingState';
-import { focusVisibleInsetSx, focusVisibleSx } from '../../styles/focus';
 
 const translations = defineMessages({
 	dropTargetsPanel: {
@@ -209,7 +208,7 @@ export function PreviewDropTargetsPanel() {
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
 								<Tooltip title={cancelSelectionLabel}>
-									<IconButton edge="end" sx={{ ml: 0.625, ...focusVisibleSx }} onClick={() => resetState()}>
+									<IconButton edge="end" sx={{ ml: 0.625 }} onClick={() => resetState()}>
 										<CloseRoundedIcon />
 									</IconButton>
 								</Tooltip>
@@ -285,10 +284,7 @@ function DropTargetsList(props: DropTargetsListProps) {
 	const { dropTargets } = props;
 	return dropTargets?.map((dropTarget: ContentTypeDropTarget) => (
 		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
-			<ListItemButton
-				onClick={() => props.onSelectedDropZone(dropTarget)}
-				sx={{ flex: 1, minWidth: 0, ...focusVisibleInsetSx }}
-			>
+			<ListItemButton onClick={() => props.onSelectedDropZone(dropTarget)} sx={{ flex: 1, minWidth: 0 }}>
 				<ListItemIcon>
 					<ContentTypeField />
 				</ListItemIcon>

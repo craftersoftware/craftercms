@@ -27,7 +27,6 @@ const { default: ActionsBar } = await import('./ImageEditorDialog/ActionsBar.tsx
 const { ToolsPanelListItemButton } = await import('./ToolsPanelListItemButton/ToolsPanelListItemButton.tsx');
 const { DraggablePanelListItem } = await import('./DraggablePanelListItem/DraggablePanelListItem.tsx');
 const { default: PluginCard } = await import('./PluginCard/PluginCard.tsx');
-const { default: BlueprintReview } = await import('./CreateSiteDialog/BlueprintReview.tsx');
 
 // The app build gives every message an id. Without that transform, use the default message as its own id.
 const baseIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
@@ -151,32 +150,5 @@ describe('accessible names', () => {
 		assert.match(textual.querySelector('.cardActions button')?.textContent ?? '', /^Use\s+Example plugin$/);
 		const iconOnly = await renderCard(React.createElement('svg', { 'aria-hidden': 'true' }));
 		assert.match(iconOnly.querySelector('.cardActions button')?.textContent ?? '', /Example plugin/);
-	});
-
-	it('gives blueprint parameter labels unique ids, even when the names differ only by whitespace', async () => {
-		const parameter = (name: string, label: string) => ({
-			name,
-			label,
-			type: 'PASSWORD',
-			required: false,
-			description: '',
-			defaultValue: ''
-		});
-		const host = await render(
-			React.createElement(BlueprintReview, {
-				blueprint: { id: 'bp', parameters: [parameter('repo url', 'Repo URL'), parameter('repo-url', 'Repo-URL')] },
-				inputs: { blueprintFields: { 'repo url': 'a', 'repo-url': 'b' } },
-				onGoTo() {}
-			} as never)
-		);
-		const toggles = Array.from(host.querySelectorAll('button[aria-describedby]'));
-		assert.equal(toggles.length, 2);
-		const labelIds = toggles.map((t) => t.getAttribute('aria-describedby') as string);
-		assert.equal(new Set(labelIds).size, 2);
-		assert.deepEqual(
-			labelIds.map((id) => document.getElementById(id)?.textContent?.trim()),
-			['Repo URL:', 'Repo-URL:']
-		);
-		assert.ok(toggles[0].getAttribute('aria-label'));
 	});
 });

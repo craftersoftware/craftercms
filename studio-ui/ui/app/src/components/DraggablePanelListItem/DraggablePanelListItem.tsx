@@ -25,7 +25,6 @@ import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { darken, useTheme } from '@mui/material/styles';
 import { getAvatarWithIconColors } from '../../utils/contentType';
-import { focusVisibleSx } from '../../styles/focus';
 
 interface PanelListItemProps {
 	primaryText: string;
@@ -112,7 +111,6 @@ export function DraggablePanelListItem(props: PanelListItemProps) {
 						onClick={onMenu}
 						size="small"
 						aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: primaryText })}
-						sx={focusVisibleSx}
 					>
 						<MoreVertRounded />
 					</IconButton>
