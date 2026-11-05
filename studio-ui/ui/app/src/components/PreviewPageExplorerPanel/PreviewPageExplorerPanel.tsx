@@ -775,7 +775,8 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 		if (focusTargetRef.current !== selected) return;
 		focusTargetRef.current = null;
 		const item = treeHostRef.current?.querySelector<HTMLElement>('[role="treeitem"]');
-		item?.focus();
+		// A filtered view can have no treeitems. Keep focus in the panel instead of dropping it to the body.
+		(item ?? treeHostRef.current)?.focus();
 	}, [selected]);
 
 	let node: any = null;
@@ -850,7 +851,12 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 					)}
 				</MuiBreadcrumbs>
 			)}
-			<div ref={treeHostRef}>
+			<Box
+				ref={treeHostRef}
+				// Focus fallback target when the filtered tree has no items. Inset: the panel clips.
+				tabIndex={-1}
+				sx={{ '&:focus-visible': getFocusRingSx({ inset: true }) }}
+			>
 				{node.id === 'root' ? (
 					<>
 						<Typography
@@ -939,7 +945,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 						/>
 					</SimpleTreeView>
 				)}
-			</div>
+			</Box>
 			{Boolean(optionsMenu.anchorEl) && (
 				<ItemActionsMenu
 					path={optionsMenu.path}

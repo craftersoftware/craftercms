@@ -42,12 +42,12 @@ interface EditFormPanelProps {
 }
 
 interface EditFormPanelBodyProps {
+	titleId: string;
 	onDismiss: () => void;
 	selected: GuestData['selected'];
 	models: GuestData['models'];
 	hierarchyMap: GuestData['hierarchyMap'];
 	modelIdByPath: GuestData['modelIdByPath'];
-	titleId: string;
 }
 
 const getEditDialogProps = (props: {
@@ -132,11 +132,11 @@ export function EditFormPanel(props: EditFormPanelProps) {
 		>
 			{selected ? (
 				<EditFormPanelBody
+					titleId={titleId}
 					models={models}
 					selected={selected}
 					hierarchyMap={hierarchyMap}
 					modelIdByPath={modelIdByPath}
-					titleId={titleId}
 					onDismiss={props.onDismiss}
 				/>
 			) : null}
@@ -145,7 +145,7 @@ export function EditFormPanel(props: EditFormPanelProps) {
 }
 
 function EditFormPanelBody(props: EditFormPanelBodyProps) {
-	const { onDismiss, selected, models, modelIdByPath, hierarchyMap, titleId } = props;
+	const { titleId, onDismiss, selected, models, modelIdByPath, hierarchyMap } = props;
 	const dispatch = useDispatch();
 	const contentTypesBranch = useSelection((state) => state.contentTypes);
 	const site = useActiveSiteId();

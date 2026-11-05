@@ -97,7 +97,13 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
+	// Both hosts pass the active tool id without its leading slash, and `tool.url` may have one, so the
+	// widget lookup, `selected` and `aria-current` compare the same normalised ids.
+	const normalizedActiveToolId = activeToolId?.replace(/^\//, '');
+	const matchedTool = normalizedActiveToolId
+		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
+		: undefined;
+	const tool = matchedTool?.widget;
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -151,8 +157,8 @@ export function SiteTools(props: SiteToolsProps) {
 							{tools.map((tool) => (
 								<ListItem key={tool.url} disablePadding>
 									<ListItemButton
-										selected={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '')}
-										aria-current={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '') ? 'page' : undefined}
+										selected={tool.url.replace(/^\//, '') === normalizedActiveToolId}
+										aria-current={tool.url.replace(/^\//, '') === normalizedActiveToolId ? 'page' : undefined}
 										onClick={() => onNavItemClick(tool.url)}
 									>
 										<ListItemIcon sx={{ minWidth: 36 }}>
