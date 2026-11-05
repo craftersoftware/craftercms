@@ -1,0 +1,19 @@
+{
+	"name": "@craftercms/studio-a11y",
+	"description": "Automated accessibility (axe) checks for Studio screens.",
+	"private": true,
+	"license": "LGPL-3.0-only",
+	"scripts": {
+		"test": "playwright test",
+		"test:light": "playwright test --project=light",
+		"test:dark": "playwright test --project=dark",
+		"report": "playwright show-report report/html",
+		"browsers": "playwright install chromium",
+		"compile": "tsc -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@axe-core/playwright": "^4.14.0",
+		"@playwright/test": "^1.64.1",
+		"typescript": "^7.0.2"
+	}
+}

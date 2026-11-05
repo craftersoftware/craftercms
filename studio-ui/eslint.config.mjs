@@ -40,6 +40,7 @@ export default [{
     'ui/utils',
     'ui/services',
     'scripts/*',
+    'ui/a11y',
     'ui/app/public/*',
     'ui/app/build',
     'ui/app/build_tsc',
