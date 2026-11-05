@@ -39,6 +39,7 @@ function LauncherTile(props: LauncherTileProps) {
 	const { title, icon, link, target, onClick, disabled = false, active, sxs } = props;
 	return (
 		<Link
+			underline="none"
 			className={[disabled ? 'disabled' : '', props.classes?.tile].filter(Boolean).join(' ')}
 			sx={{
 				width: '120px',
