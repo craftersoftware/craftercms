@@ -38,6 +38,7 @@ import {
 } from '../FormsEngine/lib/formsEngineContext';
 import {
 	buildSectionExpandedStateAtoms,
+	createChangedFieldIdsAtom,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -302,9 +303,11 @@ export function reverseTypeFieldValuesObject(
 				}
 				const fieldDescriptor = datasourceFields[property];
 				if (!fieldDescriptor) {
-					// TODO: remove - development purposes
-					console.log('Warning: property not found in descriptor', property, field.id);
-					// Drop unknown/obsolete property not present in descriptor
+					// Drop unknown/obsolete property not present in descriptor. The stored property is no longer defined by the
+					// control, so there is nothing to serialize it with; it is dropped on purpose, and silently.
+					// Known lossy collision: a stored property named like one of commonControlFieldsDescriptors (title, id,
+					// description, help, defaultValue) is also a form value, so it reaches this branch and is deleted on save.
+					// Tracked under #9288 (RT-1).
 					continue;
 				}
 				properties[property] = { ...mergedProperties[property] };
@@ -547,9 +550,9 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 });
 
 /**
- * Builds a form stack context for a content type that is being edited, not loaded from content: one value and
- * validation atom per type field, seeded from `values`. It reuses `mixin.fieldUpdates$` when given, so the
- * caller keeps listening on its own stream of {@link FieldUpdate}s; otherwise it creates one.
+ * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
+ * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
+ * share an existing stream of {@link FieldUpdate}s; otherwise a new one is created.
  */
 export function createVirtualTypeFormContext(
 	type: ContentType,
@@ -564,7 +567,7 @@ export function createVirtualTypeFormContext(
 	const formValues: LookupTable<unknown> = {};
 	context.atoms.valueByFieldId = {};
 	context.atoms.validationByFieldId = {};
-	context.changedFieldIds = new Set();
+	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
 	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {

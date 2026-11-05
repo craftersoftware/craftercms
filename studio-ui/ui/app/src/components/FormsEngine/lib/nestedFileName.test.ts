@@ -283,14 +283,14 @@ describe('rollback of an untouched page whose xml file-name differs from the pat
 		Object.keys(form.originalValues).forEach((id) => rollbackField(form, id));
 		assert.equal(form.store.get(form.atoms.fileName), 'about');
 		assert.equal(form.store.get(form.atoms.valueByFieldId['file-name']), 'about');
-		assert.equal(form.formContextRef.current.changedFieldIds.has('file-name'), false);
+		assert.equal(form.store.get(form.formContextRef.current.changedFieldIds).has('file-name'), false);
 	});
 
 	it('leaves the name alone on a field rollback', () => {
 		const form = openAbout();
 		rollbackField(form, 'file-name');
 		assert.equal(form.store.get(form.atoms.fileName), 'about');
-		assert.equal(form.formContextRef.current.changedFieldIds.has('file-name'), false);
+		assert.equal(form.store.get(form.formContextRef.current.changedFieldIds).has('file-name'), false);
 	});
 
 	it('keeps a repeat item form file-name as its own value, since a nested scope has no path', () => {

@@ -26,8 +26,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+	clearStackPendingFlags,
 	commitRepeatItem,
+	currentRepeatItemIndex,
+	findRepeatItemIndex,
 	repeatItemFormProps,
+	repeatItemInValues,
 	repeatItemValueAfterDiscard,
 	restoreOpenedRepeatItem,
 	selectedItemPendingAfterSave,
@@ -267,5 +271,228 @@ describe('repeatItemFormProps', () => {
 		});
 		await props.onSave({ values: { icon_s: 'old' } });
 		assert.equal(stored, items);
+	});
+});
+
+/** Row keys the way `repeatItemKeys.ts` keeps them. This file's helpers take them structurally. */
+function testKeys() {
+	const ids = new WeakMap<object, string>();
+	let next = 0;
+	return {
+		keyOf(item: object) {
+			if (!ids.has(item)) ids.set(item, `k${next++}`);
+			return ids.get(item);
+		},
+		carry(previous: object | undefined, replacement: object | undefined) {
+			if (!previous || !replacement || previous === replacement) return;
+			ids.set(replacement, this.keyOf(previous));
+		}
+	};
+}
+
+describe('currentRepeatItemIndex', () => {
+	it('is undefined for a new item, so the caller appends', () => {
+		assert.equal(currentRepeatItemIndex([{ id: 'a' }], undefined, undefined, testKeys()), undefined);
+	});
+
+	it('finds the launch item where it is stored now', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex([{ id: 'new' }, a, b], 1, b, testKeys()), 2);
+	});
+
+	it('finds an item that a write replaced, through its carried key', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const replaced = { id: 'b2' };
+		keys.carry(b, replaced);
+		assert.equal(currentRepeatItemIndex([{ id: 'new' }, a, replaced], 1, b, keys), 2);
+	});
+
+	it('is -1 when the item is gone', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex([a], 1, b, testKeys()), -1);
+		assert.equal(findRepeatItemIndex([a], b, testKeys()), -1);
+	});
+
+	it('keeps the launch index when it has no item or no keys to look with', () => {
+		const items = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex(items, 1, undefined, testKeys()), 1);
+		assert.equal(currentRepeatItemIndex(items, 1, items[1], undefined), 1);
+	});
+});
+
+describe('repeatItemFormProps with a shifted array', () => {
+	function open(items: Array<{ id: string }>, index: number) {
+		const keys = testKeys();
+		let stored = items;
+		let writes = 0;
+		const props = repeatItemFormProps({
+			fieldId: 'accounts_o',
+			index,
+			values: items[index],
+			getItems: () => stored,
+			keys,
+			setItems: (next) => {
+				writes++;
+				stored = next;
+			}
+		});
+		return {
+			keys,
+			props,
+			stored: () => stored,
+			shift: (next: Array<{ id: string }>) => (stored = next),
+			writes: () => writes
+		};
+	}
+
+	it('saves into the slot the item has now and carries its key to the replacement', async () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const form = open([a, b], 1);
+		const keyOfB = form.keys.keyOf(b);
+		form.shift([{ id: 'new' }, a, b]);
+		await form.props.onSave({ values: { id: 'b2' } });
+		assert.deepEqual(form.stored(), [{ id: 'new' }, { id: 'a' }, { id: 'b2' }]);
+		assert.equal(form.keys.keyOf(form.stored()[2]), keyOfB);
+	});
+
+	it('skips the write when the item is gone', async () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const form = open([a, b], 1);
+		form.shift([a]);
+		const warn = console.warn;
+		console.warn = () => undefined;
+		try {
+			const result = await form.props.onSave({ values: { id: 'b2' } });
+			assert.equal(result.close, true);
+		} finally {
+			console.warn = warn;
+		}
+		assert.equal(form.writes(), 0);
+		assert.deepEqual(form.stored(), [a]);
+	});
+});
+
+describe('item form close and selected-fields write with a resolved index', () => {
+	// FormsEngine resolves the index with `currentRepeatItemIndex` before it calls these.
+	it('restores the checkpoint into the slot the item has now', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b-edited' }];
+		const items = [{ id: 'new' }, a, b];
+		const index = currentRepeatItemIndex(items, 1, b, keys);
+		const next = stackedRepeatItemAfterClose({
+			wasSelectedItemForm: true,
+			items,
+			index: index === -1 ? undefined : index,
+			checkpoint: { id: 'b' },
+			parentCheckpoint: undefined
+		});
+		assert.deepEqual(next, [{ id: 'new' }, { id: 'a' }, { id: 'b' }]);
+	});
+
+	it('leaves the array alone when the item is gone', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b-edited' }];
+		const items = [a];
+		const index = currentRepeatItemIndex(items, 1, b, keys);
+		assert.equal(index, -1);
+		const next = stackedRepeatItemAfterClose({
+			wasSelectedItemForm: true,
+			items,
+			index: index === -1 ? undefined : index,
+			checkpoint: { id: 'b' },
+			parentCheckpoint: undefined
+		});
+		assert.equal(next, undefined);
+	});
+});
+
+describe('repeatItemInValues with a shifted saved array', () => {
+	it('finds the launch item where the saved array has it now', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const saved = { rows_o: [{ id: 'new' }, a, b] };
+		assert.deepEqual(repeatItemInValues(saved, 'rows_o', 1, b, keys), { item: b, gone: false });
+	});
+
+	it('finds an item a write replaced after the launch, by its carried key', () => {
+		const keys = testKeys();
+		const b = { id: 'b' };
+		const replaced = { id: 'b1' };
+		keys.carry(b, replaced);
+		const saved = { rows_o: [{ id: 'new' }, replaced] };
+		assert.deepEqual(repeatItemInValues(saved, 'rows_o', 1, b, keys), { item: replaced, gone: false });
+	});
+
+	it('reports a repeat item that is no longer saved as gone, not as another row', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.deepEqual(repeatItemInValues({ rows_o: [a] }, 'rows_o', 1, b, keys), { item: undefined, gone: true });
+	});
+
+	it('keeps the launch index without a launch item or keys, and has nothing for a non-item entry', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, 'rows_o', 1), { item: b, gone: false });
+		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, undefined, undefined), { item: undefined, gone: false });
+	});
+});
+
+describe('clearStackPendingFlags with a shifted saved array', () => {
+	/** An entry the way `useSaveForm` builds it: the saved item is looked up by row key. */
+	function entryFor(
+		saved: Record<string, unknown>,
+		keys: ReturnType<typeof testKeys>,
+		launchIndex: number,
+		launchItem: { id: string },
+		current: { id: string }
+	) {
+		const looked = repeatItemInValues(saved, 'rows_o', launchIndex, launchItem, keys);
+		const calls = {
+			checkpoint: undefined as unknown,
+			pending: undefined as boolean | undefined,
+			ids: undefined as unknown
+		};
+		return {
+			calls,
+			entry: {
+				selected: true,
+				changedFieldIds: new Set(['id']) as ReadonlySet<string>,
+				setChangedFieldIds(next: ReadonlySet<string>) {
+					calls.ids = next;
+				},
+				setPending(value: boolean) {
+					calls.pending = value;
+				},
+				fieldId: 'rows_o',
+				savedItem: looked.item,
+				itemGone: looked.gone,
+				currentItem: current,
+				setCheckpoint(values: Record<string, unknown>) {
+					calls.checkpoint = values;
+				}
+			}
+		};
+	}
+
+	it("stores each item's own saved row as its checkpoint, not the row at the launch index", () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		// Something was added in front after both forms opened. Launch indexes 0 and 1 now point at the wrong rows.
+		const saved = { rows_o: [{ id: 'new' }, a, b] };
+		const forA = entryFor(saved, keys, 0, a, { id: 'a' });
+		const forB = entryFor(saved, keys, 1, b, { id: 'b' });
+		clearStackPendingFlags([forA.entry, forB.entry]);
+		assert.ok(forA.calls.checkpoint === a);
+		assert.ok(forB.calls.checkpoint === b);
+		assert.equal(forA.calls.pending, false);
+		assert.equal(forB.calls.pending, false);
+	});
+
+	it('leaves the flags and checkpoint of an item that is no longer saved', () => {
+		const keys = testKeys();
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		const gone = entryFor({ rows_o: [a] }, keys, 1, b, { id: 'b-edited' });
+		clearStackPendingFlags([gone.entry]);
+		assert.deepEqual(gone.calls, { checkpoint: undefined, pending: undefined, ids: undefined });
 	});
 });

@@ -25,6 +25,7 @@ const { atom, createStore } = await import('jotai');
 const { createFormControllerContext, runFormControllerCleanup } = await import('./runtime.ts');
 const { createEmptyFormControllerState } = await import('./types.ts');
 const { createRelevanceContext } = await import('./relevance.ts');
+const { createChangedFieldIdsAtom } = await import('../lib/formUtils.tsx');
 
 /**
  * Builds a controller context over two emitting field atoms (`title_s`, `body_html`), with the same state
@@ -441,7 +442,7 @@ describe('field update producers', () => {
 		const fieldUpdates$ = new Subject<FieldUpdate>();
 		const formContext = {
 			fieldUpdates$,
-			changedFieldIds: new Set<string>(),
+			changedFieldIds: createChangedFieldIdsAtom(),
 			originalValues: {} as Record<string, unknown>,
 			atoms: { valueByFieldId: {} as Record<string, unknown>, fileName: null as unknown },
 			itemMeta: { path: aboutPath, contentType: { fields: {} } },

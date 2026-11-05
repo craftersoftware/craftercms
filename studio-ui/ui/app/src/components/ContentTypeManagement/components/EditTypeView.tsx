@@ -59,7 +59,7 @@ import {
 	TypePropsToEdit,
 	typePropsToEdit
 } from '../utils';
-import { extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
+import { EMPTY_CHANGED_FIELD_IDS, extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
 import TypeBuilderFormsEngine, { FieldFormViewProps } from './TypeBuilderFormsEngine';
 import controlDescriptors from '../descriptors/controls';
 import dataSourceDescriptors from '../descriptors/dataSources';
@@ -154,6 +154,11 @@ export interface EditTypeAppProps {
 // - When a field is added/removed...
 
 interface EditAppContextProps {
+	/**
+	 * The open form's internal stream of value writes (a stream of `FieldUpdate`s, see `StableFormContextProps.fieldUpdates$`): one emission per
+	 * write, after the changed-ids atom is updated, never on a clear. Used to track dirty state synchronously and to
+	 * debounce background validation. It carries no state: read dirty from the form's `changedFieldIds` atom.
+	 */
 	fieldUpdates$: Subject<FieldUpdate>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;
@@ -284,7 +289,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	/** True when the open form has unsaved edits (derived from that form's synchronous changedFieldIds). */
 	const activeFormHasChanges = () => {
 		const formContext = stateRef.current.activeFormContext;
-		return (formContext?.changedFieldIds?.size ?? 0) > 0;
+		return formContext?.changedFieldIds ? jotai.get(formContext.changedFieldIds).size > 0 : false;
 	};
 	/** Saves and commits the state changes. Returns undefined if no changes occurred. */
 	const commitOpenFormChanges = () => {
@@ -319,7 +324,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			// There's no selected field, section or data source, so assume the type itself is being edited.
 			updatedType = updateTypeProps(currentType, values as TypePropsToEdit);
 		}
-		formContext.changedFieldIds.clear();
+		jotai.set(formContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
 		stateRef.current.formFieldsChanged = false;
 		// Keep typeRef in sync immediately so in-flight save completion can detect
 		// structural divergence from typeToSave before the next render.
@@ -1026,7 +1031,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				tap(() => {
 					if (!effectRefs.current.open) return;
 					const formContext = stateRef.current.activeFormContext;
-					const isDirty = (formContext?.changedFieldIds?.size ?? 0) > 0;
+					const isDirty = formContext?.changedFieldIds ? jotai.get(formContext.changedFieldIds).size > 0 : false;
 					stateRef.current.formFieldsChanged = isDirty;
 					if (isDirty) {
 						effectRefs.current.onUpdateHasPendingChanges(true);
