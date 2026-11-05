@@ -107,12 +107,18 @@ import { TypeControllerFlagContext, TypeControllerFlagContextProps } from '../ty
 import { fetchContentTypes } from '../../../state/actions/preview';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import { showSystemNotification } from '../../../state/actions/system';
+import {
+	contentTypeCreated,
+	contentTypeDeleted,
+	emitSystemEvent,
+	showSystemNotification
+} from '../../../state/actions/system';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
 import { sectionDescriptor, typeBasicDetailsDescriptor } from '../descriptors/controls/commonDescriptors';
 import { ContentItem } from '../../../models/Item';
+import { onSubmittingAndOrPendingChangeProps } from '../../../hooks/useEnhancedDialogState';
 
 export interface EditTypeAppProps {
 	/**
@@ -122,7 +128,15 @@ export interface EditTypeAppProps {
 	type: PossibleContentTypeDraft;
 	sx?: BoxProps['sx'];
 	style?: BoxProps['style'];
+	/** Navigate back to the type listing (toolbar Done/back). */
+	onExit?: () => void;
+	/** Whether the tool is mounted in a dialog or as a standalone page. */
+	mountMode?: 'dialog' | 'page';
+	/** Close the host dialog (Save & Close). Only used when mountMode is 'dialog'. */
 	onClose?: () => void;
+	/** Minimize the host dialog (Save & Minimize). Only used when mountMode is 'dialog'. */
+	onMinimize?: () => void;
+	onSubmittingAndOrPendingChange?: (value: onSubmittingAndOrPendingChangeProps) => void;
 }
 
 // How this works:
@@ -168,7 +182,7 @@ export interface ContentTypeManagementConfig {
 }
 
 export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props, ref) => {
-	const { onClose } = props;
+	const { onExit, onClose, onMinimize, mountMode, onSubmittingAndOrPendingChange } = props;
 
 	const site = useActiveSiteId();
 	const contentTypesLookup = useContentTypes();
@@ -308,6 +322,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		formContext.changedFieldIds.clear();
 		notifyChangedFieldIds(jotai.set, formContext.changedFieldIds);
 		stateRef.current.formFieldsChanged = false;
+		// Keep typeRef in sync immediately so in-flight save completion can detect
+		// structural divergence from typeToSave before the next render.
+		typeRef.current = updatedType;
 		setType(updatedType);
 		return updatedType;
 	};
@@ -530,7 +547,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const onUpdateHasPendingChanges = (hasPendingChanges: boolean) => {
 		setHasPendingChanges(hasPendingChanges);
-		dialogContext?.updateSubmittingOrHasPendingChanges({ hasPendingChanges });
+		const pendingState = { hasPendingChanges };
+		dialogContext?.updateSubmittingOrHasPendingChanges(pendingState);
+		onSubmittingAndOrPendingChange?.(pendingState);
+	};
+
+	const reportSubmittingOrPending = (value: onSubmittingAndOrPendingChangeProps) => {
+		dialogContext?.updateSubmittingOrHasPendingChanges(value);
+		onSubmittingAndOrPendingChange?.(value);
 	};
 
 	const effectRefs = useUpdateRefs({
@@ -563,13 +587,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				break;
 			}
 			case 'deleted':
-				onClose?.();
-				window.top.postMessage(
-					{
-						type: 'CONTENT_TYPES_ON_DELETED'
-					},
-					'*'
-				);
+				onUpdateHasPendingChanges(false);
+				dispatch(batchActions([emitSystemEvent(contentTypeDeleted()), fetchContentTypes()]));
+				onExit?.();
 				break;
 		}
 	};
@@ -586,7 +606,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							props: {
 								title: <FormattedMessage defaultMessage="Discard changes?" />,
 								onOk: () => {
-									onClose?.();
+									onExit?.();
 									onUpdateHasPendingChanges(false);
 									dispatch(popDialog({ id }));
 								},
@@ -595,37 +615,61 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						})
 					);
 				} else {
-					onClose?.();
+					onExit?.();
 				}
 				break;
-			case 'save': {
+			case 'save':
+			case 'saveAndClose':
+			case 'saveAndMinimize': {
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
-				dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: true });
+				reportSubmittingOrPending({ isSubmitting: true });
 				const typeToSave = latestUpdate ?? type;
+				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
-						onUpdateHasPendingChanges(false);
-						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false, hasPendingChanges: false });
+						// Edits that landed after submit must keep pending state and must not close the dialog:
+						// - open-form edits (fieldUpdates$ → changedFieldIds)
+						// - structural working-type edits (delete/insert/move/etc. via setType) while save was in flight
+						const postSubmitEdits = activeFormHasChanges() || typeRef.current !== typeToSave;
+						onUpdateHasPendingChanges(postSubmitEdits);
+						reportSubmittingOrPending({ isSubmitting: false, hasPendingChanges: postSubmitEdits });
 						// If the type being saved is new, update the type state to remove the NEW property.
 						// Clearing NEW triggers the contentItem effect to fetch once. For existing types, bump
 						// the reload token so the same effect re-fetches (and cancels any in-flight request).
-						if ((typeToSave as PossibleContentTypeDraft).NEW) {
-							setType(reversePluckProps(typeToSave as PossibleContentTypeDraft, 'NEW'));
+						// Use the current working copy so edits made while save was in flight are kept.
+						if (isNew) {
+							setType((current) => reversePluckProps(current as PossibleContentTypeDraft, 'NEW'));
 						} else {
 							setContentItemReloadToken((token) => token + 1);
 						}
 						dispatch(
 							batchActions([
+								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
 								fetchContentTypes(),
 								showSystemNotification({
 									message: formatMessage({ defaultMessage: 'Save successful.' })
 								})
 							])
 						);
+						if (action === 'saveAndClose') {
+							if (postSubmitEdits) {
+								dispatch(
+									showSystemNotification({
+										message: formatMessage({
+											defaultMessage: 'Saved. The dialog stayed open because there are newer unsaved changes.'
+										})
+									})
+								);
+							} else {
+								onClose?.();
+							}
+						} else if (action === 'saveAndMinimize') {
+							onMinimize?.();
+						}
 					},
 					error(error: AjaxError) {
-						dialogContext?.updateSubmittingOrHasPendingChanges({ isSubmitting: false });
+						reportSubmittingOrPending({ isSubmitting: false });
 						showAlert({
 							children: (
 								<Box>
@@ -701,7 +745,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		stateRef.current.formFieldsChanged = false;
 		setVirtualContentType(null);
 		setFieldFormViewProps(null);
-		setHasPendingChanges(false);
+		onUpdateHasPendingChanges(false);
 		setDrawerOpenTransitionEnded(false);
 		setOpen(false);
 	};
@@ -1086,6 +1130,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				open={open}
 				onClose={handleCloseDrawer}
 				disableSave={disableSave}
+				mountMode={mountMode}
 				onActionClick={handleToolbarActionClick}
 				drawerContent={fieldEditorView}
 				drawerProps={{

@@ -97,9 +97,10 @@ import { fetchDependant } from '../services/dependencies';
 import { NewContentDialogProps } from '../components/NewContentDialog/utils';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog, updateDialogState } from '../state/actions/dialogStack';
-import { createComponentId, pickShowContentFormAction, pushConfirmDialog, pushErrorDialog } from './system';
+import { createComponentId, showContentFormAction, pushConfirmDialog, pushErrorDialog } from './system';
 import { checkAndCancelAffectedPackages } from '../components/ViewPackagesDialog/utils';
 import { fetchAllowedTypes } from '../services/contentTypes';
+import { getNormalizedFolderPathForApi1GetTypes } from './contentType';
 
 export type ContextMenuOptionDescriptor<ID extends string = string> = {
 	id: ID;
@@ -496,7 +497,7 @@ export const itemActionDispatcher = ({
 		switch (option) {
 			case 'view': {
 				const path = item.path;
-				dispatch(pickShowContentFormAction({ site, path, authoringBase, readonly: true }));
+				dispatch(showContentFormAction({ site, path, authoringBase, readonly: true }));
 				break;
 			}
 			case 'edit': {
@@ -505,7 +506,7 @@ export const itemActionDispatcher = ({
 				// const src = `${defaultSrc}site=${site}&path=${embeddedParentPath}&isHidden=true&modelId=${modelId}&type=form`
 				const path = item.path;
 				dispatch(
-					pickShowContentFormAction({
+					showContentFormAction({
 						site,
 						path,
 						authoringBase,
@@ -581,16 +582,17 @@ export const itemActionDispatcher = ({
 			}
 			case 'createContent': {
 				const id = nanoid();
+				const path = getNormalizedFolderPathForApi1GetTypes(item);
 
 				dispatch(blockUI({ progress: 'indeterminate' }));
-				fetchAllowedTypes(site, item.path).subscribe({
+				fetchAllowedTypes(site, path).subscribe({
 					next(contentTypesIds) {
 						if (contentTypesIds?.length === 1) {
 							const contentTypeId = contentTypesIds[0];
 							dispatch(
 								batchActions([
 									unblockUI(),
-									pickShowContentFormAction({
+									showContentFormAction({
 										authoringBase,
 										site,
 										path: withoutIndex(item.path),
@@ -611,7 +613,7 @@ export const itemActionDispatcher = ({
 											onContentTypeSelected(response) {
 												dispatch(updateDialogState({ id, props: { open: false } }));
 												dispatch(
-													pickShowContentFormAction({
+													showContentFormAction({
 														authoringBase,
 														site,
 														path: response.path,

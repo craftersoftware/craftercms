@@ -100,7 +100,7 @@ export function BulkCancelPackageDialogContainer(props: BulkCancelPackageDialogC
 										}
 									}}
 								/>
-								<Tooltip title={<FormattedMessage defaultMessage="View package details" />}>
+								<Tooltip title={<FormattedMessage defaultMessage="View Package Details" />}>
 									<IconButton>
 										<ChevronRightRoundedIcon />
 									</IconButton>
@@ -113,7 +113,7 @@ export function BulkCancelPackageDialogContainer(props: BulkCancelPackageDialogC
 				<Divider />
 				<TextFieldWithMax
 					value={comment}
-					label={<FormattedMessage defaultMessage="Cancellation comment" />}
+					label={<FormattedMessage defaultMessage="Cancellation Comment" />}
 					fullWidth
 					onChange={(e) => setComment(e.target.value)}
 					multiline

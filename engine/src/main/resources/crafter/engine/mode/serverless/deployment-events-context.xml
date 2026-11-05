@@ -24,6 +24,7 @@
 
 	<bean id="crafter.deploymentEventsWatcher" class="org.craftercms.engine.util.deployment.DeploymentEventsWatcher">
 		<constructor-arg name="siteContextManager" ref="crafter.siteContextManager"/>
+		<property name="deploymentEventsFileUrl" value="${crafter.engine.store.s3.deploymentEventsFileUrl:deployment-events.properties}"/>
 	</bean>
 
 	<bean id="crafter.deploymentEventsWatcherJob"

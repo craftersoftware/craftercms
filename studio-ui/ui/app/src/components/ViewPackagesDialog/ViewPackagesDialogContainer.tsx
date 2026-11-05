@@ -94,7 +94,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 					<DialogBody>
 						<Box sx={{ display: 'flex', mb: 2 }}>
 							<Typography sx={{ mr: 1 }}>
-								<FormattedMessage defaultMessage="Packages containing" />:
+								<FormattedMessage defaultMessage="Packages Containing" />:
 							</Typography>
 							<ItemDisplay
 								item={item}
@@ -138,7 +138,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 										}
 										slotProps={{ secondary: { title: pkg.title, component: 'div' } }}
 									/>
-									<Tooltip title={<FormattedMessage defaultMessage="View package details" />}>
+									<Tooltip title={<FormattedMessage defaultMessage="View Package Details" />}>
 										<IconButton>
 											<ChevronRightRoundedIcon />
 										</IconButton>
@@ -152,7 +152,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 								<FormControl fullWidth>
 									<TextFieldWithMax
 										value={cancelPackagesComment}
-										label={<FormattedMessage defaultMessage="Cancellation comment" />}
+										label={<FormattedMessage defaultMessage="Cancellation Comment" />}
 										fullWidth
 										multiline
 										onChange={(e) => setCancelPackagesComment(e.target.value)}

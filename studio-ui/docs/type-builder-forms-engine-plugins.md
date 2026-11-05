@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-10-30
+Last updated: 2026-11-04
 
 ## 1. Why plugins are part of the core design
 
@@ -121,7 +121,7 @@ Alternate registration paths also exist:
 
 ### 2.3 FE control/DS plugin
 
-Legacy FE plugins do **not** use the modern `PluginDescriptor`/widget registry. Their `<plugin>` record is an asset locator embedded in the TB catalog and later copied into `form-definition.xml`:
+Legacy FE plugins (FE1, removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197); see [Appendix A](type-builder-forms-engine.md#appendix-a--legacy-fe1tb1-reference-historical-removed-in-9197) of the main doc) do **not** use the modern `PluginDescriptor`/widget registry. Their `<plugin>` record is an asset locator embedded in the TB catalog and later copied into `form-definition.xml`:
 
 ```xml
 <plugin>
@@ -265,7 +265,7 @@ These FE1 implementations are not source-compatible with FE2 React controls. New
 
 ### FE2 controls: functional (single plugin model)
 
-For a field with `field.properties.plugin`, `ControlWrapper` (`controlHelpers.tsx`):
+For a field with `field.properties.plugin`, `ControlWrapper` (`renderControl.tsx`):
 
 1. creates a plugin locator from `type`, `name`, `filename`, `pluginId`;
 2. loads via `controlPluginLoader` → `importPlugin` → `descriptor.controls[field.type]`;
@@ -391,7 +391,7 @@ A validator returns `{ valid: boolean, messages?: FieldValidityMessage[] }` and 
 A string is shown as is. A descriptor is formatted with `react-intl`, and `values` fills its placeholders. Studio's build adds the `id` to descriptors written in its own source, but a plugin bundle may not use that transform, and `react-intl` refuses to format a descriptor with no `id`. So the host accepts a descriptor with a missing or empty `id` as long as it has a `defaultMessage`. It gives the descriptor an `id` derived from the `defaultMessage`, and the user sees the default message with its values filled in. Give the descriptor an `id` of your own to let it be translated. A descriptor with neither a non-empty `id` nor a `defaultMessage`, with a non-string `id` or `defaultMessage`, or a tuple whose `values` is not an object, is malformed. A malformed message never reaches the field. The whole result is treated as a failed validator, described below.
 
 - `ctx.signal` is an `AbortSignal` that aborts when this validation run is superseded before it settles. This can happen when the value changes, when a value read through `getValue` changes, or when the form's relevance changes. So `signal.aborted` can be `true` while your own value is unchanged. Pass it to `fetch` or any abortable call. The result of a superseded run is discarded: the field shows, and a save waits for, the result of the latest run, so a validator that stops when aborted never leaves the field invalid.
-- `ctx.getValue(fieldId)` returns the current value of a field that lives next to the one being validated, or `undefined` for an id that level does not have. For a top-level field that is the open form's fields. For a field inside a repeat item it is that item's fields, and for a field inside an embedded component it is that component's fields. A nested field never sees the page's values, so the same data gets the same verdict whether the item is validated from its parent or in its own form. Reading a field makes this field validate again when that field changes.
+- `ctx.getValue(fieldId)` returns the current value of a field that lives next to the one being validated, or `undefined` for an id that level does not have. For a top-level field that is the open form's fields. For a field inside a repeat item it is that item's fields, and for a field inside an embedded component it is that component's fields. A nested field never sees the page's values, so the same data gets the same verdict whether the item is validated from its parent or in its own form. Reading a field makes this field validate again when that field changes. The file name is the `file-name` field, so `ctx.getValue('file-name')` returns it in a top-level form, and editing it validates only the validators that read it this way.
 - A validator that throws, rejects, or returns a malformed result is treated as invalid, so a failed request does not break form validation. The detail goes to the console and the user sees a generic message under the field: "This value couldn't be validated. Try again or contact your administrator." An intentional `{ valid: false }` is not a failure and shows only the messages you return. A validator that fails with an `AbortError` while `ctx.signal` is aborted is neither logged nor shown: that run was superseded and its outcome is discarded. In every other case the host logs the failure and shows the message, including a validator that aborts its own controller, and an `AbortError` while `ctx.signal` is not aborted.
 - A `valueRetriever` that throws is reported in the console, naming the plugin and the field, and that field alone gets its raw value, so the rest of the form still loads. A `valueSerializer` that throws is not recovered from, because a fallback would write XML that does not hold what the author entered: the save stops with an error that names the field and the plugin.
 - The `field` a hook receives, and the `contentTypesById` a serializer receives, are frozen. The host objects published on `craftercms.formsEngine` (`controls`, `dataSources`, `formControllers`) are frozen too, and `getControl`, `getDataSourceBindings` and `dataSources.get` / `getAll` return read-only entries, so one plugin cannot change what another plugin or a built-in sees.
@@ -464,7 +464,7 @@ The runtime retains the source datasource on the resolved action/choice. Node-se
 
 ## 6.1 FE1 → FE2 data-source migration notes
 
-Legacy YUI data sources (`CStudioForms.Datasources.*`) are **not** loadable as FE2 modules. Migrate by rewriting behavior as a `DataSourceModule`:
+Legacy YUI data sources (`CStudioForms.Datasources.*`) are **not** loadable as FE2 modules. Migrate by rewriting behavior as a `DataSourceModule` (how FE1 loaded and used them: [Appendix A.2](type-builder-forms-engine.md#a2-fe1-runtime-controls-data-sources-load-quirks) of the main doc; overall mapping: [A.5](type-builder-forms-engine.md#a5-fe1-to-fe2-parity-map)):
 
 | FE1 concern                | FE2 equivalent                                                               |
 | -------------------------- | ---------------------------------------------------------------------------- |
@@ -504,14 +504,13 @@ Studio:
 - `ui/app/src/components/Widget/Widget.tsx`
 - `ui/app/src/models/PluginDescriptor.ts`
 - `ui/app/src/models/PluginFileBuilder.ts`
-- `ui/app/src/components/FormsEngine/lib/controlHelpers.tsx`
+- `ui/app/src/components/FormsEngine/lib/renderControl.tsx`
 - `ui/app/src/components/FormsEngine/dataSources/*`
 - `ui/app/src/components/FormsEngine/dataSourceHooks/*`
-- `ui/app/src/components/FormsEngine/fe-control-plugin.js` — local FE1 control/DS examples and catalog XML snippets
 - `ui/app/src/components/ContentTypeManagement/components/EditTypeView.tsx`
 - `ui/app/src/components/ContentTypeManagement/proposal.xml`
-- `static-assets/components/cstudio-common/common-api.js`
-- `static-assets/components/cstudio-forms/forms-engine.js`
+- `static-assets/components/cstudio-common/common-api.js` — shared `Module` protocol
+- Legacy FE/TB sources (removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197)): explained in [Appendix A](type-builder-forms-engine.md#appendix-a--legacy-fe1tb1-reference-historical-removed-in-9197) of the main doc (see also its §2 / §5.2 / §5.3). The last commit that still had the files is [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) (`forms-engine.js`, `content-types.js`, `cstudio-forms/{controls,data-sources}/*`)
 
 Examples:
 

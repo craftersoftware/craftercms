@@ -24,6 +24,7 @@ import { SiteToolsContext, SiteToolsContextProps } from '../siteToolsContext';
 import useEnhancedDialogContext from '../../EnhancedDialog/useEnhancedDialogContext';
 
 interface EmbeddedSiteToolsProps {
+	onClose?: () => void;
 	onMinimize?: () => void;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
@@ -39,7 +40,7 @@ export const EmbeddedSiteToolsContainer = (props: EmbeddedSiteToolsProps) => {
 		() => ({ setTool: (id) => setActiveToolId(id.replace(/^\//, '')), activeToolId }),
 		[activeToolId]
 	);
-	const { updateSubmittingOrHasPendingChanges } = useEnhancedDialogContext();
+	const { updateSubmittingOrHasPendingChanges, onClose: dialogOnClose } = useEnhancedDialogContext();
 
 	const onNavItemClick = (id: string) => {
 		setActiveToolId(id);
@@ -67,6 +68,13 @@ export const EmbeddedSiteToolsContainer = (props: EmbeddedSiteToolsProps) => {
 				tools={tools}
 				sx={{ height: '100%' }}
 				onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
+				onClose={() => {
+					if (props.onClose) {
+						props.onClose();
+					} else {
+						dialogOnClose?.(null, null);
+					}
+				}}
 				onMinimize={() => props.onMinimize?.()}
 				mountMode="dialog"
 			/>

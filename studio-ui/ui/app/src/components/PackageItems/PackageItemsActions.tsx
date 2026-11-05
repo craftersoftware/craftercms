@@ -134,9 +134,9 @@ export function PackageItemsActions(props: PackageItemsActionsProps) {
 							onClick={() => onSelectAllDependencies(!selectAllDependenciesChecked)}
 						>
 							{selectAllDependenciesChecked ? (
-								<FormattedMessage defaultMessage="Deselect all" />
+								<FormattedMessage defaultMessage="Deselect All" />
 							) : (
-								<FormattedMessage defaultMessage="Select all" />
+								<FormattedMessage defaultMessage="Select All" />
 							)}
 						</Button>
 					)}
@@ -147,7 +147,7 @@ export function PackageItemsActions(props: PackageItemsActionsProps) {
 							sx={{ [`.${buttonClasses.startIcon}`]: { mr: 0.5 } }}
 							onClick={() => setIncludeChildren(!includeChildren)}
 						>
-							<FormattedMessage defaultMessage="Include children" />
+							<FormattedMessage defaultMessage="Include Children" />
 						</Button>
 					)}
 				</Box>
