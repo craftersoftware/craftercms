@@ -45,6 +45,10 @@ const checkboxFocusVisibleSx = {
 	}
 };
 
+/** Makes the item text a native label for its checkbox, so clicking the text toggles it. */
+const getItemLabelRootProps = (checkboxId: string, disabled: boolean) =>
+	({ htmlFor: checkboxId, sx: disabled ? undefined : { cursor: 'pointer' } }) as never;
+
 export interface SelectionListProps {
 	title: ReactNode;
 	subtitle?: ReactNode;
@@ -145,7 +149,8 @@ export function SelectionList(props: SelectionListProps) {
 			{items ? (
 				<List sx={{ paddingTop: 0 }}>
 					{items.map((item, index) => {
-						const labelId = `${listId}-item-${index}`;
+						const checkboxId = `${listId}-item-${index}`;
+						const itemDisabled = disabled || disabledPaths[item.path];
 						const listItemComponentChildren = (
 							<>
 								{onItemClicked && (
@@ -153,20 +158,18 @@ export function SelectionList(props: SelectionListProps) {
 										<Checkbox
 											color="primary"
 											edge="start"
+											id={checkboxId}
 											checked={!!selectedItems[item.path]}
 											sx={checkboxFocusVisibleSx}
-											slotProps={{
-												input: {
-													'aria-labelledby': labelId
-												}
-											}}
-											onClick={(event) => event.stopPropagation()}
-											onChange={() => onItemClicked?.(null, item.path)}
-											disabled={disabled || disabledPaths[item.path]}
+											onChange={() => onItemClicked(null, item.path)}
+											disabled={itemDisabled}
 										/>
 									</ListItemIcon>
 								)}
-								<ListItemText id={labelId}>
+								<ListItemText
+									slots={onItemClicked ? { root: 'label' } : undefined}
+									slotProps={{ root: onItemClicked ? getItemLabelRootProps(checkboxId, itemDisabled) : undefined }}
+								>
 									<Typography
 										variant="subtitle1"
 										sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }}
@@ -264,17 +267,11 @@ export function SelectionList(props: SelectionListProps) {
 							</>
 						);
 
-						const itemDisabled = disabled || disabledPaths[item.path];
-						// The row stays a non-interactive list item so the checkbox is not nested in a button.
 						return (
 							<ListItem
 								dense
 								key={item.path}
-								onClick={onItemClicked && !itemDisabled ? (e) => onItemClicked(e, item.path) : undefined}
-								sx={{
-									...(onItemClicked && !itemDisabled ? { cursor: 'pointer' } : {}),
-									...(itemDisabled ? { opacity: 0.38 } : {})
-								}}
+								sx={itemDisabled ? { opacity: 0.38 } : undefined}
 								children={listItemComponentChildren}
 							/>
 						);
@@ -284,7 +281,8 @@ export function SelectionList(props: SelectionListProps) {
 				<List>
 					{paths.length ? (
 						paths.map((path: string, index) => {
-							const labelId = `${listId}-path-${index}`;
+							const checkboxId = `${listId}-path-${index}`;
+							const pathDisabled = disabled || disabledPaths[path];
 							const listItemComponentChildren = (
 								<>
 									{onItemClicked && (
@@ -292,23 +290,19 @@ export function SelectionList(props: SelectionListProps) {
 											<Checkbox
 												color="primary"
 												edge="start"
+												id={checkboxId}
 												checked={Boolean(selectedItems[path])}
 												sx={checkboxFocusVisibleSx}
-												slotProps={{
-													input: {
-														'aria-labelledby': labelId
-													}
-												}}
-												onClick={(event) => event.stopPropagation()}
-												onChange={() => onItemClicked?.(null, path)}
-												disabled={disabled || disabledPaths[path]}
+												onChange={() => onItemClicked(null, path)}
+												disabled={pathDisabled}
 											/>
 										</ListItemIcon>
 									)}
 									<ListItemText
-										id={labelId}
+										slots={onItemClicked ? { root: 'label' } : undefined}
 										primary={path}
 										slotProps={{
+											root: onItemClicked ? getItemLabelRootProps(checkboxId, pathDisabled) : undefined,
 											primary: {
 												title: path,
 												sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }
@@ -319,10 +313,7 @@ export function SelectionList(props: SelectionListProps) {
 										<ListItemSecondaryAction>
 											<Button
 												color="primary"
-												onClick={(e) => {
-													e.stopPropagation();
-													onEditClick(e, path);
-												}}
+												onClick={(e) => onEditClick(e, path)}
 												aria-label={formatMessage({ defaultMessage: 'Edit {item}' }, { item: path })}
 												size="small"
 												sx={{
@@ -338,16 +329,11 @@ export function SelectionList(props: SelectionListProps) {
 								</>
 							);
 
-							const pathDisabled = disabled || disabledPaths[path];
 							return (
 								<ListItem
 									dense
 									key={path}
-									onClick={onItemClicked && !pathDisabled ? (e) => onItemClicked(e, path) : undefined}
-									sx={{
-										...(onItemClicked && !pathDisabled ? { cursor: 'pointer' } : {}),
-										...(pathDisabled ? { opacity: 0.38 } : {})
-									}}
+									sx={pathDisabled ? { opacity: 0.38 } : undefined}
 									children={listItemComponentChildren}
 								/>
 							);
