@@ -50,6 +50,14 @@ const translations = defineMessages({
 	itemsPerPage: {
 		id: 'pagination.itemsPerPage',
 		defaultMessage: 'Items per page'
+	},
+	noResults: {
+		id: 'pagination.noResults',
+		defaultMessage: 'No results'
+	},
+	rangeOfMoreThan: {
+		id: 'pagination.rangeOfMoreThan',
+		defaultMessage: '{from}-{to} of more than {to}'
 	}
 });
 
@@ -129,13 +137,19 @@ export function Pagination(props: PaginationProps) {
 	const { formatMessage } = useIntl();
 	const { sxs, mode, showBottomBorder, ...tablePaginationProps } = props;
 	const { count, page, rowsPerPage } = tablePaginationProps;
-	const rangeStatus =
-		count > 0 && rowsPerPage > 0
-			? formatMessage(
-					{ defaultMessage: '{from}-{to} of {count}' },
-					{ from: page * rowsPerPage + 1, to: Math.min(count, (page + 1) * rowsPerPage), count }
-				)
-			: '';
+	let rangeStatus = '';
+	if (count === 0) {
+		rangeStatus = formatMessage(translations.noResults);
+	} else if (rowsPerPage > 0) {
+		const from = page * rowsPerPage + 1;
+		rangeStatus =
+			count === -1
+				? formatMessage(translations.rangeOfMoreThan, { from, to: (page + 1) * rowsPerPage })
+				: formatMessage(
+						{ defaultMessage: '{from}-{to} of {count}' },
+						{ from, to: Math.min(count, (page + 1) * rowsPerPage), count }
+					);
+	}
 	return (
 		<>
 			<PoliteStatus message={rangeStatus} />

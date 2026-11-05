@@ -37,7 +37,7 @@ import { registerComponents } from '../../env/registerComponents';
 import LoadingState from '../LoadingState';
 import GlobalStyles from '../GlobalStyles';
 import ErrorState from '../ErrorState/ErrorState';
-import NotistackVariant, { DefaultStatusSnackbar } from '../NotistackVariant';
+import NotistackVariant, { DefaultStatusSnackbar, SnackbarStatusRegion } from '../NotistackVariant';
 import TooltipEscapeHandler from '../TooltipEscapeHandler/TooltipEscapeHandler';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
 const LegacyConcierge = lazy(() => import('../LegacyConcierge/LegacyConcierge'));
@@ -66,6 +66,7 @@ export function CrafterCMSNextBridge(
 		mountLegacyConcierge = false
 	} = props;
 	const SnackbarOrFragment: ElementType = mountSnackbarProvider ? SnackbarProvider : Fragment;
+	const StatusRegionOrFragment: ElementType = mountSnackbarProvider ? SnackbarStatusRegion : Fragment;
 	const snackbarOrFragmentProps = mountSnackbarProvider
 		? ({
 				maxSnack: 5,
@@ -94,32 +95,34 @@ export function CrafterCMSNextBridge(
 	return (
 		<CrafterThemeProvider themeOptions={themeOptions}>
 			<I18nProvider>
-				<SnackbarOrFragment {...snackbarOrFragmentProps}>
-					<TooltipEscapeHandler />
-					{storeError ? (
-						<ErrorState
-							title={storeError}
-							imageUrl="/studio/static-assets/images/warning_state.svg"
-							sxs={{ title: { textAlign: 'center' }, image: { width: 250, marginBottom: '10px', marginTop: '10px' } }}
-						/>
-					) : store ? (
-						<StoreProvider store={store}>
-							<Suspense fallback={suspenseFallback} children={children} />
-							{mountGlobalDialogManager && (
-								<Suspense fallback="">
-									<GlobalDialogManager />
-								</Suspense>
-							)}
-							{mountLegacyConcierge && (
-								<Suspense fallback="">
-									<LegacyConcierge />
-								</Suspense>
-							)}
-						</StoreProvider>
-					) : (
-						<LoadingState />
-					)}
-				</SnackbarOrFragment>
+				<StatusRegionOrFragment>
+					<SnackbarOrFragment {...snackbarOrFragmentProps}>
+						<TooltipEscapeHandler />
+						{storeError ? (
+							<ErrorState
+								title={storeError}
+								imageUrl="/studio/static-assets/images/warning_state.svg"
+								sxs={{ title: { textAlign: 'center' }, image: { width: 250, marginBottom: '10px', marginTop: '10px' } }}
+							/>
+						) : store ? (
+							<StoreProvider store={store}>
+								<Suspense fallback={suspenseFallback} children={children} />
+								{mountGlobalDialogManager && (
+									<Suspense fallback="">
+										<GlobalDialogManager />
+									</Suspense>
+								)}
+								{mountLegacyConcierge && (
+									<Suspense fallback="">
+										<LegacyConcierge />
+									</Suspense>
+								)}
+							</StoreProvider>
+						) : (
+							<LoadingState />
+						)}
+					</SnackbarOrFragment>
+				</StatusRegionOrFragment>
 			</I18nProvider>
 			<GlobalStyles cssBaseline={mountCssBaseline} />
 		</CrafterThemeProvider>

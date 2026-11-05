@@ -35,8 +35,8 @@ export interface ServerConnectionBannerProps {
 /**
  * Full-width bar docked to the viewport bottom. `#root` is `100vh` with
  * `border-box`, so padding-bottom reserves that strip inside the app shell.
- * Dialogs are portaled to `document.body`, so their paper is shortened by the
- * same height. Styles live here, not in the shell.
+ * Dialogs are portaled to `document.body`, so their root stops above the banner.
+ * Styles live here, not in the shell.
  */
 export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 	const { authoringBase, onDismiss } = props;
@@ -68,16 +68,10 @@ export function ServerConnectionBanner(props: ServerConnectionBannerProps) {
 					'#root': {
 						paddingBottom: 'var(--studio-connection-banner-height, 0px)'
 					},
-					'.MuiDialog-paper:not(.MuiDialog-paperFullScreen)': {
-						maxHeight: 'calc(100% - 64px - var(--studio-connection-banner-height, 0px))',
-						marginBottom: 'calc(32px + var(--studio-connection-banner-height, 0px))'
-					},
-					// Same specificity as MUI's own full-screen rule (a single emotion class) loses to it, so qualify the selector.
-					'.MuiDialog-paper.MuiDialog-paperFullScreen': {
-						maxHeight: 'calc(100% - var(--studio-connection-banner-height, 0px))',
-						height: 'calc(100% - var(--studio-connection-banner-height, 0px))',
-						// The container centres the paper. This keeps the shortened paper at the top.
-						marginBottom: 'var(--studio-connection-banner-height, 0px)'
+					// Dialogs are portaled to `body` and sized from their root, so stopping the root above the banner
+					// keeps every dialog (full-screen and nested included) clear of it. `body` outranks MUI's own rule.
+					'body .MuiDialog-root': {
+						bottom: 'var(--studio-connection-banner-height, 0px)'
 					}
 				}}
 			/>

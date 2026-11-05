@@ -129,15 +129,18 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
-	const resultsTotal = searchResults?.total ?? 0;
-	const resultsStatus =
-		searchResults == null
-			? ''
-			: formatMessage(translations.resultsStatus, {
-					from: resultsTotal === 0 ? 0 : searchParameters.offset + 1,
-					to: Math.min(searchParameters.offset + searchParameters.limit, resultsTotal),
-					count: resultsTotal
-				});
+	// Stay silent while a search is in flight: `searchResults` still holds the previous response until it lands.
+	let resultsStatus = '';
+	if (searchResults != null && !isFetching) {
+		resultsStatus =
+			searchResults.total === 0
+				? formatMessage(translations.noResults)
+				: formatMessage(translations.resultsStatus, {
+						from: searchParameters.offset + 1,
+						to: Math.min(searchParameters.offset + searchParameters.limit, searchResults.total),
+						count: searchResults.total
+					});
+	}
 
 	const container = useRef(undefined);
 
