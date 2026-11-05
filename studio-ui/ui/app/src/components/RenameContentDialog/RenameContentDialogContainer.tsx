@@ -103,7 +103,7 @@ export function RenameContentDialogContainer(props: RenameContentDialogContainer
 					setConfirmBrokenReferences={setConfirmBrokenReferences}
 					onRename={onRename}
 					onInputChanges={(event) => onInputChanges(applyContentNameRules(event.target.value))}
-					nameInvalid={!isValid}
+					nameInvalid={itemExists || exceedsMaxLength}
 					helperText={
 						itemExists ? (
 							<FormattedMessage defaultMessage="An item with that name already exists." />
