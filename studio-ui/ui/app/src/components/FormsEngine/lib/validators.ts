@@ -33,6 +33,7 @@ import {
 } from './formUtils';
 import { firstValueFrom } from 'rxjs';
 import { isPagePath, withIndex } from '../../../utils/path';
+import { applyContentNameRules } from '../../../utils/content';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './dateExpressions';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
@@ -553,7 +554,7 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 }
 
 /**
- * File-name rules: required, then uniqueness.
+ * File-name rules: required, max length after {@link applyContentNameRules}, then uniqueness.
  * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
  * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
@@ -573,6 +574,20 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 		return { valid: false, messages: [defineMessage({ defaultMessage: 'This field is required.' })] };
 	}
 	if (blank) return { valid: true };
+
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const normalizedName = applyContentNameRules(currentValue);
+	if (nnou(maxLength) && normalizedName.length > maxLength) {
+		return {
+			valid: false,
+			messages: [
+				[
+					defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
+					{ maxLength }
+				]
+			]
+		};
+	}
 
 	const initialPath = meta.itemMeta.path ?? meta.itemMeta.pathInSite;
 	const isPage = isPagePath(withIndex(initialPath));
