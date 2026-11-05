@@ -977,6 +977,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
+	const customControls = useSelection((state) => state.uiConfig.controls);
 	const containerRef = useRef<HTMLDivElement>(undefined);
 	const {
 		isFullScreen = false,
@@ -1090,6 +1091,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const effectRefs = useUpdateRefs({
 		// Comments name every changed field, including ones the launch scope is hiding.
 		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
+		customControls,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName
 	});
@@ -1142,7 +1144,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 				contentType.fields,
 				effectRefs.current.commentFields,
 				store.get(changedFieldIds),
-				store.get(versionCommentAtom).trim()
+				store.get(versionCommentAtom).trim(),
+				effectRefs.current.customControls
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);
 		});

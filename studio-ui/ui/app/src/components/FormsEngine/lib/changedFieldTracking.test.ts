@@ -173,6 +173,41 @@ describe('companion additional fields', () => {
 		);
 		assert.equal(comment, 'Updated Place in Nav and Title');
 	});
+
+	it('maps companions from configured custom control descriptors', () => {
+		const customField = fieldOf('widget_s', 'Widget', 'custom-widget');
+		const customControls = {
+			'custom-widget': {
+				id: 'custom-widget',
+				name: 'Custom Widget',
+				description: '',
+				sections: [],
+				fields: {},
+				metadata: { additionalFields: ['{id}_extra'] }
+			}
+		};
+		assert.deepEqual(getCompanionFieldIds(customField, customControls), ['widget_s_extra']);
+		assert.equal(mapCompanionFieldsToParents([customField, title], customControls).widget_s_extra, customField);
+		const comment = generateDefaultChangesComment(
+			{ widget_s: customField, title_s: title },
+			[customField, title],
+			new Set(['widget_s_extra']),
+			'',
+			customControls
+		);
+		assert.equal(comment, 'Updated Widget');
+		// Without customControls, the companion id is unknown and omitted from the comment.
+		assert.equal(mapCompanionFieldsToParents([customField, title]).widget_s_extra, undefined);
+		assert.equal(
+			generateDefaultChangesComment(
+				{ widget_s: customField, title_s: title },
+				[customField, title],
+				new Set(['widget_s_extra']),
+				''
+			),
+			''
+		);
+	});
 });
 
 describe('clearing the changed ids', () => {

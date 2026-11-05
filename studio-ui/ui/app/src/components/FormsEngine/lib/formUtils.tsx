@@ -1330,7 +1330,8 @@ export function generateDefaultChangesComment(
 	contentTypeFields: LookupTable<ContentTypeField>,
 	fields: ContentTypeField[],
 	changedFieldIds: ReadonlySet<string>,
-	currentMessage: string
+	currentMessage: string,
+	customControls?: LookupTable<DescriptorContentType>
 ): string | undefined {
 	let namedFields = contentTypeFields;
 	if (fields) {
@@ -1339,7 +1340,7 @@ export function generateDefaultChangesComment(
 			namedFields[field.id] = field;
 		});
 	}
-	const companionParents = mapCompanionFieldsToParents(fields ?? Object.values(contentTypeFields));
+	const companionParents = mapCompanionFieldsToParents(fields ?? Object.values(contentTypeFields), customControls);
 	const seenParentIds = new Set<string>();
 	const fieldsChangedNames: string[] = [];
 	for (const fieldId of changedFieldIds) {
@@ -1645,9 +1646,13 @@ export function getCompanionFieldIds(
  * Used so dirty chrome and the default version comment attribute companion writes (e.g. `orderDefault_f`) to the
  * visible parent control. An id that already belongs to a content-type field is not overwritten when building the
  * name lookup; callers still prefer `namedFields[id]` first.
+ * Pass `customControls` so configured (ui.xml) controls with `additionalFields` are included alongside code defaults.
  */
-export function mapCompanionFieldsToParents(fields: ContentTypeField[]): LookupTable<ContentTypeField> {
-	const descriptors = resolveControlDescriptors();
+export function mapCompanionFieldsToParents(
+	fields: ContentTypeField[],
+	customControls?: LookupTable<DescriptorContentType>
+): LookupTable<ContentTypeField> {
+	const descriptors = resolveControlDescriptors(customControls);
 	const map: LookupTable<ContentTypeField> = {};
 	for (const field of fields) {
 		const descriptor = descriptors[field.type];
