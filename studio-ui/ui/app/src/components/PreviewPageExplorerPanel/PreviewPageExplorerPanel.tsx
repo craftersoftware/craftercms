@@ -41,6 +41,7 @@ import {
 	sortItemOperationComplete
 } from '../../state/actions/preview';
 import { getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
+import palette from '../../styles/palette';
 import { useDispatch } from 'react-redux';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
@@ -331,18 +332,17 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 					}}
 					onClick={() => handleScroll(node)}
 				>
-					<Icon
-						sx={{
-							// info is teal, tinted in dark mode: 3:1 or more on #393939, #1C1C1E and #121212.
-							color: 'info.main'
-						}}
-					/>
+					<Icon sx={{ color: palette.teal.main }} />
 					<p title={node.name}>
 						{nodeName.length === 1 ? (
 							nodeName[0]
 						) : (
 							<>
-								{nodeName[1]} <Box component="span" sx={{ color: 'text.secondary' }}>{`(${nodeName[0].trim()})`}</Box>
+								{nodeName[1]}{' '}
+								<Box
+									component="span"
+									sx={{ color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4) }}
+								>{`(${nodeName[0].trim()})`}</Box>
 							</>
 						)}
 					</p>
@@ -385,7 +385,7 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 				},
 				[`& .${treeItemClasses.iconContainer}`]: {
 					[`& .${svgIconClasses.root}`]: {
-						color: 'text.secondary',
+						color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
 						fontSize: '1.4rem'
 					}
 				}
@@ -648,7 +648,7 @@ export function PreviewPageExplorerPanel() {
 					},
 					[`& .${treeItemClasses.iconContainer}`]: {
 						[`& .${svgIconClasses.root}`]: {
-							color: 'text.secondary',
+							color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
 							fontSize: '1.4rem'
 						}
 					}
@@ -769,7 +769,7 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 							<Typography
 								key={nodeLookup[id].id}
 								variant="subtitle2"
-								sx={{ color: 'text.secondary' }}
+								sx={{ color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4) }}
 								children={nodeLookup[id].name.split(':').pop()}
 							/>
 						) : (
@@ -782,7 +782,7 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 								sx={{
 									display: 'flex',
 									[`& .${typographyClasses.root}`]: {
-										color: 'text.secondary'
+										color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4)
 									}
 								}}
 								onClick={(e) => handleBreadCrumbClick(e, id === 'root' ? { id: 'root' } : nodeLookup[id])}
@@ -791,7 +791,7 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 										<Root
 											sx={{
 												fontSize: '1.2em',
-												color: 'text.primary'
+												color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7)
 											}}
 										/>
 									) : (
@@ -809,7 +809,7 @@ function PageExplorerUI(props: PageExplorerUIProps) {
 						variant="subtitle1"
 						sx={{
 							fontWeight: 600,
-							color: 'text.primary',
+							color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7),
 							padding: '0 12px 2px 12px'
 						}}
 					>
