@@ -65,6 +65,7 @@ const relevanceSideEffectWarning =
 /**
  * The only context `isFieldRelevant` ever receives. Typed as {@link FormControllerRelevanceContext};
  * the inert write/subscribe/notify stubs only exist so untyped controllers get a warning, not a throw.
+ * `fieldChanges` is `EMPTY`: there is no live form to observe.
  */
 export function createRelevanceContext({
 	siteId,

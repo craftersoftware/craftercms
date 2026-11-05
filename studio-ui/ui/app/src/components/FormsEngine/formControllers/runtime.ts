@@ -333,6 +333,10 @@ function invokeCleanup(cleanup: (() => void) | null | undefined): void {
 	}
 }
 
+/**
+ * Runs and clears the field-change teardowns of `state`: each completes one `fieldChanges` subscription (and so
+ * removes the `onFieldChange` listener built on it). A teardown that throws is logged and does not stop the rest.
+ */
 function runFieldChangeTeardowns(state: FormControllerState | null | undefined): void {
 	if (!state?.fieldChangeTeardowns.size) return;
 	for (const teardown of [...state.fieldChangeTeardowns]) {

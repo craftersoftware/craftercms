@@ -546,6 +546,11 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
+/**
+ * Builds a form stack context for a content type that is being edited, not loaded from content: one value and
+ * validation atom per type field, seeded from `values`. It reuses `mixin.fieldUpdates$` when given, so the
+ * caller keeps listening on its own stream of {@link FieldUpdate}s; otherwise it creates one.
+ */
 export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,

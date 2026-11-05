@@ -26,6 +26,10 @@ const { createFormControllerContext, runFormControllerCleanup } = await import('
 const { createEmptyFormControllerState } = await import('./types.ts');
 const { createRelevanceContext } = await import('./relevance.ts');
 
+/**
+ * Builds a controller context over two emitting field atoms (`title_s`, `body_html`), with the same state
+ * object the host keeps on the stack entry. `write` stores through the atom, which emits like the host's writer.
+ */
 function setup(extraAtoms: Record<string, unknown> = {}) {
 	const store = createStore();
 	const fieldUpdates$ = new Subject<FieldUpdate>();
@@ -72,6 +76,7 @@ function setup(extraAtoms: Record<string, unknown> = {}) {
 	return { ctx, dispose, write, title, body, fieldUpdates$, fieldChangeTeardowns, order, store };
 }
 
+/** Subscribes to `ctx.fieldChanges` and records the changes and how the subscription ended. */
 function collect(ctx: ReturnType<typeof setup>['ctx'], order?: string[]) {
 	const values: FormFieldChange[] = [];
 	const state = { completed: false, errored: false };
@@ -87,7 +92,7 @@ function collect(ctx: ReturnType<typeof setup>['ctx'], order?: string[]) {
 }
 
 describe('form controller fieldChanges', () => {
-	it('emits in order with the field id and the value read at emit time', () => {
+	it('emits in order with the field id and the value read when the subscriber is notified', () => {
 		const { ctx, write } = setup();
 		const { values } = collect(ctx);
 		write('title_s', 'second');
@@ -246,6 +251,21 @@ describe('form controller fieldChanges', () => {
 		ctx.fieldChanges.subscribe((change) => seen.push(`b:${change.fieldId}=${change.value}`));
 		write('title_s', 'first-edit');
 		assert.deepEqual(seen, ['a:title_s', 'b:body_html=derived', 'b:title_s=first-edit']);
+	});
+
+	it('gives later subscribers the newer value when an earlier one writes the same field during delivery', () => {
+		const { ctx, write } = setup();
+		const first: unknown[] = [];
+		const second: unknown[] = [];
+		ctx.fieldChanges.subscribe((change) => {
+			first.push(change.value);
+			if (change.value === 'a') ctx.setValue('title_s', 'b');
+		});
+		ctx.fieldChanges.subscribe((change) => second.push(change.value));
+		write('title_s', 'a');
+		// The nested write is delivered to everyone first; the outer event then reads the newer value.
+		assert.deepEqual(first, ['a', 'b']);
+		assert.deepEqual(second, ['b', 'b']);
 	});
 
 	it('stops a normalise-and-write-back loop when it compares mapped values', () => {
@@ -416,6 +436,7 @@ describe('field update producers', () => {
 	const titleField = { id: 'title_s', name: 'Title', type: 'input', validations: {} } as never;
 	const fileNameField = { id: 'file-name', name: 'File Name', type: 'file-name', validations: {} } as never;
 
+	/** A form context stub with the pieces the field and file-name atom writers touch, and a recorder on `fieldUpdates$`. */
 	function wire() {
 		const fieldUpdates$ = new Subject<FieldUpdate>();
 		const formContext = {

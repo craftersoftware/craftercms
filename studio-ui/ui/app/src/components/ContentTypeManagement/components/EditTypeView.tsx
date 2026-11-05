@@ -1198,6 +1198,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	);
 });
 
+/** Fresh Type Builder edit state. `fieldUpdates$` is the internal stream the open form emits {@link FieldUpdate}s on. */
 function createContextObject(): EditAppContextProps {
 	return {
 		fieldUpdates$: new Subject<FieldUpdate>(),

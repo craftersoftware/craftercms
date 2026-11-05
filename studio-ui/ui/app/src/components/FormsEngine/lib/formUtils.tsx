@@ -517,6 +517,10 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 	return ensureSingleSlash(`${basePath}/${fullFileName}`);
 };
 
+/**
+ * Creates the context data for one form stack entry, with its own `fieldUpdates$` stream of
+ * {@link FieldUpdate}s. Properties in `mixin` replace the defaults.
+ */
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,

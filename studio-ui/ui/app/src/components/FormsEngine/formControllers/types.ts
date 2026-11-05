@@ -46,7 +46,7 @@ export type FormControllerSaveResult = boolean | { ok: boolean; message?: string
  * ```js
  * ctx.fieldChanges.subscribe((change) => {
  *   // change.fieldId → 'title_s'
- *   // change.value   → the value of 'title_s' when this change was emitted
+ *   // change.value   → the value of 'title_s' when this subscriber was notified
  *   console.log(change.fieldId, change.value);
  * });
  * ```
@@ -62,12 +62,20 @@ export interface FormFieldChange {
 	 */
 	readonly fieldId: string;
 	/**
-	 * The field's value, read synchronously when the change is emitted (at the write), exactly as
-	 * {@link FormControllerRelevanceContext.getValue} would return it for `fieldId` at that moment. It is not
-	 * re-read later, so an operator that delays delivery (`delay`, `debounceTime`, `switchMap`) hands you the
-	 * value as of the write, which may be older than the field's current value. Call `ctx.getValue(fieldId)`
-	 * when you need the latest. For a nested write this is the whole root value (the repeat array or component
-	 * object), not the changed leaf. Treat it as read-only (see {@link FormFieldChange}).
+	 * The field's value, read synchronously when the event reaches the subscriber (each subscriber reads for
+	 * itself, in subscription order), exactly as {@link FormControllerRelevanceContext.getValue} would return it
+	 * for `fieldId` at that moment. It is not captured once per write, and it is not re-read after that, so an
+	 * operator that delays delivery (`delay`, `debounceTime`, `switchMap`) hands you the value as of the
+	 * notification, which may be older than the field's current value. Call `ctx.getValue(fieldId)` when you
+	 * need the latest.
+	 *
+	 * Re-entrant writes: if an earlier subscriber writes the same field while the event is being delivered, the
+	 * nested change is delivered to everyone first, and subscribers notified after that write then read the
+	 * newer value for the outer event as well (they see the newer value twice). Filter by field or compare
+	 * values (`map` to the value, then `distinctUntilChanged`) when that matters.
+	 *
+	 * For a nested write this is the whole root value (the repeat array or component object), not the changed
+	 * leaf. Treat it as read-only (see {@link FormFieldChange}).
 	 */
 	readonly value: unknown;
 }
@@ -149,7 +157,9 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * **What it delivers.** One call per value write, in the order the writes happen, including writes to a
 	 * field that is not rendered and writes made through {@link FormControllerContext.setValue} (so a listener
 	 * that writes back to the field it listens to will re-enter itself; guard against loops). `fieldId` is
-	 * the root field id (a nested path write reports its root). `value` is read when the write happens, just before the listener is called.
+	 * the root field id (a nested path write reports its root). `value` is read synchronously when the listener is notified. If an
+	 * earlier listener or subscriber writes the same field during delivery, later listeners receive the newer
+	 * value for that event too (see {@link FormFieldChange.value}).
 	 * It is not called for the initial values, only for later writes.
 	 *
 	 * **Lifecycle.** The host removes every listener when the form this context belongs to is torn down
@@ -162,7 +172,7 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * If `listener` throws, the error is reported asynchronously (RxJS unhandled error reporting). It does not
 	 * stop other listeners and does not remove this one.
 	 *
-	 * @param listener - Called with the root field id and the value read when the write happened.
+	 * @param listener - Called with the root field id and the value read when this listener was notified.
 	 * @returns A function that removes the listener. Safe to call more than once.
 	 *
 	 * @example
@@ -201,9 +211,11 @@ export interface FormControllerContext extends FormControllerRelevanceContext {
 	 * **What it delivers.** The observable is cold and unicast per subscription: each `subscribe` is
 	 * independent, sees only changes written after it subscribed (no replay of the initial or latest value),
 	 * and emits synchronously on the write. It never errors. Read the field id and value off each
-	 * {@link FormFieldChange}; `value` is read when the change is emitted, which is when each subscriber is
-	 * notified (a subscriber that writes a field is seen by the subscribers notified after it). Operators that
-	 * delay delivery pass along that value as of the write, not the field's current value.
+	 * {@link FormFieldChange}; `value` is read synchronously when each subscriber is notified, not captured once
+	 * per write. If an earlier subscriber writes the same field during delivery, the nested change is delivered
+	 * first and later subscribers receive the newer value for the outer event too, so filter by field or compare
+	 * values when that matters. Operators that delay delivery pass along the value as of the notification, not
+	 * the field's current value.
 	 *
 	 * **Read-only.** The host never hands out its internal subject. The observable has no `next`, `error` or
 	 * `complete`, so a controller cannot push events into the form or end the stream for others.
