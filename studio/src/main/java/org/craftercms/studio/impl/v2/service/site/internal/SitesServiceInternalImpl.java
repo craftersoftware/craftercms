@@ -41,9 +41,11 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import org.craftercms.commons.entitlements.exception.EntitlementException;
 import org.craftercms.commons.entitlements.model.EntitlementType;
 import org.craftercms.commons.entitlements.validator.EntitlementValidator;
+import org.craftercms.commons.http.HttpUtils;
 import org.craftercms.commons.plugin.PluginDescriptorReader;
 import org.craftercms.commons.plugin.exception.PluginException;
 import org.craftercms.commons.plugin.model.PluginDescriptor;
+import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.commons.upgrade.exception.UpgradeException;
 import org.craftercms.studio.api.v1.constant.StudioConstants;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.MODULE_STUDIO;
@@ -137,9 +139,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 
 public class SitesServiceInternalImpl implements SitesService, ApplicationContextAware {
@@ -1177,12 +1177,13 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	/**
 	 * Duplicate the source staging deployer target. When that target does not exist, create one for the new site.
+	 * The deployer client reports that 404 as {@link RestServiceException}.
 	 */
 	private void duplicateOrCreateStagingTarget(String sourceSiteId, String siteId) {
 		try {
 			deployer.duplicateStagingTarget(sourceSiteId, siteId);
 		} catch (RestClientException e) {
-			if (!(e instanceof HttpStatusCodeException status) || !status.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) {
+			if (!HttpUtils.isNotFound(e)) {
 				throw e;
 			}
 			logger.info("Staging deployer target for site '{}' does not exist. Creating one for site '{}'", sourceSiteId, siteId);

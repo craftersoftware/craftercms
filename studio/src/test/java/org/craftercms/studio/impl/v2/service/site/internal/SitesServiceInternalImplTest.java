@@ -22,6 +22,7 @@ import org.craftercms.commons.git.utils.AuthenticationType;
 import org.craftercms.commons.plugin.model.BlueprintDescriptor;
 import org.craftercms.commons.plugin.model.Plugin;
 import org.craftercms.commons.plugin.model.PluginDescriptor;
+import org.craftercms.commons.rest.RestServiceException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteAlreadyExistsException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
@@ -56,9 +57,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
@@ -546,7 +545,7 @@ public class SitesServiceInternalImplTest {
 		sourceSite.setStagingEnabled(true);
 		when(siteDAO.getSite(SOURCE_SITE_ID)).thenReturn(sourceSite);
 		when(servicesConfig.getStagingEnvironment(NEW_SITE_ID)).thenReturn("staging");
-		doThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Target not found", HttpHeaders.EMPTY, new byte[0], null))
+		doThrow(new RestServiceException(HttpStatus.NOT_FOUND, "Target not found"))
 			.when(deployer).duplicateStagingTarget(SOURCE_SITE_ID, NEW_SITE_ID);
 
 		sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", DUPLICATE_SANDBOX_BRANCH, false, true);
