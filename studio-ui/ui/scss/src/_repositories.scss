@@ -38,7 +38,7 @@ $split-view-size: $diff-modal-size * 0.5;
 	}
 
 	.note {
-		color: #919191;
+		color: #6f6f6f;
 		font-weight: bold;
 		margin-bottom: 0;
 	}
@@ -53,6 +53,12 @@ $split-view-size: $diff-modal-size * 0.5;
 			text-decoration: none;
 			border: none;
 			outline: 0;
+
+			&:focus-visible {
+				outline: 2px solid #fff;
+				outline-offset: 2px;
+				box-shadow: 0 0 0 2px #000;
+			}
 
 			&:hover,
 			&.active {

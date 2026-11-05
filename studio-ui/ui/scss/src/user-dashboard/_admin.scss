@@ -75,6 +75,12 @@ table {
 			padding-left: 0;
 			position: relative;
 
+			&:focus-within {
+				outline: 2px solid #fff;
+				outline-offset: 2px;
+				box-shadow: 0 0 0 2px #000;
+			}
+
 			button[type='file'] {
 				position: absolute;
 				top: 0;

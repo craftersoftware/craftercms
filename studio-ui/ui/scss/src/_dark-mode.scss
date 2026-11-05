@@ -11,7 +11,7 @@ $dark-mode-button-primary-color-hover: rgb(44, 109, 178);
 $dark-mode-hover: rgba(255, 255, 255, 0.08);
 $dark-mode-divider: rgba(255, 255, 255, 0.12);
 $dark-mode-input-border: #ced4da;
-$dark-mode-input-border-focus: #007aff;
+$dark-mode-input-border-focus: #248dff;
 
 @media (prefers-color-scheme: light) {
 	.craftercms-logo-dark {
@@ -562,7 +562,6 @@ $dark-mode-input-border-focus: #007aff;
 	// Global Menu
 	a.MuiListItem-button {
 		color: inherit !important;
-		outline: none;
 	}
 	a.MuiLink-underlineNone {
 		text-decoration: none !important;
