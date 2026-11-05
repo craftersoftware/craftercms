@@ -30,10 +30,6 @@ type PasswordTextFieldProps = TextFieldProps & {
 };
 
 const translations = defineMessages({
-	hidePasswordButtonText: {
-		id: 'passwordTextField.hidePasswordButtonText',
-		defaultMessage: 'Hide password'
-	},
 	toggleVisibilityButtonText: {
 		id: 'passwordTextField.toggleVisibilityButtonText',
 		defaultMessage: 'Show password'
@@ -46,7 +42,7 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 	const [showPassword, setShowPassword] = useState(initialVisible);
 	// A mouse press focuses the button and blurs the field, which closes a caller's strength
 	// popper. Cancelling mousedown leaves focus in the field, so that popper stays open.
-	// Keyboard activation still leaves focus on this button, whose name reflects the state.
+	// Keyboard activation still leaves focus on this button, where aria-pressed is exposed.
 	const handleClickShowPassword = () => {
 		setShowPassword((visible) => !visible);
 	};
@@ -55,9 +51,8 @@ const PasswordTextField = React.forwardRef<HTMLDivElement, PasswordTextFieldProp
 		<InputAdornment position="end">
 			<IconButton
 				edge="end"
-				aria-label={formatMessage(
-					showPassword ? translations.hidePasswordButtonText : translations.toggleVisibilityButtonText
-				)}
+				aria-pressed={showPassword}
+				aria-label={formatMessage(translations.toggleVisibilityButtonText)}
 				onClick={handleClickShowPassword}
 				onMouseDown={(event) => event.preventDefault()}
 				size="large"
