@@ -161,6 +161,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 			square
 			disableGutters
 			elevation={0}
+			slots={{ heading: 'h2' }}
 			slotProps={{
 				transition: {
 					unmountOnExit: true

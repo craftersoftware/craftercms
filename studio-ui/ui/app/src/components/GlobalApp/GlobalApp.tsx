@@ -29,7 +29,8 @@ import {
 	useLocation
 } from 'react-router';
 import SiteManagement from '../SiteManagement';
-import { getLauncherSectionLink, urlMapping } from '../LauncherSection/utils';
+import { getLauncherSectionLink, messages as launcherMessages, urlMapping } from '../LauncherSection/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import EmptyState from '../EmptyState/EmptyState';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useGlobalAppState } from './GlobalAppContext';
@@ -42,6 +43,7 @@ import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
 import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -103,6 +105,11 @@ export function GlobalApp(props: GlobalAppProps) {
 
 function RouteNotFound() {
 	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	const pageNotFound = formatMessage({ id: 'globalApp.pageNotFound', defaultMessage: 'Page not found' });
+	useEffect(() => {
+		document.title = studioDocumentTitle(pageNotFound);
+	}, [pageNotFound]);
 	return (
 		<Box
 			sx={{
@@ -121,7 +128,8 @@ function RouteNotFound() {
 						margin: 0
 					}
 				}}
-				title="404"
+				title={pageNotFound}
+				titleComponent="h1"
 				subtitle={
 					<FormattedMessage
 						id={'globalApp.routeNotFound'}
@@ -151,17 +159,22 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 	);
 	useEffect(() => {
 		const path = location.pathname;
-		const id = idByPathLookup?.[path];
-		document.title = `CrafterCMS - ${formatMessage(
-			globalMenuMessages[id] ?? {
-				id: 'globalApp.routeNotFound',
-				defaultMessage: 'Route not found'
-			}
-		)}`;
+		// `/` redirects to the first launcher item. Don't flash a 404 title while that settles.
+		if (path === '/') {
+			return;
+		}
+		const id = path === '/sites' ? 'home.globalMenu.sites' : idByPathLookup?.[path];
+		const descriptor = id ? globalMenuMessages[id] : undefined;
+		if (descriptor) {
+			document.title = studioDocumentTitle(formatMessage(descriptor));
+		}
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
 		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
+			<SkipToMainContent />
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={formatMessage(launcherMessages.global)}
 				sxs={{
 					drawerPaper: {
 						top: '0',
@@ -221,7 +234,11 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
+				component="main"
+				id={STUDIO_MAIN_CONTENT_ID}
+				tabIndex={-1}
 				sx={[
+					mainLandmarkSx,
 					{
 						height: '100%',
 						width: '100%',

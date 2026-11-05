@@ -91,7 +91,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 							style={icon[collapsed ? 'collapsedStyle' : 'expandedStyle']}
 						/>
 					)}
-					<Typography variant="body1" component="h6" sx={{ flexGrow: 1 }} children={title} />
+					<Typography variant="body1" component="span" sx={{ flexGrow: 1 }} children={title} />
 				</Box>
 			</AccordionSummary>
 			{hasActions && (

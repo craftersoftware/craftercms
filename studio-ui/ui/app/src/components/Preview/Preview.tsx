@@ -33,7 +33,11 @@ import { GlobalRoutes } from '../../env/routes';
 import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
+import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 import LoadingState from '../LoadingState';
+import { visuallyHidden } from '@mui/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -59,6 +63,13 @@ function Preview() {
 		mounted: false
 	});
 	const { formatMessage } = useIntl();
+	const previewItem = useCurrentPreviewItem();
+	const previewName = previewItem?.label || formatMessage({ id: 'words.preview', defaultMessage: 'Preview' });
+	useEffect(() => {
+		if (site) {
+			document.title = studioDocumentTitle(previewName);
+		}
+	}, [previewName, site]);
 
 	// region function validateSite() { ... }
 	const validateSite = useCallback(
@@ -188,15 +199,21 @@ function Preview() {
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
 				 meantime, we'll show a loading state. */}
+				<SkipToMainContent />
 				{site ? (
 					<>
 						<ToolBar />
-						<Host />
+						<Host heading={previewName} />
 						<ToolsPanel />
 						<ICEToolsPanel />
 					</>
 				) : (
-					<LoadingState />
+					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkSx}>
+						<Box component="h1" sx={visuallyHidden}>
+							{formatMessage({ id: 'words.preview', defaultMessage: 'Preview' })}
+						</Box>
+						<LoadingState />
+					</Box>
 				)}
 			</Box>
 		</PreviewConcierge>
