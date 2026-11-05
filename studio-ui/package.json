@@ -99,6 +99,7 @@
 		"rimraf": "^6.1.3",
 		"rollup": "^4.65.1",
 		"rollup-plugin-copy": "^3.5.0",
+		"typescript-eslint-compat": "npm:typescript@^5.9.3",
 		"yargs": "^18.2.0"
 	},
 	"dependencies": {
