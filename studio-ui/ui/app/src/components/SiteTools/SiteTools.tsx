@@ -147,26 +147,22 @@ export function SiteTools(props: SiteToolsProps) {
 						{!hideSidebarSiteSwitcher && <SiteSwitcherSelect site={site} fullWidth />}
 					</Box>
 					{tools ? (
-						<Box component="nav" aria-label={formatMessage({ defaultMessage: 'Project tools' })}>
-							<List disablePadding sx={{ overflow: 'auto' }}>
-								{tools.map((tool) => (
-									<ListItem key={tool.url} disablePadding>
-										<ListItemButton
-											selected={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '')}
-											aria-current={
-												tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '') ? 'page' : undefined
-											}
-											onClick={() => onNavItemClick(tool.url)}
-										>
-											<ListItemIcon sx={{ minWidth: 36 }}>
-												<SystemIcon icon={tool.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
-											</ListItemIcon>
-											<ListItemText primary={getPossibleTranslation(tool.title, formatMessage)} />
-										</ListItemButton>
-									</ListItem>
-								))}
-							</List>
-						</Box>
+						<List disablePadding sx={{ overflow: 'auto' }}>
+							{tools.map((tool) => (
+								<ListItem key={tool.url} disablePadding>
+									<ListItemButton
+										selected={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '')}
+										aria-current={tool.url.replace(/^\//, '') === activeToolId?.replace(/^\//, '') ? 'page' : undefined}
+										onClick={() => onNavItemClick(tool.url)}
+									>
+										<ListItemIcon sx={{ minWidth: 36 }}>
+											<SystemIcon icon={tool.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+										</ListItemIcon>
+										<ListItemText primary={getPossibleTranslation(tool.title, formatMessage)} />
+									</ListItemButton>
+								</ListItem>
+							))}
+						</List>
 					) : (
 						<EmptyState
 							title={
