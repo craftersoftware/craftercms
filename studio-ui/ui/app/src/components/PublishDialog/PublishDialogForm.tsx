@@ -39,7 +39,6 @@ import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Link from '@mui/material/Link';
 import { fetchPublishingTargets, FetchPublishingTargetsResponse } from '../../services/publishing';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
-import palette from '../../styles/palette';
 
 const messages = defineMessages({
 	publishingTargetLoading: {
@@ -374,7 +373,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 							variant="body1"
 							component="span"
 							sx={{
-								border: `1px solid ${palette.gray.medium3}`,
+								border: '1px solid',
+								borderColor: 'border.control',
 								padding: '10px 12px',
 								borderRadius: '4px',
 								width: '100%',

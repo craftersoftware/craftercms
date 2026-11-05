@@ -23,7 +23,6 @@ import { setPreviewEditMode } from '../../state/actions/preview';
 import { useSelection } from '../../hooks/useSelection';
 import { styled } from '@mui/material/styles';
 import { switchClasses } from '@mui/material';
-import palette from '../../styles/palette';
 
 const EditSwitch = styled(Switch)(({ theme }) => {
 	return {
@@ -71,7 +70,7 @@ const EditSwitch = styled(Switch)(({ theme }) => {
 		},
 		[`& .${switchClasses.track}`]: {
 			borderRadius: 26 / 2,
-			border: `1px solid ${palette.gray.medium3}`,
+			border: `1px solid ${theme.palette.border.control}`,
 			backgroundColor: theme.palette.grey[50],
 			opacity: 1,
 			transition: theme.transitions.create(['background-color', 'border'])

@@ -29,7 +29,6 @@ import StarOutlineRoundedIcon from '@mui/icons-material/StarOutlineRounded';
 import Collapse from '@mui/material/Collapse';
 import { isBlank } from '../../utils/string';
 import { nou } from '../../utils/object';
-import palette from '../../styles/palette';
 
 export type PasswordStrengthDisplayClassKey =
 	| 'container'
@@ -86,7 +85,7 @@ function getStyles(sx?: PasswordStrengthDisplayPartialSx): PasswordStrengthDispl
 			width: '40px',
 			textAlign: 'center',
 			borderTop: '4px solid',
-			borderColor: palette.gray.medium3,
+			borderColor: (theme) => theme.palette.border.control,
 			...sx?.scoreListItemDisplay
 		},
 		scoreListItemText: {
@@ -102,7 +101,7 @@ function getStyles(sx?: PasswordStrengthDisplayPartialSx): PasswordStrengthDispl
 			...sx?.scoreActive40
 		},
 		scoreActive60: {
-			borderColor: (theme) => (theme.palette.mode === 'dark' ? palette.yellow.tint : palette.yellow.main),
+			borderColor: (theme) => theme.palette.yellow.main,
 			...sx?.scoreActive60
 		},
 		scoreActive80: {

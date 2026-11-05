@@ -36,7 +36,6 @@ import useSelection from '../../hooks/useSelection';
 import ListItemText, { listItemTextClasses } from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import { ItemTypeIcon } from '../ItemTypeIcon';
-import palette from '../../styles/palette';
 import { ErrorBoundary } from '../ErrorBoundary';
 import Badge, { badgeClasses } from '@mui/material/Badge';
 import Button from '@mui/material/Button';
@@ -287,8 +286,8 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 											sx={{
 												fontSize: '1.4rem',
 												marginRight: '5px',
-												// This dialog’s dark paper is #393939. #357694 is 2.29:1 there; #70D7FF is 7.07:1.
-												color: (theme) => (theme.palette.mode === 'dark' ? palette.teal.tint : palette.teal.main)
+												// info is teal, tinted in dark mode, so it clears 3:1 on this dialog's #393939 paper.
+												color: 'info.main'
 											}}
 										/>
 										<Typography>{contentType.name}</Typography>

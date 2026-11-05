@@ -16,7 +16,7 @@
 
 import { createTheme, Theme, ThemeOptions } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import palette from '@craftercms/studio-ui/styles/palette';
+import palette, { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
 import { useMemo } from 'react';
 import { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
 import { SxProps } from '@mui/system';
@@ -28,25 +28,11 @@ export function useGuestTheme(styleConfig: ThemeOptions): Theme {
 		return createTheme(
 			{
 				palette: {
+					// Same mode mapping as the Studio theme (CrafterThemeProvider).
 					mode,
-					primary: {
-						main: prefersDarkMode ? palette.blue.tint : palette.blue.main
-					},
-					warning: {
-						main: prefersDarkMode ? palette.orange.tint : palette.orange.main
-					},
-					error: {
-						main: prefersDarkMode ? palette.red.tint : palette.red.main
-					},
-					success: {
-						main: prefersDarkMode ? palette.green.tint : palette.green.main
-					},
-					info: {
-						main: prefersDarkMode ? palette.teal.tint : palette.teal.main
-					},
-					secondary: {
-						main: prefersDarkMode ? palette.indigo.tint : palette.purple.shade
-					}
+					...getStudioPaletteOptions(mode),
+					// Pick a label colour that reaches 4.5:1, like the Studio theme.
+					contrastThreshold: 4.5
 				},
 				typography: {
 					fontFamily: '"Source Sans Pro", "Open Sans", sans-serif',
@@ -72,32 +58,32 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 		selectModeHighlight: {
 			paper: {
 				bgcolor: 'success.light',
-				// contrastText is computed for .main, not .light. #121212 is 4.87:1 on error.light (#DA5750), the darkest chip.
-				color: '#121212'
+				// contrastText is computed for .main, not .light; highlightText is the readable colour for the .light chips.
+				color: palette.highlightText
 			},
 			box: {
 				outlineColor: 'success.main'
 			},
 			icon: {
-				color: '#121212'
+				color: palette.highlightText
 			}
 		},
 		moveModeHighlight: {
 			paper: {
 				bgcolor: 'primary.light',
-				color: '#121212'
+				color: palette.highlightText
 			},
 			box: {
 				outlineColor: (theme) => theme.palette.primary.main
 			},
 			icon: {
-				color: '#121212'
+				color: palette.highlightText
 			}
 		},
 		errorHighlight: {
 			paper: {
 				bgcolor: 'error.light',
-				color: '#121212'
+				color: palette.highlightText
 			},
 			box: {
 				outlineColor: (theme) => theme.palette.error.main
@@ -106,7 +92,7 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 		warnHighlight: {
 			paper: {
 				bgcolor: 'warning.light',
-				color: '#121212'
+				color: palette.highlightText
 			},
 			box: {
 				outlineColor: (theme) => theme.palette.warning.main
@@ -115,10 +101,10 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 		disabledHighlight: {
 			paper: {
 				bgcolor: (theme) => theme.palette.grey[400],
-				color: '#121212'
+				color: palette.highlightText
 			},
 			box: {
-				outlineColor: palette.gray.medium3
+				outlineColor: (theme) => theme.palette.border.control
 			}
 		}
 	},

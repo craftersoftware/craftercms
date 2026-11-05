@@ -16,9 +16,13 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import palette from './palette.ts';
+import palette, { getStudioPaletteOptions } from './palette.ts';
 
-const luminance = (hex: string) => {
+// Accepts #fff and #ffffff.
+const expand = (hex: string) => (hex.length === 4 ? `#${[...hex.slice(1)].map((c) => c + c).join('')}` : hex);
+
+const luminance = (raw: string) => {
+	const hex = expand(raw);
 	const [r, g, b] = [1, 3, 5].map((i) => {
 		const v = parseInt(hex.slice(i, i + 2), 16) / 255;
 		return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
@@ -34,11 +38,23 @@ const ratio = (a: string, b: string) => {
 const LIGHT_SURFACES = ['#FFFFFF', '#FAFAFA'];
 // Dark paper (#121212) plus the 16.5% MUI elevation overlay used by dialogs and menus.
 const DARK_SURFACES = ['#121212', '#1C1C1E', '#393939'];
-const colours = ['blue', 'green', 'orange', 'teal'] as const;
+// Every theme colour that is used as icon, border or indicator, in both modes.
+const THEME_COLOURS = [
+	'primary',
+	'secondary',
+	'error',
+	'warning',
+	'info',
+	'success',
+	'yellow',
+	'indigo',
+	'purple',
+	'pink'
+] as const;
 
 describe('palette contrast (WCAG 2.1 AA)', () => {
 	it('light-mode main colours are 4.5:1 as text on light surfaces', () => {
-		for (const name of colours) {
+		for (const name of ['blue', 'green', 'orange', 'teal'] as const) {
 			for (const surface of LIGHT_SURFACES) {
 				assert.ok(ratio(palette[name].main, surface) >= 4.5, `${name}.main on ${surface}`);
 			}
@@ -46,13 +62,13 @@ describe('palette contrast (WCAG 2.1 AA)', () => {
 	});
 
 	it('light-mode main colours carry white label text at 4.5:1', () => {
-		for (const name of ['blue', 'green', 'orange', 'teal'] as const) {
-			assert.ok(ratio(palette[name].main, '#FFFFFF') >= 4.5, `white on ${name}.main`);
+		for (const name of ['blue', 'green', 'orange', 'teal', 'red'] as const) {
+			assert.ok(ratio(palette[name].main, palette.white) >= 4.5, `white on ${name}.main`);
 		}
 	});
 
 	it('dark-mode tints are 4.5:1 as text on every dark surface', () => {
-		for (const name of [...colours, 'red', 'indigo'] as const) {
+		for (const name of ['blue', 'green', 'orange', 'teal', 'red', 'indigo', 'purple', 'yellow'] as const) {
 			for (const surface of DARK_SURFACES) {
 				assert.ok(ratio(palette[name].tint, surface) >= 4.5, `${name}.tint on ${surface}`);
 			}
@@ -68,15 +84,28 @@ describe('palette contrast (WCAG 2.1 AA)', () => {
 		}
 	});
 
-	it('the shared form boundary grey is 3:1 on every surface', () => {
-		for (const surface of [...LIGHT_SURFACES, ...DARK_SURFACES]) {
-			assert.ok(ratio(palette.gray.medium3, surface) >= 3, `gray.medium3 on ${surface}`);
-		}
-	});
-
 	it('light-mode error (red.main) is 4.5:1 on light surfaces and a #F3F3F3 panel', () => {
 		for (const surface of [...LIGHT_SURFACES, '#F3F3F3']) {
 			assert.ok(ratio(palette.red.main, surface) >= 4.5, `error on ${surface}`);
+		}
+	});
+
+	it('every mode-mapped theme colour is 3:1 on the surfaces of its own mode', () => {
+		// This is the guard on getStudioPaletteOptions, which is what the theme and components read.
+		for (const mode of ['light', 'dark'] as const) {
+			const options = getStudioPaletteOptions(mode);
+			const surfaces = mode === 'dark' ? DARK_SURFACES : LIGHT_SURFACES;
+			for (const name of THEME_COLOURS) {
+				const main = options[name].main as string;
+				for (const surface of surfaces) {
+					const value = ratio(main, surface);
+					assert.ok(value >= 3, `${mode} ${name}.main ${main} on ${surface} is ${value.toFixed(2)}:1`);
+				}
+			}
+			const border = (options.border as { control: string }).control;
+			for (const surface of [...LIGHT_SURFACES, ...DARK_SURFACES]) {
+				assert.ok(ratio(border, surface) >= 3, `border.control ${border} on ${surface}`);
+			}
 		}
 	});
 });

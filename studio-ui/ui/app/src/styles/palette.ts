@@ -14,9 +14,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import type { PaletteOptions } from '@mui/material/styles';
+
 const palette = {
 	white: '#fff',
 	black: '#000',
+	// Text and icons that sit on a `.light` variant chip, which is a mid-tone in both modes.
+	// #121212 is 4.87:1 on error.light (#DA5750), the darkest chip.
+	highlightText: '#121212',
 	blue: {
 		tint: '#54A6FF',
 		main: '#0068DA',
@@ -57,5 +62,54 @@ const palette = {
 		dark7: '#1C1C1E'
 	}
 };
+
+export type StudioPaletteMode = 'light' | 'dark';
+
+/** A palette colour with no MUI slot of its own. `main` already follows the mode. */
+export interface StudioPaletteColor {
+	main: string;
+}
+
+declare module '@mui/material/styles' {
+	interface Palette {
+		yellow: StudioPaletteColor;
+		indigo: StudioPaletteColor;
+		purple: StudioPaletteColor;
+		pink: StudioPaletteColor;
+		border: { control: string };
+	}
+	interface PaletteOptions {
+		yellow?: StudioPaletteColor;
+		indigo?: StudioPaletteColor;
+		purple?: StudioPaletteColor;
+		pink?: StudioPaletteColor;
+		border?: { control: string };
+	}
+}
+
+/**
+ * The one place that maps the palette to a mode: light mode uses the `main` shade (4.5:1 or more on the
+ * light surfaces), dark mode the `tint` (4.5:1 or more on the dark ones). The Studio theme
+ * (CrafterThemeProvider) and the guest theme (useGuestTheme) both spread this, so there is one mapping.
+ */
+export function getStudioPaletteOptions(mode: StudioPaletteMode): PaletteOptions {
+	const pick = (colour: { main: string; tint: string }) => (mode === 'dark' ? colour.tint : colour.main);
+	return {
+		primary: { main: pick(palette.blue) },
+		secondary: { main: mode === 'dark' ? palette.indigo.tint : palette.purple.shade },
+		error: { main: pick(palette.red) },
+		warning: { main: pick(palette.orange) },
+		info: { main: pick(palette.teal) },
+		success: { main: pick(palette.green) },
+		yellow: { main: pick(palette.yellow) },
+		indigo: { main: pick(palette.indigo) },
+		purple: { main: pick(palette.purple) },
+		// pink.tint is 2.84:1 on white, so the disabled-item icon keeps pink.main in both modes
+		// (3.49:1 on the light surfaces and 3.17:1 on the darkest dialog surface).
+		pink: { main: palette.pink.main },
+		// 3.26:1 on paper and 3.12:1 on background.default: the boundary of a control (1.4.11).
+		border: { control: palette.gray.medium3 }
+	};
+}
 
 export default palette;
