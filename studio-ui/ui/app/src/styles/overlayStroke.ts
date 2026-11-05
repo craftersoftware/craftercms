@@ -83,18 +83,29 @@ export function overlayBoundarySx(theme: OverlayTheme, stateColour: string): CSS
 }
 
 /**
- * The companion bands for an overlay that is a filled line rather than a hollow box: the white band is a
- * border and the black band a ring outside it, so the line reads as
- * page | black 1px | white 1px | state colour. Both bands still touch the page, so the 4.57:1 guarantee above
- * holds for them.
+ * The companion bands for an overlay that is a filled line rather than a hollow box, such as a drop
+ * marker. From the page inwards: page | white 1px | black 1px | state colour. The white band is a box
+ * shadow outside the black border, and the state colour is the element's own fill.
+ *
+ * The order is the reverse of the hollow-box case on purpose. A filled line has no outline to sit between
+ * the bands, so the state colour is immediately inside the black band, which is the neighbour it has to
+ * clear 3:1 against: the light tints are only 1.78:1 to 2.54:1 on white.
+ *
+ * Only the white band touches the page. The guarantee above still holds, but for a different reason:
+ * against any page one of the two bands reads, and the band that merges into the page just moves the
+ * visible edge outwards by 1px - on a white page the white band vanishes and the black border is the
+ * visible edge at 21:1, and on a dark page the white band is the visible edge at 18.73:1.
+ *
+ * This sets the bands only. The caller still sets the state colour as `backgroundColor` (and `color` for
+ * any text), because a filled element has no outline to carry it.
  */
 export function overlayBandSx(theme: OverlayTheme, bandWidth: number = overlayStrokeWidth): CSSObject {
 	const { white, black } = theme.palette.common;
 	return {
 		borderStyle: 'solid',
 		borderWidth: `${bandWidth}px`,
-		borderColor: white,
-		boxShadow: `0 0 0 ${bandWidth}px ${black}`
+		borderColor: black,
+		boxShadow: `0 0 0 ${bandWidth}px ${white}`
 	};
 }
 

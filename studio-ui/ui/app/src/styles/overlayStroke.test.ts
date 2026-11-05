@@ -21,8 +21,10 @@ import { focusRingColor } from './focusRing.ts';
 import {
 	getOverlayBoundarySx,
 	overlayBoundarySx,
+	overlayBandSx,
 	overlayCompanionShadow,
 	overlayOutlineOffset,
+	overlayStateOffset,
 	overlayStateWidth
 } from './overlayStroke.ts';
 
@@ -111,10 +113,23 @@ describe('overlay boundary (WCAG 2.1 SC 1.4.11, 3:1)', () => {
 		assert.equal(sx.outlineColor, '#54A6FF');
 		assert.equal(sx.outlineOffset, `-${overlayOutlineOffset}px`);
 		// An outline is painted outwards from |outlineOffset| by its own width, so its outer edge lands at
-		// |outlineOffset| - width. That must be exactly where the two bands end, or the outline covers them.
-		// A pixel scan of the rendered marker caught this: with a plain -2px offset the boundary collapsed to
-		// a single colour on every page background.
-		assert.equal(overlayOutlineOffset - overlayStateWidth, overlayStateWidth);
+		// |outlineOffset| - width. That must be exactly where the two bands end (overlayStateOffset), or the
+		// outline covers them. A pixel scan of the rendered marker caught this: with a plain -2px offset the
+		// boundary collapsed to a single colour on every page background.
+		assert.equal(overlayOutlineOffset - overlayStateWidth, overlayStateOffset);
+	});
+
+	it('puts the state colour inside the black band on a filled line', () => {
+		const sx = overlayBandSx(theme);
+		// A filled line has no outline, so the state colour is its own fill, immediately inside the black
+		// border. The black band is deliberately the inner one: the light tints are only 1.78:1 to 2.54:1 on
+		// white, and against the black band they are 8.28:1 or more.
+		assert.equal(sx.borderColor, BLACK);
+		assert.equal(sx.boxShadow, `0 0 0 ${1}px ${WHITE}`);
+		for (const colour of ZONE_STATE_COLOURS) {
+			const value = ratio(colour, BLACK);
+			assert.ok(value >= 3, `${colour} inside the black border is ${value.toFixed(2)}:1`);
+		}
 	});
 
 	it('resolves a theme callback to the same geometry', () => {

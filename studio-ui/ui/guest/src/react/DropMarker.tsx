@@ -25,6 +25,10 @@ import { FullSxRecord, PartialSxRecord } from '@craftercms/studio-ui/models/Cust
 import { Box, Theme, useTheme } from '@mui/material';
 import { overlayBandSx } from '@craftercms/studio-ui/styles/overlayStroke';
 
+// The state colour of a drop marker: a theme token, not a literal. It is the same red the marker has always
+// used, and the companion bands make it read on any authored page.
+const DROP_COLOUR = 'error.main';
+
 export type DropMarkerClassKey = 'root' | 'tips' | 'horizontal' | 'vertical';
 
 export type DropMarkerFullSx = FullSxRecord<DropMarkerClassKey>;
@@ -53,8 +57,11 @@ function getSx(sx: DropMarkerPartialSx, theme: Theme): DropMarkerFullSx {
 			content: '""',
 			width: '8px',
 			height: '8px',
-			backgroundColor: 'error.main',
+			// The tips are the line's end caps, so they carry the same bands rather than sitting on the page
+			// as a bare red square.
+			...overlayBandSx(theme),
 			borderRadius: 1,
+			backgroundColor: DROP_COLOUR,
 			marginTop: '-3px',
 			marginLeft: '-4.5px',
 			position: 'absolute',
@@ -63,9 +70,9 @@ function getSx(sx: DropMarkerPartialSx, theme: Theme): DropMarkerFullSx {
 		vertical: {
 			height: 2,
 			visibility: 'visible',
-			backgroundColor: 'error.main',
 			// The marker is drawn on the authored page, so it carries the companion bands too.
 			...overlayBandSx(theme),
+			backgroundColor: DROP_COLOUR,
 			'&::before': {
 				left: 0
 			},
@@ -79,6 +86,8 @@ function getSx(sx: DropMarkerPartialSx, theme: Theme): DropMarkerFullSx {
 			minHeight: '5px',
 			marginLeft: '3px',
 			...overlayBandSx(theme),
+			// A filled line has no outline to carry the state colour, so it is the fill.
+			backgroundColor: DROP_COLOUR,
 			'&::before': {
 				top: 0
 			},
