@@ -173,7 +173,7 @@ public class AccessTokenServiceInternalImplTest {
 	}
 
 	@Test
-	public void loginStartsCountingExtensionsFromZero() {
+	public void resetsCountSessionsOnLogin() {
 		var service = createService(480, 30);
 
 		service.resetSessionExtensions(auth);

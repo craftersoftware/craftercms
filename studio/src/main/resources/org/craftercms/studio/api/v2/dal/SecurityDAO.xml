@@ -64,7 +64,7 @@
 
 	<update id="resetSessionExtensions">
 		UPDATE refresh_token
-		SET session_extensions = 0
+		SET created_on = NOW(), session_extensions = 0
 		WHERE user_id = #{userId}
 	</update>
 

@@ -55,7 +55,7 @@ public interface AccessTokenService {
 	void updateRefreshToken(Authentication auth, HttpServletResponse response);
 
 	/**
-	 * Starts counting the extensions of the session timeout from zero
+	 * Starts a new session: restarts the session time limit and starts counting the extensions from zero
 	 *
 	 * @param auth the current authentication
 	 */

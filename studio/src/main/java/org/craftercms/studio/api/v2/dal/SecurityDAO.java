@@ -46,6 +46,9 @@ public interface SecurityDAO {
 
 	Integer getSessionExtensions(@Param("userId") long userId);
 
+	/**
+	 * Starts a new session for the user: restarts the session time limit and the extensions count
+	 */
 	void resetSessionExtensions(@Param("userId") long userId);
 
 	void deleteRefreshToken(@Param("userId") long userId);
