@@ -43,6 +43,7 @@ import {
 	yieldKeyToNestedControl,
 	isTreeContextMenuKey
 } from '../../utils/treeKeyboard';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export interface PathNavigatorTreeItemProps extends Pick<
 	PathNavigatorTreeStateProps,
@@ -257,12 +258,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 								marginRight: 0
 							}
 						},
-						{
-							'&:focus-visible > .MuiTreeItem-content': {
-								outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-								outlineOffset: '-2px'
-							}
-						}
+						{ '&:focus-visible > .MuiTreeItem-content': getFocusRingSx({ inset: true }) }
 					]}
 				/>
 			);
@@ -526,12 +522,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						}
 					}
 				},
-				{
-					'&:focus-visible > .MuiTreeItem-content': {
-						outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-						outlineOffset: '-2px'
-					}
-				}
+				{ '&:focus-visible > .MuiTreeItem-content': getFocusRingSx({ inset: true }) }
 			]}
 			{...propsForTreeItem}
 		/>

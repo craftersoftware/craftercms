@@ -51,6 +51,7 @@ import BrowseFilesDialogContainerSkeleton from '../BrowseFilesDialog/BrowseFiles
 import Checkbox from '@mui/material/Checkbox';
 import useEnv from '../../hooks/useEnv';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export interface BrowseExternalAssetDialogProps extends EnhancedDialogProps {
 	path: string;
@@ -432,10 +433,7 @@ function ExternalAssetFoldersTreeView({
 			}}
 			label={<Box id={labelId}>{label}</Box>}
 			sx={{
-				'&:focus-visible > .MuiTreeItem-content': {
-					outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-					outlineOffset: '-2px'
-				}
+				'&:focus-visible > .MuiTreeItem-content': getFocusRingSx({ inset: true })
 			}}
 		>
 			{foldersByPath[path]?.map((child) => (

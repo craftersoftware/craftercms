@@ -32,6 +32,7 @@ import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 interface PluginCardProps {
 	plugin: MarketplacePlugin;
@@ -228,10 +229,7 @@ function PluginCard(props: PluginCardProps) {
 						sx={{
 							...frameSx,
 							// Inset: the carousel clips overflow, so an outer outline would be cut off.
-							'&:focus-visible': {
-								outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-								outlineOffset: '-2px'
-							}
+							'&:focus-visible': getFocusRingSx({ inset: true })
 						}}
 						onClick={(event) => onImageClick(event, index)}
 					>
@@ -250,7 +248,8 @@ function PluginCard(props: PluginCardProps) {
 						sx={{
 							width: '100%',
 							height: '180px',
-							outline: 'none',
+							// The carousel clips overflow, so the video's ring is inset too.
+							'&:focus-visible': getFocusRingSx({ inset: true }),
 							background: backgroundColor
 						}}
 						onPlaying={handlePlay}

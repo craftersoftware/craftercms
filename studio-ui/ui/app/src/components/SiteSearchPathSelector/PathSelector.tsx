@@ -25,6 +25,7 @@ import Typography from '@mui/material/Typography';
 import SiteExplorer from '../../icons/SiteExplorer';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
+import { getFocusRingSx } from '../../styles/focusRing';
 import { createComponentId } from '../../utils/system';
 
 const messages = defineMessages({
@@ -117,10 +118,7 @@ export function PathSelector(props: PathSelectorProps) {
 					gap: '5px',
 					textAlign: 'left',
 					cursor: disabled ? 'default' : 'pointer',
-					'&:focus-visible, &.Mui-focusVisible': {
-						outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-						outlineOffset: '-2px'
-					}
+					'&:focus-visible, &.Mui-focusVisible': getFocusRingSx({ inset: true })
 				}}
 			>
 				{disabled ? null : <SiteExplorer sx={{ color: 'text.secondary' }} />}

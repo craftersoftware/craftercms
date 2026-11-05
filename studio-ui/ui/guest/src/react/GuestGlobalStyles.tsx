@@ -17,6 +17,7 @@
 import * as React from 'react';
 import { useMemo } from 'react';
 import palette from '@craftercms/studio-ui/styles/palette';
+import { focusRingColor, focusRingOffset, focusRingWidth } from '@craftercms/studio-ui/styles/focusRing';
 import Global from '@mui/material/GlobalStyles';
 import {
 	dragAndDropActiveClass,
@@ -105,7 +106,13 @@ export function GuestGlobalStyles(props: GuestGlobalStylesProps) {
 									cursor: 'pointer',
 									border: 0,
 									background: 'transparent',
-									color: 'inherit'
+									color: 'inherit',
+									// Inset ring: the chip is clipped to the page corner. The chip is white in both modes,
+									// so the light ring is the one that contrasts with it.
+									'&:focus-visible': {
+										outline: `${focusRingWidth}px solid ${focusRingColor.light}`,
+										outlineOffset: `${-focusRingOffset}px`
+									}
 								},
 								'& svg': {
 									fill: 'currentColor',

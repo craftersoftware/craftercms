@@ -17,6 +17,7 @@
 import { styled } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 import TableRow from '@mui/material/TableRow';
+import { focusRingStyles } from '../../styles/focusRing';
 
 const GlobalAppGridRow = styled(TableRow)(({ theme }) => ({
 	cursor: 'pointer',
@@ -38,10 +39,7 @@ export const GlobalAppGridRowAction = styled(ButtonBase)(({ theme }) => ({
 	width: '100%',
 	font: 'inherit',
 	textAlign: 'inherit',
-	'&:focus-visible': {
-		outline: `2px solid ${theme.palette.primary.main}`,
-		outlineOffset: '-2px'
-	}
+	'&:focus-visible': focusRingStyles(theme, { inset: true })
 }));
 
 export default GlobalAppGridRow;

@@ -41,7 +41,6 @@ import {
 	sortItemOperationComplete
 } from '../../state/actions/preview';
 import { getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
-import palette from '../../styles/palette';
 import { useDispatch } from 'react-redux';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
@@ -65,6 +64,7 @@ import {
 	yieldKeyToNestedControl,
 	isTreeContextMenuKey
 } from '../../utils/treeKeyboard';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 const rootPrefix = '{root}_';
 
@@ -383,17 +383,13 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 						}
 					}}
 				>
-					<Icon sx={{ color: palette.teal.main }} />
+					<Icon sx={{ color: 'info.main' }} />
 					<p id={labelId} title={node.name}>
 						{nodeName.length === 1 ? (
 							nodeName[0]
 						) : (
 							<>
-								{nodeName[1]}{' '}
-								<Box
-									component="span"
-									sx={{ color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4) }}
-								>{`(${nodeName[0].trim()})`}</Box>
+								{nodeName[1]} <Box component="span" sx={{ color: 'text.secondary' }}>{`(${nodeName[0].trim()})`}</Box>
 							</>
 						)}
 					</p>
@@ -428,13 +424,10 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 						paddingLeft: 0
 					}
 				},
-				['&:focus-visible > .MuiTreeItem-content']: {
-					outline: (theme) => `2px solid ${theme.palette.primary.main}`,
-					outlineOffset: '-2px'
-				},
+				['&:focus-visible > .MuiTreeItem-content']: getFocusRingSx({ inset: true }),
 				[`& .${treeItemClasses.iconContainer}`]: {
 					[`& .${svgIconClasses.root}`]: {
-						color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
+						color: 'text.secondary',
 						fontSize: '1.4rem'
 					}
 				}
@@ -822,7 +815,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 							<Typography
 								key={nodeLookup[id].id}
 								variant="subtitle2"
-								sx={{ color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4) }}
+								sx={{ color: 'text.secondary' }}
 								children={nodeLookup[id].name.split(':').pop()}
 							/>
 						) : (
@@ -835,7 +828,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 								sx={{
 									display: 'flex',
 									[`& .${typographyClasses.root}`]: {
-										color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium4)
+										color: 'text.secondary'
 									}
 								}}
 								onClick={(e) => handleBreadCrumbClick(e, id === 'root' ? { id: 'root' } : nodeLookup[id])}
@@ -845,7 +838,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 										<Root
 											sx={{
 												fontSize: '1.2em',
-												color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7)
+												color: 'text.primary'
 											}}
 										/>
 									) : (
@@ -864,7 +857,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 							variant="subtitle1"
 							sx={{
 								fontWeight: 600,
-								color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium7),
+								color: 'text.primary',
 								padding: '0 12px 2px 12px'
 							}}
 						>
@@ -878,7 +871,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 								},
 								[`& .${treeItemClasses.iconContainer}`]: {
 									[`& .${svgIconClasses.root}`]: {
-										color: (theme) => (theme.palette.mode === 'dark' ? palette.white : palette.gray.medium3),
+										color: 'text.secondary',
 										fontSize: '1.4rem'
 									}
 								}
