@@ -445,6 +445,13 @@ export function createEmptyTypeStructure(mixin?: Partial<ContentType>): ContentT
 	};
 }
 
+/**
+ * Id of the "Basic Properties" section that field and data source panels prepend to the descriptor's own sections.
+ * It must differ from the descriptors' `properties` section id, since section ids key the accordions and their
+ * expanded state.
+ */
+export const commonPropertiesSectionId = 'commonProperties';
+
 export function createVirtualTypeForField(
 	controlDescriptor: DescriptorContentType,
 	formatMessage: IntlShape['formatMessage']
@@ -458,7 +465,7 @@ export function createVirtualTypeForField(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -501,7 +508,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -516,6 +523,7 @@ export function createVirtualTypeForDataSource(
 	return createEmptyTypeStructure(translatedDataSourceDescriptor);
 }
 
+/** Builds a section, filling in the defaults. An id is generated when the given data has none. */
 export function createVirtualSection<K extends ContentTypeSection | DescriptorSection>(
 	sectionData: Partial<K> & Pick<K, 'title' | 'fields'>
 ): K {
@@ -523,10 +531,10 @@ export function createVirtualSection<K extends ContentTypeSection | DescriptorSe
 		typeof sectionData.title === 'object' ? sectionData.title.defaultMessage : sectionData.title
 	);
 	return {
-		id: sectionData?.id || nanoid(),
 		description: '',
 		expandByDefault: true,
 		...sectionData,
+		id: sectionData?.id || nanoid(),
 		color: sectionData?.color ?? toColor(title)
 	} as K;
 }
