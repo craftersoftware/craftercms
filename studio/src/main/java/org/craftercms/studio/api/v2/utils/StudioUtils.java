@@ -21,8 +21,12 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.craftercms.commons.http.RequestContext;
 import org.craftercms.studio.api.v1.constant.StudioConstants;
+import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
+import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v2.service.config.ConfigurationService;
 import org.craftercms.studio.model.contentType.ContentType;
 import org.dom4j.Document;
+import org.dom4j.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -181,6 +185,26 @@ public abstract class StudioUtils {
 	}
 
 	/**
+	 * Get the key for published repository git operations.
+	 *
+	 * @param siteId the site id
+	 * @return the lock key
+	 */
+	public static String getPublishedRepoLockKey(final String siteId) {
+		return SITE_PUBLISHED_REPOSITORY_GIT_LOCK.replaceAll(PATTERN_SITE, siteId);
+	}
+
+	/**
+	 * Get the key for the lock held for a whole enable-staging operation.
+	 *
+	 * @param siteId the site id
+	 * @return the lock key
+	 */
+	public static String getEnableStagingLockKey(final String siteId) {
+		return SITE_ENABLE_STAGING_LOCK.replaceAll(PATTERN_SITE, siteId);
+	}
+
+	/**
 	 * Get the key for the lock used to ensure exclusive access to a publish package
 	 *
 	 * @param packageId the package id
@@ -269,5 +293,36 @@ public abstract class StudioUtils {
 			return ContentType.Type.page;
 		}
 		return ContentType.Type.unknown;
+	}
+
+	/**
+	 * Read the legacy {@code published-repository/enable-staging-environment} flag from the resolved site config.
+	 * The active environment file is used when it exists. A missing file or element is false.
+	 *
+	 * @param siteId               the site id
+	 * @param studioConfiguration  studio configuration, used for the active environment and config file name
+	 * @param configurationService configuration service used to load the resolved site config
+	 * @return true when the resolved site config enables staging
+	 */
+	public static boolean isLegacyStagingEnabled(String siteId, StudioConfiguration studioConfiguration,
+												 ConfigurationService configurationService) throws ServiceLayerException {
+		String environment = studioConfiguration.getProperty(StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE);
+		String configFilename = studioConfiguration.getProperty(StudioConfiguration.CONFIGURATION_SITE_GENERAL_CONFIG_FILE_NAME);
+		Document document;
+		try {
+			document = configurationService.getConfigurationAsDocument(siteId, MODULE_STUDIO, configFilename, environment);
+		} catch (ContentNotFoundException e) {
+			return false;
+		}
+		if (document == null || document.getRootElement() == null) {
+			return false;
+		}
+		Node configNode = document.getRootElement().selectSingleNode("/site-config");
+		if (configNode == null) {
+			return false;
+		}
+		String value = configNode.valueOf(SITE_CONFIG_XML_ELEMENT_PUBLISHED_REPOSITORY + "/" +
+			SITE_CONFIG_XML_ELEMENT_ENABLE_STAGING_ENVIRONMENT);
+		return Boolean.parseBoolean(value);
 	}
 }

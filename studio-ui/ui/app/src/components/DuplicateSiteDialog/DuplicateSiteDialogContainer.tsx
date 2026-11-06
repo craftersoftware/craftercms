@@ -109,6 +109,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 			siteName: site.siteName,
 			description: site.description,
 			sandboxBranch: site.gitBranch,
+			enableStaging: site.enableStaging,
 			...(sourceSiteHasBlobStores && { readOnlyBlobStores: site.readOnlyBlobStores })
 		}).subscribe({
 			next: () => {
@@ -316,6 +317,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 										checkSiteNames={checkSiteNames}
 										handleInputChange={handleInputChange}
 										onKeyPress={onKeyPress}
+										sourceProjectStagingHelp
 									/>
 									{sourceSiteHasBlobStores && (
 										<Grid size={12} data-field-id="readOnlyBlobStores">

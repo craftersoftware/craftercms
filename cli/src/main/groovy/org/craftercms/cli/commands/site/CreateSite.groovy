@@ -49,6 +49,9 @@ class CreateSite extends AbstractCommand {
 	@CommandLine.Option(names = '--sandboxBranch', description = 'The name of the branch for the local repository')
 	String sandboxBranch
 
+	@CommandLine.Option(names = '--enableStaging', description = 'Enable staging for the new project. Staging cannot be disabled later.')
+	boolean enableStaging
+
 	@CommandLine.Option(names = ['--siteParam'], description = "Parameter for the blueprint")
 	Map<String, String> siteParams
 
@@ -102,6 +105,9 @@ class CreateSite extends AbstractCommand {
 		}
 		if (sandboxBranch) {
 			params.sandboxBranch = sandboxBranch
+		}
+		if (enableStaging) {
+			params.enableStaging = true
 		}
 		if (description) {
 			params.description = description

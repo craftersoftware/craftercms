@@ -17,12 +17,18 @@
 package org.craftercms.studio.impl.v2.publish;
 
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
+import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
+import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
+import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
@@ -30,20 +36,28 @@ import org.craftercms.studio.api.v2.utils.StudioUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.web.client.RestClientException;
 
+import static java.util.Collections.emptyList;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_START;
 import static org.craftercms.studio.api.v2.dal.Site.State.READY;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PublisherTest {
 	static final String DISABLED_PUBLISH_SITE_ID = "disabledSite1";
 	static final String SITE_ID = "site2";
+	static final String LIVE = "live";
+	static final String STAGING = "staging";
 	static final long PACKAGE_ID = 123;
 	static final long SITE_NUMERIC_ID = 456;
 
@@ -66,6 +80,18 @@ public class PublisherTest {
 	GeneralLockService generalLockService;
 
 	@Mock
+	ServicesConfig servicesConfig;
+
+	@Mock
+	ItemTargetDAO itemTargetDAO;
+
+	@Mock
+	StudioBlobAwareContentRepository contentRepository;
+
+	@Mock
+	Deployer deployer;
+
+	@Mock
 	TaskManager taskManager;
 
 	@Mock
@@ -85,6 +111,7 @@ public class PublisherTest {
 		when(site2.getPublishingEnabled()).thenReturn(true);
 		when(site2.getSiteId()).thenReturn(SITE_ID);
 		when(site2.getId()).thenReturn(SITE_NUMERIC_ID);
+		when(site2.isStagingBlobsCopied()).thenReturn(true);
 
 		when(siteDAO.getSite(SITE_ID)).thenReturn(site2);
 		when(site2.getState()).thenReturn(READY);
@@ -164,10 +191,275 @@ public class PublisherTest {
 		when(generalLockService.tryLock(StudioUtils.getPublishPackageLockKey(PACKAGE_ID))).thenReturn(true);
 
 		doNothing().when(publisher).auditPublishOperation(any(), any());
-		doNothing().when(publisher).doPublishItemList(any(), any(), any());
+		doNothing().when(publisher).doPublishItemList(any(), any(), any(), anyBoolean());
 
 		publisher.handleRequestPublishEvent(new RequestPublishEvent(SITE_ID, PACKAGE_ID));
 
 		verify(publisher).auditPublishOperation(any(), eq(OPERATION_PUBLISH_START));
+	}
+
+	@Test
+	public void livePublishRechecksStagingAfterPublishedRepoLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doAnswer(invocation -> {
+			when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+			return null;
+		}).when(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, publisher);
+		inOrder.verify(generalLockService).lock(getEnableStagingLockKey(SITE_ID));
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		inOrder.verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(generalLockService).unlock(getEnableStagingLockKey(SITE_ID));
+	}
+
+	@Test
+	public void livePublishSkipsStagingWhenStillDisabled() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(generalLockService).unlock(getEnableStagingLockKey(SITE_ID));
+	}
+
+	@Test
+	public void initialPublishRechecksStagingAfterPublishedRepoLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doAnswer(invocation -> {
+			when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+			return null;
+		}).when(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, publisher);
+		inOrder.verify(generalLockService).lock(getEnableStagingLockKey(SITE_ID));
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		inOrder.verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(generalLockService).unlock(getEnableStagingLockKey(SITE_ID));
+		verify(itemTargetDAO).insertForInitialPublish(eq(SITE_NUMERIC_ID), anyLong(), anyLong(), eq(STAGING), any(), any());
+		verify(itemTargetDAO).insertForInitialPublish(eq(SITE_NUMERIC_ID), anyLong(), anyLong(), eq(LIVE), any(), any());
+	}
+
+	@Test
+	public void initialPublishSkipsStagingWhenStillDisabled() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(generalLockService).unlock(getEnableStagingLockKey(SITE_ID));
+		verify(itemTargetDAO, never()).insertForInitialPublish(anyLong(), anyLong(), anyLong(), eq(STAGING), any(), any());
+		verify(itemTargetDAO).insertForInitialPublish(eq(SITE_NUMERIC_ID), anyLong(), anyLong(), eq(LIVE), any(), any());
+	}
+
+	@Test
+	public void livePublishWithStagingEnabledDoesNotTakeEnableLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, publisher);
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+		inOrder.verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
+		verify(deployer, never()).createStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void stagingPublishCreatesDeployerTargetAfterBranchExists() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, deployer);
+		inOrder.verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(deployer).createStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void stagingPublishSkipsDeployerTargetAfterItIsEnsured() throws Exception {
+		prepareStagingDeployerTarget();
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, times(1)).createStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void siteDeletionClearsEnsuredStagingDeployerTarget() throws Exception {
+		prepareStagingDeployerTarget();
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+		publisher.onSiteDeleting(new SiteDeletingEvent(SITE_ID, "site-uuid"));
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, times(2)).createStagingTarget(SITE_ID);
+	}
+
+	@Test
+	public void stagingPublishRetriesDeployerTargetUntilItSucceeds() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doThrow(new RestClientException("deployer down")).doNothing().when(deployer).createStagingTarget(SITE_ID);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, times(2)).createStagingTarget(SITE_ID);
+		verify(publishDAO, atLeastOnce()).updatePackage(publishPackage);
+	}
+
+	@Test
+	public void stagingPublishSkipsDeployerTargetUntilBranchExists() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(false);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		verify(deployer, never()).createStagingTarget(any());
+		verify(contentRepository, never()).isTargetPublished(any(), any());
+	}
+
+	@Test
+	public void stagingPublishCopiesLiveBlobsBeforeTheStagingDelta() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		InOrder inOrder = inOrder(generalLockService, contentRepository, siteDAO, publisher);
+		inOrder.verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		inOrder.verify(contentRepository).copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		inOrder.verify(siteDAO).setStagingBlobsCopied(SITE_ID, true);
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		inOrder.verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(true), eq(LIVE));
+	}
+
+	@Test
+	public void blobCopyFailureStopsTheStagingAndLivePublish() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+
+		assertThrows(ServiceLayerException.class, () -> publisher.doPublish(publishPackage));
+
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+	}
+
+	@Test
+	public void initialPublishFailureWhenStagingAlreadyEnabledReleasesPublishedRepoLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.INITIAL_PUBLISH, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doThrow(new SiteNotFoundException(SITE_ID)).when(publisher)
+			.runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+
+		assertThrows(SiteNotFoundException.class, () -> publisher.doPublish(publishPackage));
+
+		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+	}
+
+	@Test
+	public void stagingTargetPublishTakesPublishedRepoLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+
+		publisher.doPublish(publishPackage);
+
+		verify(publisher).runTargetPublisher(eq(publishPackage), eq(emptyList()), any(), eq(false), eq(STAGING));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		verify(generalLockService).lock(getPublishedRepoLockKey(SITE_ID));
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
+	}
+
+	@Test
+	public void livePublishFailureWhenStagingAlreadyEnabledReleasesPublishedRepoLock() throws ServiceLayerException {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		doThrow(new SiteNotFoundException(SITE_ID)).when(publisher)
+			.runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
+
+		assertThrows(SiteNotFoundException.class, () -> publisher.doPublish(publishPackage));
+
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		verify(generalLockService, never()).lock(getEnableStagingLockKey(SITE_ID));
+		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+	}
+
+	private void prepareStagingDeployerTarget() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+	}
+
+	private void preparePackagePublish(PublishPackage.PackageType packageType, String target) throws SiteNotFoundException {
+		when(publishPackage.getId()).thenReturn(PACKAGE_ID);
+		when(publishPackage.getPackageType()).thenReturn(packageType);
+		when(publishPackage.getTarget()).thenReturn(target);
+		when(publishDAO.getPublishItems(SITE_ID, PACKAGE_ID)).thenReturn(emptyList());
+		when(servicesConfig.getLiveEnvironment(SITE_ID)).thenReturn(LIVE);
+		doNothing().when(publisher).auditPublishOperation(any(), any());
 	}
 }

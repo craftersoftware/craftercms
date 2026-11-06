@@ -673,6 +673,12 @@ pipelines:
                 operations:
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/5.0.0.25-to-5.0.0.26.sql
+            -   currentVersion: 5.0.0.26
+                nextVersion: 5.0.0.27
+                operations:
+                    -   type: dbScriptUpgrader
+                        filename: upgrade/5.0.x/5.0.0.26-to-5.0.0.27.sql
+                    -   type: stagingEnabledBackfillUpgrader
 
     # Pipeline to upgrade site repositories
     site:
@@ -935,6 +941,12 @@ configurations:
                         -   type: xsltFileUpgrader
                             template: crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt
                             commitDetails: Add FTLH and FTLX to rendering template patterns
+                -   currentVersion: 5.0.0.0
+                    nextVersion: 5.0.0.1
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.1.xslt
+                            commitDetails: Remove enable-staging-environment from site config
 
     permission-mappings-config:
         module: studio

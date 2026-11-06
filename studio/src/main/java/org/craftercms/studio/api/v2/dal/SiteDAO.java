@@ -123,6 +123,23 @@ public interface SiteDAO {
 	void setPublishedRepoCreated(@Param(SITE_ID) String siteId);
 
 	/**
+	 * Enable staging for the given site. Staging cannot be disabled once enabled.
+	 *
+	 * @param siteId the site id
+	 * @return the number of rows updated. {@code 0} when staging was already enabled
+	 */
+	int setStagingEnabled(@Param(SITE_ID) String siteId);
+
+	/**
+	 * Record whether the live blob-store assets have been copied to staging.
+	 * {@code false} means the next staging publish must copy them before publishing its own delta.
+	 *
+	 * @param siteId the site id
+	 * @param copied true when the copy is done or there is nothing to copy
+	 */
+	void setStagingBlobsCopied(@Param(SITE_ID) String siteId, @Param("copied") boolean copied);
+
+	/**
 	 * Update publishing status
 	 *
 	 * @param siteId the site id

@@ -34,8 +34,13 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.craftercms.commons.rest.RestServiceException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 
 /**
  * Utility methods for HTTP related stuff.
@@ -426,6 +431,35 @@ public class HttpUtils {
 
 		return url.replace(LEFT_CURLY_BRACE, URLEncoder.encode(LEFT_CURLY_BRACE, StandardCharsets.UTF_8))
 			.replace(RIGHT_CURLY_BRACE, URLEncoder.encode(RIGHT_CURLY_BRACE, StandardCharsets.UTF_8));
+	}
+
+	/**
+	 * Returns true when the client error is a 404.
+	 * Clients in this project report HTTP errors as {@link RestServiceException}, not {@link HttpStatusCodeException}.
+	 */
+	public static boolean isNotFound(RestClientException exception) {
+		return hasStatus(exception, HttpStatus.NOT_FOUND);
+	}
+
+	/**
+	 * Returns true when the client error is a 409.
+	 */
+	public static boolean isConflict(RestClientException exception) {
+		return hasStatus(exception, HttpStatus.CONFLICT);
+	}
+
+	/**
+	 * Returns true when {@code exception} carries {@code expected}.
+	 * {@link RestServiceException} stores the status directly. {@link HttpStatusCodeException} is also accepted.
+	 */
+	public static boolean hasStatus(RestClientException exception, HttpStatusCode expected) {
+		HttpStatusCode status = null;
+		if (exception instanceof RestServiceException restServiceException) {
+			status = restServiceException.getResponseStatus();
+		} else if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
+			status = httpStatusCodeException.getStatusCode();
+		}
+		return status != null && status.isSameCodeAs(expected);
 	}
 
 }

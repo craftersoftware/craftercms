@@ -28,7 +28,7 @@ import LookupTable from '../../models/LookupTable';
 import { PublishingStatus } from '../../models/Publishing';
 import { Site } from '../../models/Site';
 import { setSiteCookie } from '../../utils/auth';
-import { trash } from '../../services/sites';
+import { enableStaging, trash } from '../../services/sites';
 import { batchActions } from '../../state/actions/misc';
 import { showSystemNotification } from '../../state/actions/system';
 import { fetchSites, popSite } from '../../state/actions/sites';
@@ -66,11 +66,21 @@ const translations = defineMessages({
 	siteDeleted: {
 		id: 'sitesGrid.siteDeleted',
 		defaultMessage: 'Project deleted successfully'
+	},
+	stagingEnabled: {
+		id: 'sitesGrid.stagingEnabled',
+		defaultMessage: 'Staging enabled'
 	}
 });
 
 const confirmDeleteInitialState = {
 	site: null,
+	open: false,
+	checked: false
+};
+
+const confirmEnableStagingInitialState = {
+	site: null as Site,
 	open: false,
 	checked: false
 };
@@ -93,6 +103,7 @@ export function SiteManagement() {
 	const [isDuplicateDialogFromCreateDialog, setIsDuplicateDialogFromCreateDialog] = useState(false);
 	const [disabledSitesLookup, setDisabledSitesLookup] = useSpreadState({});
 	const [confirmDeleteState, setConfirmDeleteState] = useSpreadState(confirmDeleteInitialState);
+	const [confirmEnableStagingState, setConfirmEnableStagingState] = useSpreadState(confirmEnableStagingInitialState);
 
 	useEffect(() => {
 		const subscription = hasGlobalPermissions('create_site', 'edit_site', 'delete_site', 'duplicate_site').subscribe(
@@ -161,6 +172,31 @@ export function SiteManagement() {
 		event.stopPropagation();
 		setSelectedSiteStatus(status);
 		publishingStatusDialogState.onOpen();
+	};
+
+	const onEnableStagingClick = (site: Site) => {
+		setConfirmEnableStagingState({ site, open: true, checked: false });
+	};
+
+	const onConfirmEnableStaging = (site: Site) => {
+		setDisabledSitesLookup({ [site.id]: true });
+		enableStaging(site.id).subscribe({
+			next() {
+				dispatch(
+					batchActions([
+						showSystemNotification({
+							message: formatMessage(translations.stagingEnabled)
+						}),
+						fetchSites()
+					])
+				);
+				setDisabledSitesLookup({ [site.id]: false });
+			},
+			error({ response: { response } }) {
+				setDisabledSitesLookup({ [site.id]: false });
+				dispatch(pushErrorDialog({ props: { error: response } }));
+			}
+		});
 	};
 
 	const onDuplicateSiteClick = (siteId: string) => {
@@ -247,6 +283,7 @@ export function SiteManagement() {
 							currentView={currentView}
 							onPublishButtonClick={onPublishButtonClick}
 							onDuplicateSiteClick={permissionsLookup['duplicate_site'] && onDuplicateSiteClick}
+							onEnableStagingClick={permissionsLookup['edit_site'] && onEnableStagingClick}
 							disabledSitesLookup={disabledSitesLookup}
 						/>
 					) : (
@@ -356,6 +393,42 @@ export function SiteManagement() {
 					setConfirmDeleteState(confirmDeleteInitialState);
 				}}
 				onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
+			/>
+			<ConfirmDialog
+				open={confirmEnableStagingState.open}
+				body={
+					<>
+						<Typography>
+							<FormattedMessage
+								defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
+								values={{ siteId: confirmEnableStagingState.site?.id }}
+							/>
+						</Typography>
+						<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+							<Typography>
+								<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
+							</Typography>
+							<FormControlLabel
+								sx={{ textAlign: 'left', mt: 1 }}
+								control={
+									<Checkbox
+										color="primary"
+										checked={confirmEnableStagingState.checked}
+										onChange={() => setConfirmEnableStagingState({ checked: !confirmEnableStagingState.checked })}
+									/>
+								}
+								label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
+							/>
+						</Alert>
+					</>
+				}
+				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
+				disableOkButton={!confirmEnableStagingState.checked}
+				onOk={() => {
+					onConfirmEnableStaging(confirmEnableStagingState.site);
+					setConfirmEnableStagingState(confirmEnableStagingInitialState);
+				}}
+				onCancel={() => setConfirmEnableStagingState(confirmEnableStagingInitialState)}
 			/>
 		</Paper>
 	);
