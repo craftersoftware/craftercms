@@ -30,6 +30,17 @@ import org.craftercms.studio.api.v1.repository.ContentRepository;
 import org.craftercms.studio.api.v1.repository.RepositoryItem;
 import org.craftercms.studio.api.v1.service.site.SiteService;
 import org.craftercms.studio.api.v2.dal.*;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_DELETE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_DUPLICATE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_START_DELETE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.TARGET_TYPE_SITE;
+import static org.craftercms.studio.api.v2.dal.AuditLogConstants.TARGET_TYPE_SOURCE_SITE;
+import org.craftercms.studio.api.v2.dal.AuditLogParameter;
+import org.craftercms.studio.api.v2.dal.PublishStatus;
+import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
+import org.craftercms.studio.api.v2.dal.Site;
+import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.site.SiteDeletedEvent;
 import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
@@ -47,8 +58,10 @@ import org.craftercms.studio.api.v2.utils.spring.context.SiteBootstrapStateProvi
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.lang.NonNull;
 
 import java.beans.ConstructorProperties;
@@ -71,7 +84,6 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.SITE_UUID_FILENAME;
-import static org.craftercms.studio.api.v2.dal.AuditLogConstants.*;
 import static org.craftercms.studio.api.v2.dal.QueryParameterNames.SITE_ID;
 import static org.craftercms.studio.api.v2.dal.Site.State.READY;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
@@ -79,6 +91,11 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
 public class SitesServiceInternalImpl implements SitesService, ApplicationContextAware {
 
     private final static Logger logger = LoggerFactory.getLogger(SitesServiceInternalImpl.class);
+    /**
+     * Site id suffix Engine uses to render a site's staging publishing target.
+     * Matches {@code crafter.engine.site.staging.pattern}.
+     */
+    private static final String STAGING_SITE_ID_SUFFIX = "-staging";
 
     private final PluginDescriptorReader descriptorReader;
     private final ContentRepository contentRepository;
@@ -90,6 +107,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
     private final SiteService siteServiceV1;
     private final Deployer deployer;
     private final ConfigurationService configurationService;
+    private ServicesConfig servicesConfig;
     private final SecurityService securityService;
     private final AuditServiceInternal auditServiceInternal;
     private final ItemServiceInternal itemServiceInternal;
@@ -567,6 +585,22 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
         return allSites;
     }
 
+    @Override
+    public List<String> getDeliverableSiteIds() {
+        List<String> deliverableSiteIds = new ArrayList<>();
+        for (String siteId : siteDao.getDeliverableSiteIds()) {
+            deliverableSiteIds.add(siteId);
+            try {
+                if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+                    deliverableSiteIds.add(siteId + STAGING_SITE_ID_SUFFIX);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to check if site '{}' is a staging site", siteId, e);
+            }
+        }
+        return deliverableSiteIds;
+    }
+
     /**
      * Creates an audit log entry for the site duplication operation, including the source site as audit params
      *
@@ -613,4 +647,10 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
     public void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
+
+	@Autowired
+	@Lazy
+	public void setServicesConfig(ServicesConfig servicesConfig) {
+		this.servicesConfig = servicesConfig;
+	}
 }

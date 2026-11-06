@@ -20,6 +20,8 @@ package org.craftercms.studio.impl.v2.service.site.internal;
 import org.craftercms.studio.api.v1.dal.SiteFeedMapper;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteAlreadyExistsException;
+import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v1.service.site.SiteService;
 import org.craftercms.studio.api.v2.dal.AuditLog;
 import org.craftercms.studio.api.v2.dal.Site;
@@ -45,6 +47,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
@@ -95,10 +98,13 @@ public class SitesServiceInternalImplTest {
     protected SiteDAO siteDAO;
     @Mock
     protected AuditServiceInternal auditServiceInternal;
+    @Mock
+    protected ServicesConfig servicesConfig;
 
     @Before
     public void setUp() throws IOException {
         sitesServiceInternal.setApplicationContext(applicationContext);
+        sitesServiceInternal.setServicesConfig(servicesConfig);
         Site site = new Site();
         site.setSiteId(SITE_ID);
         site.setName("Site 1");
@@ -255,5 +261,41 @@ public class SitesServiceInternalImplTest {
         assertThrows(ServiceLayerException.class, () ->
                 sitesServiceInternal.duplicate(SOURCE_SITE_ID, NEW_SITE_ID, "site_name", "The new site", "main_branch", false));
         verify(sitesServiceInternal).deleteSite(NEW_SITE_ID);
+    }
+
+    @Test
+    public void deliverableSitesWithoutStaging() throws SiteNotFoundException {
+        when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial", "zeta"));
+        when(servicesConfig.isStagingEnvironmentEnabled("editorial")).thenReturn(false);
+        when(servicesConfig.isStagingEnvironmentEnabled("zeta")).thenReturn(false);
+
+        assertEquals(List.of("editorial", "zeta"), sitesServiceInternal.getDeliverableSiteIds());
+    }
+
+    @Test
+    public void deliverableSitesWithStaging() throws SiteNotFoundException {
+        when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial", "zeta"));
+        when(servicesConfig.isStagingEnvironmentEnabled("editorial")).thenReturn(true);
+        when(servicesConfig.isStagingEnvironmentEnabled("zeta")).thenReturn(false);
+
+        assertEquals(List.of("editorial", "editorial-staging", "zeta"), sitesServiceInternal.getDeliverableSiteIds());
+    }
+
+    @Test
+    public void deliverableSitesStagingReadFailure() throws SiteNotFoundException {
+        when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial"));
+        when(servicesConfig.isStagingEnvironmentEnabled("editorial")).thenThrow(new SiteNotFoundException("editorial"));
+
+        assertEquals(List.of("editorial"), sitesServiceInternal.getDeliverableSiteIds());
+    }
+
+    @Test
+    public void deliverableSitesStagingConfigFailureKeepsSite() throws SiteNotFoundException {
+        when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial", "zeta"));
+        when(servicesConfig.isStagingEnvironmentEnabled("editorial"))
+            .thenThrow(new NullPointerException("site config"));
+        when(servicesConfig.isStagingEnvironmentEnabled("zeta")).thenReturn(true);
+
+        assertEquals(List.of("editorial", "zeta", "zeta-staging"), sitesServiceInternal.getDeliverableSiteIds());
     }
 }

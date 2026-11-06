@@ -66,6 +66,7 @@ public final class RequestMappingConstants {
     public static final String ENABLE = "/enable";
     public static final String DISABLE = "/disable";
     public static final String SITES = "/sites";
+    public static final String MANAGEMENT_SITES = "/management/sites";
     public static final String PATH_PARAM_SITE = "/{site}";
     public static final String ROLES = "/roles";
     public static final String ME = "/me";
