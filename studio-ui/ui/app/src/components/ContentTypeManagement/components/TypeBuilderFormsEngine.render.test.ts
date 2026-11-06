@@ -33,6 +33,7 @@ const {
 	createVirtualTypeForField
 } = await import('../utils.ts');
 const { createVirtualTypeFormContext } = await import('../utils.ts');
+const { controlMap } = await import('../controlMap.ts');
 const { inputDescriptor } = await import('../descriptors/controls/input.ts');
 const { dataSourceDescriptors } = await import('../descriptors/dataSources/index.ts');
 
@@ -249,6 +250,18 @@ describe('TypeBuilderFormsEngine section accordions', () => {
 });
 
 describe('TypeBuilderFormsEngine with descriptor-derived virtual types', () => {
+	// The common "Help" field is a rich text editor. Loading the real one pulls in TinyMCE and the editor's store slice,
+	// neither of which this test is about, so the Type Builder control map gets a stand-in for the test's duration.
+	const realRichTextEditor = controlMap.rte;
+	beforeEach(() => {
+		controlMap.rte = function RichTextEditorStub() {
+			return null;
+		};
+	});
+	afterEach(() => {
+		controlMap.rte = realRichTextEditor;
+	});
+
 	it('renders one accordion per section of a field panel, each with its own expanded state', async () => {
 		const { virtualType, stableFormContext } = virtualTypeFor('field', inputDescriptor);
 		const view = await render(virtualType, stableFormContext);
