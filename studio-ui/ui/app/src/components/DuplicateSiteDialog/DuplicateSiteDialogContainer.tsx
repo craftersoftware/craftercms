@@ -420,6 +420,16 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 										</span>
 										{` ${site.gitBranch ? site.gitBranch : 'master'}`}
 									</Typography>
+									<Typography variant="body2" gutterBottom>
+										<span>
+											<FormattedMessage defaultMessage="Enable staging" />:{' '}
+										</span>
+										{site.enableStaging ? (
+											<FormattedMessage defaultMessage="Yes" />
+										) : (
+											<FormattedMessage defaultMessage="No" />
+										)}
+									</Typography>
 									{sourceSiteHasBlobStores && (
 										<Typography variant="body2" gutterBottom>
 											<span>
