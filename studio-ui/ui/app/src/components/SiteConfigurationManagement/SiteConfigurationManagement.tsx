@@ -88,10 +88,12 @@ interface SiteConfigurationManagementProps {
 	showAppsButton?: boolean;
 	isSubmitting?: boolean;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
+	/** Config file id to select on load (e.g. `studio/site-config.xml`). */
+	selectedConfigFileId?: string;
 }
 
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
-	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting } = props;
+	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
 	const { username } = useActiveUser();
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
@@ -99,8 +101,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const { formatMessage } = useIntl();
 	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
-	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(
-		() => JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null
+	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() =>
+		selectedConfigFileId ? null : (JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null)
 	);
 	const [changesRecoveredOnMount] = useState<boolean>(() => selectedConfigFile !== null);
 	const ignoreEnv = selectedConfigFile?.path === 'site-policy-config.xml';
@@ -216,6 +218,16 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			});
 		}
 	}, [environment, site, dispatch]);
+
+	useEffect(() => {
+		if (!selectedConfigFileId || !files?.length || selectedConfigFile) {
+			return;
+		}
+		const file = files.find((f) => f.id === selectedConfigFileId);
+		if (file) {
+			setSelectedConfigFile(file);
+		}
+	}, [files, selectedConfigFileId, selectedConfigFile]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
@@ -620,13 +632,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				/>
 			)}
 			<ResizeableDrawer
-				belowToolbar
+				belowToolbar={!embedded}
 				open={openDrawer}
 				width={width}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute',
-						...(embedded ? { top: 0 } : {})
+						...(embedded && { top: 0 })
 					}
 				}}
 				onWidthChange={setWidth}

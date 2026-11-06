@@ -31,7 +31,7 @@ import { setSiteCookie } from '../../utils/auth';
 import { enableStaging, trash } from '../../services/sites';
 import { batchActions } from '../../state/actions/misc';
 import { showSystemNotification } from '../../state/actions/system';
-import { fetchSites, popSite } from '../../state/actions/sites';
+import { changeSite, fetchSites, popSite } from '../../state/actions/sites';
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary';
 import SitesGrid from '../SitesGrid/SitesGrid';
 import PublishingStatusDialog from '../PublishingStatusDialog';
@@ -185,6 +185,28 @@ export function SiteManagement() {
 		setConfirmEnableStagingState({ site, open: true, checked: false, submitting: false });
 	};
 
+	const onConfigurationClick = (site: Site) => {
+		if (site.id !== active) {
+			dispatch(changeSite(site.id));
+		}
+		dispatch(
+			pushDialog({
+				component: createComponentId('WidgetDialog'),
+				allowMinimize: true,
+				props: {
+					title: formatMessage({ defaultMessage: 'Configuration' }),
+					widget: {
+						id: createComponentId('SiteConfigurationManagement'),
+						configuration: {
+							embedded: true,
+							selectedConfigFileId: 'studio/site-config.xml'
+						}
+					}
+				}
+			})
+		);
+	};
+
 	const onConfirmEnableStaging = (site: Site) => {
 		setConfirmEnableStagingState({ submitting: true });
 		setDisabledSitesLookup({ [site.id]: true });
@@ -299,6 +321,7 @@ export function SiteManagement() {
 							onPublishButtonClick={onPublishButtonClick}
 							onDuplicateSiteClick={permissionsLookup['duplicate_site'] && onDuplicateSiteClick}
 							onEnableStagingClick={permissionsLookup['edit_site'] && onEnableStagingClick}
+							onConfigurationClick={onConfigurationClick}
 							disabledSitesLookup={disabledSitesLookup}
 						/>
 					) : (
