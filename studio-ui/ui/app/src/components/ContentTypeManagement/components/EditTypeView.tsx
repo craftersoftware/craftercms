@@ -1018,6 +1018,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	const handleReorderTypeSections = async (sections: ReorderFieldsDialogProps['fields']) => {
 		if (!(await performCurrentFormErrorCheckAndWarning())) return;
+		onUpdateHasPendingChanges(true);
 		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		const nextType = reorderTypeSections(baseType, sections);
 		setType(nextType);
