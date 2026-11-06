@@ -201,11 +201,12 @@ export function BaseSiteForm(props: BaseSiteFormProps) {
 							checked={inputs.enableStaging}
 							onChange={(event) => handleInputChange(event)}
 							color="primary"
+							slotProps={{ input: { 'aria-describedby': 'enableStagingHelper' } }}
 						/>
 					}
 					label={formatMessage(messages.enableStaging)}
 				/>
-				<FormHelperText>
+				<FormHelperText id="enableStagingHelper">
 					{formatMessage(sourceProjectStagingHelp ? messages.enableStagingHelpSource : messages.enableStagingHelp)}
 				</FormHelperText>
 			</Grid>
