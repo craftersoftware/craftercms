@@ -53,6 +53,8 @@ import CardActionArea from '@mui/material/CardActionArea';
 import CardHeader from '@mui/material/CardHeader';
 import { Typography } from '@mui/material';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -70,6 +72,10 @@ const translations = defineMessages({
 	stagingEnabled: {
 		id: 'sitesGrid.stagingEnabled',
 		defaultMessage: 'Staging enabled'
+	},
+	enablingStaging: {
+		id: 'sitesGrid.enablingStaging',
+		defaultMessage: 'Enabling staging… this can take several minutes'
 	}
 });
 
@@ -82,7 +88,8 @@ const confirmDeleteInitialState = {
 const confirmEnableStagingInitialState = {
 	site: null as Site,
 	open: false,
-	checked: false
+	checked: false,
+	submitting: false
 };
 
 export function SiteManagement() {
@@ -175,11 +182,17 @@ export function SiteManagement() {
 	};
 
 	const onEnableStagingClick = (site: Site) => {
-		setConfirmEnableStagingState({ site, open: true, checked: false });
+		setConfirmEnableStagingState({ site, open: true, checked: false, submitting: false });
 	};
 
 	const onConfirmEnableStaging = (site: Site) => {
+		setConfirmEnableStagingState({ submitting: true });
 		setDisabledSitesLookup({ [site.id]: true });
+		dispatch(
+			showSystemNotification({
+				message: formatMessage(translations.enablingStaging)
+			})
+		);
 		enableStaging(site.id).subscribe({
 			next() {
 				dispatch(
@@ -191,9 +204,11 @@ export function SiteManagement() {
 					])
 				);
 				setDisabledSitesLookup({ [site.id]: false });
+				setConfirmEnableStagingState(confirmEnableStagingInitialState);
 			},
 			error({ response: { response } }) {
 				setDisabledSitesLookup({ [site.id]: false });
+				setConfirmEnableStagingState({ submitting: false });
 				dispatch(pushErrorDialog({ props: { error: response } }));
 			}
 		});
@@ -396,39 +411,52 @@ export function SiteManagement() {
 			/>
 			<ConfirmDialog
 				open={confirmEnableStagingState.open}
+				disableBackdropClick={confirmEnableStagingState.submitting}
+				disableEscapeKeyDown={confirmEnableStagingState.submitting}
 				body={
-					<>
-						<Typography>
-							<FormattedMessage
-								defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
-								values={{ siteId: confirmEnableStagingState.site?.id }}
-							/>
-						</Typography>
-						<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+					confirmEnableStagingState.submitting ? (
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+							<CircularProgress size={24} />
 							<Typography>
-								<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
+								<FormattedMessage {...translations.enablingStaging} />
 							</Typography>
-							<FormControlLabel
-								sx={{ textAlign: 'left', mt: 1 }}
-								control={
-									<Checkbox
-										color="primary"
-										checked={confirmEnableStagingState.checked}
-										onChange={() => setConfirmEnableStagingState({ checked: !confirmEnableStagingState.checked })}
-									/>
-								}
-								label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
-							/>
-						</Alert>
-					</>
+						</Box>
+					) : (
+						<>
+							<Typography>
+								<FormattedMessage
+									defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
+									values={{ siteId: confirmEnableStagingState.site?.id }}
+								/>
+							</Typography>
+							<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+								<Typography>
+									<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
+								</Typography>
+								<FormControlLabel
+									sx={{ textAlign: 'left', mt: 1 }}
+									control={
+										<Checkbox
+											color="primary"
+											checked={confirmEnableStagingState.checked}
+											onChange={() => setConfirmEnableStagingState({ checked: !confirmEnableStagingState.checked })}
+										/>
+									}
+									label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
+								/>
+							</Alert>
+						</>
+					)
 				}
 				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
-				disableOkButton={!confirmEnableStagingState.checked}
-				onOk={() => {
-					onConfirmEnableStaging(confirmEnableStagingState.site);
-					setConfirmEnableStagingState(confirmEnableStagingInitialState);
+				disableOkButton={!confirmEnableStagingState.checked || confirmEnableStagingState.submitting}
+				disableCancelButton={confirmEnableStagingState.submitting}
+				onOk={() => onConfirmEnableStaging(confirmEnableStagingState.site)}
+				onCancel={() => {
+					if (!confirmEnableStagingState.submitting) {
+						setConfirmEnableStagingState(confirmEnableStagingInitialState);
+					}
 				}}
-				onCancel={() => setConfirmEnableStagingState(confirmEnableStagingInitialState)}
 			/>
 		</Paper>
 	);
