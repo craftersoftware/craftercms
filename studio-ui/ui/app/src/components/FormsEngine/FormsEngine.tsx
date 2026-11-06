@@ -1683,6 +1683,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 		setItemLaunchEntering(false);
 	}, []);
 
+	const minimizeLabel = formatMessage({ defaultMessage: 'Minimize' });
+	const closeLabel = formatMessage({ defaultMessage: 'Close' });
+	const fullscreenLabel = isFullScreen
+		? formatMessage({ defaultMessage: 'Exit full screen' })
+		: formatMessage({ defaultMessage: 'Enter full screen' });
+
 	const bodyFragment = (
 		<FormLayout
 			stackIndex={stackIndex}
@@ -1708,21 +1714,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={<FormattedMessage defaultMessage="Minimize" />}>
+								<Tooltip title={minimizeLabel}>
 									<IconButton size="small" onClick={props.onMinimize}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
-								<Tooltip title={<FormattedMessage defaultMessage="Maximize" />}>
+								<Tooltip title={fullscreenLabel}>
 									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
-								<Tooltip title={<FormattedMessage defaultMessage="Close" />}>
+								<Tooltip title={closeLabel}>
 									<IconButton size="small" onClick={handleClose}>
 										<Close />
 									</IconButton>
@@ -1752,7 +1758,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
 							<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
 								{useCollapsedToC ? (
-									<IconButton size="small" onClick={handleOpenDrawerSidebar}>
+									<IconButton
+										size="small"
+										onClick={handleOpenDrawerSidebar}
+										aria-label={formatMessage({ defaultMessage: 'Open table of contents' })}
+									>
 										<MenuRounded />
 									</IconButton>
 								) : (

@@ -30,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
 
 interface PluginCardProps {
@@ -95,6 +96,8 @@ function PluginCard(props: PluginCardProps) {
 	} = props;
 	const { media, name, license, id, developer } = plugin;
 	const { formatMessage } = useIntl();
+	const pluginLabel =
+		typeof name === 'string' ? name : id === 'DUPLICATE' ? formatMessage({ defaultMessage: 'Duplicate Project' }) : id;
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
@@ -344,6 +347,9 @@ function PluginCard(props: PluginCardProps) {
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
+							<Box component="span" sx={visuallyHidden}>
+								{` ${pluginLabel}`}
+							</Box>
 						</SecondaryButton>
 					)}
 					<Button
@@ -353,6 +359,7 @@ function PluginCard(props: PluginCardProps) {
 							color: (theme) => theme.palette.text.secondary,
 							flex: 1
 						}}
+						aria-label={formatMessage({ defaultMessage: 'More about {name}' }, { name: pluginLabel })}
 						onClick={() => onDetails(plugin)}
 					>
 						{formatMessage(messages.more)}
