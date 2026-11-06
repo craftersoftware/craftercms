@@ -687,7 +687,7 @@ export function inputValidator(
 		return { valid: true };
 	}
 	const pattern = field.validations.pattern?.value as string;
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxlength');
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	// If there's a pattern and it doesn't match, it's invalid.
 	if (pattern && !String(currentValue).match(pattern)) {
 		messages.push([
