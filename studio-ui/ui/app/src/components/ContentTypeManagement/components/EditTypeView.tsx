@@ -665,7 +665,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 									</Typography>
 									<Box component="ul" sx={{ m: 0, pl: 2 }}>
 										{postfixViolations.map((violation) => (
-											<Typography key={violation.title} component="li" variant="body2">
+											<Typography key={violation.id} component="li" variant="body2">
 												<strong>{violation.title}:</strong>{' '}
 												{violation.suffixes.length > 1 ? (
 													<FormattedMessage

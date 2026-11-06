@@ -25,6 +25,7 @@ import type { ContentType, ContentTypeField } from '../../models/ContentType';
 export type FieldNamePostfixCheck = 'ignored' | 'ok' | 'missing';
 
 export interface FieldNamePostfixViolation {
+	id: string;
 	title: string;
 	suffixes: string[];
 }
@@ -93,7 +94,7 @@ export function collectTopLevelFieldNamePostfixViolations(
 			if (!field?.id || !field.name) continue;
 			const suffixes = [...(getSuffixes(field) ?? [])];
 			if (checkFieldNamePostfix(field.id, ignoreFields, suffixes) === 'missing') {
-				violations.push({ title: field.name, suffixes });
+				violations.push({ id: field.id, title: field.name, suffixes });
 			}
 		}
 	}

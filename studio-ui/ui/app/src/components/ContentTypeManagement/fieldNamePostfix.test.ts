@@ -94,7 +94,7 @@ describe('collectTopLevelFieldNamePostfixViolations', () => {
 			['internal-name'],
 			(field) => suffixesByType[field.type]
 		);
-		assert.deepEqual(violations, [{ title: 'Title', suffixes: ['_s', '_t'] }]);
+		assert.deepEqual(violations, [{ id: 'title_bad', title: 'Title', suffixes: ['_s', '_t'] }]);
 	});
 
 	it('skips fields without an id or title', () => {
