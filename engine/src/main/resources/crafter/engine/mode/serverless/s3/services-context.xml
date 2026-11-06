@@ -44,10 +44,26 @@
 		<constructor-arg name="pathStyle" value="${crafter.engine.s3.pathStyle:false}"/>
 	</bean>
 
-	<!-- AWS S3 Site List Resolver -->
-	<bean id="crafter.siteListResolver" class="org.craftercms.engine.store.s3.S3SiteListResolver">
+	<!-- AWS S3 Site List Resolver. Used when the Studio site list is not configured or the call fails. -->
+	<bean id="crafter.s3SiteListResolver" class="org.craftercms.engine.store.s3.S3SiteListResolver">
 		<constructor-arg name="s3Uri" value="${crafter.engine.site.default.rootFolder.path}"/>
 		<constructor-arg name="clientBuilder" ref="crafter.s3ClientBuilder"/>
+	</bean>
+
+	<bean id="crafter.studioSiteListResolver" class="org.craftercms.engine.service.context.StudioSiteListResolver">
+		<constructor-arg name="studioUrl" value="${crafter.engine.studio.url:}"/>
+		<constructor-arg name="managementToken" value="${crafter.engine.studio.managementToken:}"/>
+		<constructor-arg name="connectTimeout" value="${crafter.engine.studio.connectTimeout:5000}"/>
+		<constructor-arg name="readTimeout" value="${crafter.engine.studio.readTimeout:10000}"/>
+	</bean>
+
+	<bean id="crafter.siteListResolver" class="org.craftercms.engine.service.context.FallbackSiteListResolver">
+		<constructor-arg name="resolvers">
+			<list>
+				<ref bean="crafter.studioSiteListResolver"/>
+				<ref bean="crafter.s3SiteListResolver"/>
+			</list>
+		</constructor-arg>
 	</bean>
 
 	<bean id="crafter.siteContextManager" class="org.craftercms.engine.service.context.SiteContextManager" parent="crafter.siteContextManagerBase">
