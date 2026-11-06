@@ -89,6 +89,8 @@ export interface PathNavigatorTreeProps extends Pick<
 	active?: PathNavigatorTreeItemProps['active'];
 	classes?: Partial<Record<'header', string>>;
 	sxs?: PartialSxRecord<'header' | 'activeItem'>;
+	// When true, child expandability (caret) uses filtered totals matching systemTypes instead of item.childrenCount.
+	seedFilteredChildTotals?: boolean;
 }
 
 export interface PathNavigatorTreeStateProps {
@@ -108,6 +110,7 @@ export interface PathNavigatorTreeStateProps {
 	isRootPathMissing: boolean;
 	sortStrategy: GetChildrenOptions['sortStrategy'];
 	order: GetChildrenOptions['order'];
+	seedFilteredChildTotals?: boolean;
 }
 
 interface Menu {
@@ -158,7 +161,8 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 		showItemMenu,
 		sortStrategy,
 		order,
-		sxs
+		sxs,
+		seedFilteredChildTotals = false
 	} = props;
 	// endregion
 	const state = useSelection((state) => state.pathNavigatorTree[id]);
@@ -170,7 +174,14 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 	const { authoringBase } = useEnv();
 	const dispatch = useDispatch();
 	const itemsByPath = useItemsByPath();
-	const initialRefs = useRef({ initialCollapsed, initialSystemTypes, limit, excludes, initialExpanded });
+	const initialRefs = useRef({
+		initialCollapsed,
+		initialSystemTypes,
+		limit,
+		excludes,
+		initialExpanded,
+		seedFilteredChildTotals
+	});
 	const keywordByPath = state?.keywordByPath;
 	const totalByPath = state?.totalByPath;
 	const childrenByParentPath = state?.childrenByParentPath;
@@ -183,7 +194,8 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 		// initialize with previous state information when switching sites
 		if (rootPath !== state?.rootPath && uiConfig.currentSite === siteId) {
 			const storedState = getStoredPathNavigatorTree(uuid, user.username, id);
-			const { initialSystemTypes, initialCollapsed, limit, excludes, initialExpanded } = initialRefs.current;
+			const { initialSystemTypes, initialCollapsed, limit, excludes, initialExpanded, seedFilteredChildTotals } =
+				initialRefs.current;
 			dispatch(
 				pathNavigatorTreeInit({
 					id,
@@ -195,7 +207,8 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 					expanded: initialExpanded,
 					sortStrategy,
 					order,
-					...storedState
+					...storedState,
+					seedFilteredChildTotals
 				})
 			);
 		}

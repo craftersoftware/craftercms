@@ -123,6 +123,7 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 			collapsible={false}
 			initialCollapsed={false}
 			initialSystemTypes={['folder', 'page']}
+			seedFilteredChildTotals
 			active={{ [selectedPathWithIndex in (tree?.totalByPath ?? {}) ? selectedPathWithIndex : selectedPath]: true }}
 			onNodeClick={handleNodeClick}
 			sxs={{

@@ -111,9 +111,15 @@ export function deleteItemFromState(tree: PathNavigatorTreeStateProps, targetPat
 }
 
 const updatePath = (state, payload) => {
-	const { id, parentPath, children, options } = payload;
+	const { id, parentPath, children, options, childTotals } = payload;
 	const chunk = state[id];
 	chunk.totalByPath[parentPath] = children.total;
+	// Pages can be keyed as both `/page` and `/page/index.xml`; keep an existing alias in sync.
+	[withIndex(parentPath), withoutIndex(parentPath)].forEach((alias) => {
+		if (alias !== parentPath && alias in chunk.totalByPath) {
+			chunk.totalByPath[alias] = children.total;
+		}
+	});
 	chunk.childrenByParentPath[parentPath] = [];
 	if (children.levelDescriptor) {
 		chunk.childrenByParentPath[parentPath].push(children.levelDescriptor.path);
@@ -121,7 +127,7 @@ const updatePath = (state, payload) => {
 	}
 	children.forEach((item) => {
 		chunk.childrenByParentPath[parentPath].push(item.path);
-		chunk.totalByPath[item.path] = item.childrenCount;
+		chunk.totalByPath[item.path] = childTotals?.[item.path] ?? item.childrenCount;
 	});
 	// If the expanded node has no children, no level descriptor and is not filtered, it's a
 	// leaf node and there's no point keeping it in `expanded`
@@ -131,7 +137,7 @@ const updatePath = (state, payload) => {
 };
 
 const restoreTree = (state, payload) => {
-	const { id, children, items, expanded } = payload;
+	const { id, children, items, expanded, childTotals } = payload;
 	const chunk = state[id];
 	chunk.childrenByParentPath = {};
 	chunk.totalByPath = {};
@@ -141,7 +147,7 @@ const restoreTree = (state, payload) => {
 	const offsetByPath = chunk.offsetByPath;
 	// Set totalByPath of items for the tree to know which items have children (in case they are not expanded).
 	items.forEach((item) => {
-		totalByPath[item.path] = item.childrenCount;
+		totalByPath[item.path] = childTotals?.[item.path] ?? item.childrenCount;
 	});
 	Object.keys(children).forEach((parentPath) => {
 		const childrenOfPath = children[parentPath];
@@ -153,9 +159,8 @@ const restoreTree = (state, payload) => {
 			}
 			childrenOfPath.forEach((child) => {
 				childrenByParentPath[parentPath].push(child.path);
-				// If we have the total in the children object, use it (since that object has the total considering filters),
-				// otherwise use the childrenCount.
-				totalByPath[child.path] = children[child.path]?.total ?? child.childrenCount;
+				// Prefer filtered totals: expanded grandchild fetch, opt-in childTotals, then childrenCount.
+				totalByPath[child.path] = children[child.path]?.total ?? childTotals?.[child.path] ?? child.childrenCount;
 			});
 		}
 		// Should we account here for the level descriptor (LD)? if there's a LD, add 1 to the total?
@@ -197,7 +202,8 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 					excludes = null,
 					systemTypes = null,
 					sortStrategy = null,
-					order = null
+					order = null,
+					seedFilteredChildTotals = false
 				}
 			} = action;
 			state[id] = {
@@ -216,7 +222,8 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 				isRootPathMissing: false,
 				systemTypes,
 				sortStrategy,
-				order
+				order,
+				seedFilteredChildTotals
 			};
 		})
 		// endregion
@@ -258,17 +265,20 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 				? state[id].offsetByPath[path] + state[id].limit
 				: state[id].limit;
 		})
-		.addCase(pathNavigatorTreeFetchPathPageComplete, (state, { payload: { id, parentPath, children, options } }) => {
-			const chunk = state[id];
-			chunk.totalByPath[parentPath] = children.total;
-			if (children.levelDescriptor) {
-				chunk.totalByPath[children.levelDescriptor.path] = 0;
+		.addCase(
+			pathNavigatorTreeFetchPathPageComplete,
+			(state, { payload: { id, parentPath, children, childTotals } }) => {
+				const chunk = state[id];
+				chunk.totalByPath[parentPath] = children.total;
+				if (children.levelDescriptor) {
+					chunk.totalByPath[children.levelDescriptor.path] = 0;
+				}
+				children.forEach((item) => {
+					chunk.childrenByParentPath[parentPath].push(item.path);
+					chunk.totalByPath[item.path] = childTotals?.[item.path] ?? item.childrenCount;
+				});
 			}
-			children.forEach((item) => {
-				chunk.childrenByParentPath[parentPath].push(item.path);
-				chunk.totalByPath[item.path] = item.childrenCount;
-			});
-		})
+		)
 		.addCase(pathNavigatorTreeUpdate, (state, { payload }) => {
 			return {
 				...state,
@@ -301,7 +311,14 @@ const reducer = createReducer<GlobalState['pathNavigatorTree']>({}, (builder) =>
 			const path = item.path;
 			Object.values(state).forEach((tree) => {
 				if (path in tree.totalByPath) {
-					tree.totalByPath[path] = item.childrenCount;
+					// Don't overwrite filtered totals with unfiltered childrenCount; only clear when truly empty.
+					if (tree.seedFilteredChildTotals) {
+						if (item.childrenCount === 0) {
+							tree.totalByPath[path] = 0;
+						}
+					} else {
+						tree.totalByPath[path] = item.childrenCount;
+					}
 				}
 			});
 		})
