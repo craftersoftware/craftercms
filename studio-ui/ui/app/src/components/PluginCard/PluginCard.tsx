@@ -22,7 +22,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import CardActions from '@mui/material/CardActions';
 import { MarketplacePlugin } from '../../models/MarketplacePlugin';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type MessageValue } from 'react-intl';
 import MobileStepper from '../MobileStepper/MobileStepper';
 import { backgroundColor } from '../../styles/theme';
 import Button from '@mui/material/Button';
@@ -44,40 +44,46 @@ interface PluginCardProps {
 	onDetails(plugin: MarketplacePlugin, index?: number): any;
 }
 
-const messages = defineMessages({
-	version: {
-		id: 'plugin.version',
-		defaultMessage: 'Version'
-	},
-	license: {
-		id: 'plugin.license',
-		defaultMessage: 'License'
-	},
-	crafterCms: {
-		id: 'plugin.crafterCMS',
-		defaultMessage: 'CrafterCMS'
-	},
-	by: {
-		id: 'plugin.by',
-		defaultMessage: 'By'
-	},
-	noDev: {
-		id: 'plugin.noDev',
-		defaultMessage: 'No developer specified.'
-	},
-	use: {
-		id: 'plugin.use',
-		defaultMessage: 'Use'
-	},
-	more: {
-		id: 'plugin.more',
-		defaultMessage: 'More...'
-	},
-	licenseTooltip: {
-		id: 'plugin.licenseTooltip',
-		defaultMessage: '{license} license'
-	}
-});
+const messages = {
+	...defineMessages({
+		version: {
+			id: 'plugin.version',
+			defaultMessage: 'Version'
+		},
+		license: {
+			id: 'plugin.license',
+			defaultMessage: 'License'
+		},
+		crafterCms: {
+			id: 'plugin.crafterCMS',
+			defaultMessage: 'CrafterCMS'
+		},
+		by: {
+			id: 'plugin.by',
+			defaultMessage: 'By'
+		},
+		noDev: {
+			id: 'plugin.noDev',
+			defaultMessage: 'No developer specified.'
+		},
+		use: {
+			id: 'plugin.use',
+			defaultMessage: 'Use'
+		},
+		more: {
+			id: 'plugin.more',
+			defaultMessage: 'More...'
+		}
+	}),
+	...defineMessages<{
+		licenseTooltip: { readonly license: MessageValue };
+	}>({
+		licenseTooltip: {
+			id: 'plugin.licenseTooltip',
+			defaultMessage: '{license} license'
+		}
+	})
+};
 
 function PluginCard(props: PluginCardProps) {
 	const [index, setIndex] = useState(0);

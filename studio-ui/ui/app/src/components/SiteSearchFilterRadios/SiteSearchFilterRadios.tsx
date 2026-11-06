@@ -16,7 +16,7 @@
 
 import { Facet } from '../../models/Search';
 import { LookupTable } from '../../models/LookupTable';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { capitalize, formatBytes } from '../../utils/string';
 import RadioGroup from '@mui/material/RadioGroup';
 import { nnou } from '../../utils/object';
@@ -24,7 +24,10 @@ import FormControlLabel, { formControlLabelClasses } from '@mui/material/FormCon
 import Radio from '@mui/material/Radio';
 import React from 'react';
 
-const messages = defineMessages({
+const messages = defineMessages<{
+	under: { readonly unit: MessageValue; readonly value: MessageValue };
+	above: { readonly unit: MessageValue; readonly value: MessageValue };
+}>({
 	under: {
 		id: 'searchFilter.under',
 		defaultMessage: 'Under {value}{unit}'

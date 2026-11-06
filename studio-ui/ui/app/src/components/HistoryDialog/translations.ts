@@ -14,53 +14,61 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue, type MessageTag } from 'react-intl';
 
-export const translations = defineMessages({
-	previousPage: {
-		id: 'pagination.PreviousPage',
-		defaultMessage: 'Previous page'
-	},
-	nextPage: {
-		id: 'pagination.nextPage',
-		defaultMessage: 'Next page'
-	},
-	view: {
-		id: 'words.view',
-		defaultMessage: 'View'
-	},
-	compareTo: {
-		id: 'historyDialog.options.compareTo',
-		defaultMessage: 'Compare to...'
-	},
-	compareToCurrent: {
-		id: 'historyDialog.options.compareToCurrent',
-		defaultMessage: 'Compare to current'
-	},
-	compareToPrevious: {
-		id: 'historyDialog.options.compareToPrevious',
-		defaultMessage: 'Compare to previous'
-	},
-	revertToPrevious: {
-		id: 'historyDialog.options.revertToPrevious',
-		defaultMessage: 'Revert to <b>previous</b>'
-	},
-	revertToThisVersion: {
-		id: 'historyDialog.options.revertToThisVersion',
-		defaultMessage: 'Revert to <b>this version</b>'
-	},
-	backToHistoryList: {
-		id: 'historyDialog.back.selectRevision',
-		defaultMessage: 'Back to history list'
-	},
-	confirmRevertTitle: {
-		id: 'historyDialog.confirmRevertTitle',
-		defaultMessage: 'Revert confirmation'
-	},
-	confirmRevertBody: {
-		id: 'historyDialog.confirmRevertBody',
-		defaultMessage: 'Are you sure you want to revert to {versionTitle}?'
-	}
-});
+export const translations = {
+	...defineMessages({
+		previousPage: {
+			id: 'pagination.PreviousPage',
+			defaultMessage: 'Previous page'
+		},
+		nextPage: {
+			id: 'pagination.nextPage',
+			defaultMessage: 'Next page'
+		},
+		view: {
+			id: 'words.view',
+			defaultMessage: 'View'
+		},
+		compareTo: {
+			id: 'historyDialog.options.compareTo',
+			defaultMessage: 'Compare to...'
+		},
+		compareToCurrent: {
+			id: 'historyDialog.options.compareToCurrent',
+			defaultMessage: 'Compare to current'
+		},
+		compareToPrevious: {
+			id: 'historyDialog.options.compareToPrevious',
+			defaultMessage: 'Compare to previous'
+		},
+		backToHistoryList: {
+			id: 'historyDialog.back.selectRevision',
+			defaultMessage: 'Back to history list'
+		},
+		confirmRevertTitle: {
+			id: 'historyDialog.confirmRevertTitle',
+			defaultMessage: 'Revert confirmation'
+		}
+	}),
+	...defineMessages<{
+		revertToPrevious: { readonly b: MessageTag };
+		revertToThisVersion: { readonly b: MessageTag };
+		confirmRevertBody: { readonly versionTitle: MessageValue };
+	}>({
+		revertToPrevious: {
+			id: 'historyDialog.options.revertToPrevious',
+			defaultMessage: 'Revert to <b>previous</b>'
+		},
+		revertToThisVersion: {
+			id: 'historyDialog.options.revertToThisVersion',
+			defaultMessage: 'Revert to <b>this version</b>'
+		},
+		confirmRevertBody: {
+			id: 'historyDialog.confirmRevertBody',
+			defaultMessage: 'Are you sure you want to revert to {versionTitle}?'
+		}
+	})
+};
 
 export default translations;

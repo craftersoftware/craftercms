@@ -19,7 +19,9 @@ import { defineMessages } from 'react-intl';
 import { getCurrentIntl } from './i18n';
 import GlobalState from '../models/GlobalState';
 
-const translations = defineMessages({
+const translations = defineMessages<{
+	ordinals: { readonly day: number | bigint };
+}>({
 	ordinals: {
 		id: 'dateTime.ordinals',
 		defaultMessage: '{day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}'
@@ -51,7 +53,7 @@ export function asDayMonthDateTime(date: string): string {
 		year: 'numeric'
 	});
 	return `${parts[0].value} ${parts[2].value} ${getCurrentIntl().formatMessage(translations.ordinals, {
-		day: parts[4].value
+		day: Number(parts[4].value)
 	})} ${parts[6].value} @ ${getCurrentIntl().formatTime(date)}`;
 }
 

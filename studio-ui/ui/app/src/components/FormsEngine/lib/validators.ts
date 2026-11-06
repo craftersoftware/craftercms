@@ -19,7 +19,7 @@ import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
 import { isInternalNameFilled, missingMinimumSaveRequirements } from './minimumSaveRequirements';
-import { defineMessage, defineMessages, type MessageDescriptor } from 'react-intl';
+import { defineMessage, defineMessages, type MessageDescriptor, type MessageValue } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
 import { checkPathExistence } from '../../../services/content';
@@ -439,10 +439,10 @@ export async function validateFieldValue(
 	return Promise.resolve({ isValid, messages });
 }
 
-const minItemsMessage = defineMessage({
+const minItemsMessage = defineMessage<{ readonly minCount: number | bigint }>({
 	defaultMessage: 'At least {minCount, plural, one {# item is} other {# items are}} required.'
 });
-const maxItemsMessage = defineMessage({
+const maxItemsMessage = defineMessage<{ readonly maxCount: number | bigint }>({
 	defaultMessage: 'No more than {maxCount, plural, one {# item is} other {# items are}} allowed.'
 });
 
@@ -698,7 +698,9 @@ export function inputValidator(
 
 	if (nnou(maxLength) && currentValue.length > maxLength) {
 		messages.push([
-			defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
+			defineMessage<{ readonly maxLength: MessageValue }>({
+				defaultMessage: `The value is greater than the allowed maximum ({maxLength}).`
+			}),
 			{ maxLength }
 		]);
 	}
@@ -750,14 +752,18 @@ export function numericInputValidator(currentValue: number, ctx: ValidatorContex
 	// If there's a max and the value is greater than the max
 	if (maxValue != null && Number(currentValue) > Number(maxValue)) {
 		messages.push([
-			defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxValue}).` }),
+			defineMessage<{ readonly maxValue: MessageValue }>({
+				defaultMessage: `The value is greater than the allowed maximum ({maxValue}).`
+			}),
 			{ maxValue }
 		]);
 	}
 	// If there's a min and the value is less than the min
 	if (minValue != null && Number(currentValue) < Number(minValue)) {
 		messages.push([
-			defineMessage({ defaultMessage: 'The value is less than the minimum ({minValue}).' }),
+			defineMessage<{ readonly minValue: MessageValue }>({
+				defaultMessage: 'The value is less than the minimum ({minValue}).'
+			}),
 			{ minValue }
 		]);
 	}
@@ -883,7 +889,7 @@ function rteValidator(currentValue: string, ctx: ValidatorContext): ValidatorRes
 	}
 	if (maxLengthExceeded) {
 		messages.push([
-			defineMessage({
+			defineMessage<{ readonly maxLength: MessageValue }>({
 				defaultMessage: `The value is greater than the allowed maximum ({maxLength}).`
 			}),
 			{ maxLength }
@@ -910,7 +916,9 @@ function pathWithMacroValidator(currentValue: string): ValidatorResult {
 			valid: false,
 			messages: [
 				[
-					defineMessage({ defaultMessage: 'The following are invalid macros: {invalidMacros}.' }),
+					defineMessage<{ readonly invalidMacros: MessageValue }>({
+						defaultMessage: 'The following are invalid macros: {invalidMacros}.'
+					}),
 					{ invalidMacros: invalidMacros.join(', ') }
 				]
 			]

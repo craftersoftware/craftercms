@@ -18,7 +18,7 @@ import React from 'react';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import { SiteState } from '../../models/Site';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import GitAuthForm from '../GitAuthForm';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
@@ -52,53 +52,59 @@ const cloneMessages = defineMessages({
 	}
 });
 
-const messages = defineMessages({
-	userName: {
-		id: 'common.userName',
-		defaultMessage: 'Username'
-	},
-	password: {
-		id: 'common.password',
-		defaultMessage: 'Password'
-	},
-	token: {
-		id: 'common.token',
-		defaultMessage: 'Token'
-	},
-	privateKey: {
-		id: 'common.privateKey',
-		defaultMessage: 'Private Key'
-	},
-	repoUrl: {
-		id: 'createSiteDialog.repoUrl',
-		defaultMessage: 'Git Repo URL'
-	},
-	authenticationNoRequired: {
-		id: 'createSiteDialog.authenticationNoRequired',
-		defaultMessage: 'Authentication not required (public URL)'
-	},
-	usernameAndPassword: {
-		id: 'common.usernameAndPassword',
-		defaultMessage: 'Username & Password'
-	},
-	remoteName: {
-		id: 'common.remoteName',
-		defaultMessage: 'Git Remote Name'
-	},
-	required: {
-		id: 'createSiteDialog.required',
-		defaultMessage: '{name} is required.'
-	},
-	createAsOrphan: {
-		id: 'createSiteDialog.createAsOrphan',
-		defaultMessage: 'Create the project from a remote repository as orphan (no git history)'
-	},
-	createAsOrphanHelpText: {
-		id: 'createSiteDialog.createAsOrphanHelpText',
-		defaultMessage:
-			'Creating the project as an orphan will dissociate the project from the source git repository and remove all history.'
-	}
-});
+const messages = {
+	...defineMessages({
+		userName: {
+			id: 'common.userName',
+			defaultMessage: 'Username'
+		},
+		password: {
+			id: 'common.password',
+			defaultMessage: 'Password'
+		},
+		token: {
+			id: 'common.token',
+			defaultMessage: 'Token'
+		},
+		privateKey: {
+			id: 'common.privateKey',
+			defaultMessage: 'Private Key'
+		},
+		repoUrl: {
+			id: 'createSiteDialog.repoUrl',
+			defaultMessage: 'Git Repo URL'
+		},
+		authenticationNoRequired: {
+			id: 'createSiteDialog.authenticationNoRequired',
+			defaultMessage: 'Authentication not required (public URL)'
+		},
+		usernameAndPassword: {
+			id: 'common.usernameAndPassword',
+			defaultMessage: 'Username & Password'
+		},
+		remoteName: {
+			id: 'common.remoteName',
+			defaultMessage: 'Git Remote Name'
+		},
+		createAsOrphan: {
+			id: 'createSiteDialog.createAsOrphan',
+			defaultMessage: 'Create the project from a remote repository as orphan (no git history)'
+		},
+		createAsOrphanHelpText: {
+			id: 'createSiteDialog.createAsOrphanHelpText',
+			defaultMessage:
+				'Creating the project as an orphan will dissociate the project from the source git repository and remove all history.'
+		}
+	}),
+	...defineMessages<{
+		required: { readonly name: MessageValue };
+	}>({
+		required: {
+			id: 'createSiteDialog.required',
+			defaultMessage: '{name} is required.'
+		}
+	})
+};
 
 function GitForm(props: GitFormProps) {
 	const { inputs, setInputs, handleInputChange, onKeyPress } = props;

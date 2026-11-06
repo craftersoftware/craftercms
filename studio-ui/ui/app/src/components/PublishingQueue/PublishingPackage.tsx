@@ -18,7 +18,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import React, { ChangeEvent, ReactNode, useRef } from 'react';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import '../../styles/animations.scss';
@@ -32,76 +32,82 @@ import { CancelPackageDialog } from '../CancelPackageDialog';
 import useEnhancedDialogState from '../../hooks/useEnhancedDialogState';
 import { PackageDetailsDialog } from '../PackageDetailsDialog';
 
-const translations = defineMessages({
-	cancelText: {
-		id: 'publishingDashboard.cancelItemButtonText',
-		defaultMessage: 'Cancel'
-	},
-	cancel: {
-		id: 'publishingDashboard.no',
-		defaultMessage: 'No'
-	},
-	confirm: {
-		id: 'publishingDashboard.yes',
-		defaultMessage: 'Yes'
-	},
-	confirmHelperText: {
-		id: 'publishingDashboard.confirmHelperText',
-		defaultMessage: 'Set item state to "Cancelled"?'
-	},
-	status: {
-		id: 'publishingDashboard.status',
-		defaultMessage: 'Status is {state} for {environment} target'
-	},
-	comment: {
-		id: 'publishingDashboard.comment',
-		defaultMessage: 'Comment'
-	},
-	commentNotProvided: {
-		id: 'publishingDashboard.commentNotProvided',
-		defaultMessage: '(submission comment not provided)'
-	},
-	filesList: {
-		id: 'publishingDashboard.filesList',
-		defaultMessage: 'files list'
-	},
-	path: {
-		id: 'words.path',
-		defaultMessage: 'Path'
-	},
-	type: {
-		id: 'words.type',
-		defaultMessage: 'Type'
-	},
-	item: {
-		id: 'words.item',
-		defaultMessage: 'Item'
-	},
-	asset: {
-		id: 'words.asset',
-		defaultMessage: 'Asset'
-	},
-	script: {
-		id: 'words.script',
-		defaultMessage: 'Script'
-	},
-	page: {
-		id: 'words.page',
-		defaultMessage: 'Page'
-	},
-	renderingTemplate: {
-		id: 'words.template',
-		defaultMessage: 'Template'
-	},
-	component: {
-		id: 'words.component',
-		defaultMessage: 'Component'
-	},
-	unknown: {
-		id: 'words.unknown',
-		defaultMessage: 'Unknown'
-	}
-});
+const translations = {
+	...defineMessages({
+		cancelText: {
+			id: 'publishingDashboard.cancelItemButtonText',
+			defaultMessage: 'Cancel'
+		},
+		cancel: {
+			id: 'publishingDashboard.no',
+			defaultMessage: 'No'
+		},
+		confirm: {
+			id: 'publishingDashboard.yes',
+			defaultMessage: 'Yes'
+		},
+		confirmHelperText: {
+			id: 'publishingDashboard.confirmHelperText',
+			defaultMessage: 'Set item state to "Cancelled"?'
+		},
+		comment: {
+			id: 'publishingDashboard.comment',
+			defaultMessage: 'Comment'
+		},
+		commentNotProvided: {
+			id: 'publishingDashboard.commentNotProvided',
+			defaultMessage: '(submission comment not provided)'
+		},
+		filesList: {
+			id: 'publishingDashboard.filesList',
+			defaultMessage: 'files list'
+		},
+		path: {
+			id: 'words.path',
+			defaultMessage: 'Path'
+		},
+		type: {
+			id: 'words.type',
+			defaultMessage: 'Type'
+		},
+		item: {
+			id: 'words.item',
+			defaultMessage: 'Item'
+		},
+		asset: {
+			id: 'words.asset',
+			defaultMessage: 'Asset'
+		},
+		script: {
+			id: 'words.script',
+			defaultMessage: 'Script'
+		},
+		page: {
+			id: 'words.page',
+			defaultMessage: 'Page'
+		},
+		renderingTemplate: {
+			id: 'words.template',
+			defaultMessage: 'Template'
+		},
+		component: {
+			id: 'words.component',
+			defaultMessage: 'Component'
+		},
+		unknown: {
+			id: 'words.unknown',
+			defaultMessage: 'Unknown'
+		}
+	}),
+	...defineMessages<{
+		status: { readonly environment: MessageValue; readonly state: MessageValue };
+	}>({
+		status: {
+			id: 'publishingDashboard.status',
+			defaultMessage: 'Status is {state} for {environment} target'
+		}
+	})
+};
 
 interface PublishingPackageProps {
 	siteId: string;

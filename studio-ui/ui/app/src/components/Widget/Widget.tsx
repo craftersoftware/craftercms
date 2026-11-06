@@ -19,7 +19,7 @@ import NonReactWidget from '../NonReactWidget/NonReactWidget';
 import { buildFileUrl, importPlugin } from '../../services/plugin';
 import { components } from '../../utils/constants';
 import EmptyState from '../EmptyState/EmptyState';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type MessageValue } from 'react-intl';
 import ErrorState from '../ErrorState';
 import { isValidElementType } from 'react-is';
 import WidgetDescriptor from '../../models/WidgetDescriptor';
@@ -32,24 +32,31 @@ export interface WidgetProps extends WidgetDescriptor {
 	defaultProps?: object;
 }
 
-const messages = defineMessages({
-	componentNotFoundTitle: {
-		id: 'widgetComponent.componentNotFoundTitle',
-		defaultMessage: 'Component {id} not found.'
-	},
-	componentNotFoundSubtitle: {
-		id: 'widgetComponent.componentNotFoundSubtitle',
-		defaultMessage: "Check ui config & make sure you've installed the plugins that contain the desired components."
-	},
-	pluginLoadFailedMessageTitle: {
-		id: 'widgetComponent.pluginLoadFailedMessageTitle',
-		defaultMessage: 'Plugin load failed'
-	},
-	pluginLoadFailedMessageBody: {
-		id: 'widgetComponent.pluginLoadFailedMessageBody',
-		defaultMessage: 'With {info} & component id "{id}".'
-	}
-});
+const messages = {
+	...defineMessages({
+		componentNotFoundSubtitle: {
+			id: 'widgetComponent.componentNotFoundSubtitle',
+			defaultMessage: "Check ui config & make sure you've installed the plugins that contain the desired components."
+		},
+		pluginLoadFailedMessageTitle: {
+			id: 'widgetComponent.pluginLoadFailedMessageTitle',
+			defaultMessage: 'Plugin load failed'
+		}
+	}),
+	...defineMessages<{
+		componentNotFoundTitle: { readonly id: MessageValue };
+		pluginLoadFailedMessageBody: { readonly id: MessageValue; readonly info: MessageValue };
+	}>({
+		componentNotFoundTitle: {
+			id: 'widgetComponent.componentNotFoundTitle',
+			defaultMessage: 'Component {id} not found.'
+		},
+		pluginLoadFailedMessageBody: {
+			id: 'widgetComponent.pluginLoadFailedMessageBody',
+			defaultMessage: 'With {info} & component id "{id}".'
+		}
+	})
+};
 
 const cache: Record<string, ComponentType<WidgetProps>> = {};
 

@@ -16,7 +16,7 @@
 
 import React, { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Paper from '@mui/material/Paper';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageTag } from 'react-intl';
 import DialogHeader from '../DialogHeader/DialogHeader';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import palette from '../../styles/palette';
@@ -52,33 +52,39 @@ import { nanoid } from 'nanoid';
 import { createComponentId, pushConfirmDialog, pushErrorDialog } from '../../utils/system';
 import { extractErrorPayload } from '../../utils/ajax';
 
-const messages = defineMessages({
-	publishStudioWarning: {
-		defaultMessage:
-			"This will force publish all items that match the pattern requested including their references, and it may take a long time depending on the number of items. Please make sure that all modified items (including potentially someone's work in progress) are ready to be published before continuing."
-	},
-	warningLabel: {
-		id: 'words.warning',
-		defaultMessage: 'Warning'
-	},
-	publishStudioNote: {
-		id: 'publishingDashboard.studioNote',
-		defaultMessage:
-			'Publishing by path should be used to publish changes made in Studio via the UI. For changes made via direct git actions, please <a>publish by commit or tag</a>.'
-	},
-	publishSuccess: {
-		id: 'publishingDashboard.publishSuccess',
-		defaultMessage: 'Published successfully.'
-	},
-	bulkPublishStarted: {
-		id: 'publishingDashboard.bulkPublishStarted',
-		defaultMessage: 'Bulk Publish process has been started.'
-	},
-	invalidForm: {
-		id: 'publishingDashboard.invalidForm',
-		defaultMessage: 'You cannot publish until form requirements are satisfied.'
-	}
-});
+const messages = {
+	...defineMessages({
+		publishStudioWarning: {
+			defaultMessage:
+				"This will force publish all items that match the pattern requested including their references, and it may take a long time depending on the number of items. Please make sure that all modified items (including potentially someone's work in progress) are ready to be published before continuing."
+		},
+		warningLabel: {
+			id: 'words.warning',
+			defaultMessage: 'Warning'
+		},
+		publishSuccess: {
+			id: 'publishingDashboard.publishSuccess',
+			defaultMessage: 'Published successfully.'
+		},
+		bulkPublishStarted: {
+			id: 'publishingDashboard.bulkPublishStarted',
+			defaultMessage: 'Bulk Publish process has been started.'
+		},
+		invalidForm: {
+			id: 'publishingDashboard.invalidForm',
+			defaultMessage: 'You cannot publish until form requirements are satisfied.'
+		}
+	}),
+	...defineMessages<{
+		publishStudioNote: { readonly a: MessageTag };
+	}>({
+		publishStudioNote: {
+			id: 'publishingDashboard.studioNote',
+			defaultMessage:
+				'Publishing by path should be used to publish changes made in Studio via the UI. For changes made via direct git actions, please <a>publish by commit or tag</a>.'
+		}
+	})
+};
 
 const initialPublishStudioFormData = {
 	path: '',

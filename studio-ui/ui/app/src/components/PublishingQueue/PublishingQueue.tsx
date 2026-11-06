@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import PublishingPackage from './PublishingPackage';
 import { fetchPackages, fetchPublishingTargets } from '../../services/publishing';
 import { CurrentFilters, PublishPackage, Selected } from '../../models/Publishing';
@@ -61,57 +61,64 @@ import { getPackageStateLabel, isReady } from '../PublishPackageReviewDialog/uti
 import { BulkCancelPackageDialog } from '../BulkCancelPackageDialog';
 import useEnhancedDialogState from '../../hooks/useEnhancedDialogState';
 
-const messages = defineMessages({
-	selectAll: {
-		id: 'publishingDashboard.selectAll',
-		defaultMessage: 'Select all on this page'
-	},
-	cancelSelected: {
-		id: 'publishingDashboard.cancelSelected',
-		defaultMessage: 'Cancel Selected'
-	},
-	cancel: {
-		id: 'publishingDashboard.no',
-		defaultMessage: 'No'
-	},
-	confirm: {
-		id: 'publishingDashboard.yes',
-		defaultMessage: 'Yes'
-	},
-	confirmAllHelper: {
-		id: 'publishingDashboard.confirmAllHelper',
-		defaultMessage: 'Set the state for all selected items to "Cancelled"?'
-	},
-	filters: {
-		id: 'publishingDashboard.filters',
-		defaultMessage: 'Filters'
-	},
-	noPackagesTitle: {
-		id: 'publishingDashboard.noPackagesTitle',
-		defaultMessage: 'No packages were found'
-	},
-	noPackagesSubtitle: {
-		id: 'publishingDashboard.noPackagesSubtitle',
-		defaultMessage: 'Try changing your query'
-	},
-	filteredBy: {
-		id: 'publishingDashboard.filteredBy',
-		defaultMessage:
-			'Showing: {state, select, all {} other {Status: {state}.}} {environment, select, all {} other {{environment} target.}}'
-	},
-	packagesSelected: {
-		id: 'publishingDashboard.packagesSelected',
-		defaultMessage: '{count, plural, one {{count} Package selected} other {{count} Packages selected}}'
-	},
-	previous: {
-		id: 'publishingDashboard.previous',
-		defaultMessage: 'Previous Page'
-	},
-	next: {
-		id: 'publishingDashboard.next',
-		defaultMessage: 'Next Page'
-	}
-});
+const messages = {
+	...defineMessages({
+		selectAll: {
+			id: 'publishingDashboard.selectAll',
+			defaultMessage: 'Select all on this page'
+		},
+		cancelSelected: {
+			id: 'publishingDashboard.cancelSelected',
+			defaultMessage: 'Cancel Selected'
+		},
+		cancel: {
+			id: 'publishingDashboard.no',
+			defaultMessage: 'No'
+		},
+		confirm: {
+			id: 'publishingDashboard.yes',
+			defaultMessage: 'Yes'
+		},
+		confirmAllHelper: {
+			id: 'publishingDashboard.confirmAllHelper',
+			defaultMessage: 'Set the state for all selected items to "Cancelled"?'
+		},
+		filters: {
+			id: 'publishingDashboard.filters',
+			defaultMessage: 'Filters'
+		},
+		noPackagesTitle: {
+			id: 'publishingDashboard.noPackagesTitle',
+			defaultMessage: 'No packages were found'
+		},
+		noPackagesSubtitle: {
+			id: 'publishingDashboard.noPackagesSubtitle',
+			defaultMessage: 'Try changing your query'
+		},
+		previous: {
+			id: 'publishingDashboard.previous',
+			defaultMessage: 'Previous Page'
+		},
+		next: {
+			id: 'publishingDashboard.next',
+			defaultMessage: 'Next Page'
+		}
+	}),
+	...defineMessages<{
+		filteredBy: { readonly environment: MessageValue; readonly state: MessageValue };
+		packagesSelected: { readonly count: number | bigint };
+	}>({
+		filteredBy: {
+			id: 'publishingDashboard.filteredBy',
+			defaultMessage:
+				'Showing: {state, select, all {} other {Status: {state}.}} {environment, select, all {} other {{environment} target.}}'
+		},
+		packagesSelected: {
+			id: 'publishingDashboard.packagesSelected',
+			defaultMessage: '{count, plural, one {{count} Package selected} other {{count} Packages selected}}'
+		}
+	})
+};
 
 export const allFiltersState =
 	READY_MASK +

@@ -24,7 +24,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CloseIconRounded from '@mui/icons-material/CloseRounded';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type MessageValue } from 'react-intl';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
 
@@ -40,7 +40,9 @@ export interface BreadcrumbsProps {
 	onCrumbSelected(breadcrumb: ContentItem, event: React.SyntheticEvent): void;
 }
 
-const messages = defineMessages({
+const messages = defineMessages<{
+	filter: { readonly name: MessageValue };
+}>({
 	filter: { id: 'pathNavigator.pathFilterInputPlaceholder', defaultMessage: 'Filter children of {name}...' }
 });
 

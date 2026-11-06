@@ -1,11 +1,11 @@
 import * as monaco from 'monaco-editor';
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import editorWorker from 'monaco-editor/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/language/json/json.worker?worker';
+import cssWorker from 'monaco-editor/language/css/css.worker?worker';
+import htmlWorker from 'monaco-editor/language/html/html.worker?worker';
+import tsWorker from 'monaco-editor/language/typescript/ts.worker?worker';
+import graphqlWorker from 'monaco-graphql/graphql.worker?worker';
 
-// @ts-ignore
 self.MonacoEnvironment = {
 	getWorker(_: any, label: string) {
 		if (label === 'json') {
@@ -20,8 +20,11 @@ self.MonacoEnvironment = {
 		if (label === 'typescript' || label === 'javascript') {
 			return new tsWorker();
 		}
+		if (label === 'graphql') {
+			return new graphqlWorker();
+		}
 		return new editorWorker();
 	}
 };
 
-monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+monaco.typescript.typescriptDefaults.setEagerModelSync(true);

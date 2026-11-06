@@ -55,12 +55,19 @@ import {
 	isRepeatAddDisabled,
 	isRepeatRemoveDisabled
 } from '../../../utils/countLimits';
-const repeatMessages = defineMessages({
-	addItems: { defaultMessage: 'Add items' },
-	maxReached: { defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached' },
-	deleteItem: { defaultMessage: 'Delete' },
-	minRequired: { defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required' }
-});
+const repeatMessages = {
+	...defineMessages({
+		addItems: { defaultMessage: 'Add items' },
+		deleteItem: { defaultMessage: 'Delete' }
+	}),
+	...defineMessages<{
+		maxReached: { readonly max: number | bigint };
+		minRequired: { readonly min: number | bigint };
+	}>({
+		maxReached: { defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached' },
+		minRequired: { defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required' }
+	})
+};
 
 export type RepeatItem = Record<string, unknown>;
 
