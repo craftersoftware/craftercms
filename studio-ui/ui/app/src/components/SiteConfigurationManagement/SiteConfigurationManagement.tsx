@@ -85,6 +85,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import useSitesBranch from '../../hooks/useSitesBranch';
 import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
+import Link from '@mui/material/Link';
 import { enableStaging } from '../../services/sites';
 import { fetchSites } from '../../state/actions/sites';
 
@@ -108,6 +109,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		checked: false,
 		submitting: false
 	});
+	const [stagingInfoDialogOpen, setStagingInfoDialogOpen] = useState(false);
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const { formatMessage } = useIntl();
@@ -892,9 +894,19 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 														<Typography color="textSecondary">
 															<FormattedMessage defaultMessage="Staging is enabled" />
 														</Typography>
-														<IconButton size="small" aria-label={formatMessage({ defaultMessage: 'Staging info' })}>
-															<InfoOutlinedIcon fontSize="small" />
-														</IconButton>
+														<Tooltip
+															title={
+																<FormattedMessage defaultMessage="Learn more about staging" />
+															}
+														>
+															<IconButton
+																size="small"
+																aria-label={formatMessage({ defaultMessage: 'Staging info' })}
+																onClick={() => setStagingInfoDialogOpen(true)}
+															>
+																<InfoOutlinedIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
 													</Box>
 												) : (
 													<FormControlLabel
@@ -1054,12 +1066,22 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 									values={{ siteId: site }}
 								/>
 							</Typography>
-							<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+							<Box component="ul" sx={{ mt: 2, pl: 1, textAlign: 'left', listStylePosition: 'inside' }}>
 								<Typography>
-									<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
+									<li>
+										<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="Serverless delivery provisions a staging target and cloud storage." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="Removing staging later means recreating the project." />
+									</li>
 								</Typography>
+							</Box>
+							<Alert severity="warning" icon={false} sx={{ mt: 3 }}>
 								<FormControlLabel
-									sx={{ textAlign: 'left', mt: 1 }}
+									sx={{ textAlign: 'left' }}
 									control={
 										<Checkbox
 											color="primary"
@@ -1082,6 +1104,30 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						setEnableStagingConfirm({ open: false, checked: false, submitting: false });
 					}
 				}}
+			/>
+			<ConfirmDialog
+				open={stagingInfoDialogOpen}
+				body={
+					<>
+						<Typography>
+							<FormattedMessage defaultMessage="Staging publishing becomes available and cannot be turned off later. Removing it means recreating the project. If this project is already published, Studio copies its live published content and assets into staging first; on large projects that can take several minutes and uses additional storage. With serverless delivery, a staging target and cloud storage are also provisioned." />
+						</Typography>
+						<Typography sx={{ mt: 2 }}>
+							<FormattedMessage
+								defaultMessage="For more details, see the <a>staging documentation</a>."
+								values={{
+									a: (msg) => (
+										<Link href="#" underline="hover" onClick={(e) => e.preventDefault()}>
+											{msg}
+										</Link>
+									)
+								}}
+							/>
+						</Typography>
+					</>
+				}
+				onOk={() => setStagingInfoDialogOpen(false)}
+				onClose={() => setStagingInfoDialogOpen(false)}
 			/>
 		</Box>
 	);
