@@ -60,15 +60,15 @@ export function shouldPreserveVariableInput(input: string, ignoreFields: readonl
 	return ignoreFields.some((field) => field.startsWith(input));
 }
 
-/** Formats suffixes for messages the way Type Builder 1 did: `_s`, `_s and _t`, `_s, _t and _i`. */
+/** Formats suffixes for “must end with one of” messages: `_s`, `_s or _t`, `_s, _t or _i`. */
 export function formatPostfixList(suffixes: readonly string[]): string {
 	if (suffixes.length <= 1) {
 		return suffixes[0] ?? '';
 	}
 	if (suffixes.length === 2) {
-		return `${suffixes[0]} and ${suffixes[1]}`;
+		return `${suffixes[0]} or ${suffixes[1]}`;
 	}
-	return `${suffixes.slice(0, -1).join(', ')} and ${suffixes[suffixes.length - 1]}`;
+	return `${suffixes.slice(0, -1).join(', ')} or ${suffixes[suffixes.length - 1]}`;
 }
 
 /**

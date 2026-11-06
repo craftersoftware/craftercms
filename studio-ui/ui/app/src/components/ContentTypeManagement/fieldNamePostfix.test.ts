@@ -116,7 +116,7 @@ describe('formatPostfixList', () => {
 	it('joins suffixes like Type Builder 1', () => {
 		assert.equal(formatPostfixList([]), '');
 		assert.equal(formatPostfixList(['_s']), '_s');
-		assert.equal(formatPostfixList(['_s', '_t']), '_s and _t');
-		assert.equal(formatPostfixList(['_s', '_t', '_i']), '_s, _t and _i');
+		assert.equal(formatPostfixList(['_s', '_t']), '_s or _t');
+		assert.equal(formatPostfixList(['_s', '_t', '_i']), '_s, _t or _i');
 	});
 });
