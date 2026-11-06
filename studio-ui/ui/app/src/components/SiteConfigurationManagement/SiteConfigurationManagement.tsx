@@ -894,11 +894,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 														<Typography color="textSecondary">
 															<FormattedMessage defaultMessage="Staging is enabled" />
 														</Typography>
-														<Tooltip
-															title={
-																<FormattedMessage defaultMessage="Learn more about staging" />
-															}
-														>
+														<Tooltip title={<FormattedMessage defaultMessage="Learn more about staging" />}>
 															<IconButton
 																size="small"
 																aria-label={formatMessage({ defaultMessage: 'Staging info' })}
@@ -1108,10 +1104,23 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			<ConfirmDialog
 				open={stagingInfoDialogOpen}
 				body={
-					<>
+					<Box sx={{ textAlign: 'left' }}>
 						<Typography>
-							<FormattedMessage defaultMessage="Staging publishing becomes available and cannot be turned off later. Removing it means recreating the project. If this project is already published, Studio copies its live published content and assets into staging first; on large projects that can take several minutes and uses additional storage. With serverless delivery, a staging target and cloud storage are also provisioned." />
+							<FormattedMessage defaultMessage="Staging cannot be turned off later — removing it means recreating the project." />
 						</Typography>
+						<Box component="ul" sx={{ m: 0, mt: 1.5, p: 0, pl: '1.25em' }}>
+							<Typography>
+								<li>
+									<FormattedMessage defaultMessage="Staging publishing becomes available." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
+								</li>
+							</Typography>
+						</Box>
 						<Typography sx={{ mt: 2 }}>
 							<FormattedMessage
 								defaultMessage="For more details, see the <a>staging documentation</a>."
@@ -1124,7 +1133,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								}}
 							/>
 						</Typography>
-					</>
+					</Box>
 				}
 				onOk={() => setStagingInfoDialogOpen(false)}
 				onClose={() => setStagingInfoDialogOpen(false)}
