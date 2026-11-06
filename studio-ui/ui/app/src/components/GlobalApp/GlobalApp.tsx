@@ -16,8 +16,12 @@
 
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import LauncherGlobalNav from '../LauncherGlobalNav/LauncherGlobalNav';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import {
 	createHashRouter,
@@ -39,11 +43,13 @@ import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LoadingState from '../LoadingState/LoadingState';
 import LauncherOpenerButton from '../LauncherOpenerButton';
 import { useGlobalNavigation } from '../../hooks/useGlobalNavigation';
+import { useEnv } from '../../hooks/useEnv';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
 import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
 import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
+import SystemIcon from '../SystemIcon';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -142,6 +148,54 @@ function RouteNotFound() {
 	);
 }
 
+function globalNavItemSelected(itemId: string, pathname: string): boolean {
+	const hash = urlMapping[itemId];
+	if (!hash) {
+		return false;
+	}
+	const path = hash.replace(/^#/, '');
+	// `/sites` remains as a backwards-compatible alias of Projects.
+	return pathname === path || (pathname === '/sites' && path === GlobalRoutes.Projects);
+}
+
+function GlobalSidebarNav() {
+	const { items } = useGlobalNavigation();
+	const { authoringBase } = useEnv();
+	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	return (
+		<List disablePadding sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+			{items?.map((item) => {
+				const selected = globalNavItemSelected(item.id, pathname);
+				const label = globalMenuMessages[item.id] ? formatMessage(globalMenuMessages[item.id]) : item.id;
+				return (
+					<ListItem key={item.id} disablePadding>
+						<ListItemButton
+							component="a"
+							href={getLauncherSectionLink(item.id, authoringBase)}
+							selected={selected}
+							aria-current={selected ? 'page' : undefined}
+						>
+							<ListItemIcon>
+								<SystemIcon icon={item.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+							</ListItemIcon>
+							<ListItemText primary={label} />
+						</ListItemButton>
+					</ListItem>
+				);
+			})}
+			<ListItem disablePadding>
+				<ListItemButton component="a" href="https://craftercms.com/docs" target="_blank" rel="noopener noreferrer">
+					<ListItemIcon>
+						<SystemIcon icon={{ id: 'craftercms.icons.Docs' }} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+					</ListItemIcon>
+					<ListItemText primary={formatMessage(launcherMessages.docs)} />
+				</ListItemButton>
+			</ListItem>
+		</List>
+	);
+}
+
 export function GlobalAppInternal(props: GlobalAppProps) {
 	const { footerHtml } = props;
 	const [width, setWidth] = useState(240);
@@ -214,47 +268,31 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				landmarkLabel={formatMessage(launcherMessages.global)}
 				sxs={{
 					drawerPaper: {
-						top: '0',
-						padding: 2
+						top: '0'
 					},
 					drawerBody: {
 						height: '100%',
 						display: 'flex',
 						flexDirection: 'column',
-						justifyContent: 'space-between'
+						justifyContent: 'space-between',
+						overflow: 'hidden'
 					}
 				}}
 				open={openSidebar}
 				width={width}
 				onWidthChange={setWidth}
 			>
-				<LauncherGlobalNav
-					title=""
-					sectionSxs={{
-						nav: {
-							maxHeight: '100%',
-							overflow: 'auto'
-						}
+				<GlobalSidebarNav />
+				<Box
+					component="footer"
+					sx={{
+						// The drawer no longer pads both pieces. The list sits on the sidebar edges; the footer keeps
+						// the inset it used to get from the drawer (16px) plus its own 20px block padding.
+						padding: (theme) => theme.spacing(2.5, 2, 4.5),
+						textAlign: 'center',
+						flexShrink: 0
 					}}
-					tileSxs={{
-						tile: {
-							width: '100%',
-							height: '35px',
-							flexDirection: 'row',
-							justifyContent: 'left',
-							margin: '0 0 5px'
-						},
-						iconAvatar: {
-							width: '25px',
-							height: '25px',
-							margin: '5px 10px'
-						},
-						title: {
-							textAlign: 'left'
-						}
-					}}
-				/>
-				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
+				>
 					<CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />
 					<Typography
 						component="p"
