@@ -122,8 +122,7 @@ export function SiteTools(props: SiteToolsProps) {
 					drawerBody: {
 						display: 'flex',
 						flexDirection: 'column',
-						justifyContent: 'space-between',
-						padding: (theme) => theme.spacing(2)
+						justifyContent: 'space-between'
 					}
 				}}
 				open={openSidebar}
@@ -132,12 +131,15 @@ export function SiteTools(props: SiteToolsProps) {
 				onWidthChange={onWidthChange}
 			>
 				<section>
+					{/* Controls above the list keep their own inset; the list below runs to the drawer edges. */}
 					<Box
-						sx={{
+						sx={(theme) => ({
 							display: 'flex',
 							justifyContent: 'space-between',
+							padding: theme.spacing(2),
+							paddingBottom: 0,
 							marginBottom: '10px'
-						}}
+						})}
 					>
 						{onBackClick && (
 							<Tooltip title={<FormattedMessage id="words.preview" defaultMessage="Preview" />}>
@@ -186,7 +188,14 @@ export function SiteTools(props: SiteToolsProps) {
 						/>
 					)}
 				</section>
-				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
+				<Box
+					component="footer"
+					sx={(theme) => ({
+						// Same box as before the drawer lost its padding: 20px of its own plus the 16px it used to sit inside.
+						padding: theme.spacing(4.5, 2),
+						textAlign: 'center'
+					})}
+				>
 					{!hideSidebarLogo && <CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />}
 					{footerHtml && (
 						<Typography
