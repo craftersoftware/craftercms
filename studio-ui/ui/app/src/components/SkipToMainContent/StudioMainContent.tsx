@@ -18,7 +18,7 @@ import React, { PropsWithChildren } from 'react';
 import Box from '@mui/material/Box';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material/styles';
-import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from './studioMainContent';
+import { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from './mainLandmark';
 
 export type StudioMainContentProps = PropsWithChildren<{ sx?: SxProps<Theme> }>;
 

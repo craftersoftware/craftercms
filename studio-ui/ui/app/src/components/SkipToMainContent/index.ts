@@ -16,5 +16,5 @@
 
 export { default } from './SkipToMainContent';
 export * from './SkipToMainContent';
-export * from './studioMainContent';
+export * from './mainLandmark';
 export * from './StudioMainContent';

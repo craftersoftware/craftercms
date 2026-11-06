@@ -18,7 +18,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import { visuallyHidden } from '@mui/utils';
 import { useIntl } from 'react-intl';
-import { focusStudioMainContent } from './studioMainContent';
+import { focusStudioMainContent } from './mainLandmark';
 import { focusRingStyles } from '../../styles/focusRing';
 
 /**
