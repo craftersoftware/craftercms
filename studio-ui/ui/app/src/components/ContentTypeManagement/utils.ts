@@ -504,6 +504,7 @@ export function createVirtualTypeForDataSource(
 	return createEmptyTypeStructure(translatedDataSourceDescriptor);
 }
 
+/** Builds a section, filling in the defaults. An id is generated when the given data has none. */
 export function createVirtualSection<K extends ContentTypeSection | DescriptorSection>(
 	sectionData: Partial<K> & Pick<K, 'title' | 'fields'>
 ): K {

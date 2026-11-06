@@ -120,6 +120,8 @@ export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | S
 
 const typesWarnedAboutMissingSectionIds = new WeakSet<ContentType>();
 const fallbackKeysBySection = new WeakMap<ContentTypeSection, string>();
+
+/** Key for a section accordion. Uses the section id, or a stable generated key when the section has none. */
 function getSectionKey(typeId: string, virtualType: ContentType, section: ContentTypeSection): string {
 	if (section.id) return `${typeId}-${section.id}`;
 	if (!typesWarnedAboutMissingSectionIds.has(virtualType)) {
