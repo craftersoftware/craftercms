@@ -294,6 +294,15 @@ export type ValidatorsData = {
 	currentIds?: string[];
 	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
 	additionalFields?: string[];
+	/**
+	 * Site-config variable-name postfix rules for a top-level Type Builder field form.
+	 * Omitted for nested fields, data sources, and when `<field-name-postfix>` is not `true`.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
 	resolveEmbeddedRelevance?: (
 		contentType: ContentType,
@@ -547,6 +556,7 @@ export function createFieldAtoms(
 			siblingIds: validatorsData?.siblingIds,
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
+			fieldNamePostfix: validatorsData?.fieldNamePostfix,
 			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.

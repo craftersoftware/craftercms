@@ -55,6 +55,7 @@ import {
 import { evaluateRteConstraints, measureRteValue } from './rtePlainText';
 import { asArray } from '../../../utils/array';
 import { freezeForPlugin } from './pluginHooks';
+import { checkFieldNamePostfix, formatPostfixList } from '../../ContentTypeManagement/fieldNamePostfix';
 
 /**
  * Everything the host knows when it validates a field. Internal: built-in validators read it through
@@ -96,6 +97,15 @@ export interface ValidatorMetaData {
 	 * is an ordinary field and only the constraints its content type declares apply. See {@link validateFieldValue}.
 	 */
 	nested?: boolean;
+	/**
+	 * Type Builder variable-name postfix rules from site-config. Present only for top-level field forms when
+	 * `<field-name-postfix>` is `true`. See {@link variableValidator}.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 }
 
 /**
@@ -922,19 +932,34 @@ function pathWithMacroValidator(currentValue: string): ValidatorResult {
 
 function variableValidator(currentValue: string, ctx: BuiltInValidatorContext): ValidatorResult {
 	const { meta } = ctx;
-	if (!currentValue?.trim() || !meta.siblingIds?.length) {
+	if (!currentValue?.trim()) {
 		return { valid: true };
 	}
-	const ownIds = new Set(meta.currentIds ?? []);
-	const candidateIds = [
-		currentValue,
-		...asArray(meta.additionalFields).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
-	];
-	const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
-	if (isDuplicate) {
-		return { valid: false, messages: [defineMessage({ defaultMessage: 'That variable name is already in use.' })] };
+	const messages: FieldValidityMessage[] = [];
+	const postfix = meta.fieldNamePostfix;
+	if (postfix?.enabled) {
+		const result = checkFieldNamePostfix(currentValue, postfix.ignoreFields, postfix.suffixes);
+		if (result === 'missing') {
+			messages.push([
+				defineMessage({
+					defaultMessage: 'The variable name must end with {postfixes}.'
+				}),
+				{ postfixes: formatPostfixList(postfix.suffixes) }
+			]);
+		}
 	}
-	return { valid: true };
+	if (meta.siblingIds?.length) {
+		const ownIds = new Set(meta.currentIds ?? []);
+		const candidateIds = [
+			currentValue,
+			...asArray(meta.additionalFields).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
+		];
+		const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
+		if (isDuplicate) {
+			messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
+		}
+	}
+	return { valid: messages.length === 0, messages };
 }
 
 export default validateFieldValue;
