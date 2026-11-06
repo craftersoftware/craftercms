@@ -19,7 +19,6 @@ import Card from '@mui/material/Card';
 import CardHeader, { cardHeaderClasses } from '@mui/material/CardHeader';
 import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
-import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -50,7 +49,6 @@ interface SiteCardProps {
 	onDeleteSiteClick(site: Site): void;
 	onEditSiteClick(site: Site): void;
 	onDuplicateSiteClick(siteId: string): void;
-	onEnableStagingClick?(site: Site): void;
 	onConfigurationClick?(site: Site): void;
 	onPublishButtonClick(
 		event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
@@ -69,7 +67,6 @@ export function SiteCard(props: SiteCardProps) {
 		onDeleteSiteClick,
 		onEditSiteClick,
 		onDuplicateSiteClick,
-		onEnableStagingClick,
 		onConfigurationClick,
 		fallbackImageSrc,
 		compact = false,
@@ -242,18 +239,6 @@ export function SiteCard(props: SiteCardProps) {
 							aria-label={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}
 						>
 							<EditRoundedIcon />
-						</IconButton>
-					</Tooltip>
-				)}
-				{isSiteReady && onEnableStagingClick && !site.stagingEnabled && (
-					<Tooltip title={<FormattedMessage defaultMessage="Enable staging" />}>
-						<IconButton
-							onClick={() => onEnableStagingClick(site)}
-							size={compact ? 'small' : 'medium'}
-							disabled={disabled}
-							aria-label={formatMessage({ defaultMessage: 'Enable staging' })}
-						>
-							<AccountTreeRoundedIcon />
 						</IconButton>
 					</Tooltip>
 				)}

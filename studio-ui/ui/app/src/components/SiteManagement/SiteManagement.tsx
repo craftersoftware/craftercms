@@ -28,7 +28,7 @@ import LookupTable from '../../models/LookupTable';
 import { PublishingStatus } from '../../models/Publishing';
 import { Site } from '../../models/Site';
 import { setSiteCookie } from '../../utils/auth';
-import { enableStaging, trash } from '../../services/sites';
+import { trash } from '../../services/sites';
 import { batchActions } from '../../state/actions/misc';
 import { showSystemNotification } from '../../state/actions/system';
 import { changeSite, fetchSites, popSite } from '../../state/actions/sites';
@@ -53,8 +53,6 @@ import CardActionArea from '@mui/material/CardActionArea';
 import CardHeader from '@mui/material/CardHeader';
 import { Typography } from '@mui/material';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -68,14 +66,6 @@ const translations = defineMessages({
 	siteDeleted: {
 		id: 'sitesGrid.siteDeleted',
 		defaultMessage: 'Project deleted successfully'
-	},
-	stagingEnabled: {
-		id: 'sitesGrid.stagingEnabled',
-		defaultMessage: 'Staging enabled'
-	},
-	enablingStaging: {
-		id: 'sitesGrid.enablingStaging',
-		defaultMessage: 'Enabling staging… this can take several minutes'
 	}
 });
 
@@ -83,13 +73,6 @@ const confirmDeleteInitialState = {
 	site: null,
 	open: false,
 	checked: false
-};
-
-const confirmEnableStagingInitialState = {
-	site: null as Site,
-	open: false,
-	checked: false,
-	submitting: false
 };
 
 export function SiteManagement() {
@@ -110,7 +93,6 @@ export function SiteManagement() {
 	const [isDuplicateDialogFromCreateDialog, setIsDuplicateDialogFromCreateDialog] = useState(false);
 	const [disabledSitesLookup, setDisabledSitesLookup] = useSpreadState({});
 	const [confirmDeleteState, setConfirmDeleteState] = useSpreadState(confirmDeleteInitialState);
-	const [confirmEnableStagingState, setConfirmEnableStagingState] = useSpreadState(confirmEnableStagingInitialState);
 
 	useEffect(() => {
 		const subscription = hasGlobalPermissions('create_site', 'edit_site', 'delete_site', 'duplicate_site').subscribe(
@@ -181,10 +163,6 @@ export function SiteManagement() {
 		publishingStatusDialogState.onOpen();
 	};
 
-	const onEnableStagingClick = (site: Site) => {
-		setConfirmEnableStagingState({ site, open: true, checked: false, submitting: false });
-	};
-
 	const onConfigurationClick = (site: Site) => {
 		if (site.id !== active) {
 			dispatch(changeSite(site.id));
@@ -205,35 +183,6 @@ export function SiteManagement() {
 				}
 			})
 		);
-	};
-
-	const onConfirmEnableStaging = (site: Site) => {
-		setConfirmEnableStagingState({ submitting: true });
-		setDisabledSitesLookup({ [site.id]: true });
-		dispatch(
-			showSystemNotification({
-				message: formatMessage(translations.enablingStaging)
-			})
-		);
-		enableStaging(site.id).subscribe({
-			next() {
-				dispatch(
-					batchActions([
-						showSystemNotification({
-							message: formatMessage(translations.stagingEnabled)
-						}),
-						fetchSites()
-					])
-				);
-				setDisabledSitesLookup({ [site.id]: false });
-				setConfirmEnableStagingState(confirmEnableStagingInitialState);
-			},
-			error({ response: { response } }) {
-				setDisabledSitesLookup({ [site.id]: false });
-				setConfirmEnableStagingState({ submitting: false });
-				dispatch(pushErrorDialog({ props: { error: response } }));
-			}
-		});
 	};
 
 	const onDuplicateSiteClick = (siteId: string) => {
@@ -320,7 +269,6 @@ export function SiteManagement() {
 							currentView={currentView}
 							onPublishButtonClick={onPublishButtonClick}
 							onDuplicateSiteClick={permissionsLookup['duplicate_site'] && onDuplicateSiteClick}
-							onEnableStagingClick={permissionsLookup['edit_site'] && onEnableStagingClick}
 							onConfigurationClick={onConfigurationClick}
 							disabledSitesLookup={disabledSitesLookup}
 						/>
@@ -431,55 +379,6 @@ export function SiteManagement() {
 					setConfirmDeleteState(confirmDeleteInitialState);
 				}}
 				onCancel={() => setConfirmDeleteState(confirmDeleteInitialState)}
-			/>
-			<ConfirmDialog
-				open={confirmEnableStagingState.open}
-				disableBackdropClick={confirmEnableStagingState.submitting}
-				disableEscapeKeyDown={confirmEnableStagingState.submitting}
-				body={
-					confirmEnableStagingState.submitting ? (
-						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-							<CircularProgress size={24} />
-							<Typography>
-								<FormattedMessage {...translations.enablingStaging} />
-							</Typography>
-						</Box>
-					) : (
-						<>
-							<Typography>
-								<FormattedMessage
-									defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
-									values={{ siteId: confirmEnableStagingState.site?.id }}
-								/>
-							</Typography>
-							<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
-								<Typography>
-									<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
-								</Typography>
-								<FormControlLabel
-									sx={{ textAlign: 'left', mt: 1 }}
-									control={
-										<Checkbox
-											color="primary"
-											checked={confirmEnableStagingState.checked}
-											onChange={() => setConfirmEnableStagingState({ checked: !confirmEnableStagingState.checked })}
-										/>
-									}
-									label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
-								/>
-							</Alert>
-						</>
-					)
-				}
-				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
-				disableOkButton={!confirmEnableStagingState.checked || confirmEnableStagingState.submitting}
-				disableCancelButton={confirmEnableStagingState.submitting}
-				onOk={() => onConfirmEnableStaging(confirmEnableStagingState.site)}
-				onCancel={() => {
-					if (!confirmEnableStagingState.submitting) {
-						setConfirmEnableStagingState(confirmEnableStagingInitialState);
-					}
-				}}
 			/>
 		</Paper>
 	);

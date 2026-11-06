@@ -78,6 +78,15 @@ import { SiteToolsContext } from '../SiteTools/siteToolsContext';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import Paper from '@mui/material/Paper';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useSitesBranch from '../../hooks/useSitesBranch';
+import Checkbox from '@mui/material/Checkbox';
+import CircularProgress from '@mui/material/CircularProgress';
+import { enableStaging } from '../../services/sites';
+import { fetchSites } from '../../state/actions/sites';
 
 interface SiteConfigurationManagementProps {
 	embedded?: boolean;
@@ -91,7 +100,14 @@ interface SiteConfigurationManagementProps {
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
 	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
+	const { byId: sitesById } = useSitesBranch();
+	const stagingEnabled = Boolean(sitesById?.[site]?.stagingEnabled);
 	const { username } = useActiveUser();
+	const [enableStagingConfirm, setEnableStagingConfirm] = useState({
+		open: false,
+		checked: false,
+		submitting: false
+	});
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const { formatMessage } = useIntl();
@@ -594,6 +610,40 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
+	const isProjectConfigurationXml =
+		selectedConfigFile?.module === 'studio' && selectedConfigFile?.path === 'site-config.xml';
+
+	const onEnableStagingSwitch = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+		if (checked) {
+			setEnableStagingConfirm({ open: true, checked: false, submitting: false });
+		}
+	};
+
+	const onConfirmEnableStaging = () => {
+		setEnableStagingConfirm((state) => ({ ...state, submitting: true }));
+		dispatch(
+			showSystemNotification({
+				message: formatMessage({ defaultMessage: 'Enabling staging… this can take several minutes' })
+			})
+		);
+		enableStaging(site).subscribe({
+			next() {
+				dispatch(
+					batchActions([
+						showSystemNotification({
+							message: formatMessage({ defaultMessage: 'Staging enabled' })
+						}),
+						fetchSites()
+					])
+				);
+				setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+			},
+			error({ response: { response } }) {
+				setEnableStagingConfirm((state) => ({ ...state, submitting: false }));
+				dispatch(pushErrorDialog({ props: { error: response } }));
+			}
+		});
+	};
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -789,8 +839,9 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						<>
 							<GlobalAppToolbar
 								sxs={{
-									appBar: { paddingRight: '14.4px' },
-									toolbar: { '& > section': {} }
+									appBar: { paddingRight: '14.4px', overflow: 'visible' },
+									toolbar: { overflow: 'visible', '& > section': { overflow: 'visible' } },
+									rightContent: { overflow: 'visible' }
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
@@ -802,7 +853,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								title={getTranslation(selectedConfigFile.title, translations, formatMessage)}
 								subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
 								rightContent={
-									<>
+									<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
 										<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
 											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
 												{formatMessage(translations.encryptMarked)}
@@ -818,13 +869,56 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
 											)}
 										</SecondaryButton>
-									</>
+										{isProjectConfigurationXml && (
+											<Paper
+												elevation={0}
+												sx={{
+													position: 'absolute',
+													top: 'calc(100% + 14px)',
+													right: '-11px',
+													zIndex: 2,
+													display: 'flex',
+													alignItems: 'center',
+													py: 2,
+													px: 2.5,
+													borderRadius: 0,
+													borderBottomLeftRadius: 4,
+													bgcolor: 'background.paper',
+													boxShadow: 2
+												}}
+											>
+												{stagingEnabled ? (
+													<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+														<Typography color="textSecondary">
+															<FormattedMessage defaultMessage="Staging is enabled" />
+														</Typography>
+														<IconButton size="small" aria-label={formatMessage({ defaultMessage: 'Staging info' })}>
+															<InfoOutlinedIcon fontSize="small" />
+														</IconButton>
+													</Box>
+												) : (
+													<FormControlLabel
+														sx={{
+															mr: 0,
+															gap: 1,
+															'& .MuiFormControlLabel-label': { color: 'text.secondary' }
+														}}
+														control={
+															<Switch size="small" sx={{ ml: 0.5 }} checked={false} onChange={onEnableStagingSwitch} />
+														}
+														label={<FormattedMessage defaultMessage="Enable Staging" />}
+													/>
+												)}
+											</Paper>
+										)}
+									</Box>
 								}
 							/>
 							<Box
 								sx={{
 									display: 'flex',
-									flexGrow: 1
+									flexGrow: 1,
+									position: 'relative'
 								}}
 							>
 								<AceEditor
@@ -940,6 +1034,55 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				</Box>
 			)}
 			<ConfirmDialog open={false} {...confirmDialogProps} />
+			<ConfirmDialog
+				open={enableStagingConfirm.open}
+				disableBackdropClick={enableStagingConfirm.submitting}
+				disableEscapeKeyDown={enableStagingConfirm.submitting}
+				body={
+					enableStagingConfirm.submitting ? (
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+							<CircularProgress size={24} />
+							<Typography>
+								<FormattedMessage defaultMessage="Enabling staging… this can take several minutes" />
+							</Typography>
+						</Box>
+					) : (
+						<>
+							<Typography>
+								<FormattedMessage
+									defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
+									values={{ siteId: site }}
+								/>
+							</Typography>
+							<Alert severity="warning" icon={false} sx={{ mt: 2 }}>
+								<Typography>
+									<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live. Serverless delivery provisions a staging target and cloud storage. Removing staging later means recreating the project." />
+								</Typography>
+								<FormControlLabel
+									sx={{ textAlign: 'left', mt: 1 }}
+									control={
+										<Checkbox
+											color="primary"
+											checked={enableStagingConfirm.checked}
+											onChange={() => setEnableStagingConfirm((state) => ({ ...state, checked: !state.checked }))}
+										/>
+									}
+									label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
+								/>
+							</Alert>
+						</>
+					)
+				}
+				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
+				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
+				disableCancelButton={enableStagingConfirm.submitting}
+				onOk={onConfirmEnableStaging}
+				onCancel={() => {
+					if (!enableStagingConfirm.submitting) {
+						setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+					}
+				}}
+			/>
 		</Box>
 	);
 }
