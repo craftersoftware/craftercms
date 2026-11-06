@@ -31,38 +31,38 @@ import { SearchResult } from '@craftercms/models/src/search';
 export function search(query: Query, config?: CrafterConfig): Observable<SearchResult>;
 export function search(params: Object, config?: CrafterConfig): Observable<SearchResult>;
 export function search(queryOrParams: Query | Object, config?: CrafterConfig): Observable<SearchResult> {
-  config = crafterConf.mix(config);
-  let requestURL;
-  const params = queryOrParams instanceof Query ? queryOrParams.params : queryOrParams;
+	config = crafterConf.mix(config);
+	let requestURL;
+	const params = queryOrParams instanceof Query ? queryOrParams.params : queryOrParams;
 
-  if (queryOrParams instanceof Query) {
-    requestURL = composeUrl(config, config.endpoints.SEARCH) + '?crafterSite=' + config.site;
+	if (queryOrParams instanceof Query) {
+		requestURL = composeUrl(config, config.endpoints.SEARCH) + '?crafterSite=' + config.site;
 
-    return SDKService.httpPost(requestURL, params).pipe(
-      map((response: any) => {
-        return response.hits;
-      })
-    );
-  }
+		return SDKService.httpPost(requestURL, params).pipe(
+			map((response: any) => {
+				return response.hits;
+			})
+		);
+	}
 }
 
 /**
  * Returns a new Query object
  */
 export function createQuery(params?: Object): Query {
-  let query = new Query();
-  const queryId = params && params['uuid'] ? params['uuid'] : uuid();
-  Object.assign(query.params, params);
-  query.uuid = queryId;
-  return query;
+	let query = new Query();
+	const queryId = params && params['uuid'] ? params['uuid'] : uuid();
+	Object.assign(query.params, params);
+	query.uuid = queryId;
+	return query;
 }
 
 /**
  * Implementation of Search Service for ElasticSearch
  */
 export const SearchService = {
-  search,
-  createQuery
+	search,
+	createQuery
 };
 
 export default SearchService;

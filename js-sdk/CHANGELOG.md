@@ -1,16 +1,18 @@
 # SDK Changelog
 
+## @craftercms/content@4.5.0
+- Deprecated "Get Descriptor" API (use getItem instead)
+- `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
+- New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
+
+## @craftercms/redux@4.5.0
+- Deprecated `getDescriptor` API (use `getItem` instead)
+- `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
+
 ## @craftercms/content@4.4.1
 - Fix the published README for links to work on npmjs.com
 
-## @craftercms/content@4.4.0
-- "Get Descriptor" API is deprecated and will be removed (use getItem instead)
-- New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
-
-## @craftercms/redux@4.4.0
-- "Get Descriptor" API is deprecated (use getItem instead)
-
-## @craftercms/classes@4.4.0
+## @craftercms/classes@4.4.1
 - New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
 
 ## 4.2.0

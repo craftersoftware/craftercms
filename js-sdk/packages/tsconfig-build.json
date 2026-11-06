@@ -10,7 +10,7 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "module": "es2015",
     "target": "es2015",
     "lib": ["dom", "es2019"],

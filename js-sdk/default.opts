@@ -1,5 +1,4 @@
 --require assert
 --require mocha
 --require xhr-mock
---require ts-node/register
---require tsconfig-paths/register
+--node-option import=tsx

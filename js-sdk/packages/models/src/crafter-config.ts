@@ -30,7 +30,4 @@ type DeprecatedCrafterConfig<T> = CrafterConfig;
  **/
 type DeprecatedEndpoints<T> = Endpoints;
 
-export {
-  DeprecatedCrafterConfig as CrafterConfig,
-  DeprecatedEndpoints as Endpoints
-};
+export { DeprecatedCrafterConfig as CrafterConfig, DeprecatedEndpoints as Endpoints };
