@@ -99,7 +99,6 @@ import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
 import {
-	applyTypeStateUpdate,
 	createTypeWorkingCopy,
 	deleteDataSourceFromType,
 	insertDataSourceIntoType,
