@@ -284,6 +284,7 @@
 		<constructor-arg name="deployer" ref="allDeployers"/>
 		<constructor-arg name="auditService" ref="auditServiceInternal"/>
 		<constructor-arg name="taskManager" ref="taskManager"/>
+		<property name="servicesConfig" ref="cstudioServicesConfig"/>
 	</bean>
 
 	<bean id="auditService" class="org.craftercms.studio.impl.v2.service.audit.AuditServiceImpl">
