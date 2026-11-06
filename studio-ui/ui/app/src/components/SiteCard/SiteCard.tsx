@@ -21,7 +21,7 @@ import IconButton from '@mui/material/IconButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import ContentCopyIcon from '@mui/icons-material/ContentCopyRounded';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import { Site } from '../../models/Site';
 import CardMedia from '@mui/material/CardMedia';
 import CardActions from '@mui/material/CardActions';
@@ -222,7 +222,7 @@ export function SiteCard(props: SiteCardProps) {
 							disabled={disabled}
 							aria-label={formatMessage({ defaultMessage: 'Enable staging' })}
 						>
-							<AccountTreeOutlinedIcon />
+							<AccountTreeRoundedIcon />
 						</IconButton>
 					</Tooltip>
 				)}
