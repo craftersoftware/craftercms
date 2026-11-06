@@ -18,6 +18,7 @@ package org.craftercms.studio.controller.rest.v2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.studio.api.v1.service.security.SecurityService;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
@@ -64,6 +65,18 @@ public abstract class ManagementTokenAware {
 			if (!CS.equals(token, getConfiguredToken())) {
 				throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
 			}
+		}
+	}
+
+	/**
+	 * Requires the value of {@link ManagementToken#HEADER_NAME}. A logged-in session does not replace it.
+	 *
+	 * @param token the header value
+	 * @throws InvalidManagementTokenException if the header is missing or does not match the configured token
+	 */
+	protected void validateHeaderToken(String token) throws InvalidManagementTokenException {
+		if (StringUtils.isEmpty(token) || !CS.equals(token, getConfiguredToken())) {
+			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
 		}
 	}
 

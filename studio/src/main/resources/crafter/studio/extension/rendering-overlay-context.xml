@@ -135,6 +135,11 @@
     <bean id="cmisController" class="org.craftercms.studio.controller.rest.v2.CmisController">
     </bean>
 
+	<bean id="siteManagementController" class="org.craftercms.studio.controller.rest.v2.SiteManagementController">
+		<constructor-arg name="studioConfiguration" ref="studioConfiguration"/>
+		<constructor-arg name="sitesService" ref="sitesService"/>
+	</bean>
+
     <bean id="repositoryManagementController"
           class="org.craftercms.studio.controller.rest.v2.RepositoryManagementController">
         <constructor-arg name="repositoryManagementService" ref="repositoryManagementService" />
