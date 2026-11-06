@@ -17,13 +17,13 @@
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import FormHelperText from '@mui/material/FormHelperText';
 import { siteIdMaxLength, siteInputMaxLength, siteNameMaxLength } from './utils';
 import React from 'react';
 import { renderSiteFormHelperText } from './BlueprintForm';
 import { defineMessages, useIntl } from 'react-intl';
 import { DuplicateSiteState, LookupTable, SiteState } from '../../models';
+import Switch from '@mui/material/Switch';
 
 const messages = defineMessages({
 	siteId: {
@@ -196,12 +196,11 @@ export function BaseSiteForm(props: BaseSiteFormProps) {
 			<Grid size={12} data-field-id="enableStaging">
 				<FormControlLabel
 					control={
-						<Checkbox
-							id="enableStaging"
+						<Switch
 							name="enableStaging"
-							color="primary"
 							checked={inputs.enableStaging}
 							onChange={(event) => handleInputChange(event)}
+							color="primary"
 						/>
 					}
 					label={formatMessage(messages.enableStaging)}
