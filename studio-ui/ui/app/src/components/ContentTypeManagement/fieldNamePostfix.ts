@@ -30,9 +30,15 @@ export interface FieldNamePostfixViolation {
 }
 
 /**
- * Exact ignore list match, then require one of `suffixes` at the end of `name`.
+ * Exact ignore-list match, then require one of `suffixes` at the end of `name`.
+ *
+ * Postfixes (e.g. `_s`, `_dt`) tell search how to type the field; `ignore-postfix-fields` exempts
+ * names that skip that rule. TB1 used `includes` on the parsed config: several `<field>`s → array
+ * (exact match), one `<field>` → string (accidental substring). It also accepted the postfix
+ * anywhere via `indexOf` (`is_sold` passed for `_s`). TB2 always matches exemptions on the whole
+ * name (the one-entry substring was a parser artefact) and uses `endsWith` so the typing hint stays
+ * at the end. Longer suffixes such as `_dt` are not confused with shorter ones such as `_d`.
  * An empty `suffixes` list is always `ok` (controls with no declared postfixes are not errors).
- * Longer suffixes such as `_dt` are not confused with shorter ones such as `_d`: matching uses `endsWith`.
  */
 export function checkFieldNamePostfix(
 	name: string,
