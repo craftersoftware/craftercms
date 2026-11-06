@@ -136,6 +136,8 @@ export interface ContentTypeField {
 	fields?: LookupTable<ContentTypeField>;
 	values?: { label: string; value: string }[];
 	helpText?: string;
+	/** Companion XML property ids declared by the control (e.g. `date_dt_tz`, `backUpInput_s_bk`). */
+	additionalFields?: string[];
 	/**
 	 * Constraints as parsed (name, value, type, label). Save writes them in their original order,
 	 * updating the ones Type Builder edits in place. Item-count constraints stay with countLimits.
@@ -274,6 +276,7 @@ export interface LegacyFormDefinitionField {
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	fields?: { field: LegacyFormDefinitionField | Array<LegacyFormDefinitionField> };
 	plugin: FormDefinitionPlugin;
+	additionalFields?: { id: string | string[] };
 	// Repeat groups store these as elements and as properties. See utils/countLimits.ts.
 	minOccurs?: string;
 	maxOccurs?: string;
