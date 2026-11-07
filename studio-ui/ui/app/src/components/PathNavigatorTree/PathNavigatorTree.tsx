@@ -230,7 +230,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 
 	const onNodeLabelClick =
 		onNodeClick ??
-		((event: React.MouseEvent<Element, MouseEvent>, path: string) => {
+		((event: React.MouseEvent<Element> | React.KeyboardEvent<Element>, path: string) => {
 			const item = getItemByPath(path);
 			if (isNavigable(item)) {
 				dispatch(previewItem({ item, newTab: event.ctrlKey || event.metaKey }));
@@ -271,12 +271,14 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 		const anchorRect = element.getBoundingClientRect();
 		const top = anchorRect.top + getOffsetTop(anchorRect, 'top');
 		const left = anchorRect.left + getOffsetLeft(anchorRect, 'left');
+		// A coordinate anchor keeps the DOM node out of the Redux action. MUI still restores
+		// focus to the element that was focused when the menu opened.
 		dispatch(
 			showItemMegaMenu({
 				path,
 				anchorReference: 'anchorPosition',
 				anchorPosition: { top, left },
-				loaderItems: getNumOfMenuOptionsForItem(getItemByPath(path))
+				numOfLoaderItems: getNumOfMenuOptionsForItem(getItemByPath(path))
 			})
 		);
 	};

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { type ReactNode } from 'react';
+import React, { isValidElement, type ReactNode } from 'react';
 import Accordion from '@mui/material/Accordion';
 import { PathNavigatorHeader } from '../PathNavigator/PathNavigatorHeader';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -24,10 +24,11 @@ import LookupTable from '../../models/LookupTable';
 import { ContentItem } from '../../models/Item';
 import { SystemIconDescriptor } from '../SystemIcon';
 import RefreshRounded from '@mui/icons-material/RefreshRounded';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, type MessageDescriptor, useIntl } from 'react-intl';
 import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
+import { getPossibleTranslation } from '../../utils/i18n';
 
 export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
 
@@ -42,14 +43,14 @@ export interface PathNavigatorTreeUIProps extends Pick<
 	| 'childrenByParentPath'
 	| 'errorByPath'
 > {
-	title: ReactNode;
+	title: ReactNode | MessageDescriptor;
 	icon?: SystemIconDescriptor;
 	container?: Partial<StateStylingProps>;
 	rootPath: string;
 	isRootPathMissing: boolean;
 	itemsByPath: LookupTable<ContentItem>;
 	onIconClick(path: string): void;
-	onLabelClick(event: React.MouseEvent<Element, MouseEvent>, path: string): void;
+	onLabelClick(event: React.MouseEvent<Element> | React.KeyboardEvent<Element>, path: string): void;
 	onChangeCollapsed(collapsed: boolean): void;
 	onOpenItemMenu(element: Element, path: string): void;
 	onHeaderButtonClick(element: Element): void;
@@ -92,6 +93,13 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 		sxs
 	} = props;
 	// endregion
+	const { formatMessage } = useIntl();
+	const isTranslatable =
+		typeof title === 'string' ||
+		(typeof title === 'object' && title !== null && !isValidElement(title) && !Array.isArray(title) && 'id' in title);
+	const resolvedTitle = isTranslatable
+		? getPossibleTranslation(title as MessageDescriptor | string, formatMessage)
+		: title;
 	return (
 		<Accordion
 			square
@@ -122,7 +130,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 		>
 			<PathNavigatorHeader
 				icon={icon}
-				title={title}
+				title={resolvedTitle as ReactNode}
 				locale={null}
 				// @see https://github.com/craftersoftware/craftercms/issues/5360
 				menuButtonIcon={<RefreshRounded />}
@@ -144,7 +152,18 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 				/>
 			) : (
 				<AccordionDetails className={props.classes?.body} sx={{ padding: 0, flexDirection: 'column', ...sxs?.body }}>
-					<SimpleTreeView expandedItems={expandedNodes} disableSelection>
+					<SimpleTreeView
+						aria-label={typeof resolvedTitle === 'string' ? resolvedTitle : undefined}
+						expandedItems={expandedNodes}
+						// Label activation (open/preview) stays on the item. The icon container expands.
+						expansionTrigger="iconContainer"
+						disableSelection
+						onItemExpansionToggle={(_event, itemId) => {
+							if (!itemId.endsWith('::__more__')) {
+								onIconClick(itemId);
+							}
+						}}
+					>
 						<PathNavigatorTreeItem
 							path={rootPath}
 							active={active}

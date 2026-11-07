@@ -16,8 +16,11 @@
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import React from 'react';
-import MenuList from '@mui/material/MenuList';
-import MenuItem from '@mui/material/MenuItem';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -94,7 +97,13 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
+	// Both hosts pass the active tool id without its leading slash, and `tool.url` may have one, so the
+	// widget lookup, `selected` and `aria-current` compare the same normalised ids.
+	const normalizedActiveToolId = activeToolId?.replace(/^\//, '');
+	const matchedTool = normalizedActiveToolId
+		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
+		: undefined;
+	const tool = matchedTool?.widget;
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -113,8 +122,7 @@ export function SiteTools(props: SiteToolsProps) {
 					drawerBody: {
 						display: 'flex',
 						flexDirection: 'column',
-						justifyContent: 'space-between',
-						padding: (theme) => theme.spacing(2)
+						justifyContent: 'space-between'
 					}
 				}}
 				open={openSidebar}
@@ -123,12 +131,15 @@ export function SiteTools(props: SiteToolsProps) {
 				onWidthChange={onWidthChange}
 			>
 				<section>
+					{/* Controls above the list keep their own inset; the list below runs to the drawer edges. */}
 					<Box
-						sx={{
+						sx={(theme) => ({
 							display: 'flex',
 							justifyContent: 'space-between',
+							padding: theme.spacing(2),
+							paddingBottom: 0,
 							marginBottom: '10px'
-						}}
+						})}
 					>
 						{onBackClick && (
 							<Tooltip title={<FormattedMessage id="words.preview" defaultMessage="Preview" />}>
@@ -143,41 +154,48 @@ export function SiteTools(props: SiteToolsProps) {
 						)}
 						{!hideSidebarSiteSwitcher && <SiteSwitcherSelect site={site} fullWidth />}
 					</Box>
-					<MenuList disablePadding sx={{ overflow: 'auto' }}>
-						{tools ? (
-							tools.map((tool) => (
-								<MenuItem
-									onClick={() => onNavItemClick(tool.url)}
-									key={tool.url}
-									selected={`/${tool.url}` === activeToolId}
-								>
-									<SystemIcon
-										sx={{ marginRight: '10px' }}
-										icon={tool.icon}
-										svgIconProps={{ fontSize: 'small', color: 'action' }}
-									/>
-									<Typography>{getPossibleTranslation(tool.title, formatMessage)}</Typography>
-								</MenuItem>
-							))
-						) : (
-							<EmptyState
-								title={
-									<FormattedMessage
-										id="siteTools.toolListingNotConfigured"
-										defaultMessage="The project tools list has not been set"
-									/>
-								}
-								subtitle={
-									<FormattedMessage
-										id="siteTools.toolListingNotConfiguredSubtitle"
-										defaultMessage="Please set the craftercms.siteTools reference on the ui.xml"
-									/>
-								}
-							/>
-						)}
-					</MenuList>
+					{tools ? (
+						<List disablePadding sx={{ overflow: 'auto' }}>
+							{tools.map((tool) => (
+								<ListItem key={tool.url} disablePadding>
+									<ListItemButton
+										selected={tool.url.replace(/^\//, '') === normalizedActiveToolId}
+										aria-current={tool.url.replace(/^\//, '') === normalizedActiveToolId ? 'page' : undefined}
+										onClick={() => onNavItemClick(tool.url)}
+									>
+										<ListItemIcon sx={{ minWidth: 36 }}>
+											<SystemIcon icon={tool.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+										</ListItemIcon>
+										<ListItemText primary={getPossibleTranslation(tool.title, formatMessage)} />
+									</ListItemButton>
+								</ListItem>
+							))}
+						</List>
+					) : (
+						<EmptyState
+							title={
+								<FormattedMessage
+									id="siteTools.toolListingNotConfigured"
+									defaultMessage="The project tools list has not been set"
+								/>
+							}
+							subtitle={
+								<FormattedMessage
+									id="siteTools.toolListingNotConfiguredSubtitle"
+									defaultMessage="Please set the craftercms.siteTools reference on the ui.xml"
+								/>
+							}
+						/>
+					)}
 				</section>
-				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
+				<Box
+					component="footer"
+					sx={(theme) => ({
+						// Same box as before the drawer lost its padding: 20px of its own plus the 16px it used to sit inside.
+						padding: theme.spacing(4.5, 2),
+						textAlign: 'center'
+					})}
+				>
 					{!hideSidebarLogo && <CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />}
 					{footerHtml && (
 						<Typography

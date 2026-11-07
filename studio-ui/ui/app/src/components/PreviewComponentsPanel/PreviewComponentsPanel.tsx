@@ -399,7 +399,8 @@ export function PreviewComponentsPanel() {
 				}}
 			>
 				<Box
-					component="header"
+					component="li"
+					role="presentation"
 					sx={{
 						px: 2,
 						py: 1,

@@ -46,10 +46,12 @@ import useActiveUser from '../../hooks/useActiveUser';
 import { MEDIA_CARD_GRID_TEMPLATE_COLUMNS, viewModes } from '../BrowseFilesDialog';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
+import { cancelTreeItemKey, isOwnTreeItemEvent } from '../../utils/treeKeyboard';
 import BrowseFilesDialogContainerSkeleton from '../BrowseFilesDialog/BrowseFilesDialogContainerSkeleton';
 import Checkbox from '@mui/material/Checkbox';
 import useEnv from '../../hooks/useEnv';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export interface BrowseExternalAssetDialogProps extends EnhancedDialogProps {
 	path: string;
@@ -215,10 +217,11 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 							rowGap: (theme) => theme.spacing(1)
 						}}
 					>
-						<SimpleTreeView disableSelection>
+						<SimpleTreeView aria-label={formatMessage({ defaultMessage: 'Folders' })} disableSelection>
 							<ExternalAssetFoldersTreeView
 								foldersByPath={foldersByPath}
 								path={path}
+								currentPath={currentPath}
 								onFolderClick={(e, folderPath) => {
 									e.stopPropagation();
 									setCurrentPath(folderPath);
@@ -390,28 +393,61 @@ function ExternalAssetFoldersTreeView({
 	foldersByPath,
 	path,
 	folder,
+	currentPath,
+	level = 1,
 	onFolderClick
 }: {
 	foldersByPath: LookupTable<MediaItem[]>;
 	path?: string;
 	folder?: MediaItem;
+	currentPath?: string;
+	level?: number;
 	onFolderClick(e, folderPath: string): void;
 }) {
 	const label = folder?.name ?? path ?? '/';
+	const labelId = React.useId();
 	return (
-		<>
-			<TreeItem itemId={path} label={<Box onClick={(e) => onFolderClick(e, path)}>{label}</Box>}>
-				{foldersByPath[path]?.map((folder) => (
-					<ExternalAssetFoldersTreeView
-						key={folder.path}
-						foldersByPath={foldersByPath}
-						path={folder.path}
-						folder={folder}
-						onFolderClick={onFolderClick}
-					/>
-				))}
-			</TreeItem>
-		</>
+		<TreeItem
+			itemId={path}
+			aria-level={level}
+			aria-selected={path === currentPath}
+			aria-labelledby={labelId}
+			onClick={(event) => {
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
+				event.stopPropagation();
+				if ((event.target as HTMLElement).closest('.MuiTreeItem-iconContainer')) {
+					return;
+				}
+				onFolderClick(event, path);
+			}}
+			onKeyDown={(event) => {
+				if (!isOwnTreeItemEvent(event)) {
+					return;
+				}
+				if (event.key === 'Enter') {
+					cancelTreeItemKey(event);
+					onFolderClick(event, path);
+				}
+			}}
+			label={<Box id={labelId}>{label}</Box>}
+			sx={{
+				'&:focus-visible > .MuiTreeItem-content': getFocusRingSx({ inset: true })
+			}}
+		>
+			{foldersByPath[path]?.map((child) => (
+				<ExternalAssetFoldersTreeView
+					key={child.path}
+					foldersByPath={foldersByPath}
+					path={child.path}
+					folder={child}
+					currentPath={currentPath}
+					level={level + 1}
+					onFolderClick={onFolderClick}
+				/>
+			))}
+		</TreeItem>
 	);
 }
 
