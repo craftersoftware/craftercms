@@ -16,8 +16,12 @@
 
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import LauncherGlobalNav from '../LauncherGlobalNav/LauncherGlobalNav';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import {
 	createHashRouter,
@@ -29,7 +33,8 @@ import {
 	useLocation
 } from 'react-router';
 import SiteManagement from '../SiteManagement';
-import { getLauncherSectionLink, urlMapping } from '../LauncherSection/utils';
+import { getLauncherSectionLink, messages as launcherMessages, urlMapping } from '../LauncherSection/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import EmptyState from '../EmptyState/EmptyState';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useGlobalAppState } from './GlobalAppContext';
@@ -38,10 +43,13 @@ import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LoadingState from '../LoadingState/LoadingState';
 import LauncherOpenerButton from '../LauncherOpenerButton';
 import { useGlobalNavigation } from '../../hooks/useGlobalNavigation';
+import { useEnv } from '../../hooks/useEnv';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import Skeleton from '@mui/material/Skeleton';
 import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
+import SystemIcon from '../SystemIcon';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -103,6 +111,11 @@ export function GlobalApp(props: GlobalAppProps) {
 
 function RouteNotFound() {
 	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	const pageNotFound = formatMessage({ id: 'globalApp.pageNotFound', defaultMessage: 'Page not found' });
+	useEffect(() => {
+		document.title = studioDocumentTitle(pageNotFound);
+	}, [pageNotFound]);
 	return (
 		<Box
 			sx={{
@@ -121,7 +134,8 @@ function RouteNotFound() {
 						margin: 0
 					}
 				}}
-				title="404"
+				title={pageNotFound}
+				titleComponent="h1"
 				subtitle={
 					<FormattedMessage
 						id={'globalApp.routeNotFound'}
@@ -131,6 +145,54 @@ function RouteNotFound() {
 				}
 			/>
 		</Box>
+	);
+}
+
+function globalNavItemSelected(itemId: string, pathname: string): boolean {
+	const hash = urlMapping[itemId];
+	if (!hash) {
+		return false;
+	}
+	const path = hash.replace(/^#/, '');
+	// `/sites` remains as a backwards-compatible alias of Projects.
+	return pathname === path || (pathname === '/sites' && path === GlobalRoutes.Projects);
+}
+
+function GlobalSidebarNav() {
+	const { items } = useGlobalNavigation();
+	const { authoringBase } = useEnv();
+	const { pathname } = useLocation();
+	const { formatMessage } = useIntl();
+	return (
+		<List disablePadding sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+			{items?.map((item) => {
+				const selected = globalNavItemSelected(item.id, pathname);
+				const label = globalMenuMessages[item.id] ? formatMessage(globalMenuMessages[item.id]) : item.id;
+				return (
+					<ListItem key={item.id} disablePadding>
+						<ListItemButton
+							component="a"
+							href={getLauncherSectionLink(item.id, authoringBase)}
+							selected={selected}
+							aria-current={selected ? 'page' : undefined}
+						>
+							<ListItemIcon>
+								<SystemIcon icon={item.icon} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+							</ListItemIcon>
+							<ListItemText primary={label} />
+						</ListItemButton>
+					</ListItem>
+				);
+			})}
+			<ListItem disablePadding>
+				<ListItemButton component="a" href="https://craftercms.com/docs" target="_blank" rel="noopener noreferrer">
+					<ListItemIcon>
+						<SystemIcon icon={{ id: 'craftercms.icons.Docs' }} svgIconProps={{ fontSize: 'small', color: 'action' }} />
+					</ListItemIcon>
+					<ListItemText primary={formatMessage(launcherMessages.docs)} />
+				</ListItemButton>
+			</ListItem>
+		</List>
 	);
 }
 
@@ -151,84 +213,32 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 	);
 	useEffect(() => {
 		const path = location.pathname;
-		const id = idByPathLookup?.[path];
-		document.title = `CrafterCMS - ${formatMessage(
-			globalMenuMessages[id] ?? {
-				id: 'globalApp.routeNotFound',
-				defaultMessage: 'Route not found'
-			}
-		)}`;
+		// `/` redirects to the first launcher item. Don't flash a 404 title while that settles.
+		if (path === '/') {
+			return;
+		}
+		const id = path === '/sites' ? 'home.globalMenu.sites' : idByPathLookup?.[path];
+		const descriptor = id ? globalMenuMessages[id] : undefined;
+		if (descriptor) {
+			document.title = studioDocumentTitle(formatMessage(descriptor));
+		}
 	}, [formatMessage, idByPathLookup, location.pathname]);
 	return (
 		<Paper sx={{ height: '100vh', width: '100%' }} elevation={0}>
-			<ResizeableDrawer
-				sxs={{
-					drawerPaper: {
-						top: '0',
-						padding: 2
-					},
-					drawerBody: {
-						height: '100%',
-						display: 'flex',
-						flexDirection: 'column',
-						justifyContent: 'space-between'
-					}
-				}}
-				open={openSidebar}
-				width={width}
-				onWidthChange={setWidth}
-			>
-				<LauncherGlobalNav
-					title=""
-					sectionSxs={{
-						nav: {
-							maxHeight: '100%',
-							overflow: 'auto'
-						}
-					}}
-					tileSxs={{
-						tile: {
-							width: '100%',
-							height: '35px',
-							flexDirection: 'row',
-							justifyContent: 'left',
-							margin: '0 0 5px'
-						},
-						iconAvatar: {
-							width: '25px',
-							height: '25px',
-							margin: '5px 10px'
-						},
-						title: {
-							textAlign: 'left'
-						}
-					}}
-				/>
-				<Box component="footer" sx={{ padding: '20px 0', textAlign: 'center' }}>
-					<CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />
-					<Typography
-						component="p"
-						variant="caption"
-						sx={(theme) => ({
-							color: theme.palette.text.secondary,
-							'& > a': {
-								textDecoration: 'none',
-								color: theme.palette.primary.main
-							}
-						})}
-						dangerouslySetInnerHTML={{ __html: footerHtml }}
-					/>
-				</Box>
-			</ResizeableDrawer>
+			<SkipToMainContent />
 			<Box
+				component="main"
+				id={STUDIO_MAIN_CONTENT_ID}
+				tabIndex={-1}
 				sx={[
+					mainLandmarkSx,
 					{
 						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${width}px` : 0
+						width: 'auto',
+						marginLeft: openSidebar ? `${width}px` : 0
 					},
 					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
+						transition: theme.transitions.create('margin-left', {
 							easing: theme.transitions.easing.easeOut,
 							duration: theme.transitions.duration.enteringScreen
 						})
@@ -253,6 +263,51 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 					<Outlet />
 				</Suspense>
 			</Box>
+			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={formatMessage(launcherMessages.global)}
+				sxs={{
+					drawerPaper: {
+						top: '0'
+					},
+					drawerBody: {
+						height: '100%',
+						display: 'flex',
+						flexDirection: 'column',
+						justifyContent: 'space-between',
+						overflow: 'hidden'
+					}
+				}}
+				open={openSidebar}
+				width={width}
+				onWidthChange={setWidth}
+			>
+				<GlobalSidebarNav />
+				<Box
+					component="footer"
+					sx={{
+						// The drawer no longer pads both pieces. The list sits on the sidebar edges; the footer keeps
+						// the inset it used to get from the drawer (16px) plus its own 20px block padding.
+						padding: (theme) => theme.spacing(2.5, 2, 4.5),
+						textAlign: 'center',
+						flexShrink: 0
+					}}
+				>
+					<CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />
+					<Typography
+						component="p"
+						variant="caption"
+						sx={(theme) => ({
+							color: theme.palette.text.secondary,
+							'& > a': {
+								textDecoration: 'none',
+								color: theme.palette.primary.main
+							}
+						})}
+						dangerouslySetInnerHTML={{ __html: footerHtml }}
+					/>
+				</Box>
+			</ResizeableDrawer>
 		</Paper>
 	);
 }

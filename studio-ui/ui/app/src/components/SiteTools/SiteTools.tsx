@@ -15,7 +15,7 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
-import React from 'react';
+import React, { useEffect } from 'react';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
@@ -39,6 +39,8 @@ import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDial
 import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 
 export interface Tool {
 	title: TranslationOrText;
@@ -94,7 +96,30 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
+	const projectToolsLabel = formatMessage({ id: 'siteTools.title', defaultMessage: 'Project Tools' });
+	const toolNotFoundLabel = formatMessage({ id: 'siteTools.toolNotFound', defaultMessage: 'Tool not found' });
+	const isPage = mountMode === 'page';
+	const normalizedActiveToolId = activeToolId?.replace(/^\//, '');
+	const matchedTool = normalizedActiveToolId
+		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
+		: undefined;
+	const tool = matchedTool?.widget;
+	useEffect(() => {
+		if (!isPage) {
+			return;
+		}
+		// The tools reference arrives after the first paint. Don't flash "Tool not found" in the meantime.
+		if (activeToolId && !tools) {
+			return;
+		}
+		const translatedTitle = matchedTool ? getPossibleTranslation(matchedTool.title, formatMessage) : '';
+		const pageTitle = !activeToolId
+			? projectToolsLabel
+			: typeof translatedTitle === 'string' && translatedTitle
+				? translatedTitle
+				: toolNotFoundLabel;
+		document.title = studioDocumentTitle(pageTitle);
+	}, [activeToolId, formatMessage, isPage, matchedTool, projectToolsLabel, toolNotFoundLabel, tools]);
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -105,7 +130,69 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
+			{isPage && <SkipToMainContent />}
+			<Box
+				{...(isPage ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
+				sx={[
+					isPage && mainLandmarkSx,
+					{
+						height: '100%',
+						width: 'auto',
+						marginLeft: openSidebar ? `${sidebarWidth}px` : 0
+					},
+					(theme) => ({
+						transition: theme.transitions.create('margin-left', {
+							easing: theme.transitions.easing.easeOut,
+							duration: theme.transitions.duration.enteringScreen
+						})
+					})
+				]}
+			>
+				{activeToolId ? (
+					tool ? (
+						<Suspencified>
+							<Widget
+								{...tool}
+								overrideProps={{
+									embedded: false,
+									mountMode,
+									showAppsButton,
+									onSubmittingAndOrPendingChange,
+									onClose,
+									onMinimize
+								}}
+							/>
+						</Suspencified>
+					) : (
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								height: '100%'
+							}}
+						>
+							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
+								<LauncherOpenerButton />
+							</Box>
+							<EmptyState
+								sxs={{ root: { height: '100%', margin: 0 } }}
+								title={toolNotFoundLabel}
+								titleComponent={isPage ? 'h1' : 'h2'}
+							/>
+						</Box>
+					)
+				) : (
+					<EmptyState
+						sxs={{ root: { height: '100%', margin: 0 } }}
+						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
+						titleComponent={isPage ? 'h1' : 'h2'}
+						image={`${baseUrl}/static-assets/images/choose_option.svg`}
+					/>
+				)}
+			</Box>
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={projectToolsLabel}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute'
@@ -149,7 +236,7 @@ export function SiteTools(props: SiteToolsProps) {
 								<MenuItem
 									onClick={() => onNavItemClick(tool.url)}
 									key={tool.url}
-									selected={`/${tool.url}` === activeToolId}
+									selected={tool.url.replace(/^\//, '') === normalizedActiveToolId}
 								>
 									<SystemIcon
 										sx={{ marginRight: '10px' }}
@@ -161,6 +248,7 @@ export function SiteTools(props: SiteToolsProps) {
 							))
 						) : (
 							<EmptyState
+								titleComponent="p"
 								title={
 									<FormattedMessage
 										id="siteTools.toolListingNotConfigured"
@@ -195,62 +283,6 @@ export function SiteTools(props: SiteToolsProps) {
 					)}
 				</Box>
 			</ResizeableDrawer>
-			<Box
-				sx={[
-					{
-						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
-					},
-					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
-							easing: theme.transitions.easing.easeOut,
-							duration: theme.transitions.duration.enteringScreen
-						})
-					})
-				]}
-			>
-				{activeToolId ? (
-					tool ? (
-						<Suspencified>
-							<Widget
-								{...tool}
-								overrideProps={{
-									embedded: false,
-									mountMode,
-									showAppsButton,
-									onSubmittingAndOrPendingChange,
-									onClose,
-									onMinimize
-								}}
-							/>
-						</Suspencified>
-					) : (
-						<Box
-							sx={{
-								display: 'flex',
-								flexDirection: 'column',
-								height: '100%'
-							}}
-						>
-							<Box component="section" sx={{ margin: '10px 12px 0 auto' }}>
-								<LauncherOpenerButton />
-							</Box>
-							<EmptyState
-								sxs={{ root: { height: '100%', margin: 0 } }}
-								title="404"
-								subtitle={<FormattedMessage id="siteTools.toolNotFound" defaultMessage="Tool not found" />}
-							/>
-						</Box>
-					)
-				) : (
-					<EmptyState
-						sxs={{ root: { height: '100%', margin: 0 } }}
-						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						image={`${baseUrl}/static-assets/images/choose_option.svg`}
-					/>
-				)}
-			</Box>
 		</Paper>
 	);
 }

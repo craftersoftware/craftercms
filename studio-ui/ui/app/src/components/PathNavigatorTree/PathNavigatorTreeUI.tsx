@@ -98,6 +98,9 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			disableGutters
 			elevation={0}
 			slotProps={{
+				// Keep MUI's styled heading (it resets the user-agent heading font and margin) and only
+				// change the element, so the title is an h2 without the taller raw-heading layout.
+				heading: { component: 'h2' },
 				transition: {
 					unmountOnExit: true
 				}
