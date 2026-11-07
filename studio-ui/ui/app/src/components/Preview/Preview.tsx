@@ -34,6 +34,7 @@ import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
+import { PREVIEW_REFLOW_NARROW_QUERY } from '../ToolbarOverflow/previewReflow';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -183,7 +184,15 @@ function Preview() {
 					height: '100%',
 					display: 'flex',
 					flexDirection: 'column',
-					background: theme.palette.background.default
+					minWidth: 0,
+					maxWidth: '100%',
+					background: theme.palette.background.default,
+					// At the 320px reflow width, scroll the shell vertically instead of locking a 100vh pane
+					// that overflows on both axes. Side panels overlay (see Host) rather than sitting beside it.
+					[PREVIEW_REFLOW_NARROW_QUERY]: {
+						overflowX: 'clip',
+						overflowY: 'auto'
+					}
 				})}
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the

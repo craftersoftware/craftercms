@@ -25,7 +25,7 @@ function PathNavigatorSkeletonItem() {
 	return (
 		<ListItem
 			sx={{
-				minHeight: '23.5px',
+				minHeight: '24px',
 				padding: '0 0 0 5px',
 				marginLeft: '15px',
 				width: 'calc(100% - 15px)',
