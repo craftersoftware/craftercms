@@ -74,6 +74,8 @@
   * Removed `LegacyFormDialog` component (`craftercms.components.LegacyFormDialog`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * [TypeList] Added `disableSelected` prop.
   * [UserManagement] Removed delete user functionality. Only `enable`/`disable` users is allowed.
+  * [theme] `MuiTooltip` defaults: removed `disableInteractive: true` (tooltips are now hoverable, WCAG 1.4.13) and added `leaveDelay: 200` so the pointer can move onto them. Applies to every Tooltip that does not override them.
+  * [CrafterCMSNextBridge] Mounts a persistent polite status region (`SnackbarStatusRegion`) around the snackbar provider. Success, info and default snackbars are announced through it, and only error and warning snackbars keep `role="alert"`.
 * [hooks]
   * Removed `useLogicResource` hook.
   * Removed `useSelectorResource` hook.
