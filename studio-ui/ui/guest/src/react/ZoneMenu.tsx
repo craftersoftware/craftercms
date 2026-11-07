@@ -67,7 +67,15 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
-import { FormattedMessage } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { announceGuestStatus } from '../utils/guestAnnounce';
+import {
+	clearZoneOpenedFromKeyboard,
+	focusAddressesAfterRemoval,
+	requestZoneFocus,
+	shiftedCollectionIndex,
+	wasZoneOpenedFromKeyboard
+} from '../utils/zoneFocus';
 import type { ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
 
 /** Item count stored on a model field. A missing field is an empty collection. */
@@ -86,6 +94,28 @@ function containerCountLimits(field?: ContentTypeField | null): { minCount?: num
 		maxCount: countLimitValue(field?.validations?.maxCount?.value)
 	};
 }
+
+const zoneActionLabels = defineMessages({
+	edit: { id: 'words.edit', defaultMessage: 'Edit' },
+	unlock: { id: 'words.unlock', defaultMessage: 'Unlock' },
+	editTemplate: { id: 'zoneMenu.editTemplate', defaultMessage: 'Edit template' },
+	editController: { id: 'zoneMenu.editController', defaultMessage: 'Edit controller' },
+	addItem: { id: 'zoneMenu.addItem', defaultMessage: 'Add new item' },
+	duplicateItem: { id: 'zoneMenu.duplicateItem', defaultMessage: 'Duplicate item' },
+	moveUpName: { id: 'zoneMenu.moveUpName', defaultMessage: 'Move up' },
+	moveDownName: { id: 'zoneMenu.moveDownName', defaultMessage: 'Move down' },
+	trashName: { id: 'zoneMenu.trashName', defaultMessage: 'Trash' },
+	options: { id: 'words.options', defaultMessage: 'Options' },
+	cancelName: { id: 'zoneMenu.cancelName', defaultMessage: 'Cancel' }
+});
+
+const zoneMenuMessages = defineMessages({
+	actionForZone: { id: 'zoneMenu.actionForZone', defaultMessage: '{action}, {zone}' },
+	moved: { id: 'ice.moved', defaultMessage: 'Moved {label}.' },
+	untitledZone: { id: 'ice.untitledZone', defaultMessage: 'Content zone' }
+});
+
+type ZoneAction = keyof typeof zoneActionLabels;
 
 export interface ZoneMenuProps {
 	record: ElementRecord;
@@ -110,8 +140,10 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		? models[getModelIdFromInheritedField(modelId, fieldId)].craftercms.path
 		: (models[modelId].craftercms.path ?? models[parentModelId].craftercms.path);
 
-	const trashButtonRef = React.useRef(undefined);
+	const menuRef = React.useRef<HTMLDivElement>(null);
+	const [trashAnchor, setTrashAnchor] = useState<HTMLElement | null>(null);
 	const [showTrashConfirmation, setShowTrashConfirmation] = useState<boolean>(false);
+	const { formatMessage } = useIntl();
 
 	const iceRecord = getById(record.iceIds[0]);
 	const recordType = iceRecord.recordType;
@@ -270,8 +302,24 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		isItemFile
 	]);
 	const showItemMenuButton = ['node-selector-item', 'component', 'page'].includes(recordType);
+	const zoneLabel = record.label || field?.name || contentType?.name || '';
 
 	const store = useStore();
+	const named = (action: ZoneAction): string => {
+		const actionText = formatMessage(zoneActionLabels[action]) as string;
+		if (!zoneLabel) {
+			return actionText;
+		}
+		return formatMessage(zoneMenuMessages.actionForZone, { action: actionText, zone: zoneLabel }) as string;
+	};
+	const moveSource = () =>
+		nodeSelectorItemRecord
+			? {
+					modelId: nodeSelectorItemRecord.modelId,
+					fieldId: String(nodeSelectorItemRecord.fieldId),
+					index: nodeSelectorItemRecord.index
+				}
+			: { modelId, fieldId: record.fieldId.join('.'), index };
 	const getItemData = () => {
 		const models = getCachedModels();
 		const isNodeSelectorItem = recordType === 'component' && Boolean(nodeSelectorItemRecord);
@@ -284,20 +332,51 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	// region Callbacks
 
-	const execOperation = (subscriber: () => void) => {
+	const execOperation = (subscriber: () => void, onSkipped?: () => void) => {
 		const { username, activeSite } = store.getState();
 		const { path } = getItemData();
+		let ran = false;
 		beforeWrite$({
 			path,
 			site: activeSite,
 			username,
 			localItem: getCachedContentItem(path)
-		}).subscribe(subscriber);
+		}).subscribe({
+			next: () => {
+				ran = true;
+				subscriber();
+			},
+			complete: () => !ran && onSkipped?.()
+		});
+	};
+
+	const closeMenu = () => {
+		clearAndListen$.next();
+		dispatch(startListening());
 	};
 
 	const onCancel = () => {
-		clearAndListen$.next();
-		dispatch(startListening());
+		closeMenu();
+		requestZoneFocus({ iceId: record.iceIds[0] });
+	};
+
+	const focusAfterMove = (delta: number) => {
+		const source = moveSource();
+		requestZoneFocus({
+			iceId: record.iceIds[0],
+			addresses: [
+				{ modelId: source.modelId, fieldId: source.fieldId, index: shiftedCollectionIndex(source.index, delta) }
+			],
+			afterRegistryChange: true
+		});
+	};
+
+	const announceMove = () => {
+		announceGuestStatus(
+			formatMessage(zoneMenuMessages.moved, {
+				label: zoneLabel || (formatMessage(zoneMenuMessages.untitledZone) as string)
+			}) as string
+		);
 	};
 
 	const commonEdit = (e, typeOfEdit) => {
@@ -336,7 +415,8 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				})
 			);
 		}
-		onCancel();
+		// The host opens the edit dialog. Restoring guest focus here would steal it (2.4.3).
+		closeMenu();
 	};
 
 	const onEdit = (e) => {
@@ -387,27 +467,34 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const onMoveUp = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		// Keep a zone button focused while the menu unmounts. The new index is focused only after the move.
+		requestZoneFocus({ iceId: record.iceIds[0] });
 		execOperation(() => {
 			if (recordType === 'component' && nodeSelectorItemRecord) {
 				sortUpItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 			} else {
 				sortUpItem(modelId, fieldId, index);
 			}
+			announceMove();
+			focusAfterMove(-1);
 		});
-		onCancel();
+		closeMenu();
 	};
 
 	const onMoveDown = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		requestZoneFocus({ iceId: record.iceIds[0] });
 		execOperation(() => {
 			if (recordType === 'component' && nodeSelectorItemRecord) {
 				sortDownItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 			} else {
 				sortDownItem(modelId, fieldId, index);
 			}
+			announceMove();
+			focusAfterMove(1);
 		});
-		onCancel();
+		closeMenu();
 	};
 
 	const doTrash = () => {
@@ -417,21 +504,37 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		]);
 		if (minCount) {
 			post(snackGuestMessage(minCount));
-		} else {
-			execOperation(() => {
+			return;
+		}
+		const source = moveSource();
+		const originIceId = record.iceIds[0];
+		// If the lock fails, the item is still here. After a successful delete, focus the same index,
+		// otherwise the previous item, otherwise the next.
+		requestZoneFocus({ iceId: originIceId });
+		execOperation(
+			() => {
 				if (recordType === 'component' && nodeSelectorItemRecord) {
 					deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
 				} else {
 					deleteItem(modelId, fieldId, index);
 				}
-			});
-			onCancel();
-		}
+				requestZoneFocus({
+					iceId: originIceId,
+					addresses: focusAddressesAfterRemoval(source.modelId, source.fieldId, source.index),
+					afterRegistryChange: true,
+					focusCurrent: false
+				});
+			},
+			// Lock refused or cancelled: the item is still here. Ask for focus again once the menu has closed.
+			() => requestAnimationFrame(() => requestZoneFocus({ iceId: originIceId }))
+		);
+		closeMenu();
 	};
 
 	const onTrash = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
+		setTrashAnchor(e.currentTarget);
 		setShowTrashConfirmation(true);
 	};
 
@@ -452,8 +555,14 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		e.stopPropagation();
 		const path =
 			recordType === 'component' || recordType === 'node-selector-item' ? (componentPath ?? modelPath) : modelPath;
-		const top = e.clientY;
-		const left = e.clientX;
+		let top = e.clientY;
+		let left = e.clientX;
+		// Enter/Space reports detail 0 and client coordinates at the origin.
+		if (e.detail === 0) {
+			const rect = e.currentTarget.getBoundingClientRect();
+			top = rect.bottom;
+			left = rect.left;
+		}
 		post(
 			showItemMegaMenu({
 				path,
@@ -472,29 +581,86 @@ export function ZoneMenu(props: ZoneMenuProps) {
 
 	// endregion
 
-	const refs = useRef({ onMoveUp, onMoveDown, onTrash, doTrash, onCancel, isFirstItem, isLastItem });
+	const closeSubmenus = () => {
+		setShowTrashConfirmation(false);
+	};
+
+	// MUI types the menu onClose event as {}. The backdrop click is a real mouse event.
+	const stopSubmenuDismiss = (event: object) => {
+		const dismissEvent = event as { stopPropagation?: () => void; nativeEvent?: { stopPropagation?: () => void } };
+		dismissEvent.stopPropagation?.();
+		dismissEvent.nativeEvent?.stopPropagation?.();
+	};
+
+	const refs = useRef({
+		onMoveUp,
+		onMoveDown,
+		onTrash,
+		doTrash,
+		onCancel,
+		closeMenu,
+		isFirstItem,
+		isLastItem,
+		isMovable,
+		isTrashable,
+		showTrashConfirmation,
+		closeSubmenus,
+		iceId: record.iceIds[0]
+	});
 
 	// Listen for key input to sort/delete and for clicking outside the zone to dismiss selection.
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
+			const keyTarget = e.target instanceof Element ? e.target : null;
+			// Only this menu and this zone's own button. Other zones' buttons stay rendered while a menu is open, and
+			// their arrow keys must not reorder the selected item.
+			const inZoneChrome =
+				Boolean(keyTarget?.closest('[data-craftercms-zone-menu]')) ||
+				keyTarget?.getAttribute('data-craftercms-zone-button') === String(refs.current.iceId);
+			const inOurSubmenu = Boolean(keyTarget?.closest('[data-craftercms-zone-submenu]'));
+			// A click can leave focus on the document while this menu is still open.
+			const looseFocus = e.target === document.body || e.target === document.documentElement || e.target === document;
+			const submenuOpen = refs.current.showTrashConfirmation;
+			// Escape inside the confirm menu closes only that menu. Other widgets keep their keys.
+			if (e.key === 'Escape' && submenuOpen && (inOurSubmenu || inZoneChrome)) {
+				e.preventDefault();
+				e.stopPropagation();
+				refs.current.closeSubmenus();
+				return;
+			}
+			if (!inZoneChrome && !looseFocus) {
+				return;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				refs.current.onCancel();
+				return;
+			}
+			if (e.defaultPrevented || submenuOpen || keyTarget?.closest('input,textarea,select,[contenteditable]')) {
+				return;
+			}
 			switch (e.key) {
 				case 'ArrowLeft':
 				case 'ArrowUp': {
-					if (isMovable && !refs.current.isFirstItem) {
+					if (refs.current.isMovable && !refs.current.isFirstItem) {
 						refs.current.onMoveUp(e);
 					}
 					break;
 				}
 				case 'ArrowRight':
 				case 'ArrowDown': {
-					if (isMovable && !refs.current.isLastItem) {
+					if (refs.current.isMovable && !refs.current.isLastItem) {
 						refs.current.onMoveDown(e);
 					}
 					break;
 				}
 				case 'Backspace': {
-					if (isTrashable) {
+					if (refs.current.isTrashable) {
 						e.preventDefault();
+						const trashButton = menuRef.current?.querySelector<HTMLElement>('[aria-keyshortcuts="Backspace"]');
+						if (trashButton) {
+							setTrashAnchor(trashButton);
+						}
 						setShowTrashConfirmation(true);
 					}
 					break;
@@ -502,31 +668,46 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			}
 		};
 		const onClickOut = (e: MouseEvent) => {
+			const target = e.target as Element | null;
+			// Zone keyboard buttons dispatch their own click. The zone menu and an open submenu
+			// must not be treated as an outside click.
+			if (target?.closest?.('[data-craftercms-ice-control],[data-craftercms-zone-menu],[role="menu"]')) {
+				return;
+			}
 			e.stopPropagation();
 			e.preventDefault();
-			refs.current.onCancel();
+			if (refs.current.showTrashConfirmation) {
+				refs.current.closeSubmenus();
+				return;
+			}
+			// Mouse path: focus stays wherever the user clicked.
+			refs.current.closeMenu();
 		};
-		document.addEventListener('keydown', onKeyDown, false);
+		document.addEventListener('keydown', onKeyDown, true);
 		document.addEventListener('click', onClickOut, false);
+		if (wasZoneOpenedFromKeyboard()) {
+			menuRef.current?.querySelector<HTMLButtonElement>('button:not([tabindex="-1"])')?.focus({ preventScroll: true });
+		}
 		return () => {
-			document.removeEventListener('keydown', onKeyDown, false);
+			clearZoneOpenedFromKeyboard();
+			document.removeEventListener('keydown', onKeyDown, true);
 			document.removeEventListener('click', onClickOut, false);
 		};
 	}, []);
 
 	return (
-		<>
+		<Box ref={menuRef} data-craftercms-zone-menu="" sx={{ display: 'contents' }}>
 			<Box sx={{ display: 'flex' }}>
 				{hasEditAction && !isLockedItem && (
-					<UltraStyledTooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />} key="edit">
-						<UltraStyledIconButton size="small" onClick={onEdit}>
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.edit)} key="edit">
+						<UltraStyledIconButton size="small" aria-label={named('edit')} onClick={onEdit}>
 							<PencilIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isLockedByCurrentUser && (
-					<UltraStyledTooltip title="Unlock" key="unlock">
-						<UltraStyledIconButton size="small" onClick={onUnlock}>
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.unlock)} key="unlock">
+						<UltraStyledIconButton size="small" aria-label={named('unlock')} onClick={onUnlock}>
 							<UnlockIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -534,21 +715,19 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				{showCodeEditOptions && (
 					<>
 						{itemAvailableActions.editTemplate && (
-							<UltraStyledTooltip
-								title={<FormattedMessage id="zoneMenu.editTemplate" defaultMessage="Edit template" />}
-								key="editTemplate"
-							>
-								<UltraStyledIconButton size="small" onClick={onEditTemplate}>
+							<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.editTemplate)} key="editTemplate">
+								<UltraStyledIconButton size="small" aria-label={named('editTemplate')} onClick={onEditTemplate}>
 									<FreemarkerIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
 						)}
 						{itemAvailableActions.editController && (
 							<UltraStyledTooltip
-								title={<FormattedMessage id="zoneMenu.editController" defaultMessage="Edit controller" />}
+								describeChild
+								title={formatMessage(zoneActionLabels.editController)}
 								key="editController"
 							>
-								<UltraStyledIconButton size="small" onClick={onEditController}>
+								<UltraStyledIconButton size="small" aria-label={named('editController')} onClick={onEditController}>
 									<GroovyIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
@@ -556,21 +735,15 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</>
 				)}
 				{!isLockedItem && showAddItem && (
-					<UltraStyledTooltip
-						title={<FormattedMessage id="zoneMenu.addItem" defaultMessage="Add new item" />}
-						key="addNewItem"
-					>
-						<UltraStyledIconButton size="small" onClick={onAddRepeatItem}>
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.addItem)} key="addNewItem">
+						<UltraStyledIconButton size="small" aria-label={named('addItem')} onClick={onAddRepeatItem}>
 							<AddCircleOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{showDuplicate && (
-					<UltraStyledTooltip
-						title={<FormattedMessage id="zoneMenu.duplicateItem" defaultMessage="Duplicate item" />}
-						key="duplicateItem"
-					>
-						<UltraStyledIconButton size="small" onClick={onDuplicateItem}>
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.duplicateItem)} key="duplicateItem">
+						<UltraStyledIconButton size="small" aria-label={named('duplicateItem')} onClick={onDuplicateItem}>
 							<ContentCopyRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -580,35 +753,63 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					!isOnlyItem && [
 						!isFirstItem && (
 							<UltraStyledTooltip
+								describeChild
 								title={<FormattedMessage id="zoneMenu.moveUp" defaultMessage="Move up/left (← or ↑)" />}
 								key="moveUp"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveUp}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={named('moveUpName')}
+									aria-keyshortcuts="ArrowUp ArrowLeft"
+									onClick={onMoveUp}
+								>
 									<ArrowUpwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
 						),
 						!isLastItem && (
 							<UltraStyledTooltip
+								describeChild
 								title={<FormattedMessage id="zoneMenu.moveDown" defaultMessage="Move down/right (→ or ↓)" />}
 								key="moveDown"
 							>
-								<UltraStyledIconButton size="small" onClick={onMoveDown}>
+								<UltraStyledIconButton
+									size="small"
+									aria-label={named('moveDownName')}
+									aria-keyshortcuts="ArrowDown ArrowRight"
+									onClick={onMoveDown}
+								>
 									<ArrowDownwardRoundedIcon />
 								</UltraStyledIconButton>
 							</UltraStyledTooltip>
 						)
 					]}
 				{isTrashable && !isLockedItem && (
-					<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />} key="trash">
-						<UltraStyledIconButton size="small" onClick={onTrash} ref={trashButtonRef}>
+					<UltraStyledTooltip
+						describeChild
+						title={<FormattedMessage id="zoneMenu.trash" defaultMessage="Trash (⌫)" />}
+						key="trash"
+					>
+						<UltraStyledIconButton
+							size="small"
+							aria-label={named('trashName')}
+							aria-keyshortcuts="Backspace"
+							onClick={onTrash}
+						>
 							<DeleteOutlineRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
 				{isMovable && (!isLockedItem || !isEmbedded) && (
 					<UltraStyledTooltip title={<FormattedMessage id="words.move" defaultMessage="Move" />} key="move">
-						<UltraStyledIconButton size="small" draggable sx={{ cursor: 'grab' }} onDragStart={onDragStart}>
+						<UltraStyledIconButton
+							size="small"
+							draggable
+							tabIndex={-1}
+							aria-hidden
+							sx={{ cursor: 'grab' }}
+							onDragStart={onDragStart}
+						>
 							<DragIndicatorRounded />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
@@ -617,25 +818,41 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			<Box sx={{ display: 'flex' }}>
 				<Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 				{showItemMenuButton && (
-					<UltraStyledTooltip
-						title={<FormattedMessage id="words.options" defaultMessage="Options" />}
-						onClick={handleRequestItemMenu}
-					>
-						<UltraStyledIconButton size="small">
+					<UltraStyledTooltip describeChild title={formatMessage(zoneActionLabels.options)}>
+						<UltraStyledIconButton size="small" aria-label={named('options')} onClick={handleRequestItemMenu}>
 							<MoreRoundedIcon />
 						</UltraStyledIconButton>
 					</UltraStyledTooltip>
 				)}
-				<UltraStyledTooltip title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}>
-					<UltraStyledIconButton size="small" onClick={onCancel}>
+				<UltraStyledTooltip
+					describeChild
+					title={<FormattedMessage id="zoneMenu.cancel" defaultMessage="Cancel (Esc)" />}
+				>
+					<UltraStyledIconButton
+						size="small"
+						aria-label={named('cancelName')}
+						aria-keyshortcuts="Escape"
+						onClick={onCancel}
+					>
 						<CloseRoundedIcon />
 					</UltraStyledIconButton>
 				</UltraStyledTooltip>
 			</Box>
 			<Menu
-				anchorEl={trashButtonRef.current}
+				anchorEl={trashAnchor}
 				open={showTrashConfirmation}
-				onClose={() => setShowTrashConfirmation(false)}
+				onClose={(event) => {
+					stopSubmenuDismiss(event);
+					setShowTrashConfirmation(false);
+				}}
+				slotProps={{
+					list: { 'data-craftercms-zone-submenu': '' },
+					backdrop: {
+						onClick: (event) => {
+							event.stopPropagation();
+						}
+					}
+				}}
 				anchorOrigin={{
 					vertical: 'bottom',
 					horizontal: 'right'
@@ -669,7 +886,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					</UltraStyledTypography>
 				</MenuItem>
 			</Menu>
-		</>
+		</Box>
 	);
 }
 
