@@ -21,7 +21,6 @@ import { getItemPublishingTargetText } from '../ItemDisplay/utils';
 import { ContentItem } from '../../models/Item';
 import { SvgIconProps } from '@mui/material/SvgIcon';
 import { PartialSxRecord } from '../../models';
-import palette from '../../styles/palette';
 import { LIVE_COLOUR, STAGING_COLOUR } from './styles';
 import { useIntl } from 'react-intl';
 
@@ -50,7 +49,7 @@ export function ItemPublishingTargetIcon(props: ItemPublishingTargetIconProps) {
 				aria-label={getItemPublishingTargetText(item.stateMap, formatMessage)}
 				aria-hidden={false}
 				sx={{
-					color: item.stateMap.live ? LIVE_COLOUR : item.stateMap.staged ? STAGING_COLOUR : palette.gray.medium2,
+					color: item.stateMap.live ? LIVE_COLOUR : item.stateMap.staged ? STAGING_COLOUR : 'border.control',
 					...sxs?.root
 				}}
 			/>

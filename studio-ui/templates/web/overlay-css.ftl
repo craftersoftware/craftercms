@@ -138,7 +138,7 @@ div.yui-calcontainer {
     padding: 1px 0;
 }
 .water-marked {
-    color: #777777;
+    color: #767676;
 }
 .cstudio-view input.date-picker {
     background-image:url("${urlBase}/static-assets/themes/cstudioTheme/images/icons/icon_calendar.gif");

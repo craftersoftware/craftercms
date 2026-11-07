@@ -24,6 +24,7 @@ import FieldIcon from '@craftercms/studio-ui/icons/ContentTypeField';
 import LockedStateIcon from '@craftercms/studio-ui/icons/Lock';
 import Person from '@craftercms/studio-ui/models/Person';
 import { darken, styled } from '@mui/material/styles';
+import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import LookupTable from '@craftercms/studio-ui/src/models/LookupTable';
 import AllowedContentTypesData from '@craftercms/studio-ui/models/AllowedContentTypesData';
 import { ContentType, ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
@@ -57,6 +58,7 @@ export interface ZoneMarkerProps {
 	label: string;
 	inherited: boolean;
 	showZoneTooltip?: boolean;
+	hasFailedRequired?: boolean;
 	menuItems?: ReactNode;
 	lockInfo?: Person;
 	isStale?: boolean;
@@ -71,17 +73,19 @@ export interface ZoneMarkerProps {
 }
 
 function getStyles(sx: ZoneMarkerPartialSx): ZoneMarkerFullSx {
+	// The boundary is drawn on the authored page, so it cannot follow the Studio mode (a dark-mode light
+	// blue is 2.54:1 on a white page). The companion bands make it background-independent; see
+	// styles/overlayStroke.ts. The default is the select-mode colour; src/styles/styles.ts sets each state.
+	// A list, not a spread: the state colour arrives as an sx callback, and spreading a callback yields {}.
+	const boxDefaults = {
+		boxSizing: 'border-box' as const,
+		textAlign: 'center' as const,
+		position: 'absolute' as const,
+		zIndex: 'tooltip',
+		pointerEvents: 'none' as const
+	};
 	return {
-		box: {
-			boxSizing: 'border-box',
-			outline: (theme) => `2px solid ${theme.palette.success.main}`,
-			outlineOffset: '-2px',
-			textAlign: 'center',
-			position: 'absolute',
-			zIndex: 'tooltip',
-			pointerEvents: 'none',
-			...sx?.box
-		},
+		box: [boxDefaults, getOverlayBoundarySx((theme) => theme.palette.success.main), ...(sx?.box ? [sx.box] : [])],
 		paper: {
 			padding: [0.5, 1],
 			fontSize: '14px',
@@ -124,6 +128,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 		label,
 		classes,
 		inherited,
+		hasFailedRequired = false,
 		menuItems,
 		showZoneTooltip = true,
 		onPopperClick,
@@ -261,6 +266,11 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 									id="zoneMarker.modifiedItem"
 									defaultMessage="Item was modified. Refresh to enable editing."
 								/>
+							</Typography>
+						)}
+						{hasFailedRequired && !isLockedItem && isEditable && !isStale && (
+							<Typography noWrap variant="body2" component="div">
+								<FormattedMessage id="zoneMarker.required" defaultMessage="Required" />
 							</Typography>
 						)}
 						{menuItems && <Box sx={sx.menuItemsContainer}>{menuItems}</Box>}

@@ -16,7 +16,8 @@
 
 import { createTheme, Theme, ThemeOptions } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import palette from '@craftercms/studio-ui/styles/palette';
+import palette, { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
+import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import { useMemo } from 'react';
 import { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
 import { SxProps } from '@mui/system';
@@ -28,25 +29,11 @@ export function useGuestTheme(styleConfig: ThemeOptions): Theme {
 		return createTheme(
 			{
 				palette: {
+					// Same mode mapping as the Studio theme (CrafterThemeProvider).
 					mode,
-					primary: {
-						main: prefersDarkMode ? palette.blue.tint : palette.blue.main
-					},
-					warning: {
-						main: prefersDarkMode ? palette.orange.tint : palette.orange.main
-					},
-					error: {
-						main: prefersDarkMode ? palette.red.tint : palette.red.main
-					},
-					success: {
-						main: prefersDarkMode ? palette.green.tint : palette.green.main
-					},
-					info: {
-						main: prefersDarkMode ? palette.teal.tint : palette.teal.main
-					},
-					secondary: {
-						main: prefersDarkMode ? palette.indigo.tint : palette.purple.tint
-					}
+					...getStudioPaletteOptions(mode),
+					// Pick a label colour that reaches 4.5:1, like the Studio theme.
+					contrastThreshold: 4.5
 				},
 				typography: {
 					fontFamily: '"Source Sans Pro", "Open Sans", sans-serif',
@@ -72,51 +59,44 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 		selectModeHighlight: {
 			paper: {
 				bgcolor: 'success.light',
-				color: 'success.contrastText'
+				// contrastText is computed for .main, not .light; highlightText is the readable colour for the .light chips.
+				color: palette.highlightText
 			},
-			box: {
-				outlineColor: 'success.light'
-			},
+			box: getOverlayBoundarySx((theme) => theme.palette.success.main),
 			icon: {
-				color: 'success.contrastText'
+				color: palette.highlightText
 			}
 		},
 		moveModeHighlight: {
 			paper: {
 				bgcolor: 'primary.light',
-				color: 'primary.contrastText'
+				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.primary.light
-			},
-			icon: {}
+			box: getOverlayBoundarySx((theme) => theme.palette.primary.main),
+			icon: {
+				color: palette.highlightText
+			}
 		},
 		errorHighlight: {
 			paper: {
 				bgcolor: 'error.light',
-				color: 'error.contrastText'
+				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.error.light
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.error.main)
 		},
 		warnHighlight: {
 			paper: {
 				bgcolor: 'warning.light',
-				color: 'warning.contrastText'
+				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.warning.light
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.warning.main)
 		},
 		disabledHighlight: {
 			paper: {
 				bgcolor: (theme) => theme.palette.grey[400],
-				color: (theme) => theme.palette.getContrastText(theme.palette.grey[400])
+				color: palette.highlightText
 			},
-			box: {
-				outlineColor: (theme) => theme.palette.grey[400]
-			}
+			box: getOverlayBoundarySx((theme) => theme.palette.border.control)
 		}
 	},
 	dropMarker: {

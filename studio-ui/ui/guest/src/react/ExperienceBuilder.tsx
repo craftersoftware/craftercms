@@ -678,6 +678,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 									lockInfo={lockInfo}
 									isStale={isExternallyModified}
 									isEditable={isEditable}
+									hasFailedRequired={hasFailedRequired}
 									stateMap={itemStateMap}
 									field={field}
 									onPopperClick={

@@ -24,7 +24,6 @@ import { MarketplacePlugin, MarketplacePluginParameter } from '../../models/Mark
 import { defineMessages, useIntl } from 'react-intl';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import palette from '../../styles/palette';
 import Box from '@mui/material/Box';
 
 interface BlueprintReviewProps {
@@ -297,7 +296,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						{inputs.description ? (
 							inputs.description
 						) : (
-							<Box component="span" sx={{ color: palette.gray.medium2 }}>
+							<Box component="span" sx={{ color: 'text.secondary' }}>
 								({formatMessage(messages.noDescription)})
 							</Box>
 						)}
