@@ -16,6 +16,7 @@
 
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
+import DialogContentText from '@mui/material/DialogContentText';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
 import TextField from '@mui/material/TextField';
@@ -23,7 +24,8 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import React, { CSSProperties, PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { login, loginComplete, logout } from '../../state/actions/auth';
+import { login, loginComplete, logout, sharedWorkerExtendSession } from '../../state/actions/auth';
+import { messageSharedWorker } from '../../state/actions/system';
 import loginGraphicUrl from '../../assets/authenticate.svg';
 import { isBlank } from '../../utils/string';
 import Typography from '@mui/material/Typography';
@@ -38,6 +40,9 @@ import Box from '@mui/material/Box';
 import palette from '../../styles/palette';
 import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
+import { SESSION_TIMEOUT_WARNING_MS } from '../../utils/constants';
+import { useSessionTimeoutWarning } from '../../hooks/useSessionTimeoutWarning';
+import { getXSRFToken } from '../../utils/auth';
 
 const translations = defineMessages({
 	sessionExpired: {
@@ -86,15 +91,114 @@ export function AuthMonitor() {
 		}
 	}, [active, dispatch, formatMessage, username]);
 	return (
-		<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
-			<AuthMonitorBody
-				isSSO={isSSO}
-				username={username}
-				logoutUrl={logoutUrl}
-				authoringUrl={authoringBase}
-				dispatch={dispatch}
-				formatMessage={formatMessage}
-			/>
+		<>
+			<SessionTimeoutWarning />
+			<Dialog open={!active} id="authMonitorDialog" aria-labelledby="craftercmsReLoginDialog">
+				<AuthMonitorBody
+					isSSO={isSSO}
+					username={username}
+					logoutUrl={logoutUrl}
+					authoringUrl={authoringBase}
+					dispatch={dispatch}
+					formatMessage={formatMessage}
+				/>
+			</Dialog>
+		</>
+	);
+}
+
+// WCAG 2.1 SC 2.2.1 Timing Adjustable: warns before the session expires and lets the user extend it. The number of
+// extensions is limited (server side), so the last warning only tells the user to save their work.
+function SessionTimeoutWarning() {
+	const dispatch = useDispatch();
+	const { active, sessionExpiresAt, canExtendSession } = useSelection((state) => state.auth);
+	const { visible, secondsLeft, dismiss } = useSessionTimeoutWarning(
+		active,
+		sessionExpiresAt,
+		SESSION_TIMEOUT_WARNING_MS
+	);
+	const [extending, setExtending] = useState(false);
+	const [extendFailed, setExtendFailed] = useState(false);
+	useEffect(() => {
+		if (extending) {
+			const timeout = setTimeout(() => {
+				setExtending(false);
+				setExtendFailed(true);
+			}, 10000);
+			return () => clearTimeout(timeout);
+		}
+	}, [extending]);
+	useEffect(() => {
+		// Only a new session expiry (or the cap being reached) means the extend landed. A routine token refresh that
+		// lands first must not re-enable the button. The timeout above covers a failed request.
+		setExtending(false);
+		setExtendFailed(false);
+	}, [sessionExpiresAt, canExtendSession]);
+	const onStaySignedIn = () => {
+		if (!extending) {
+			setExtending(true);
+			setExtendFailed(false);
+			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
+		}
+	};
+	return (
+		<Dialog
+			// Remounts when the user runs out of extensions so the new warning is announced.
+			key={canExtendSession ? 'extendable' : 'final'}
+			open={visible}
+			// Escape or clicking outside keeps the user working rather than leaving them with a dismissed warning.
+			onClose={canExtendSession ? onStaySignedIn : dismiss}
+			role="alertdialog"
+			aria-labelledby="sessionTimeoutWarningTitle"
+			aria-describedby="sessionTimeoutWarningMessage"
+		>
+			<DialogTitle id="sessionTimeoutWarningTitle">
+				<FormattedMessage id="authMonitor.sessionExpiringTitle" defaultMessage="Your session is about to expire" />
+			</DialogTitle>
+			<DialogContent sx={{ width: '400px' }}>
+				<DialogContentText id="sessionTimeoutWarningMessage">
+					{canExtendSession ? (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}}. Select Stay signed in to keep working."
+							values={{ seconds: secondsLeft }}
+						/>
+					) : (
+						<FormattedMessage
+							id="authMonitor.sessionExpiringFinalMessage"
+							defaultMessage="For your security, your session will expire in {seconds, plural, one {# second} other {# seconds}} and it can't be extended any more. Close this message and save your work, then log in again."
+							values={{ seconds: secondsLeft }}
+						/>
+					)}
+				</DialogContentText>
+				<Typography variant="body2" role="status">
+					{extending && (
+						<FormattedMessage id="authMonitor.sessionExtendingMessage" defaultMessage="Extending your session…" />
+					)}
+				</Typography>
+				{extendFailed && (
+					<Typography variant="body2" role="alert" sx={{ marginTop: (theme) => theme.spacing(1) }}>
+						<FormattedMessage
+							id="authMonitor.sessionExtendFailedMessage"
+							defaultMessage="Your session could not be extended. Select Stay signed in to try again."
+						/>
+					</Typography>
+				)}
+			</DialogContent>
+			<DialogActions>
+				<Button color="primary" variant="text" onClick={() => dispatch(logout())}>
+					<FormattedMessage id="authMonitor.logOutButtonLabel" defaultMessage="Log Out" />
+				</Button>
+				{canExtendSession ? (
+					<Button autoFocus color="primary" variant="contained" aria-disabled={extending} onClick={onStaySignedIn}>
+						<FormattedMessage id="authMonitor.staySignedInButtonLabel" defaultMessage="Stay signed in" />
+					</Button>
+				) : (
+					<Button autoFocus color="primary" variant="contained" onClick={dismiss}>
+						<FormattedMessage id="words.close" defaultMessage="Close" />
+					</Button>
+				)}
+			</DialogActions>
 		</Dialog>
 	);
 }

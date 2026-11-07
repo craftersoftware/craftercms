@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
-import { obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
+import { extendSession, obtainAuthToken, ObtainAuthTokenResponse } from './services/auth';
+import { createAuthTokenQueue, getNextRefreshDelay, refreshAtFactor } from './utils/authTokenQueue';
 import StandardAction from './models/StandardAction';
 import {
 	logout,
@@ -8,12 +9,13 @@ import {
 	sharedWorkerConnect,
 	sharedWorkerDisconnect,
 	sharedWorkerError,
+	sharedWorkerExtendSession,
 	sharedWorkerTimeout,
 	sharedWorkerToken,
 	sharedWorkerUnauthenticated
 } from './state/actions/auth';
 import { AjaxError } from 'rxjs/ajax';
-import { SHARED_WORKER_NAME, XSRF_TOKEN_HEADER_NAME } from './utils/constants';
+import { SESSION_TIMEOUT_WARNING_MS, SHARED_WORKER_NAME, XSRF_TOKEN_HEADER_NAME } from './utils/constants';
 import { Client, StompSubscription } from '@stomp/stompjs';
 import {
 	closeSiteSocket,
@@ -47,7 +49,6 @@ declare const self: SharedWorkerGlobalScope;
 
 export type SharedWorkerStatus = '' | 'active' | 'expired' | 'error';
 
-const refreshAtFactor = 0.5;
 let clients: MessagePort[] = [];
 let status: SharedWorkerStatus = '';
 let timeout: number;
@@ -56,7 +57,6 @@ let current: ObtainAuthTokenResponse = {
 	token: null
 };
 let refreshInterval;
-let isRetrieving = false;
 let isProduction = process.env.PRODUCTION !== 'development';
 let siteSocketClient: Client;
 let rootSocketClient: Client;
@@ -99,6 +99,11 @@ function onmessage(event) {
 			openSocket({ site: null, xsrfToken: event.data.payload.xsrfToken });
 			retrieve();
 			break;
+		// The user chose to stay signed in from the session timeout warning.
+		case sharedWorkerExtendSession.type:
+			log('App requested to extend the session');
+			retrieve(event.data.payload.xsrfToken);
+			break;
 		// The user logged out.
 		case logout.type:
 		// The app received a 401 and it's reporting the session timeout.
@@ -129,6 +134,47 @@ function onmessage(event) {
 	}
 }
 
+const authTokenQueue = createAuthTokenQueue({
+	obtain: obtainAuthToken,
+	extend: extendSession,
+	onToken(token) {
+		log('New token received');
+		status = 'active';
+		current = token;
+		broadcast(sharedWorkerToken(current));
+		refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
+		if (clients.length) {
+			// If there are clients connected, keep the token refresh going
+			timeout = self.setTimeout(
+				() => authTokenQueue.retrieve(),
+				getNextRefreshDelay(current, refreshInterval, SESSION_TIMEOUT_WARNING_MS)
+			);
+		} else {
+			// Do SharedWorkers stop as soon as all their tabs are terminated?
+			clearTimeout(timeout);
+		}
+	},
+	onUnauthenticated() {
+		unauthenticated();
+	},
+	onError(e: AjaxError) {
+		clearTimeout(timeout);
+		log('Error retrieving token', e);
+		status = 'error';
+		broadcast(sharedWorkerError({ status: e.status, message: e.message }));
+		// If there are clients connected try again.
+		if (clients.length && authTokenQueue.shouldRetry()) {
+			timeout = self.setTimeout(() => authTokenQueue.retrieve(), Math.floor(refreshInterval * 0.9));
+		}
+	},
+	log
+});
+
+function retrieve(extendSessionXsrfToken?: string) {
+	clearTimeout(timeout);
+	authTokenQueue.retrieve(extendSessionXsrfToken);
+}
+
 function clearCurrent() {
 	status = '';
 	current.token = null;
@@ -141,58 +187,12 @@ function isExpired(time = Date.now()) {
 
 function unauthenticated(excludeClient?: MessagePort) {
 	log(`Auth has expired.`);
+	authTokenQueue.clearPendingExtend();
 	clearTimeout(timeout);
 	status = 'expired';
 	siteSocketClient?.deactivate();
 	rootSocketClient?.deactivate();
 	broadcast(sharedWorkerUnauthenticated(), excludeClient);
-}
-
-let retries = 0;
-function retrieve() {
-	clearTimeout(timeout);
-	if (!isRetrieving) {
-		isRetrieving = true;
-		return obtainAuthToken().subscribe({
-			next(response) {
-				retries = 0;
-				isRetrieving = false;
-				if (response) {
-					log('New token received');
-					status = 'active';
-					current = response;
-					broadcast(sharedWorkerToken(current));
-					refreshInterval = Math.floor((current.expiresAt - Date.now()) * refreshAtFactor);
-					if (clients.length) {
-						// If there are clients connected, keep the token refresh going
-						timeout = self.setTimeout(retrieve, refreshInterval);
-					} else {
-						// Do SharedWorkers stop as soon as all their tabs are terminated?
-						clearTimeout(timeout);
-					}
-				} else {
-					unauthenticated();
-				}
-				return current;
-			},
-			error(e: AjaxError) {
-				isRetrieving = false;
-				clearTimeout(timeout);
-				log('Error retrieving token', e);
-				if (e.status === 401) {
-					retries = 0;
-					unauthenticated();
-				} else {
-					status = 'error';
-					broadcast(sharedWorkerError({ status: e.status, message: e.message }));
-					// If there are clients connected try again.
-					if (clients.length && retries++ < 3) {
-						timeout = self.setTimeout(retrieve, Math.floor(refreshInterval * 0.9));
-					}
-				}
-			}
-		});
-	}
 }
 
 function broadcast(message: StandardAction, excludedClient?: MessagePort) {

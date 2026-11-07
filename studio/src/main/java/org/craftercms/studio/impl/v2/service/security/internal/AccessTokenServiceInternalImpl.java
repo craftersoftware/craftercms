@@ -95,6 +95,14 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	private static final String CRAFTER_SITE_COOKIE_NAME = "crafterSite";
 	private static final String JWE_ALGORITHM_HEADER_VALUE = PBES2_HS512_A256KW;
 	private static final String JWE_ENCRYPTION_METHOD_HEADER_VALUE = AES_256_CBC_HMAC_SHA_512;
+	/**
+	 * Time limits of this length (in minutes) or longer are not reported to the UI for a warning (WCAG 2.1 SC 2.2.1)
+	 */
+	private static final int SESSION_WARNING_MAX_MINUTES = 20 * 60;
+	/**
+	 * Limits that are this close are treated as simultaneous, as extending the session restarts both
+	 */
+	private static final long SESSION_LIMITS_TOLERANCE_SECONDS = 60;
 
 	/**
 	 * The issuer for generation access tokens
@@ -136,6 +144,11 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	 */
 	protected final int inactivityTimeout;
 
+	/**
+	 * Maximum number of times a user can extend the session timeout before logging in again
+	 */
+	protected final int sessionMaxExtensions;
+
 	private NamedCookieManager refreshTokenCookieManager;
 	private NamedCookieManager previewCookieManager;
 
@@ -158,12 +171,12 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	protected final TextEncryptor previewTokenEncryptor;
 
 	@ConstructorProperties({"issuer", "validIssuers", "accessTokenExpiration", "signPassword", "encryptPassword",
-		"sessionTimeout", "inactivityTimeout", "securityDao", "instanceService", "auditService",
+		"sessionTimeout", "inactivityTimeout", "sessionMaxExtensions", "securityDao", "instanceService", "auditService",
 		"studioConfiguration", "siteService", "retryingDatabaseOperationFacade", "systemStatusProvider",
 		"previewTokenEncryptor", "userService"})
 	public AccessTokenServiceInternalImpl(String issuer, String[] validIssuers, int accessTokenExpiration,
 										  String signPassword, String encryptPassword, int sessionTimeout,
-										  int inactivityTimeout, SecurityDAO securityDao,
+										  int inactivityTimeout, int sessionMaxExtensions, SecurityDAO securityDao,
 										  InstanceService instanceService, AuditService auditService,
 										  StudioConfiguration studioConfiguration, SitesService siteService,
 										  RetryingDatabaseOperationFacade retryingDatabaseOperationFacade,
@@ -176,6 +189,7 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		this.encryptPassword = encryptPassword;
 		this.sessionTimeout = sessionTimeout;
 		this.inactivityTimeout = inactivityTimeout;
+		this.sessionMaxExtensions = sessionMaxExtensions;
 		this.securityDao = securityDao;
 		this.instanceService = instanceService;
 		this.auditService = auditService;
@@ -223,6 +237,65 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 
 		retryingDatabaseOperationFacade.retry(() -> securityDao.upsertRefreshToken(userId, refreshToken));
 		refreshTokenCookieManager.addCookie(refreshToken, response);
+	}
+
+	@Override
+	public void resetSessionExtensions(Authentication auth) {
+		var userId = getUserId(auth);
+		retryingDatabaseOperationFacade.retry(() -> securityDao.resetSessionExtensions(userId));
+	}
+
+	/**
+	 * Restarts the inactivity time limit and, unless the user already used all the extensions, the session time limit
+	 */
+	protected void extendSession(Authentication auth) {
+		var userId = getUserId(auth);
+		updateUserActivity(auth);
+		int updated = retryingDatabaseOperationFacade.retry(() -> securityDao.extendSession(userId, sessionMaxExtensions));
+		if (updated == 0) {
+			logger.debug("User '{}' can't extend the session any more", auth.getName());
+		}
+	}
+
+	/**
+	 * Gets the earliest moment at which the refresh token of the user can be deleted because of the session time limit.
+	 *
+	 * @return the moment, or null if the limit is 20 hours or longer or the user has no refresh token
+	 */
+	protected Instant getSessionLimitExpiration(long userId) {
+		if (sessionTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
+		}
+		// The clean up deletes the tokens that are older than the timeout in whole minutes
+		Long remainingSeconds = securityDao.getRefreshTokenRemainingSeconds(userId, sessionTimeout + 1);
+		return remainingSeconds != null ? now().plusSeconds(remainingSeconds) : null;
+	}
+
+	/**
+	 * Gets the earliest moment at which the refresh token of the user can be deleted because of inactivity.
+	 *
+	 * @return the moment, or null if the limit is 20 hours or longer or there is no recorded activity
+	 */
+	protected Instant getInactivityExpiration(long userId) {
+		if (inactivityTimeout >= SESSION_WARNING_MAX_MINUTES) {
+			return null;
+		}
+		Instant lastActivity = userActivity.getIfPresent(userId);
+		return lastActivity != null ? lastActivity.plus(inactivityTimeout + 1L, MINUTES) : null;
+	}
+
+	/**
+	 * Indicates if choosing to stay signed in would move the moment in which the session expires, which is not the
+	 * case when the session time limit is the next one to be reached and the user used all the extensions.
+	 */
+	protected boolean canExtendSession(long userId, Instant sessionLimit, Instant inactivityLimit) {
+		if (sessionLimit == null ||
+			(inactivityLimit != null &&
+				inactivityLimit.plusSeconds(SESSION_LIMITS_TOLERANCE_SECONDS).isBefore(sessionLimit))) {
+			return true;
+		}
+		Integer extensions = securityDao.getSessionExtensions(userId);
+		return extensions == null || extensions < sessionMaxExtensions;
 	}
 
 	@Override
@@ -297,7 +370,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 	}
 
 	@Override
-	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response) throws ServiceLayerException {
+	public AccessToken createTokens(Authentication auth, HttpServletRequest request, HttpServletResponse response,
+									boolean extendSession) throws ServiceLayerException {
 		logger.debug("Create tokens for '{}'", auth.getName());
 		var issuedAt = now();
 		var expireAt = issuedAt.plus(accessTokenExpiration, MINUTES);
@@ -305,11 +379,22 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 		String token = createToken(issuedAt, expireAt, auth.getName(), null);
 
 		updateRefreshToken(auth, response);
+		if (extendSession) {
+			extendSession(auth);
+		}
 		refreshPreviewCookie(auth, request, response, true);
 
 		var accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setExpiresAt(expireAt);
+		var userId = getUserId(auth);
+		var sessionLimit = getSessionLimitExpiration(userId);
+		var inactivityLimit = getInactivityExpiration(userId);
+		if (sessionLimit != null || inactivityLimit != null) {
+			accessToken.setSessionExpiresAt(sessionLimit == null || (inactivityLimit != null &&
+				inactivityLimit.isBefore(sessionLimit)) ? inactivityLimit : sessionLimit);
+		}
+		accessToken.setCanExtendSession(canExtendSession(userId, sessionLimit, inactivityLimit));
 
 		return accessToken;
 	}

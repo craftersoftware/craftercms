@@ -57,6 +57,7 @@ public class AccessTokenAuthenticationListener {
 		HttpServletRequest request = RequestContext.getCurrent().getRequest();
 		HttpServletResponse response = RequestContext.getCurrent().getResponse();
 		accessTokenService.updateRefreshToken(authentication, response);
+		accessTokenService.resetSessionExtensions(authentication);
 		accessTokenService.refreshPreviewCookie(authentication, request, response);
 	}
 

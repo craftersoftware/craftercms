@@ -35,6 +35,16 @@ public class AccessToken {
 	 */
 	protected Instant expiresAt;
 
+	/**
+	 * The earliest date in which the session of the user can expire, null if there is no time limit to warn about
+	 */
+	protected Instant sessionExpiresAt;
+
+	/**
+	 * Indicates if the user can still extend the session before it expires
+	 */
+	protected boolean canExtendSession = true;
+
 	public void setToken(String token) {
 		this.token = token;
 	}
@@ -43,12 +53,28 @@ public class AccessToken {
 		this.expiresAt = expiresAt;
 	}
 
+	public void setSessionExpiresAt(Instant sessionExpiresAt) {
+		this.sessionExpiresAt = sessionExpiresAt;
+	}
+
+	public void setCanExtendSession(boolean canExtendSession) {
+		this.canExtendSession = canExtendSession;
+	}
+
 	public String getToken() {
 		return token;
 	}
 
 	public Instant getExpiresAt() {
 		return expiresAt;
+	}
+
+	public Instant getSessionExpiresAt() {
+		return sessionExpiresAt;
+	}
+
+	public boolean isCanExtendSession() {
+		return canExtendSession;
 	}
 
 }

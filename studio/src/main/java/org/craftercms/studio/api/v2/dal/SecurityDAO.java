@@ -30,6 +30,27 @@ public interface SecurityDAO {
 
 	boolean validateRefreshToken(@Param("userId") long userId, @Param("token") String token);
 
+	/**
+	 * Gets the seconds left until the refresh token of the user is older than the given minutes
+	 *
+	 * @return the seconds (negative if already older), or null if the user has no refresh token
+	 */
+	Long getRefreshTokenRemainingSeconds(@Param("userId") long userId, @Param("minutes") int minutes);
+
+	/**
+	 * Restarts the session time limit of the user if the extensions used are below the given maximum
+	 *
+	 * @return the number of refresh tokens updated, 0 if the maximum was reached
+	 */
+	int extendSession(@Param("userId") long userId, @Param("maxExtensions") int maxExtensions);
+
+	Integer getSessionExtensions(@Param("userId") long userId);
+
+	/**
+	 * Starts a new session for the user: restarts the session time limit and the extensions count
+	 */
+	void resetSessionExtensions(@Param("userId") long userId);
+
 	void deleteRefreshToken(@Param("userId") long userId);
 
 	void deleteRefreshTokens(@Param("userIds") Collection<Long> userIds);

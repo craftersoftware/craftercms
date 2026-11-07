@@ -349,6 +349,9 @@ studio.objectState.bulkOperationsBatchSize: 500
 ##########################################################
 # Time in minutes after which active users will be required to log in again
 studio.security.sessionTimeout: 480
+# Number of times a user can extend the session timeout (by choosing to stay signed in when warned that the session is
+# about to expire) before having to log in again
+studio.security.sessionMaxExtensions: 10
 # Time in minutes after which inactive users will be required to log in again
 studio.security.inactivityTimeout: 30
 # Comma separated list of URLs that should not be tracked as user activity
