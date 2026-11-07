@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMount } from '../../hooks/useMount';
 import { useTheme } from '@mui/material/styles';
 import { useEnhancedDialogContext } from '../EnhancedDialog/useEnhancedDialogContext';
@@ -23,6 +23,9 @@ import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import { Theme } from '@mui/material';
+import { useIntl } from 'react-intl';
+import { applyAceKeyboardAccessibility } from '../editorKeyboard/aceKeyboard';
+import { codeEditorKeyboardMessages } from '../editorKeyboard/messages';
 
 // @see https://github.com/ajaxorg/ace/wiki/Configuring-Ace
 export interface AceOptions {
@@ -207,6 +210,22 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 	const {
 		palette: { mode }
 	} = useTheme();
+	const { formatMessage } = useIntl();
+	const keyboardLabels = useMemo(
+		() => ({
+			name: formatMessage(codeEditorKeyboardMessages.groupLabel),
+			instructions: formatMessage(codeEditorKeyboardMessages.instructions),
+			instructionsReadOnly: formatMessage(codeEditorKeyboardMessages.instructionsReadOnly),
+			gutterLabel: formatMessage(codeEditorKeyboardMessages.gutterLabel),
+			hintIdPrefix: 'craftercms-code-editor-hint-react'
+		}),
+		[formatMessage]
+	);
+	// The editor is created asynchronously from the mount effect, so it reads the labels through a ref.
+	const keyboardLabelsRef = useRef(keyboardLabels);
+	useEffect(() => {
+		keyboardLabelsRef.current = keyboardLabels;
+	}, [keyboardLabels]);
 
 	options.theme = options.theme ?? `ace/theme/${mode === 'light' ? 'chrome' : 'tomorrow_night'}`;
 
@@ -235,6 +254,8 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 							fontSize: '15px',
 							fontFamily: "'Monaco', 'Menlo', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace"
 						});
+						// Tab still indents while editing. Esc returns to the scroller, then Tab leaves.
+						applyAceKeyboardAccessibility(aceEditor, keyboardLabelsRef.current);
 						autoFocus && aceEditor.focus();
 						if (refs.current.options.readOnly) {
 							// This setting of the cursor to not display is unnecessary as the
@@ -310,6 +331,14 @@ function AceEditorComp(props: AceEditorProps, ref: MutableRef<AceAjax.Editor>) {
 			editor.renderer.$cursorLayer.element.style.display = options?.readOnly ? 'none' : '';
 		}
 	}, [initialized, options?.readOnly]);
+
+	// Re-apply after locale changes. Runs after the setOptions effect above so a
+	// caller option refresh cannot drop the localized labels.
+	useEffect(() => {
+		if (initialized) {
+			applyAceKeyboardAccessibility(refs.current.ace, keyboardLabels);
+		}
+	}, [initialized, keyboardLabels, options?.readOnly]);
 
 	// If the Editor is inside a dialog, resize when fullscreen changes
 	const isFullScreen = useEnhancedDialogContext()?.isFullScreen;
