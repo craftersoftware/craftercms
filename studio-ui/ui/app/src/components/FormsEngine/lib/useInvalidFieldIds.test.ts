@@ -15,33 +15,62 @@
  */
 
 import assert from 'node:assert/strict';
-import type { FieldUpdate } from './formsEngineContext.ts';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { invalidFieldReadDebounceMs, watchInvalidFieldUpdates } = await import('./useInvalidFieldIds.ts');
-const { Subject, VirtualTimeScheduler } = await import('rxjs');
+const { atom, createStore } = await import('jotai');
+const { createFormStackData, invalidFieldIdsAtom } = await import('./formUtils.tsx');
 
-describe('invalid field updates', () => {
-	// The form used to debounce this read by 300ms. Without it, every keystroke re-checks every field.
-	it('reads once after typing pauses, not on every keystroke', () => {
-		const scheduler = new VirtualTimeScheduler();
-		const updates$ = new Subject<FieldUpdate>();
-		const reads: number[] = [];
-		const subscription = watchInvalidFieldUpdates(
-			updates$,
-			() => reads.push(reads.length),
-			invalidFieldReadDebounceMs,
-			scheduler
+describe('invalidFieldIdsAtom', () => {
+	function entryWith(validations: Record<string, { isValid: boolean }>, irrelevantFieldPaths?: ReadonlySet<string>) {
+		const entry = createFormStackData({
+			itemMeta: {} as never,
+			originalValues: {}
+		});
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			validationByFieldId: Object.fromEntries(
+				Object.entries(validations).map(([id, state]) => [id, atom(Promise.resolve(state))])
+			)
+		} as never;
+		if (irrelevantFieldPaths) {
+			entry.formControllerState = { irrelevantFieldPaths } as never;
+		}
+		return entry;
+	}
+
+	it('returns the same atom for the same entry and parentPath', () => {
+		const entry = entryWith({ title_s: { isValid: true } });
+		assert.equal(invalidFieldIdsAtom(entry), invalidFieldIdsAtom(entry));
+		assert.equal(invalidFieldIdsAtom(entry, 'rows_o'), invalidFieldIdsAtom(entry, 'rows_o'));
+		assert.notEqual(invalidFieldIdsAtom(entry), invalidFieldIdsAtom(entry, 'rows_o'));
+	});
+
+	it('lists only invalid fields and excludes controller-irrelevant paths', async () => {
+		const entry = entryWith(
+			{
+				title_s: { isValid: false },
+				body_html: { isValid: true },
+				sidebar_s: { isValid: false }
+			},
+			new Set(['sidebar_s'])
 		);
-		updates$.next({ fieldId: 'title_s' });
-		updates$.next({ fieldId: 'title_s' });
-		scheduler.maxFrames = invalidFieldReadDebounceMs - 1;
-		scheduler.flush();
-		assert.deepEqual(reads, []);
-		scheduler.maxFrames = Number.POSITIVE_INFINITY;
-		scheduler.flush();
-		assert.deepEqual(reads, [0]);
-		subscription?.unsubscribe();
+		const store = createStore();
+		assert.deepEqual(await store.get(invalidFieldIdsAtom(entry)), ['title_s']);
+	});
+
+	it('recomputes after a validation atom changes', async () => {
+		const title = atom('bad');
+		const validation = atom(async (get) => ({ isValid: get(title) !== 'bad' }));
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			validationByFieldId: { title_s: validation }
+		} as never;
+		const store = createStore();
+		const idsAtom = invalidFieldIdsAtom(entry);
+		assert.deepEqual(await store.get(idsAtom), ['title_s']);
+		store.set(title, 'ok');
+		assert.deepEqual(await store.get(idsAtom), []);
 	});
 });

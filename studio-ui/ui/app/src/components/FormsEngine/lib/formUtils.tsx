@@ -771,6 +771,47 @@ export async function readInvalidFieldIds(
 	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
 }
 
+const emptyInvalidFieldIds: Atom<Promise<string[]>> = atom(Promise.resolve([] as string[]));
+const invalidFieldIdsAtomsByAtoms = new WeakMap<FormsEngineAtoms, Map<string, Atom<Promise<string[]>>>>();
+
+/**
+ * Invalid field ids for a form entry, derived from its validation atoms. Cached per entry and `parentPath`
+ * (like {@link changedFieldAtom}), so the local reader and a stacked child's parent reader share one computation.
+ * Recomputes when a validation result or {@link FormsEngineAtoms.relevanceVersion} changes; no `fieldUpdates$`.
+ * The deny-list is read live from the entry. Pass the same `parentPath` the imperative read would use
+ * (`repeat?.fieldId` for a repeat item; `undefined` for a parent form read).
+ */
+export function invalidFieldIdsAtom(
+	entry: StableFormContextProps | null | undefined,
+	parentPath?: string
+): Atom<Promise<string[]>> {
+	if (!entry?.atoms) return emptyInvalidFieldIds;
+	const pathKey = parentPath ?? '';
+	const atoms = entry.atoms;
+	let byPath = invalidFieldIdsAtomsByAtoms.get(atoms);
+	if (!byPath) {
+		byPath = new Map();
+		invalidFieldIdsAtomsByAtoms.set(atoms, byPath);
+	}
+	let idsAtom = byPath.get(pathKey);
+	if (!idsAtom) {
+		idsAtom = atom(async (get) => {
+			const atoms = entry.atoms;
+			if (!atoms) return [];
+			get(atoms.relevanceVersion);
+			const fields = relevantFieldValidations(
+				atoms.validationByFieldId,
+				entry.formControllerState?.irrelevantFieldPaths,
+				parentPath
+			);
+			const states = await Promise.all(fields.map(({ atom: validityAtom }) => get(validityAtom)));
+			return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
+		});
+		byPath.set(pathKey, idsAtom);
+	}
+	return idsAtom;
+}
+
 export function getValidationAtomsExcludingIrrelevant(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
 	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,

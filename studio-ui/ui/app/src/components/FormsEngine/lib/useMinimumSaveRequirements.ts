@@ -14,52 +14,62 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useEffect, useState } from 'react';
-import type { Observable } from 'rxjs';
-import { useStore as useJotaiStore } from 'jotai';
-import type { FieldUpdate, FormsEngineAtoms } from './formsEngineContext';
-import { settleInvalidFieldRead } from './formVisibility';
+import { atom, useAtomValue } from 'jotai';
+import { useEffect, useMemo, useState } from 'react';
+import type { FormsEngineAtoms } from './formsEngineContext';
+import { XmlKeys } from './formConsts';
 import {
-	readMissingMinimumSaveRequirements,
+	missingMinimumSaveRequirements,
 	sameMinimumSaveRequirements,
 	type MinimumSaveRequirement
 } from './minimumSaveRequirements';
-import { watchInvalidFieldUpdates } from './useInvalidFieldIds';
+import useLoadableAtom from './useLoadableAtom';
+import type { FieldValidityState } from './validators';
+
+const emptyInternalName = atom<unknown>(undefined);
+const alwaysValidFileName = atom(Promise.resolve({ isValid: true, messages: [] } as FieldValidityState));
 
 /**
  * Live list of what the save would refuse to write without. Empty means the minimum is met.
- * The first read is immediate; later edits wait out the same pause as the invalid-field read.
- * The save still checks on its own, so a read that is a moment behind cannot write a bad file.
+ * Reads the file-name validity and internal-name value atoms directly. The save still checks on its
+ * own, so a read that is a moment behind cannot write a bad file.
  */
 export function useMinimumSaveRequirements(
 	atoms: FormsEngineAtoms | null | undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean },
-	fieldUpdates$: Observable<FieldUpdate> | null | undefined
+	flags: { isRepeatMode: boolean; isEmbedded: boolean }
 ): MinimumSaveRequirement[] {
-	const jotai = useJotaiStore();
-	const [missing, setMissing] = useState<MinimumSaveRequirement[]>([]);
 	const { isRepeatMode, isEmbedded } = flags;
+	const fileNameAtom = useMemo(() => {
+		if (!atoms || isRepeatMode || isEmbedded) return alwaysValidFileName;
+		return atoms.validationByFieldId?.[XmlKeys.fileName] ?? alwaysValidFileName;
+	}, [atoms, isEmbedded, isRepeatMode]);
+	const internalNameAtom = useMemo(() => {
+		if (!atoms || isRepeatMode) return emptyInternalName;
+		return atoms.valueByFieldId?.[XmlKeys.internalName] ?? emptyInternalName;
+	}, [atoms, isRepeatMode]);
+	const fileNameLoadable = useLoadableAtom(fileNameAtom);
+	const internalName = useAtomValue(internalNameAtom);
+	const [missing, setMissing] = useState<MinimumSaveRequirement[]>([]);
+
 	useEffect(() => {
-		let disposed = false;
-		let latest = 0;
-		const read = async () => {
-			const seq = ++latest;
-			try {
-				const next = await readMissingMinimumSaveRequirements(jotai, atoms, { isRepeatMode, isEmbedded });
-				if (settleInvalidFieldRead({ disposed, seq, latest, rejected: false }) !== 'apply') return;
-				setMissing((current) => (sameMinimumSaveRequirements(current, next) ? current : next));
-			} catch (error) {
-				// A plugin validator can reject. Keep the last result; the save guard still applies.
-				if (settleInvalidFieldRead({ disposed, seq, latest, rejected: true }) !== 'report') return;
-				console.error(error);
-			}
-		};
-		void read();
-		const subscription = watchInvalidFieldUpdates(fieldUpdates$, () => void read());
-		return () => {
-			disposed = true;
-			subscription?.unsubscribe();
-		};
-	}, [atoms, fieldUpdates$, isEmbedded, isRepeatMode, jotai]);
+		if (!atoms || isRepeatMode) {
+			setMissing((current) => (current.length === 0 ? current : []));
+			return;
+		}
+		if (fileNameLoadable.state === 'loading') return;
+		if (fileNameLoadable.state === 'hasError') {
+			// A plugin validator can reject. Keep the last result; the save guard still applies.
+			console.error(fileNameLoadable.error);
+			return;
+		}
+		const next = missingMinimumSaveRequirements({
+			isRepeatMode,
+			isEmbedded,
+			fileNameValid: fileNameLoadable.data.isValid,
+			internalName
+		});
+		setMissing((current) => (sameMinimumSaveRequirements(current, next) ? current : next));
+	}, [atoms, fileNameLoadable, internalName, isEmbedded, isRepeatMode]);
+
 	return missing;
 }
