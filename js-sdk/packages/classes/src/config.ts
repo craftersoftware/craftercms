@@ -61,7 +61,7 @@ class ConfigManager {
 		observerOrNext: ObserverOrNext<R>,
 		...operators: OperatorFunction<T, R>[]
 	): Subscription {
-		const pipe = this.config$.pipe as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
+		const pipe = this.config$.pipe.bind(this.config$) as (...ops: OperatorFunction<any, any>[]) => Observable<R>;
 		return pipe(...operators).subscribe(observerOrNext);
 	}
 
