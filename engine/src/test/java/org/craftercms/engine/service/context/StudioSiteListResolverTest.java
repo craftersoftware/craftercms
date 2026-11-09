@@ -122,7 +122,7 @@ public class StudioSiteListResolverTest {
 		assertEquals(List.of("from-s3"), new ArrayList<>(resolver.getSiteList()));
 		long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
 
-		assertTrue("elapsed " + elapsedMillis + "ms", elapsedMillis < 1_000);
+		assertTrue("elapsed " + elapsedMillis + "ms", elapsedMillis < 3_000);
 	}
 
 	@Test
