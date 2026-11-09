@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 ## 1. Why plugins are part of the core design
 
@@ -53,7 +53,7 @@ Historically:
 - `form-datasource` adds a `<datasource>` there
 - modern UI widgets add `<widget>` declarations to `ui.xml`
 
-This installer contract must evolve with TB's move from `site-config-tools.xml` to `ui.xml`; otherwise existing plugin packages will install successfully but remain invisible to new TB.
+The legacy admin console that read `site-config-tools.xml` (`cstudio-admin/base.js`) has been removed; blueprints no longer ship that file. Marketplace `form-control` / `form-datasource` wiring may still target it (see [#9277](https://github.com/craftersoftware/craftercms/issues/9277)). This installer contract must evolve with TB's move from `site-config-tools.xml` to `ui.xml`; otherwise existing plugin packages will install successfully but remain invisible to new TB.
 
 ### 2.2 General modern Studio UI plugin
 
