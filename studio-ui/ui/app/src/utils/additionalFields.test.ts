@@ -209,6 +209,138 @@ describe('additionalFields form-definition round trip', () => {
 		assert.deepEqual(roundTripped.fields.title_s.additionalFields, ['title_s_bk']);
 		assert.deepEqual(roundTripped.fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
 	});
+
+	it('preserves persisted ids when the resolved descriptor has no additionalFields (root and nested)', () => {
+		// Built-in `input` resolves to a descriptor whose metadata has suffixes only — no additionalFields.
+		// Serialize must keep form-def companions rather than treating an empty descriptor as a clear.
+		const parsed = parseLegacyFormDefinition({
+			'content-type': '/page/article',
+			title: 'Article',
+			description: '',
+			objectType: 'page',
+			sections: {
+				section: {
+					title: 'Content',
+					description: '',
+					defaultOpen: 'true',
+					fields: {
+						field: [
+							{
+								id: 'title_s',
+								title: 'Title',
+								description: '',
+								type: 'input',
+								additionalFields: { id: ['title_s_bk', 'title_s_alt'] }
+							},
+							{
+								id: 'items_o',
+								title: 'Items',
+								description: '',
+								type: 'repeat',
+								fields: {
+									field: {
+										id: 'note_s',
+										title: 'Note',
+										description: '',
+										type: 'input',
+										additionalFields: { id: 'note_s_bk' }
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		} as never);
+
+		assert.deepEqual(parsed.fields.title_s.additionalFields, ['title_s_bk', 'title_s_alt']);
+		assert.deepEqual(parsed.fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
+
+		const xml = buildContentTypeXml(prepareSerializeToXmlTypeObject(parsed));
+		assert.match(
+			xml,
+			/<id>title_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>title_s_bk<\/id>[\s\S]*<id>title_s_alt<\/id>/
+		);
+		assert.match(xml, /<id>note_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>note_s_bk<\/id>/);
+
+		const roundTripped = parseFormXml(xml);
+		assert.deepEqual(roundTripped.fields.title_s.additionalFields, ['title_s_bk', 'title_s_alt']);
+		assert.deepEqual(roundTripped.fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
+	});
+
+	it('keeps persisted ids and backfills missing descriptor ids on serialize (root and nested)', () => {
+		const parsed = parseLegacyFormDefinition({
+			'content-type': '/page/article',
+			title: 'Article',
+			description: '',
+			objectType: 'page',
+			sections: {
+				section: {
+					title: 'Content',
+					description: '',
+					defaultOpen: 'true',
+					fields: {
+						field: [
+							{
+								id: 'title_s',
+								title: 'Title',
+								description: '',
+								type: 'backup-control',
+								additionalFields: { id: 'title_s_custom' }
+							},
+							{
+								id: 'items_o',
+								title: 'Items',
+								description: '',
+								type: 'repeat',
+								fields: {
+									field: {
+										id: 'note_s',
+										title: 'Note',
+										description: '',
+										type: 'backup-control',
+										additionalFields: { id: 'note_s_custom' }
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		} as never);
+
+		const xml = buildContentTypeXml(
+			prepareSerializeToXmlTypeObject(parsed, {
+				controlDescriptors: {
+					'backup-control': {
+						id: 'backup-control',
+						name: 'Backup',
+						description: '',
+						sections: [],
+						fields: {},
+						metadata: { additionalFields: ['{id}_bk', '{id}_alt'] }
+					}
+				} as never,
+				dataSourceDescriptors: {}
+			})
+		);
+		assert.match(
+			xml,
+			/<id>title_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>title_s_custom<\/id>[\s\S]*<id>title_s_bk<\/id>[\s\S]*<id>title_s_alt<\/id>/
+		);
+		assert.match(
+			xml,
+			/<id>note_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>note_s_custom<\/id>[\s\S]*<id>note_s_bk<\/id>[\s\S]*<id>note_s_alt<\/id>/
+		);
+
+		const roundTripped = parseFormXml(xml);
+		assert.deepEqual(roundTripped.fields.title_s.additionalFields, ['title_s_custom', 'title_s_bk', 'title_s_alt']);
+		assert.deepEqual(roundTripped.fields.items_o.fields.note_s.additionalFields, [
+			'note_s_custom',
+			'note_s_bk',
+			'note_s_alt'
+		]);
+	});
 });
 
 const pluginControls = {

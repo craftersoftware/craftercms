@@ -28,7 +28,7 @@ import { ContentItem } from '../models/Item';
 import type { BuiltInControlType } from '../components/FormsEngine/lib/controlMap';
 import { defineMessages, IntlShape } from 'react-intl';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
-import { expandAdditionalFieldTemplates } from './additionalFields';
+import { mergeAdditionalFieldIds } from './additionalFields';
 
 const messages = defineMessages({
 	[XmlKeys.displayTemplate]: {
@@ -353,20 +353,14 @@ export function addConfiguredAdditionalFields(
 			const fields = Object.fromEntries(
 				Object.entries(contentType.fields).map(([fieldId, field]) => {
 					const persistedAdditionalFields = field.additionalFields ?? [];
-					const expandedAdditionalFields = expandAdditionalFieldTemplates(
+					const additionalFields = mergeAdditionalFieldIds(
 						field.id,
+						persistedAdditionalFields,
 						controls[field.type]?.metadata?.additionalFields
 					);
-					const seen = new Set(persistedAdditionalFields);
-					const missingAdditionalFields: string[] = [];
-					for (const additionalFieldId of expandedAdditionalFields) {
-						if (seen.has(additionalFieldId)) continue;
-						seen.add(additionalFieldId);
-						missingAdditionalFields.push(additionalFieldId);
-					}
-					if (missingAdditionalFields.length === 0) return [fieldId, field];
+					if (additionalFields.length === persistedAdditionalFields.length) return [fieldId, field];
 					fieldsChanged = true;
-					return [fieldId, { ...field, additionalFields: [...persistedAdditionalFields, ...missingAdditionalFields] }];
+					return [fieldId, { ...field, additionalFields }];
 				})
 			);
 			if (!fieldsChanged) return [contentTypeId, contentType];

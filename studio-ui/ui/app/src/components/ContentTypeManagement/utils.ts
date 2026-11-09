@@ -42,6 +42,7 @@ import {
 	setFieldAtoms,
 	type ValidatorsData
 } from '../FormsEngine/lib/formUtils';
+import { mergeAdditionalFieldIds } from '../../utils/additionalFields';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
@@ -889,9 +890,11 @@ function convertFieldStructToXmlStruct(
 	}
 	const constraints = constraintList.length > 0 ? { constraint: constraintList } : undefined;
 
+	// Form-def ids are authoritative; descriptor templates only backfill. An empty descriptor must
+	// not clear persisted companions (e.g. built-in `input` has a descriptor with no additionalFields).
 	const descriptor = field.id ? resolveControlDescriptors(controlDescriptors)[field.type] : undefined;
-	const additionalFieldIds = descriptor
-		? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor)
+	const additionalFieldIds = field.id
+		? mergeAdditionalFieldIds(field.id, field.additionalFields, descriptor?.metadata?.additionalFields)
 		: (field.additionalFields ?? []);
 	const additionalFields = additionalFieldIds.length > 0 ? { id: additionalFieldIds } : undefined;
 

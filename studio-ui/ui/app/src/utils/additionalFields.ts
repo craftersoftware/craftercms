@@ -27,3 +27,27 @@ export function expandAdditionalFieldTemplates(
 	if (!templates?.length) return [];
 	return templates.map((template) => processAdditionalFieldMacro(fieldId, template));
 }
+
+/**
+ * Form-definition ids are authoritative. Descriptor templates only backfill ids that were never
+ * persisted; an empty descriptor does not clear stored ids, and a persisted id that differs from
+ * the descriptor is kept.
+ */
+export function mergeAdditionalFieldIds(
+	fieldId: string,
+	persisted: readonly string[] | null | undefined,
+	templates: readonly string[] | null | undefined
+): string[] {
+	const persistedAdditionalFields = persisted ?? [];
+	const expandedAdditionalFields = expandAdditionalFieldTemplates(fieldId, templates);
+	if (expandedAdditionalFields.length === 0) return [...persistedAdditionalFields];
+	const seen = new Set(persistedAdditionalFields);
+	const missingAdditionalFields: string[] = [];
+	for (const additionalFieldId of expandedAdditionalFields) {
+		if (seen.has(additionalFieldId)) continue;
+		seen.add(additionalFieldId);
+		missingAdditionalFields.push(additionalFieldId);
+	}
+	if (missingAdditionalFields.length === 0) return [...persistedAdditionalFields];
+	return [...persistedAdditionalFields, ...missingAdditionalFields];
+}
