@@ -33,7 +33,7 @@ interface SitesGridProps {
 		status: PublishingStatus
 	): void;
 	onDuplicateSiteClick(siteId: string): void;
-	onEnableStagingClick?(site: Site): void;
+	onConfigurationClick?(site: Site): void;
 	currentView: 'grid' | 'list';
 	disabledSitesLookup: LookupTable<boolean>;
 }
@@ -45,7 +45,7 @@ export function SitesGrid(props: SitesGridProps) {
 		onDeleteSiteClick,
 		onEditSiteClick,
 		onDuplicateSiteClick,
-		onEnableStagingClick,
+		onConfigurationClick,
 		currentView,
 		onPublishButtonClick,
 		disabledSitesLookup
@@ -61,7 +61,7 @@ export function SitesGrid(props: SitesGridProps) {
 							onDeleteSiteClick={onDeleteSiteClick}
 							onEditSiteClick={onEditSiteClick}
 							onDuplicateSiteClick={onDuplicateSiteClick}
-							onEnableStagingClick={onEnableStagingClick}
+							onConfigurationClick={onConfigurationClick}
 							onPublishButtonClick={onPublishButtonClick}
 							compact={currentView === 'list'}
 							disabled={disabledSitesLookup[site.id]}

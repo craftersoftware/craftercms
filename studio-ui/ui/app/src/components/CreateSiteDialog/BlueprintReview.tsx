@@ -75,6 +75,18 @@ const messages = defineMessages({
 		id: 'createSiteDialog.gitBranch',
 		defaultMessage: 'Git Branch'
 	},
+	enableStaging: {
+		id: 'createSiteDialog.enableStaging',
+		defaultMessage: 'Enable staging'
+	},
+	yes: {
+		id: 'words.yes',
+		defaultMessage: 'Yes'
+	},
+	no: {
+		id: 'words.no',
+		defaultMessage: 'No'
+	},
 	userNameAndPassword: {
 		id: 'createSiteDialog.userNameAndPassword',
 		defaultMessage: 'Username & Password'
@@ -307,6 +319,12 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							{formatMessage(messages.gitBranch)}:
 						</Box>
 						{` ${inputs.gitBranch ? inputs.gitBranch : 'master'}`}
+					</Typography>
+					<Typography variant="body2" gutterBottom>
+						<Box component="span" sx={{ fontWeight: 'bold' }}>
+							{formatMessage(messages.enableStaging)}:{' '}
+						</Box>
+						{formatMessage(inputs.enableStaging ? messages.yes : messages.no)}
 					</Typography>
 					{blueprint.source !== 'GIT' && blueprint.id === 'GIT' && renderGitOptions()}
 				</Grid>
