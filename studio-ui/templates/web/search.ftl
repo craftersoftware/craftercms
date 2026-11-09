@@ -28,7 +28,7 @@
 <#include "/static-assets/app/pages/legacy.html">
 <script>
 	document.addEventListener("CrafterCMS.CodebaseBridgeReady", () => {
-		CrafterCMSNext.render('#root', 'SearchPage', {}, false);
+		CrafterCMSNext.render('#root', 'SearchPage', { embedded: ${((RequestParameters.embedded!'false') == 'true')?string} }, false);
 	});
 </script>
 </body>
