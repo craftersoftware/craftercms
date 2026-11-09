@@ -173,6 +173,8 @@ export function SiteTools(props: SiteToolsProps) {
 						</List>
 					) : (
 						<EmptyState
+							// Gives back the side inset the drawer padding used to add on top of EmptyState's own margin.
+							sxs={{ root: { padding: (theme) => theme.spacing(0, 2) } }}
 							title={
 								<FormattedMessage
 									id="siteTools.toolListingNotConfigured"
@@ -191,8 +193,8 @@ export function SiteTools(props: SiteToolsProps) {
 				<Box
 					component="footer"
 					sx={(theme) => ({
-						// Same box as before the drawer lost its padding: 20px of its own plus the 16px it used to sit inside.
-						padding: theme.spacing(4.5, 2),
+						// Same box as before the drawer lost its padding: 20px of its own on top; sides and bottom add the 16px it used to sit inside.
+						padding: theme.spacing(2.5, 2, 4.5),
 						textAlign: 'center'
 					})}
 				>
