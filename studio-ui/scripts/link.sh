@@ -129,7 +129,6 @@ if [[ $DO_BACKUP == true ]]; then
   cp -r "$STATIC_ASSETS/libs" "$DEFAULT_SITE/link-backup/libs"
   cp -r "$STATIC_ASSETS/images" "$DEFAULT_SITE/link-backup/images"
   cp -r "$DEFAULT_SITE/site" "$DEFAULT_SITE/link-backup/site"
-  cp -r "$STATIC_ASSETS/css" "$DEFAULT_SITE/link-backup/css"
   cp -r "$STATIC_ASSETS/js" "$DEFAULT_SITE/link-backup/js"
 fi
 # endregion
@@ -145,7 +144,6 @@ if [[ $DO_REMOVE == true ]]; then
   rm -rf "$STATIC_ASSETS/libs"
   rm -rf "$STATIC_ASSETS/images"
   rm -rf "$DEFAULT_SITE/site"
-  rm -rf "$STATIC_ASSETS/css"
   rm -rf "$STATIC_ASSETS/js"
 fi
 # endregion
@@ -161,7 +159,6 @@ if [[ $DO_RESTORE == true ]]; then
   cp -r "$DEFAULT_SITE/link-backup/libs" "$STATIC_ASSETS/libs"
   cp -r "$DEFAULT_SITE/link-backup/images" "$STATIC_ASSETS/images"
   cp -r "$DEFAULT_SITE/link-backup/site" "$DEFAULT_SITE/site"
-  cp -r "$DEFAULT_SITE/link-backup/css" "$STATIC_ASSETS/css"
   cp -r "$DEFAULT_SITE/link-backup/js" "$STATIC_ASSETS/js"
 fi
 # endregion
@@ -177,7 +174,6 @@ if [[ $DO_LINK == true ]]; then
   ln -s "$SRC/static-assets/libs" "$STATIC_ASSETS/libs"
   ln -s "$SRC/static-assets/images" "$STATIC_ASSETS/images"
   ln -s "$SRC/site" "$DEFAULT_SITE/site"
-  ln -s "$SRC/static-assets/css" "$STATIC_ASSETS/css"
   ln -s "$SRC/static-assets/js" "$STATIC_ASSETS/js"
 fi
 # endregion
@@ -193,7 +189,6 @@ if [[ $DO_SYNC == true ]]; then
   cp -r "$SRC/static-assets/libs" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/images" "$STATIC_ASSETS"
   cp -r "$SRC/site" "$DEFAULT_SITE"
-  cp -r "$SRC/static-assets/css" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/js" "$STATIC_ASSETS"
 fi
 # endregion
