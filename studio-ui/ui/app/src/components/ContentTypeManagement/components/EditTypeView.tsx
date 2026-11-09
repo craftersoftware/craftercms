@@ -66,6 +66,7 @@ import dataSourceDescriptors from '../descriptors/dataSources';
 import type { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import TypeDetailsView, { TypeDetailsViewProps } from './TypeDetailsView';
 import {
+	FieldUpdate,
 	FormsEngineAtoms,
 	FormsEngineFormApiContextProps,
 	StableFormContextProps
@@ -97,6 +98,12 @@ import { fetchItemVersions } from '../../../state/actions/versions';
 import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
+import {
+	createTypeWorkingCopy,
+	deleteDataSourceFromType,
+	insertDataSourceIntoType,
+	reorderTypeSections
+} from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
 import type { ReorderFieldsDialogProps } from './ReorderFieldsDialog';
@@ -154,11 +161,11 @@ export interface EditTypeAppProps {
 
 interface EditAppContextProps {
 	/**
-	 * The open form's internal stream of value writes (see `StableFormContextProps.fieldUpdates$`): one emission per
+	 * The open form's internal stream of value writes (a stream of `FieldUpdate`s, see `StableFormContextProps.fieldUpdates$`): one emission per
 	 * write, after the changed-ids atom is updated, never on a clear. Used to track dirty state synchronously and to
 	 * debounce background validation. It carries no state: read dirty from the form's `changedFieldIds` atom.
 	 */
-	fieldUpdates$: Subject<string>;
+	fieldUpdates$: Subject<FieldUpdate>;
 	formContextApi: FormsEngineFormApiContextProps;
 	activeFormContext: StableFormContextProps;
 	selectedField: ContentTypeField;
@@ -200,7 +207,9 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const stateRef = useRef<EditAppContextProps>(null);
 	if (!stateRef.current) stateRef.current = createContextObject();
 
-	const [type, setType] = useState(() => ({ ...props.type })); // Working copy of the ContentType being edited.
+	// Deep-clone so nested fields/sections/dataSources are not shared with `props.type`
+	// (rollback baseline / diff source). A shallow spread would leak in-place mutations.
+	const [type, setType] = useState(() => createTypeWorkingCopy(props.type));
 	const typeRef = useRef(type);
 	typeRef.current = type;
 	// `<controller>` written straight to the saved form-definition this session. Rollback and diff
@@ -627,7 +636,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
 				reportSubmittingOrPending({ isSubmitting: true });
-				const typeToSave = latestUpdate ?? type;
+				const typeToSave = latestUpdate ?? typeRef.current;
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
@@ -730,7 +739,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 							),
 							onOk: () => {
 								resetSelection();
-								setType(withPersistedJsController(props.type));
+								setType(withPersistedJsController(createTypeWorkingCopy(props.type)));
 								dispatch(popDialog({ id }));
 							},
 							onCancel: () => dispatch(popDialog({ id }))
@@ -765,7 +774,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 
 	const handleInsertSection: TypeDetailsViewProps['onInsertSection'] = (section, position) => {
-		setType(insertSection(type, section, position));
+		setType((currentType) => insertSection(currentType, section, position));
 		onUpdateHasPendingChanges(true);
 		handleSectionSelected(section);
 	};
@@ -829,9 +838,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const newDataSource = getNewDataSourceFromDescriptor(dataSourceType, descriptor, configEntry);
 
 		setOpenDataSourceInserter(false);
-		const nextDataSources = type.dataSources?.concat() ?? [];
-		nextDataSources.splice(position, 0, newDataSource);
-		setType({ ...type, dataSources: nextDataSources });
+		setType((currentType) => insertDataSourceIntoType(currentType, newDataSource, position));
 		onUpdateHasPendingChanges(true);
 		handleDataSourceSelected(newDataSource);
 	};
@@ -851,8 +858,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	const handleDeleteDataSource: FieldFormViewProps['onDeleteDataSource'] = (dataSourceId) => {
 		resetSelection();
 		onUpdateHasPendingChanges(true);
-		const nextDataSources = type.dataSources.filter((dataSource) => dataSource.id !== dataSourceId);
-		setType((currentType) => ({ ...currentType, dataSources: nextDataSources }));
+		setType((currentType) => deleteDataSourceFromType(currentType, dataSourceId));
 	};
 	// endregion
 
@@ -904,7 +910,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the move runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -971,7 +977,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Field id may have changed during commit (rename); replace only the leaf of composed paths.
 		const committedFieldId = stateRef.current.selectedField?.id ?? getIdFromIdPath(fieldIdPath);
 		const resolvedFieldIdPath = replaceIdPathLeaf(fieldIdPath, committedFieldId);
@@ -988,7 +994,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// Commit open form edits first so the reorder runs on up-to-date type state.
 		// commitOpenFormChanges clears the active form's changedFieldIds / formFieldsChanged
 		// so a subsequent closeAndCleanup won't re-commit onto a stale type.
-		const baseType = commitOpenFormChanges() ?? type;
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
 		// Dialog keys are pre-commit; replace any id missing from type.fields with the
 		// committed selected field id (rename), preserving the requested order.
 		const renamedId = stateRef.current.selectedField?.id;
@@ -1009,15 +1015,13 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		}
 	};
 
-	const handleReorderTypeSections = (sections: ReorderFieldsDialogProps['fields']) => {
-		setType((currentType) => {
-			const newSections = sections.map((section) => {
-				return currentType.sections.find((s) => s.id === section.key);
-			});
-			const nextType = { ...currentType, sections: newSections };
-			handleEditTypeProperties(nextType);
-			return nextType;
-		});
+	const handleReorderTypeSections = async (sections: ReorderFieldsDialogProps['fields']) => {
+		if (!(await performCurrentFormErrorCheckAndWarning())) return;
+		onUpdateHasPendingChanges(true);
+		const baseType = commitOpenFormChanges() ?? typeRef.current;
+		const nextType = reorderTypeSections(baseType, sections);
+		setType(nextType);
+		handleEditTypeProperties(nextType);
 	};
 	// endregion
 
@@ -1202,9 +1206,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	);
 });
 
+/** Fresh Type Builder edit state. `fieldUpdates$` is the internal stream the open form emits {@link FieldUpdate}s on. */
 function createContextObject(): EditAppContextProps {
 	return {
-		fieldUpdates$: new Subject<string>(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		formContextApi: createFieldFormContextApi(),
 		activeFormContext: null,
 		selectedField: null,

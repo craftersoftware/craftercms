@@ -20,6 +20,7 @@ import { debounceTime } from 'rxjs/operators';
 import { useStore as useJotaiStore, type Atom } from 'jotai';
 import type LookupTable from '../../../models/LookupTable';
 import type { FieldValidityState } from './validators';
+import type { FieldUpdate } from './formsEngineContext';
 import { settleInvalidFieldRead } from './formVisibility';
 import { readInvalidFieldIds } from './formUtils';
 
@@ -28,7 +29,7 @@ export const invalidFieldReadDebounceMs = 300;
 
 /** Subscribes to field edits and calls `read` once the author pauses. */
 export function watchInvalidFieldUpdates(
-	fieldUpdates$: Observable<string> | null | undefined,
+	fieldUpdates$: Observable<FieldUpdate> | null | undefined,
 	read: () => void,
 	dueTime = invalidFieldReadDebounceMs,
 	scheduler?: SchedulerLike
@@ -43,7 +44,7 @@ export function useInvalidFieldIds(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
 	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
 	parentPath: string | undefined,
-	fieldUpdates$: Observable<string> | null | undefined
+	fieldUpdates$: Observable<FieldUpdate> | null | undefined
 ): string[] {
 	const jotai = useJotaiStore();
 	const [ids, setIds] = useState<string[]>([]);
