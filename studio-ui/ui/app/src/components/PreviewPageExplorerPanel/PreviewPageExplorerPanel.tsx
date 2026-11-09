@@ -332,7 +332,7 @@ function TreeItemCustom(props: TreeItemCustomInterface) {
 					}}
 					onClick={() => handleScroll(node)}
 				>
-					<Icon sx={{ color: palette.teal.main }} />
+					<Icon sx={{ color: 'info.main' }} />
 					<p title={node.name}>
 						{nodeName.length === 1 ? (
 							nodeName[0]
