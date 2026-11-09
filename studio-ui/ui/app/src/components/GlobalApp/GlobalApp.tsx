@@ -50,6 +50,7 @@ import { globalMenuMessages } from '../../env/i18n-legacy';
 import { GlobalRoutes } from '../../env/routes';
 import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 import SystemIcon from '../SystemIcon';
+import ApiResponseErrorState from '../ApiResponseErrorState';
 
 const routeWrapper = (module) => ({ ...module, Component: module.default });
 
@@ -159,12 +160,22 @@ function globalNavItemSelected(itemId: string, pathname: string): boolean {
 }
 
 function GlobalSidebarNav() {
-	const { items } = useGlobalNavigation();
+	const { items, error } = useGlobalNavigation();
 	const { authoringBase } = useEnv();
 	const { pathname } = useLocation();
 	const { formatMessage } = useIntl();
+	if (error) {
+		return <ApiResponseErrorState error={error.response ?? error} />;
+	}
 	return (
 		<List disablePadding sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+			{/* Placeholder rows while the menu loads. Hidden from assistive tech so they aren't read as empty items. */}
+			{!items &&
+				[0, 1, 2, 3].map((i) => (
+					<ListItem key={i} aria-hidden="true" sx={{ px: 2 }}>
+						<Skeleton width="100%" height={36} />
+					</ListItem>
+				))}
 			{items?.map((item) => {
 				const selected = globalNavItemSelected(item.id, pathname);
 				const label = globalMenuMessages[item.id] ? formatMessage(globalMenuMessages[item.id]) : item.id;
