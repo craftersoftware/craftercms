@@ -45,19 +45,3 @@ export function insertDataSourceIntoType(
 	nextDataSources.splice(position, 0, dataSource);
 	return { ...currentType, dataSources: nextDataSources };
 }
-
-/**
- * Compute next state from the latest value, set it, then run side effects once.
- * Keeps side effects out of `setType` updaters (React StrictMode invokes those twice).
- */
-export function applyTypeStateUpdate(
-	getCurrent: () => ContentType,
-	setType: (next: ContentType) => void,
-	compute: (current: ContentType) => ContentType,
-	after?: (next: ContentType) => void
-): ContentType {
-	const nextType = compute(getCurrent());
-	setType(nextType);
-	after?.(nextType);
-	return nextType;
-}

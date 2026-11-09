@@ -24,13 +24,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const {
-	applyTypeStateUpdate,
-	createTypeWorkingCopy,
-	deleteDataSourceFromType,
-	insertDataSourceIntoType,
-	reorderTypeSections
-} = await import('./editTypeWorkingCopy.ts');
+const { createTypeWorkingCopy, deleteDataSourceFromType, insertDataSourceIntoType, reorderTypeSections } =
+	await import('./editTypeWorkingCopy.ts');
 const { createEmptyTypeStructure } = await import('../utils.ts');
 
 function section(id: string, title = id) {
@@ -75,40 +70,10 @@ describe('editTypeWorkingCopy', () => {
 		assert.notEqual(working.fields.title_s, baseline.fields.title_s);
 	});
 
-	// Reorder side effect once: compute + setType + after, never inside a StrictMode-doubled updater.
-	it('runs the reorder side effect once even when setState updaters would run twice', () => {
-		let state = makeType();
-		let sideEffectCount = 0;
-		const after = () => {
-			sideEffectCount += 1;
-		};
-
-		// Bad pattern (for contrast): side effect inside an updater StrictMode invokes twice.
-		let badCount = 0;
-		const setTypeStrictMode = (updater: (current: typeof state) => typeof state) => {
-			state = updater(state);
-			state = updater(state);
-		};
-		setTypeStrictMode((current) => {
-			badCount += 1;
-			return reorderTypeSections(current, [{ key: 'c' }, { key: 'a' }, { key: 'b' }]);
-		});
-		assert.equal(badCount, 2);
-
-		// Good pattern used by EditTypeView: side effect outside setType.
-		state = makeType();
-		applyTypeStateUpdate(
-			() => state,
-			(next) => {
-				state = next;
-			},
-			(current) => reorderTypeSections(current, [{ key: 'c' }, { key: 'a' }, { key: 'b' }]),
-			after
-		);
-
-		assert.equal(sideEffectCount, 1);
+	it('reorders sections by the requested key order', () => {
+		const next = reorderTypeSections(makeType(), [{ key: 'c' }, { key: 'a' }, { key: 'b' }]);
 		assert.deepEqual(
-			state.sections.map((s) => s.id),
+			next.sections.map((s) => s.id),
 			['c', 'a', 'b']
 		);
 	});
