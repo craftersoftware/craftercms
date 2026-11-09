@@ -751,12 +751,6 @@ div#acn-active-content div.acn-link-last a
   padding:0 0 0 17px;
 }
 
-.acn-admin-console
-{
-  background:url('${urlBase}/static-assets/themes/cstudioTheme/images/icons/icon_sm_gears.png') no-repeat left;
-  padding: 6px 0 0 21px;
-}
-
 .acn-dropdown-wrapper .acn-dropdown-menu .acn-previewsync
 {
   background:url('${urlBase}/static-assets/themes/cstudioTheme/images/icons/icon_strip_vertical.gif') no-repeat left;

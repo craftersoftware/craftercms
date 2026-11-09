@@ -260,54 +260,6 @@ $dark-mode-input-border-focus: #007aff;
 		}
 	}
 
-	.admin-console-view {
-		.screen-title,
-		.screen-title h1 {
-			color: $dark-mode-font-color;
-			background: none;
-			border-color: $dark-mode-divider;
-		}
-		.global-menu--item__active {
-			.global-menu--item-link {
-				background: $dark-mode-background-default;
-				color: $dark-mode-font-color;
-				.global-menu--nav-icon {
-					background: none;
-					color: $dark-mode-font-color;
-				}
-			}
-			.global-menu--item-link:hover,
-			.global-menu--item-link:focus {
-				color: $dark-mode-font-color;
-				background: $dark-mode-background-default !important;
-			}
-		}
-		.global-menu--item-link {
-			color: $dark-mode-font-color;
-		}
-
-		.global-menu--item-link:hover,
-		.global-menu--item-link:focus {
-			color: $dark-mode-font-color;
-			background-color: $dark-mode-hover !important;
-		}
-
-		.divider {
-			border-color: $dark-mode-divider;
-		}
-	}
-
-	#categories-panel {
-		background-color: $dark-mode-background-paper !important;
-		color: $dark-mode-font-color;
-		border-color: $dark-mode-background-default-dimmed !important;
-
-		.cstudio-admin-console-item-selected {
-			background-color: rgba(0, 0, 0, 0.08);
-			color: $dark-mode-font-color;
-		}
-	}
-
 	body:not(.user-dashboard) .craftercms-entitlement {
 		border-color: $dark-mode-background-default-dimmed !important;
 		.craftercms-entitlement-copy {
@@ -328,7 +280,6 @@ $dark-mode-input-border-focus: #007aff;
 
 		#acn-sites-link,
 		.acn-parent-folder,
-		.acn-admin-console,
 		.ygtvcell {
 			color: $dark-mode-font-color;
 		}
@@ -566,16 +517,6 @@ $dark-mode-input-border-focus: #007aff;
 	}
 	a.MuiLink-underlineNone {
 		text-decoration: none !important;
-	}
-
-	// cstudio-admin-console-workarea-container
-	.cstudio-admin-console-workarea-container {
-		height: calc(100vh - 53px);
-		background-color: $dark-mode-background-paper;
-		margin-top: -2px;
-		h1 {
-			color: $dark-mode-font-color;
-		}
 	}
 
 	// workflow states

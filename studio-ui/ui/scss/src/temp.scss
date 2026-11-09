@@ -607,30 +607,6 @@ div#acn-active-content {
 	padding: 0 0 0 17px;
 }
 
-.acn-admin-console {
-	font-size: 14px;
-	line-height: 15px;
-	margin-top: 15px !important;
-	color: #333333;
-	cursor: pointer;
-	padding: 3px 0;
-
-	&:hover {
-		background: rgba(0, 0, 0, 0.04);
-	}
-}
-
-#cstudio-admin-console-workarea {
-	iframe {
-		border: 0;
-	}
-}
-
-.acn-admin-console:hover {
-	color: #333333;
-	text-decoration: none;
-}
-
 .acn-dropdown-wrapper .acn-dropdown-menu .acn-previewsync,
 .acn-dropdown-wrapper .acn-dropdown-menu .acn-syncrepo {
 	background: url('/studio/static-assets/themes/cstudioTheme/images/icons/icon_strip_vertical.gif') no-repeat left;

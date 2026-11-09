@@ -619,46 +619,6 @@ table {
 	}
 }
 
-.admin-console-view {
-	.tab-content > .tab-pane {
-		display: block;
-		visibility: visible;
-	}
-
-	.nav-stacked > li {
-		border-radius: 4px;
-		margin-bottom: 2px;
-
-		> a {
-			margin-right: 0;
-		}
-	}
-
-	.nav-tabs {
-		border-bottom: none;
-	}
-
-	.nav-icon {
-		min-width: 20px;
-	}
-
-	.container-flex {
-		display: flex;
-	}
-
-	.globalNavElementWrapper {
-		padding: 16px;
-		width: 240px;
-		min-width: 240px;
-		height: 100vh;
-		border-right: 1px solid #e7e7e7;
-	}
-
-	.globalNavContentWrapper {
-		width: calc(100% - 240px);
-	}
-}
-
 .global-menu-pagination-wrapper {
 	display: flex;
 	align-items: center;
