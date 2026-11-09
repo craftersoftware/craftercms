@@ -188,7 +188,6 @@ export const components = {
 	LegacyConcierge: lazy(() => import('../components/LegacyConcierge')),
 	LegacyDashboardFrame: lazy(() => import('../components/LegacyDashboardFrame')),
 	LegacyIFrame: lazy(() => import('../components/LegacyIFrame')),
-	LegacySiteToolsFrame: lazy(() => import('../components/LegacySiteToolsFrame')),
 	LoadingIconButton: lazy(() => import('../components/LoadingIconButton')),
 	LoadingState: lazy(() => import('../components/LoadingState')),
 	LogConsole: lazy(() => import('../components/LogConsole')),

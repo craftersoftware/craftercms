@@ -201,6 +201,7 @@
 * Removed the `/studio/form` and `/studio/legacy/form` routes (and their FTLs).
 * Removed the legacy site-config-tools `content-types` tool from blueprints and the sample config. Use `craftercms.components.ContentTypeManagement` (configured in `ui.xml`) instead.
 * Existing `form-control` and `form-datasource` plugin installations still target `site-config-tools.xml`. The new Type Builder does not read that file, so these entries may not appear until they are migrated. See https://github.com/craftersoftware/craftercms/issues/9277.
+* Removed `craftercms.components.LegacySiteToolsFrame`, the `/legacy-site-config` page (`cstudio-admin` console and its tool modules), and `site-config-tools.xml` tool loading. Use modern Site Tools widgets configured in `ui.xml` instead.
 * Removed LegacyVersionDialog and the entire associated `/studio/diff` route
 * [ItemDisplay/utils]
   * Updated `getItemPublishingTargetText` to return a string. It now receives `formatMessage` as a parameter.
