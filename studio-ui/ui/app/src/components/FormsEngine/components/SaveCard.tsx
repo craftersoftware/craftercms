@@ -201,10 +201,7 @@ export function SaveCard(props: SaveCardProps) {
 	// MUI gives the helper text `${id}-helper-text`.
 	const versionCommentHelperId = `${versionCommentId}-helper-text`;
 	const saveDescribedBy =
-		[
-			showVersionComment && versionCommentMissing ? versionCommentHelperId : null,
-			validationAlertId
-		]
+		[showVersionComment && versionCommentMissing ? versionCommentHelperId : null, validationAlertId]
 			.filter(Boolean)
 			.join(' ') || undefined;
 	const showSaveOptions = !isEmbedded && !isRepeatMode;
@@ -328,7 +325,9 @@ export function SaveCard(props: SaveCardProps) {
 							required={versionCommentRequired}
 							label={<FormattedMessage defaultMessage="Version Comment" />}
 							helperText={
-								versionCommentMissing ? formatMessage({ defaultMessage: 'Enter a version comment to save.' }) : undefined
+								versionCommentMissing
+									? formatMessage({ defaultMessage: 'Enter a version comment to save.' })
+									: undefined
 							}
 							value={versionComment}
 							onChange={(e) => setVersionComment(e.target.value)}
