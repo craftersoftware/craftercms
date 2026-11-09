@@ -37,12 +37,8 @@ $ice-component-attribute-name: 'data-studio-component' !default;
 
 /* Bootstrap Config */
 
-// Mirrors ui/app/src/styles/palette.ts (blue.main, red.main). Change both together.
-$brand-primary: #0068da;
-$brand-danger: #d12e25;
-
-// Secondary text at 4.5:1 on the light surfaces. Replaces the old #777 / #808080 greys.
-$text-secondary-aa: #767676;
+$brand-primary: #007aff;
+$brand-danger: #ff3b30;
 
 $btn-primary-border: transparent;
 

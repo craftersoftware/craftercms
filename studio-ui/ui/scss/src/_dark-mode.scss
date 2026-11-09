@@ -5,13 +5,13 @@ $dark-mode-font-color: #fff;
 $dark-mode-font-color-secondary: rgba(255, 255, 255, 0.5);
 $dark-mode-font-highlight: #70d7ff;
 $dark-mode-button-outlined-border: rgba(255, 255, 255, 0.23);
-$dark-mode-button-primary: #54a6ff;
+$dark-mode-button-primary: #409cff;
 $dark-mode-button-primary-color: rgba(0, 0, 0, 0.87);
 $dark-mode-button-primary-color-hover: rgb(44, 109, 178);
 $dark-mode-hover: rgba(255, 255, 255, 0.08);
 $dark-mode-divider: rgba(255, 255, 255, 0.12);
 $dark-mode-input-border: #ced4da;
-$dark-mode-input-border-focus: #54a6ff;
+$dark-mode-input-border-focus: #007aff;
 
 @media (prefers-color-scheme: light) {
 	.craftercms-logo-dark {
@@ -562,6 +562,7 @@ $dark-mode-input-border-focus: #54a6ff;
 	// Global Menu
 	a.MuiListItem-button {
 		color: inherit !important;
+		outline: none;
 	}
 	a.MuiLink-underlineNone {
 		text-decoration: none !important;

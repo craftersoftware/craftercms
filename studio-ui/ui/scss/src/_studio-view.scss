@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-@import 'focus-ring';
 @import 'variables';
 @import '../../static-assets/libs/bootstrap/scss/mixins';
 
@@ -460,10 +459,6 @@ table.scroll-body {
 			border: none;
 			outline: none;
 			position: absolute;
-
-			&:focus-visible {
-				@include focus-ring;
-			}
 		}
 	}
 }

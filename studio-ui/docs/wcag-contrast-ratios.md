@@ -11,7 +11,7 @@ How to read the tables:
 - The token tables are computed from the theme. They cover the three surfaces a control can sit on: `paper` (cards, panels), `default` (page) and `dialog`.
 - "Measured component states" come from the rendered components in a harness that mounts `CrafterThemeProvider` (computed styles, composited). The worst case across the three surfaces is shown.
 - Text sweep: every text node in a gallery of the MUI components the app uses (typography, inputs, helper text, buttons, chips, alerts, tabs, tables, lists, tooltips, badges, breadcrumbs, accordions) is at least 4.5:1 on all three surfaces in both modes (294 text nodes, 0 failures, filled alerts included), and axe-core `color-contrast` reports 0 violations on the same gallery and on the login view.
-- Focus ring: one brand-blue ring (`#0068DA` in light, `#54A6FF` in dark), a 2px outline drawn 2px outside the control. It is defined once in `ui/app/src/styles/focusRing.ts`, applied by the theme to every ButtonBase-based control, and used through a shared helper for the rest. `ui/scss/src/_focus-ring.scss` mirrors it for the legacy SCSS.
+- Focus ring: one brand-blue ring (`#0068DA` in light, `#54A6FF` in dark), a 2px outline drawn 2px outside the control. It is defined once in `ui/app/src/styles/focusRing.ts`, applied by the theme to every ButtonBase-based control, and used through a shared helper for the rest. `ui/scss/src/_focus-ring.scss` mirrors the same values for `tinymce-ace.scss`; `focusRing.test.ts` fails if the two drift.
 - The `MuiSwitch` ring is drawn on the track (MUI v9 does that), and the `List`/`Menu` rows and grid cells use the inset variant.
 - The guest zone and drop markers are drawn on the authored page, not on a Studio surface, so their boundary is background-independent: a white and a black companion band carry the 3:1, and the state colour sits inside them. See `ui/app/src/styles/overlayStroke.ts` and the table below. This is separate from the focus ring.
 
@@ -61,7 +61,7 @@ Hovered label contrast, all 18 variant (contained, outlined, text) and colour co
 | purple.main as icon or border                                | `#AF52DE` | 4.13 yes | 3.96 yes   | 4.13 yes  |
 | pink.main as icon or border                                  | `#FF2D55` | 3.65 yes | 3.49 yes   | 3.65 yes  |
 
-`yellow.main` is only used for icons, not text (3.28:1 on white). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
+`yellow.main` is only used for icons, not text (3.43:1 on white, 3.28:1 on `#FAFAFA`). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
 
 ### Keyboard focus ring (SC 2.4.7 and 1.4.11, 3:1)
 
@@ -119,7 +119,7 @@ Hovered label contrast, all 18 variant (contained, outlined, text) and colour co
 | purple.main as icon or border                                | `#DA8FFF` | 8.34 yes  | 7.58 yes   | 5.14 yes  |
 | pink.main as icon or border                                  | `#FF2D55` | 5.14 yes  | 4.67 yes   | 3.17 yes  |
 
-`yellow.main` is only used for icons, not text (3.28:1 on white). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
+`yellow.main` is only used for icons, not text (3.43:1 on white, 3.28:1 on `#FAFAFA`). `pink.main` is the disabled-item icon in both modes; `pink.tint` is only 2.84:1 on white.
 
 ### Keyboard focus ring (SC 2.4.7 and 1.4.11, 3:1)
 
@@ -280,7 +280,7 @@ Zone markers and drop markers are drawn over the page the developer authored, so
 
 The state colour is 2px and sits inside both bands, so the boundary reads white | black | state colour against whatever page is behind it. Measured on the rendered zone marker: page, white 1px, black 1px, state colour. Only the outer band touches the page; on a white page the white band merges and the black band is the visible edge at 21:1, and on a dark page the white band is the visible edge at 18.73:1.
 
-The drop marker is a filled line, so it has no outline to carry the state colour and the band order is reversed: page | white 1px | black 1px | state colour fill. The fill is then next to the black band, which is the neighbour it has to clear, because the light tints are only 1.78:1 to 2.54:1 on white. Measured on the rendered vertical line: page, white 1px, black 1px, fill, black 1px, white 1px, page — 4.13:1 (light `error.main`) and 8.28:1 (dark `red.tint`) against the black band, with the white band at 18.73:1 against a `#121212` page and the black band at 21:1 against a white page.
+The drop marker is a filled line, so it has no outline to carry the state colour; the bands are the same, with the state colour as the fill: page | white 1px | black 1px | state colour fill. The fill is then next to the black band, which is the neighbour it has to clear, because the light tints are only 1.78:1 to 2.54:1 on white. Measured on the rendered vertical line: page, white 1px, black 1px, fill, black 1px, white 1px, page — 4.13:1 (light `error.main`) and 8.28:1 (dark `red.tint`) against the black band, with the white band at 18.73:1 against a `#121212` page and the black band at 21:1 against a white page.
 
 ## `error.main` evaluation
 
@@ -305,6 +305,6 @@ Candidates for light-mode `error.main` used as text (4.5:1) on the light surface
 - Selected list items, menu items and tree-like rows also get a tinted background. The tint alone is 1.1:1 to 1.3:1 and is not relied on. A 3px bar in the text colour marks the selected item (text colour on surface is at least 11:1).
 - Disabled controls, divider lines and the 1px decorative borders of cards are exempt.
 - Text drawn over photographs or arbitrary images (for example the login page background) cannot be measured from the theme.
-- Surfaces outside the theme (TinyMCE and Ace editor chrome, legacy `.scss` views) were adjusted for the specific values listed in the pull request. They are not part of these tables.
+- Surfaces outside the theme (the TinyMCE and Ace editor chrome in `tinymce-ace.scss`) were adjusted for the specific values listed in the pull request. They are not part of these tables. The legacy `.scss` views are untouched by this pull request.
 - The focus ring cannot be checked against a primary-filled control: a blue ring on a blue fill is 1.00:1. It is always offset so the gap shows the page, and it is never drawn inset on a fill. Coloured and unknown guest surfaces use the helper's `halo` option.
 - Text over the guest page and the preview cannot be measured from the theme; the guest overlay chips are measured separately (see the pull request).
