@@ -20,7 +20,6 @@ import IconButton from '@mui/material/IconButton';
 import Popover from '@mui/material/Popover';
 import Tooltip from '@mui/material/Tooltip';
 import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
-import { visuallyHidden } from '@mui/utils';
 import { defineMessages, useIntl } from 'react-intl';
 import { countVisibleToolbarItems } from './countVisibleToolbarItems';
 
@@ -37,6 +36,34 @@ const MORE_BUTTON_FALLBACK_WIDTH = 48;
  * edge. The bar pads itself by this much on every side and cancels it with a negative margin.
  */
 const FOCUS_RING_ROOM = 4;
+const FOCUSABLE_SELECTOR =
+	'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Identifies the rendered items, so cached widths are dropped when an item is replaced by another one. */
+function getItemsSignature(items: ReturnType<typeof Children.toArray>): string {
+	return items
+		.map((child) => {
+			if (!React.isValidElement<{ id?: string; uiKey?: string; configuration?: unknown }>(child)) {
+				return String(child);
+			}
+			const type = typeof child.type === 'string' ? child.type : (child.type as { name?: string }).name;
+			const { id, uiKey, configuration } = child.props;
+			return `${child.key}|${type}|${id ?? ''}|${uiKey ?? ''}|${JSON.stringify(configuration ?? null)}`;
+		})
+		.join('\n');
+}
+
+/** Index of the overflow item, and of the control within it, that holds `element`. */
+function locateFocus(element: Element | null): { item: number; control: number } | null {
+	const wrapper = element?.closest<HTMLElement>('[data-toolbar-overflow-item]');
+	if (!wrapper) {
+		return null;
+	}
+	return {
+		item: Number(wrapper.dataset.toolbarOverflowItem),
+		control: Math.max(0, Array.from(wrapper.querySelectorAll(FOCUSABLE_SELECTOR)).indexOf(element))
+	};
+}
 
 export interface ToolbarOverflowProps {
 	children: React.ReactNode;
@@ -66,25 +93,38 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	// content and never grow back).
 	const [naturalWidth, setNaturalWidth] = useState(0);
 	const [moreWidth, setMoreWidth] = useState(MORE_BUTTON_FALLBACK_WIDTH);
-	const lastItemCountRef = useRef(items.length);
+	const menuContentRef = useRef<HTMLDivElement>(null);
+	// Set when the menu closes because everything fits again while focus was inside it.
+	const pendingFocusRef = useRef<{ item: number; control: number } | null>(null);
 	const itemCount = items.length;
+	const itemsSignature = getItemsSignature(items);
+	const lastSignatureRef = useRef(itemsSignature);
 	// The item list changed (e.g. the toolbar configuration arrived): render every item again so each one
 	// can be measured. State is adjusted while rendering, which React applies before painting.
-	const [seenItemCount, setSeenItemCount] = useState(itemCount);
-	if (seenItemCount !== itemCount) {
-		setSeenItemCount(itemCount);
+	const [seenSignature, setSeenSignature] = useState(itemsSignature);
+	if (seenSignature !== itemsSignature) {
+		setSeenSignature(itemsSignature);
 		setVisibleCount(itemCount);
 	}
 
 	useLayoutEffect(() => {
 		visibleCountRef.current = visibleCount;
+		const pendingFocus = pendingFocusRef.current;
+		if (pendingFocus && visibleCount >= itemCount) {
+			// The menu closed and its items moved back into the bar. Focus the same control there, so it does
+			// not fall to the document body (the More button that would get it back is gone).
+			pendingFocusRef.current = null;
+			const wrapper = itemRefs.current[pendingFocus.item];
+			const controls = wrapper?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+			(controls?.[pendingFocus.control] ?? controls?.[0])?.focus();
+		}
 		const bar = barRef.current;
 		if (!bar) {
 			return undefined;
 		}
-		if (lastItemCountRef.current !== itemCount) {
+		if (lastSignatureRef.current !== itemsSignature) {
 			// Cached widths belong to other items.
-			lastItemCountRef.current = itemCount;
+			lastSignatureRef.current = itemsSignature;
 			widthsRef.current = [];
 		}
 		const measure = () => {
@@ -103,7 +143,13 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			if (widths.length > 0 && widths.every((width) => width > 0)) {
 				setNaturalWidth(widths.reduce((sum, width) => sum + width, 0));
 			}
-			const next = countVisibleToolbarItems(widths, bar.clientWidth - FOCUS_RING_ROOM * 2, currentMoreWidth);
+			// The end-aligned bar keeps its trailing items (e.g. the Navigation menu at the edge) and moves the
+			// leading ones into the menu first.
+			const next = countVisibleToolbarItems(
+				align === 'end' ? [...widths].reverse() : widths,
+				bar.clientWidth - FOCUS_RING_ROOM * 2,
+				currentMoreWidth
+			);
 			// The bar's room does not depend on the packed count, so the result is stable and needs no
 			// hysteresis. (A guard against "button appearing reveals an item again" kept a collapsed bar
 			// collapsed after the window grew back.)
@@ -114,6 +160,14 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				setVisibleCount(resolved);
 			}
 			if (resolved >= itemCount) {
+				const menuPaper = menuContentRef.current?.parentElement;
+				if (resolved !== current && menuPaper?.contains(document.activeElement)) {
+					// Focus on the menu itself (not on an item) goes to the first item that moves back.
+					pendingFocusRef.current = locateFocus(document.activeElement) ?? {
+						item: align === 'end' ? 0 : current,
+						control: 0
+					};
+				}
 				setMenuAnchor(null);
 			}
 		};
@@ -126,10 +180,37 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			}
 		});
 		return () => observer.disconnect();
-	}, [itemCount, visibleCount]);
+	}, [align, itemCount, itemsSignature, visibleCount]);
 
-	const overflowItems = items.slice(visibleCount);
+	// Item indexes stay absolute, so `itemRefs` and the cached widths line up whichever end is kept.
+	const firstVisible = align === 'end' ? itemCount - visibleCount : 0;
+	const visibleItems = items.slice(firstVisible, firstVisible + visibleCount);
+	const overflowItems = align === 'end' ? items.slice(0, firstVisible) : items.slice(visibleCount);
+	const firstOverflow = align === 'end' ? 0 : visibleCount;
 	const hasOverflow = overflowItems.length > 0;
+	const moreButton = (
+		<Tooltip title={moreLabel}>
+			<IconButton
+				ref={moreRef}
+				aria-label={moreLabel}
+				aria-expanded={Boolean(menuAnchor)}
+				aria-controls={menuAnchor ? menuId : undefined}
+				aria-haspopup="dialog"
+				onClick={(event) => setMenuAnchor((current) => (current ? null : event.currentTarget))}
+				sx={{
+					flex: '0 0 auto',
+					position: 'relative',
+					'&:focus-visible, &.Mui-focusVisible': {
+						outline: '2px solid',
+						outlineColor: 'primary.main',
+						outlineOffset: 2
+					}
+				}}
+			>
+				<MoreHorizRoundedIcon />
+			</IconButton>
+		</Tooltip>
+	);
 
 	return (
 		<>
@@ -148,43 +229,28 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 					margin: `-${FOCUS_RING_ROOM}px`
 				}}
 			>
-				{items.slice(0, visibleCount).map((child, index) => (
-					<Box
-						key={index}
-						ref={(node: HTMLDivElement | null) => {
-							itemRefs.current[index] = node;
-						}}
-						sx={{ display: 'flex', flex: '0 0 auto' }}
-					>
-						<Suspense fallback={null}>{child}</Suspense>
-					</Box>
-				))}
-				{hasOverflow && (
-					<Tooltip title={moreLabel} describeChild>
-						<IconButton
-							ref={moreRef}
-							aria-expanded={Boolean(menuAnchor)}
-							aria-controls={menuAnchor ? menuId : undefined}
-							aria-haspopup="dialog"
-							onClick={(event) => setMenuAnchor((current) => (current ? null : event.currentTarget))}
-							sx={{
-								flex: '0 0 auto',
-								position: 'relative',
-								'&:focus-visible, &.Mui-focusVisible': {
-									outline: '2px solid',
-									outlineColor: 'primary.main',
-									outlineOffset: 2
-								}
+				{hasOverflow && align === 'end' && moreButton}
+				{visibleItems.map((child, offset) => {
+					const index = firstVisible + offset;
+					return (
+						<Box
+							key={index}
+							ref={(node: HTMLDivElement | null) => {
+								itemRefs.current[index] = node;
 							}}
+							sx={{ display: 'flex', flex: '0 0 auto' }}
 						>
-							<MoreHorizRoundedIcon />
-							<Box component="span" sx={visuallyHidden}>
-								{moreLabel}
-							</Box>
-						</IconButton>
-					</Tooltip>
-				)}
+							<Suspense fallback={null}>{child}</Suspense>
+						</Box>
+					);
+				})}
+				{hasOverflow && align !== 'end' && moreButton}
 			</Box>
+			{/*
+			 * Widgets in the menu may open their own popups (QuickCreate's menu, the Launcher anchored to its button)
+			 * or Studio dialogs, so the menu stays open under them rather than unmounting their anchor. MUI only
+			 * traps focus in the topmost modal, and when that one closes focus returns to the control in this menu.
+			 */}
 			<Popover
 				open={Boolean(menuAnchor) && hasOverflow}
 				anchorEl={menuAnchor}
@@ -201,12 +267,17 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				}}
 			>
 				<Box
+					ref={menuContentRef}
 					sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', p: 1, gap: 0.5, maxWidth: '100vw' }}
 				>
-					{overflowItems.map((child, index) => (
-						<Suspense key={visibleCount + index} fallback={null}>
-							{child}
-						</Suspense>
+					{overflowItems.map((child, offset) => (
+						<Box
+							key={firstOverflow + offset}
+							data-toolbar-overflow-item={firstOverflow + offset}
+							sx={{ display: 'contents' }}
+						>
+							<Suspense fallback={null}>{child}</Suspense>
+						</Box>
 					))}
 				</Box>
 			</Popover>
