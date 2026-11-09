@@ -33,17 +33,15 @@ import React, {
 	useContext,
 	useEffect,
 	useId,
-	useLayoutEffect,
 	useRef,
 	useState
 } from 'react';
 import { isEmptyValue, isFieldRequired } from '../lib/validators';
 import {
-	applyFieldControlA11y,
-	FIELD_CONTROL_READY_EVENT,
+	fieldDescriptionId,
+	fieldErrorId,
 	FormSaveAttemptedContext,
-	FormValidationAnnouncerContext,
-	resolveFieldControl
+	FormValidationAnnouncerContext
 } from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -92,6 +90,11 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	field: ContentTypeField;
 	autoFocus?: boolean;
 	htmlFor?: string;
+	/**
+	 * Id the description and error ids derive from, for a control the label's `htmlFor` does not point at
+	 * (a select, the rich text editor). Ignored when `htmlFor` is set. See `useFieldControlA11y`.
+	 */
+	controlId?: string;
 	labelId?: string;
 	value?: unknown;
 	min?: number;
@@ -142,6 +145,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		length,
 		action,
 		htmlFor,
+		controlId: controlIdProp,
 		labelId,
 		autoFocus,
 		menu = true,
@@ -183,56 +187,18 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const announceValidation = useContext(FormValidationAnnouncerContext);
 	const saveAttempted = useContext(FormSaveAttemptedContext);
 	const editedRef = useRef(false);
+	// The control links these ids through `useFieldControlA11y` with the same id it passes here.
 	const generatedId = useId();
-	const controlId = htmlFor || generatedId;
-	const descriptionId = hasDescription ? `${controlId}-description` : undefined;
-	const errorMessages =
-		!isValid && validityData.state === 'hasData'
-			? (validityData.data?.messages ?? []).map((messageData) => translateValidityMessage(messageData, formatMessage))
-			: [];
-	const errorText = errorMessages.join(' ');
-	const errorId = errorText ? `${controlId}-error` : undefined;
-	const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
-	const formControlRef = useRef<HTMLDivElement>(null);
-	const a11yRef = useRef({ describedBy, required: isRequired, invalid: !isValid, htmlFor });
-	a11yRef.current = { describedBy, required: isRequired, invalid: !isValid, htmlFor };
-	const setFormControlRef = (node: HTMLDivElement | null) => {
-		formControlRef.current = node;
-		if (typeof ref === 'function') ref(node);
-		else if (ref) ref.current = node;
-	};
+	const controlId = htmlFor || controlIdProp || generatedId;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
-	const linkControl = () => {
-		const root = formControlRef.current;
-		if (!root) return;
-		const current = a11yRef.current;
-		const control = resolveFieldControl(root, current.htmlFor);
-		if (!control) return;
-		applyFieldControlA11y(control, current);
-	};
-	// Re-apply after every commit. Attributes are written on the visible control (the TinyMCE
-	// iframe, not its hidden textarea). Same-value writes are skipped inside applyFieldControlA11y.
-	useLayoutEffect(() => {
-		linkControl();
-	});
-	useEffect(() => {
-		const root = formControlRef.current;
-		if (!root) return;
-		const onFocusIn = () => {
-			queueMicrotask(linkControl);
-		};
-		const onControlReady = () => linkControl();
-		root.addEventListener('focusin', onFocusIn);
-		root.addEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
-		return () => {
-			root.removeEventListener('focusin', onFocusIn);
-			root.removeEventListener(FIELD_CONTROL_READY_EVENT, onControlReady);
-		};
-	}, []);
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;
 		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		if (isValid || validityData.state !== 'hasData') return;
+		const errorText = (validityData.data?.messages ?? [])
+			.map((messageData) => translateValidityMessage(messageData, formatMessage))
+			.join(' ');
 		if (!errorText) return;
 		// Tabbing through a pristine required field should not announce. Announce after the
 		// user edits the field, or after Save has already been attempted.
@@ -247,7 +213,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	}, [autoFocus]);
 	return (
 		<FormControl
-			ref={setFormControlRef}
+			ref={ref}
 			fullWidth
 			error={!isValid}
 			variant="standard"
@@ -434,10 +400,11 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				</Alert>
 			)}
 			{children}
-			{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
-			{errorText && (
-				<Box id={errorId}>
-					<FieldValidityMessages messages={validityData.state === 'hasData' ? validityData.data?.messages : undefined} />
+			{hasDescription && <FormHelperText id={fieldDescriptionId(controlId)}>{field.description}</FormHelperText>}
+			{/* Rendered while invalid, even with no messages, so the control's aria-describedby always resolves. */}
+			{!isValid && (
+				<Box id={fieldErrorId(controlId)}>
+					{validityData.state === 'hasData' && <FieldValidityMessages messages={validityData.data?.messages} />}
 				</Box>
 			)}
 		</FormControl>

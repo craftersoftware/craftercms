@@ -19,12 +19,14 @@ import React, { useId } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import { getPropertyValue, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { useFieldControlA11y } from '../lib/fieldA11y';
 
 export type TextareaProps = ControlProps<string>;
 
 export function Textarea(props: TextareaProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;
 	const htmlId = useId();
+	const a11y = useFieldControlA11y(field, htmlId);
 
 	// region field properties/validations
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -44,6 +46,7 @@ export function Textarea(props: TextareaProps) {
 				rows={rows}
 				inputProps={{ maxLength }}
 				id={htmlId}
+				aria-describedby={a11y['aria-describedby']}
 				value={value}
 				onChange={handleChange}
 				disabled={readonly}

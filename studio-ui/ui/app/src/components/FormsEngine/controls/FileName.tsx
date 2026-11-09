@@ -36,6 +36,7 @@ import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { isPagePath } from '../../../utils/path';
+import { useFieldControlA11y } from '../lib/fieldA11y';
 
 export function FileName(props: ControlProps<string>) {
 	const { field, readonly: formReadonly, autoFocus } = props;
@@ -51,6 +52,7 @@ export function FileName(props: ControlProps<string>) {
 	const [value, setValue] = useAtom(atoms.fileName as PrimitiveAtom<string>);
 	const validityData = useLoadableAtom(atoms.validationByFieldId['file-name']);
 	const isValid = validityData.state === 'hasData' ? validityData.data.isValid : true;
+	const a11y = useFieldControlA11y(field, htmlId, isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -88,6 +90,7 @@ export function FileName(props: ControlProps<string>) {
 				autoFocus={autoFocus}
 				fullWidth
 				id={htmlId}
+				aria-describedby={a11y['aria-describedby']}
 				value={value}
 				onChange={handleChange}
 				disabled={!isNewForm || readonly}

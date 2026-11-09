@@ -24,6 +24,7 @@ import Button from '@mui/material/Button';
 import MinusRounded from '@mui/icons-material/RemoveRounded';
 import { NumberField } from '@base-ui-components/react/number-field';
 import { getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { useFieldControlA11y } from '../lib/fieldA11y';
 
 type NumberFieldRootProps = ComponentProps<typeof NumberField.Root>;
 
@@ -59,6 +60,7 @@ const OutlinedInputWithRef = forwardRef<HTMLInputElement, OutlinedInputProps>((p
 export function Numeric(props: NumberProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;
 	const htmlId = useId();
+	const a11y = useFieldControlA11y(field, htmlId);
 
 	// region field properties/validations
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -91,7 +93,7 @@ export function Numeric(props: NumberProps) {
 					<NumberField.Decrement render={<Button variant="outlined" sx={decrementButtonSx} />}>
 						<MinusRounded />
 					</NumberField.Decrement>
-					<NumberField.Input render={<OutlinedInputWithRef />} />
+					<NumberField.Input render={<OutlinedInputWithRef />} aria-describedby={a11y['aria-describedby']} />
 					<NumberField.Increment render={<Button variant="outlined" sx={incrementButtonSx} />}>
 						<AddRounded />
 					</NumberField.Increment>

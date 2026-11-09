@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import useRTEConfig from '../../../hooks/useRTEConfig';
@@ -32,7 +32,7 @@ import { getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
 import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
-import { FIELD_CONTROL_READY_EVENT } from '../lib/fieldA11y';
+import { type FieldControlA11y, useFieldControlA11y } from '../lib/fieldA11y';
 import { getCurrentLocale } from '../../../utils/i18n';
 import Dialog from '@mui/material/Dialog';
 import MenuList from '@mui/material/MenuList';
@@ -48,6 +48,18 @@ export interface RichTextEditorProps extends ControlProps<string> {
 
 const tinymceScriptSrc = '/studio/static-assets/libs/tinymce/tinymce.min.js';
 
+/**
+ * TinyMCE hides the textarea and edits in an iframe, so the field's description and invalid state go on the iframe.
+ * `aria-required` is not allowed on an iframe, so it is not set.
+ */
+function linkEditorIframe(iframe: HTMLIFrameElement | null | undefined, a11y: FieldControlA11y) {
+	if (!iframe) return;
+	const set = (name: string, value: string | undefined) =>
+		value ? iframe.setAttribute(name, value) : iframe.removeAttribute(name);
+	set('aria-describedby', a11y['aria-describedby']);
+	set('aria-invalid', a11y['aria-invalid'] ? 'true' : undefined);
+}
+
 declare global {
 	interface Window {
 		tinymce: TinyMCE;
@@ -60,6 +72,17 @@ export function RichTextEditor(props: RichTextEditorProps) {
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
 	const hasReceivedFocusRef = useRef(false);
+	const controlId = useId();
+	const a11y = useFieldControlA11y(field, controlId);
+	const describedBy = a11y['aria-describedby'];
+	const invalid = a11y['aria-invalid'];
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+	// Latest committed values, for an editor that finishes initializing after this effect ran.
+	const iframeA11yRef = useRef<FieldControlA11y>({});
+	useEffect(() => {
+		iframeA11yRef.current = { 'aria-describedby': describedBy, 'aria-invalid': invalid };
+		linkEditorIframe(iframeRef.current, iframeA11yRef.current);
+	}, [describedBy, invalid]);
 	const [dataSourcePicker, setDataSourcePicker] = useState<{
 		actions: readonly ResolvedDataSourceAction[];
 		context: DataSourceFieldContext;
@@ -112,11 +135,20 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		setValue(newValue);
 	};
 	if (!rteConfig || !scriptLoaded) {
-		return <FormsEngineField field={field} max={maxLength} length={value.length} children={<ControlSkeleton />} />;
+		return (
+			<FormsEngineField
+				field={field}
+				controlId={controlId}
+				max={maxLength}
+				length={value.length}
+				children={<ControlSkeleton />}
+			/>
+		);
 	}
 	return (
 		<FormsEngineField
 			field={field}
+			controlId={controlId}
 			max={maxLength}
 			length={currentLength}
 			sx={{
@@ -168,10 +200,9 @@ export function RichTextEditor(props: RichTextEditorProps) {
 					editor.once('focus', () => {
 						hasReceivedFocusRef.current = true;
 					});
-					// Init does not re-render an empty required field, so the layout effect never
-					// sees the iframe. Tell the field to link aria-invalid onto it now.
-					const host = editor.getElement();
-					host?.dispatchEvent(new Event(FIELD_CONTROL_READY_EVENT, { bubbles: true }));
+					// The iframe exists from here on. Later changes are applied by the effect above.
+					iframeRef.current = editor.iframeElement;
+					linkEditorIframe(editor.iframeElement, iframeA11yRef.current);
 				}}
 				disabled={readonly}
 			/>

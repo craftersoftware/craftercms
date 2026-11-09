@@ -54,6 +54,7 @@ import { getParentPath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
 import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
 import { XmlKeys } from '../lib/formConsts';
+import { useFieldControlA11y } from '../lib/fieldA11y';
 
 export type PageNavOrderProps = ControlProps<boolean>;
 
@@ -62,6 +63,7 @@ const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 export function PageNavOrder(props: PageNavOrderProps) {
 	const { value, setValue, field, autoFocus, readonly: formReadonly } = props;
 	const htmlId = useId();
+	const a11y = useFieldControlA11y(field, htmlId);
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
 	const [pagesOrderState, setPagesOrderState] = useSpreadState<{
@@ -189,6 +191,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 				}}
 			>
 				<RadioGroup
+					{...a11y}
 					row
 					value={String(value)}
 					onChange={handleChange}

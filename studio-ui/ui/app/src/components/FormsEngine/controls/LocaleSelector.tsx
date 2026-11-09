@@ -15,7 +15,7 @@
  */
 
 import { ControlProps } from '../types';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { fetchSiteLocales } from '../../../services/translation';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { extractErrorPayload } from '../../../utils/ajax';
@@ -29,6 +29,7 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import { FormattedMessage } from 'react-intl';
 import { isFieldReadOnly } from '../lib/formUtils';
+import { useFieldControlA11y } from '../lib/fieldA11y';
 import { Subscription } from 'rxjs';
 
 export type LocaleSelectorProps = ControlProps<string>;
@@ -49,6 +50,8 @@ export function LocaleSelector(props: LocaleSelectorProps) {
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 	const refs = useUpdateRefs({ value, readonly });
 	const fetchSubscriptionRef = useRef<Subscription | null>(null);
+	const controlId = useId();
+	const a11y = useFieldControlA11y(field, controlId);
 
 	const fetchLocales = useCallback(() => {
 		fetchSubscriptionRef.current?.unsubscribe();
@@ -93,7 +96,7 @@ export function LocaleSelector(props: LocaleSelectorProps) {
 	if (!isFetching && !localeData && !error) return null;
 
 	return (
-		<FormsEngineField field={field}>
+		<FormsEngineField field={field} controlId={controlId}>
 			{isFetching ? (
 				<Skeleton variant="rounded" width="100%" height={50} />
 			) : error ? (
@@ -111,7 +114,13 @@ export function LocaleSelector(props: LocaleSelectorProps) {
 					{error.remedialAction ? `${error.message ? '. ' : ' '}${error.remedialAction}` : ''}
 				</Alert>
 			) : (
-				<Select value={value} onChange={handleChange} autoFocus={autoFocus} disabled={readonly}>
+				<Select
+					value={value}
+					onChange={handleChange}
+					autoFocus={autoFocus}
+					disabled={readonly}
+					aria-describedby={a11y['aria-describedby']}
+				>
 					{localeData.localeCodes.map((locale) => (
 						<MenuItem key={locale.code} value={locale.code}>
 							{locale.label}
