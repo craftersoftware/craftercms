@@ -747,8 +747,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// endregion
 			const { type, payload } = action;
 			const permissions = user?.permissionsBySite[siteId];
-			// Do not hold for UI config: take the first ready lookup, and re-issue when a later
-			// merged lookup arrives (useContentTypes merges once uiConfig loads). Cancel prior in-flight.
+			// Take the first ready lookup. useContentTypes applies configured additionalFields once uiConfig loads.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
 				take(1)
@@ -793,10 +792,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const { url, location } = payload;
 					const path = getPathFromPreviewURL(url);
 					dispatch(guestCheckIn({ location, site: siteId, path }));
-					let descriptorRequest: Subscription | undefined;
 					contentTypes$.subscribe((contentTypes) => {
-						descriptorRequest?.unsubscribe();
-						descriptorRequest = issueDescriptorRequest({
+						issueDescriptorRequest({
 							site: siteId,
 							path,
 							contentTypes,
@@ -858,11 +855,9 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						nnou(siteId) && dispatch(changeCurrentUrl('/'));
 					} else {
 						const path = payload.path;
-						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
-							descriptorRequest?.unsubscribe();
 							hostToGuest$.next(contentTypesResponse({ contentTypes: Object.values(contentTypes) }));
-							descriptorRequest = issueDescriptorRequest({
+							issueDescriptorRequest({
 								site: siteId,
 								path,
 								contentTypes,
@@ -878,10 +873,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case fetchGuestModel.type: {
 					if (payload.path?.startsWith('/')) {
-						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
-							descriptorRequest?.unsubscribe();
-							descriptorRequest = issueDescriptorRequest({
+							issueDescriptorRequest({
 								site: siteId,
 								path: payload.path,
 								contentTypes,
