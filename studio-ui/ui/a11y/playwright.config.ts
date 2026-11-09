@@ -16,11 +16,21 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
-const use = { ...devices['Desktop Chrome'], locale: 'en-US', reducedMotion: 'reduce' as const };
+// `A11Y_BROWSER_CHANNEL=chrome` runs the installed Google Chrome instead of Playwright's bundled Chromium.
+const channel = process.env.A11Y_BROWSER_CHANNEL;
+const use = {
+	...devices['Desktop Chrome'],
+	locale: 'en-US',
+	reducedMotion: 'reduce' as const,
+	...(channel && { channel })
+};
+const screens = /screens\.spec\.ts$/;
 
 export default defineConfig({
 	testDir: './tests',
 	outputDir: 'report/artifacts',
+	// With A11Y_CAPTURE=1, records this run's ticketed findings in tests/allow-list.json.
+	globalTeardown: './tests/capture-teardown.ts',
 	timeout: 180_000,
 	workers: 1,
 	retries: process.env.CI ? 1 : 0,
@@ -37,13 +47,19 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'light',
-			testMatch: /\.spec\.ts/,
+			testMatch: screens,
 			use: { ...use, colorScheme: 'light' }
 		},
 		{
 			name: 'dark',
-			testMatch: /\.spec\.ts/,
+			testMatch: screens,
 			use: { ...use, colorScheme: 'dark' }
+		},
+		// The suite's own helpers (allow-list filter, readiness). No Studio needed.
+		{
+			name: 'unit',
+			testMatch: /unit\/.*\.spec\.ts$/,
+			use
 		}
 	]
 });

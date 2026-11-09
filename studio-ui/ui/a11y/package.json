@@ -4,9 +4,11 @@
 	"private": true,
 	"license": "LGPL-3.0-only",
 	"scripts": {
-		"test": "playwright test",
+		"test": "playwright test --project=light --project=dark",
 		"test:light": "playwright test --project=light",
 		"test:dark": "playwright test --project=dark",
+		"test:unit": "playwright test --project=unit",
+		"capture": "A11Y_CAPTURE=1 playwright test --project=light --project=dark",
 		"report": "playwright show-report report/html",
 		"browsers": "playwright install chromium",
 		"compile": "tsc -p tsconfig.json"
