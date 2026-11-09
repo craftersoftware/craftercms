@@ -111,8 +111,28 @@
 	<!--			Health Check			-->
 	<!--									-->
 	<!-- ////////////////////////////////// -->
+
+	<!-- All-sites probes use a short Studio timeout, then the same S3 resolver. A slow Studio call
+	     must not hold the probe for crafter.engine.studio.readTimeout. Context creation and sync
+	     keep crafter.siteListResolver (Studio first, then S3, with the longer timeouts). -->
+	<bean id="crafter.healthCheckStudioSiteListResolver" class="org.craftercms.engine.service.context.StudioSiteListResolver">
+		<constructor-arg name="studioUrl" value="${crafter.engine.studio.url:}"/>
+		<constructor-arg name="managementToken" value="${crafter.engine.studio.managementToken:}"/>
+		<constructor-arg name="connectTimeout" value="${crafter.engine.studio.healthCheck.connectTimeout:200}"/>
+		<constructor-arg name="readTimeout" value="${crafter.engine.studio.healthCheck.readTimeout:200}"/>
+	</bean>
+
+	<bean id="crafter.healthCheckSiteListResolver" class="org.craftercms.engine.service.context.FallbackSiteListResolver">
+		<constructor-arg name="resolvers">
+			<list>
+				<ref bean="crafter.healthCheckStudioSiteListResolver"/>
+				<ref bean="crafter.s3SiteListResolver"/>
+			</list>
+		</constructor-arg>
+	</bean>
+
 	<bean id="siteHealthCheckService" class="org.craftercms.engine.service.impl.SiteHealthCheckServiceImpl">
-		<constructor-arg name="siteListResolver" ref="crafter.siteListResolver"/>
+		<constructor-arg name="siteListResolver" ref="crafter.healthCheckSiteListResolver"/>
 		<constructor-arg name="healthChecks" ref="siteHealthChecks"/>
 	</bean>
 </beans>

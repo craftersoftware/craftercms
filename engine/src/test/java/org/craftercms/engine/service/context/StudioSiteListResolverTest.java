@@ -112,6 +112,20 @@ public class StudioSiteListResolverTest {
 	}
 
 	@Test
+	public void slowStudioFallsBackToTheNextResolverWithinTheProbeBudget() {
+		bodyDelayMillis = 8_000;
+		FallbackSiteListResolver resolver = new FallbackSiteListResolver(List.of(
+			new StudioSiteListResolver(baseUrl, TOKEN, 200, 200),
+			() -> List.of("from-s3")));
+
+		long started = System.nanoTime();
+		assertEquals(List.of("from-s3"), new ArrayList<>(resolver.getSiteList()));
+		long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+
+		assertTrue("elapsed " + elapsedMillis + "ms", elapsedMillis < 1_000);
+	}
+
+	@Test
 	public void unauthorizedResponseFails() {
 		status = 401;
 		body = "{\"response\":{\"code\":2001}}";
