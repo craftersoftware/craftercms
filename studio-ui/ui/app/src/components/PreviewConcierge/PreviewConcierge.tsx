@@ -229,7 +229,7 @@ const issueDescriptorRequest = (props: {
 	completeActionCreator: ActionCreatorWithOptionalPayload<any>;
 	permissions: string[];
 	controls?: Record<string, { metadata?: { additionalFields?: string[] | null } }>;
-}): Subscription => {
+}) => {
 	const {
 		site,
 		path,
@@ -244,10 +244,10 @@ const issueDescriptorRequest = (props: {
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
 	// Track paths queued by this request only; mark the shared ref after delivery so
-	// cancellation (e.g. contentTypes re-issue) leaves them eligible for the replacement.
+	// cancellation (e.g. a new check-in) leaves them eligible for the next request.
 	const pendingSourceMapPaths = new Set<string>();
 
-	return fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
+	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
