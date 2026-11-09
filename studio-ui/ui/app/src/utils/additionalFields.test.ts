@@ -144,6 +144,71 @@ describe('additionalFields form-definition round trip', () => {
 		);
 		assert.deepEqual(namedList(nestedExpires?.additionalFields?.id), ['expires_dt_tz']);
 	});
+
+	it('expands a custom plugin descriptor through serialize and parse at root and inside a repeat', () => {
+		const parsed = parseLegacyFormDefinition({
+			'content-type': '/page/article',
+			title: 'Article',
+			description: '',
+			objectType: 'page',
+			sections: {
+				section: {
+					title: 'Content',
+					description: '',
+					defaultOpen: 'true',
+					fields: {
+						field: [
+							{
+								id: 'title_s',
+								title: 'Title',
+								description: '',
+								type: 'backup-control'
+							},
+							{
+								id: 'items_o',
+								title: 'Items',
+								description: '',
+								type: 'repeat',
+								fields: {
+									field: {
+										id: 'note_s',
+										title: 'Note',
+										description: '',
+										type: 'backup-control'
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		} as never);
+
+		assert.equal(parsed.fields.title_s.additionalFields, undefined);
+		assert.equal(parsed.fields.items_o.fields.note_s.additionalFields, undefined);
+
+		const xml = buildContentTypeXml(
+			prepareSerializeToXmlTypeObject(parsed, {
+				controlDescriptors: {
+					'backup-control': {
+						id: 'backup-control',
+						name: 'Backup',
+						description: '',
+						sections: [],
+						fields: {},
+						metadata: { additionalFields: ['{id}_bk'] }
+					}
+				} as never,
+				dataSourceDescriptors: {}
+			})
+		);
+		assert.match(xml, /<id>title_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>title_s_bk<\/id>/);
+		assert.match(xml, /<id>note_s<\/id>[\s\S]*<additionalFields>[\s\S]*<id>note_s_bk<\/id>/);
+
+		const roundTripped = parseFormXml(xml);
+		assert.deepEqual(roundTripped.fields.title_s.additionalFields, ['title_s_bk']);
+		assert.deepEqual(roundTripped.fields.items_o.fields.note_s.additionalFields, ['note_s_bk']);
+	});
 });
 
 const pluginControls = {
@@ -399,6 +464,53 @@ describe('parseContentXML additionalFields skip logic', () => {
 				(message) =>
 					message.includes('[parseContentXML]') &&
 					message.includes('stale_prop') &&
+					message.includes('was not found') &&
+					message.includes('/page/article')
+			),
+			true
+		);
+	});
+
+	it('parses a nested plugin companion value and still logs an unrelated root field', () => {
+		let instance: { items_o?: Array<{ note_s?: string; note_s_bk?: string }>; note_s_bk?: string };
+		const messages = captureConsoleErrors(() => {
+			instance = parseContentXML(
+				contentDoc(`<note_s_bk>Root leftover</note_s_bk>
+	<items_o>
+		<item>
+			<note_s>Hello</note_s>
+			<note_s_bk>Backup</note_s_bk>
+		</item>
+	</items_o>`),
+				path,
+				{
+					'/page/article': {
+						fields: {
+							items_o: {
+								id: 'items_o',
+								type: 'repeat',
+								fields: {
+									note_s: {
+										id: 'note_s',
+										type: 'backup-control',
+										additionalFields: ['note_s_bk']
+									}
+								}
+							}
+						}
+					}
+				} as never,
+				{}
+			) as never;
+		});
+		assert.equal(instance.items_o?.[0]?.note_s, 'Hello');
+		assert.equal(instance.items_o?.[0]?.note_s_bk, 'Backup');
+		// Nested companions are not root fields; do not silence a same-named root tag via a recursive scan.
+		assert.equal(
+			messages.some(
+				(message) =>
+					message.includes('[parseContentXML]') &&
+					message.includes('note_s_bk') &&
 					message.includes('was not found') &&
 					message.includes('/page/article')
 			),
