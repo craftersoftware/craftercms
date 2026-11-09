@@ -27,7 +27,7 @@ import {
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage } from 'react-intl';
+import { FormattedList, FormattedMessage } from 'react-intl';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import NavigateNextIcon from '@mui/icons-material/NavigateNextRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -455,7 +455,9 @@ function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
 	const { dataSource, onDeleteDataSource, type } = props;
 	if (!dataSource) return;
 	const referencingFields = type ? findFieldsReferencingDataSource(type, dataSource.id) : [];
-	const referencingFieldNames = referencingFields.map((field) => field.name).join(', ');
+	const referencingFieldNames = (
+		<FormattedList type="conjunction" value={referencingFields.map((field) => field.name)} />
+	);
 	return (
 		<>
 			<ConfirmDropdown
