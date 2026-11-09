@@ -256,6 +256,73 @@ describe('Repeat row keys', () => {
 	});
 });
 
+describe('Repeat with one item object stored twice', () => {
+	// A form controller can write the same object into the array twice: [a, a, b].
+	const rowsOf = (host: HTMLElement) => Array.from(host.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+	const moveButton = (row: HTMLElement, control: 'up' | 'down') =>
+		row.closest('li').querySelector<HTMLButtonElement>(`button[data-reorder-control="${control}"]`);
+	async function mountTwice() {
+		const ia = a();
+		const ib = { name_s: 'b' };
+		const mounted = await mount([ia, ia, ib]);
+		return { mounted, ia, ib };
+	}
+
+	it('renders a row per occurrence, with no duplicate React key', async () => {
+		const errors: unknown[] = [];
+		const original = console.error;
+		console.error = (...args: unknown[]) => errors.push(args);
+		try {
+			const { mounted } = await mountTwice();
+			assert.deepEqual(titles(mounted.host), ['a', 'a', 'b']);
+		} finally {
+			console.error = original;
+		}
+		assert.ok(!errors.some((args) => String((args as unknown[])[0]).includes('same key')), 'duplicate key warning');
+	});
+
+	it('deletes the second occurrence when its row is used', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		await act(async () => deleteButton(rowsOf(mounted.host)[1]).click());
+		const next = mounted.setValueCalls.at(-1);
+		assert.equal(next.length, 2);
+		assert.ok(next[0] === ia && next[1] === ib);
+	});
+
+	it('edits the second occurrence, and saves into its slot', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		await act(async () => rowsOf(mounted.host)[1].click());
+		const props = mounted.pushed[0] as unknown as { repeat: { index: number } };
+		assert.equal(props.repeat.index, 1);
+		await act(async () => {
+			await mounted.pushed[0].onSave({ values: { name_s: 'a2' } });
+		});
+		const next = mounted.setValueCalls.at(-1);
+		assert.deepEqual(names(next), ['a', 'a2', 'b']);
+		assert.ok(next[0] === ia && next[2] === ib);
+	});
+
+	it('moves each occurrence with the Move buttons and keeps both in the array', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		// Second "a" down: [a, b, a].
+		await act(async () => moveButton(rowsOf(mounted.host)[1], 'down').click());
+		let next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ib && next[2] === ia);
+		// That "a" (now last) up again: [a, a, b].
+		await act(async () => moveButton(rowsOf(mounted.host)[2], 'up').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ia && next[2] === ib);
+		// First "a" down swaps it with its twin. The array is unchanged in content and still has both.
+		await act(async () => moveButton(rowsOf(mounted.host)[0], 'down').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next.length === 3 && next[0] === ia && next[1] === ia && next[2] === ib);
+		// Second "a" up does the same.
+		await act(async () => moveButton(rowsOf(mounted.host)[1], 'up').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next.length === 3 && next[0] === ia && next[1] === ia && next[2] === ib);
+	});
+});
+
 /** What the Experience Builder launch in FormsEngine builds: its own props, writing to the store, with the shared keys. */
 const launchProps = (mounted: Mounted, index: number) =>
 	repeatItemFormProps<Item>({

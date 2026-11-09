@@ -59,7 +59,13 @@ import {
 	repeatDisplayFieldIds,
 	repeatSortItems
 } from './repeatItemDisplay';
-import { findRepeatItemIndex, removeRepeatItem, repeatItemKeysFor, type RepeatItemKeys } from '../lib/repeatItemKeys';
+import {
+	findRepeatItemIndex,
+	removeRepeatItem,
+	repeatItemKeysFor,
+	repeatOccurrenceKeys,
+	type RepeatItemKeys
+} from '../lib/repeatItemKeys';
 import {
 	countLimitValue,
 	getRepeatMinimum,
@@ -77,15 +83,13 @@ export type RepeatItem = Record<string, unknown>;
 export type RepeatProps = ControlProps<RepeatItem[]>;
 
 let warnedUnkeyedItem = false;
-/** The stable key of a row. Items are objects, so a missing key means the value is malformed. */
-function rowKey(keys: RepeatItemKeys<RepeatItem>, item: RepeatItem, index: number): string | number {
-	const key = keys.keyOf(item);
-	if (key !== undefined) return key;
-	if (!warnedUnkeyedItem) {
+/** The stable row keys, one per occurrence. Items are objects, so a missing key means the value is malformed. */
+function rowKeysFor(keys: RepeatItemKeys<RepeatItem>, items: readonly RepeatItem[]): string[] {
+	if (!warnedUnkeyedItem && items.some((item) => keys.keyOf(item) === undefined)) {
 		warnedUnkeyedItem = true;
 		console.warn('A repeat item is not an object, so its row is keyed by position.');
 	}
-	return index;
+	return repeatOccurrenceKeys(items, keys);
 }
 
 const SortableList = lazy(() => import('../components/SortableList'));
@@ -146,15 +150,17 @@ export function Repeat(props: RepeatProps) {
 	const minimumTooltip = formatMessage(repeatMessages.minRequired, { min: minimum });
 	const { rootRef, remember } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
+	const rowKeys = useMemo(() => rowKeysFor(itemKeys, value), [itemKeys, value]);
+	// Row actions pass the row's render index. An item stored twice then acts on the occurrence that was clicked.
 	/** Removes one item unless the repeat is already at its minimum. */
-	const handleRemoveItem = (event: { stopPropagation(): void }, item: RepeatItem) => {
+	const handleRemoveItem = (event: { stopPropagation(): void }, item: RepeatItem, near: number) => {
 		event.stopPropagation();
 		if (isRemoveDisabled) return;
 		const stored = getStoredItems();
 		// The stored array can be shorter than this render's. Check the limit against it.
 		if (isRepeatRemoveDisabled(Boolean(readonly), stored.length, minCount)) return;
 		// The row's item, found in the stored array. Its position may have moved since the render.
-		const index = findRepeatItemIndex(stored, item, itemKeys);
+		const index = findRepeatItemIndex(stored, item, itemKeys, near);
 		if (index === -1) return;
 		if (stored.length > 1) {
 			remember(Math.min(index, stored.length - 2), 'row');
@@ -164,9 +170,9 @@ export function Repeat(props: RepeatProps) {
 		setValue(removeRepeatItem(stored, index));
 	};
 	/** Moves the row's item one step, or to the edge, in the stored array. Nothing moves past either end. */
-	const handleMoveItem = (item: RepeatItem, action: SortAction, moveToEdge: boolean, control: string) => {
+	const handleMoveItem = (item: RepeatItem, near: number, action: SortAction, moveToEdge: boolean, control: string) => {
 		const stored = getStoredItems();
-		const index = findRepeatItemIndex(stored, item, itemKeys);
+		const index = findRepeatItemIndex(stored, item, itemKeys, near);
 		if (index === -1) return;
 		const next = destinationIndex(action, moveToEdge, index, stored.length);
 		if (next == null) return;
@@ -174,9 +180,9 @@ export function Repeat(props: RepeatProps) {
 		sortableListActionProcessor(action, moveToEdge, stored, index, setValue);
 	};
 	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
-	const handleEditItem = (item: RepeatItem) => {
+	const handleEditItem = (item: RepeatItem, near: number) => {
 		const stored = getStoredItems();
-		const index = findRepeatItemIndex(stored, item, itemKeys);
+		const index = findRepeatItemIndex(stored, item, itemKeys, near);
 		if (index === -1) return;
 		openItemForm(index, stored[index]);
 	};
@@ -253,7 +259,7 @@ export function Repeat(props: RepeatProps) {
 								return (
 									<Box
 										component="li"
-										key={rowKey(itemKeys, item, index)}
+										key={rowKeys[index]}
 										sx={{
 											display: 'flex',
 											alignItems: 'center',
@@ -266,19 +272,19 @@ export function Repeat(props: RepeatProps) {
 											data-reorder-index={index}
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
-											onClick={() => handleEditItem(item)}
+											onClick={() => handleEditItem(item, index)}
 											onKeyDown={
 												canMove
 													? (event) => {
 															const stored = getStoredItems();
-															const storedIndex = findRepeatItemIndex(stored, item, itemKeys);
+															const storedIndex = findRepeatItemIndex(stored, item, itemKeys, index);
 															if (storedIndex === -1) return;
 															sortableListKeyDownHandler(
 																event,
 																stored,
 																storedIndex,
 																setValue,
-																() => handleEditItem(item),
+																() => handleEditItem(item, index),
 																(nextIndex) => remember(nextIndex, 'row')
 															);
 														}
@@ -307,7 +313,7 @@ export function Repeat(props: RepeatProps) {
 															control="up"
 															index={index}
 															disabled={index === 0}
-															onClick={() => handleMoveItem(item, 'up', false, 'up')}
+															onClick={() => handleMoveItem(item, index, 'up', false, 'up')}
 														>
 															<ArrowUpwardRounded fontSize="small" />
 														</ReorderMoveButton>
@@ -316,7 +322,7 @@ export function Repeat(props: RepeatProps) {
 															control="down"
 															index={index}
 															disabled={index === count - 1}
-															onClick={() => handleMoveItem(item, 'down', false, 'down')}
+															onClick={() => handleMoveItem(item, index, 'down', false, 'down')}
 														>
 															<ArrowDownwardRounded fontSize="small" />
 														</ReorderMoveButton>
@@ -328,7 +334,7 @@ export function Repeat(props: RepeatProps) {
 														size="small"
 														aria-label={editLabel}
 														tabIndex={-1}
-														onClick={() => handleEditItem(item)}
+														onClick={() => handleEditItem(item, index)}
 													>
 														<EditOutlined fontSize="small" />
 													</IconButton>
@@ -341,7 +347,7 @@ export function Repeat(props: RepeatProps) {
 																size="small"
 																aria-label={deleteLabel}
 																disabled={isRemoveDisabled}
-																onClick={(e) => handleRemoveItem(e, item)}
+																onClick={(e) => handleRemoveItem(e, item, index)}
 															>
 																<DeleteOutlined fontSize="small" />
 															</IconButton>
