@@ -1578,11 +1578,12 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case contentEvent.type: {
 					const { user: person, targetPath } = payload as SocketEventBase;
 					const { theme } = upToDateRefs.current;
-					// Only the active page (path or primary model id) — not every loaded model on the page.
+					// Notify for the active page itself, or a shared component it renders; skip other pages it only references.
 					if (
 						person.username !== user.username &&
 						guest &&
-						(guest.path === targetPath || guest.modelIdByPath?.[targetPath] === guest.modelId)
+						(guest.path === targetPath ||
+							(Boolean(guest.modelIdByPath?.[targetPath]) && !targetPath.startsWith('/site/website/')))
 					) {
 						enqueueSnackbar(
 							formatMessage(guestMessages.contentWasChangedByAnotherUser, {
