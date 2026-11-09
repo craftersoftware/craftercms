@@ -96,7 +96,7 @@ import {
 	writeInstance
 } from '../../services/content';
 import { uploadDataUrl } from '../../services/contentUpload';
-import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of, Subscription } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
@@ -243,6 +243,9 @@ const issueDescriptorRequest = (props: {
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
+	// Track paths queued by this request only; mark the shared ref after delivery so
+	// cancellation (e.g. contentTypes re-issue) leaves them eligible for the replacement.
+	const pendingSourceMapPaths = new Set<string>();
 
 	return fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
 		.pipe(
@@ -262,8 +265,8 @@ const issueDescriptorRequest = (props: {
 								contentItemPathLookup[path] = true;
 								contentItemPaths.push(path);
 							}
-							if (!requestedSourceMapPaths.current[path]) {
-								requestedSourceMapPaths.current[path] = true;
+							if (!requestedSourceMapPaths.current[path] && !pendingSourceMapPaths.has(path)) {
+								pendingSourceMapPaths.add(path);
 								requests.push(fetchContentInstance(site, path, contentTypes));
 							}
 						});
@@ -299,6 +302,9 @@ const issueDescriptorRequest = (props: {
 			})
 		)
 		.subscribe(({ contentItems, modelResponse }) => {
+			pendingSourceMapPaths.forEach((path) => {
+				requestedSourceMapPaths.current[path] = true;
+			});
 			const { model, modelLookup } = modelResponse;
 			const normalizedModels = normalizeModelsLookup(modelLookup);
 			const hierarchyMap = createModelHierarchyDescriptorMap(normalizedModels, contentTypes);
@@ -359,7 +365,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		usePreviewState();
 	const item = useCurrentPreviewItem();
 	const { currentUrlPath } = usePreviewNavigation();
-	const loadedContentTypes = useContentTypes();
 	const contentTypes$Ref = useRef<BehaviorSubject<Record<string, ContentType>>>(undefined);
 	const { authoringBase, guestBase, xsrfArgument } = useSelection((state) => state.env);
 	const priorState = useRef({ site: siteId });
@@ -376,7 +381,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
-	const contentTypes = loadedContentTypes;
+	const contentTypes = useContentTypes();
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();
@@ -746,7 +751,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// merged lookup arrives (useContentTypes merges once uiConfig loads). Cancel prior in-flight.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
-				takeUntil(guestToHost$.pipe(filter(({ type }) => [guestCheckIn.type, guestCheckOut.type].includes(type))))
+				take(1)
 			);
 			const controlsForParse = () =>
 				upToDateRefs.current.uiConfig?.isFetching === false ? upToDateRefs.current.uiConfig.controls : undefined;
