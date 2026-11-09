@@ -48,7 +48,6 @@ export default [{
     'static-assets/libs/ace/*',
     'static-assets/libs/*',
     'static-assets/js/*',
-    'static-assets/modules/*',
     'static-assets/scripts/craftercms-guest.umd.js',
     'static-assets/scripts/craftercms-xb.umd.js',
     'static-assets/scripts/preview-landing.umd.js',
