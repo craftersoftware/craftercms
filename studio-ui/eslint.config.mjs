@@ -51,7 +51,6 @@ export default [{
     'static-assets/scripts/craftercms-guest.umd.js',
     'static-assets/scripts/craftercms-xb.umd.js',
     'static-assets/scripts/preview-landing.umd.js',
-    'static-assets/yui/*',
     'ui/scss/scripts/*',
     'ui/uppy/types/*',
     'ui/uppy/lib/*',

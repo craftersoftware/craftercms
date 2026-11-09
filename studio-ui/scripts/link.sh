@@ -121,8 +121,6 @@ echo ""
 if [[ $DO_BACKUP == true ]]; then
   echo "Backup directories"
   mkdir "$DEFAULT_SITE/link-backup"
-  cp -r "$STATIC_ASSETS/modules" "$DEFAULT_SITE/link-backup/modules"
-  cp -r "$STATIC_ASSETS/components" "$DEFAULT_SITE/link-backup/components"
   cp -r "$STATIC_ASSETS/app" "$DEFAULT_SITE/link-backup/app"
   cp -r "$STATIC_ASSETS/scripts" "$DEFAULT_SITE/link-backup/scripts"
   cp -r "$STATIC_ASSETS/styles" "$DEFAULT_SITE/link-backup/styles"
@@ -131,7 +129,6 @@ if [[ $DO_BACKUP == true ]]; then
   cp -r "$STATIC_ASSETS/libs" "$DEFAULT_SITE/link-backup/libs"
   cp -r "$STATIC_ASSETS/images" "$DEFAULT_SITE/link-backup/images"
   cp -r "$DEFAULT_SITE/site" "$DEFAULT_SITE/link-backup/site"
-  cp -r "$STATIC_ASSETS/yui" "$DEFAULT_SITE/link-backup/yui"
   cp -r "$STATIC_ASSETS/css" "$DEFAULT_SITE/link-backup/css"
   cp -r "$STATIC_ASSETS/js" "$DEFAULT_SITE/link-backup/js"
 fi
@@ -140,8 +137,6 @@ fi
 # region Remove
 if [[ $DO_REMOVE == true ]]; then
   echo "Removing directories"
-  rm -rf "$STATIC_ASSETS/modules"
-  rm -rf "$STATIC_ASSETS/components"
   rm -rf "$STATIC_ASSETS/app"
   rm -rf "$STATIC_ASSETS/scripts"
   rm -rf "$STATIC_ASSETS/styles"
@@ -150,7 +145,6 @@ if [[ $DO_REMOVE == true ]]; then
   rm -rf "$STATIC_ASSETS/libs"
   rm -rf "$STATIC_ASSETS/images"
   rm -rf "$DEFAULT_SITE/site"
-  rm -rf "$STATIC_ASSETS/yui"
   rm -rf "$STATIC_ASSETS/css"
   rm -rf "$STATIC_ASSETS/js"
 fi
@@ -159,8 +153,6 @@ fi
 # region Restore
 if [[ $DO_RESTORE == true ]]; then
   echo "Restoring directories"
-  cp -r "$DEFAULT_SITE/link-backup/modules" "$STATIC_ASSETS/modules"
-  cp -r "$DEFAULT_SITE/link-backup/components" "$STATIC_ASSETS/components"
   cp -r "$DEFAULT_SITE/link-backup/app" "$STATIC_ASSETS/app"
   cp -r "$DEFAULT_SITE/link-backup/scripts" "$STATIC_ASSETS/scripts"
   cp -r "$DEFAULT_SITE/link-backup/styles" "$STATIC_ASSETS/styles"
@@ -169,7 +161,6 @@ if [[ $DO_RESTORE == true ]]; then
   cp -r "$DEFAULT_SITE/link-backup/libs" "$STATIC_ASSETS/libs"
   cp -r "$DEFAULT_SITE/link-backup/images" "$STATIC_ASSETS/images"
   cp -r "$DEFAULT_SITE/link-backup/site" "$DEFAULT_SITE/site"
-  cp -r "$DEFAULT_SITE/link-backup/yui" "$STATIC_ASSETS/yui"
   cp -r "$DEFAULT_SITE/link-backup/css" "$STATIC_ASSETS/css"
   cp -r "$DEFAULT_SITE/link-backup/js" "$STATIC_ASSETS/js"
 fi
@@ -178,8 +169,6 @@ fi
 # region Link
 if [[ $DO_LINK == true ]]; then
   echo "Linking directories"
-  ln -s "$SRC/static-assets/modules" "$STATIC_ASSETS"
-  ln -s "$SRC/static-assets/components" "$STATIC_ASSETS"
   ln -s "$SRC/static-assets/app" "$STATIC_ASSETS"
   ln -s "$SRC/static-assets/scripts" "$STATIC_ASSETS"
   ln -s "$SRC/static-assets/styles" "$STATIC_ASSETS"
@@ -188,7 +177,6 @@ if [[ $DO_LINK == true ]]; then
   ln -s "$SRC/static-assets/libs" "$STATIC_ASSETS/libs"
   ln -s "$SRC/static-assets/images" "$STATIC_ASSETS/images"
   ln -s "$SRC/site" "$DEFAULT_SITE/site"
-  ln -s "$SRC/static-assets/yui" "$STATIC_ASSETS/yui"
   ln -s "$SRC/static-assets/css" "$STATIC_ASSETS/css"
   ln -s "$SRC/static-assets/js" "$STATIC_ASSETS/js"
 fi
@@ -197,8 +185,6 @@ fi
 # region Sync
 if [[ $DO_SYNC == true ]]; then
   echo "Synchronizing directories"
-  cp -r "$SRC/static-assets/modules" "$STATIC_ASSETS"
-  cp -r "$SRC/static-assets/components" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/app" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/scripts" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/styles" "$STATIC_ASSETS"
@@ -207,7 +193,6 @@ if [[ $DO_SYNC == true ]]; then
   cp -r "$SRC/static-assets/libs" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/images" "$STATIC_ASSETS"
   cp -r "$SRC/site" "$DEFAULT_SITE"
-  cp -r "$SRC/static-assets/yui" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/css" "$STATIC_ASSETS"
   cp -r "$SRC/static-assets/js" "$STATIC_ASSETS"
 fi

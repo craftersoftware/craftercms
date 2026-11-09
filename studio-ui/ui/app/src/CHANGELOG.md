@@ -205,6 +205,7 @@
 * Removed `static-assets/components` entirely (`common-api.js`, dialogs, loader/dialogue/view-controllers, amplify-core duplicate, and i18n resource bundles), plus unused `page-fragments/head.ftl` and `studio-context.ftl`.
 * Removed unused `static-assets/libs` leftovers: `datetimepicker`, `handlebars`, `js-cache`, `momentjs`, `routie`, `pako.js`, `upng.js`, and Bootstrap/Popper JS bundles (SCSS retained).
 * Removed unused `static-assets/modules` (legacy TinyMCE 3.x / `tinymce2` under `editors/tinymce/v2`). Current RTE uses `static-assets/libs/tinymce`.
+* Removed unused YUI 2 assets (`static-assets/yui`, `themes/cstudioTheme/yui`) and the unused `/overlay-css` route. Updated `scripts/link.sh` accordingly.
 * Removed the legacy site-config-tools `content-types` tool from blueprints and the sample config. Use `craftercms.components.ContentTypeManagement` (configured in `ui.xml`) instead.
 * Existing `form-control` and `form-datasource` plugin installations still target `site-config-tools.xml`. The new Type Builder does not read that file, so these entries may not appear until they are migrated. See https://github.com/craftersoftware/craftercms/issues/9277.
 * Removed `craftercms.components.LegacySiteToolsFrame`, the `/legacy-site-config` page (`cstudio-admin` console and its tool modules), and `site-config-tools.xml` tool loading. Use modern Site Tools widgets configured in `ui.xml` instead.
