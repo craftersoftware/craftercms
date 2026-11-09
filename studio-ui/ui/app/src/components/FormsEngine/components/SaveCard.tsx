@@ -40,11 +40,9 @@ import EditNoteOutlined from '@mui/icons-material/EditNoteOutlined';
 import { useIsDarkModeTheme } from '../../../hooks/useIsDarkModeTheme';
 import { SplitButton } from '../../SplitButton';
 import { useDispatch } from 'react-redux';
-import { pushConfirmDialog, pushErrorDialog } from '../../../utils/system';
+import { pushErrorDialog } from '../../../utils/system';
 import { showSystemNotification } from '../../../state/actions/system';
 import type { FormsEngineAtoms } from '../lib/formsEngineContext';
-import { popDialog } from '../../../state/actions/dialogStack';
-import { nanoid } from 'nanoid';
 import type { SaveFormResult } from '../lib/useSaveForm';
 import type { ApiResponse } from '../../../models/ApiResponse';
 import { saveButtonTip, type MinimumRequirementsNotice } from '../lib/minimumSaveRequirements';
@@ -161,14 +159,27 @@ export interface SaveCardProps {
 	minimumRequirements?: MinimumRequirementsNotice;
 	/**
 	 * Runs the save. `revealed` opened a hidden field and wrote nothing.
-	 * `invalid` is the cannot-proceed dialog. `saved` started a write.
+	 * `invalid` calls `onInvalidSave`. `saved` started a write.
 	 * `auto` is the main button: draft when the fresh read is invalid, else the remembered choice.
 	 */
 	onSave: (e: MouseEvent, draft?: boolean | 'auto') => Promise<SaveFormResult | void>;
+	/** A non-draft Save on an invalid form. Moves focus to the first error and announces the count. */
+	onInvalidSave(): void;
+	/** Id of the validation alert, set while it shows. The Save button is described by it. */
+	validationAlertId?: string;
 }
 
 export function SaveCard(props: SaveCardProps) {
-	const { isEmbedded, isStackedForm, isRepeatMode, onSave, validationErrorCount = 0, minimumRequirements } = props;
+	const {
+		isEmbedded,
+		isStackedForm,
+		isRepeatMode,
+		onSave,
+		onInvalidSave,
+		validationAlertId,
+		validationErrorCount = 0,
+		minimumRequirements
+	} = props;
 	const stableFormContext = useContext(StableFormContext);
 	const formAtoms = props.atoms ?? stableFormContext.atoms;
 	const isSubmitting = useAtomValue(formAtoms.isSubmitting);
@@ -181,8 +192,21 @@ export function SaveCard(props: SaveCardProps) {
 	const showDraft = validationErrorCount > 0 || saveAsDraft === true;
 	const afterSavingLabelId = useId();
 	const afterSaving = afterSavingChoice(closeAfterSave, minimizeAfterSave);
-	const disableSave = !isEmbedded && !isRepeatMode && (isSubmitting || !versionComment);
+	const versionCommentRequired = !isEmbedded && !isRepeatMode;
+	// A whitespace-only comment counts as empty.
+	const versionCommentMissing = versionCommentRequired && !versionComment?.trim();
+	const disableSave = versionCommentRequired && (isSubmitting || versionCommentMissing);
 	const showVersionComment = (!isEmbedded || !isStackedForm) && !isRepeatMode;
+	const versionCommentId = useId();
+	// MUI gives the helper text `${id}-helper-text`.
+	const versionCommentHelperId = `${versionCommentId}-helper-text`;
+	const saveDescribedBy =
+		[
+			showVersionComment && versionCommentMissing ? versionCommentHelperId : null,
+			validationAlertId
+		]
+			.filter(Boolean)
+			.join(' ') || undefined;
 	const showSaveOptions = !isEmbedded && !isRepeatMode;
 	const { formatMessage } = useIntl();
 	// The minimum requirements outrank the empty comment: filling the comment would not allow the save.
@@ -222,29 +246,12 @@ export function SaveCard(props: SaveCardProps) {
 		setCloseAfterSave(choice === 'close');
 		setMinimizeAfterSave(choice === 'minimize');
 	};
-	const showCannotProceed = () => {
-		const dialogId = nanoid();
-		dispatch(
-			pushConfirmDialog({
-				id: dialogId,
-				props: {
-					title: formatMessage({ defaultMessage: 'Cannot Proceed' }),
-					body: formatMessage({
-						defaultMessage:
-							'You cannot save until all form requirements are satisfied. If you still want to save, you can use the Save as draft option, but required fields left blank may cause errors when previewed or deployed.'
-					}),
-					cancelButtonText: formatMessage({ defaultMessage: 'Ok' }),
-					onCancel: () => dispatch(popDialog({ id: dialogId }))
-				}
-			})
-		);
-	};
 	const handleSave = async (e: MouseEvent, draft?: boolean | 'auto') => {
 		if (saveInFlight.current) return;
 		saveInFlight.current = true;
 		try {
 			const status = await onSave(e, draft);
-			if (status === 'invalid') showCannotProceed();
+			if (status === 'invalid') onInvalidSave();
 			else if (status === 'revealed') {
 				dispatch(
 					showSystemNotification({
@@ -270,6 +277,7 @@ export function SaveCard(props: SaveCardProps) {
 			fullWidth
 			loading={isSubmitting}
 			disabled={disableSave || blockedByMinimum}
+			describedBy={saveDescribedBy}
 			selectedId={showDraft ? 'saveDraft' : 'save'}
 			onClick={(e) => handleSave(e, 'auto')}
 			onSelect={(id) => {
@@ -313,10 +321,15 @@ export function SaveCard(props: SaveCardProps) {
 					{showVersionComment && (
 						// TODO: Should embedded components and repeats get a version comment? How would that work?
 						<TextField
+							id={versionCommentId}
 							size="small"
 							multiline
 							fullWidth
+							required={versionCommentRequired}
 							label={<FormattedMessage defaultMessage="Version Comment" />}
+							helperText={
+								versionCommentMissing ? formatMessage({ defaultMessage: 'Enter a version comment to save.' }) : undefined
+							}
 							value={versionComment}
 							onChange={(e) => setVersionComment(e.target.value)}
 							onFocus={(e) => e.target.select()}

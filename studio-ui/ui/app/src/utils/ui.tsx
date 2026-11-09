@@ -34,6 +34,7 @@ export const displayWithPendingChangesConfirm = (
 			id,
 			props: {
 				title: message,
+				defaultFocus: 'cancel',
 				onOk() {
 					dispatch(popDialog({ id }));
 					onClose();

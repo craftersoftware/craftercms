@@ -39,6 +39,12 @@ export interface ConfirmDialogProps extends ConfirmDialogBaseProps, Omit<DialogP
 	onOk?(): void;
 	onCancel?(): void;
 	onClosed?(): void;
+	/**
+	 * Which action receives focus when the dialog opens. Defaults to the accept button, matching
+	 * the previous behaviour. Set `cancel` only when Cancel is the non-destructive action
+	 * (for example, staying on a form instead of discarding unsaved changes).
+	 */
+	defaultFocus?: 'ok' | 'cancel';
 }
 
 export interface ConfirmDialogStateProps extends ConfirmDialogBaseProps, Pick<DialogProps, 'open'> {
@@ -48,4 +54,5 @@ export interface ConfirmDialogStateProps extends ConfirmDialogBaseProps, Pick<Di
 	onClosed?: StandardAction;
 	okButtonText?: string;
 	cancelButtonText?: string;
+	defaultFocus?: 'ok' | 'cancel';
 }

@@ -26,6 +26,7 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useId,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -123,6 +124,8 @@ import {
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
+import { FormSaveAttemptedContext, FormValidationAnnouncerContext } from './lib/fieldA11y';
+import { SkipToActionsLink } from '../SkipToActionsLink';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -960,6 +963,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const formActionsId = useId();
+	const validationAlertId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
@@ -1082,6 +1087,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
+	const [validationStatusMessage, setValidationStatusMessage] = useState('');
+	const [saveAttempted, setSaveAttempted] = useState(false);
+	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const announceValidation = useCallback((message: string) => {
+		setValidationStatusMessage('');
+		if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		// Clear first so a repeated message still changes the live region's text.
+		validationStatusTimer.current = setTimeout(() => setValidationStatusMessage(message), 40);
+	}, []);
+	useEffect(
+		() => () => {
+			if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
+		},
+		[]
+	);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -1530,6 +1550,24 @@ function FormOrchestrator(props: FormsEngineProps) {
 		commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
 		contextApi.popForm();
 	};
+	// A non-draft Save on an invalid form. The reveal scrolls to the first error and focuses it, and the field
+	// exposes its own error. The live region gives only the count, so the error is not spoken twice.
+	const handleInvalidSave = () => {
+		setSaveAttempted(true);
+		const count = validationErrors?.count ?? 0;
+		showValidationField();
+		announceValidation(
+			count > 0
+				? formatMessage(
+						{
+							defaultMessage:
+								'Cannot save yet. {count, plural, one {# field needs attention} other {# fields need attention}}'
+						},
+						{ count }
+					)
+				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
+		);
+	};
 	const saveFromSelectedItem = async (_event: unknown, draft?: boolean | 'auto') => {
 		if (!parentAtoms || !parentEntry) return;
 		const choice = draft ?? false;
@@ -1693,7 +1731,16 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box id="header" sx={{ minHeight: 50, containerType: 'inline-size', containerName: formHeaderContainerName }}>
+				<Box
+					id="header"
+					sx={{
+						minHeight: 50,
+						position: 'relative',
+						containerType: 'inline-size',
+						containerName: formHeaderContainerName
+					}}
+				>
+					<SkipToActionsLink targetId={formActionsId} scopeRef={containerRef} />
 					<Box
 						component={Container}
 						sx={{
@@ -1859,9 +1906,14 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Grid>
 						<Grid size="grow">
 							<StickyBox
+								id={formActionsId}
+								role="region"
+								tabIndex={-1}
+								aria-label={formatMessage({ defaultMessage: 'Form actions' })}
 								className="space-y"
 								sx={{
 									height: 'auto',
+									scrollMarginTop: 8,
 									// overflow-y:auto computes overflow-x to auto and clips the paper shadow.
 									// The negative margin moves that edge out; the padding puts the content back.
 									mx: -1,
@@ -1892,6 +1944,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 												}
 												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
+												id={validationAlertId}
 											/>
 										)}
 										<SaveCard
@@ -1902,6 +1955,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 											validationErrorCount={validationErrors?.count ?? 0}
 											minimumRequirements={minimumNotice ?? undefined}
 											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
+											onInvalidSave={handleInvalidSave}
+											validationAlertId={alertVariant ? validationAlertId : undefined}
 										/>
 										{showReleaseLockControl && (
 											<SecondaryButton
@@ -2019,7 +2074,29 @@ function FormOrchestrator(props: FormsEngineProps) {
 	return (
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
-		isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment
+		<FormValidationAnnouncerContext.Provider value={announceValidation}>
+			<FormSaveAttemptedContext.Provider value={saveAttempted}>
+				{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+				<Box
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					sx={{
+						border: 0,
+						clip: 'rect(0 0 0 0)',
+						height: '1px',
+						margin: '-1px',
+						overflow: 'hidden',
+						padding: 0,
+						position: 'absolute',
+						whiteSpace: 'nowrap',
+						width: '1px'
+					}}
+				>
+					{validationStatusMessage}
+				</Box>
+			</FormSaveAttemptedContext.Provider>
+		</FormValidationAnnouncerContext.Provider>
 	);
 }
 
