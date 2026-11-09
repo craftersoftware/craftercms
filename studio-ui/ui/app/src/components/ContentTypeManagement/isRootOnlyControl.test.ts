@@ -26,9 +26,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../test/registerTsLoader.mjs';
-import { isFieldRootOnly } from './utils.ts';
 
-const { isRootOnlyControl, readOnlyFieldsIds } = await import('./utils.ts');
+const { isRootOnlyControl, isFieldRootOnly, readOnlyFieldsIds } = await import('./utils.ts');
 const { controlDescriptors } = await import('./descriptors/controls/index.ts');
 
 describe('isRootOnlyControl', () => {
