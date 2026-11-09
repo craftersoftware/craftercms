@@ -37,6 +37,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Lists sites from Studio's management site API.
@@ -85,26 +89,52 @@ public class StudioSiteListResolver implements SiteListResolver {
 
 		HttpRequest request = HttpRequest.newBuilder()
 			.uri(URI.create(studioUrl + SITES_PATH))
-			.timeout(readTimeout)
 			.header(ManagementToken.HEADER_NAME, managementToken)
 			.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
 			.GET()
 			.build();
 
-		HttpResponse<String> response;
-		try {
-			response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new StudioSiteListException("Studio site list request was interrupted", e);
-		} catch (IOException e) {
-			throw new StudioSiteListException("Unable to call Studio site list: " + e.getMessage(), e);
-		}
+		HttpResponse<String> response = send(request);
 
 		if (response.statusCode() != 200) {
 			throw new StudioSiteListException("Studio site list returned HTTP " + response.statusCode());
 		}
 		return parseSites(response.body());
+	}
+
+	/**
+	 * Waits until the response body is fully received, or {@code readTimeout} elapses.
+	 * {@link HttpRequest.Builder#timeout(Duration)} stops when headers arrive, so it does not cover the body.
+	 * A response still being read is cancelled so a stalled body does not hold the connection.
+	 */
+	private HttpResponse<String> send(HttpRequest request) {
+		CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(
+			request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		try {
+			return response.get(readTimeout.toMillis(), TimeUnit.MILLISECONDS);
+		} catch (TimeoutException e) {
+			throw new StudioSiteListException("Unable to call Studio site list: request timed out", e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new StudioSiteListException("Studio site list request was interrupted", e);
+		} catch (ExecutionException e) {
+			Throwable cause = e.getCause() == null ? e : e.getCause();
+			if (cause instanceof InterruptedException interrupted) {
+				Thread.currentThread().interrupt();
+				throw new StudioSiteListException("Studio site list request was interrupted", interrupted);
+			}
+			if (cause instanceof Error error) {
+				throw error;
+			}
+			if (cause instanceof RuntimeException runtime) {
+				throw runtime;
+			}
+			throw new StudioSiteListException("Unable to call Studio site list: " + cause.getMessage(), cause);
+		} finally {
+			if (!response.isDone()) {
+				response.cancel(true);
+			}
+		}
 	}
 
 	private List<String> parseSites(String body) {

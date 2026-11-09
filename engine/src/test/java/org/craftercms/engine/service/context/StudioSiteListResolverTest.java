@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -47,6 +48,7 @@ public class StudioSiteListResolverTest {
 	private final AtomicInteger requests = new AtomicInteger();
 	private volatile int status = 200;
 	private volatile String body = "{\"response\":{\"code\":0},\"sites\":[\"editorial\",\"editorial-staging\"]}";
+	private volatile long bodyDelayMillis;
 	private volatile String requestHeader;
 	private volatile String requestQuery;
 
@@ -61,6 +63,7 @@ public class StudioSiteListResolverTest {
 			requestQuery = exchange.getRequestURI().getRawQuery();
 			byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
 			exchange.sendResponseHeaders(status, bytes.length);
+			pause(bodyDelayMillis);
 			exchange.getResponseBody().write(bytes);
 			exchange.close();
 		});
@@ -93,6 +96,19 @@ public class StudioSiteListResolverTest {
 		StudioSiteListResolver resolver = resolver(baseUrl, TOKEN);
 
 		assertEquals(List.of(), new ArrayList<>(resolver.getSiteList()));
+	}
+
+	@Test
+	public void delayedBodyTimesOut() {
+		bodyDelayMillis = 8_000;
+		StudioSiteListResolver resolver = new StudioSiteListResolver(baseUrl, TOKEN, TIMEOUT, 1_000);
+
+		long started = System.nanoTime();
+		StudioSiteListException error = assertThrows(StudioSiteListException.class, resolver::getSiteList);
+		long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+
+		assertTrue(error.getMessage().contains("timed out"));
+		assertTrue("elapsed " + elapsedMillis + "ms", elapsedMillis < 4_000);
 	}
 
 	@Test
@@ -141,6 +157,18 @@ public class StudioSiteListResolverTest {
 
 	private static StudioSiteListResolver resolver(String studioUrl, String token) {
 		return new StudioSiteListResolver(studioUrl, token, TIMEOUT, TIMEOUT);
+	}
+
+	private static void pause(long delayMillis) throws IOException {
+		if (delayMillis <= 0) {
+			return;
+		}
+		try {
+			Thread.sleep(delayMillis);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IOException("interrupted", e);
+		}
 	}
 
 }
