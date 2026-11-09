@@ -68,6 +68,7 @@ import { useEnhancedDialogState } from '../../../hooks/useEnhancedDialogState';
 import { SwapFieldDialog } from './SwapFieldDialog';
 import { nanoid } from 'nanoid';
 import MoveDownIcon from '@mui/icons-material/MoveDown';
+import { findFieldsReferencingDataSource } from './editTypeWorkingCopy';
 import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 
@@ -451,14 +452,26 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 }
 
 function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
-	const { dataSource, onDeleteDataSource } = props;
+	const { dataSource, onDeleteDataSource, type } = props;
 	if (!dataSource) return;
+	const referencingFields = type ? findFieldsReferencingDataSource(type, dataSource.id) : [];
+	const referencingFieldNames = referencingFields.map((field) => field.name).join(', ');
 	return (
 		<>
 			<ConfirmDropdown
 				icon={DeleteRounded}
 				iconTooltip={<FormattedMessage defaultMessage="Delete Data Source" />}
-				confirmHelperText={<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />}
+				confirmHelperText={
+					referencingFields.length > 0 ? (
+						<FormattedMessage
+							defaultMessage={'Delete "{name}"? It is used by: {fields}'}
+							values={{ name: dataSource.title, fields: referencingFieldNames }}
+						/>
+					) : (
+						<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />
+					)
+				}
+				sx={{ menuPaper: { maxWidth: 360 } }}
 				cancelText={<FormattedMessage defaultMessage="No" />}
 				confirmText={<FormattedMessage defaultMessage="Yes" />}
 				onConfirm={() => {
