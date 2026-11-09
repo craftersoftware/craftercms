@@ -90,6 +90,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
+import { expandAdditionalFieldTemplates, processAdditionalFieldMacro } from '../../../utils/additionalFields';
 import { createObjectGroupId, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
@@ -1339,9 +1340,10 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 }
 
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
-	const additionalFields = descriptor.metadata?.additionalFields ?? [];
-	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+	return expandAdditionalFieldTemplates(fieldId, descriptor.metadata?.additionalFields);
 }
+
+export { processAdditionalFieldMacro };
 
 /**
  * Merges ui.xml custom control descriptors under code-default descriptors.
@@ -1351,9 +1353,4 @@ export function resolveControlDescriptors(
 	customControls?: LookupTable<DescriptorContentType>
 ): LookupTable<DescriptorContentType> {
 	return { ...customControls, ...controlDescriptors };
-}
-
-// TODO: are there going to be other placeholders besides {id}?
-export function processAdditionalFieldMacro(parentFieldId: string, fieldId: string): string {
-	return fieldId.replaceAll('{id}', parentFieldId);
 }

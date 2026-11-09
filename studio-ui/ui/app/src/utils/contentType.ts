@@ -28,6 +28,7 @@ import { ContentItem } from '../models/Item';
 import type { BuiltInControlType } from '../components/FormsEngine/lib/controlMap';
 import { defineMessages, IntlShape } from 'react-intl';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
+import { expandAdditionalFieldTemplates } from './additionalFields';
 
 const messages = defineMessages({
 	[XmlKeys.displayTemplate]: {
@@ -328,9 +329,10 @@ export const componentsDataSourceContentTypesPropertyNames = [
 ];
 
 /**
- * Form-definition XML is one source for `additionalFields`. Control descriptors in the site UI
- * config are the other (including controls whose form def was saved before that tag existed).
- * Merge them onto the lookup `parseContentXML` receives so every caller shares one result.
+ * Form-definition XML is the authoritative source for a field's `additionalFields`.
+ * Control descriptors in the site UI config backfill ids that were never persisted
+ * (form defs saved before that tag existed, or a descriptor template whose expanded
+ * id is not already stored). A persisted id that differs from the descriptor is kept.
  *
  * Old form defs must keep working before re-save: callers that parse content (Preview,
  * `fetchContentInstanceDescriptor`, dialogs via `useContentTypes`) should run this merge.
@@ -350,15 +352,21 @@ export function addConfiguredAdditionalFields(
 			let fieldsChanged = false;
 			const fields = Object.fromEntries(
 				Object.entries(contentType.fields).map(([fieldId, field]) => {
-					const configuredAdditionalFields = controls[field.type]?.metadata?.additionalFields?.map((additionalField) =>
-						additionalField.replace(/\{id\}/g, field.id)
+					const persistedAdditionalFields = field.additionalFields ?? [];
+					const expandedAdditionalFields = expandAdditionalFieldTemplates(
+						field.id,
+						controls[field.type]?.metadata?.additionalFields
 					);
-					const additionalFields = [
-						...new Set([...(field.additionalFields ?? []), ...(configuredAdditionalFields ?? [])])
-					];
-					if (additionalFields.length === (field.additionalFields?.length ?? 0)) return [fieldId, field];
+					const seen = new Set(persistedAdditionalFields);
+					const missingAdditionalFields: string[] = [];
+					for (const additionalFieldId of expandedAdditionalFields) {
+						if (seen.has(additionalFieldId)) continue;
+						seen.add(additionalFieldId);
+						missingAdditionalFields.push(additionalFieldId);
+					}
+					if (missingAdditionalFields.length === 0) return [fieldId, field];
 					fieldsChanged = true;
-					return [fieldId, { ...field, additionalFields }];
+					return [fieldId, { ...field, additionalFields: [...persistedAdditionalFields, ...missingAdditionalFields] }];
 				})
 			);
 			if (!fieldsChanged) return [contentTypeId, contentType];

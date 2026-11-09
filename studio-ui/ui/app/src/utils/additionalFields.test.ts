@@ -194,6 +194,55 @@ describe('addConfiguredAdditionalFields', () => {
 		});
 		assert.deepEqual(merged['/page/article'].fields.publishDate_dt.additionalFields, ['publishDate_dt_tz']);
 	});
+
+	it('keeps existing persisted ids and does not duplicate an expanded descriptor id', () => {
+		const title = {
+			id: 'title_s',
+			name: 'Title',
+			type: 'backup-control',
+			validations: {},
+			properties: {},
+			defaultValue: '',
+			additionalFields: ['title_s_bk', 'title_s_alt']
+		};
+		const contentTypes = {
+			'/page/article': {
+				id: '/page/article',
+				fields: { title_s: title }
+			}
+		};
+		const merged = addConfiguredAdditionalFields(contentTypes as never, pluginControls);
+		assert.equal(merged, contentTypes);
+		assert.equal(merged['/page/article'].fields.title_s, title);
+		assert.deepEqual(title.additionalFields, ['title_s_bk', 'title_s_alt']);
+	});
+
+	it('keeps a conflicting persisted id and backfills only the expanded id that is missing', () => {
+		const contentTypes = {
+			'/page/article': {
+				id: '/page/article',
+				fields: {
+					title_s: {
+						id: 'title_s',
+						name: 'Title',
+						type: 'backup-control',
+						validations: {},
+						properties: {},
+						defaultValue: '',
+						additionalFields: ['title_s_custom', 'title_s_bk']
+					}
+				}
+			}
+		};
+		const merged = addConfiguredAdditionalFields(contentTypes as never, {
+			'backup-control': { metadata: { additionalFields: ['{id}_bk', '{id}_alt'] } }
+		});
+		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, [
+			'title_s_custom',
+			'title_s_bk',
+			'title_s_alt'
+		]);
+	});
 });
 
 describe('fetchContentInstanceDescriptor lookup paths', () => {
