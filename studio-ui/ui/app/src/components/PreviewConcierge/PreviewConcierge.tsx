@@ -1583,7 +1583,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						person.username !== user.username &&
 						guest &&
 						(guest.path === targetPath ||
-							(Boolean(guest.modelIdByPath?.[targetPath]) && !targetPath.startsWith('/site/website/')))
+							// crafter-level-descriptor.level.xml lives under /site/website/, and its models are loaded so pages can resolve inherited fields (getModelIdFromInheritedField).
+							(Boolean(guest.modelIdByPath?.[targetPath]) &&
+								(!targetPath.startsWith('/site/website/') ||
+									targetPath.endsWith('/crafter-level-descriptor.level.xml'))))
 					) {
 						enqueueSnackbar(
 							formatMessage(guestMessages.contentWasChangedByAnotherUser, {
