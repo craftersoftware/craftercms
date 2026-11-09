@@ -326,3 +326,40 @@ export const componentsDataSourceContentTypesPropertyNames = [
 	'allowedSharedContentTypes',
 	'allowedSharedExistingContentTypes'
 ];
+
+/**
+ * Form-definition XML is one source for `additionalFields`. Control descriptors in the site UI
+ * config are the other (including controls whose form def was saved before that tag existed).
+ * Merge them onto the lookup `parseContentXML` receives so every caller shares one result.
+ */
+export function addConfiguredAdditionalFields(
+	contentTypes: LookupTable<ContentType>,
+	controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>
+): LookupTable<ContentType> {
+	if (!contentTypes || !controls) return contentTypes;
+
+	let contentTypesChanged = false;
+	const result = Object.fromEntries(
+		Object.entries(contentTypes).map(([contentTypeId, contentType]) => {
+			let fieldsChanged = false;
+			const fields = Object.fromEntries(
+				Object.entries(contentType.fields).map(([fieldId, field]) => {
+					const configuredAdditionalFields = controls[field.type]?.metadata?.additionalFields?.map((additionalField) =>
+						additionalField.replace(/\{id\}/g, field.id)
+					);
+					const additionalFields = [
+						...new Set([...(field.additionalFields ?? []), ...(configuredAdditionalFields ?? [])])
+					];
+					if (additionalFields.length === (field.additionalFields?.length ?? 0)) return [fieldId, field];
+					fieldsChanged = true;
+					return [fieldId, { ...field, additionalFields }];
+				})
+			);
+			if (!fieldsChanged) return [contentTypeId, contentType];
+			contentTypesChanged = true;
+			return [contentTypeId, { ...contentType, fields }];
+		})
+	);
+
+	return contentTypesChanged ? result : contentTypes;
+}

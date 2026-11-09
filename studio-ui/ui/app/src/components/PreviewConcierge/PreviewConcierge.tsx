@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { MutableRefObject, PropsWithChildren, useEffect, useMemo, useRef, useState } from 'react';
+import React, { MutableRefObject, PropsWithChildren, useEffect, useRef, useState } from 'react';
 import {
 	allowedContentTypesUpdate,
 	changeCurrentUrl,
@@ -219,38 +219,6 @@ import type {
 } from '../FormsEngine/dataSources/types';
 import { getField } from '../../utils/contentType';
 
-function addConfiguredAdditionalFields(
-	contentTypes: Record<string, ContentType>,
-	controls: Record<string, { metadata?: { additionalFields?: string[] } }>
-): Record<string, ContentType> {
-	if (!contentTypes || !controls) return contentTypes;
-
-	let contentTypesChanged = false;
-	const result = Object.fromEntries(
-		Object.entries(contentTypes).map(([contentTypeId, contentType]) => {
-			let fieldsChanged = false;
-			const fields = Object.fromEntries(
-				Object.entries(contentType.fields).map(([fieldId, field]) => {
-					const configuredAdditionalFields = controls[field.type]?.metadata?.additionalFields?.map((additionalField) =>
-						additionalField.replace(/\{id\}/g, field.id)
-					);
-					const additionalFields = [
-						...new Set([...(field.additionalFields ?? []), ...(configuredAdditionalFields ?? [])])
-					];
-					if (additionalFields.length === (field.additionalFields?.length ?? 0)) return [fieldId, field];
-					fieldsChanged = true;
-					return [fieldId, { ...field, additionalFields }];
-				})
-			);
-			if (!fieldsChanged) return [contentTypeId, contentType];
-			contentTypesChanged = true;
-			return [contentTypeId, { ...contentType, fields }];
-		})
-	);
-
-	return contentTypesChanged ? result : contentTypes;
-}
-
 const issueDescriptorRequest = (props: {
 	site: string;
 	path: string;
@@ -407,10 +375,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
 	const uiConfigLoaded = uiConfig.isFetching === false;
-	const contentTypes = useMemo(
-		() => (uiConfigLoaded ? addConfiguredAdditionalFields(loadedContentTypes, uiConfig.controls) : null),
-		[uiConfigLoaded, loadedContentTypes, uiConfig.controls]
-	);
+	// Hold guest model parsing until UI config is in, so the lookup from useContentTypes is already merged.
+	const contentTypes = uiConfigLoaded ? loadedContentTypes : null;
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();

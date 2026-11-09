@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo } from 'react';
 import StandardAction from '../../models/StandardAction';
 import { useDispatch } from 'react-redux';
 import { SnackbarKey, useSnackbar } from 'notistack';
@@ -22,6 +22,7 @@ import { getHostToHostBus } from '../../utils/subjects';
 import { blockUI, newProjectReady, showSystemNotification, unblockUI } from '../../state/actions/system';
 import Launcher from '../Launcher/Launcher';
 import useSelection from '../../hooks/useSelection';
+import { useContentTypes } from '../../hooks/useContentTypes';
 import MinimizedBar from '../MinimizedBar';
 import { FormattedMessage, useIntl } from 'react-intl';
 import Button from '@mui/material/Button';
@@ -52,7 +53,12 @@ const UIBlocker = lazy(() => import('../UIBlocker'));
 function GlobalDialogManager() {
 	const state = useSelection((state) => state.dialogs);
 	const stack = useSelection((state) => state.dialogStack);
-	const contentTypesBranch = useSelection((state) => state.contentTypes);
+	const contentTypesState = useSelection((state) => state.contentTypes);
+	const contentTypesById = useContentTypes();
+	const contentTypesBranch = useMemo(
+		() => ({ ...contentTypesState, byId: contentTypesById }),
+		[contentTypesState, contentTypesById]
+	);
 	const versionsBranch = useSelection((state) => state.versions);
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 	const dispatch = useDispatch();
