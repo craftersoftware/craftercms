@@ -46,7 +46,6 @@ export default [{
     'ui/guest/build',
     'ui/guest/build_tsc',
     'static-assets/libs/ace/*',
-    'static-assets/components/cstudio-common/amplify-core.js',
     'static-assets/libs/*',
     'static-assets/js/*',
     'static-assets/modules/*',

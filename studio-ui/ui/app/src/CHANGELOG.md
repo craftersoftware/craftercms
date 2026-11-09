@@ -194,11 +194,16 @@
   * Updated `Clipboard` interface: removed `paths` property, added `includeChildren` property.
 * [common-api.js]
   * Removed `CStudioAuthoring.Operations.uploadCMISAsset` and `CStudioAuthoring.Operations.openCMISUploadDialog`.
+  * Removed legacy browse page entry points: `CStudioAuthoring.Operations.openBrowse`, `openS3Browse`, `openWebDAVBrowse`, `uploadS3Asset`, `openS3UploadDialog`, `uploadWebDAVAsset`, and `openWebDAVUploadDialog`. Use React `BrowseFilesDialog` / `BrowseExternalAssetDialog` / `ExternalAssetUploadDialog` instead.
   * Removed legacy Forms Engine entry points: `CStudioAuthoring.Operations.openContentWebForm`, `openContentWebFormWithPermission`, `openContentWebFormLegacyFormServer`, `performSimpleIceEdit`, `createNewContent`, `createNewContentForType`, `editContent`, `viewContent`, `addMetadata`; `CStudioAuthoring.Service.reorderServiceCreatePanel`; and `CStudioAuthoring.Utils.form` (`getPluginInfo`, `getPluginError`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * Removed `CStudioAuthoring.ChildFormManager` and `CStudioAuthoring.InContextEdit`.
   * Removed `CStudioAuthoring.Constants.CONTROL_URL` and `CStudioAuthoring.Constants.DATASOURCE_URL` (legacy FE1 control/datasource script roots).
 * Removed the legacy Forms Engine runtime (`forms-engine.js`, `cstudio-forms` controls/datasources) and Type Builder (`content-types.js`, content-type-propsheet). Custom FE1 controls/datasources and the legacy Type Builder no longer load.
 * Removed the `/studio/form` and `/studio/legacy/form` routes (and their FTLs).
+* Removed the legacy `/studio/browse`, `/studio/browseS3`, and `/studio/browseWebDAV` routes (FTLs, site pages, `cstudio-browse` scripts, S3/WebDAV upload dialogs, and `browse` styles/i18n).
+* Simplified `/studio/search` (`search.ftl`): removed the legacy `mode=select` / `ChildSearchManager` bridge and the YUI/`common-api` page head. Full-page Search now boots like site-dashboard (React `SearchPage` only). Selection flows use the React Search dialog.
+* Removed `static-assets/components` entirely (`common-api.js`, dialogs, loader/dialogue/view-controllers, amplify-core duplicate, and i18n resource bundles), plus unused `page-fragments/head.ftl` and `studio-context.ftl`.
+* Removed unused `static-assets/libs` leftovers: `datetimepicker`, `handlebars`, `js-cache`, `momentjs`, `routie`, `pako.js`, `upng.js`, and Bootstrap/Popper JS bundles (SCSS retained).
 * Removed the legacy site-config-tools `content-types` tool from blueprints and the sample config. Use `craftercms.components.ContentTypeManagement` (configured in `ui.xml`) instead.
 * Existing `form-control` and `form-datasource` plugin installations still target `site-config-tools.xml`. The new Type Builder does not read that file, so these entries may not appear until they are migrated. See https://github.com/craftersoftware/craftercms/issues/9277.
 * Removed `craftercms.components.LegacySiteToolsFrame`, the `/legacy-site-config` page (`cstudio-admin` console and its tool modules), and `site-config-tools.xml` tool loading. Use modern Site Tools widgets configured in `ui.xml` instead.

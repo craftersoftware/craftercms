@@ -1,7 +1,3 @@
-<#--  <#assign mode = RequestParameters["mode"] />  -->
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 <!--
   ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
   ~
@@ -18,66 +14,21 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html lang="en">
 <head>
+	<meta charset="utf-8"/>
+	<link rel="shortcut icon" href="/studio/static-assets/img/favicon.ico">
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<meta name="theme-color" content="#000000"/>
 	<title>${contentModel['internal-name']} - ${contentModel['common-title']!''}</title>
-
-	<#include "/templates/web/common/page-fragments/head.ftl" />
-	<#include "/templates/web/common/page-fragments/studio-context.ftl" />
-
 </head>
-
 <body>
-<#assign embedded = false />
-<#assign mode = 'default' />
-
-<#if RequestParameters.embedded?exists && RequestParameters.embedded == 'true'>
-	<#assign embedded = true />
-</#if>
-
-<#if RequestParameters.mode?exists && RequestParameters.mode == 'select'>
-	<#assign embedded = true />
-	<#assign mode = 'select' />
-</#if>
-
 <div id="root"></div>
-
 <#include "/static-assets/app/pages/legacy.html">
 <script>
-	<#if mode == 'select'>
-	const opener = window.opener ? window.opener : parent.iframeOpener;
-	const searchId = CStudioAuthoring.Utils.getQueryVariable(document.location.search, 'searchId');
-	const openerChildSearchMgr = opener.CStudioAuthoring.ChildSearchManager;
-	const searchConfig = openerChildSearchMgr.searches[searchId];
-	const callback = searchConfig.saveCallback;
-
-	const closeSearch = () => {
-		window.close();
-		$(window.frameElement.parentElement)
-			.closest('.studio-ice-dialog')
-			.parent()
-			.remove();
-	}
-	</#if>
-
 	document.addEventListener("CrafterCMS.CodebaseBridgeReady", () => {
-		CrafterCMSNext.render('#root', 'SearchPage', {
-			embedded: ${embedded?string},
-			mode: "${mode}",
-			<#if mode == 'select'>
-			onClose: closeSearch,
-			onAcceptSelection: (selectedItems) => {
-				const store = craftercms.getStore();
-				const siteId = store.getState().sites.active;
-				store.dispatch({ type: 'BLOCK_UI' });
-				craftercms.services.content.fetchItemsByPath(siteId, selectedItems, { castAsDetailedItem: true }).subscribe((items) => {
-					store.dispatch({ type: 'UNBLOCK_UI' });
-					callback.success('', items);
-					closeSearch();
-				});
-			}
-			</#if>
-		}, false);
+		CrafterCMSNext.render('#root', 'SearchPage', {}, false);
 	});
 </script>
 </body>

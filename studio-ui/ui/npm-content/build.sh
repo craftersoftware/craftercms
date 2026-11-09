@@ -30,12 +30,10 @@ mkdir "$libsDirectory/js-yaml"
 rsync -ar --delete ../../node_modules/js-yaml/dist/browser/js-yaml.umd.min.js "$libsDirectory/js-yaml/js-yaml.min.js"
 echo "Copied js-yaml assets"
 
-# bootstrap build
+# bootstrap build (SCSS only; JS bundles are unused after legacy head.ftl removal)
 rm -rf "$libsDirectory/bootstrap"
 mkdir "$libsDirectory/bootstrap"
 rsync -ar --delete ../../node_modules/bootstrap/scss/ "$libsDirectory/bootstrap/scss"
-rsync -ar --delete ../../node_modules/bootstrap/dist/js/bootstrap.min.js "$libsDirectory/bootstrap/bootstrap.min.js"
-rsync -ar --delete ../../node_modules/@popperjs/core/dist/umd/popper.min.js "$libsDirectory/bootstrap/popper.min.js"
 echo "Copied Bootstrap assets"
 
 # jquery-ui build
