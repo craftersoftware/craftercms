@@ -1056,7 +1056,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								contentTypes,
 								requestedSourceMapPaths,
 								dispatch,
-								completeActionCreator: fetchPrimaryGuestModelComplete,
+								completeActionCreator: fetchGuestModelsComplete,
 								permissions
 							});
 							hostToGuest$.next(duplicateItemOperationComplete());
