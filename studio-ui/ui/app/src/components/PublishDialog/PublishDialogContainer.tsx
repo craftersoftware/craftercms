@@ -22,8 +22,9 @@ import { InternalDialogState, itemsArrayChanged, PublishDialogContainerProps, us
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useDispatch, useSelector } from 'react-redux';
 import { calculatePackage, publish } from '../../services/publishing';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { isBlank } from '../../utils/string';
+import { getPublishSubmitReason, type PublishSubmitReason } from './publishSubmitReason';
 import { ContentItem, GlobalState, LightItem } from '../../models';
 import { createAtLeastHalfHourInFutureDate } from '../../utils/datetime';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
@@ -73,6 +74,22 @@ export function DependencyChip({ type }: { type: DependencyType }) {
 		/>
 	);
 }
+
+const publishSubmitReasonMessages = defineMessages<PublishSubmitReason>({
+	loading: { defaultMessage: 'Wait for the items to finish loading before publishing.' },
+	targetsFailed: { defaultMessage: 'Publishing targets could not be loaded. Retry before publishing.' },
+	noTarget: { defaultMessage: 'Wait for a publishing target to become available.' },
+	selectTarget: { defaultMessage: 'Select a publishing target to publish.' },
+	packageTitle: { defaultMessage: 'Enter a package title to publish.' },
+	submissionComment: { defaultMessage: 'Enter a submission comment to publish.' },
+	pendingDependencies: { defaultMessage: 'Apply or discard the dependency changes before publishing.' },
+	error: { defaultMessage: 'Resolve the error shown in this dialog before publishing.' },
+	pastSchedule: { defaultMessage: 'Choose a schedule time in the future.' },
+	emptyFolders: { defaultMessage: 'Select items that are not empty folders to publish.' },
+	dependenciesFailed: { defaultMessage: 'Dependency validation could not complete. Try again before publishing.' },
+	dependenciesPending: { defaultMessage: 'Wait for dependency validation to finish before publishing.' },
+	noPermission: { defaultMessage: 'This package has required references you do not have permission to publish.' }
+});
 
 export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const { items: initialItems, scheduling = 'now', onSuccess, onClose, isSubmitting } = props;
@@ -148,8 +165,6 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			(item) => !item.canRequestPublish && dependencyData.typeByPath[item.path] === 'hard'
 		);
 	}, [dependencyData, packageDependenciesFetchFailed]);
-	const dependencyValidationIncomplete =
-		packageDependenciesFetchFailed || (!dependencyData && Boolean(state.publishingTarget));
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
@@ -214,35 +229,27 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		return allItems.length > 0 && allItems.every((item) => item.systemType === 'folder');
 	}, [mainItems, childrenItems]);
 
-	// Submit button should be disabled when:
-	const submitDisabled =
-		// Detailed items haven't loaded
-		isFetchingItems ||
-		// While fetching dependencies
-		state.fetchingItems ||
-		!contentItems ||
-		// While submitting
-		isSubmitting ||
-		// If package title is blank
-		isBlank(state.packageTitle) ||
-		// If package comment is blank
-		isBlank(state.submissionComment) ||
-		// When there are no available/loaded publishing targets
-		!publishingTargets?.length ||
-		// When there are selected dependencies not applied.
-		Boolean(selectedDependenciesPaths?.length) ||
-		// When no publishing target is selected
-		!state.publishingTarget ||
-		// When there's an error
-		Boolean(state.error) ||
-		// The scheduled date is in the past
-		state.scheduledDateTime < new Date() ||
-		// All items to publish are empty folders.
-		arePublishingItemsFolders ||
-		// When dependency validation did not complete successfully
-		dependencyValidationIncomplete ||
-		// When there are hard dependencies without publish permission
-		hardDependenciesWithoutPublishPermission;
+	// The reason is the only list of conditions, so the button is disabled exactly when one is shown.
+	const publishSubmitReasonKey = getPublishSubmitReason({
+		isFetchingItems,
+		fetchingPackage: state.fetchingItems,
+		hasContentItems: Boolean(contentItems),
+		publishingTargetsFailed,
+		publishingTargetCount: publishingTargets?.length ?? null,
+		hasPublishingTarget: Boolean(state.publishingTarget),
+		packageTitle: state.packageTitle,
+		submissionComment: state.submissionComment,
+		pendingDependencyCount: selectedDependenciesPaths?.length ?? 0,
+		hasError: Boolean(state.error),
+		scheduling: state.scheduling,
+		scheduledDateTime: state.scheduledDateTime,
+		now: new Date(),
+		allItemsAreFolders: arePublishingItemsFolders,
+		dependenciesFetchFailed: packageDependenciesFetchFailed,
+		dependencyDataMissing: !dependencyData,
+		hardDependenciesWithoutPublishPermission
+	});
+	const submitDisabled = isSubmitting || publishSubmitReasonKey !== null;
 
 	useEffect(() => {
 		// Package calculation only runs once a target exists. Leaving fetchingItems true with no
@@ -388,58 +395,10 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 	const publishSubmitReasonId = useId();
-	// Visible reason for a disabled Publish/Schedule/Request Publish button. One object-literal
-	// formatMessage per branch so the formatjs babel plugin can inject message ids.
-	let publishSubmitReason = '';
-	if (!isSubmitting) {
-		if (isFetchingItems || !contentItems) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Wait for the items to finish loading before publishing.'
-			});
-		} else if (publishingTargetsFailed) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Publishing targets could not be loaded. Retry before publishing.'
-			});
-		} else if (publishingTargets && publishingTargets.length === 0) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
-		} else if (!state.publishingTarget && publishingTargets == null) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Wait for a publishing target to become available.' });
-		} else if (!state.publishingTarget) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Select a publishing target to publish.' });
-		} else if (state.fetchingItems) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Wait for the items to finish loading before publishing.'
-			});
-		} else if (isBlank(state.packageTitle)) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a package title to publish.' });
-		} else if (isBlank(state.submissionComment)) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Enter a submission comment to publish.' });
-		} else if (selectedDependenciesPaths?.length) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Apply or discard the dependency changes before publishing.'
-			});
-		} else if (state.error) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Resolve the error shown in this dialog before publishing.'
-			});
-		} else if (state.scheduledDateTime < new Date()) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Choose a schedule time in the future.' });
-		} else if (arePublishingItemsFolders) {
-			publishSubmitReason = formatMessage({ defaultMessage: 'Select items that are not empty folders to publish.' });
-		} else if (packageDependenciesFetchFailed) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Dependency validation could not complete. Try again before publishing.'
-			});
-		} else if (dependencyValidationIncomplete) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'Wait for dependency validation to finish before publishing.'
-			});
-		} else if (hardDependenciesWithoutPublishPermission) {
-			publishSubmitReason = formatMessage({
-				defaultMessage: 'This package has required references you do not have permission to publish.'
-			});
-		}
-	}
+	// Visible reason for a disabled Publish/Schedule/Request Publish button. Hidden while submitting,
+	// since the button shows its own progress then.
+	const publishSubmitReason =
+		!isSubmitting && publishSubmitReasonKey ? formatMessage(publishSubmitReasonMessages[publishSubmitReasonKey]) : '';
 
 	const onDependencyCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
