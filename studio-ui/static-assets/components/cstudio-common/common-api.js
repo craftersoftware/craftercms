@@ -6661,9 +6661,7 @@ CStudioAuthoring.FilesDiff = {
 function getTopLegacyWindow(nextWindow) {
   try {
     if (nextWindow === window.top) return nextWindow;
-    else if (nextWindow && nextWindow.IS_LEGACY_TOP_WINDOW) {
-      return nextWindow;
-    } else if (nextWindow) {
+    else if (nextWindow) {
       return getTopLegacyWindow(nextWindow.parent);
     } else {
       return getTopLegacyWindow(window);
