@@ -125,7 +125,6 @@ import {
 import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import { FormSaveAttemptedContext, FormValidationAnnouncerContext } from './lib/fieldA11y';
-import { SkipToActionsLink } from '../SkipToActionsLink';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -963,7 +962,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
-	const formActionsId = useId();
 	const validationAlertId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
@@ -1731,16 +1729,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 			// top/bottom margins (2 top, 2 bottom). If not a dialog, take up the whole screen.
 			targetHeight={getTargetHeight(isDialog, isFullScreen, theme)}
 			headerFragment={
-				<Box
-					id="header"
-					sx={{
-						minHeight: 50,
-						position: 'relative',
-						containerType: 'inline-size',
-						containerName: formHeaderContainerName
-					}}
-				>
-					<SkipToActionsLink targetId={formActionsId} scopeRef={containerRef} />
+				<Box id="header" sx={{ minHeight: 50, containerType: 'inline-size', containerName: formHeaderContainerName }}>
 					<Box
 						component={Container}
 						sx={{
@@ -1906,14 +1895,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Grid>
 						<Grid size="grow">
 							<StickyBox
-								id={formActionsId}
-								role="region"
-								tabIndex={-1}
-								aria-label={formatMessage({ defaultMessage: 'Form actions' })}
 								className="space-y"
 								sx={{
 									height: 'auto',
-									scrollMarginTop: 8,
 									// overflow-y:auto computes overflow-x to auto and clips the paper shadow.
 									// The negative margin moves that edge out; the padding puts the content back.
 									mx: -1,

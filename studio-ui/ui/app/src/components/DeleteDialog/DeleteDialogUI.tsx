@@ -14,11 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useId } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import React from 'react';
+import { FormattedMessage } from 'react-intl';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
-import { SkipToActionsLink } from '../SkipToActionsLink';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
 import DeleteDialogUIBody from './DeleteDialogUIBody';
@@ -51,11 +50,8 @@ export function DeleteDialogUI(props: DeleteDialogUIProps) {
 		onConfirmDeleteChange,
 		onEditDependantClick
 	} = props;
-	const { formatMessage } = useIntl();
-	const deleteActionsId = useId();
 	return (
 		<>
-			<SkipToActionsLink targetId={deleteActionsId} />
 			<DialogBody minHeight>
 				{error || submitError ? (
 					<ApiResponseErrorState error={error ?? submitError} onButtonClick={() => setSubmitError(null)} />
@@ -80,12 +76,7 @@ export function DeleteDialogUI(props: DeleteDialogUIProps) {
 					/>
 				)}
 			</DialogBody>
-			<DialogFooter
-				id={deleteActionsId}
-				tabIndex={-1}
-				role="group"
-				aria-label={formatMessage({ defaultMessage: 'Delete actions' })}
-			>
+			<DialogFooter>
 				<SecondaryButton onClick={onCloseButtonClick} disabled={isDisabled}>
 					<FormattedMessage id="words.cancel" defaultMessage="Cancel" />
 				</SecondaryButton>
