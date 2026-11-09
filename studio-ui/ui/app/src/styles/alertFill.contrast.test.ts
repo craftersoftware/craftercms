@@ -32,8 +32,9 @@ import { getStudioPaletteOptions } from './palette.ts';
 
 const SEVERITIES = ['error', 'warning', 'info', 'success'] as const;
 
-// MUI's dark-mode `text.primary` is rgba(0, 0, 0, 0.87); the label is composited over the fill.
+// MUI's two label colours: dark.text.primary is rgba(0, 0, 0, 0.87) and light.text.primary is white.
 const DARK_TEXT = { r: 0, g: 0, b: 0, a: 0.87 };
+const LIGHT_TEXT = '#FFFFFF';
 
 const parse = (colour: string) => {
 	const m = colour.match(/rgba?\(([^)]+)\)/);
@@ -71,8 +72,23 @@ const ratio = (fg: string | { r: number; g: number; b: number }, bg: string) => 
 	return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 };
 
-/** MUI's `getContrastText` at contrastThreshold 4.5, which is what the theme sets. */
-const contrastText = (background: string) => (ratio('#000000', background) >= 4.5 ? DARK_TEXT : '#FFFFFF');
+/**
+ * MUI 9.5's `getContrastText` at the contrastThreshold 4.5 the theme sets. It tests the dark (black) label
+ * first and falls back to the light (white) one:
+ *   getContrastRatio(background, dark.text.primary) >= contrastThreshold ? dark : light
+ * So white is the check that runs on every dark-mode fill, and black is the fallback. Getting this order
+ * wrong would label a mid-tone fill with black when MUI labels it white.
+ */
+const contrastText = (background: string) => (ratio(DARK_TEXT, background) >= 4.5 ? DARK_TEXT : LIGHT_TEXT);
+
+describe('contrastText follows MUI getContrastText', () => {
+	it('checks the dark label first, as MUI does', () => {
+		// #FF7A73: black is 7.6:1, so MUI keeps the dark label rather than switching to white (4.8:1).
+		assert.deepEqual(contrastText('#FF7A73'), DARK_TEXT);
+		// #0068DA: black is 3.67:1, under the threshold, so MUI falls back to white (5.26:1).
+		assert.equal(contrastText('#0068DA'), LIGHT_TEXT);
+	});
+});
 
 describe('filled Alert label contrast (WCAG 2.1 SC 1.4.3, 4.5:1)', () => {
 	for (const mode of ['light', 'dark'] as const) {

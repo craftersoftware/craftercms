@@ -77,6 +77,7 @@ declare module '@mui/material/styles' {
 		purple: StudioPaletteColor;
 		pink: StudioPaletteColor;
 		border: { control: string };
+		icon: { muted: string };
 	}
 	interface PaletteOptions {
 		yellow?: StudioPaletteColor;
@@ -84,6 +85,7 @@ declare module '@mui/material/styles' {
 		purple?: StudioPaletteColor;
 		pink?: StudioPaletteColor;
 		border?: { control: string };
+		icon?: { muted: string };
 	}
 }
 
@@ -108,7 +110,10 @@ export function getStudioPaletteOptions(mode: StudioPaletteMode): PaletteOptions
 		// (3.49:1 on the light surfaces and 3.17:1 on the darkest dialog surface).
 		pink: { main: palette.pink.main },
 		// 3.26:1 on paper and 3.12:1 on background.default: the boundary of a control (1.4.11).
-		border: { control: palette.gray.medium3 }
+		border: { control: palette.gray.medium3 },
+		// The same value, named for the other job it does: a muted icon that has no state of its own
+		// (folder, not in workflow, no publishing target). An alias, not a second colour.
+		icon: { muted: palette.gray.medium3 }
 	};
 }
 

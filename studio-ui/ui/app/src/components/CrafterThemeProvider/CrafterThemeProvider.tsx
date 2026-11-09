@@ -86,9 +86,12 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				MuiSwitch: {
 					styleOverrides: {
 						// The default 38% / 50% tracks are 2.2:1 to 2.7:1 on white. 1.4.11 needs 3:1.
+						// `:not(.Mui-disabled)` leaves MUI's own disabled track rules in charge, so a read-only
+						// checked switch (FormsEngine's checkbox control uses one) keeps its disabled look
+						// instead of a full-strength track. 1.4.11 exempts disabled controls, so nothing is lost.
 						root: ({ ownerState, theme }) => ({
 							'& .MuiSwitch-track': { opacity: 1, backgroundColor: theme.palette.border.control },
-							'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+							'& .MuiSwitch-switchBase.Mui-checked:not(.Mui-disabled) + .MuiSwitch-track': {
 								opacity: 1,
 								backgroundColor:
 									ownerState.color === 'default'

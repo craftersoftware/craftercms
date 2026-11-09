@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -87,9 +87,9 @@ export function overlayBoundarySx(theme: OverlayTheme, stateColour: string): CSS
  * marker. From the page inwards: page | white 1px | black 1px | state colour. The white band is a box
  * shadow outside the black border, and the state colour is the element's own fill.
  *
- * The order is the reverse of the hollow-box case on purpose. A filled line has no outline to sit between
- * the bands, so the state colour is immediately inside the black band, which is the neighbour it has to
- * clear 3:1 against: the light tints are only 1.78:1 to 2.54:1 on white.
+ * The band order is the same as the hollow-box case: white outside, black inside. A filled line has no
+ * outline to sit between the bands, so the state colour is immediately inside the black band, which is the
+ * neighbour it has to clear 3:1 against: the light tints are only 1.78:1 to 2.54:1 on white.
  *
  * Only the white band touches the page. The guarantee above still holds, but for a different reason:
  * against any page one of the two bands reads, and the band that merges into the page just moves the

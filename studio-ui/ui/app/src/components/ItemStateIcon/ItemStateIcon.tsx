@@ -66,7 +66,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 		if (item.systemType === 'folder') {
 			return {
 				Icon: NotInWorkflowIcon,
-				stateSpecificSx: { color: 'border.control', ...sxs?.stateNotInWorkflow }
+				stateSpecificSx: { color: 'icon.muted', ...sxs?.stateNotInWorkflow }
 			};
 		}
 		let map: { [key in ItemStates]: any };
@@ -151,7 +151,7 @@ export function ItemStateIcon(props: ItemStateIconProps) {
 			map[getItemStateId(item.stateMap)] ?? {
 				Icon: NotInWorkflowIcon,
 				stateSpecificClass: classes?.stateNotInWorkflow,
-				stateSpecificSx: { color: 'border.control', ...sxs?.stateNotInWorkflow }
+				stateSpecificSx: { color: 'icon.muted', ...sxs?.stateNotInWorkflow }
 			}
 		);
 	}, [sxs, classes, item]);
