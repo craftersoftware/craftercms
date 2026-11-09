@@ -29,7 +29,7 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
 import Tooltip from '@mui/material/Tooltip';
 import useContentTypes from '../../../hooks/useContentTypes';
@@ -122,6 +122,10 @@ import { MenuList } from '@mui/material';
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
+const nodeSelectorMessages = defineMessages({
+	addItemsToField: { defaultMessage: 'Add items to {field}' }
+});
+
 export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
 export interface NodeSelectorItem {
@@ -188,6 +192,7 @@ function getInitialCreatePickerValue(
 
 function NodeSelector(props: NodeSelectorProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -762,6 +767,8 @@ function NodeSelector(props: NodeSelectorProps) {
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
+								// The tooltip sits on the wrapping span, so it does not name the button.
+								aria-label={formatMessage(nodeSelectorMessages.addItemsToField, { field: field.name })}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {
