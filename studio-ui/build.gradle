@@ -59,7 +59,6 @@ tasks.named('clean') {
 	delete 'node_modules'
 	delete 'ui/guest/node_modules'
 	delete 'ui/app/node_modules'
-	delete 'ui/legacy/node_modules'
 	delete 'ui/npm-content/node_modules'
 	delete 'ui/uppy/node_modules'
 	delete 'ui/scss/node_modules'
