@@ -1578,10 +1578,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case contentEvent.type: {
 					const { user: person, targetPath } = payload as SocketEventBase;
 					const { theme } = upToDateRefs.current;
+					// Only the active page (path or primary model id) — not every loaded model on the page.
 					if (
 						person.username !== user.username &&
 						guest &&
-						(guest.path === targetPath || guest.modelIdByPath[targetPath])
+						(guest.path === targetPath || guest.modelIdByPath?.[targetPath] === guest.modelId)
 					) {
 						enqueueSnackbar(
 							formatMessage(guestMessages.contentWasChangedByAnotherUser, {
