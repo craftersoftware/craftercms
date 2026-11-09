@@ -52,7 +52,7 @@
 
 	<bean id="crafter.studioSiteListResolver" class="org.craftercms.engine.service.context.StudioSiteListResolver">
 		<constructor-arg name="studioUrl" value="${crafter.engine.studio.url:}"/>
-		<constructor-arg name="managementToken" value="${crafter.engine.studio.managementToken:}"/>
+		<constructor-arg name="managementToken" value="${crafter.engine.studio.siteManagementToken:}"/>
 		<constructor-arg name="connectTimeout" value="${crafter.engine.studio.connectTimeout:5000}"/>
 		<constructor-arg name="readTimeout" value="${crafter.engine.studio.readTimeout:10000}"/>
 	</bean>
@@ -117,7 +117,7 @@
 	     keep crafter.siteListResolver (Studio first, then S3, with the longer timeouts). -->
 	<bean id="crafter.healthCheckStudioSiteListResolver" class="org.craftercms.engine.service.context.StudioSiteListResolver">
 		<constructor-arg name="studioUrl" value="${crafter.engine.studio.url:}"/>
-		<constructor-arg name="managementToken" value="${crafter.engine.studio.managementToken:}"/>
+		<constructor-arg name="managementToken" value="${crafter.engine.studio.siteManagementToken:}"/>
 		<constructor-arg name="connectTimeout" value="${crafter.engine.studio.healthCheck.connectTimeout:200}"/>
 		<constructor-arg name="readTimeout" value="${crafter.engine.studio.healthCheck.readTimeout:200}"/>
 	</bean>

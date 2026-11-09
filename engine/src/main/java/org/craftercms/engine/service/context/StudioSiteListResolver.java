@@ -66,7 +66,7 @@ public class StudioSiteListResolver implements SiteListResolver {
 		boolean hasToken = StringUtils.isNotBlank(managementToken);
 		if (hasUrl != hasToken) {
 			logger.warn("Studio site list is not used: crafter.engine.studio.url and "
-				+ "crafter.engine.studio.managementToken must both be set");
+				+ "crafter.engine.studio.siteManagementToken must both be set");
 		}
 		this.readTimeout = Duration.ofMillis(readTimeout);
 		this.objectMapper = new ObjectMapper();

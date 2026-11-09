@@ -156,6 +156,7 @@ public interface StudioConfiguration {
 	String CONFIGURATION_SITE_DEFAULT_AUTHORING_URL = "studio.configuration.site.defaultAuthoringUrl";
 	String CONFIGURATION_SITE_DEFAULT_GRAPHQL_SERVER_URL = "studio.configuration.site.defaultGraphqlServerUrl";
 	String CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN = "studio.configuration.management.authorizationToken";
+	String CONFIGURATION_MANAGEMENT_SITE_MANAGEMENT_TOKEN = "studio.configuration.management.siteManagementToken";
 	String CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN =
 			"studio.configuration.management.previewAuthorizationToken";
 	String CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN =
