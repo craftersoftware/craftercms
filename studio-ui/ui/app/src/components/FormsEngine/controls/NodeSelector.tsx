@@ -93,6 +93,7 @@ import {
 import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
 import { ReorderMoveButton } from '../components/ReorderMoveButton';
+import { ReorderAnnouncement } from '../components/ReorderAnnouncement';
 import type { TItem } from '../components/SortableList';
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
@@ -214,7 +215,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	useFetchContentItems(value.flatMap((item) => item.include ?? []));
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
-	const { rootRef, remember } = useReorderFocus(value);
+	const { rootRef, remember, announcement } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
 	const sortItems = useMemo(
@@ -353,7 +354,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			);
 		}
 	};
-	const handleItemKeyDown = (e: KeyDownEvent, index: number) => {
+	const handleItemKeyDown = (e: KeyDownEvent, index: number, itemLabel: string) => {
 		if (readonly && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) {
 			return;
 		}
@@ -365,7 +366,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				if (!readonly) setValue(newList);
 			},
 			(itemIndex, edit) => handleEditItem(e, itemIndex, edit && !readonly),
-			(nextIndex) => remember(nextIndex, 'row')
+			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
 	};
 	const applyDataSourceSelection = (
@@ -878,7 +879,7 @@ function NodeSelector(props: NodeSelectorProps) {
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
 											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
-											onKeyDown={(e) => handleItemKeyDown(e, index)}
+											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel)}
 										>
 											<ListItemText
 												primary={
@@ -914,7 +915,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
-															remember(next, 'up');
+															remember(next, 'up', itemLabel);
 															sortableListActionProcessor('up', false, value, index, setValue);
 														}}
 													>
@@ -930,7 +931,7 @@ function NodeSelector(props: NodeSelectorProps) {
 															if (next == null) {
 																return;
 															}
-															remember(next, 'down');
+															remember(next, 'down', itemLabel);
 															sortableListActionProcessor('down', false, value, index, setValue);
 														}}
 													>
@@ -1011,6 +1012,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							}}
 						/>
 					)}
+					<ReorderAnnouncement message={announcement} />
 				</FieldBox>
 			</FormsEngineField>
 		</>

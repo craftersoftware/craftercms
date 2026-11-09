@@ -14,7 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { defineMessages, useIntl } from 'react-intl';
 import { ListItemButtonProps } from '@mui/material/ListItemButton';
 
 export type KeyDownEvent = Parameters<ListItemButtonProps['onKeyDown']>[0];
@@ -112,8 +113,18 @@ export function sortableListActionProcessor<T = unknown>(
 	onChange(newList);
 }
 
-/** After a reorder, focus the control that belongs to the moved item. */
+const reorderMessages = defineMessages({
+	moved: { defaultMessage: 'Moved {name} to position {position} of {total}' }
+});
+
+/**
+ * After a reorder, focus the control that belongs to the moved item. With a `name`, `remember` also sets
+ * `announcement`, the text for a polite live region (see ReorderAnnouncement), since the new position is not read
+ * otherwise.
+ */
 export function useReorderFocus<T>(list: T[]) {
+	const { formatMessage } = useIntl();
+	const [announcement, setAnnouncement] = useState('');
 	const rootRef = useRef<HTMLUListElement | null>(null);
 	const pendingRef = useRef<{ index: number; control: string } | null>(null);
 	useLayoutEffect(() => {
@@ -134,10 +145,14 @@ export function useReorderFocus<T>(list: T[]) {
 			}
 		}
 	}, [list]);
-	const remember = (index: number, control: string) => {
+	/** `name` is the moved item's label. Leave it out when nothing moved (a remove). A move keeps the list length. */
+	const remember = (index: number, control: string, name?: string) => {
 		pendingRef.current = { index, control };
+		if (name !== undefined) {
+			setAnnouncement(formatMessage(reorderMessages.moved, { name, position: index + 1, total: list.length }));
+		}
 	};
-	return { rootRef, remember };
+	return { rootRef, remember, announcement };
 }
 
 const occurrenceIds = new WeakMap<object, number>();

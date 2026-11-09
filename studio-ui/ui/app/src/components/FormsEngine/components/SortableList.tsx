@@ -28,6 +28,7 @@ import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRound
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import { destinationIndex, sortableListActionProcessor, useReorderFocus } from '../lib/sortableListUtil';
 import { ReorderMoveButton } from './ReorderMoveButton';
+import { ReorderAnnouncement } from './ReorderAnnouncement';
 
 // Adapted from:
 // https://stackblitz.com/github/alexreardon/pdnd-react-tailwind
@@ -336,7 +337,7 @@ function SortableItem({
 
 export function SortableList({ items, onChange, selectedItemId, onlySelectedSortable }: SortableListProps) {
 	const onChangeRef = useUpdateRefs(onChange);
-	const { rootRef, remember } = useReorderFocus(items);
+	const { rootRef, remember, announcement } = useReorderFocus(items);
 	useEffect(() => {
 		return monitorForElements({
 			canMonitor({ source }) {
@@ -402,23 +403,26 @@ export function SortableList({ items, onChange, selectedItemId, onlySelectedSort
 		if (next == null) {
 			return;
 		}
-		remember(next, control);
+		remember(next, control, items[index].value);
 		sortableListActionProcessor(direction, toEdge, items, index, onChange);
 	};
 	return (
-		<List ref={rootRef} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
-			{items.map((item, index) => (
-				<SortableItem
-					key={item.key}
-					item={item}
-					index={index}
-					count={items.length}
-					selected={item.key === selectedItemId}
-					sortable={onlySelectedSortable ? item.key === selectedItemId : true}
-					onMove={onMove}
-				/>
-			))}
-		</List>
+		<>
+			<List ref={rootRef} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 1 }}>
+				{items.map((item, index) => (
+					<SortableItem
+						key={item.key}
+						item={item}
+						index={index}
+						count={items.length}
+						selected={item.key === selectedItemId}
+						sortable={onlySelectedSortable ? item.key === selectedItemId : true}
+						onMove={onMove}
+					/>
+				))}
+			</List>
+			<ReorderAnnouncement message={announcement} />
+		</>
 	);
 }
 

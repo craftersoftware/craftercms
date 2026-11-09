@@ -40,6 +40,7 @@ import {
 	useRestoreFocusWhenEmpty
 } from '../lib/sortableListUtil';
 import { ReorderMoveButton } from '../components/ReorderMoveButton';
+import { ReorderAnnouncement } from '../components/ReorderAnnouncement';
 import Tooltip from '@mui/material/Tooltip';
 import { lazy, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar, { avatarClasses } from '@mui/material/Avatar';
@@ -148,7 +149,7 @@ export function Repeat(props: RepeatProps) {
 			: formatMessage(repeatMessages.addItems);
 	// Delete's tooltip is its name, or this reason while delete is disabled.
 	const minimumTooltip = formatMessage(repeatMessages.minRequired, { min: minimum });
-	const { rootRef, remember } = useReorderFocus(value);
+	const { rootRef, remember, announcement } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useMemo(() => rowKeysFor(itemKeys, value), [itemKeys, value]);
 	// Row actions pass the row's render index. An item stored twice then acts on the occurrence that was clicked.
@@ -176,7 +177,7 @@ export function Repeat(props: RepeatProps) {
 		if (index === -1) return;
 		const next = destinationIndex(action, moveToEdge, index, stored.length);
 		if (next == null) return;
-		remember(next, control);
+		remember(next, control, getRepeatItemTitle(item, displayFieldIds));
 		sortableListActionProcessor(action, moveToEdge, stored, index, setValue);
 	};
 	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
@@ -285,7 +286,7 @@ export function Repeat(props: RepeatProps) {
 																storedIndex,
 																setValue,
 																() => handleEditItem(item, index),
-																(nextIndex) => remember(nextIndex, 'row')
+																(nextIndex) => remember(nextIndex, 'row', itemLabel)
 															);
 														}
 													: undefined
@@ -382,6 +383,7 @@ export function Repeat(props: RepeatProps) {
 							</span>
 						</Tooltip>
 					)}
+					<ReorderAnnouncement message={announcement} />
 				</FieldBox>
 			</FormsEngineField>
 		</>
