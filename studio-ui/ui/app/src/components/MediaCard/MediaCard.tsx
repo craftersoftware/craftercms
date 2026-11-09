@@ -29,6 +29,8 @@ import { PartialSxRecord } from '../../models/CustomRecord';
 import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx';
 import { consolidateSx } from '../../utils/system';
 import { useIntl } from 'react-intl';
+import type { KeyboardEvent } from 'react';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 export type MediaCardViewModes = 'card' | 'compact' | 'row';
 
@@ -43,6 +45,12 @@ export interface MediaCardProps {
 	action?: CardHeaderProps['action'];
 	avatar?: CardHeaderProps['avatar'];
 	disableSelection?: boolean;
+	/**
+	 * Single selection without the checkbox. When set together with `onClick`, the card header is a toggle
+	 * button in the tab order: Enter or Space runs `onClick`, and `aria-pressed` reports this value.
+	 * Clicking the card works as before.
+	 */
+	isSelected?: boolean;
 	classes?: Partial<Record<MediaCardClassKey, string>>;
 	sxs?: PartialSxRecord<MediaCardClassKey>;
 	onClick?(e): void;
@@ -69,9 +77,11 @@ function MediaCard(props: MediaCardProps) {
 		onDragEnd,
 		viewMode = 'card',
 		disableSelection,
+		isSelected,
 		sxs
 	} = props;
 	// endregion
+	const keyboardSelectable = typeof isSelected === 'boolean' && Boolean(onClick) && !onSelect;
 	let { name, path, type } = item;
 	if (item.mimeType.includes('audio/')) {
 		type = 'Audio';
@@ -165,7 +175,25 @@ function MediaCard(props: MediaCardProps) {
 		>
 			<CardHeader
 				classes={{ root: props.classes?.cardHeader }}
-				sx={{ alignSelf: 'center', ...sxs?.cardHeader }}
+				sx={{
+					alignSelf: 'center',
+					// Inset, because the card clips anything drawn outside it.
+					...(keyboardSelectable && { '&:focus-visible': getFocusRingSx({ inset: true }) }),
+					...sxs?.cardHeader
+				}}
+				{...(keyboardSelectable
+					? {
+							role: 'button',
+							tabIndex: 0,
+							'aria-pressed': isSelected,
+							'aria-disabled': disableSelection || undefined,
+							onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+								if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+								e.preventDefault();
+								if (!disableSelection) onClick(e);
+							}
+						}
+					: {})}
 				avatar={
 					onSelect ? (
 						<FormGroup className={props.classes?.checkbox} sx={sxs?.checkbox}>

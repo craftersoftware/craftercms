@@ -374,6 +374,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 											disableSelection={disableChangePreselected && isPreselected}
 											selected={multiSelect ? [...selectedArray] : []}
 											onSelect={multiSelect ? onSelect : null}
+											isSelected={multiSelect ? undefined : item.path === selectedCard?.path}
 											onPreview={onPreviewImage ? () => onPreviewImage(item) : null}
 											previewAppBaseUri={guestBase}
 											onClick={() => !(disableChangePreselected && isPreselected) && onCardSelected(item)}
