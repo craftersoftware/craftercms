@@ -374,9 +374,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
-	const uiConfigLoaded = uiConfig.isFetching === false;
-	// Hold guest model parsing until UI config is in, so the lookup from useContentTypes is already merged.
-	const contentTypes = uiConfigLoaded ? loadedContentTypes : null;
+	const contentTypes = loadedContentTypes;
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();
