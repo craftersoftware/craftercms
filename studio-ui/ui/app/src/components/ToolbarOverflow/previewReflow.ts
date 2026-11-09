@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** 400% zoom on a 1280px window. WCAG 2.2 SC 1.4.10 reflow width. */
+/** 400% zoom on a 1280px window. WCAG 2.1 SC 1.4.10 reflow width. */
 export const PREVIEW_REFLOW_NARROW_QUERY = '@media (max-width: 320px)';
 
 /**
