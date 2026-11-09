@@ -62,6 +62,10 @@ export function sortableListKeyDownHandler<T = unknown>(
 	onOpen: (index: number, edit: boolean) => void,
 	onMoved?: (nextIndex: number) => void
 ): void {
+	// Leave browser and OS shortcuts alone (Ctrl/Cmd+E, Alt+Arrow, Cmd+Arrow). Shift is move-to-edge, so it stays.
+	if (event.ctrlKey || event.metaKey || event.altKey) {
+		return;
+	}
 	const action = sortingKeyToActionMap[event.key];
 	if (
 		// Not a key we're working with.

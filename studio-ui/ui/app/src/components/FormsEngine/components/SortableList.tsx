@@ -270,6 +270,9 @@ function SortableItem({
 					onKeyDown={
 						sortable && count > 1
 							? (event) => {
+									if (event.ctrlKey || event.metaKey || event.altKey) {
+										return;
+									}
 									if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
 										event.preventDefault();
 										event.stopPropagation();
