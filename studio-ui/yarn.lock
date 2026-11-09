@@ -2115,12 +2115,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@craftercms/npm-content@workspace:ui/npm-content"
   dependencies:
-    "@popperjs/core": "npm:^2.11.8"
-    "@types/bootstrap": "npm:^5.2.11"
     "@types/jquery": "npm:^3.5.34"
     "@types/rimraf": "npm:^4.0.5"
     ace-builds: "npm:^1.45.2"
-    bootstrap: "npm:^5.3.8"
     build-if-changed: "npm:^1.5.5"
     css-loader: "npm:^7.1.5"
     file-loader: "npm:^6.2.0"
@@ -3814,7 +3811,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@popperjs/core@npm:^2.11.8, @popperjs/core@npm:^2.9.2":
+"@popperjs/core@npm:^2.11.8":
   version: 2.11.8
   resolution: "@popperjs/core@npm:2.11.8"
   checksum: 10/ddd16090cde777aaf102940f05d0274602079a95ad9805bd20bc55dcc7c3a2ba1b99dd5c73e5cc2753c3d31250ca52a67d58059459d7d27debb983a9f552936c
@@ -5424,15 +5421,6 @@ __metadata:
   dependencies:
     "@babel/types": "npm:^7.28.2"
   checksum: 10/371c5e1b40399ef17570e630b2943617b84fafde2860a56f0ebc113d8edb1d0534ade0175af89eda1ae35160903c33057ed42457e165d4aa287fedab2c82abcf
-  languageName: node
-  linkType: hard
-
-"@types/bootstrap@npm:^5.2.11":
-  version: 5.2.11
-  resolution: "@types/bootstrap@npm:5.2.11"
-  dependencies:
-    "@popperjs/core": "npm:^2.9.2"
-  checksum: 10/9d613df4b6701f51a64ff61ab8220bfbf3cd6904b1f3e902f986b8af9be59607e80deb0a14579d6710343e3be23227f95e2d953d325168033215c0490316659d
   languageName: node
   linkType: hard
 
@@ -7192,15 +7180,6 @@ __metadata:
   version: 1.0.0
   resolution: "boolbase@npm:1.0.0"
   checksum: 10/3e25c80ef626c3a3487c73dbfc70ac322ec830666c9ad915d11b701142fab25ec1e63eff2c450c74347acfd2de854ccde865cd79ef4db1683f7c7b046ea43bb0
-  languageName: node
-  linkType: hard
-
-"bootstrap@npm:^5.3.8":
-  version: 5.3.8
-  resolution: "bootstrap@npm:5.3.8"
-  peerDependencies:
-    "@popperjs/core": ^2.11.8
-  checksum: 10/ca36e1816940ee424b91f3a534e7a359c1f180da00e92c650b92a9c2621a1ca24ee71a0886666675718b58527f9193cd0ead934da7a92108224013fa07bec2d2
   languageName: node
   linkType: hard
 
