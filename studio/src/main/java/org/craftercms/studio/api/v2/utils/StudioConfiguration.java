@@ -137,6 +137,11 @@ public interface StudioConfiguration {
 	String CONFIGURATION_SITE_ROLE_MAPPINGS_FILE_NAME = "studio.configuration.site.roleMappingsFileName";
 	String CONFIGURATION_SITE_CONTENT_TYPES_CONFIG_FILE_NAME = "studio.configuration.site.contentTypes.configFileName";
 	String CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL = "studio.configuration.site.preview.destroy.context.url";
+	/**
+	 * Site id suffix appended for a site's staging publishing target.
+	 * Must match the suffix recognized by {@code crafter.engine.site.staging.pattern}.
+	 */
+	String CONFIGURATION_SITE_STAGING_ID_SUFFIX = "studio.configuration.site.staging.idSuffix";
 	String CONFIGURATION_DEFAULT_DEPENDENCY_RESOLVER_CONFIG_FILE_NAME =
 		"studio.configuration.default.dependencyResolver.configFileName";
 	String CONFIGURATION_DEFAULT_DEPENDENCY_RESOLVER_CONFIG_BASE_PATH =

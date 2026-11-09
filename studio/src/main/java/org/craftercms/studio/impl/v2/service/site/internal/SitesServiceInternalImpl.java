@@ -104,6 +104,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLUE_PRINTS
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.GLOBAL_REPO_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BASE_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BLUEPRINTS_DESCRIPTOR_FILENAME;
@@ -140,11 +141,6 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	private final static Logger logger = LoggerFactory.getLogger(SitesServiceInternalImpl.class);
 	// This will become remoteName:remoteBranch
 	private static final String REMOTE_REPOSITORY_AUDIT_FORMAT = "%s/%s";
-	/**
-	 * Site id suffix Engine uses to render a site's staging publishing target.
-	 * Matches {@code crafter.engine.site.staging.pattern}.
-	 */
-	private static final String STAGING_SITE_ID_SUFFIX = "-staging";
 
 	private final PluginDescriptorReader descriptorReader;
 	private StudioBlobAwareContentRepository blobAwareRepository;
@@ -662,11 +658,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	@Override
 	public List<String> getDeliverableSiteIds() {
 		List<String> deliverableSiteIds = new ArrayList<>();
+		String stagingSiteIdSuffix = studioConfiguration.getProperty(CONFIGURATION_SITE_STAGING_ID_SUFFIX);
 		for (String siteId : siteDao.getDeliverableSiteIds()) {
 			deliverableSiteIds.add(siteId);
 			try {
 				if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
-					deliverableSiteIds.add(siteId + STAGING_SITE_ID_SUFFIX);
+					deliverableSiteIds.add(siteId + stagingSiteIdSuffix);
 				}
 			} catch (SiteNotFoundException e) {
 				// Here we know the site exists, so this should not really happen

@@ -226,6 +226,9 @@ studio.configuration.site.contentTypes.configFileName: config.xml
 studio.configuration.site.contentTypes.definitionFileName: form-definition.xml
 # Destroy site context url for preview engine
 studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}&token=${studio.configuration.management.previewAuthorizationToken}
+# Site id suffix appended when listing a site's staging publishing target.
+# Must match the suffix recognized by crafter.engine.site.staging.pattern.
+studio.configuration.site.staging.idSuffix: -staging
 # Location pattern where default dependency resolver specific configuration for is stored
 studio.configuration.default.dependencyResolver.configBasePath: /configuration/dependency
 # File name where default dependency specific configuration is stored
