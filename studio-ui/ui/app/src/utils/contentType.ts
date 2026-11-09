@@ -331,6 +331,12 @@ export const componentsDataSourceContentTypesPropertyNames = [
  * Form-definition XML is one source for `additionalFields`. Control descriptors in the site UI
  * config are the other (including controls whose form def was saved before that tag existed).
  * Merge them onto the lookup `parseContentXML` receives so every caller shares one result.
+ *
+ * Old form defs must keep working before re-save: callers that parse content (Preview,
+ * `fetchContentInstanceDescriptor`, dialogs via `useContentTypes`) should run this merge.
+ * Preview must not stall guest load waiting on UI config solely to silence companion-field
+ * logs — emit content types as soon as `byId` is ready and re-issue the descriptor request
+ * when a later merged lookup arrives.
  */
 export function addConfiguredAdditionalFields(
 	contentTypes: LookupTable<ContentType>,

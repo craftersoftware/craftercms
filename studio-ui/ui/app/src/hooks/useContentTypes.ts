@@ -35,6 +35,7 @@ export function useContentTypes(): LookupTable<ContentType> {
 		}
 	}, [dispatch, site, byId, isFetching]);
 
+	// Return `byId` immediately so Preview is not held on UI config; merge once controls load.
 	return useMemo(
 		() => (uiConfig.isFetching === false ? addConfiguredAdditionalFields(byId, uiConfig.controls) : byId),
 		[byId, uiConfig.isFetching, uiConfig.controls]

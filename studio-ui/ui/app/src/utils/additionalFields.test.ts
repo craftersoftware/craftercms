@@ -30,6 +30,7 @@ const { buildContentTypeXml, prepareSerializeToXmlTypeObject } =
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('./xml.ts');
 const { parseContentXML } = await import('./content.ts');
 const { addConfiguredAdditionalFields } = await import('./contentType.ts');
+const { createLookupTable } = await import('./object.ts');
 
 function namedList<T>(value: T | T[] | null | undefined): T[] {
 	if (value == null) return [];
@@ -145,6 +146,32 @@ describe('additionalFields form-definition round trip', () => {
 	});
 });
 
+const pluginControls = {
+	'backup-control': { metadata: { additionalFields: ['{id}_bk'] } }
+};
+
+const articleWithoutPersistedAdditionalFields = {
+	id: '/page/article',
+	fields: {
+		title_s: {
+			id: 'title_s',
+			name: 'Title',
+			type: 'backup-control',
+			validations: {},
+			properties: {},
+			defaultValue: ''
+		},
+		publishDate_dt: {
+			id: 'publishDate_dt',
+			name: 'Publish Date',
+			type: 'date-time',
+			validations: {},
+			properties: {},
+			defaultValue: ''
+		}
+	}
+};
+
 describe('addConfiguredAdditionalFields', () => {
 	it('expands control-descriptor macros onto fields that lack persisted additionalFields', () => {
 		const contentTypes = {
@@ -166,6 +193,83 @@ describe('addConfiguredAdditionalFields', () => {
 			'date-time': { metadata: { additionalFields: ['{id}_tz'] } }
 		});
 		assert.deepEqual(merged['/page/article'].fields.publishDate_dt.additionalFields, ['publishDate_dt_tz']);
+	});
+});
+
+describe('fetchContentInstanceDescriptor lookup paths', () => {
+	const path = '/site/website/articles/index.xml';
+	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
+
+	it('supplied lookup: merge from controls quiets plugin companions on old form defs', () => {
+		const supplied = { '/page/article': articleWithoutPersistedAdditionalFields };
+		const merged = addConfiguredAdditionalFields(supplied as never, pluginControls);
+		const messages = captureConsoleErrors(() => {
+			parseContentXML(contentDoc(companionXml), path, merged as never, {});
+		});
+		assert.equal(
+			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
+			false
+		);
+		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
+	});
+
+	it('internally fetched lookup: merge after createLookupTable quiets plugin companions', () => {
+		// Mirrors fetchContentInstanceDescriptor's internal branch:
+		// fetchContentTypes(site) -> createLookupTable(types) -> addConfiguredAdditionalFields(..., controls)
+		const fetchedTypes = [articleWithoutPersistedAdditionalFields];
+		const lookup = createLookupTable(fetchedTypes as never);
+		const merged = addConfiguredAdditionalFields(lookup as never, pluginControls);
+		const messages = captureConsoleErrors(() => {
+			parseContentXML(contentDoc(companionXml), path, merged as never, {});
+		});
+		assert.equal(
+			messages.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
+			false
+		);
+		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
+	});
+});
+
+describe('Preview additionalFields loading race', () => {
+	const path = '/site/website/articles/index.xml';
+	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
+
+	it('unmerged lookup (content types before UI config) logs; merged re-parse stays quiet', () => {
+		const unmerged = { '/page/article': articleWithoutPersistedAdditionalFields };
+		const before = captureConsoleErrors(() => {
+			parseContentXML(contentDoc(companionXml), path, unmerged as never, {});
+		});
+		assert.equal(
+			before.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
+			true
+		);
+
+		// Preview must not delay guest load for this log; when useContentTypes later merges, re-issue parses quietly.
+		const merged = addConfiguredAdditionalFields(unmerged as never, pluginControls);
+		const after = captureConsoleErrors(() => {
+			parseContentXML(contentDoc(companionXml), path, merged as never, {});
+		});
+		assert.equal(
+			after.some((message) => message.includes('title_s_bk') && message.includes('was not found')),
+			false
+		);
+	});
+
+	it('does not require UI config merge for legacy _tz (hardcoded fallback covers cold start)', () => {
+		const messages = captureConsoleErrors(() => {
+			parseContentXML(
+				contentDoc(
+					'<publishDate_dt>2024-01-01T00:00:00.000Z</publishDate_dt><publishDate_dt_tz>UTC</publishDate_dt_tz>'
+				),
+				path,
+				{ '/page/article': articleWithoutPersistedAdditionalFields } as never,
+				{}
+			);
+		});
+		assert.equal(
+			messages.some((message) => message.includes('publishDate_dt_tz') && message.includes('was not found')),
+			false
+		);
 	});
 });
 

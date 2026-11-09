@@ -96,7 +96,7 @@ import {
 	writeInstance
 } from '../../services/content';
 import { uploadDataUrl } from '../../services/contentUpload';
-import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of, Subscription } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
@@ -228,7 +228,8 @@ const issueDescriptorRequest = (props: {
 	dispatch: Dispatch;
 	completeActionCreator: ActionCreatorWithOptionalPayload<any>;
 	permissions: string[];
-}) => {
+	controls?: Record<string, { metadata?: { additionalFields?: string[] | null } }>;
+}): Subscription => {
 	const {
 		site,
 		path,
@@ -237,12 +238,13 @@ const issueDescriptorRequest = (props: {
 		flatten = true,
 		dispatch,
 		completeActionCreator,
-		permissions
+		permissions,
+		controls
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
 
-	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
+	return fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
@@ -428,6 +430,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		enqueueSnackbar,
 		editModePadding,
 		cdataEscapedFieldPatterns,
+		uiConfig,
 		toggleEditMode,
 		keyboardShortcutsDialogState,
 		setDataSourceActionsListState,
@@ -739,10 +742,14 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// endregion
 			const { type, payload } = action;
 			const permissions = user?.permissionsBySite[siteId];
+			// Do not hold for UI config: take the first ready lookup, and re-issue when a later
+			// merged lookup arrives (useContentTypes merges once uiConfig loads). Cancel prior in-flight.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
-				take(1)
+				takeUntil(guestToHost$.pipe(filter(({ type }) => [guestCheckIn.type, guestCheckOut.type].includes(type))))
 			);
+			const controlsForParse = () =>
+				upToDateRefs.current.uiConfig?.isFetching === false ? upToDateRefs.current.uiConfig.controls : undefined;
 			switch (type) {
 				case guestSiteLoad.type:
 				case guestCheckIn.type:
@@ -781,15 +788,18 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const { url, location } = payload;
 					const path = getPathFromPreviewURL(url);
 					dispatch(guestCheckIn({ location, site: siteId, path }));
+					let descriptorRequest: Subscription | undefined;
 					contentTypes$.subscribe((contentTypes) => {
-						issueDescriptorRequest({
+						descriptorRequest?.unsubscribe();
+						descriptorRequest = issueDescriptorRequest({
 							site: siteId,
 							path,
 							contentTypes,
 							requestedSourceMapPaths,
 							dispatch,
 							completeActionCreator: fetchPrimaryGuestModelComplete,
-							permissions
+							permissions,
+							controls: controlsForParse()
 						});
 					});
 					break;
@@ -843,16 +853,19 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						nnou(siteId) && dispatch(changeCurrentUrl('/'));
 					} else {
 						const path = payload.path;
+						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
+							descriptorRequest?.unsubscribe();
 							hostToGuest$.next(contentTypesResponse({ contentTypes: Object.values(contentTypes) }));
-							issueDescriptorRequest({
+							descriptorRequest = issueDescriptorRequest({
 								site: siteId,
 								path,
 								contentTypes,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchPrimaryGuestModelComplete,
-								permissions
+								permissions,
+								controls: controlsForParse()
 							});
 						});
 					}
@@ -860,15 +873,18 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case fetchGuestModel.type: {
 					if (payload.path?.startsWith('/')) {
+						let descriptorRequest: Subscription | undefined;
 						contentTypes$.subscribe((contentTypes) => {
-							issueDescriptorRequest({
+							descriptorRequest?.unsubscribe();
+							descriptorRequest = issueDescriptorRequest({
 								site: siteId,
 								path: payload.path,
 								contentTypes,
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
-								permissions
+								permissions,
+								controls: controlsForParse()
 							});
 						});
 					} else {
