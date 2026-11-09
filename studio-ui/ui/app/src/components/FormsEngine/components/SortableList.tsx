@@ -183,6 +183,8 @@ function SortableItem({
 	onMove(index: number, direction: 'up' | 'down', toEdge: boolean, control: string): void;
 }) {
 	const ref = useRef<HTMLLIElement | null>(null);
+	// The row button is the drag handle, so a drag cannot start from the Move buttons beside it.
+	const handleRef = useRef<HTMLDivElement | null>(null);
 	const [state, setState] = useState<ItemState>(idle);
 	useEffect(() => {
 		const element = ref.current;
@@ -191,6 +193,7 @@ function SortableItem({
 			sortable
 				? draggable({
 						element,
+						dragHandle: handleRef.current ?? undefined,
 						getInitialData() {
 							return getItemData(item);
 						},
@@ -264,6 +267,7 @@ function SortableItem({
 		<>
 			<Box ref={ref} component="li" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
 				<ListItemButton
+					ref={handleRef}
 					data-item-id={item.key}
 					data-reorder-index={index}
 					data-reorder-control="row"

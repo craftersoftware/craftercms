@@ -15,11 +15,9 @@
  */
 
 import { ReactNode } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, useIntl } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import Box from '@mui/material/Box';
-import { visuallyHidden } from '@mui/utils';
 
 // Explicit keyboard focus indicator. MUI shows only a faint ripple on focus-visible (about 1.5:1 on a light surface),
 // and none at all when the user turns "animations" off (CrafterThemeProvider then sets disableRipple globally).
@@ -28,6 +26,17 @@ const focusVisibleSx = {
 } as const;
 
 export type ReorderControl = 'up' | 'down' | 'top' | 'bottom';
+
+const messages = defineMessages({
+	upLabel: { defaultMessage: 'Move up: {name}' },
+	upTooltip: { defaultMessage: 'Move up' },
+	downLabel: { defaultMessage: 'Move down: {name}' },
+	downTooltip: { defaultMessage: 'Move down' },
+	topLabel: { defaultMessage: 'Move to top: {name}' },
+	topTooltip: { defaultMessage: 'Move to top' },
+	bottomLabel: { defaultMessage: 'Move to bottom: {name}' },
+	bottomTooltip: { defaultMessage: 'Move to bottom' }
+});
 
 export interface ReorderMoveButtonProps {
 	name: string;
@@ -57,24 +66,7 @@ export function ReorderMoveButton({
 	size = 'small'
 }: ReorderMoveButtonProps) {
 	const { formatMessage } = useIntl();
-	const label =
-		control === 'up'
-			? formatMessage({ defaultMessage: 'Move up: {name}' }, { name })
-			: control === 'down'
-				? formatMessage({ defaultMessage: 'Move down: {name}' }, { name })
-				: control === 'top'
-					? formatMessage({ defaultMessage: 'Move to top: {name}' }, { name })
-					: formatMessage({ defaultMessage: 'Move to bottom: {name}' }, { name });
-	const tooltip =
-		control === 'up' ? (
-			<FormattedMessage defaultMessage="Move up" />
-		) : control === 'down' ? (
-			<FormattedMessage defaultMessage="Move down" />
-		) : control === 'top' ? (
-			<FormattedMessage defaultMessage="Move to top" />
-		) : (
-			<FormattedMessage defaultMessage="Move to bottom" />
-		);
+	const label = formatMessage(messages[`${control}Label`], { name });
 	const button = (
 		<IconButton
 			size={size}
@@ -84,21 +76,16 @@ export function ReorderMoveButton({
 			aria-label={label}
 			data-reorder-index={index}
 			data-reorder-control={control}
-			onPointerDown={(event) => event.stopPropagation()}
-			onMouseDown={(event) => event.stopPropagation()}
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick();
 			}}
 		>
 			{children}
-			<Box component="span" sx={visuallyHidden}>
-				{label}
-			</Box>
 		</IconButton>
 	);
 	return (
-		<Tooltip describeChild title={tooltip}>
+		<Tooltip describeChild title={formatMessage(messages[`${control}Tooltip`])}>
 			{disabled ? <span>{button}</span> : button}
 		</Tooltip>
 	);
