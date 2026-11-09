@@ -184,4 +184,5 @@ public class StudioSiteListResolverTest {
 			throw new IOException("interrupted", e);
 		}
 	}
+
 }
