@@ -44,7 +44,7 @@ function texts(messages: FieldValidityMessage[]): Array<string | undefined> {
 
 describe('built-in validators on the new signature', () => {
 	it('input: pattern message comes before the max length message', async () => {
-		const result = await validateFieldValue(field('input', 'a_s', { pattern: '^x', maxlength: 2 }), 'abcd', meta);
+		const result = await validateFieldValue(field('input', 'a_s', { pattern: '^x', maxLength: 2 }), 'abcd', meta);
 		assert.equal(result.isValid, false);
 		assert.deepEqual(texts(result.messages), [
 			'The value does not match the required pattern.',
