@@ -16,6 +16,7 @@
 
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import useActiveSite from '../../hooks/useActiveSite';
@@ -2061,22 +2062,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		<FormValidationAnnouncerContext.Provider value={announceValidation}>
 			<FormSaveAttemptedContext.Provider value={saveAttempted}>
 				{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
-				<Box
-					role="status"
-					aria-live="polite"
-					aria-atomic="true"
-					sx={{
-						border: 0,
-						clip: 'rect(0 0 0 0)',
-						height: '1px',
-						margin: '-1px',
-						overflow: 'hidden',
-						padding: 0,
-						position: 'absolute',
-						whiteSpace: 'nowrap',
-						width: '1px'
-					}}
-				>
+				<Box role="status" aria-live="polite" aria-atomic="true" sx={visuallyHidden}>
 					{validationStatusMessage}
 				</Box>
 			</FormSaveAttemptedContext.Provider>

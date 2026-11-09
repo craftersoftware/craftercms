@@ -59,7 +59,13 @@ export function FieldStateIndicator({ isRequired, hasValidator, isValid, isEmpty
 
 	return (
 		<Tooltip title={label}>
-			<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', columnGap: 0.5 }}>
+			{/* A span with no role may not carry the label the tooltip gives it. As an image it is named and announced. */}
+			<Box
+				component="span"
+				role="img"
+				aria-label={label}
+				sx={{ display: 'inline-flex', alignItems: 'center', columnGap: 0.5 }}
+			>
 				<IndicatorComponent aria-hidden fontSize="small" color={isValid ? 'success' : 'error'} />
 				{!isValid && (
 					<Box component="span" sx={{ color: 'error.main', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1 }}>
