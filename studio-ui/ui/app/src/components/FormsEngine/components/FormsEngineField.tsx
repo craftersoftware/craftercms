@@ -191,8 +191,10 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	useLayoutEffect(() => {
 		if (!fieldUpdates$) return undefined;
 		const subscription = fieldUpdates$.subscribe((update) => {
-			if (update.fieldId !== fieldId || !update.origin) return;
-			systemWriteRef.current = true;
+			if (update.fieldId !== fieldId) return;
+			// The latest write decides. A same-value controller setValue or rollback still emits, and the
+			// value effect does not run, so leaving the flag true would swallow the author's next edit.
+			systemWriteRef.current = Boolean(update.origin);
 		});
 		return () => subscription.unsubscribe();
 	}, [fieldUpdates$, fieldId]);

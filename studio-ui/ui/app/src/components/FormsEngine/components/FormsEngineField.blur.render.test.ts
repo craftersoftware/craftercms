@@ -236,8 +236,7 @@ describe('field blur announcement', () => {
 		assert.deepEqual(announcements, ['Section: Section is required']);
 	});
 
-	it('does not announce when a controller or a rollback writes the value', async () => {
-		const announcements: string[] = [];
+	async function renderTrackedTitle(announcements: string[]) {
 		const field = fieldFor('title_s', 'Title', 'input');
 		const fieldUpdates$ = new Subject<{ fieldId: string; origin?: 'controller' | 'rollback' }>();
 		const tracking = {
@@ -326,6 +325,12 @@ describe('field blur announcement', () => {
 			);
 		});
 		mounted.push({ unmount: () => root.unmount(), host });
+		return { host, store, valueAtom, tracking };
+	}
+
+	it('does not announce when a controller or a rollback writes the value', async () => {
+		const announcements: string[] = [];
+		const { host, store, valueAtom, tracking } = await renderTrackedTitle(announcements);
 		tracking.valueWriteOrigin = 'controller';
 		await act(async () => {
 			store.set(valueAtom, 'from-controller');
@@ -340,6 +345,36 @@ describe('field blur announcement', () => {
 		tracking.valueWriteOrigin = undefined;
 		await leaveField(host);
 		assert.deepEqual(announcements, []);
+		await act(async () => {
+			store.set(valueAtom, 'typed');
+		});
+		await leaveField(host);
+		assert.deepEqual(announcements, ['Title: Title is required']);
+	});
+
+	it('announces an author edit that follows a same-value controller write', async () => {
+		const announcements: string[] = [];
+		const { host, store, valueAtom, tracking } = await renderTrackedTitle(announcements);
+		tracking.valueWriteOrigin = 'controller';
+		await act(async () => {
+			store.set(valueAtom, '');
+		});
+		tracking.valueWriteOrigin = undefined;
+		await act(async () => {
+			store.set(valueAtom, 'typed');
+		});
+		await leaveField(host);
+		assert.deepEqual(announcements, ['Title: Title is required']);
+	});
+
+	it('announces an author edit that follows a rollback of an unchanged field', async () => {
+		const announcements: string[] = [];
+		const { host, store, valueAtom, tracking } = await renderTrackedTitle(announcements);
+		tracking.valueWriteOrigin = 'rollback';
+		await act(async () => {
+			store.set(valueAtom, '');
+		});
+		tracking.valueWriteOrigin = undefined;
 		await act(async () => {
 			store.set(valueAtom, 'typed');
 		});
