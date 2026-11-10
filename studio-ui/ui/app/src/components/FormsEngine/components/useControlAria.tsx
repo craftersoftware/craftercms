@@ -58,7 +58,7 @@ export function useControlAria(describedBy?: string) {
 
 function RequiredCue({ id }: { id: string }) {
 	return (
-		<Box component="span" id={id} sx={visuallyHidden}>
+		<Box component="span" id={id} aria-hidden sx={visuallyHidden}>
 			<FormattedMessage defaultMessage="Required" />
 		</Box>
 	);

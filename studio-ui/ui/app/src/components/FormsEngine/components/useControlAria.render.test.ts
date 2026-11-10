@@ -159,6 +159,7 @@ describe('custom control group', () => {
 		assert.equal(label.id, 'features_s-label');
 		assert.equal(group.getAttribute('aria-labelledby'), label.id);
 		assert.ok(required?.id);
+		assert.equal(required?.getAttribute('aria-hidden'), 'true');
 		const described = group.getAttribute('aria-describedby')?.split(/\s+/) ?? [];
 		assert.ok(described.includes('caller-note'));
 		assert.ok(described.includes('features_s-label-description'));
