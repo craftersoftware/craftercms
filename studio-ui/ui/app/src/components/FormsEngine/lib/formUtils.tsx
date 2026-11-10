@@ -139,7 +139,10 @@ export function buildSaveContentXml(
 	target: { path: string } | { embeddedObjectId: string }
 ): string {
 	if ('embeddedObjectId' in target) {
-		values[XmlKeys.fileName] = fileNameElementForXml(null, target.embeddedObjectId);
+		const current = values[XmlKeys.fileName];
+		if (current == null || current === '') {
+			values[XmlKeys.fileName] = fileNameElementForXml(null, target.embeddedObjectId);
+		}
 		return buildContentXml(values, contentTypesById);
 	}
 	return buildContentXml({ ...values, [XmlKeys.fileName]: fileNameElementForXml(target.path) }, contentTypesById);
