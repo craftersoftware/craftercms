@@ -91,11 +91,6 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
 public class SitesServiceInternalImpl implements SitesService, ApplicationContextAware {
 
     private final static Logger logger = LoggerFactory.getLogger(SitesServiceInternalImpl.class);
-    /**
-     * Site id suffix Engine uses to render a site's staging publishing target.
-     * Matches {@code crafter.engine.site.staging.pattern}.
-     */
-    private static final String STAGING_SITE_ID_SUFFIX = "-staging";
 
     private final PluginDescriptorReader descriptorReader;
     private final ContentRepository contentRepository;
@@ -588,11 +583,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
     @Override
     public List<String> getDeliverableSiteIds() {
         List<String> deliverableSiteIds = new ArrayList<>();
+        String stagingSiteIdSuffix = studioConfiguration.getProperty(CONFIGURATION_SITE_STAGING_ID_SUFFIX);
         for (String siteId : siteDao.getDeliverableSiteIds()) {
             deliverableSiteIds.add(siteId);
             try {
                 if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
-                    deliverableSiteIds.add(siteId + STAGING_SITE_ID_SUFFIX);
+                    deliverableSiteIds.add(siteId + stagingSiteIdSuffix);
                 }
             } catch (Exception e) {
                 logger.warn("Failed to check if site '{}' is a staging site", siteId, e);

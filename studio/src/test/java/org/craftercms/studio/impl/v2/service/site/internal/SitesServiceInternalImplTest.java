@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -116,6 +117,7 @@ public class SitesServiceInternalImplTest {
         when(siteDAO.getSite(ROOT_SITE_ID)).thenReturn(rootSite);
 
         when(studioConfiguration.getProperty(CONFIGURATION_GLOBAL_SYSTEM_SITE)).thenReturn(ROOT_SITE_ID);
+        lenient().when(studioConfiguration.getProperty(CONFIGURATION_SITE_STAGING_ID_SUFFIX)).thenReturn("-staging");
 
         when(auditServiceInternal.createAuditLogEntry()).thenReturn(new AuditLog());
 
