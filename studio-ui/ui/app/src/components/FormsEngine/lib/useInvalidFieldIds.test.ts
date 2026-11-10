@@ -19,7 +19,8 @@ import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
 const { atom, createStore } = await import('jotai');
-const { createFormStackData, invalidFieldIdsAtom } = await import('./formUtils.tsx');
+const { EMPTY_INVALID_FIELD_IDS, createFormStackData, invalidFieldIdsAtom, watchInvalidFieldIds } =
+	await import('./formUtils.tsx');
 
 describe('invalidFieldIdsAtom', () => {
 	function entryWith(validations: Record<string, { isValid: boolean }>, irrelevantFieldPaths?: ReadonlySet<string>) {
@@ -29,6 +30,7 @@ describe('invalidFieldIdsAtom', () => {
 		});
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId: Object.fromEntries(
 				Object.entries(validations).map(([id, state]) => [id, atom(Promise.resolve(state))])
 			)
@@ -37,6 +39,20 @@ describe('invalidFieldIdsAtom', () => {
 			entry.formControllerState = { irrelevantFieldPaths } as never;
 		}
 		return entry;
+	}
+
+	async function synced(entry: ReturnType<typeof entryWith>, store = createStore()) {
+		const { unsubscribe, ready } = watchInvalidFieldIds(store, entry.atoms!);
+		await ready;
+		return { store, unsubscribe };
+	}
+
+	async function until(predicate: () => boolean): Promise<void> {
+		for (let i = 0; i < 50; i++) {
+			if (predicate()) return;
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
+		assert.fail('timed out waiting for invalid-field ids');
 	}
 
 	it('returns the same atom for the same entry and parentPath', () => {
@@ -55,8 +71,12 @@ describe('invalidFieldIdsAtom', () => {
 			},
 			new Set(['sidebar_s'])
 		);
-		const store = createStore();
-		assert.deepEqual(await store.get(invalidFieldIdsAtom(entry)), ['title_s']);
+		const { store, unsubscribe } = await synced(entry);
+		try {
+			assert.deepEqual(store.get(invalidFieldIdsAtom(entry)), ['title_s']);
+		} finally {
+			unsubscribe();
+		}
 	});
 
 	it('recomputes after a validation atom changes', async () => {
@@ -65,13 +85,18 @@ describe('invalidFieldIdsAtom', () => {
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId: { title_s: validation }
 		} as never;
-		const store = createStore();
-		const idsAtom = invalidFieldIdsAtom(entry);
-		assert.deepEqual(await store.get(idsAtom), ['title_s']);
-		store.set(title, 'ok');
-		assert.deepEqual(await store.get(idsAtom), []);
+		const { store, unsubscribe } = await synced(entry);
+		try {
+			const idsAtom = invalidFieldIdsAtom(entry);
+			assert.deepEqual(store.get(idsAtom), ['title_s']);
+			store.set(title, 'ok');
+			await until(() => store.get(idsAtom).length === 0);
+		} finally {
+			unsubscribe();
+		}
 	});
 
 	it('keeps the same array when a recompute leaves membership unchanged', async () => {
@@ -84,22 +109,29 @@ describe('invalidFieldIdsAtom', () => {
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId: { title_s: validation }
 		} as never;
-		const store = createStore();
-		const idsAtom = invalidFieldIdsAtom(entry);
-		const first = await store.get(idsAtom);
-		assert.deepEqual(first, ['title_s']);
-		store.set(tick, 1);
-		assert.equal(await store.get(idsAtom), first);
-		store.set(title, 'ok');
-		const empty = await store.get(idsAtom);
-		assert.deepEqual(empty, []);
-		store.set(tick, 2);
-		assert.equal(await store.get(idsAtom), empty);
+		const { store, unsubscribe } = await synced(entry);
+		try {
+			const idsAtom = invalidFieldIdsAtom(entry);
+			const first = store.get(idsAtom);
+			assert.deepEqual(first, ['title_s']);
+			store.set(tick, 1);
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			assert.equal(store.get(idsAtom), first);
+			store.set(title, 'ok');
+			await until(() => store.get(idsAtom).length === 0);
+			const empty = store.get(idsAtom);
+			store.set(tick, 2);
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			assert.equal(store.get(idsAtom), empty);
+		} finally {
+			unsubscribe();
+		}
 	});
 
-	// #9340: one edit re-evaluates only that field's validation; the read count must not grow with N.
+	// #9340: one edit re-evaluates only that field's validation; the invalid set updates that field only.
 	it('re-runs only the edited field validation when the form has N fields', async () => {
 		const fieldCount = 40;
 		const runs: Record<string, number> = {};
@@ -117,27 +149,34 @@ describe('invalidFieldIdsAtom', () => {
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId
 		} as never;
 		const store = createStore();
-		const idsAtom = invalidFieldIdsAtom(entry);
-		assert.deepEqual(await store.get(idsAtom), ['f0_s']);
-		assert.equal(runs.f0_s, 1);
-		assert.equal(runs.f39_s, 1);
-		assert.equal(
-			Object.values(runs).reduce((sum, n) => sum + n, 0),
-			fieldCount
-		);
+		const { unsubscribe, ready } = watchInvalidFieldIds(store, entry.atoms);
+		await ready;
+		try {
+			const idsAtom = invalidFieldIdsAtom(entry);
+			assert.deepEqual(store.get(idsAtom), ['f0_s']);
+			assert.equal(runs.f0_s, 1);
+			assert.equal(runs.f39_s, 1);
+			assert.equal(
+				Object.values(runs).reduce((sum, n) => sum + n, 0),
+				fieldCount
+			);
 
-		store.set(values.f0_s, 'ok');
-		assert.deepEqual(await store.get(idsAtom), []);
-		assert.equal(runs.f0_s, 2);
-		assert.equal(runs.f1_s, 1);
-		assert.equal(runs.f39_s, 1);
-		assert.equal(
-			Object.values(runs).reduce((sum, n) => sum + n, 0),
-			fieldCount + 1,
-			'only the edited field validation ran again'
-		);
+			store.set(values.f0_s, 'ok');
+			await until(() => store.get(idsAtom).length === 0);
+			assert.equal(runs.f0_s, 2);
+			assert.equal(runs.f1_s, 1);
+			assert.equal(runs.f39_s, 1);
+			assert.equal(
+				Object.values(runs).reduce((sum, n) => sum + n, 0),
+				fieldCount + 1,
+				'only the edited field validation ran again'
+			);
+		} finally {
+			unsubscribe();
+		}
 	});
 });

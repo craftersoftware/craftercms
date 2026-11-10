@@ -1192,7 +1192,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 			});
 	}, [isStackedForm, stackSummary.pending, stackSummary.submitting, updateSubmittingOrHasPendingChanges]);
 
-	// Live invalid ids from the shared derived atom. The first read is immediate; later edits wait
+	// Live invalid ids from the per-field ReadonlySet. The first seeded read is immediate; later edits wait
 	// out the display pause in the hook, so the alert's count is not rewritten on every keystroke.
 	const localInvalid = useInvalidFieldIds(stableFormContext, repeat?.fieldId);
 	const parentInvalid = useInvalidFieldIds(parentEntry, undefined);

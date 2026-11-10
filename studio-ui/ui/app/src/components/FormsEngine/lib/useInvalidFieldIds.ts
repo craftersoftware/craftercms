@@ -14,44 +14,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StableFormContextProps } from './formsEngineContext';
-import { invalidFieldIdsAtom } from './formUtils';
-import useLoadableAtom from './useLoadableAtom';
+import { invalidFieldIdsAtom, watchInvalidFieldIds } from './formUtils';
 
 /** Pause before the alert's count updates. A keystroke must not rewrite the banner on every settled validation. */
 export const invalidFieldReadDebounceMs = 300;
 
 const noInvalidFieldIds: string[] = [];
 
-/** Live ids of fields that fail validation, excluding controller-irrelevant fields. */
+/**
+ * Live ids of fields that fail validation, excluding controller-irrelevant fields.
+ * The first seeded read applies immediately; later membership changes wait out {@link invalidFieldReadDebounceMs}.
+ * A rejected plugin validator leaves the last ids in place.
+ */
 export function useInvalidFieldIds(entry: StableFormContextProps | null | undefined, parentPath?: string): string[] {
+	const jotai = useJotaiStore();
 	const idsAtom = useMemo(() => invalidFieldIdsAtom(entry, parentPath), [entry, entry?.atoms, parentPath]);
-	const loadable = useLoadableAtom(idsAtom);
+	const liveIds = useAtomValue(idsAtom);
 	const [ids, setIds] = useState<string[]>([]);
-	const appliedInitial = useRef(false);
-	const entryKey = entry ?? null;
+	const initial = useRef(true);
 
 	useEffect(() => {
-		appliedInitial.current = false;
-	}, [entryKey, entry?.atoms, parentPath]);
+		if (!entry?.atoms) return;
+		let cancelled = false;
+		initial.current = true;
+		const { unsubscribe, ready } = watchInvalidFieldIds(jotai, entry.atoms);
+		void ready.then(() => {
+			if (cancelled) return;
+			setIds(jotai.get(idsAtom));
+			initial.current = false;
+		});
+		return () => {
+			cancelled = true;
+			unsubscribe();
+		};
+	}, [entry, entry?.atoms, idsAtom, jotai]);
 
 	useEffect(() => {
-		if (loadable.state === 'hasError') {
-			// A plugin validator can reject. Keep the last ids.
-			console.error(loadable.error);
-			return;
-		}
-		if (loadable.state !== 'hasData') return;
-		const next = loadable.data;
-		if (!appliedInitial.current) {
-			appliedInitial.current = true;
-			setIds(next);
-			return;
-		}
-		const timer = window.setTimeout(() => setIds(next), invalidFieldReadDebounceMs);
+		if (initial.current) return;
+		const timer = window.setTimeout(() => setIds(liveIds), invalidFieldReadDebounceMs);
 		return () => window.clearTimeout(timer);
-	}, [loadable]);
+	}, [liveIds]);
 
 	return entry?.atoms ? ids : noInvalidFieldIds;
 }

@@ -23,7 +23,7 @@ const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act, useState } = await import('react');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
-const { createFormStackData } = await import('./formUtils.tsx');
+const { EMPTY_INVALID_FIELD_IDS, createFormStackData } = await import('./formUtils.tsx');
 const { invalidFieldReadDebounceMs, useInvalidFieldIds } = await import('./useInvalidFieldIds.ts');
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,6 +35,7 @@ function entryWith(validations: Record<string, { isValid: boolean }>) {
 	});
 	entry.atoms = {
 		relevanceVersion: atom(0),
+		invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 		validationByFieldId: Object.fromEntries(
 			Object.entries(validations).map(([id, state]) => [id, atom(Promise.resolve(state))])
 		)
@@ -95,6 +96,7 @@ describe('useInvalidFieldIds', () => {
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId: {
 				title_s: atom(async (get) => ({ isValid: get(title) !== 'bad' }))
 			}
@@ -120,6 +122,7 @@ describe('useInvalidFieldIds', () => {
 		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
 		entry.atoms = {
 			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			validationByFieldId: {
 				title_s: atom(async (get) => {
 					if (get(fail)) throw new Error('boom');
