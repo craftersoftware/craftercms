@@ -14,9 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 'react';
+import React, { RefObject, SyntheticEvent, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import visuallyHidden from '@mui/utils/visuallyHidden';
-import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
@@ -40,8 +40,11 @@ import {
 import { immutableEmptyArray } from '../../../utils/array';
 import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
-import FieldStateIndicator, { fieldIndicatorAtoms, useFieldStateIndicatorProps } from './FieldStateIndicator';
-import { useInvalidFieldIds } from '../lib/useInvalidFieldIds';
+import FieldStateIndicator, {
+	type FieldStateIndicatorProps,
+	fieldIndicatorAtoms,
+	useFieldStateIndicatorProps
+} from './FieldStateIndicator';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
@@ -60,13 +63,16 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 	const store = useJotaiStore();
 	const stableForm = useContext(StableFormContext);
 	const atoms = stableForm.atoms;
-	const invalidFieldIds = useInvalidFieldIds(
-		atoms.validationByFieldId,
-		stableForm.formControllerState?.irrelevantFieldPaths,
-		stableForm.props?.repeat?.fieldId,
-		stableForm.fieldUpdates$
-	);
-	const invalidFieldIdSet = useMemo(() => new Set(invalidFieldIds), [invalidFieldIds]);
+	const [invalidFieldIds, setInvalidFieldIds] = useState<ReadonlySet<string>>(() => new Set());
+	const reportFieldInvalid = useCallback((fieldId: string, invalid: boolean) => {
+		setInvalidFieldIds((current) => {
+			if (current.has(fieldId) === invalid) return current;
+			const next = new Set(current);
+			if (invalid) next.add(fieldId);
+			else next.delete(fieldId);
+			return next;
+		});
+	}, []);
 	const contentType = useContext(ItemMetaContext).contentType;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = sections ?? contentType.sections;
@@ -132,8 +138,14 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 			/>
 		);
 	};
+	const sectionFields = contentTypeSections.flatMap((section) =>
+		section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean)
+	);
 	return (
 		<>
+			{sectionFields.map((field) => (
+				<SectionFieldInvalidProbe key={field.id} field={field} atoms={atoms} report={reportFieldInvalid} />
+			))}
 			{countFieldIds && <FieldScopeNotice countFieldIds={countFieldIds} />}
 			<SearchBar
 				dense
@@ -162,7 +174,7 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 								label={
 									<SectionNavLabel
 										title={section.title}
-										hasError={section.fields.some((fieldId) => invalidFieldIdSet.has(fieldId))}
+										hasError={section.fields.some((fieldId) => invalidFieldIds.has(fieldId))}
 									/>
 								}
 								onClick={handleSectionClick}
@@ -229,9 +241,37 @@ export function FieldScopeNotice({ countFieldIds }: { countFieldIds: string[] })
 }
 
 /**
- * A section that contains an invalid field. The mark is an error icon (a different shape from the
- * field asterisk) plus text, so the cue is not the red colour alone (WCAG 1.4.1). The text is
- * visually hidden and the icon stays inline, so the row keeps the same height as a section title.
+ * A required field that is still empty is the asterisk, not an error. Anything else that fails is.
+ * Same split as {@link FieldStateIndicator}.
+ */
+function sectionFieldIsInvalid({ isValid, isRequired, isEmpty }: FieldStateIndicatorProps): boolean {
+	if (isValid) return false;
+	if (isRequired && isEmpty) return false;
+	return true;
+}
+
+function SectionFieldInvalidProbe({
+	field,
+	atoms,
+	report
+}: {
+	field: ContentTypeField;
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
+	report(fieldId: string, invalid: boolean): void;
+}) {
+	const { props } = useFieldStateIndicatorProps(field, atoms);
+	const invalid = sectionFieldIsInvalid(props);
+	useEffect(() => {
+		report(field.id, invalid);
+		return () => report(field.id, false);
+	}, [field.id, invalid, report]);
+	return null;
+}
+
+/**
+ * A section that contains a field the indicator would mark invalid. The mark is that same warning
+ * icon plus hidden text, so the cue is not colour alone. The text stays visually hidden and the icon
+ * stays inline, so the row keeps the same height as a section title.
  */
 export function SectionNavLabel({ title, hasError }: { title: string; hasError: boolean }) {
 	const { formatMessage } = useIntl();
@@ -244,7 +284,7 @@ export function SectionNavLabel({ title, hasError }: { title: string; hasError: 
 					component="span"
 					sx={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', ml: 0.5 }}
 				>
-					<ErrorOutlineRounded aria-hidden color="error" sx={{ fontSize: '1em' }} />
+					<WarningAmberRounded aria-hidden color="error" sx={{ fontSize: '1em' }} />
 					<Box component="span" sx={visuallyHidden}>
 						{errorLabel}
 					</Box>
