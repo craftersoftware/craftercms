@@ -23,9 +23,6 @@ import useLoadableAtom from './useLoadableAtom';
 /** Form-level polite live region. The default is a no-op so fields can render outside a form shell. */
 export const FormValidationAnnouncerContext = createContext<(message: string) => void>(() => {});
 
-/** True after Save was pressed on an invalid form. Field blur does not read this. */
-export const FormSaveAttemptedContext = createContext(false);
-
 /** Id of the field description that `FormsEngineField` renders for the control with `controlId`. */
 export function fieldDescriptionId(controlId: string): string {
 	return `${controlId}-description`;

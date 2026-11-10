@@ -125,7 +125,7 @@ import {
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
-import { FormSaveAttemptedContext, FormValidationAnnouncerContext } from './lib/fieldA11y';
+import { FormValidationAnnouncerContext } from './lib/fieldA11y';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -1087,7 +1087,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
 	const [validationStatusMessage, setValidationStatusMessage] = useState('');
-	const [saveAttempted, setSaveAttempted] = useState(false);
 	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const announceValidation = useCallback((message: string) => {
 		setValidationStatusMessage('');
@@ -1552,7 +1551,6 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// A non-draft Save on an invalid form. The reveal scrolls to the first error and focuses it, and the field
 	// exposes its own error. The live region gives only the count, so the error is not spoken twice.
 	const handleInvalidSave = () => {
-		setSaveAttempted(true);
 		const count = validationErrors?.count ?? 0;
 		showValidationField();
 		announceValidation(
@@ -2060,12 +2058,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
 		<FormValidationAnnouncerContext.Provider value={announceValidation}>
-			<FormSaveAttemptedContext.Provider value={saveAttempted}>
-				{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
-				<Box role="status" aria-live="polite" aria-atomic="true" sx={visuallyHidden}>
-					{validationStatusMessage}
-				</Box>
-			</FormSaveAttemptedContext.Provider>
+			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+			<Box role="status" aria-live="polite" aria-atomic="true" sx={visuallyHidden}>
+				{validationStatusMessage}
+			</Box>
 		</FormValidationAnnouncerContext.Provider>
 	);
 }

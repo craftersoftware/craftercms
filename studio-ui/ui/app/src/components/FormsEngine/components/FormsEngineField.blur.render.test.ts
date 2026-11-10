@@ -17,7 +17,7 @@
 /**
  * Blur announces an invalid field only after its value atom changes.
  * Select and the rich text editor commit through that atom, not a bubbling input event.
- * An untouched field stays quiet, including after Save.
+ * An untouched field stays quiet.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
@@ -50,7 +50,7 @@ const { createChangedFieldIdsAtom } = await import('../lib/formUtils.tsx');
 const { createFormVisibilityAtoms } = await import('../lib/formVisibility.ts');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('../lib/formsEngineContext.ts');
-const { FormSaveAttemptedContext, FormValidationAnnouncerContext } = await import('../lib/fieldA11y.ts');
+const { FormValidationAnnouncerContext } = await import('../lib/fieldA11y.ts');
 const { Text } = await import('../controls/Text.tsx');
 const { Dropdown } = await import('../controls/Dropdown.tsx');
 const { RichTextEditor } = await import('../controls/RichTextEditor.tsx');
@@ -167,20 +167,16 @@ async function renderInvalidField(
 										React.createElement(
 											FormValidationAnnouncerContext.Provider,
 											{ value: (message: string) => announcements.push(message) },
-											React.createElement(
-												FormSaveAttemptedContext.Provider,
-												{ value: true },
-												React.createElement(Control, {
-													field,
-													value: initial,
-													setValue(next: unknown) {
-														store.set(valueAtom, next);
-													},
-													contentType,
-													readonly: false,
-													autoFocus: false
-												})
-											)
+											React.createElement(Control, {
+												field,
+												value: initial,
+												setValue(next: unknown) {
+													store.set(valueAtom, next);
+												},
+												contentType,
+												readonly: false,
+												autoFocus: false
+											})
 										)
 									)
 								)
@@ -208,7 +204,7 @@ async function leaveField(host: HTMLElement) {
 }
 
 describe('field blur announcement', () => {
-	it('does not announce when an untouched invalid field blurs after Save', async () => {
+	it('does not announce when an untouched invalid field blurs', async () => {
 		const announcements: string[] = [];
 		const field = fieldFor('title_s', 'Title', 'input');
 		const { host } = await renderInvalidField(Text, field, announcements, '');
