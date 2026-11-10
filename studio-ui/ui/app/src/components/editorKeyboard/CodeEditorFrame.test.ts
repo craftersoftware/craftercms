@@ -22,9 +22,13 @@ import { describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { IntlProvider, createIntl, createIntlCache } = await import('react-intl');
 const { CodeEditorFrame } = await import('./CodeEditorFrame.tsx');
 const { codeEditorKeyboardMessages } = await import('./messages.ts');
+
+// The test loader precompiles defaultMessage into a formatjs AST. Compare the rendered
+// string to the formatted message, the same way the frame itself calls formatMessage.
+const intl = createIntl({ locale: 'en', messages: {} }, createIntlCache());
 
 function render(props: { onActivate(): boolean; readOnly?: boolean; onParentKeyDown?(key: string): void }) {
 	const host = document.createElement('div');
@@ -64,9 +68,9 @@ describe('CodeEditorFrame', () => {
 	it('is one tab stop named "Code editor" and described by the exit instruction', () => {
 		const { frame, host } = render({ onActivate: () => true });
 		assert.equal(frame.tabIndex, 0);
-		assert.equal(frame.getAttribute('aria-label'), codeEditorKeyboardMessages.groupLabel.defaultMessage);
+		assert.equal(frame.getAttribute('aria-label'), intl.formatMessage(codeEditorKeyboardMessages.groupLabel));
 		const hint = document.getElementById(frame.getAttribute('aria-describedby'));
-		assert.equal(hint.textContent, codeEditorKeyboardMessages.instructions.defaultMessage);
+		assert.equal(hint.textContent, intl.formatMessage(codeEditorKeyboardMessages.instructions));
 		assert.ok(hint.parentElement === frame, 'hint stays in the DOM so aria-describedby resolves');
 	});
 
@@ -102,7 +106,7 @@ describe('CodeEditorFrame', () => {
 	it('describes a read-only editor with the read-only sentence', () => {
 		const { frame, host } = render({ onActivate: () => true, readOnly: true });
 		const hint = document.getElementById(frame.getAttribute('aria-describedby'));
-		assert.equal(hint.textContent, codeEditorKeyboardMessages.instructionsReadOnly.defaultMessage);
+		assert.equal(hint.textContent, intl.formatMessage(codeEditorKeyboardMessages.instructionsReadOnly));
 	});
 
 	it('moves into the editor on Enter on the frame', () => {
