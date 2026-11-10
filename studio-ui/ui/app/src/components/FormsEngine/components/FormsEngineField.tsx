@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,7 +18,7 @@ import { ContentTypeField } from '../../../models';
 import FormControl from '@mui/material/FormControl';
 import type { SxProps, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import FieldRequiredStateIndicator from './FieldRequiredStateIndicator';
+import FieldStateIndicator, { useFieldStateIndicatorProps } from './FieldStateIndicator';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
@@ -26,7 +26,7 @@ import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
 import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { isEmptyValue, isFieldRequired } from '../lib/validators';
+import { isEmptyValue } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -45,7 +45,6 @@ import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
 import { changedFieldAtom, commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
 import { FieldValidityMessages } from './FieldValidityMessages';
-import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
@@ -157,10 +156,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });
-	const isRequired = isFieldRequired(field);
-	const validityData = useLoadableAtom(atoms.validationByFieldId[fieldId]);
-	const value = useAtomValue(atoms.valueByFieldId[fieldId]);
-	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
+	// Same atoms and verdict as the table-of-contents row for this field. `props.isValid` stays a label-only
+	// override for the control chrome; the indicator itself follows the shared verdict.
+	const fieldState = useFieldStateIndicatorProps(field, atoms);
+	const { validityData, value } = fieldState;
+	const isRequired = fieldState.props.isRequired;
+	const isValid = props.isValid ?? fieldState.props.isValid;
 	const dispatch = useDispatch();
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
@@ -200,10 +201,10 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						component="label"
 						ref={labelRef}
 						tabIndex={autoFocus ? 0 : undefined}
+						sx={{ display: 'inline-flex', alignItems: 'center' }}
 					>
-						{field.name}
+						{[field.name, <FieldStateIndicator key="state" {...fieldState.props} />]}
 					</FormLabel>
-					{isRequired && <FieldRequiredStateIndicator isValid={isValid} />}
 					{hasHelpText && (
 						<IconButton size="small" onClick={() => setShowHelp(!showHelp)}>
 							<HelpOutlineRounded fontSize="small" />
