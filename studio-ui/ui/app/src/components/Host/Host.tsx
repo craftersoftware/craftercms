@@ -124,8 +124,7 @@ export function Host() {
 					// sidebar. Once the margins are gone it would sit on top of the drawer and hide the open tools panel.
 					zIndex: 'auto',
 					height: 'auto',
-					maxHeight: 'none',
-					minHeight: '50vh'
+					maxHeight: 'none'
 				},
 				transition: eitherSideBarOpen
 					? theme.transitions.create('margin', {

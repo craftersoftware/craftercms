@@ -22,6 +22,8 @@ import Tooltip from '@mui/material/Tooltip';
 import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
 import { defineMessages, useIntl } from 'react-intl';
 import { countVisibleToolbarItems } from './countVisibleToolbarItems';
+import { toolbarItemSignature } from './toolbarItemSignature';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 const messages = defineMessages({
 	moreActions: {
@@ -48,7 +50,13 @@ function getItemsSignature(items: ReturnType<typeof Children.toArray>): string {
 			}
 			const type = typeof child.type === 'string' ? child.type : (child.type as { name?: string }).name;
 			const { id, uiKey, configuration } = child.props;
-			return `${child.key}|${type}|${id ?? ''}|${uiKey ?? ''}|${JSON.stringify(configuration ?? null)}`;
+			return toolbarItemSignature({
+				key: child.key == null ? null : String(child.key),
+				typeName: type ?? '',
+				id,
+				uiKey,
+				configuration
+			});
 		})
 		.join('\n');
 }
@@ -196,15 +204,16 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				aria-expanded={Boolean(menuAnchor)}
 				aria-controls={menuAnchor ? menuId : undefined}
 				aria-haspopup="dialog"
-				onClick={(event) => setMenuAnchor((current) => (current ? null : event.currentTarget))}
+				onClick={(event) => {
+					// Read currentTarget before the state updater. React runs the updater after the event
+					// dispatch, by which time currentTarget is null, and the menu would not open.
+					const anchor = event.currentTarget;
+					setMenuAnchor((current) => (current ? null : anchor));
+				}}
 				sx={{
 					flex: '0 0 auto',
 					position: 'relative',
-					'&:focus-visible, &.Mui-focusVisible': {
-						outline: '2px solid',
-						outlineColor: 'primary.main',
-						outlineOffset: 2
-					}
+					'&:focus-visible, &.Mui-focusVisible': getFocusRingSx()
 				}}
 			>
 				<MoreHorizRoundedIcon />
