@@ -208,7 +208,11 @@ const validatorsMap: Partial<Record<BuiltInControlType | DescriptorControlType, 
  * Control types whose validator applies the required constraint itself.
  * {@link validateFieldValue} does not add a required message for these. The validator emits that message.
  */
-const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>(['file-name']);
+const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>([
+	'file-name',
+	// Unchecked is empty, but the message is "must be checked", not the host's "required".
+	'checkbox'
+]);
 
 /**
  * Validators selected by a validation key on the field, not by its control type.
@@ -245,15 +249,15 @@ function hashText(text: string): string {
 function withMessageId(value: unknown): MessageDescriptor | undefined {
 	if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
 	const { id, defaultMessage } = value as Record<string, unknown>;
-	if (
-		(id !== undefined && typeof id !== 'string') ||
-		(defaultMessage !== undefined && typeof defaultMessage !== 'string')
-	) {
+	// The app build precompiles defaultMessage into an AST. A string is the uncompiled form.
+	const text = typeof defaultMessage === 'string';
+	const precompiled = Array.isArray(defaultMessage);
+	if ((id !== undefined && typeof id !== 'string') || (defaultMessage !== undefined && !text && !precompiled)) {
 		return undefined;
 	}
 	if (id) return { ...(value as MessageDescriptor) };
-	if (!defaultMessage) return undefined;
-	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage as string)}` };
+	if (!text || !defaultMessage) return undefined;
+	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage)}` };
 }
 
 /**
@@ -416,7 +420,7 @@ export async function validateFieldValue(
 	meta: ValidatorMetaData
 ): Promise<FieldValidityState> {
 	const messages: FieldValidityState['messages'] = [];
-	const isEmpty = isEmptyValue(field, currentValue);
+	const isEmpty = isFieldValueEmpty(field, currentValue);
 	const requiredByConstraint = Boolean(field.validations?.required?.value);
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
@@ -516,6 +520,18 @@ export function isEmptyValue(field: ContentTypeField, currentValue: unknown): bo
 		(typeof currentValue === 'string' && currentValue.trim() === '') ||
 		(Array.isArray(currentValue) && currentValue.length === 0)
 	);
+}
+
+/**
+ * Whether `value` is empty for this control, for the required marker and the host required check.
+ * A checkbox is empty until it is checked (`false` is unchecked, not a filled value).
+ * An RTE is empty when {@link measureRteValue} finds no text, so markup such as `<p></p>` counts as empty.
+ * Every other control uses {@link isEmptyValue}.
+ */
+export function isFieldValueEmpty(field: ContentTypeField, value: unknown): boolean {
+	if (field.type === 'checkbox') return value !== true;
+	if (field.type === 'rte') return measureRteValue(value) === '';
+	return isEmptyValue(field, value);
 }
 
 /**

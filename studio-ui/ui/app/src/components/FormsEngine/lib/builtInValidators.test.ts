@@ -21,7 +21,12 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { JSDOM } from 'jsdom';
 import '../../../../test/registerTsLoader.mjs';
+
+// An RTE's emptiness is its text. node --test has no DOMParser; jsdom supplies one.
+globalThis.DOMParser = new JSDOM('').window.DOMParser;
+import { messageSource } from '../../../../test/messageSource.mjs';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
 import type { FieldValidityMessage } from './validators.ts';
@@ -38,7 +43,7 @@ function field(type: string, id: string, validations: Record<string, unknown> = 
 function texts(messages: FieldValidityMessage[]): Array<string | undefined> {
 	return messages.map((message) => {
 		const descriptor = Array.isArray(message) ? message[0] : message;
-		return typeof descriptor === 'string' ? descriptor : descriptor.defaultMessage;
+		return typeof descriptor === 'string' ? descriptor : messageSource(descriptor.defaultMessage);
 	});
 }
 
@@ -89,8 +94,17 @@ describe('built-in validators on the new signature', () => {
 	it('checkbox: required means checked, and the host required message does not apply', async () => {
 		const required = field('checkbox', 'c_b', { required: true });
 		const result = await validateFieldValue(required, false, meta);
+		assert.equal(result.isValid, false);
+		assert.equal(result.messages.length, 1);
 		assert.deepEqual(texts(result.messages), ['This checkbox must be checked.']);
 		assert.equal((await validateFieldValue(required, true, meta)).isValid, true);
+	});
+
+	it('required RTE with empty markup fails once, as required', async () => {
+		const result = await validateFieldValue(field('rte', 'body_html', { required: true }), '<p></p>', meta);
+		assert.equal(result.isValid, false);
+		assert.equal(result.messages.length, 1);
+		assert.deepEqual(texts(result.messages), ['This field is required.']);
 	});
 
 	it('required with an empty value short-circuits before the type validator', async () => {

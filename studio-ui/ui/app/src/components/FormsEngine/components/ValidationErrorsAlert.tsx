@@ -15,6 +15,7 @@
  */
 
 import Alert from '@mui/material/Alert';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -58,7 +59,7 @@ export function ValidationErrorsAlert(props: {
 		? formatMessage({ defaultMessage: 'Show {field}' }, { field: props.fieldName })
 		: formatMessage({ defaultMessage: 'Show the field' });
 	return (
-		<Alert role="status" severity="warning">
+		<Alert role="status" severity="warning" icon={<WarningAmberRounded fontSize="inherit" />}>
 			<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
 				{props.minimumRequirements ? (
 					<MinimumRequirementsMessage notice={props.minimumRequirements} />

@@ -17,6 +17,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
+import { messageSource } from '../../../../test/messageSource.mjs';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type { FieldValidityMessage } from './validators.ts';
 
@@ -75,10 +76,10 @@ function validation(id: string, value: number | boolean) {
 function messageOf(message: FieldValidityMessage): { text?: string; values?: unknown } {
 	if (Array.isArray(message)) {
 		const [descriptor, values] = message;
-		return { text: typeof descriptor === 'string' ? descriptor : descriptor.defaultMessage, values };
+		return { text: typeof descriptor === 'string' ? descriptor : messageSource(descriptor.defaultMessage), values };
 	}
 	if (typeof message === 'string') return { text: message };
-	return { text: message.defaultMessage };
+	return { text: messageSource(message.defaultMessage) };
 }
 
 describe('repeatGroupValidator', () => {

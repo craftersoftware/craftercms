@@ -98,7 +98,11 @@ export function getFocusVisible(mode: FocusRingMode): NonNullable<ThemeOptions['
 	};
 }
 
-/** Spread into the options passed to createTheme(), in CrafterThemeProvider and useGuestTheme. */
+/**
+ * Spread into the options passed to createTheme(). CrafterThemeProvider is the only caller: the guest theme
+ * does not use it, because a ring on every guest MUI control would sit on an unknown authored page. Guest
+ * controls that need a ring call `focusRingStyles` directly with `halo`.
+ */
 export function getFocusRingThemeOptions(mode: FocusRingMode): Pick<ThemeOptions, 'focusVisible'> {
 	return { focusVisible: getFocusVisible(mode) };
 }

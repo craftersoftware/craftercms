@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { register } from 'node:module';
+import { registerHooks } from 'node:module';
+import { load, resolve } from './ts-loader.mjs';
 
-register(new URL('./ts-loader.mjs', import.meta.url));
+// registerHooks installs synchronous hooks, which also apply to require() (babel-plugin-formatjs uses it). Node >= 22.15.
+registerHooks({ load, resolve });
