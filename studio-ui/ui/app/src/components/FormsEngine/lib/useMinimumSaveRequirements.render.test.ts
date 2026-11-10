@@ -24,6 +24,9 @@ const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
 const { useMinimumSaveRequirements } = await import('./useMinimumSaveRequirements.ts');
+const { invalidFieldReadDebounceMs } = await import('./useInvalidFieldIds.ts');
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function createFormAtoms(initial: { fileNameValid: boolean; internalName: unknown }) {
 	const fileName = atom(Promise.resolve({ isValid: initial.fileNameValid }));
@@ -124,11 +127,15 @@ describe('useMinimumSaveRequirements', () => {
 		await act(async () => {
 			form.store.set(form.internalName, 'Home');
 		});
+		await act(async () => pause(20));
+		assert.deepEqual(latest(), ['internalName'], 'still the first list before the pause ends');
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
 		assert.deepEqual(latest(), []);
 
 		await act(async () => {
 			form.store.set(form.internalName, '  ');
 		});
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
 		assert.deepEqual(latest(), ['internalName']);
 	});
 
@@ -140,6 +147,7 @@ describe('useMinimumSaveRequirements', () => {
 			// Still blank after trim; the missing list must not be replaced.
 			form.store.set(form.internalName, '   ');
 		});
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
 		assert.equal(latest(), before);
 	});
 });

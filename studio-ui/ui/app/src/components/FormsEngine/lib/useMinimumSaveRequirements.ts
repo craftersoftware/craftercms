@@ -15,7 +15,7 @@
  */
 
 import { atom, useAtomValue } from 'jotai';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormsEngineAtoms } from './formsEngineContext';
 import { XmlKeys } from './formConsts';
 import {
@@ -23,6 +23,7 @@ import {
 	sameMinimumSaveRequirements,
 	type MinimumSaveRequirement
 } from './minimumSaveRequirements';
+import { invalidFieldReadDebounceMs } from './useInvalidFieldIds';
 import useLoadableAtom from './useLoadableAtom';
 import type { FieldValidityState } from './validators';
 
@@ -31,8 +32,9 @@ const alwaysValidFileName = atom(Promise.resolve({ isValid: true, messages: [] }
 
 /**
  * Live list of what the save would refuse to write without. Empty means the minimum is met.
- * Reads the file-name validity and internal-name value atoms directly. The save still checks on its
- * own, so a read that is a moment behind cannot write a bad file.
+ * Reads the file-name validity and internal-name value atoms directly. The first read is immediate;
+ * later changes wait out the same pause as the invalid-field alert ({@link invalidFieldReadDebounceMs})
+ * so the banner's variant stays in step. The save still checks on its own.
  */
 export function useMinimumSaveRequirements(
 	atoms: FormsEngineAtoms | null | undefined,
@@ -50,10 +52,16 @@ export function useMinimumSaveRequirements(
 	const fileNameLoadable = useLoadableAtom(fileNameAtom);
 	const internalName = useAtomValue(internalNameAtom);
 	const [missing, setMissing] = useState<MinimumSaveRequirement[]>([]);
+	const initial = useRef(true);
+
+	useEffect(() => {
+		initial.current = true;
+	}, [atoms, isEmbedded, isRepeatMode]);
 
 	useEffect(() => {
 		if (!atoms || isRepeatMode) {
 			setMissing((current) => (current.length === 0 ? current : []));
+			initial.current = false;
 			return;
 		}
 		if (fileNameLoadable.state === 'loading') return;
@@ -68,7 +76,14 @@ export function useMinimumSaveRequirements(
 			fileNameValid: fileNameLoadable.data.isValid,
 			internalName
 		});
-		setMissing((current) => (sameMinimumSaveRequirements(current, next) ? current : next));
+		const apply = () => setMissing((current) => (sameMinimumSaveRequirements(current, next) ? current : next));
+		if (initial.current) {
+			initial.current = false;
+			apply();
+			return;
+		}
+		const timer = window.setTimeout(apply, invalidFieldReadDebounceMs);
+		return () => window.clearTimeout(timer);
 	}, [atoms, fileNameLoadable, internalName, isEmbedded, isRepeatMode]);
 
 	return missing;
