@@ -110,7 +110,10 @@ import type { ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import PickControlDialog from './PickControlDialog';
 import PickDataSourceDialog from './PickDataSourceDialog';
 import { TypeControllerFlagContext, TypeControllerFlagContextProps } from '../typeControllerFlagContext';
+import { FieldNamePostfixContext, FieldNamePostfixContextProps } from '../fieldNamePostfixContext';
+import { collectTopLevelFieldNamePostfixViolations, formatPostfixList } from '../fieldNamePostfix';
 import { fetchContentTypes } from '../../../state/actions/preview';
+import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
 import {
@@ -238,6 +241,14 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			}
 		}),
 		[jotai]
+	);
+	const formEngine = useSelection((state) => state.uiConfig.formEngine);
+	const fieldNamePostfixContext = useMemo<FieldNamePostfixContextProps>(
+		() => ({
+			fieldNamePostfix: formEngine.fieldNamePostfix,
+			ignorePostfixFields: formEngine.ignorePostfixFields
+		}),
+		[formEngine.fieldNamePostfix, formEngine.ignorePostfixFields]
 	);
 	const [open, setOpen] = useState(false);
 	const xmlViewerDialogState = useEnhancedDialogState();
@@ -483,7 +494,16 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						fieldForForm.type,
 						configDescriptors.controlDescriptors ?? undefined
 					),
-					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined
+					additionalFields: controlDescriptor.metadata?.additionalFields ?? undefined,
+					// Nested fields (inside a repeat) are not postfix-checked; only the repeat itself is.
+					...(!isComposedPath(resolvedFieldIdPath) &&
+						formEngine.fieldNamePostfix && {
+							fieldNamePostfix: {
+								enabled: true,
+								ignoreFields: formEngine.ignorePostfixFields,
+								suffixes: controlDescriptor.metadata?.suffixes ?? []
+							}
+						})
 				}
 			),
 			{
@@ -635,8 +655,47 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			case 'saveAndMinimize': {
 				if (!(await performCurrentFormErrorCheckAndWarning())) break;
 				const latestUpdate = commitOpenFormChanges();
-				reportSubmittingOrPending({ isSubmitting: true });
 				const typeToSave = latestUpdate ?? typeRef.current;
+				if (formEngine.fieldNamePostfix) {
+					const postfixViolations = collectTopLevelFieldNamePostfixViolations(
+						typeToSave,
+						formEngine.ignorePostfixFields,
+						(field) =>
+							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
+								?.metadata?.suffixes
+					);
+					if (postfixViolations.length) {
+						showAlert({
+							children: (
+								<Box>
+									<Typography sx={{ marginBottom: 1 }}>
+										<FormattedMessage defaultMessage="Model fields require their respective data type postfix at the end of the variable name:" />
+									</Typography>
+									<Box component="ul" sx={{ m: 0, pl: 2 }}>
+										{postfixViolations.map((violation) => (
+											<Typography key={violation.id} component="li" variant="body2">
+												<strong>{violation.title}:</strong>{' '}
+												{violation.suffixes.length > 1 ? (
+													<FormattedMessage
+														defaultMessage="options are {postfixes}"
+														values={{ postfixes: formatPostfixList(violation.suffixes) }}
+													/>
+												) : (
+													<FormattedMessage
+														defaultMessage="option is {postfixes}"
+														values={{ postfixes: formatPostfixList(violation.suffixes) }}
+													/>
+												)}
+											</Typography>
+										))}
+									</Box>
+								</Box>
+							)
+						});
+						break;
+					}
+				}
+				reportSubmittingOrPending({ isSubmitting: true });
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
@@ -887,16 +946,18 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 
 	// region const fieldEditorView = ...
 	const fieldEditorView = virtualContentType ? (
-		<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
-			{createElement(TypeBuilderFormsEngine, {
-				...fieldFormViewProps,
-				// Keep `type` current so delete-confirmation can list fields that still reference a data source.
-				type,
-				isPanelReady: drawerOpenTransitionEnded,
-				onOpenInsertFieldDialog,
-				performCurrentFormErrorCheckAndWarning
-			})}
-		</TypeControllerFlagContext.Provider>
+		<FieldNamePostfixContext.Provider value={fieldNamePostfixContext}>
+			<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
+				{createElement(TypeBuilderFormsEngine, {
+					...fieldFormViewProps,
+					// Keep `type` current so delete-confirmation can list fields that still reference a data source.
+					type,
+					isPanelReady: drawerOpenTransitionEnded,
+					onOpenInsertFieldDialog,
+					performCurrentFormErrorCheckAndWarning
+				})}
+			</TypeControllerFlagContext.Provider>
+		</FieldNamePostfixContext.Provider>
 	) : null;
 	// endregion
 

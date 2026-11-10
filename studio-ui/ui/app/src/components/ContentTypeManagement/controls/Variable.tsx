@@ -15,7 +15,7 @@
  */
 
 import OutlinedInput, { OutlinedInputProps } from '@mui/material/OutlinedInput';
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import { ControlProps } from '../../FormsEngine/types';
 import controlDescriptors from '../descriptors/controls';
@@ -28,6 +28,8 @@ import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { useAtomValue } from 'jotai';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import { isFieldReadOnly } from '../../FormsEngine/lib/formUtils';
+import { FieldNamePostfixContext } from '../fieldNamePostfixContext';
+import { shouldPreserveVariableInput } from '../fieldNamePostfix';
 
 export type VariableProps = ControlProps<string>;
 
@@ -42,14 +44,16 @@ export function Variable(props: VariableProps) {
 	const controlDescriptor = contentType?.id && controlDescriptors[contentType?.id];
 	const supportedSuffixes: SuffixesType[] = controlDescriptor?.metadata?.suffixes;
 	const { formatMessage } = useIntl();
+	const ignorePostfixFields = useContext(FieldNamePostfixContext)?.ignorePostfixFields ?? [];
 	const disabled = isFieldReadOnly(field, readonly) || disabledFields.includes(value);
-	const showSuffixes = supportedSuffixes && !disableSuffixes.includes(value);
+	const showSuffixes = supportedSuffixes && !disableSuffixes.includes(value) && !ignorePostfixFields.includes(value);
 	const effectRefs = useUpdateRefs({
 		value,
 		setValue,
 		supportedSuffixes,
 		allowAutoValue,
-		disabled
+		disabled,
+		ignorePostfixFields
 	});
 	const {
 		atoms: { valueByFieldId }
@@ -58,15 +62,17 @@ export function Variable(props: VariableProps) {
 	const inputRef = useRef<HTMLInputElement>(null); // ref for the input
 
 	useEffect(() => {
-		const { setValue, supportedSuffixes, allowAutoValue, disabled } = effectRefs.current;
+		const { setValue, supportedSuffixes, allowAutoValue, disabled, ignorePostfixFields } = effectRefs.current;
 		// If allowAutoValue is true and the field is not disabled, set the value from the title.
 		if (allowAutoValue && !disabled && title) {
-			setValue(getValueFromTitle(title, supportedSuffixes));
+			setValue(getValueFromTitle(title, supportedSuffixes, ignorePostfixFields));
 		}
 	}, [title, effectRefs]);
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {
-		const newValue = cleanVariable(e.currentTarget.value);
+		const raw = e.currentTarget.value;
+		// Keep hyphens (and other chars) while the value is a prefix of an ignore-postfix-fields entry.
+		const newValue = shouldPreserveVariableInput(raw, ignorePostfixFields) ? raw : cleanVariable(raw);
 		// If when manually updating the variable, the value is empty, allow auto value to be set again.
 		setAllowAutoValue(newValue === '');
 		setValue(newValue);
@@ -152,12 +158,16 @@ const getValueWithSuffix = (value: string, suffix: string, supportedSuffixes: Su
 	return isSuffix ? value.replace(/_[a-z]+$/, `${suffix}`) : `${value}${suffix}`;
 };
 
-const getValueFromTitle = (title: string, supportedSuffixes: SuffixesType[]): string => {
+const getValueFromTitle = (
+	title: string,
+	supportedSuffixes: SuffixesType[],
+	ignorePostfixFields: readonly string[] = []
+): string => {
 	let newValue = cleanVariable(title);
 	// Lowercase the first letter
 	newValue = newValue.charAt(0).toLowerCase() + newValue.slice(1);
-	// If there are supported suffixes and the value is not in the disableSuffixes list, add the first one.
-	if (supportedSuffixes?.length && !disableSuffixes.includes(newValue)) {
+	// If there are supported suffixes and the value is not exempt from postfixes, add the first one.
+	if (supportedSuffixes?.length && !disableSuffixes.includes(newValue) && !ignorePostfixFields.includes(newValue)) {
 		newValue = getValueWithSuffix(newValue, supportedSuffixes[0], supportedSuffixes);
 	}
 	return newValue;

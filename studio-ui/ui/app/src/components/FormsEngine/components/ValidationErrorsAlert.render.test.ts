@@ -71,6 +71,7 @@ describe('ValidationErrorsAlert', () => {
 			text(one.host),
 			/^The form has a validation error\. This will save as a draft until the error is fixed\./
 		);
+		assert.equal(one.host.querySelector('svg')?.getAttribute('data-testid'), 'WarningAmberRoundedIcon');
 		const many = await render({ count: 3 });
 		assert.match(text(many.host), /^The form has 3 validation errors\./);
 	});
