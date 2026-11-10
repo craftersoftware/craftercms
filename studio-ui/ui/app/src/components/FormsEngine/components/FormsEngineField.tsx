@@ -37,12 +37,7 @@ import React, {
 	useState
 } from 'react';
 import { isEmptyValue, isFieldRequired } from '../lib/validators';
-import {
-	fieldDescriptionId,
-	fieldErrorId,
-	FormSaveAttemptedContext,
-	FormValidationAnnouncerContext
-} from '../lib/fieldA11y';
+import { fieldDescriptionId, fieldErrorId, FormValidationAnnouncerContext } from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -185,7 +180,6 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
 	const dispatch = useDispatch();
 	const announceValidation = useContext(FormValidationAnnouncerContext);
-	const saveAttempted = useContext(FormSaveAttemptedContext);
 	const editedRef = useRef(false);
 	// The control links these ids through `useFieldControlA11y` with the same id it passes here.
 	const generatedId = useId();
@@ -200,9 +194,10 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			.map((messageData) => translateValidityMessage(messageData, formatMessage))
 			.join(' ');
 		if (!errorText) return;
-		// Tabbing through a pristine required field should not announce. Announce after the
-		// user edits the field, or after Save has already been attempted.
-		if (!editedRef.current && !saveAttempted) return;
+		// Blur announces only edited fields, to cut noise while tabbing.
+		// Untouched invalid fields still expose their error on focus through aria-describedby, and a failed
+		// Save still announces the full error count and summary, so nothing is lost.
+		if (!editedRef.current) return;
 		announceValidation(formatMessage({ defaultMessage: '{field}: {error}' }, { field: field.name, error: errorText }));
 	};
 	useEffect(() => {
