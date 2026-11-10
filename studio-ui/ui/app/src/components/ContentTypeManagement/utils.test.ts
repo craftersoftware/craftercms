@@ -134,3 +134,11 @@ describe('reverseTypeFieldValuesObject dropping properties the descriptor does n
 		assert.equal(result.consoleCalls, 0);
 	});
 });
+
+describe('createVirtualTypeFormContext', () => {
+	it('creates its own fieldUpdates$ Subject when mixin is omitted', () => {
+		const virtualType = createVirtualTypeForField(inputDescriptor, ({ defaultMessage }) => String(defaultMessage));
+		const context = createVirtualTypeFormContext(virtualType, {}, {});
+		assert.ok(context.fieldUpdates$ instanceof Subject);
+	});
+});

@@ -125,6 +125,31 @@ describe('built-in validators on the new signature', () => {
 		assert.equal(own.isValid, true);
 	});
 
+	it('variable: requires an ending postfix when site-config rules are enabled', async () => {
+		const variable = field('variable', 'v_s');
+		const postfix = { enabled: true, ignoreFields: ['internal-name'], suffixes: ['_s', '_t'] };
+		const missing = await validateFieldValue(variable, 'is_syz', { ...meta, fieldNamePostfix: postfix });
+		assert.deepEqual(texts(missing.messages), ['The variable name must end with {postfixes}.']);
+		assert.equal((await validateFieldValue(variable, 'title_s', { ...meta, fieldNamePostfix: postfix })).isValid, true);
+		assert.equal(
+			(await validateFieldValue(variable, 'internal-name', { ...meta, fieldNamePostfix: postfix })).isValid,
+			true
+		);
+		// Nested / data-source forms omit the rules; no postfix error without them.
+		assert.equal((await validateFieldValue(variable, 'is_syz', meta)).isValid, true);
+		// Duplicate check still runs alongside postfix rules.
+		const both = await validateFieldValue(variable, 'name', {
+			...meta,
+			siblingIds: ['name'],
+			currentIds: [],
+			fieldNamePostfix: postfix
+		});
+		assert.deepEqual(texts(both.messages), [
+			'The variable name must end with {postfixes}.',
+			'That variable name is already in use.'
+		]);
+	});
+
 	it('file-name owns its required message and does not get the host one', async () => {
 		const result = await validateFieldValue(field('file-name', 'file-name', { required: true }), '', meta);
 		assert.equal(result.isValid, false);
