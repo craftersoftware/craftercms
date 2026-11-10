@@ -1578,35 +1578,37 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				case contentEvent.type: {
 					const { user: person, targetPath } = payload as SocketEventBase;
 					const { theme, store, contentTypes } = upToDateRefs.current;
-					// Notify for the active page itself, or a shared component it renders; skip other pages it only references.
+					// Notify for the active page itself, or any item it loaded as a model (shared components, level descriptors, pages it renders, e.g. in navigation).
 					if (
 						person.username !== user.username &&
 						guest &&
 						(guest.path === targetPath || guest.modelIdByPath[targetPath])
 					) {
-						const item = store.getState().content.itemsByPath[targetPath];
-						const contentTypeName = contentTypes[item.contentTypeId]?.name ?? item.contentTypeId;
-						const itemLabel = `${item.label} (${contentTypeName})`;
-						enqueueSnackbar(
-							guest.path === targetPath
-								? formatMessage(guestMessages.currentContentChangedByAnotherUser, { name: getPersonFullName(person) })
-								: formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-										name: getPersonFullName(person),
-										content: itemLabel
-									}),
-							{
-								action: (
-									<IconButton
-										size="small"
-										onClick={() => hostToGuest$.next(reloadRequest())}
-										sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
-									>
-										<RefreshRounded />
-									</IconButton>
-								),
-								autoHideDuration: 10000
-							}
-						);
+						let message: string;
+						if (guest.path === targetPath) {
+							message = formatMessage(guestMessages.currentContentChangedByAnotherUser, {
+								name: getPersonFullName(person)
+							});
+						} else {
+							const item = store.getState().content.itemsByPath[targetPath];
+							const contentTypeName = item ? (contentTypes[item.contentTypeId]?.name ?? item.contentTypeId) : null;
+							message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+								name: getPersonFullName(person),
+								content: item ? `${item.label} (${contentTypeName})` : targetPath
+							});
+						}
+						enqueueSnackbar(message, {
+							action: (
+								<IconButton
+									size="small"
+									onClick={() => hostToGuest$.next(reloadRequest())}
+									sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
+								>
+									<RefreshRounded />
+								</IconButton>
+							),
+							autoHideDuration: 10000
+						});
 					}
 					break;
 				}
