@@ -36,15 +36,15 @@ import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { isPagePath } from '../../../utils/path';
-import { useFieldControlA11y } from '../lib/fieldA11y';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 export function FileName(props: ControlProps<string>) {
-	const { field, readonly: formReadonly, autoFocus } = props;
+	const { field, readonly: formReadonly, autoFocus, inputId, labelId } = props;
 	const { path: initialPath, pathInSite } = useItemMetaContext();
 	const formContext = useStableFormContext();
 	const atoms = formContext.atoms;
 	const isNewForm = nnou(formContext.props?.create);
-	const htmlId = useId();
+	const htmlId = inputId || useId();
 	if (field.id === 'fileName') {
 		throw new Error('Detected field ID "fileName" instead "file-name" at the "FileName" Control.');
 	}
@@ -52,7 +52,7 @@ export function FileName(props: ControlProps<string>) {
 	const [value, setValue] = useAtom(atoms.fileName as PrimitiveAtom<string>);
 	const validityData = useLoadableAtom(atoms.validationByFieldId['file-name']);
 	const isValid = validityData.state === 'hasData' ? validityData.data.isValid : true;
-	const a11y = useFieldControlA11y(field, htmlId, isValid);
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId), isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -85,7 +85,14 @@ export function FileName(props: ControlProps<string>) {
 	};
 
 	return (
-		<FormsEngineField isValid={isValid} htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
+		<FormsEngineField
+			isValid={isValid}
+			htmlFor={htmlId}
+			labelId={labelId}
+			field={field}
+			max={maxLength}
+			length={value.length}
+		>
 			<OutlinedInput
 				autoFocus={autoFocus}
 				fullWidth

@@ -16,7 +16,7 @@
 
 import React, { useId } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
-import { useFieldControlA11y } from '../lib/fieldA11y';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 import { ControlProps } from '../types';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -27,15 +27,15 @@ import { useDataSourceListOptions, type DataSourceListOptionGroup } from '../dat
 export type DropdownProps = ControlProps<string>;
 
 export function Dropdown(props: DropdownProps) {
-	const { field, value, setValue, readonly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly, autoFocus, dataSources, inputId, labelId } = props;
 	const maxLength = field.validations.maxLength?.value;
 	const handleChange = (event: SelectChangeEvent) => setValue(event.target.value);
 	const optionGroups = useDataSourceListOptions(dataSources);
-	const controlId = useId();
-	const a11y = useFieldControlA11y(field, controlId);
+	const controlId = inputId || useId();
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 	if (!optionGroups) {
 		return (
-			<FormsEngineField field={field} max={maxLength} length={value.length}>
+			<FormsEngineField field={field} labelId={labelId} max={maxLength} length={value.length}>
 				<Skeleton variant="rounded" height={56} />
 			</FormsEngineField>
 		);
@@ -47,7 +47,7 @@ export function Dropdown(props: DropdownProps) {
 			</MenuItem>
 		));
 	return (
-		<FormsEngineField field={field} controlId={controlId} max={maxLength} length={value.length}>
+		<FormsEngineField field={field} controlId={controlId} labelId={labelId} max={maxLength} length={value.length}>
 			<Select
 				value={value}
 				label=""

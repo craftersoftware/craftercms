@@ -54,18 +54,62 @@ import { getParentPath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
 import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
 import { XmlKeys } from '../lib/formConsts';
-import { useFieldControlA11y } from '../lib/fieldA11y';
+import { useControlAria } from '../components/useControlAria';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 
 export type PageNavOrderProps = ControlProps<boolean>;
 
 const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 
+function PageNavChoices({
+	value,
+	onChange,
+	readonly,
+	autoFocus
+}: {
+	value: boolean;
+	onChange(event: ChangeEvent<HTMLInputElement>, selected: string): void;
+	readonly: boolean;
+	autoFocus?: boolean;
+}) {
+	// The radios are a group, so required is a description, not aria-required.
+	const aria = useControlAria();
+	return (
+		<RadioGroup
+			row
+			aria-invalid={aria['aria-invalid']}
+			aria-labelledby={aria['aria-labelledby']}
+			aria-describedby={aria['aria-describedby']}
+			value={String(value)}
+			onChange={onChange}
+			sx={{ display: 'inline-flex' }}
+			autoFocus={autoFocus}
+		>
+			{aria.requiredId && (
+				<Box component="span" id={aria.requiredId} aria-hidden sx={visuallyHidden}>
+					<FormattedMessage defaultMessage="Required" />
+				</Box>
+			)}
+			<FormControlLabel
+				value="false"
+				control={<Radio />}
+				label={<FormattedMessage defaultMessage="No" />}
+				disabled={readonly}
+			/>
+			<FormControlLabel
+				value="true"
+				control={<Radio />}
+				label={<FormattedMessage defaultMessage="Yes" />}
+				disabled={readonly}
+			/>
+		</RadioGroup>
+	);
+}
+
 export function PageNavOrder(props: PageNavOrderProps) {
-	const { value, setValue, field, autoFocus, readonly: formReadonly } = props;
-	const htmlId = useId();
+	const { value, setValue, field, autoFocus, readonly: formReadonly, labelId: labelIdProp } = props;
 	// The group is a div, so the label's htmlFor cannot name it. The label id does.
-	const labelId = useId();
-	const a11y = useFieldControlA11y(field, htmlId);
+	const labelId = labelIdProp || useId();
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
 	const [pagesOrderState, setPagesOrderState] = useSpreadState<{
@@ -179,7 +223,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	};
 
 	return (
-		<FormsEngineField field={field} controlId={htmlId} labelId={labelId}>
+		<FormsEngineField field={field} labelId={labelId}>
 			{nou(currentPath) && (
 				<Alert severity="warning" variant="outlined" sx={{ my: 1 }}>
 					<FormattedMessage defaultMessage="This element doesn't have an identifier yet. You can't edit the navigation order until it has an identifier." />
@@ -192,28 +236,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					gap: 2
 				}}
 			>
-				<RadioGroup
-					{...a11y}
-					aria-labelledby={labelId}
-					row
-					value={String(value)}
-					onChange={handleChange}
-					sx={{ display: 'inline-flex' }}
-					autoFocus={autoFocus}
-				>
-					<FormControlLabel
-						value="false"
-						control={<Radio />}
-						label={<FormattedMessage defaultMessage="No" />}
-						disabled={readonly}
-					/>
-					<FormControlLabel
-						value="true"
-						control={<Radio />}
-						label={<FormattedMessage defaultMessage="Yes" />}
-						disabled={readonly}
-					/>
-				</RadioGroup>
+				<PageNavChoices value={value} onChange={handleChange} readonly={readonly} autoFocus={autoFocus} />
 
 				{value && (
 					<Button

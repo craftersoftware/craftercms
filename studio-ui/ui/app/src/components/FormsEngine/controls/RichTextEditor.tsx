@@ -33,7 +33,7 @@ import { getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
 import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
-import { type FieldControlA11y, useFieldControlA11y } from '../lib/fieldA11y';
+import { type FieldControlA11y, fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 import { getCurrentLocale } from '../../../utils/i18n';
 import Dialog from '@mui/material/Dialog';
 import MenuList from '@mui/material/MenuList';
@@ -68,13 +68,13 @@ declare global {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-	const { field, value, setValue, readonly, defaultInitOptions, dataSources, labelId } = props;
+	const { field, value, setValue, readonly, defaultInitOptions, dataSources, inputId, labelId } = props;
 	const locale = getCurrentLocale();
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
 	const hasReceivedFocusRef = useRef(false);
-	const controlId = useId();
-	const a11y = useFieldControlA11y(field, controlId);
+	const controlId = inputId || useId();
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 	const describedBy = a11y['aria-describedby'];
 	const invalid = a11y['aria-invalid'];
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);

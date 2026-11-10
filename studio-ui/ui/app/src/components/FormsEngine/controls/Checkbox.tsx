@@ -19,23 +19,26 @@ import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
 import Switch from '@mui/material/Switch';
 import { isFieldReadOnly } from '../lib/formUtils';
-import { useFieldControlA11y } from '../lib/fieldA11y';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 export type CheckboxProps = ControlProps<boolean>;
 
 export function Checkbox(props: CheckboxProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;
+	const { field, value, setValue, readonly: formReadonly, autoFocus, inputId, labelId } = props;
 
 	//  region field properties/validations
 	const readonly = isFieldReadOnly(field, formReadonly);
 	// endregion
 
-	const htmlId = useId();
+	const htmlId = inputId || useId();
 	// `aria-required` is not allowed on role="switch", so only the description and invalid state are passed.
-	const { 'aria-describedby': describedBy, 'aria-invalid': invalid } = useFieldControlA11y(field, htmlId);
+	const { 'aria-describedby': describedBy, 'aria-invalid': invalid } = useFieldControlA11y(
+		field,
+		fieldDescribedById(labelId, htmlId)
+	);
 	const handleChange = (e: ChangeEvent<HTMLInputElement>) => setValue(e.target.checked);
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
+		<FormsEngineField htmlFor={htmlId} labelId={labelId} field={field}>
 			<Switch
 				id={htmlId}
 				checked={value}

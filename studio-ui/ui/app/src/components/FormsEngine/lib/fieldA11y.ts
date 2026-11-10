@@ -23,6 +23,14 @@ import useLoadableAtom from './useLoadableAtom';
 /** Form-level polite live region. The default is a no-op so fields can render outside a form shell. */
 export const FormValidationAnnouncerContext = createContext<(message: string) => void>(() => {});
 
+/**
+ * The id description and error suffixes hang off. A label id is the group name. A control rendered
+ * without one uses its own id, which is what `useFieldControlA11y` is given.
+ */
+export function fieldDescribedById(labelId: string | undefined, controlId: string): string {
+	return labelId || controlId;
+}
+
 /** Id of the field description that `FormsEngineField` renders for the control with `controlId`. */
 export function fieldDescriptionId(controlId: string): string {
 	return `${controlId}-description`;

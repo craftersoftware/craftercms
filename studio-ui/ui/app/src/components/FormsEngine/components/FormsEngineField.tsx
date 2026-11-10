@@ -39,7 +39,7 @@ import React, {
 	useState
 } from 'react';
 import { isEmptyValue } from '../lib/validators';
-import { fieldDescriptionId, fieldErrorId, FormValidationAnnouncerContext } from '../lib/fieldA11y';
+import { fieldDescribedById, fieldDescriptionId, fieldErrorId, FormValidationAnnouncerContext } from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -212,10 +212,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		}
 		editedRef.current = true;
 	}, [value]);
-	// 9388 names the description and the error from the label id, which is what a group is labelled by.
-	// A control that has no label id passes the id `useFieldControlA11y` uses, so the same elements resolve.
+	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
 	const generatedId = useId();
-	const describedByBase = labelId || htmlFor || controlIdProp || generatedId;
+	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {

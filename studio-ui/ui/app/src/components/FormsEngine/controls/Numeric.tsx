@@ -24,7 +24,7 @@ import Button from '@mui/material/Button';
 import MinusRounded from '@mui/icons-material/RemoveRounded';
 import { NumberField } from '@base-ui-components/react/number-field';
 import { getValidationValue, isFieldReadOnly } from '../lib/formUtils';
-import { useFieldControlA11y } from '../lib/fieldA11y';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 type NumberFieldRootProps = ComponentProps<typeof NumberField.Root>;
 
@@ -58,9 +58,9 @@ const OutlinedInputWithRef = forwardRef<HTMLInputElement, OutlinedInputProps>((p
 });
 
 export function Numeric(props: NumberProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus } = props;
-	const htmlId = useId();
-	const a11y = useFieldControlA11y(field, htmlId);
+	const { field, value, setValue, readonly: formReadonly, autoFocus, inputId, labelId } = props;
+	const htmlId = inputId || useId();
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
@@ -71,7 +71,7 @@ export function Numeric(props: NumberProps) {
 
 	const handleChange: NumberFieldRootProps['onValueChange'] = (newValue) => setValue(newValue);
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field} max={maxLength}>
+		<FormsEngineField htmlFor={htmlId} labelId={labelId} field={field} max={maxLength}>
 			<NumberField.Root
 				id={htmlId}
 				value={value}
