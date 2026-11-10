@@ -156,15 +156,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });
-	// Same atoms and verdict as the table-of-contents row for this field. `props.isValid` stays a label-only
-	// override for the control chrome; the indicator itself follows the shared verdict.
-	const fieldState = useFieldStateIndicatorProps(field, atoms);
+	// The label icon and the control border share this verdict, including a control's isValid override.
+	const fieldState = useFieldStateIndicatorProps(field, atoms, { isValid: props.isValid });
 	const { validityData, value } = fieldState;
 	const isRequired = fieldState.props.isRequired;
-	// A control may pass isValid (a rejected image, the file-name control). The border and the icon use that
-	// same verdict, so a red label is never paired with a green check.
-	const isValid = props.isValid ?? fieldState.props.isValid;
-	const indicatorProps = { ...fieldState.props, isValid };
+	const isValid = fieldState.props.isValid;
+	const indicatorProps = fieldState.props;
 	const dispatch = useDispatch();
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);

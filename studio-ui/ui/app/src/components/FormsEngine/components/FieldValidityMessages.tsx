@@ -27,7 +27,7 @@ import { translateIfMessageDescriptor } from '../../ContentTypeManagement/utils'
  * @param formatMessage {IntlFormatters['formatMessage']} - The function used to format internationalized messages.
  * @returns {string} - The translated validity message.
  */
-function translateValidityMessage(
+export function translateValidityMessage(
 	messageData: FieldValidityMessage,
 	formatMessage: IntlFormatters['formatMessage']
 ): string {

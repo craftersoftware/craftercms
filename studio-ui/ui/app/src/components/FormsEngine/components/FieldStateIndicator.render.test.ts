@@ -16,12 +16,16 @@
 
 /**
  * The field state icon is the same component on the label and in the table of contents.
- * Complete is a check, an empty required field is an asterisk, and any other failure is an error icon.
- * The words are in the accessible name. An empty optional field with no validator shows nothing.
+ * Complete is a check, an empty required field is an asterisk, and any other failure is a warning triangle.
+ * A filled required field keeps a small asterisk on that icon. The words are in the accessible name.
+ * An empty optional field with no validator shows nothing.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
+
+// The emptiness check for an RTE reads text through DOMParser. The test DOM is jsdom's.
+globalThis.DOMParser = window.DOMParser;
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import type { ContentTypeField } from '../../../models/ContentType';
@@ -98,10 +102,14 @@ function spoken(root: ParentNode) {
 	return walk(root).replace(/\s+/g, ' ').trim();
 }
 
-function stateIcon(root: ParentNode) {
-	return Array.from(root.querySelectorAll('svg')).find((svg) =>
-		/^(CheckRounded|Asterisk|ErrorOutlineRounded)Icon$/.test(svg.getAttribute('data-testid') ?? '')
+function stateIcons(root: ParentNode) {
+	return Array.from(root.querySelectorAll('svg')).filter((svg) =>
+		/^(CheckRounded|Asterisk|WarningAmberRounded)Icon$/.test(svg.getAttribute('data-testid') ?? '')
 	);
+}
+
+function stateIcon(root: ParentNode) {
+	return stateIcons(root)[0];
 }
 
 function indicatorOf(root: ParentNode) {
@@ -117,49 +125,69 @@ function indicatorOf(root: ParentNode) {
 }
 
 describe('FieldStateIndicator', () => {
-	const cases: Array<{ props: Record<string, boolean>; icon: string; colour: string; text: string }> = [
-		{
-			props: { isRequired: true, hasValidator: true, isValid: true, isEmpty: false },
-			icon: 'CheckRoundedIcon',
-			colour: 'MuiSvgIcon-colorSuccess',
-			text: ', Complete'
-		},
+	const cases: Array<{
+		props: Record<string, unknown>;
+		icons: string[];
+		colour: string;
+		text: string;
+	}> = [
 		{
 			props: { isRequired: true, hasValidator: true, isValid: false, isEmpty: true },
-			icon: 'AsteriskIcon',
+			icons: ['AsteriskIcon'],
 			colour: 'MuiSvgIcon-colorError',
 			text: ', Required'
 		},
 		{
-			props: { isRequired: true, hasValidator: true, isValid: false, isEmpty: false },
-			icon: 'ErrorOutlineRoundedIcon',
+			props: { isRequired: true, hasValidator: true, isValid: true, isEmpty: false },
+			icons: ['CheckRoundedIcon', 'AsteriskIcon'],
+			colour: 'MuiSvgIcon-colorSuccess',
+			text: ', Required, complete'
+		},
+		{
+			props: {
+				isRequired: true,
+				hasValidator: true,
+				isValid: false,
+				isEmpty: false,
+				detail: 'Use letters only.'
+			},
+			icons: ['WarningAmberRoundedIcon', 'AsteriskIcon'],
 			colour: 'MuiSvgIcon-colorError',
-			text: ', Invalid'
+			text: ', Required. Use letters only.'
 		},
 		{
 			props: { isRequired: false, hasValidator: true, isValid: false, isEmpty: false },
-			icon: 'ErrorOutlineRoundedIcon',
+			icons: ['WarningAmberRoundedIcon'],
 			colour: 'MuiSvgIcon-colorError',
 			text: ', Invalid'
 		},
 		{
-			props: { isRequired: false, hasValidator: true, isValid: false, isEmpty: true },
-			icon: 'ErrorOutlineRoundedIcon',
-			colour: 'MuiSvgIcon-colorError',
-			text: ', Invalid'
+			props: { isRequired: false, hasValidator: true, isValid: true, isEmpty: false },
+			icons: ['CheckRoundedIcon'],
+			colour: 'MuiSvgIcon-colorSuccess',
+			text: ', Complete'
 		}
 	];
 
 	for (const entry of cases) {
-		it(`renders ${entry.text.trim()} with ${entry.icon}`, async () => {
-			const { host, errors } = await render(createElement(FieldStateIndicator, entry.props));
-			const icon = stateIcon(host);
-			assert.ok(icon);
-			assert.equal(icon.getAttribute('data-testid'), entry.icon);
-			assert.equal(icon.getAttribute('aria-hidden'), 'true');
-			assert.ok(icon.classList.contains(entry.colour));
-			assert.doesNotMatch(icon.getAttribute('fill') ?? '', /^#/);
-			assert.equal(icon.parentElement?.tagName, 'SPAN');
+		it(`renders ${entry.text.trim()} with ${entry.icons.join(' + ')}`, async () => {
+			const { host, errors } = await render(createElement(FieldStateIndicator, entry.props as never));
+			const icons = stateIcons(host);
+			assert.deepEqual(
+				icons.map((icon) => icon.getAttribute('data-testid')),
+				entry.icons
+			);
+			for (const icon of icons) {
+				assert.equal(icon.getAttribute('aria-hidden'), 'true');
+				assert.doesNotMatch(icon.getAttribute('fill') ?? '', /^#/);
+			}
+			assert.ok(icons[0].classList.contains(entry.colour));
+			assert.equal(icons[0].parentElement?.tagName, 'SPAN');
+			const badge = icons[1];
+			if (badge) {
+				assert.equal(getComputedStyle(badge).position, 'absolute');
+				assert.equal(badge.getAttribute('aria-hidden'), 'true');
+			}
 			const hidden = Array.from(host.querySelectorAll('span')).find(
 				(span) => span.textContent === entry.text && span.querySelector('svg') == null
 			);
@@ -218,8 +246,8 @@ const surfaces = [
 		isValid: true,
 		message: '',
 		icon: 'CheckRoundedIcon',
-		text: ', Complete',
-		spoken: 'Title, Complete'
+		text: ', Required, complete',
+		spoken: 'Title, Required, complete'
 	},
 	{
 		id: 'required_s',
@@ -241,7 +269,7 @@ const surfaces = [
 		value: '???',
 		isValid: false,
 		message: 'The value does not match the required pattern.',
-		icon: 'ErrorOutlineRoundedIcon',
+		icon: 'WarningAmberRoundedIcon',
 		text: ', Invalid',
 		spoken: 'Summary, Invalid'
 	},
@@ -256,6 +284,30 @@ const surfaces = [
 		icon: '',
 		text: '',
 		spoken: 'Note'
+	},
+	{
+		id: 'flag_s',
+		name: 'Agree',
+		type: 'checkbox',
+		required: true,
+		value: false,
+		isValid: false,
+		message: 'This checkbox must be checked.',
+		icon: 'AsteriskIcon',
+		text: ', Required',
+		spoken: 'Agree, Required'
+	},
+	{
+		id: 'article_s',
+		name: 'Article',
+		type: 'rte',
+		required: true,
+		value: '<p></p>',
+		isValid: false,
+		message: 'This field is required.',
+		icon: 'AsteriskIcon',
+		text: ', Required',
+		spoken: 'Article, Required'
 	}
 ];
 
@@ -324,6 +376,15 @@ describe('field label and table of contents', () => {
 									),
 									createElement(
 										'div',
+										{ id: 'override' },
+										createElement(FormsEngineField, {
+											field: fields[0],
+											menu: false,
+											isValid: false
+										})
+									),
+									createElement(
+										'div',
 										{ id: 'toc' },
 										createElement(TableOfContents, {
 											containerRef: { current: document.createElement('div') },
@@ -362,6 +423,11 @@ describe('field label and table of contents', () => {
 				assert.equal(labelField.textContent?.includes(entry.message), true);
 			}
 		}
+		const override = host.querySelector('#override [data-field-id="complete_s"]') as HTMLElement;
+		assert.equal(stateIcon(override)?.getAttribute('data-testid'), 'WarningAmberRoundedIcon');
+		assert.equal(stateIcons(override).length, 2);
+		assert.equal(stateIcons(override)[1]?.getAttribute('aria-hidden'), 'true');
+		assert.equal(spoken(override.querySelector('label')), 'Title');
 		const body = labels.querySelector('[data-field-id="required_s"] label') as HTMLElement;
 		assert.equal(spoken(body), 'Body');
 		await act(async () => {

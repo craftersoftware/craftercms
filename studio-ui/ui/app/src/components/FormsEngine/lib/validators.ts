@@ -198,7 +198,11 @@ const validatorsMap: Partial<Record<BuiltInControlType | DescriptorControlType, 
  * Control types whose validator applies the required constraint itself.
  * {@link validateFieldValue} does not add a required message for these. The validator emits that message.
  */
-const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>(['file-name']);
+const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>([
+	'file-name',
+	// Unchecked is empty, but the message is "must be checked", not the host's "required".
+	'checkbox'
+]);
 
 /**
  * Validators selected by a validation key on the field, not by its control type.
@@ -406,7 +410,7 @@ export async function validateFieldValue(
 	meta: ValidatorMetaData
 ): Promise<FieldValidityState> {
 	const messages: FieldValidityState['messages'] = [];
-	const isEmpty = isEmptyValue(field, currentValue);
+	const isEmpty = isFieldValueEmpty(field, currentValue);
 	const requiredByConstraint = Boolean(field.validations?.required?.value);
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
@@ -506,6 +510,18 @@ export function isEmptyValue(field: ContentTypeField, currentValue: unknown): bo
 		(typeof currentValue === 'string' && currentValue.trim() === '') ||
 		(Array.isArray(currentValue) && currentValue.length === 0)
 	);
+}
+
+/**
+ * Whether `value` is empty for this control, for the required marker and the host required check.
+ * A checkbox is empty until it is checked (`false` is unchecked, not a filled value).
+ * An RTE is empty when {@link measureRteValue} finds no text, so markup such as `<p></p>` counts as empty.
+ * Every other control uses {@link isEmptyValue}.
+ */
+export function isFieldValueEmpty(field: ContentTypeField, value: unknown): boolean {
+	if (field.type === 'checkbox') return value !== true;
+	if (field.type === 'rte') return measureRteValue(value) === '';
+	return isEmptyValue(field, value);
 }
 
 /**
