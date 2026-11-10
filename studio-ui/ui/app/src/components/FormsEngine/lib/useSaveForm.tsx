@@ -32,6 +32,7 @@ import {
 	composePathForType,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
+	fileNameElementForXml,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
@@ -74,6 +75,7 @@ import {
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 import { applySavedRenameToLock } from './unlockOnClose';
+
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -386,8 +388,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
@@ -403,6 +403,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 						});
 					}
 
+					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
+					// Mutate in place so relevance WeakMap association is kept for stacked commits.
+					values[XmlKeys.fileName] = fileNameElementForXml(null, id);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -498,6 +502,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 						path = itemPath;
 					}
 				}
+
+				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
+				const xml = buildContentXml({ ...values, [XmlKeys.fileName]: fileNameElementForXml(path) }, contentTypesById);
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {

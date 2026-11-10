@@ -37,8 +37,13 @@ const { getItemDataSourceId, parseLegacyFormDefinition } = await import('../../.
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('../../../utils/xml.ts');
 const { createParsedValuesObject, deserializeContentDoc } = await import('./valueRetrievers.ts');
 const { buildContentXml } = await import('./valueSerializers.ts');
-const { complementValuesWithSystemProps, createObjectWithSystemProps, extractAtomValues, setFieldAtoms } =
-	await import('./formUtils.tsx');
+const {
+	complementValuesWithSystemProps,
+	createObjectWithSystemProps,
+	extractAtomValues,
+	fileNameElementForXml,
+	setFieldAtoms
+} = await import('./formUtils.tsx');
 const { XmlKeys, xmlDataSourceAttribute } = await import('./formConsts.ts');
 const { itemsFromTaxonomyDoc } = await import('../dataSources/modules/simpleTaxonomy.ts');
 const { parseConfiguredListItems } = await import('../dataSources/modules/configuredList.ts');
@@ -66,8 +71,11 @@ function parseType(xml: string) {
 	);
 }
 
-/** Open the item for edit and save it without changes, as FormsEngine and useSaveForm do. */
-function saveWithoutChanges(xml: string, contentTypesById: Record<string, ContentType>): Document {
+/**
+ * Open the item for edit and save it without changes, as FormsEngine and useSaveForm do.
+ * `itemPath` is the repo path when known; without it, embeds use `{objectId}.xml` for `<file-name>`.
+ */
+function saveWithoutChanges(xml: string, contentTypesById: Record<string, ContentType>, itemPath?: string): Document {
 	const contentObject = deserializeContentDoc(fromString(xml));
 	const contentType = contentTypesById[contentObject[XmlKeys.contentTypeId] as string];
 	const atoms = { valueByFieldId: {}, validationByFieldId: {} } as FormsEngineAtoms;
@@ -84,14 +92,18 @@ function saveWithoutChanges(xml: string, contentTypesById: Record<string, Conten
 				atoms,
 				value,
 				undefined,
-				isAdditional
+				isAdditional,
+				itemPath
 			)
 	);
 	const saved = extractAtomValues(createStore(), atoms.valueByFieldId);
-	complementValuesWithSystemProps(values[XmlKeys.modelId] as string, saved, contentObject, contentType, false);
-	const withoutFileName = { ...saved };
-	delete withoutFileName[XmlKeys.fileName];
-	return fromString(buildContentXml(withoutFileName, contentTypesById));
+	const objectId = values[XmlKeys.modelId] as string;
+	complementValuesWithSystemProps(objectId, saved, contentObject, contentType, false);
+	const xmlValues = {
+		...saved,
+		[XmlKeys.fileName]: fileNameElementForXml(itemPath, objectId)
+	};
+	return fromString(buildContentXml(xmlValues, contentTypesById));
 }
 
 /** Element path => text, and element path@attribute => value. Item paths carry their index. */
@@ -108,6 +120,20 @@ function flatten(element: Element, prefix = '', out = new Map<string, string>())
 
 const blueprints = existsSync(blueprintsDir) ? readdirSync(blueprintsDir) : [];
 
+describe('fileNameElementForXml', () => {
+	it('uses the path basename for pages and components', () => {
+		assert.equal(fileNameElementForXml('/site/website/about/index.xml'), 'index.xml');
+		assert.equal(fileNameElementForXml('/site/components/headers/header.xml'), 'header.xml');
+	});
+	it('uses {objectId}.xml when there is no path (embedded)', () => {
+		assert.equal(
+			fileNameElementForXml(null, 'c646ba89-a4c3-308f-3492-93be61429fec'),
+			'c646ba89-a4c3-308f-3492-93be61429fec.xml'
+		);
+		assert.equal(fileNameElementForXml(undefined, 'abc'), 'abc.xml');
+	});
+});
+
 describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blueprints not found' }, () => {
 	for (const blueprint of blueprints) {
 		const typesDir = path.join(blueprintsDir, blueprint, 'config/studio/content-types');
@@ -123,9 +149,11 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 			const xml = readFileSync(file, 'utf8');
 			const doc = fromString(xml);
 			if (!contentTypesById[doc.querySelector(':scope > content-type')?.textContent.trim()]) continue;
+			const itemPath = `/site${file.split('/site')[1]}`;
 			it(`${blueprint}${file.split('/site')[1]} keeps preserved elements, item attributes and text`, () => {
 				const before = flatten(doc.documentElement);
-				const after = flatten(saveWithoutChanges(xml, contentTypesById).documentElement);
+				const savedDoc = saveWithoutChanges(xml, contentTypesById, itemPath);
+				const after = flatten(savedDoc.documentElement);
 				for (const [key, value] of before) {
 					const kept =
 						/\/(objectGroupId|orderDefault_f|placeInNav)$/.test(key) ||
@@ -133,9 +161,17 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 						/\/item\[\d+\]\/[^/]+$/.test(key);
 					if (kept) assert.equal(after.get(key), value, key);
 				}
-				const root = saveWithoutChanges(xml, contentTypesById).documentElement;
-				const firstObjectId = root.getElementsByTagName(XmlKeys.modelId)[0];
-				assert.equal(firstObjectId?.parentElement, root, 'the root objectId comes before any embedded one');
+				assert.equal(
+					savedDoc.documentElement.querySelector(':scope > file-name')?.textContent,
+					path.basename(file),
+					'root file-name matches the path basename'
+				);
+				const firstObjectId = savedDoc.documentElement.getElementsByTagName(XmlKeys.modelId)[0];
+				assert.equal(
+					firstObjectId?.parentElement,
+					savedDoc.documentElement,
+					'the root objectId comes before any embedded one'
+				);
 			});
 		}
 	}

@@ -102,7 +102,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { createObjectGroupId, getFileNameFromPath, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
 	postUnlockKeepalive,
@@ -115,6 +115,16 @@ import {
 } from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
+
+/**
+ * Value written to the `<file-name>` element on save. Matches FE1/XB/blueprints: the path basename
+ * with extension (`index.xml`, `foo.xml`). Embedded components have no item path; they use
+ * `{objectId}.xml`, as XB's `createComponentObject` does.
+ **/
+export function fileNameElementForXml(path: string | null | undefined, embeddedObjectId?: string): string {
+	if (path) return getFileNameFromPath(path);
+	return `${embeddedObjectId}.xml`;
+}
 
 /**
  * Returns the scroll container for the form's container.
@@ -1015,10 +1025,10 @@ export function setFieldAtoms(
 	// after a rename done outside the form, or when the element is missing.
 	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
-	// never uses.
-	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
-	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
-	// again only on a copy collision.
+	// never uses for the path.
+	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
+	// Save writes `<file-name>` as the path basename (via {@link fileNameElementForXml}), matching FE1/XB,
+	// while the form atom keeps the slug. The backend still rewrites both names on a copy collision.
 	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
 	const initialValue =
 		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
