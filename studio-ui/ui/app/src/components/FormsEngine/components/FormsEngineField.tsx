@@ -33,6 +33,7 @@ import React, {
 	useContext,
 	useEffect,
 	useId,
+	useLayoutEffect,
 	useRef,
 	useState
 } from 'react';
@@ -181,13 +182,29 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const dispatch = useDispatch();
 	const announceValidation = useContext(FormValidationAnnouncerContext);
 	// The value atom is the edit signal. Select, the rich-text iframe, pickers and the node selector
-	// change it without a bubbling input event, so a DOM listener would leave those fields silent on blur.
+	// change it without a bubbling input event. The flag is recorded after commit, before paint, so the
+	// first blur after an edit still sees it. Controller setValue and rollback tag the write and are ignored.
 	const editedRef = useRef(false);
 	const committedValueRef = useRef(value);
-	if (!Object.is(committedValueRef.current, value)) {
+	const systemWriteRef = useRef(false);
+	const fieldUpdates$ = stableForm.fieldUpdates$;
+	useLayoutEffect(() => {
+		if (!fieldUpdates$) return undefined;
+		const subscription = fieldUpdates$.subscribe((update) => {
+			if (update.fieldId !== fieldId || !update.origin) return;
+			systemWriteRef.current = true;
+		});
+		return () => subscription.unsubscribe();
+	}, [fieldUpdates$, fieldId]);
+	useLayoutEffect(() => {
+		if (Object.is(committedValueRef.current, value)) return;
 		committedValueRef.current = value;
+		if (systemWriteRef.current) {
+			systemWriteRef.current = false;
+			return;
+		}
 		editedRef.current = true;
-	}
+	}, [value]);
 	// The control links these ids through `useFieldControlA11y` with the same id it passes here.
 	const generatedId = useId();
 	const controlId = htmlFor || controlIdProp || generatedId;
