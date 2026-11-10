@@ -25,7 +25,16 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
-import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
+import React, {
+	forwardRef,
+	PropsWithChildren,
+	ReactNode,
+	SyntheticEvent,
+	useEffect,
+	useMemo,
+	useRef,
+	useState
+} from 'react';
 import { isEmptyValue, isFieldRequired } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -43,7 +52,7 @@ import {
 } from '../lib/formsEngineContext';
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
-import { changedFieldAtom, commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
+import { changedFieldAtom, commitFormVisibility, getAdditionalFieldIds, useStackSubmitting } from '../lib/formUtils';
 import { FieldValidityMessages } from './FieldValidityMessages';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
@@ -153,7 +162,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
-	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id));
+	const customControls = useSelection((state) => state.uiConfig?.controls);
+	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
+	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });
