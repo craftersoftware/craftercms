@@ -188,7 +188,7 @@ function getInitialCreatePickerValue(
 }
 
 function NodeSelector(props: NodeSelectorProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources, labelId } = props;
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -743,6 +743,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			</Dialog>
 			<FormsEngineField
 				field={field}
+				labelId={labelId}
 				min={countLimitValue(field.validations?.minCount?.value)}
 				max={maxCount}
 				length={value.length}
