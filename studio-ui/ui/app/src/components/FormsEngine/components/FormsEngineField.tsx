@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,15 +18,24 @@ import { ContentTypeField } from '../../../models';
 import FormControl from '@mui/material/FormControl';
 import type { SxProps, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import FieldRequiredStateIndicator from './FieldRequiredStateIndicator';
+import FieldStateIndicator, { useFieldStateIndicatorProps } from './FieldStateIndicator';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import Collapse from '@mui/material/Collapse';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import FormHelperText from '@mui/material/FormHelperText';
-import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { isEmptyValue, isFieldRequired } from '../lib/validators';
+import React, {
+	forwardRef,
+	PropsWithChildren,
+	ReactNode,
+	SyntheticEvent,
+	useEffect,
+	useMemo,
+	useRef,
+	useState
+} from 'react';
+import { isEmptyValue } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -43,9 +52,9 @@ import {
 } from '../lib/formsEngineContext';
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
-import { changedFieldAtom, commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
+import { changedFieldAtom, commitFormVisibility, getAdditionalFieldIds, useStackSubmitting } from '../lib/formUtils';
 import { FieldValidityMessages } from './FieldValidityMessages';
-import useLoadableAtom from '../lib/useLoadableAtom';
+import { FieldDescribedByProvider } from './useControlAria';
 import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
@@ -153,14 +162,18 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
-	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id));
+	const customControls = useSelection((state) => state.uiConfig?.controls);
+	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
+	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });
-	const isRequired = isFieldRequired(field);
-	const validityData = useLoadableAtom(atoms.validationByFieldId[fieldId]);
-	const value = useAtomValue(atoms.valueByFieldId[fieldId]);
-	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
+	// The label icon and the control border share this verdict, including a control's isValid override.
+	const fieldState = useFieldStateIndicatorProps(field, atoms, { isValid: props.isValid });
+	const { validityData, value } = fieldState;
+	const isRequired = fieldState.props.isRequired;
+	const isValid = fieldState.props.isValid;
+	const indicatorProps = fieldState.props;
 	const dispatch = useDispatch();
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
@@ -170,6 +183,11 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			labelRef.current?.focus();
 		}
 	}, [autoFocus]);
+	const errorShown = !isValid && validityData.state === 'hasData';
+	const helpId = labelId && hasHelpText && showHelp ? `${labelId}-help` : undefined;
+	const descriptionId = labelId && hasDescription ? `${labelId}-description` : undefined;
+	const errorId = labelId && errorShown ? `${labelId}-error` : undefined;
+	const describedByIds = [helpId, descriptionId, errorId].filter((id): id is string => Boolean(id));
 	return (
 		<FormControl
 			ref={ref}
@@ -181,193 +199,203 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			className={className}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
-			<Box
-				sx={{
-					display: 'flex',
-					justifyContent: 'space-between',
-					alignItems: 'center'
-				}}
-			>
+			<FieldDescribedByProvider value={{ labelId, describedByIds }}>
 				<Box
 					sx={{
 						display: 'flex',
+						justifyContent: 'space-between',
 						alignItems: 'center'
 					}}
 				>
-					<FormLabel
-						htmlFor={htmlFor}
-						id={labelId}
-						component="label"
-						ref={labelRef}
-						tabIndex={autoFocus ? 0 : undefined}
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
 					>
-						{field.name}
-					</FormLabel>
-					{isRequired && <FieldRequiredStateIndicator isValid={isValid} />}
-					{hasHelpText && (
-						<IconButton
-							size="small"
-							onClick={() => setShowHelp(!showHelp)}
-							aria-expanded={showHelp}
-							aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
+						<FormLabel
+							htmlFor={htmlFor}
+							id={labelId}
+							component="label"
+							ref={labelRef}
+							tabIndex={autoFocus ? 0 : undefined}
 						>
-							<HelpOutlineRounded fontSize="small" />
-						</IconButton>
-					)}
-				</Box>
-				<Box
-					sx={{
-						display: 'flex',
-						alignItems: 'center'
-					}}
-				>
-					{lengthBlock}
-					{action}
-					{menu && (
-						<>
-							{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
+							{field.name}
+						</FormLabel>
+						<FieldStateIndicator {...indicatorProps} announce={false} />
+						{hasHelpText && (
 							<IconButton
 								size="small"
-								tabIndex={-1}
-								ref={menuButtonRef}
-								onClick={() => setOpenMenu(true)}
-								aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+								onClick={() => setShowHelp(!showHelp)}
+								aria-expanded={showHelp}
+								aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
 							>
-								<MoreVertRounded fontSize="small" />
+								<HelpOutlineRounded fontSize="small" />
 							</IconButton>
-							<Menu
-								open={openMenu}
-								anchorEl={menuButtonRef.current}
-								onClose={handleCloseMenu}
-								onClick={handleCloseMenu}
-							>
-								<MenuItem
-									onClick={() => {
-										dispatch(
-											pushDialog({
-												component: createComponentId('FieldInformationDialog'),
-												props: { field }
-											})
-										);
-									}}
+						)}
+					</Box>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center'
+						}}
+					>
+						{lengthBlock}
+						{action}
+						{menu && (
+							<>
+								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
+								<IconButton
+									size="small"
+									tabIndex={-1}
+									ref={menuButtonRef}
+									onClick={() => setOpenMenu(true)}
+									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
 								>
-									<ListItemText>
-										<FormattedMessage defaultMessage="Field Information" />
-									</ListItemText>
-								</MenuItem>
-								{scopeActive && (
+									<MoreVertRounded fontSize="small" />
+								</IconButton>
+								<Menu
+									open={openMenu}
+									anchorEl={menuButtonRef.current}
+									onClose={handleCloseMenu}
+									onClick={handleCloseMenu}
+								>
 									<MenuItem
-										disabled={stackSubmitting}
 										onClick={() => {
-											if (stackSubmitting) return;
-											const reveal = revealField(jotai.get(atoms.formVisibility), field.id);
-											commitFormVisibility(jotai.set, atoms, reveal.state, reveal.fieldId);
-											if (stableForm.itemFormMode) jotai.set(stableForm.itemFormMode, 'full');
+											dispatch(
+												pushDialog({
+													component: createComponentId('FieldInformationDialog'),
+													props: { field }
+												})
+											);
 										}}
 									>
 										<ListItemText>
-											<FormattedMessage defaultMessage="View in form" />
+											<FormattedMessage defaultMessage="Field Information" />
 										</ListItemText>
 									</MenuItem>
-								)}
-								{hasChanges && [
-									<Divider key="rollback-divider" />,
-									<MenuItem key="rollback-action" onClick={handleRollback}>
-										<ListItemText>
-											<FormattedMessage defaultMessage="Rollback changes" />
-										</ListItemText>
-									</MenuItem>
-								]}
-								{menuOptions && <Divider />}
-								{menuOptions?.map((option, index) =>
-									option === 'divider' ? (
-										<Divider key={`divider_${index}`} />
-									) : (
-										<MenuItem key={option.id} onClick={(e) => onMenuOptionClick?.(e, option.id, handleCloseMenu)}>
-											<ListItemText children={option.text} />
+									{scopeActive && (
+										<MenuItem
+											disabled={stackSubmitting}
+											onClick={() => {
+												if (stackSubmitting) return;
+												const reveal = revealField(jotai.get(atoms.formVisibility), field.id);
+												commitFormVisibility(jotai.set, atoms, reveal.state, reveal.fieldId);
+												if (stableForm.itemFormMode) jotai.set(stableForm.itemFormMode, 'full');
+											}}
+										>
+											<ListItemText>
+												<FormattedMessage defaultMessage="View in form" />
+											</ListItemText>
 										</MenuItem>
-									)
-								)}
-							</Menu>
-						</>
-					)}
+									)}
+									{hasChanges && [
+										<Divider key="rollback-divider" />,
+										<MenuItem key="rollback-action" onClick={handleRollback}>
+											<ListItemText>
+												<FormattedMessage defaultMessage="Rollback changes" />
+											</ListItemText>
+										</MenuItem>
+									]}
+									{menuOptions && <Divider />}
+									{menuOptions?.map((option, index) =>
+										option === 'divider' ? (
+											<Divider key={`divider_${index}`} />
+										) : (
+											<MenuItem key={option.id} onClick={(e) => onMenuOptionClick?.(e, option.id, handleCloseMenu)}>
+												<ListItemText children={option.text} />
+											</MenuItem>
+										)
+									)}
+								</Menu>
+							</>
+						)}
+					</Box>
 				</Box>
-			</Box>
-			{hasHelpText && (
-				<Collapse in={showHelp}>
-					<Alert severity="info" variant="outlined" sx={{ border: 'none' }}>
-						<Typography
-							variant="body2"
-							component="section"
-							color="textSecondary"
-							dangerouslySetInnerHTML={{ __html: field.helpText }}
-							sx={{ 'p:first-of-type:last-of-type': { margin: 0 } }}
-						/>
-					</Alert>
-				</Collapse>
-			)}
-			{sourcePath && (
-				<Alert
-					variant="standard"
-					severity="info"
-					icon={
-						<IconButton
-							href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-inheritance.html"
-							size="small"
-							color="inherit"
-							target="_blank"
-							component="a"
-							aria-label={formatMessage({ defaultMessage: 'Learn more about content inheritance' })}
-							title={formatMessage({ defaultMessage: 'Learn more about content inheritance' })}
-							sx={{ p: 0 }}
-						>
-							<InfoOutlinedIcon />
-						</IconButton>
-					}
-					action={
-						<>
+				{hasHelpText && (
+					<Collapse in={showHelp}>
+						<Alert severity="info" variant="outlined" sx={{ border: 'none' }}>
+							<Typography
+								variant="body2"
+								component="section"
+								color="textSecondary"
+								id={helpId}
+								dangerouslySetInnerHTML={{ __html: field.helpText }}
+								sx={{ 'p:first-of-type:last-of-type': { margin: 0 } }}
+							/>
+						</Alert>
+					</Collapse>
+				)}
+				{sourcePath && (
+					<Alert
+						variant="standard"
+						severity="info"
+						icon={
 							<IconButton
-								color="inherit"
+								href="https://craftercms.com/docs/current/by-role/developer/common/content-modeling/content-inheritance.html"
 								size="small"
-								sx={{ px: 0.5, minWidth: 0 }}
-								onClick={() => {
-									globalApi.pushForm({
-										update: { path: sourcePath }
-									});
-								}}
-								aria-label={formatMessage({ defaultMessage: 'Edit' })}
-								title={formatMessage({ defaultMessage: 'Edit' })}
+								color="inherit"
+								target="_blank"
+								component="a"
+								aria-label={formatMessage({ defaultMessage: 'Learn more about content inheritance' })}
+								title={formatMessage({ defaultMessage: 'Learn more about content inheritance' })}
+								sx={{ p: 0 }}
 							>
-								<EditOutlined fontSize="small" />
+								<InfoOutlinedIcon />
 							</IconButton>
-						</>
-					}
-					sx={{
-						px: 1,
-						mb: 0.625,
-						borderRadius: 5,
-						alignItems: 'center',
-						[`.${alertClasses.message}`]: { display: 'flex', alignItems: 'center' },
-						[`.${alertClasses.action}`]: { mr: 0 },
-						[`.${alertClasses.icon}`]: { mr: 1 }
-					}}
-				>
-					{isEmptyValue(field, value) ? (
-						<FormattedMessage
-							defaultMessage="Value is inherited from {label}"
-							values={{ label: sourceLabel ?? sourcePath }}
-						/>
+						}
+						action={
+							<>
+								<IconButton
+									color="inherit"
+									size="small"
+									sx={{ px: 0.5, minWidth: 0 }}
+									onClick={() => {
+										globalApi.pushForm({
+											update: { path: sourcePath }
+										});
+									}}
+									aria-label={formatMessage({ defaultMessage: 'Edit' })}
+									title={formatMessage({ defaultMessage: 'Edit' })}
+								>
+									<EditOutlined fontSize="small" />
+								</IconButton>
+							</>
+						}
+						sx={{
+							px: 1,
+							mb: 0.625,
+							borderRadius: 5,
+							alignItems: 'center',
+							[`.${alertClasses.message}`]: { display: 'flex', alignItems: 'center' },
+							[`.${alertClasses.action}`]: { mr: 0 },
+							[`.${alertClasses.icon}`]: { mr: 1 }
+						}}
+					>
+						{isEmptyValue(field, value) ? (
+							<FormattedMessage
+								defaultMessage="Value is inherited from {label}"
+								values={{ label: sourceLabel ?? sourcePath }}
+							/>
+						) : (
+							<FormattedMessage
+								defaultMessage="Inherited value from {label} is overridden"
+								values={{ label: sourceLabel ?? sourcePath }}
+							/>
+						)}
+					</Alert>
+				)}
+				{children}
+				{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
+				{errorShown &&
+					(errorId ? (
+						<Box id={errorId}>
+							<FieldValidityMessages messages={validityData.data?.messages} />
+						</Box>
 					) : (
-						<FormattedMessage
-							defaultMessage="Inherited value from {label} is overridden"
-							values={{ label: sourceLabel ?? sourcePath }}
-						/>
-					)}
-				</Alert>
-			)}
-			{children}
-			{hasDescription && <FormHelperText>{field.description}</FormHelperText>}
-			{!isValid && validityData.state === 'hasData' && <FieldValidityMessages messages={validityData.data?.messages} />}
+						<FieldValidityMessages messages={validityData.data?.messages} />
+					))}
+			</FieldDescribedByProvider>
 		</FormControl>
 	);
 });

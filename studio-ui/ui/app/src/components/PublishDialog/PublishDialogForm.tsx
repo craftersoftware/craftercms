@@ -372,7 +372,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 							variant="body1"
 							component="span"
 							sx={{
-								border: '1px solid #ced4da',
+								border: '1px solid',
+								borderColor: 'border.control',
 								padding: '10px 12px',
 								borderRadius: '4px',
 								width: '100%',
