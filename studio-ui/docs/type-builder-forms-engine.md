@@ -57,10 +57,10 @@ Typical type folder contents:
 
 Last commit that still had the files: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) —
 
-| Module       | Historical entry                                                                                                                                                                                            |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module       | Historical entry                                                                 |
+| ------------ | -------------------------------------------------------------------------------- |
 | Type Builder | [`cstudio-admin/mods/content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) |
-| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js)             |
+| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) |
 
 ### Next (React / `ui/app`)
 
@@ -573,12 +573,12 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 **In FE2 code:**
 
-| Piece     | Location                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Piece     | Location                                                                                                                                                                                                                                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                            |
+| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                 |
+| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                       |
+| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                              |
 | Types     | `FormController` / `FormControllerContext` / `FormControllerRelevanceContext` / `FormFieldChange` in `formControllers/types.ts`. Their TSDoc is the authoritative contract: there is no doc generator, and `build:tsc` copies the comments into the emitted `.d.ts` files. These types are not re-exported from the package entry point, so editors show the comments only where they resolve the deep path; a blob-imported `form-controller.js` gets no type information from them. Change the contract in that TSDoc first, then keep this section in step. |
 
 **Load sequence:**
@@ -735,22 +735,22 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### Quick “where do I look?”
 
-| Question                         | Start here                                                                                            |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Author form shell / save / stack | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
-| Form controller                  | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
-| Legacy module protocol           | `cstudio-common/common-api.js` (`Module`)                                                             |
-| New FE DS interpretation         | `FormsEngine/dataSourceHooks/*`                                                                       |
-| Content XML in/out               | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
-| Item reads, subscriptions        | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
-| Type list / edit UI              | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
-| New TB catalog configuration     | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
-| Type XML out                     | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
-| Control property forms           | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
-| config.xml merge plan            | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
-| Plugin packaging / runtime       | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
-| Plugin / listing design          | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
+| Question                          | Start here                                                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
+| Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
+| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
+| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
+| New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
+| Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
+| Item reads, subscriptions         | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
+| Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
+| New TB catalog configuration      | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
+| Type XML out                      | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
+| Control property forms            | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
+| config.xml merge plan             | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
+| Plugin packaging / runtime        | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
+| Plugin / listing design           | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
 
 ---
 
