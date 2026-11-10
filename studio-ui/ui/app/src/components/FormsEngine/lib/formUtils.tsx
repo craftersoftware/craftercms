@@ -304,7 +304,13 @@ export type ValidatorsData = {
 
 type FieldTrackingContext = Pick<
 	StableFormContextProps,
-	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta' | 'formControllerState'
+	| 'fieldUpdates$'
+	| 'changedFieldIds'
+	| 'originalValues'
+	| 'atoms'
+	| 'itemMeta'
+	| 'formControllerState'
+	| 'valueWriteOrigin'
 >;
 
 /**
@@ -477,6 +483,12 @@ function applyAtomUpdate<T>(
 	return typeof update === 'function' ? (update as (prev: T) => T)(get(baseAtom)) : update;
 }
 
+/** A value write. `origin` is set only while rollback or a controller `setValue` is in progress. */
+function fieldUpdate(fieldId: string, formContext: FieldTrackingContext): FieldUpdate {
+	const origin = formContext.valueWriteOrigin;
+	return origin ? { fieldId, origin } : { fieldId };
+}
+
 /**
  * Filename atom whose writes update dirty-tracking and emit `fieldUpdates$` once.
  * Also mirrors `valueByFieldId['file-name']` when that atom exists, without a second event:
@@ -501,7 +513,7 @@ function createTrackedFileNameAtom(
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
 			trackFieldChange(field, next, formContext, get, set);
-			formContext.fieldUpdates$.next({ fieldId: XmlKeys.fileName });
+			formContext.fieldUpdates$.next(fieldUpdate(XmlKeys.fileName, formContext));
 		}
 	);
 }
@@ -532,7 +544,7 @@ export function createFieldAtoms(
 				return;
 			}
 			trackFieldChange(field, next, formContext, get, set);
-			formContext.fieldUpdates$.next({ fieldId: field.id });
+			formContext.fieldUpdates$.next(fieldUpdate(field.id, formContext));
 		}
 	);
 	const validationAtom = atom(async (get, { signal }) => {

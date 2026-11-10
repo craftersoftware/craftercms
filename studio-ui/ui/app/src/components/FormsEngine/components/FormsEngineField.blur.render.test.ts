@@ -46,7 +46,8 @@ const intl = {
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
-const { createChangedFieldIdsAtom } = await import('../lib/formUtils.tsx');
+const { createChangedFieldIdsAtom, createFieldAtoms } = await import('../lib/formUtils.tsx');
+const { Subject } = await import('rxjs');
 const { createFormVisibilityAtoms } = await import('../lib/formVisibility.ts');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('../lib/formsEngineContext.ts');
@@ -233,6 +234,117 @@ describe('field blur announcement', () => {
 		});
 		await leaveField(host);
 		assert.deepEqual(announcements, ['Section: Section is required']);
+	});
+
+	it('does not announce when a controller or a rollback writes the value', async () => {
+		const announcements: string[] = [];
+		const field = fieldFor('title_s', 'Title', 'input');
+		const fieldUpdates$ = new Subject<{ fieldId: string; origin?: 'controller' | 'rollback' }>();
+		const tracking = {
+			fieldUpdates$,
+			changedFieldIds: createChangedFieldIdsAtom(),
+			originalValues: { title_s: '' },
+			atoms: null as never,
+			itemMeta,
+			formControllerState: null,
+			valueWriteOrigin: undefined as 'controller' | 'rollback' | undefined
+		};
+		const [valueAtom] = createFieldAtoms(field, '', { current: tracking });
+		const validationAtom = atom({ isValid: false, messages: ['Title is required'] });
+		const store = createStore();
+		const stable = {
+			atoms: {
+				valueByFieldId: {
+					[field.id]: valueAtom,
+					'internal-name': atom('Home'),
+					orderDefault_f: atom(1)
+				},
+				validationByFieldId: {
+					[field.id]: validationAtom,
+					'file-name': validationAtom
+				},
+				fileName: atom(''),
+				...createFormVisibilityAtoms()
+			},
+			changedFieldIds: tracking.changedFieldIds,
+			fieldUpdates$,
+			itemMeta,
+			originalValues: tracking.originalValues,
+			props: null,
+			state: null,
+			affectedPluginControlFields: [],
+			formControllerState: null,
+			getItem: () => null
+		};
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(
+				React.createElement(
+					Provider,
+					{ store: redux },
+					React.createElement(
+						RawIntlProvider,
+						{ value: intl as never },
+						React.createElement(
+							JotaiProvider,
+							{ store },
+							React.createElement(
+								StableGlobalContext.Provider,
+								{ value: { formsStackData: [], api: {} } },
+								React.createElement(
+									StableFormContext.Provider,
+									{ value: stable },
+									React.createElement(
+										ItemMetaContext.Provider,
+										{ value: itemMeta },
+										React.createElement(
+											FormsEngineFormContextApi.Provider,
+											{ value: { rollbackField() {} } },
+											React.createElement(
+												FormValidationAnnouncerContext.Provider,
+												{ value: (message: string) => announcements.push(message) },
+												React.createElement(Text, {
+													field,
+													value: '',
+													setValue(next: unknown) {
+														store.set(valueAtom, next);
+													},
+													contentType,
+													readonly: false,
+													autoFocus: false
+												})
+											)
+										)
+									)
+								)
+							)
+						)
+					)
+				)
+			);
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		tracking.valueWriteOrigin = 'controller';
+		await act(async () => {
+			store.set(valueAtom, 'from-controller');
+		});
+		tracking.valueWriteOrigin = undefined;
+		await leaveField(host);
+		assert.deepEqual(announcements, []);
+		tracking.valueWriteOrigin = 'rollback';
+		await act(async () => {
+			store.set(valueAtom, '');
+		});
+		tracking.valueWriteOrigin = undefined;
+		await leaveField(host);
+		assert.deepEqual(announcements, []);
+		await act(async () => {
+			store.set(valueAtom, 'typed');
+		});
+		await leaveField(host);
+		assert.deepEqual(announcements, ['Title: Title is required']);
 	});
 
 	it('announces when an edited invalid rich text field blurs', async () => {

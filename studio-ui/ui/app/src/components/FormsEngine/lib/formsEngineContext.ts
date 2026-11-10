@@ -161,6 +161,11 @@ export interface StableGlobalContextProps {
  */
 export interface FieldUpdate {
 	readonly fieldId: string;
+	/**
+	 * Set when rollback or a form controller `setValue` wrote the value. Absent when a control wrote it.
+	 * Blur announcements ignore a write that carries an origin.
+	 */
+	readonly origin?: 'controller' | 'rollback';
 }
 
 // Consolidated base data store for the form instance (single form/item). Once initialised, it won't change (won't cause re-renders).
@@ -208,7 +213,8 @@ export interface StableFormContextProps {
 	 * updated, so a synchronous subscriber can read the new state with `store.get`.
 	 *
 	 * The payload is a {@link FieldUpdate}: the id of the field that was written (`'file-name'` for the file name),
-	 * and nothing else (no `value` or `previousValue`). A write inside a repeat reports the root field's id. A write
+	 * and an optional origin when rollback or a controller `setValue` wrote it (no `value` or `previousValue`).
+	 * A write inside a repeat reports the root field's id. A write
 	 * that does not change the changed-ids set still emits: this is a stream of writes, not of changes.
 	 *
 	 * Nothing emits for clears or checkpoints (a save, a Type Builder commit, a stack rebuild): those set
@@ -235,6 +241,11 @@ export interface StableFormContextProps {
 	 * @see {@link StableFormContextProps.changedFieldIds}
 	 */
 	fieldUpdates$: Subject<FieldUpdate>;
+	/**
+	 * Present only while rollback or a form controller `setValue` is writing. The atom writer copies it onto
+	 * {@link FieldUpdate.origin}. Absent for a control's own `setValue`.
+	 */
+	valueWriteOrigin?: 'controller' | 'rollback';
 	itemMeta: FormsEngineItemMetaContextProps; // TODO: There's a dedicated ItemMetaContext; why have here too?
 	originalValues: LookupTable<unknown>;
 	props: FormsEngineProps;
