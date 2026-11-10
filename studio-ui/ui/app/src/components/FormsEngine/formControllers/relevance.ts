@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { EMPTY } from 'rxjs';
 import type ContentType from '../../../models/ContentType';
 import type { ContentTypeField } from '../../../models/ContentType';
 import { XmlKeys } from '../lib/formConsts';
@@ -64,6 +65,7 @@ const relevanceSideEffectWarning =
 /**
  * The only context `isFieldRelevant` ever receives. Typed as {@link FormControllerRelevanceContext};
  * the inert write/subscribe/notify stubs only exist so untyped controllers get a warning, not a throw.
+ * `fieldChanges` is `EMPTY`: there is no live form to observe.
  */
 export function createRelevanceContext({
 	siteId,
@@ -88,7 +90,8 @@ export function createRelevanceContext({
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
-		}
+		},
+		fieldChanges: EMPTY
 	};
 	return Object.assign(ctx, {
 		setValue: warn,

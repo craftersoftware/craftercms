@@ -31,7 +31,7 @@ import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { nnou } from '../../../utils/object';
-import { getBasePath, getFileNameValueFromPath, isFieldReadOnly } from '../lib/formUtils';
+import { getBasePath, getFileNameValueFromPath, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
 import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
@@ -53,6 +53,7 @@ export function FileName(props: ControlProps<string>) {
 	const isValid = validityData.state === 'hasData' ? validityData.data.isValid : true;
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {
@@ -76,18 +77,13 @@ export function FileName(props: ControlProps<string>) {
 				setValue(updatedName);
 				dispatch(popDialog({ id }));
 			},
-			dispatch
+			dispatch,
+			maxLength
 		);
 	};
 
 	return (
-		<FormsEngineField
-			isValid={isValid}
-			htmlFor={htmlId}
-			field={field}
-			max={field.validations?.maxLength?.value}
-			length={value.length}
-		>
+		<FormsEngineField isValid={isValid} htmlFor={htmlId} field={field} max={maxLength} length={value.length}>
 			<OutlinedInput
 				autoFocus={autoFocus}
 				fullWidth
@@ -109,6 +105,7 @@ export function FileName(props: ControlProps<string>) {
 						</Tooltip>
 					)
 				}
+				inputProps={{ maxLength }}
 			/>
 		</FormsEngineField>
 	);
@@ -120,13 +117,14 @@ function showRenameDialog(
 	value: string,
 	validRenameValue: string,
 	onRenamed: (newName: string) => void,
-	dispatch: Dispatch
+	dispatch: Dispatch,
+	maxLength?: number
 ) {
 	dispatch(
 		pushDialog({
 			id,
 			component: createComponentId('RenameContentDialog'),
-			props: { path, value, validRenameValue, onRenamed }
+			props: { path, value, validRenameValue, onRenamed, maxLength }
 		})
 	);
 
