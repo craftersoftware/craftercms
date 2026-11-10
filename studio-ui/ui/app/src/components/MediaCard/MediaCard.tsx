@@ -46,9 +46,11 @@ export interface MediaCardProps {
 	avatar?: CardHeaderProps['avatar'];
 	disableSelection?: boolean;
 	/**
-	 * Single selection without the checkbox. When set together with `onClick`, the card header is a toggle
-	 * button in the tab order: Enter or Space runs `onClick`, and `aria-pressed` reports this value.
-	 * Clicking the card works as before.
+	 * Single selection without the checkbox. When set together with `onClick`, a transparent toggle
+	 * covers the header in the tab order: Enter or Space runs `onClick`, and `aria-pressed` reports
+	 * this value. The toggle is not an ancestor of the title heading or the path, so both stay exposed.
+	 * Its accessible name is the item name and, when the path is shown, the path. Clicking the card
+	 * works as before.
 	 */
 	isSelected?: boolean;
 	classes?: Partial<Record<MediaCardClassKey, string>>;
@@ -83,6 +85,7 @@ function MediaCard(props: MediaCardProps) {
 	// endregion
 	const keyboardSelectable = typeof isSelected === 'boolean' && Boolean(onClick) && !onSelect;
 	let { name, path, type } = item;
+	const selectionLabel = showPath ? `${name}, ${item.path}` : name;
 	if (item.mimeType.includes('audio/')) {
 		type = 'Audio';
 	}
@@ -177,23 +180,36 @@ function MediaCard(props: MediaCardProps) {
 				classes={{ root: props.classes?.cardHeader }}
 				sx={{
 					alignSelf: 'center',
-					// Inset, because the card clips anything drawn outside it.
-					...(keyboardSelectable && { '&:focus-visible': getFocusRingSx({ inset: true }) }),
+					// The toggle is positioned against the header, on the same box the ring used to use.
+					...(keyboardSelectable && { position: 'relative' }),
 					...sxs?.cardHeader
 				}}
-				{...(keyboardSelectable
-					? {
-							role: 'button',
-							tabIndex: 0,
-							'aria-pressed': isSelected,
-							'aria-disabled': disableSelection || undefined,
-							onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+				action={
+					keyboardSelectable ? (
+						<Box
+							role="button"
+							tabIndex={0}
+							aria-pressed={isSelected}
+							aria-disabled={disableSelection || undefined}
+							aria-label={selectionLabel}
+							onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
 								if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
 								e.preventDefault();
 								if (!disableSelection) onClick(e);
-							}
-						}
-					: {})}
+							}}
+							sx={{
+								position: 'absolute',
+								inset: 0,
+								// Clicks keep going to the card. The control is only a keyboard tab stop.
+								pointerEvents: 'none',
+								// Inset, because the card clips anything drawn outside it.
+								'&:focus-visible': getFocusRingSx({ inset: true })
+							}}
+						/>
+					) : (
+						action
+					)
+				}
 				avatar={
 					onSelect ? (
 						<FormGroup className={props.classes?.checkbox} sx={sxs?.checkbox}>
@@ -212,8 +228,21 @@ function MediaCard(props: MediaCardProps) {
 				}
 				title={name}
 				subheader={showPath ? item.path : null}
-				action={action}
 				slotProps={{
+					action: keyboardSelectable
+						? {
+								// The slot's own margins and flex basis would shift the title. Collapse it;
+								// the toggle is taken out of flow and covers the header.
+								sx: {
+									m: 0,
+									flex: '0 0 auto',
+									width: 0,
+									height: 0,
+									overflow: 'visible',
+									pointerEvents: 'none'
+								}
+							}
+						: undefined,
 					content: {
 						sx: {
 							flexGrow: 1,
