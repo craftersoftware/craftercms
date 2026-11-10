@@ -282,14 +282,6 @@ public class SitesServiceInternalImplTest {
     }
 
     @Test
-    public void deliverableSitesStagingReadFailure() throws SiteNotFoundException {
-        when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial"));
-        when(servicesConfig.isStagingEnvironmentEnabled("editorial")).thenThrow(new SiteNotFoundException("editorial"));
-
-        assertEquals(List.of("editorial"), sitesServiceInternal.getDeliverableSiteIds());
-    }
-
-    @Test
     public void deliverableSitesStagingConfigFailureKeepsSite() throws SiteNotFoundException {
         when(siteDAO.getDeliverableSiteIds()).thenReturn(List.of("editorial", "zeta"));
         when(servicesConfig.isStagingEnvironmentEnabled("editorial"))
