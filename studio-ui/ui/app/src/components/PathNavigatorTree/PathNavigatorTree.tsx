@@ -63,6 +63,7 @@ import { pushDialog } from '../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
 import usePossibleTranslation from '../../hooks/usePossibleTranslation';
+import { NavigatorTitleComponent } from '../PathNavigator/navigatorHeading';
 import TranslationOrText from '../../models/TranslationOrText';
 import { useIntl } from 'react-intl';
 
@@ -72,6 +73,8 @@ export interface PathNavigatorTreeProps extends Pick<
 > {
 	id: string;
 	label: TranslationOrText;
+	/** Heading element for the title. Defaults to h2, or to the parent navigator-heading context. */
+	titleComponent?: NavigatorTitleComponent;
 	rootPath: string;
 	sortStrategy?: GetChildrenOptions['sortStrategy'];
 	order?: GetChildrenOptions['order'];
@@ -156,6 +159,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 		showPublishingTarget,
 		showWorkflowState,
 		showItemMenu,
+		titleComponent,
 		sortStrategy,
 		order,
 		sxs
@@ -354,6 +358,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
 				classes={{ header: classes?.header }}
 				sxs={{ header: sxs?.header, activeItem: sxs?.activeItem }}
 				title={translatedLabel}
+				titleComponent={titleComponent}
 				active={active}
 				icon={expandedIcon && collapsedIcon ? (state.collapsed ? collapsedIcon : expandedIcon) : icon}
 				container={container}

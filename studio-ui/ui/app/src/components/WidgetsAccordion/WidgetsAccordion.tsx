@@ -28,6 +28,7 @@ import WidgetsGrid from '../WidgetsGrid';
 import { getStoredWidgetsAccordion, setStoredWidgetsAccordion } from '../../utils/state';
 import useActiveSite from '../../hooks/useActiveSite';
 import useActiveUser from '../../hooks/useActiveUser';
+import { NavigatorTitleComponentContext } from '../PathNavigator/navigatorHeading';
 
 export interface WidgetsAccordionProps {
 	id?: string;
@@ -98,12 +99,15 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 				</Typography>
 			</AccordionSummary>
 			<AccordionDetails sx={{ padding: 0, ...sxs?.accordionDetails }}>
-				<WidgetsGrid
-					container
-					spacing={0}
-					widgets={props.widgets}
-					sx={{ flexDirection: 'column', ...sxs?.widgetsGrid }}
-				/>
+				{/* This accordion title is an h2. Navigators inside it are sections of that group. */}
+				<NavigatorTitleComponentContext.Provider value="h3">
+					<WidgetsGrid
+						container
+						spacing={0}
+						widgets={props.widgets}
+						sx={{ flexDirection: 'column', ...sxs?.widgetsGrid }}
+					/>
+				</NavigatorTitleComponentContext.Provider>
 			</AccordionDetails>
 		</Accordion>
 	);
