@@ -98,4 +98,46 @@ describe('invalidFieldIdsAtom', () => {
 		store.set(tick, 2);
 		assert.equal(await store.get(idsAtom), empty);
 	});
+
+	// #9340: one edit re-evaluates only that field's validation; the read count must not grow with N.
+	it('re-runs only the edited field validation when the form has N fields', async () => {
+		const fieldCount = 40;
+		const runs: Record<string, number> = {};
+		const values: Record<string, ReturnType<typeof atom<string>>> = {};
+		const validationByFieldId: Record<string, ReturnType<typeof atom>> = {};
+		for (let i = 0; i < fieldCount; i++) {
+			const id = `f${i}_s`;
+			runs[id] = 0;
+			values[id] = atom(i === 0 ? 'bad' : 'ok');
+			validationByFieldId[id] = atom(async (get) => {
+				runs[id]++;
+				return { isValid: get(values[id]) !== 'bad' };
+			});
+		}
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			validationByFieldId
+		} as never;
+		const store = createStore();
+		const idsAtom = invalidFieldIdsAtom(entry);
+		assert.deepEqual(await store.get(idsAtom), ['f0_s']);
+		assert.equal(runs.f0_s, 1);
+		assert.equal(runs.f39_s, 1);
+		assert.equal(
+			Object.values(runs).reduce((sum, n) => sum + n, 0),
+			fieldCount
+		);
+
+		store.set(values.f0_s, 'ok');
+		assert.deepEqual(await store.get(idsAtom), []);
+		assert.equal(runs.f0_s, 2);
+		assert.equal(runs.f1_s, 1);
+		assert.equal(runs.f39_s, 1);
+		assert.equal(
+			Object.values(runs).reduce((sum, n) => sum + n, 0),
+			fieldCount + 1,
+			'only the edited field validation ran again'
+		);
+	});
 });

@@ -34,7 +34,7 @@ export function useInvalidFieldIds(entry: StableFormContextProps | null | undefi
 
 	useEffect(() => {
 		appliedInitial.current = false;
-	}, [entryKey, parentPath]);
+	}, [entryKey, entry?.atoms, parentPath]);
 
 	useEffect(() => {
 		if (loadable.state === 'hasError') {
