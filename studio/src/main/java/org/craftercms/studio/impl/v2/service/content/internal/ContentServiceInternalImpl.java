@@ -166,6 +166,7 @@ import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.exception.content.ContentExistException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.exception.content.ContentLockedByAnotherUserException;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.contentType.ContentTypeInvalidLocationException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.repository.ContentWriteItem;
@@ -220,6 +221,7 @@ import org.craftercms.studio.model.contentType.ContentType;
 import org.craftercms.studio.model.contentType.CopyDependency;
 import org.craftercms.studio.model.history.ItemVersion;
 import org.craftercms.studio.model.history.RepositoryVersion;
+import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.Person;
 import org.craftercms.studio.model.rest.content.DeleteContentResult;
 import org.craftercms.studio.model.rest.content.GetChildrenBulkRequest.PathParams;
@@ -1098,14 +1100,14 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	 * @param previousPath the path of the previous item, null if it should be before a reference item
 	 * @param nextPath     the path of the next item, null if it should be after a reference item
 	 * @return the new order value for the item being reordered
-	 * @throws ContentNotFoundException   if any of the previous or next items does not exist
-	 * @throws InvalidParametersException if the order values of the previous or next items are not valid, or if the previous item order is greater or equal to the next item order
+	 * @throws ContentNotFoundException if any of the previous or next items does not exist
+	 * @throws NavOrderException        if the reference items do not share a parent, lack an order value, or their order values cannot be used to calculate a new order
 	 */
 	protected double reorderItem(String siteId, String previousPath, String nextPath) throws ServiceLayerException {
 		String previousParent = getParentUrl(previousPath);
 		String nextParent = getParentUrl(nextPath);
 		if (previousPath != null && nextPath != null && !CS.equals(previousParent, nextParent)){
-			throw new InvalidParametersException(format("Previous item '%s' and next item '%s' for site '%s' do not have the same parent, cannot reorder item",
+			throw new NavOrderException(ApiResponse.NAV_ORDER_DIFFERENT_PARENT, format("Previous item '%s' and next item '%s' for site '%s' do not have the same parent, cannot reorder item",
 					previousPath, nextPath, siteId));
 		}
 
@@ -1113,19 +1115,22 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 		if (previousPath != null) {
 			beforeOrder = getItemOrder(siteId, previousPath);
 			if (beforeOrder == null) {
-				throw new InvalidParametersException(format("Previous item '%s' for site '%s' does not have an order value, cannot reorder item", previousPath, siteId));
+				throw new NavOrderException(ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER, format("Previous item '%s' for site '%s' does not have an order value, cannot reorder item", previousPath, siteId));
 			}
 		}
 		Double afterOrder = null;
 		if (nextPath != null) {
 			afterOrder = getItemOrder(siteId, nextPath);
 			if (afterOrder == null) {
-				throw new InvalidParametersException(format("Next item '%s' for site '%s' does not have an order value, cannot reorder item", nextPath, siteId));
+				throw new NavOrderException(ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER, format("Next item '%s' for site '%s' does not have an order value, cannot reorder item", nextPath, siteId));
 			}
 		}
 		if (beforeOrder != null && afterOrder != null) {
-			if (beforeOrder >= afterOrder) {
-				throw new InvalidParametersException(format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
+			if (beforeOrder > afterOrder) {
+				throw new NavOrderException(ApiResponse.NAV_ORDER_PREVIOUS_GREATER_THAN_NEXT, format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
+			}
+			if (beforeOrder.equals(afterOrder)) {
+				throw new NavOrderException(ApiResponse.NAV_ORDER_SAME_VALUE, format("Previous item '%s' and next item '%s' for site '%s' have the same order value, cannot reorder item", previousPath, nextPath, siteId));
 			}
 			return (beforeOrder + afterOrder) / 2;
 		}
@@ -1134,7 +1139,11 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 			return beforeOrder + pageNavOrderIncrement;
 		}
 
-		return afterOrder - pageNavOrderIncrement;
+		if (afterOrder != null) {
+			return afterOrder - pageNavOrderIncrement;
+		}
+
+		throw new NavOrderException(ApiResponse.NAV_ORDER_NO_REFERENCE, format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
 	}
 
 	/**

@@ -56,6 +56,7 @@ import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.exception.content.ContentExistException;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.repository.GitContentRepository;
 import org.craftercms.studio.api.v2.repository.RepositoryItem;
@@ -83,6 +84,7 @@ import org.craftercms.studio.impl.v2.service.content.internal.ContentServiceInte
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
 import org.craftercms.studio.impl.v2.utils.security.SecurityUtils;
 import org.craftercms.studio.model.AuthenticatedUser;
+import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.content.PasteContentResult;
 import org.craftercms.studio.model.rest.content.WriteContentResult;
 import org.craftercms.studio.model.rest.content.order.ItemOrder;
@@ -93,6 +95,7 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import org.junit.Before;
 import org.junit.Test;
@@ -1045,6 +1048,61 @@ public class ContentServiceInternalImplTest {
 	}
 
 	@Test
+	public void testReorderInsertDifferentParent() {
+		ReorderItemRequest.Insert request = insertRequest(
+				"/site/website/section-a/page1/index.xml",
+				"/site/website/section-b/page2/index.xml");
+
+		assertNavOrderException(request, ApiResponse.NAV_ORDER_DIFFERENT_PARENT);
+	}
+
+	@Test
+	public void testReorderInsertPreviousMissingOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(null).when(serviceInternal).getItemOrder(SITE_ID, previous);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER);
+	}
+
+	@Test
+	public void testReorderInsertNextMissingOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(null).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER);
+	}
+
+	@Test
+	public void testReorderInsertPreviousOrderGreaterThanNext() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(10.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_PREVIOUS_GREATER_THAN_NEXT);
+	}
+
+	@Test
+	public void testReorderInsertSameOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_SAME_VALUE);
+	}
+
+	@Test
+	public void testReorderNoReference() {
+		NavOrderException exception = assertThrows(NavOrderException.class,
+				() -> serviceInternal.reorderItem(SITE_ID, null, null));
+		assertSame(ApiResponse.NAV_ORDER_NO_REFERENCE, exception.getResponse());
+	}
+
+	@Test
 	public void testGetItemsOrder_returnsSortedListWhenChildrenHaveValidNavOrder() throws Exception {
 		String parentPath = "/site/website/section";
 
@@ -1152,6 +1210,19 @@ public class ContentServiceInternalImplTest {
 
 		assertNotNull("Result should not be null", result);
 		assertTrue("Result should be empty", result.isEmpty());
+	}
+
+	private ReorderItemRequest.Insert insertRequest(String previousPath, String nextPath) {
+		ReorderItemRequest.Insert request = new ReorderItemRequest.Insert();
+		request.setPreviousPath(previousPath);
+		request.setNextPath(nextPath);
+		return request;
+	}
+
+	private void assertNavOrderException(ReorderItemRequest request, ApiResponse expectedResponse) {
+		NavOrderException exception = assertThrows(NavOrderException.class,
+				() -> serviceInternal.reorderItem(SITE_ID, request));
+		assertSame(expectedResponse, exception.getResponse());
 	}
 
 	private ContentItem createMockContentItem(String path) {
