@@ -76,7 +76,7 @@ import { getStoredShowToolsPanel } from '../../utils/state';
 import { closeToolsPanel, openToolsPanel } from '../actions/preview';
 import { getXSRFToken, removeSiteCookie, setSiteCookie } from '../../utils/auth';
 import { changeSiteComplete, fetchSites, popSite } from '../actions/sites';
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue } from 'react-intl';
 import { batchActions } from '../actions/misc';
 import StandardAction from '../../models/StandardAction';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
@@ -87,7 +87,11 @@ import { getPublishingStatusState } from '../../components/PublishingStatusDispl
 import { nanoid } from 'nanoid';
 import { popDialog } from '../actions/dialogStack';
 
-const msgs = defineMessages({
+const msgs = defineMessages<{
+	siteSwitchedOnAnotherTab: { readonly currentProject: MessageValue; readonly newProject: MessageValue };
+	siteSwitchedOnAnotherTabPrimaryAction: { readonly currentProject: MessageValue };
+	siteSwitchedOnAnotherTabSecondaryAction: { readonly newProject: MessageValue };
+}>({
 	siteSwitchedOnAnotherTab: {
 		defaultMessage: 'The active project was changed from "{currentProject}" to "{newProject}" on another tab.'
 	},
@@ -516,12 +520,10 @@ const systemEpics: CrafterCMSEpic[] = [
 							currentProject
 						}),
 						okButtonText: getIntl().formatMessage(msgs.siteSwitchedOnAnotherTabPrimaryAction, {
-							newProject,
 							currentProject
 						}),
 						cancelButtonText: getIntl().formatMessage(msgs.siteSwitchedOnAnotherTabSecondaryAction, {
-							newProject,
-							currentProject
+							newProject
 						}),
 						onOk: () => {
 							// Continue on current site (since it was changed on another tab we need to call previewSwitch, to re-set the

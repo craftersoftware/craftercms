@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
@@ -93,51 +93,57 @@ type SubViewProps = React.PropsWithChildren<{
 	lockedTimeSeconds?: number;
 }>;
 
-const translations = defineMessages({
-	loginDialogTitle: {
-		id: 'loginView.dialogTitleText',
-		defaultMessage: 'Login to CrafterCMS'
-	},
-	incorrectCredentialsMessage: {
-		id: 'loginView.incorrectCredentialsMessage',
-		defaultMessage: 'Incorrect username or password. Please try again.'
-	},
-	languageDropDownLabel: {
-		id: 'words.language',
-		defaultMessage: 'Language'
-	},
-	recoverYourPasswordViewTitle: {
-		id: 'loginView.recoverYourPasswordIntroText',
-		defaultMessage: 'If your username exists, an email will be sent to you with a reset link.'
-	},
-	recoverYourPasswordSuccessMessage: {
-		id: 'loginView.recoverYourPasswordSuccessMessage',
-		defaultMessage: 'If the user exists, a recovery email has been sent'
-	},
-	resetPasswordFieldPlaceholderLabel: {
-		id: 'resetView.resetPasswordFieldPlaceholderLabel',
-		defaultMessage: 'New Password'
-	},
-	resetPasswordConfirmFieldPlaceholderLabel: {
-		id: 'resetView.resetPasswordConfirmFieldPlaceholderLabel',
-		defaultMessage: 'Confirm Password'
-	},
-	resetPasswordSuccess: {
-		id: 'resetView.resetPasswordSuccess',
-		defaultMessage: 'Password successfully reset. Please login with your new password.'
-	},
-	resetPasswordError: {
-		id: 'resetView.resetPasswordError',
-		defaultMessage: 'Error resetting password. Token may be invalid or expired.'
-	},
-	resetPasswordInvalidToken: {
-		id: 'resetView.resetPasswordInvalidToken',
-		defaultMessage: 'Token validation failed.'
-	},
-	lockedAccountTryAgain: {
-		defaultMessage: 'Try again {fullTime, select, true {{time}} other {in {time} seconds}}'
-	}
-});
+const translations = {
+	...defineMessages({
+		loginDialogTitle: {
+			id: 'loginView.dialogTitleText',
+			defaultMessage: 'Login to CrafterCMS'
+		},
+		incorrectCredentialsMessage: {
+			id: 'loginView.incorrectCredentialsMessage',
+			defaultMessage: 'Incorrect username or password. Please try again.'
+		},
+		languageDropDownLabel: {
+			id: 'words.language',
+			defaultMessage: 'Language'
+		},
+		recoverYourPasswordViewTitle: {
+			id: 'loginView.recoverYourPasswordIntroText',
+			defaultMessage: 'If your username exists, an email will be sent to you with a reset link.'
+		},
+		recoverYourPasswordSuccessMessage: {
+			id: 'loginView.recoverYourPasswordSuccessMessage',
+			defaultMessage: 'If the user exists, a recovery email has been sent'
+		},
+		resetPasswordFieldPlaceholderLabel: {
+			id: 'resetView.resetPasswordFieldPlaceholderLabel',
+			defaultMessage: 'New Password'
+		},
+		resetPasswordConfirmFieldPlaceholderLabel: {
+			id: 'resetView.resetPasswordConfirmFieldPlaceholderLabel',
+			defaultMessage: 'Confirm Password'
+		},
+		resetPasswordSuccess: {
+			id: 'resetView.resetPasswordSuccess',
+			defaultMessage: 'Password successfully reset. Please login with your new password.'
+		},
+		resetPasswordError: {
+			id: 'resetView.resetPasswordError',
+			defaultMessage: 'Error resetting password. Token may be invalid or expired.'
+		},
+		resetPasswordInvalidToken: {
+			id: 'resetView.resetPasswordInvalidToken',
+			defaultMessage: 'Token validation failed.'
+		}
+	}),
+	...defineMessages<{
+		lockedAccountTryAgain: { readonly fullTime: string; readonly time: MessageValue };
+	}>({
+		lockedAccountTryAgain: {
+			defaultMessage: 'Try again {fullTime, select, true {{time}} other {in {time} seconds}}'
+		}
+	})
+};
 
 const retrieveStoredLangPreferences = () =>
 	Object.keys(window.localStorage).filter((key) => key.includes('_crafterStudioLanguage'));

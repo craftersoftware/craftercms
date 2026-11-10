@@ -14,17 +14,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue } from 'react-intl';
 
-export const translations = defineMessages({
-	placeholder: {
-		id: 'createFileDialog.placeholder',
-		defaultMessage: 'Please type a name'
-	},
-	policyError: {
-		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-	},
-	fetchingDependentItems: {
-		defaultMessage: 'Fetching items that reference the selected item'
-	}
-});
+export const translations = {
+	...defineMessages({
+		placeholder: {
+			id: 'createFileDialog.placeholder',
+			defaultMessage: 'Please type a name'
+		},
+		fetchingDependentItems: {
+			defaultMessage: 'Fetching items that reference the selected item'
+		}
+	}),
+	...defineMessages<{
+		policyError: { readonly detail: MessageValue; readonly fileName: MessageValue };
+	}>({
+		policyError: {
+			defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
+		}
+	})
+};

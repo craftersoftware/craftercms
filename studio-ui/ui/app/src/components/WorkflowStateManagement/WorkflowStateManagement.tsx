@@ -58,7 +58,9 @@ import { EmptyState } from '../EmptyState';
 import { pushErrorDialog } from '../../utils/system';
 import { extractErrorPayload } from '../../utils/ajax';
 
-const workflowStateManagementMessages = defineMessages({
+const workflowStateManagementMessages = defineMessages<{
+	statesUpdatedMessage: { readonly count: number | bigint };
+}>({
 	statesUpdatedMessage: {
 		id: 'workflowStateManagementMessages.statesUpdatedMessage',
 		defaultMessage: 'State for {count} {count, plural, one {item} other {items}} updated successfully'

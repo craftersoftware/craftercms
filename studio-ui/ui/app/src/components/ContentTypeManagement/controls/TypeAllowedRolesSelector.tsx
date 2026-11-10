@@ -17,15 +17,22 @@
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Box from '@mui/material/Box';
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue } from 'react-intl';
 import { TypeBuilderControl } from '../utils';
 import { StringListEditor } from './StringListEditor';
 
-const messages = defineMessages({
-	role: { id: 'typeAllowedRoles.role', defaultMessage: 'Role {index}' },
-	add: { id: 'typeAllowedRoles.add', defaultMessage: 'Add Role' },
-	remove: { id: 'typeAllowedRoles.remove', defaultMessage: 'Remove Role {index}' }
-});
+const messages = {
+	...defineMessages({
+		add: { id: 'typeAllowedRoles.add', defaultMessage: 'Add Role' }
+	}),
+	...defineMessages<{
+		role: { readonly index: MessageValue };
+		remove: { readonly index: MessageValue };
+	}>({
+		role: { id: 'typeAllowedRoles.role', defaultMessage: 'Role {index}' },
+		remove: { id: 'typeAllowedRoles.remove', defaultMessage: 'Remove Role {index}' }
+	})
+};
 
 export type TypeAllowedRolesSelectorProps = TypeBuilderControl<string[]>;
 

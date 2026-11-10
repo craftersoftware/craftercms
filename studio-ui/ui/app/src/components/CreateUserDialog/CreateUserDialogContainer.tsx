@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { create } from '../../services/users';
 import DialogBody from '../DialogBody/DialogBody';
@@ -51,16 +51,22 @@ import Box from '@mui/material/Box';
 import { pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 
-const translations = defineMessages({
-	invalidMinLength: {
-		id: 'createUserDialog.invalidMinLength',
-		defaultMessage: 'Min {length} characters'
-	},
-	userCreated: {
-		id: 'createUserDialog.userCreated',
-		defaultMessage: 'User created successfully'
-	}
-});
+const translations = {
+	...defineMessages({
+		userCreated: {
+			id: 'createUserDialog.userCreated',
+			defaultMessage: 'User created successfully'
+		}
+	}),
+	...defineMessages<{
+		invalidMinLength: { readonly length: MessageValue };
+	}>({
+		invalidMinLength: {
+			id: 'createUserDialog.invalidMinLength',
+			defaultMessage: 'Min {length} characters'
+		}
+	})
+};
 
 export function CreateUserDialogContainer(props: CreateUserDialogContainerProps) {
 	const { onClose, passwordRequirementsMinComplexity, onCreateSuccess, isSubmitting } = props;

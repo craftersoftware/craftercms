@@ -18,7 +18,7 @@ import React from 'react';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import DialogBody from '../DialogBody/DialogBody';
 import Typography from '@mui/material/Typography';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
@@ -40,20 +40,26 @@ import {
 } from '../GroupManagement/utils';
 import { excludeCommonItems } from '../TransferList/utils';
 
-const translations = defineMessages({
-	confirmHelperText: {
-		id: 'editGroupDialog.helperText',
-		defaultMessage: 'Delete group "{name}"?'
-	},
-	confirmOk: {
-		id: 'words.yes',
-		defaultMessage: 'Yes'
-	},
-	confirmCancel: {
-		id: 'words.no',
-		defaultMessage: 'No'
-	}
-});
+const translations = {
+	...defineMessages({
+		confirmOk: {
+			id: 'words.yes',
+			defaultMessage: 'Yes'
+		},
+		confirmCancel: {
+			id: 'words.no',
+			defaultMessage: 'No'
+		}
+	}),
+	...defineMessages<{
+		confirmHelperText: { readonly name: MessageValue };
+	}>({
+		confirmHelperText: {
+			id: 'editGroupDialog.helperText',
+			defaultMessage: 'Delete group "{name}"?'
+		}
+	})
+};
 
 export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 	const { formatMessage } = useIntl();

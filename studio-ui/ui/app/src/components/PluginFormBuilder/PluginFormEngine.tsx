@@ -18,7 +18,7 @@ import React from 'react';
 import { MarketplacePluginParameter } from '../../models/MarketplacePlugin';
 import TextField from '@mui/material/TextField';
 import Grid from '@mui/material/Grid';
-import { defineMessages, useIntl } from 'react-intl';
+import { defineMessages, useIntl, type MessageValue } from 'react-intl';
 import PasswordTextField from '../PasswordTextField/PasswordTextField';
 
 export interface PluginFormEngineProps {
@@ -31,7 +31,9 @@ export interface PluginFormEngineProps {
 	onKeyPress?(event: React.KeyboardEvent): any;
 }
 
-const messages = defineMessages({
+const messages = defineMessages<{
+	required: { readonly name: MessageValue };
+}>({
 	required: {
 		id: 'createSiteDialog.required',
 		defaultMessage: '{name} is required.'

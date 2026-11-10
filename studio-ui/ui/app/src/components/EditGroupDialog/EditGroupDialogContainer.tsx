@@ -44,28 +44,35 @@ import { pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 import { firstValueFrom } from 'rxjs';
 
-const translations = defineMessages({
-	groupCreated: {
-		id: 'groupEditDialog.groupCreated',
-		defaultMessage: 'Group created successfully'
-	},
-	groupEdited: {
-		id: 'groupEditDialog.groupEdited',
-		defaultMessage: 'Group edited successfully'
-	},
-	groupDeleted: {
-		id: 'groupEditDialog.groupDeleted',
-		defaultMessage: 'Group deleted successfully'
-	},
-	membersAdded: {
-		id: 'groupEditDialog.membersAdded',
-		defaultMessage: '{count, plural, one {User added successfully} other {Users added successfully}}'
-	},
-	membersRemoved: {
-		id: 'groupEditDialog.membersRemoved',
-		defaultMessage: '{count, plural, one {User removed successfully} other {Users removed successfully}}'
-	}
-});
+const translations = {
+	...defineMessages({
+		groupCreated: {
+			id: 'groupEditDialog.groupCreated',
+			defaultMessage: 'Group created successfully'
+		},
+		groupEdited: {
+			id: 'groupEditDialog.groupEdited',
+			defaultMessage: 'Group edited successfully'
+		},
+		groupDeleted: {
+			id: 'groupEditDialog.groupDeleted',
+			defaultMessage: 'Group deleted successfully'
+		}
+	}),
+	...defineMessages<{
+		membersAdded: { readonly count: number | bigint };
+		membersRemoved: { readonly count: number | bigint };
+	}>({
+		membersAdded: {
+			id: 'groupEditDialog.membersAdded',
+			defaultMessage: '{count, plural, one {User added successfully} other {Users added successfully}}'
+		},
+		membersRemoved: {
+			id: 'groupEditDialog.membersRemoved',
+			defaultMessage: '{count, plural, one {User removed successfully} other {Users removed successfully}}'
+		}
+	})
+};
 
 export function EditGroupDialogContainer(props: EditGroupDialogContainerProps) {
 	const { onClose, onGroupSaved, onGroupDeleted, isSubmitting } = props;

@@ -31,7 +31,14 @@ import Box from '@mui/material/Box';
 import ItemTypeIcon from '../../ItemTypeIcon';
 import Typography from '@mui/material/Typography';
 import Chip, { chipClasses } from '@mui/material/Chip';
-import { defineMessages, FormattedMessage, type MessageDescriptor, useIntl } from 'react-intl';
+import {
+	defineMessages,
+	FormattedMessage,
+	type MessageDescriptor,
+	useIntl,
+	type MessageValue,
+	type MessageTag
+} from 'react-intl';
 import { EditOffOutlined, EditOutlined } from '@mui/icons-material';
 import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
 import ItemPublishingTargetIcon from '../../ItemPublishingTargetIcon';
@@ -48,18 +55,27 @@ import { formHeaderTitleMinHeight, iconButtonSmallSize } from './formHeaderMetri
 
 export const formHeaderContainerName = 'formHeader';
 
-const copyMessages = defineMessages({
-	copyValue: { defaultMessage: 'Copy {value}' },
-	copied: { defaultMessage: 'Copied' },
-	copyFailed: { defaultMessage: 'Could not copy to the clipboard' }
-});
+const copyMessages = {
+	...defineMessages({
+		copied: { defaultMessage: 'Copied' },
+		copyFailed: { defaultMessage: 'Could not copy to the clipboard' }
+	}),
+	...defineMessages<{
+		copyValue: { readonly value: MessageValue };
+	}>({
+		copyValue: { defaultMessage: 'Copy {value}' }
+	})
+};
 
 const tocMessages = defineMessages({
 	collapse: { defaultMessage: 'Collapse table of contents' },
 	expand: { defaultMessage: 'Expand table of contents' }
 });
 
-const dateMessages = defineMessages({
+const dateMessages = defineMessages<{
+	created: { readonly when: MessageValue; readonly who: MessageTag };
+	updated: { readonly when: MessageValue; readonly who: MessageTag };
+}>({
 	created: { defaultMessage: 'Created {when} by <who>who</who>' },
 	updated: { defaultMessage: 'Updated {when} by <who>who</who>' }
 });

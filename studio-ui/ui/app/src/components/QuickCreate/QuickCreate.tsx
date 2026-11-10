@@ -15,7 +15,7 @@
  */
 
 import React, { forwardRef, useEffect, useMemo, useState } from 'react';
-import { defineMessages, FormattedMessage, IntlShape, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, IntlShape, useIntl, type MessageValue } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import AddCircleIcon from '@mui/icons-material/AddRounded';
 import Menu, { menuClasses } from '@mui/material/Menu';
@@ -56,20 +56,26 @@ import Box from '@mui/material/Box';
 import { retry } from 'rxjs';
 import { fetchItemByPath } from '../../services/content';
 
-const translations = defineMessages({
-	quickCreateBtnLabel: {
-		id: 'quickCreateBtnLabel.label',
-		defaultMessage: 'Open quick create menu'
-	},
-	quickCreateMenuTooltip: {
-		id: 'previewToolbar.quickCreateMenuTooltip',
-		defaultMessage: 'Quick create menu'
-	},
-	itemLookupFailedAfterSave: {
-		id: 'quickCreate.itemLookupFailedAfterSave',
-		defaultMessage: 'Content was saved at {path}, but the item could not be loaded.'
-	}
-});
+const translations = {
+	...defineMessages({
+		quickCreateBtnLabel: {
+			id: 'quickCreateBtnLabel.label',
+			defaultMessage: 'Open quick create menu'
+		},
+		quickCreateMenuTooltip: {
+			id: 'previewToolbar.quickCreateMenuTooltip',
+			defaultMessage: 'Quick create menu'
+		}
+	}),
+	...defineMessages<{
+		itemLookupFailedAfterSave: { readonly path: MessageValue };
+	}>({
+		itemLookupFailedAfterSave: {
+			id: 'quickCreate.itemLookupFailedAfterSave',
+			defaultMessage: 'Content was saved at {path}, but the item could not be loaded.'
+		}
+	})
+};
 
 interface QuickCreateMenuProps {
 	open: boolean;

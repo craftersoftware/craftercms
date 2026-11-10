@@ -16,6 +16,7 @@
 
 import { fixupConfigRules } from '@eslint/compat';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import formatjs from 'eslint-plugin-formatjs';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
 import path from 'node:path';
@@ -47,7 +48,7 @@ export default [
 	})),
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'react-refresh': reactRefresh },
+		plugins: { 'react-refresh': reactRefresh, formatjs },
 		languageOptions: {
 			globals: { ...globals.browser },
 			parser: tsParser
@@ -68,7 +69,8 @@ export default [
 				}
 			],
 			// Enable the TypeScript-specific rule with allowShortCircuit option
-			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }]
+			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }],
+			'formatjs/enforce-message-types': ['error', { generateTypes: true }]
 		}
 	}
 ];

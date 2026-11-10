@@ -14,21 +14,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessages, type MessageValue } from 'react-intl';
 
-export const translations = defineMessages({
-	editStates: {
-		id: 'words.edit',
-		defaultMessage: 'Edit'
-	},
-	selectAll: {
-		id: 'itemStates.selectedAll',
-		defaultMessage: 'Select {count} items across pages'
-	},
-	clearSelected: {
-		id: 'common.clearSelectedWithCount',
-		defaultMessage: 'Clear {count} selected'
-	}
-});
+export const translations = {
+	...defineMessages({
+		editStates: {
+			id: 'words.edit',
+			defaultMessage: 'Edit'
+		}
+	}),
+	...defineMessages<{
+		selectAll: { readonly count: MessageValue };
+		clearSelected: { readonly count: MessageValue };
+	}>({
+		selectAll: {
+			id: 'itemStates.selectedAll',
+			defaultMessage: 'Select {count} items across pages'
+		},
+		clearSelected: {
+			id: 'common.clearSelectedWithCount',
+			defaultMessage: 'Clear {count} selected'
+		}
+	})
+};
 
 export default translations;

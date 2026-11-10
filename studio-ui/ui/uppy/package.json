@@ -37,12 +37,11 @@
 	"dependencies": {
 		"@transloadit/prettier-bytes": "^2.0.0",
 		"classnames": "^2.5.1",
-		"preact": "^11.0.2"
+		"preact": "^11.1.1"
 	},
 	"devDependencies": {
 		"@babel/cli": "^8.0.6",
-		"@babel/plugin-proposal-class-properties": "^7.18.6",
-		"@babel/plugin-proposal-object-rest-spread": "^7.20.7",
+		"@babel/core": "^8.1.0",
 		"@babel/plugin-transform-private-methods": "^8.0.1",
 		"@babel/plugin-transform-react-jsx": "^8.0.1",
 		"@babel/preset-env": "^8.0.7",
@@ -51,7 +50,7 @@
 		"@types/eslint": "^9.6.1",
 		"babel-plugin-inline-package-json": "^2.0.0",
 		"build-if-changed": "^1.5.5",
-		"eslint": "^10.13.0"
+		"eslint": "^10.14.0"
 	},
 	"peerDependencies": {
 		"uppy": "^5.2.3"
