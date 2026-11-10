@@ -70,15 +70,26 @@ const iconByKind: Record<FieldStateKind, ComponentType<SvgIconProps>> = {
 	invalid: WarningAmberRounded
 };
 
+/**
+ * Where the asterisk sits on each icon. `em` is the icon font size (the small icon, 20px in the label),
+ * so a 16px table-of-contents icon keeps the same proportions.
+ * The check's +0.15em drops the asterisk into its upper-left notch. The triangle's -0.02em is just inside
+ * the left edge: -0.05em clears the apex but crowds the label.
+ */
+const badgeOffset: Record<'success' | 'error', { left: string; top: string }> = {
+	success: { left: '0.1em', top: '0.15em' },
+	error: { left: '-0.02em', top: '0em' }
+};
+
 /** Asterisk in the icon's empty upper-left. Size and nudge are fractions of the icon, so 16px and 20px share one placement. */
 function badgeSx(color: 'success' | 'error') {
+	const offset = badgeOffset[color];
 	return (theme: Theme) => ({
 		position: 'absolute',
 		width: '52%',
 		height: '52%',
-		left: '10%',
-		top: 0,
-		// In the triangle's empty upper-left, above the stroke, not in the gap before the icon.
+		left: offset.left,
+		top: offset.top,
 		transform: 'translate(0, -28%)',
 		color: theme.palette[color].main,
 		overflow: 'visible',
@@ -96,7 +107,7 @@ function RequiredBadge({ color, children }: { color: 'success' | 'error'; childr
 	return (
 		<Box component="span" sx={{ display: 'inline-flex', position: 'relative', lineHeight: 0 }}>
 			{children}
-			<Asterisk aria-hidden sx={badgeSx(color)} />
+			<Asterisk aria-hidden fontSize="small" sx={badgeSx(color)} />
 		</Box>
 	);
 }
