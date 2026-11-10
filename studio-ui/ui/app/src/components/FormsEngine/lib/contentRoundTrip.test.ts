@@ -36,12 +36,14 @@ const { createStore } = await import('jotai');
 const { getItemDataSourceId, parseLegacyFormDefinition } = await import('../../../services/contentTypes.ts');
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('../../../utils/xml.ts');
 const { createParsedValuesObject, deserializeContentDoc } = await import('./valueRetrievers.ts');
-const { buildContentXml } = await import('./valueSerializers.ts');
 const {
+	buildSaveContentXml,
 	complementValuesWithSystemProps,
+	composePathForType,
 	createObjectWithSystemProps,
 	extractAtomValues,
 	fileNameElementForXml,
+	getBasePath,
 	setFieldAtoms
 } = await import('./formUtils.tsx');
 const { XmlKeys, xmlDataSourceAttribute } = await import('./formConsts.ts');
@@ -99,11 +101,10 @@ function saveWithoutChanges(xml: string, contentTypesById: Record<string, Conten
 	const saved = extractAtomValues(createStore(), atoms.valueByFieldId);
 	const objectId = values[XmlKeys.modelId] as string;
 	complementValuesWithSystemProps(objectId, saved, contentObject, contentType, false);
-	const xmlValues = {
-		...saved,
-		[XmlKeys.fileName]: fileNameElementForXml(itemPath, objectId)
-	};
-	return fromString(buildContentXml(xmlValues, contentTypesById));
+	const savedXml = itemPath
+		? buildSaveContentXml(saved, contentTypesById, { path: itemPath })
+		: buildSaveContentXml(saved, contentTypesById, { embeddedObjectId: objectId });
+	return fromString(savedXml);
 }
 
 /** Element path => text, and element path@attribute => value. Item paths carry their index. */
@@ -120,6 +121,9 @@ function flatten(element: Element, prefix = '', out = new Map<string, string>())
 
 const blueprints = existsSync(blueprintsDir) ? readdirSync(blueprintsDir) : [];
 
+const field = (id: string, type: string, extra = '') =>
+	`<field><type>${type}</type><id>${id}</id><title>${id}</title><properties></properties><constraints></constraints>${extra}</field>`;
+
 describe('fileNameElementForXml', () => {
 	it('uses the path basename for pages and components', () => {
 		assert.equal(fileNameElementForXml('/site/website/about/index.xml'), 'index.xml');
@@ -131,6 +135,85 @@ describe('fileNameElementForXml', () => {
 			'c646ba89-a4c3-308f-3492-93be61429fec.xml'
 		);
 		assert.equal(fileNameElementForXml(undefined, 'abc'), 'abc.xml');
+	});
+});
+
+/**
+ * Same XML-building step useSaveForm runs before writeContent / onSave.
+ * Returns repository XML, the values object handed to onSave/the parent, and the file-name in that XML.
+ */
+function saveFileNameOutcome(
+	slug: string,
+	contentType: ContentType,
+	target: { path: string } | { embeddedObjectId: string }
+) {
+	const values: Record<string, unknown> = {
+		[XmlKeys.contentTypeId]: contentType.id,
+		[XmlKeys.modelId]: '0123abcd-0000-0000-0000-000000000000',
+		[XmlKeys.fileName]: slug,
+		[XmlKeys.internalName]: 'Label'
+	};
+	const xml = buildSaveContentXml(values, { [contentType.id]: contentType }, target);
+	return {
+		xml,
+		values,
+		xmlFileName: fromString(xml).documentElement.querySelector(':scope > file-name')?.textContent
+	};
+}
+
+const pageType = parseType(`<form><title>T</title><content-type>/page/t</content-type><objectType>page</objectType>
+	<properties></properties><sections><section><title>S</title><fields>
+	${field('file-name', 'file-name')}${field('internal-name', 'input')}
+	</fields></section></sections></form>`);
+const componentType = parseType(
+	`<form><title>C</title><content-type>/component/c</content-type><objectType>component</objectType>
+	<properties></properties><sections><section><title>S</title><fields>
+	${field('file-name', 'file-name')}${field('internal-name', 'input')}
+	</fields></section></sections></form>`
+);
+
+describe('buildSaveContentXml (useSaveForm file-name)', () => {
+	it('create writes the path basename in XML and keeps the UI slug on values for onSave', () => {
+		const path = composePathForType('/site/website/', 'about', pageType);
+		const { xmlFileName, values } = saveFileNameOutcome('about', pageType, { path });
+		assert.equal(path, '/site/website/about/index.xml');
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(values[XmlKeys.fileName], 'about');
+	});
+
+	it('plain update writes the path basename in XML and keeps the UI slug on values for onSave', () => {
+		const path = '/site/website/about/index.xml';
+		const { xmlFileName, values } = saveFileNameOutcome('about', pageType, { path });
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(values[XmlKeys.fileName], 'about');
+
+		const componentPath = '/site/components/headers/header.xml';
+		const component = saveFileNameOutcome('header', componentType, { path: componentPath });
+		assert.equal(component.xmlFileName, 'header.xml');
+		assert.equal(component.values[XmlKeys.fileName], 'header');
+	});
+
+	it('rename writes the new path basename in XML and keeps the new UI slug on values for onSave', () => {
+		const itemPath = '/site/website/about/index.xml';
+		const path = composePathForType(getBasePath(itemPath, true), 'contact', pageType);
+		const { xmlFileName, values } = saveFileNameOutcome('contact', pageType, { path });
+		assert.equal(path, '/site/website/contact/index.xml');
+		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(values[XmlKeys.fileName], 'contact');
+
+		const componentItemPath = '/site/components/headers/header.xml';
+		const componentPath = composePathForType(getBasePath(componentItemPath, false), 'footer', componentType);
+		const component = saveFileNameOutcome('footer', componentType, { path: componentPath });
+		assert.equal(componentPath, '/site/components/headers/footer.xml');
+		assert.equal(component.xmlFileName, 'footer.xml');
+		assert.equal(component.values[XmlKeys.fileName], 'footer');
+	});
+
+	it('embedded writes {objectId}.xml into both the XML and the values object parents merge', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		const { xmlFileName, values } = saveFileNameOutcome('', componentType, { embeddedObjectId: objectId });
+		assert.equal(xmlFileName, `${objectId}.xml`);
+		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
 	});
 });
 
@@ -177,8 +260,6 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 	}
 });
 
-const field = (id: string, type: string, extra = '') =>
-	`<field><type>${type}</type><id>${id}</id><title>${id}</title><properties></properties><constraints></constraints>${extra}</field>`;
 const typedType = parseType(`<form><title>T</title><content-type>/page/t</content-type><objectType>page</objectType>
 	<properties></properties><sections><section><title>S</title><fields>
 	${field('file-name', 'file-name')}${field('internal-name', 'input')}${field('code_s', 'input')}${field('notes_t', 'textarea')}

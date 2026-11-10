@@ -29,10 +29,10 @@ import {
 import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
+	buildSaveContentXml,
 	composePathForType,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
-	fileNameElementForXml,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
@@ -54,7 +54,6 @@ import {
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
@@ -404,8 +403,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
 					// Mutate in place so relevance WeakMap association is kept for stacked commits.
-					values[XmlKeys.fileName] = fileNameElementForXml(null, id);
-					const xml = buildContentXml(values, contentTypesById);
+					const xml = buildSaveContentXml(values, contentTypesById, { embeddedObjectId: id });
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -503,7 +501,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				}
 
 				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
-				const xml = buildContentXml({ ...values, [XmlKeys.fileName]: fileNameElementForXml(path) }, contentTypesById);
+				const xml = buildSaveContentXml(values, contentTypesById, { path });
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {

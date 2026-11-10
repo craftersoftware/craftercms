@@ -127,6 +127,25 @@ export function fileNameElementForXml(path: string | null | undefined, embeddedO
 }
 
 /**
+ * Builds the content XML for a FormsEngine save the same way {@link useSaveForm} does.
+ *
+ * Repository saves keep the UI slug on `values` and only put the path basename on the XML copy.
+ * Embedded saves mutate `values` in place to `{objectId}.xml` because parents (e.g. NodeSelector)
+ * merge `values`, not the XML/`dom` copy.
+ **/
+export function buildSaveContentXml(
+	values: LookupTable<unknown>,
+	contentTypesById: LookupTable<ContentType>,
+	target: { path: string } | { embeddedObjectId: string }
+): string {
+	if ('embeddedObjectId' in target) {
+		values[XmlKeys.fileName] = fileNameElementForXml(null, target.embeddedObjectId);
+		return buildContentXml(values, contentTypesById);
+	}
+	return buildContentXml({ ...values, [XmlKeys.fileName]: fileNameElementForXml(target.path) }, contentTypesById);
+}
+
+/**
  * Returns the scroll container for the form's container.
  **/
 export function getScrollContainer(container: HTMLElement): HTMLElement {
