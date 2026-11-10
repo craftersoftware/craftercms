@@ -75,7 +75,8 @@ function parseType(xml: string) {
 
 /**
  * Open the item for edit and save it without changes, as FormsEngine and useSaveForm do.
- * `itemPath` is the repo path when known; without it, embeds use `{objectId}.xml` for `<file-name>`.
+ * `itemPath` is the repo path when known; without it, embeds pass the stored `<file-name>`
+ * (or `{objectId}.xml` when the element is missing).
  */
 function saveWithoutChanges(xml: string, contentTypesById: Record<string, ContentType>, itemPath?: string): Document {
 	const contentObject = deserializeContentDoc(fromString(xml));
@@ -103,7 +104,10 @@ function saveWithoutChanges(xml: string, contentTypesById: Record<string, Conten
 	complementValuesWithSystemProps(objectId, saved, contentObject, contentType, false);
 	const savedXml = itemPath
 		? buildSaveContentXml(saved, contentTypesById, { path: itemPath })
-		: buildSaveContentXml(saved, contentTypesById, { embeddedObjectId: objectId });
+		: buildSaveContentXml(saved, contentTypesById, {
+				embeddedObjectId: objectId,
+				storedFileName: contentObject[XmlKeys.fileName] as string | null | undefined
+			});
 	return fromString(savedXml);
 }
 
@@ -145,7 +149,7 @@ describe('fileNameElementForXml', () => {
 function saveFileNameOutcome(
 	slug: string,
 	contentType: ContentType,
-	target: { path: string } | { embeddedObjectId: string }
+	target: { path: string } | { embeddedObjectId: string; storedFileName?: string | null }
 ) {
 	const values: Record<string, unknown> = {
 		[XmlKeys.contentTypeId]: contentType.id,
@@ -209,11 +213,23 @@ describe('buildSaveContentXml (useSaveForm file-name)', () => {
 		assert.equal(component.values[XmlKeys.fileName], 'footer');
 	});
 
-	it('embedded writes {objectId}.xml into both the XML and the values object parents merge', () => {
+	it('embedded without a stored name writes {objectId}.xml into both the XML and values parents merge', () => {
 		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
 		const { xmlFileName, values } = saveFileNameOutcome('', componentType, { embeddedObjectId: objectId });
 		assert.equal(xmlFileName, `${objectId}.xml`);
 		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
+	});
+
+	it('embedded keeps the stored file-name from the content object, not a path-derived or empty form value', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		const stored = 'custom-component.xml';
+		// Form values may be empty (stacked) or a path slug (top-level embed); neither is the stored name.
+		const { xmlFileName, values } = saveFileNameOutcome('about', componentType, {
+			embeddedObjectId: objectId,
+			storedFileName: stored
+		});
+		assert.equal(xmlFileName, stored);
+		assert.equal(values[XmlKeys.fileName], stored);
 	});
 });
 

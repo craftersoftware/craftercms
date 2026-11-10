@@ -403,7 +403,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 
 					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
 					// Mutate in place so relevance WeakMap association is kept for stacked commits.
-					const xml = buildSaveContentXml(values, contentTypesById, { embeddedObjectId: id });
+					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
+					// top-level embed may seed a path-derived slug. Use the component's stored element.
+					const xml = buildSaveContentXml(values, contentTypesById, {
+						embeddedObjectId: id,
+						storedFileName: contentObject[XmlKeys.fileName] as string | null | undefined
+					});
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
