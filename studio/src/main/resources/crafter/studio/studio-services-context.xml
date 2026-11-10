@@ -469,7 +469,6 @@
         <constructor-arg name="configurationService" ref="configurationService" />
         <constructor-arg name="auditServiceInternal" ref="auditServiceInternal" />
         <constructor-arg name="itemServiceInternal" ref="itemServiceInternal" />
-		<property name="servicesConfig" ref="cstudioServicesConfig"/>
     </bean>
 
     <bean id="auditService" class="org.craftercms.studio.impl.v2.service.audit.AuditServiceImpl" >
