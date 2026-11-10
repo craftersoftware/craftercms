@@ -384,7 +384,8 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 				major: site.blueprint.version.major,
 				minor: site.blueprint.version.minor,
 				patch: site.blueprint.version.patch
-			}
+			},
+			enableStaging: site.enableStaging
 		};
 		if (site.gitBranch) params.sandboxBranch = site.gitBranch as string;
 		if (site.blueprintFields) params.siteParams = site.blueprintFields;
@@ -399,7 +400,8 @@ export function CreateSiteDialogContainer(props: CreateSiteDialogContainerProps)
 				createAsOrphan: site.createAsOrphan,
 				name: site.siteName,
 				sourceType: 'blueprint',
-				authentication: { type: 'none' }
+				authentication: { type: 'none' },
+				enableStaging: site.enableStaging
 			};
 			if (site.blueprint.id !== 'GIT') {
 				params.blueprintId = site.blueprint.id;

@@ -486,13 +486,13 @@ public class StudioAwsS3BlobStore extends AwsS3BlobStore implements StudioBlobSt
 	}
 
 	@Override
-	public void copyBlobs(final StudioBlobStore source, final String environment, final List<String> items) {
+	public void copyBlobs(final StudioBlobStore source, final String sourceEnvironment, final String targetEnvironment, final List<String> items) {
 		if (!(source instanceof StudioAwsS3BlobStore sourceStudioBlobStore)) {
 			throw new UnsupportedOperationException("Source blob store is not an instance of StudioAwsS3BlobStore");
 		}
 
-		Mapping sourceMapping = sourceStudioBlobStore.getMapping(environment);
-		Mapping targetMapping = getMapping(environment);
+		Mapping sourceMapping = sourceStudioBlobStore.getMapping(sourceEnvironment);
+		Mapping targetMapping = getMapping(targetEnvironment);
 
 		if (targetMapping.equals(sourceMapping)) {
 			logger.info("Source and target mappings are the same, skipping copy operation");

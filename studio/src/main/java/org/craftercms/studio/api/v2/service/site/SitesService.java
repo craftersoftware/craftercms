@@ -208,8 +208,17 @@ public interface SitesService {
 	 *                           overridden (forced to false) if serverless delivery is enabled
 	 * @throws ServiceLayerException if there is an error duplicating the site
 	 */
-	void duplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores)
+	void duplicate(String sourceSiteId, String siteId, String siteName, String description, String sandboxBranch, boolean readOnlyBlobStores, boolean enableStaging)
 			throws ServiceLayerException;
+
+	/**
+	 * Enable staging for a site. Staging stays disabled until this is called and cannot be disabled afterwards.
+	 * When the site is already published, the staging branch and blob-store assets are initialized from live.
+	 *
+	 * @param siteId the site id
+	 * @throws ServiceLayerException if staging is already enabled or initialization fails
+	 */
+	void enableStaging(String siteId) throws ServiceLayerException;
 
 	/**
 	 * Get the sites matching a given state

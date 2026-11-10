@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.ListUtils;
@@ -56,9 +57,11 @@ import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.READY;
+import org.craftercms.studio.api.v2.deployment.Deployer;
 import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.PublishEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
+import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.ContentRepository;
 import org.craftercms.studio.api.v2.repository.PublishItemTO;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -69,6 +72,8 @@ import org.craftercms.studio.api.v2.task.TaskManager;
 import org.craftercms.studio.api.v2.task.TaskProgress;
 import org.craftercms.studio.api.v2.task.TaskProgress.Stage;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
+import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import org.craftercms.studio.impl.v2.utils.DateUtils;
 import org.craftercms.studio.impl.v2.utils.PublishUtils;
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
@@ -77,6 +82,7 @@ import org.craftercms.studio.model.task.PublishTask.PublishTaskId;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.event.EventListener;
@@ -105,10 +111,16 @@ public class Publisher implements ApplicationEventPublisherAware {
 	private final ActivityStreamService activityService;
 	private final TaskManager taskManager;
 	private final SqlSessionFactory sqlSessionFactory;
+	private final Deployer deployer;
+	/**
+	 * Sites whose staging deployer target has already been accepted. A 409 from deployer is success, so remembering
+	 * the site avoids that round trip on later staging publishes.
+	 */
+	private final Set<String> ensuredStagingDeployerTargets = ConcurrentHashMap.newKeySet();
 
 	@ConstructorProperties({"siteDao", "publishDao", "auditService",
 		"contentRepository", "generalLockService", "servicesConfig", "itemTargetDAO", "transactionManager",
-		"activityService", "taskManager", "sqlSessionFactory"})
+		"activityService", "taskManager", "sqlSessionFactory", "deployer"})
 	public Publisher(final SiteDAO siteDao, final PublishDAO publishDao,
 			 final AuditService auditService,
 			 final StudioBlobAwareContentRepository contentRepository,
@@ -118,7 +130,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			 final PlatformTransactionManager transactionManager,
 			 final ActivityStreamService activityService,
 			 final TaskManager taskManager,
-			 final SqlSessionFactory sqlSessionFactory) {
+			 final SqlSessionFactory sqlSessionFactory,
+			 @Qualifier("allDeployers") final Deployer deployer) {
 		this.siteDao = siteDao;
 		this.publishDao = publishDao;
 		this.auditService = auditService;
@@ -130,6 +143,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		this.activityService = activityService;
 		this.taskManager = taskManager;
 		this.sqlSessionFactory = sqlSessionFactory;
+		this.deployer = deployer;
 	}
 
 	@Async
@@ -198,25 +212,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 			auditPublishOperation(publishPackage, OPERATION_PUBLISH_START);
 			itemLoadStage.complete();
 
-			switch (publishPackage.getPackageType()) {
-				case INITIAL_PUBLISH -> {
-					logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_INITIAL_PUBLISH;
-					doInitialPublish(publishPackage);
-				}
-				case PUBLISH_ALL -> {
-					logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_PUBLISH_ALL;
-					doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget);
-				}
-				case ITEM_LIST -> {
-					logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
-					activityOperation = OPERATION_ITEM_LIST_PUBLISHED;
-					doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget);
-				}
-				default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
-					publishPackage.getPackageType(), packageId, siteId));
-			}
+			activityOperation = auditOperation(publishPackage.getPackageType(), packageId, siteId);
+			publishPackage(publishPackage, publishItems);
 		} finally {
 			Stage completeStage = taskProgress.startStage("Save completed package");
 			if (activityOperation != null) {
@@ -235,17 +232,163 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST)
+	 * Publish one package. Staging cannot be disabled, and a package for the staging target exists only while it is
+	 * on. When staging is on, the package publishes while holding the published-repo lock. A live package also
+	 * publishes to staging. When staging is off, the package is for live: it waits for enable-staging to finish and
+	 * reads the flag again under the published-repo lock, so a package that blocked while enable ran still publishes
+	 * to staging. After the locks are released, the serverless staging target is created when the staging branch
+	 * exists. That call is skipped once deployer has accepted the target for the site. A deployer outage leaves
+	 * the completed Git publish in place.
+	 */
+	private void publishPackage(final PublishPackage publishPackage, final Collection<PublishItem> publishItems)
+			throws ServiceLayerException {
+		String siteId = publishPackage.getSite().getSiteId();
+		if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+			publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, true);
+		} else {
+			String enableLockKey = getEnableStagingLockKey(siteId);
+			generalLockService.lock(enableLockKey);
+			try {
+				publishUnderPublishedRepoLock(publishPackage, publishItems, siteId, false);
+			} finally {
+				generalLockService.unlock(enableLockKey);
+			}
+		}
+		ensureStagingDeployerTarget(siteId);
+	}
+
+	/**
+	 * Create the serverless staging target once the staging branch exists. {@code createStagingTarget} does not
+	 * replace an existing target, and an "already exists" response is success. After deployer accepts the target,
+	 * the site is remembered and later staging publishes skip the call. A timeout or outage is not remembered, so
+	 * the next staging publish tries again, and it does not fail the Git publish that already completed.
+	 * Site deletion forgets the site, so a recreated site creates the target again.
+	 */
+	private void ensureStagingDeployerTarget(String siteId) {
+		if (ensuredStagingDeployerTargets.contains(siteId)) {
+			return;
+		}
+		try {
+			if (!servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+				return;
+			}
+			String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+			if (!contentRepository.publishedRepositoryExists(siteId)
+					|| !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				logger.debug("Staging branch '{}' is not published yet for site '{}'. The deployer target will be created after the branch is published",
+					stagingBranch, siteId);
+				return;
+			}
+			deployer.createStagingTarget(siteId);
+			ensuredStagingDeployerTargets.add(siteId);
+		} catch (Exception e) {
+			logger.error("Failed to create the staging deployer target for site '{}'. The next staging publish will try again",
+				siteId, e);
+		}
+	}
+
+	/**
+	 * Forget a remembered staging deployer target when site deletion starts. The target is removed with the site,
+	 * and a later site with the same id has to create it again.
+	 */
+	@EventListener
+	public void onSiteDeleting(SiteDeletingEvent event) {
+		ensuredStagingDeployerTargets.remove(event.getSiteId());
+	}
+
+	/**
+	 * Publish a package while holding the published-repo lock. When {@code stagingEnabled} is false, the flag is read
+	 * again while holding the lock.
+	 */
+	private void publishUnderPublishedRepoLock(final PublishPackage publishPackage,
+						   final Collection<PublishItem> publishItems, final String siteId,
+						   boolean stagingEnabled) throws ServiceLayerException {
+		String publishedRepoLockKey = getPublishedRepoLockKey(siteId);
+		generalLockService.lock(publishedRepoLockKey);
+		try {
+			// Staging can only be enabled, never disabled, so recheck the flag only if it was false originally
+			if (!stagingEnabled) {
+				stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
+			}
+			publishByType(publishPackage, publishItems, stagingEnabled);
+		} finally {
+			generalLockService.unlock(publishedRepoLockKey);
+		}
+	}
+
+	private void publishByType(final PublishPackage publishPackage, final Collection<PublishItem> publishItems,
+				   final boolean stagingEnabled) throws ServiceLayerException {
+		String siteId = publishPackage.getSite().getSiteId();
+		long packageId = publishPackage.getId();
+		if (stagingEnabled) {
+			copyStagingBlobsFromLive(siteId);
+		}
+		switch (publishPackage.getPackageType()) {
+			case INITIAL_PUBLISH -> {
+				logger.debug("Processing initial publish package '{}' for site '{}'", packageId, siteId);
+				doInitialPublish(publishPackage, stagingEnabled);
+			}
+			case PUBLISH_ALL -> {
+				logger.debug("Processing publish-all package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishAllTarget, stagingEnabled);
+			}
+			case ITEM_LIST -> {
+				logger.debug("Processing publish package '{}' for site '{}'", packageId, siteId);
+				doPublishItemList(publishPackage, publishItems, this::doPublishItemListTarget, stagingEnabled);
+			}
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				publishPackage.getPackageType(), packageId, siteId));
+		}
+	}
+
+	/**
+	 * Copy the live blob-store assets onto the staging branch created during upgrade, before this package publishes
+	 * its staging delta. The copy is skipped once {@code staging_blobs_copied} is set. A failure leaves the flag
+	 * false and stops the package, so the next publish request copies again.
+	 */
+	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
+		Site site = siteDao.getSite(siteId);
+		if (site == null || site.isStagingBlobsCopied()) {
+			return;
+		}
+		String liveBranch = servicesConfig.getLiveEnvironment(siteId);
+		String stagingBranch = servicesConfig.getStagingEnvironment(siteId);
+		try {
+			if (!contentRepository.publishedRepositoryExists(siteId) || !contentRepository.isTargetPublished(siteId, stagingBranch)) {
+				siteDao.setStagingBlobsCopied(siteId, true);
+				return;
+			}
+			logger.info("Copy blobs for site '{}' from '{}' to '{}' before publishing the staging delta", siteId, liveBranch, stagingBranch);
+			contentRepository.copyBlobs(siteId, liveBranch, stagingBranch, stagingBranch);
+			siteDao.setStagingBlobsCopied(siteId, true);
+		} catch (IOException e) {
+			throw new ServiceLayerException(format("Failed to copy live blobs to staging for site '%s'", siteId), e);
+		}
+	}
+
+	private String auditOperation(final PublishPackage.PackageType packageType, final long packageId, final String siteId)
+			throws ServiceLayerException {
+		return switch (packageType) {
+			case INITIAL_PUBLISH -> OPERATION_INITIAL_PUBLISH;
+			case PUBLISH_ALL -> OPERATION_PUBLISH_ALL;
+			case ITEM_LIST -> OPERATION_ITEM_LIST_PUBLISHED;
+			default -> throw new ServiceLayerException(format("Unknown package type '%s' for package '%d' for site '%s'",
+				packageType, packageId, siteId));
+		};
+	}
+
+	/**
+	 * Process a package that contains a list of items to publish (i.e. a package with type equal to either PUBLISH_ALL or ITEM_LIST).
+	 * When {@code stagingEnabled} is true and the package target is live, staging is published first.
 	 */
 	protected void doPublishItemList(final PublishPackage publishPackage,
 					 final Collection<PublishItem> publishItems,
-					 final TargetPublisherFunction targetPublisher) throws SiteNotFoundException {
+					 final TargetPublisherFunction targetPublisher,
+					 final boolean stagingEnabled) throws SiteNotFoundException {
 		String siteId = publishPackage.getSite().getSiteId();
 		String target = publishPackage.getTarget();
-
 		boolean isLiveTarget = CS.equals(servicesConfig.getLiveEnvironment(siteId), target);
-
-		if (isLiveTarget && servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+		if (isLiveTarget && stagingEnabled) {
 			String stagingEnvironment = servicesConfig.getStagingEnvironment(siteId);
 			runTargetPublisher(publishPackage, publishItems, targetPublisher, false, stagingEnvironment);
 		}
@@ -256,7 +399,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 	 * Helper function to run the "target publisher" and handle exception.
 	 * On exception, it will update the package and its PublishItems with the target-aware failing state
 	 */
-	private void runTargetPublisher(final PublishPackage publishPackage,
+	protected void runTargetPublisher(final PublishPackage publishPackage,
 					final Collection<PublishItem> publishItems,
 					final TargetPublisherFunction targetPublisher,
 					final boolean isLiveTarget,
@@ -442,21 +585,19 @@ public class Publisher implements ApplicationEventPublisherAware {
 	}
 
 	/**
-	 * Process an initial publish package
+	 * Process an initial publish package. The caller has already read {@code stagingEnabled} while holding the
+	 * enable-staging and published-repo locks.
 	 */
-	private void doInitialPublish(final PublishPackage publishPackage) throws SiteNotFoundException {
+	private void doInitialPublish(final PublishPackage publishPackage, final boolean stagingEnabled) throws SiteNotFoundException {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
 		String liveTarget = servicesConfig.getLiveEnvironment(siteId);
-		boolean stagingEnabled = servicesConfig.isStagingEnvironmentEnabled(siteId);
 		String stagingTarget = servicesConfig.getStagingEnvironment(siteId);
-
 		Map<String, PublishItem> failedItems = new HashMap<>();
 		if (stagingEnabled) {
 			runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, false),
 				false, stagingTarget);
 		}
-
 		runTargetPublisher(publishPackage, emptyList(), (packageTO, target, __) -> doInitialPublishTarget(packageTO, target, failedItems, true),
 			true, liveTarget);
 

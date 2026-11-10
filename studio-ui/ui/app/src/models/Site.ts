@@ -38,6 +38,7 @@ export interface SiteBaseState {
 	selectedView: number;
 	gitBranch: string;
 	singleBranch: boolean;
+	enableStaging: boolean;
 }
 
 export interface SiteState extends SiteBaseState {
@@ -86,6 +87,7 @@ export interface CreateSiteMeta {
 		[key: string]: string;
 	};
 	createAsOrphan: boolean;
+	enableStaging?: boolean;
 	sourceType: 'blueprint' | 'remote';
 	authentication: {
 		type: SiteState['repoAuthentication'];
@@ -96,7 +98,10 @@ export interface CreateSiteMeta {
 	};
 }
 
-export interface DuplicateSiteMeta extends Pick<CreateSiteMeta, 'siteId' | 'description' | 'sandboxBranch'> {
+export interface DuplicateSiteMeta extends Pick<
+	CreateSiteMeta,
+	'siteId' | 'description' | 'sandboxBranch' | 'enableStaging'
+> {
 	siteName: string;
 	sourceSiteId: string;
 }
@@ -115,6 +120,7 @@ export interface MarketplaceSite {
 	};
 	sandboxBranch?: string;
 	description: string;
+	enableStaging?: boolean;
 }
 
 export interface Site {
@@ -123,6 +129,7 @@ export interface Site {
 	name: string;
 	description: string;
 	state?: 'INITIALIZING' | 'READY' | 'DELETING' | 'DELETED';
+	stagingEnabled?: boolean;
 }
 
 export interface BackendSite {
@@ -131,6 +138,7 @@ export interface BackendSite {
 	name: string;
 	desc: string;
 	state: 'INITIALIZING' | 'READY' | 'DELETING' | 'DELETED';
+	stagingEnabled?: boolean;
 }
 
 export interface DetailedSite {
@@ -144,6 +152,7 @@ export interface DetailedSite {
 	publishingStatus: string;
 	sandboxBranch: string;
 	publishedRepoCreated: boolean;
+	stagingEnabled: boolean;
 	state: 'INITIALIZING' | 'READY' | 'DELETING' | 'DELETED';
 	blobStores: {
 		id: string;

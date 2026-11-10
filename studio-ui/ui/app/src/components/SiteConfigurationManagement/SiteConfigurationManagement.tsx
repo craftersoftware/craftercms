@@ -78,25 +78,45 @@ import { SiteToolsContext } from '../SiteTools/siteToolsContext';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import Paper from '@mui/material/Paper';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useSitesBranch from '../../hooks/useSitesBranch';
+import Checkbox from '@mui/material/Checkbox';
+import CircularProgress from '@mui/material/CircularProgress';
+import Link from '@mui/material/Link';
+import { enableStaging } from '../../services/sites';
+import { fetchSites } from '../../state/actions/sites';
 
 interface SiteConfigurationManagementProps {
 	embedded?: boolean;
 	showAppsButton?: boolean;
 	isSubmitting?: boolean;
 	onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
+	/** Config file id to select on load (e.g. `studio/site-config.xml`). */
+	selectedConfigFileId?: string;
 }
 
 export function SiteConfigurationManagement(props: SiteConfigurationManagementProps) {
-	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting } = props;
+	const { embedded, showAppsButton, onSubmittingAndOrPendingChange, isSubmitting, selectedConfigFileId } = props;
 	const site = useActiveSiteId();
+	const { byId: sitesById } = useSitesBranch();
+	const stagingEnabled = Boolean(sitesById?.[site]?.stagingEnabled);
 	const { username } = useActiveUser();
+	const [enableStagingConfirm, setEnableStagingConfirm] = useState({
+		open: false,
+		checked: false,
+		submitting: false
+	});
+	const [stagingInfoDialogOpen, setStagingInfoDialogOpen] = useState(false);
 	const sessionStorageKey = `craftercms.${username}.projectToolsConfigurationData.${site}`;
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
 	const { formatMessage } = useIntl();
 	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
-	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(
-		() => JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null
+	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() =>
+		selectedConfigFileId ? null : (JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null)
 	);
 	const [changesRecoveredOnMount] = useState<boolean>(() => selectedConfigFile !== null);
 	const ignoreEnv = selectedConfigFile?.path === 'site-policy-config.xml';
@@ -212,6 +232,16 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			});
 		}
 	}, [environment, site, dispatch]);
+
+	useEffect(() => {
+		if (!selectedConfigFileId || !files?.length || selectedConfigFile) {
+			return;
+		}
+		const file = files.find((f) => f.id === selectedConfigFileId);
+		if (file) {
+			setSelectedConfigFile(file);
+		}
+	}, [files, selectedConfigFileId, selectedConfigFile]);
 
 	useEffect(() => {
 		if (selectedConfigFile && environment) {
@@ -582,6 +612,40 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
+	const isProjectConfigurationXml =
+		selectedConfigFile?.module === 'studio' && selectedConfigFile?.path === 'site-config.xml';
+
+	const onEnableStagingSwitch = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+		if (checked) {
+			setEnableStagingConfirm({ open: true, checked: false, submitting: false });
+		}
+	};
+
+	const onConfirmEnableStaging = () => {
+		setEnableStagingConfirm((state) => ({ ...state, submitting: true }));
+		dispatch(
+			showSystemNotification({
+				message: formatMessage({ defaultMessage: 'Enabling staging… this can take several minutes' })
+			})
+		);
+		enableStaging(site).subscribe({
+			next() {
+				dispatch(
+					batchActions([
+						showSystemNotification({
+							message: formatMessage({ defaultMessage: 'Staging enabled' })
+						}),
+						fetchSites()
+					])
+				);
+				setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+			},
+			error({ response: { response } }) {
+				setEnableStagingConfirm((state) => ({ ...state, submitting: false }));
+				dispatch(pushErrorDialog({ props: { error: response } }));
+			}
+		});
+	};
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -609,13 +673,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				/>
 			)}
 			<ResizeableDrawer
-				belowToolbar
+				belowToolbar={!embedded}
 				open={openDrawer}
 				width={width}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute',
-						...(embedded ? { top: 0 } : {})
+						...(embedded && { top: 0 })
 					}
 				}}
 				onWidthChange={setWidth}
@@ -777,8 +841,9 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						<>
 							<GlobalAppToolbar
 								sxs={{
-									appBar: { paddingRight: '14.4px' },
-									toolbar: { '& > section': {} }
+									appBar: { paddingRight: '14.4px', overflow: 'visible' },
+									toolbar: { overflow: 'visible', '& > section': { overflow: 'visible' } },
+									rightContent: { overflow: 'visible' }
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
@@ -790,7 +855,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								title={getTranslation(selectedConfigFile.title, translations, formatMessage)}
 								subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
 								rightContent={
-									<>
+									<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
 										<ButtonGroup variant="outlined" sx={{ marginRight: '15px' }}>
 											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
 												{formatMessage(translations.encryptMarked)}
@@ -806,13 +871,62 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												<FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
 											)}
 										</SecondaryButton>
-									</>
+										{isProjectConfigurationXml && (
+											<Paper
+												elevation={0}
+												sx={{
+													position: 'absolute',
+													top: 'calc(100% + 14px)',
+													right: '-11px',
+													zIndex: 2,
+													display: 'flex',
+													alignItems: 'center',
+													py: 2,
+													px: 2.5,
+													borderRadius: 0,
+													borderBottomLeftRadius: 4,
+													bgcolor: 'background.paper',
+													boxShadow: 2
+												}}
+											>
+												{stagingEnabled ? (
+													<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+														<Typography color="textSecondary">
+															<FormattedMessage defaultMessage="Staging is enabled" />
+														</Typography>
+														<Tooltip title={<FormattedMessage defaultMessage="Learn more about staging" />}>
+															<IconButton
+																size="small"
+																aria-label={formatMessage({ defaultMessage: 'Staging info' })}
+																onClick={() => setStagingInfoDialogOpen(true)}
+															>
+																<InfoOutlinedIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
+													</Box>
+												) : (
+													<FormControlLabel
+														sx={{
+															mr: 0,
+															gap: 1,
+															'& .MuiFormControlLabel-label': { color: 'text.secondary' }
+														}}
+														control={
+															<Switch size="small" sx={{ ml: 0.5 }} checked={false} onChange={onEnableStagingSwitch} />
+														}
+														label={<FormattedMessage defaultMessage="Enable Staging" />}
+													/>
+												)}
+											</Paper>
+										)}
+									</Box>
 								}
 							/>
 							<Box
 								sx={{
 									display: 'flex',
-									flexGrow: 1
+									flexGrow: 1,
+									position: 'relative'
 								}}
 							>
 								<AceEditor
@@ -928,6 +1042,102 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				</Box>
 			)}
 			<ConfirmDialog open={false} {...confirmDialogProps} />
+			<ConfirmDialog
+				open={enableStagingConfirm.open}
+				disableBackdropClick={enableStagingConfirm.submitting}
+				disableEscapeKeyDown={enableStagingConfirm.submitting}
+				body={
+					enableStagingConfirm.submitting ? (
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+							<CircularProgress size={24} />
+							<Typography>
+								<FormattedMessage defaultMessage="Enabling staging… this can take several minutes" />
+							</Typography>
+						</Box>
+					) : (
+						<>
+							<Typography>
+								<FormattedMessage
+									defaultMessage="Enable staging for “{siteId}”. This cannot be undone."
+									values={{ siteId: site }}
+								/>
+							</Typography>
+							<Box component="ul" sx={{ mt: 2, pl: 1, textAlign: 'left', listStylePosition: 'inside' }}>
+								<Typography>
+									<li>
+										<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="Serverless delivery provisions a staging target and cloud storage." />
+									</li>
+									<li>
+										<FormattedMessage defaultMessage="Removing staging later means recreating the project." />
+									</li>
+								</Typography>
+							</Box>
+							<Alert severity="warning" icon={false} sx={{ mt: 3 }}>
+								<FormControlLabel
+									sx={{ textAlign: 'left' }}
+									control={
+										<Checkbox
+											color="primary"
+											checked={enableStagingConfirm.checked}
+											onChange={() => setEnableStagingConfirm((state) => ({ ...state, checked: !state.checked }))}
+										/>
+									}
+									label={<FormattedMessage defaultMessage="I understand enabling staging is irreversible." />}
+								/>
+							</Alert>
+						</>
+					)
+				}
+				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
+				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
+				disableCancelButton={enableStagingConfirm.submitting}
+				onOk={onConfirmEnableStaging}
+				onCancel={() => {
+					if (!enableStagingConfirm.submitting) {
+						setEnableStagingConfirm({ open: false, checked: false, submitting: false });
+					}
+				}}
+			/>
+			<ConfirmDialog
+				open={stagingInfoDialogOpen}
+				body={
+					<Box sx={{ textAlign: 'left' }}>
+						<Typography>
+							<FormattedMessage defaultMessage="Staging cannot be turned off later — removing it means recreating the project." />
+						</Typography>
+						<Box component="ul" sx={{ m: 0, mt: 1.5, p: 0, pl: '1.25em' }}>
+							<Typography>
+								<li>
+									<FormattedMessage defaultMessage="Staging publishing becomes available." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
+								</li>
+								<li>
+									<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
+								</li>
+							</Typography>
+						</Box>
+						<Typography sx={{ mt: 2 }}>
+							<FormattedMessage
+								defaultMessage="For more details, see the <a>staging documentation</a>."
+								values={{
+									a: (msg) => (
+										<Link href="#" underline="hover" onClick={(e) => e.preventDefault()}>
+											{msg}
+										</Link>
+									)
+								}}
+							/>
+						</Typography>
+					</Box>
+				}
+				onOk={() => setStagingInfoDialogOpen(false)}
+				onClose={() => setStagingInfoDialogOpen(false)}
+			/>
 		</Box>
 	);
 }

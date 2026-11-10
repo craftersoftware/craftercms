@@ -16,11 +16,14 @@
 
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import { siteIdMaxLength, siteInputMaxLength, siteNameMaxLength } from './utils';
 import React from 'react';
 import { renderSiteFormHelperText } from './BlueprintForm';
 import { defineMessages, useIntl } from 'react-intl';
 import { DuplicateSiteState, LookupTable, SiteState } from '../../models';
+import Switch from '@mui/material/Switch';
 
 const messages = defineMessages({
 	siteId: {
@@ -66,6 +69,19 @@ const messages = defineMessages({
 	gitBranchDescription: {
 		id: 'createSiteDialog.gitBranchDescription',
 		defaultMessage: 'Name of the branch this project will track. Pull operations will be done against this branch.'
+	},
+	enableStaging: {
+		id: 'createSiteDialog.enableStaging',
+		defaultMessage: 'Enable staging'
+	},
+	enableStagingHelp: {
+		id: 'createSiteDialog.enableStagingHelp',
+		defaultMessage: 'Staging cannot be turned off later. Removing it means recreating the project.'
+	},
+	enableStagingHelpSource: {
+		id: 'createSiteDialog.enableStagingHelpSource',
+		defaultMessage:
+			'The new project uses this setting, not the source project. Staging cannot be turned off later. Removing it means recreating the project.'
 	}
 });
 
@@ -77,10 +93,20 @@ export interface BaseSiteFormProps {
 	handleInputChange(event: any, type?: string): void;
 	onKeyPress(event: React.KeyboardEvent): void;
 	onBlur?(event: React.FocusEvent): void;
+	sourceProjectStagingHelp?: boolean;
 }
 
 export function BaseSiteForm(props: BaseSiteFormProps) {
-	const { inputs, checkSites, checkSiteNames, handleInputChange, onKeyPress, fieldsErrorsLookup, onBlur } = props;
+	const {
+		inputs,
+		checkSites,
+		checkSiteNames,
+		handleInputChange,
+		onKeyPress,
+		fieldsErrorsLookup,
+		onBlur,
+		sourceProjectStagingHelp
+	} = props;
 	const { formatMessage } = useIntl();
 
 	return (
@@ -166,6 +192,23 @@ export function BaseSiteForm(props: BaseSiteFormProps) {
 					value={inputs.gitBranch}
 					helperText={formatMessage(messages.gitBranchDescription)}
 				/>
+			</Grid>
+			<Grid size={12} data-field-id="enableStaging">
+				<FormControlLabel
+					control={
+						<Switch
+							name="enableStaging"
+							checked={inputs.enableStaging}
+							onChange={(event) => handleInputChange(event)}
+							color="primary"
+							slotProps={{ input: { 'aria-describedby': 'enableStagingHelper' } }}
+						/>
+					}
+					label={formatMessage(messages.enableStaging)}
+				/>
+				<FormHelperText id="enableStagingHelper">
+					{formatMessage(sourceProjectStagingHelp ? messages.enableStagingHelpSource : messages.enableStagingHelp)}
+				</FormHelperText>
 			</Grid>
 		</>
 	);

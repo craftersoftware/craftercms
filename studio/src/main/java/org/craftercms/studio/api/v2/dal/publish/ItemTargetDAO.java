@@ -120,6 +120,23 @@ public interface ItemTargetDAO {
 			 @Param(LIVE_TARGET) String liveTarget);
 
 	/**
+	 * Delete item target rows for a publishing target
+	 *
+	 * @param siteId the numeric site id
+	 * @param target the publishing target
+	 */
+	void deleteForTarget(@Param(SITE_ID) long siteId, @Param(TARGET) String target);
+
+	/**
+	 * Check if item target rows exist for a publishing target
+	 *
+	 * @param siteId the numeric site id
+	 * @param target the publishing target
+	 * @return true if at least one row exists
+	 */
+	boolean targetExists(@Param(SITE_ID) long siteId, @Param(TARGET) String target);
+
+	/**
 	 * Get the item targets for the given paths, grouped by path
 	 *
 	 * @param siteId the site id

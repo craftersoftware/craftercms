@@ -51,13 +51,25 @@ public interface StudioBlobStore extends BlobStore, ContentRepository {
 	boolean isReadOnly();
 
 	/**
-	 * Copy the blob items from the source store
+	 * Copy the blob items from the source store for the same publishing target
 	 *
 	 * @param sourceStore the source store
 	 * @param environment the environment (publishing target)
 	 * @param items       the items to copy
 	 */
-	void copyBlobs(StudioBlobStore sourceStore, String environment, List<String> items);
+	default void copyBlobs(StudioBlobStore sourceStore, String environment, List<String> items) {
+		copyBlobs(sourceStore, environment, environment, items);
+	}
+
+	/**
+	 * Copy the blob items from one publishing target to another
+	 *
+	 * @param sourceStore       the source store
+	 * @param sourceEnvironment the source publishing target
+	 * @param targetEnvironment the target publishing target
+	 * @param items             the items to copy
+	 */
+	void copyBlobs(StudioBlobStore sourceStore, String sourceEnvironment, String targetEnvironment, List<String> items);
 
 	/**
 	 * Publish the given items to the given publishing target

@@ -54,6 +54,10 @@ public sealed abstract class CreateSiteRequest permits CreateSiteRequest.RemoteS
 	@Size(max = 255)
 	protected String sandboxBranch;
 	protected Map<String, String> siteParams;
+	/**
+	 * When true, staging is enabled for the new site. Staging cannot be disabled afterwards.
+	 */
+	protected boolean enableStaging;
 
 	public String getDescription() {
 		return description;
@@ -77,6 +81,14 @@ public sealed abstract class CreateSiteRequest permits CreateSiteRequest.RemoteS
 
 	public void setSandboxBranch(String sandboxBranch) {
 		this.sandboxBranch = sandboxBranch;
+	}
+
+	public boolean isEnableStaging() {
+		return enableStaging;
+	}
+
+	public void setEnableStaging(boolean enableStaging) {
+		this.enableStaging = enableStaging;
 	}
 
 	public String getSiteId() {

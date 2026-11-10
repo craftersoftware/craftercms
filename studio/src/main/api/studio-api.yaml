@@ -2250,6 +2250,45 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
+    /api/2/sites/{siteId}/enable_staging:
+        post:
+            tags:
+                - sites
+            summary: Enable staging for a site
+            description: |
+                    Module: Studio <br>
+                    Required Permission: "edit_site" <br>
+                    Staging stays off until this is called. There is no disable operation. If the site is already published to live, the staging branch and blob-store assets are copied from live. Serverless delivery creates a staging target.
+            operationId: enableStaging
+            parameters:
+                -   name: siteId
+                    in: path
+                    schema:
+                        type: string
+                    required: true
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    response:
+                                        $ref: '#/components/schemas/ApiResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
+                '404':
+                    $ref: '#/components/responses/NotFound'
+                '409':
+                    $ref: '#/components/responses/Conflict'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
     /api/2/sites/{siteId}/policy/validate:
         post:
             tags:
@@ -8845,6 +8884,9 @@ components:
                 desc:
                     type: string
                     description: Site description
+                stagingEnabled:
+                    type: boolean
+                    description: Indicates if staging is enabled. Staging cannot be disabled once enabled.
             required:
                 - siteId
 
@@ -8883,6 +8925,9 @@ components:
                 publishedRepoCreated:
                     type: boolean
                     description: Indicates if the published repository has been created
+                stagingEnabled:
+                    type: boolean
+                    description: Indicates if staging is enabled. Staging cannot be disabled once enabled.
                 state:
                     type: string
                     description: Current state of the site
@@ -9233,6 +9278,10 @@ components:
                 sandboxBranch:
                     type: string
                     description: Name for sandbox branch (default master)
+                enableStaging:
+                    type: boolean
+                    description: Enable staging for the new site. Defaults to false. Staging cannot be disabled later.
+                    default: false
                 remoteName:
                     type: string
                     description: Remote repository name (default origin)
@@ -9272,6 +9321,10 @@ components:
                 sandboxBranch:
                     type: string
                     description: Name for sandbox branch (default master)
+                enableStaging:
+                    type: boolean
+                    description: Enable staging for the new site. Defaults to false. Staging cannot be disabled later.
+                    default: false
                 siteParams:
                     type: object
                     description: Object containing all parameters for the blueprint. It should include all required parameters from the descriptor
@@ -10933,6 +10986,10 @@ components:
                 readOnlyBlobStores:
                     type: boolean
                     description: If true, the blob stores will be read-only in the copied site.
+                    default: false
+                enableStaging:
+                    type: boolean
+                    description: Enable staging on the new site. The copy follows this value, not the source site. Defaults to false.
                     default: false
 
         ContentType:
