@@ -15,7 +15,6 @@
  */
 
 import DashletCard, { DashletCardProps } from '../DashletCard/DashletCard';
-import palette from '../../styles/palette';
 import { FormattedMessage } from 'react-intl';
 import React, { useEffect, useMemo, useState } from 'react';
 import useSpreadState from '../../hooks/useSpreadState';
@@ -95,7 +94,8 @@ function DevContentOpsStats(props: { stats: PublishingStats; sx?: { root: SxProp
 }
 
 export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
-	const { borderLeftColor = palette.teal.main } = props;
+	// info is teal, tinted in dark mode, so it clears 3:1 on a Card's #1E1E1E and on dialog paper #393939.
+	const { borderLeftColor = 'info.main' } = props;
 	const site = useActiveSiteId();
 	const [{ stats, loading }, setState] = useSpreadState<DevContentOpsDashletState>({
 		stats: null,
