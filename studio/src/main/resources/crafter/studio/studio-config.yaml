@@ -263,6 +263,10 @@ studio.configuration.site.translation: ${studio.configuration.site.configBasePat
 # Studio management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.authorizationToken: defaultManagementToken
+# Studio management token for the site management API.
+# Delivery sends this value in the X-Crafter-Management-Token header when listing sites.
+# Please update this per installation and provide this token to delivery.
+studio.configuration.management.siteManagementToken: ${env:STUDIO_SITE_MANAGEMENT_TOKEN}
 # Preview engine management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}

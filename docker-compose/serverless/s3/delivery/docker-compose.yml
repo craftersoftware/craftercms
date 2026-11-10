@@ -28,7 +28,7 @@ services:
       - ES_URL
       - crafter.engine.site.default.rootFolder.path
       - crafter.engine.studio.url
-      - crafter.engine.studio.managementToken
+      - crafter.engine.studio.siteManagementToken
       - crafter.engine.s3.region
       - crafter.engine.s3.accessKey
       - crafter.engine.s3.secretKey

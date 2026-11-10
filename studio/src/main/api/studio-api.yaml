@@ -3998,7 +3998,7 @@ paths:
           parameters:
               -   name: X-Crafter-Management-Token
                   in: header
-                  description: Management token. Must match studio.configuration.management.authorizationToken. A token query parameter is ignored.
+                  description: Management token. Must match studio.configuration.management.siteManagementToken. A token query parameter is ignored.
                   required: true
                   schema:
                       type: string

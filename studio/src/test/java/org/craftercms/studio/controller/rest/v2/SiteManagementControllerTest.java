@@ -59,7 +59,7 @@ public class SiteManagementControllerTest {
 
 	@Before
 	public void setUp() {
-		when(studioConfiguration.getProperty(StudioConfiguration.CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN))
+		when(studioConfiguration.getProperty(StudioConfiguration.CONFIGURATION_MANAGEMENT_SITE_MANAGEMENT_TOKEN))
 			.thenReturn(TOKEN);
 		controller = new SiteManagementController(studioConfiguration, sitesService, securityService);
 	}

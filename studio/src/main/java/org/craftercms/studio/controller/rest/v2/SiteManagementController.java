@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.beans.ConstructorProperties;
 
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_SITE_MANAGEMENT_TOKEN;
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.API_2;
 import static org.craftercms.studio.controller.rest.v2.RequestMappingConstants.MANAGEMENT_SITES;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.RESULT_KEY_SITES;
@@ -50,6 +51,11 @@ public class SiteManagementController extends ManagementTokenAware {
 	public SiteManagementController(StudioConfiguration studioConfiguration, SitesService sitesService, SecurityService securityService) {
 		super(studioConfiguration, securityService);
 		this.sitesService = sitesService;
+	}
+
+	@Override
+	protected String getConfiguredToken() {
+		return studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_SITE_MANAGEMENT_TOKEN);
 	}
 
 	@GetMapping(produces = APPLICATION_JSON_VALUE)
