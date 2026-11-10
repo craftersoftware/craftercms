@@ -57,9 +57,19 @@ const reduxStore = configureStore({
 	}
 });
 
-// The test build adds no message ids, and react-intl throws on a descriptor without one. Use the default message.
+// The test build adds no message ids, and react-intl throws on a descriptor without one. Fill `{name}` style
+// placeholders so the position announcement can be read; ICU plurals are left as written.
 const baseIntl = createIntl({ locale: 'en', onError: () => undefined });
-const intl = { ...baseIntl, formatMessage: (descriptor: { defaultMessage?: string }) => descriptor.defaultMessage };
+const intl = {
+	...baseIntl,
+	formatMessage: (descriptor: { defaultMessage?: string }, values?: Record<string, unknown>) => {
+		const template = String(descriptor.defaultMessage ?? '');
+		if (!values) return template;
+		return template.replace(/\{(\w+)\}/g, (token, key) =>
+			Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : token
+		);
+	}
+};
 
 const field = {
 	id: 'rows_o',
@@ -98,7 +108,10 @@ afterEach(async () => {
 });
 
 /** Mounts Repeat the way the form does: `value` comes from the field atom, and `setValue` writes to it. */
-async function mount(initial: Item[], options: { live?: boolean; field?: ContentTypeField } = {}): Promise<Mounted> {
+async function mount(
+	initial: Item[],
+	options: { live?: boolean; field?: ContentTypeField; repeatItemIndex?: number } = {}
+): Promise<Mounted> {
 	const jotai = createStore();
 	const valueAtom = atom<unknown>(initial);
 	const pushed: Mounted['pushed'] = [];
@@ -108,7 +121,17 @@ async function mount(initial: Item[], options: { live?: boolean; field?: Content
 		atoms: {
 			valueByFieldId: { rows_o: valueAtom },
 			validationByFieldId: { rows_o: atom({ isValid: true }) },
-			...createFormVisibilityAtoms()
+			...createFormVisibilityAtoms(
+				options.repeatItemIndex === undefined
+					? undefined
+					: {
+							active: {
+								fieldIds: null,
+								repeatItem: { fieldId: (options.field ?? field).id, index: options.repeatItemIndex }
+							},
+							launch: null
+						}
+			)
 		},
 		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
@@ -601,5 +624,127 @@ describe('Repeat limits against the stored array', () => {
 		assert.equal(mounted.pushed.length, 1);
 		await act(async () => deleteButton(rowFor(mounted.host, 'a')).click());
 		assert.deepEqual(names(mounted.setValueCalls.at(-1)), ['b', 'c']);
+	});
+});
+
+const press = (element: HTMLElement, key: string, init: KeyboardEventInit = {}) => {
+	element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
+};
+const liveMessage = (host: HTMLElement) => host.querySelector('[aria-live="polite"]')?.textContent ?? '';
+const moveControl = (row: HTMLElement, control: 'up' | 'down') =>
+	row.closest('li')!.querySelector<HTMLButtonElement>(`button[data-reorder-control="${control}"]`);
+
+describe('Repeat keyboard reorder', () => {
+	const three = () => [a(), { name_s: 'b' }, { name_s: 'c' }] as Item[];
+
+	it('moves a row down and up with the arrow keys, and focuses the moved row', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown'));
+		assert.deepEqual(titles(host), ['b', 'a', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(document.activeElement?.getAttribute('data-reorder-control'), 'row');
+		assert.equal(liveMessage(host), 'Moved a to position 2 of 3');
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp'));
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 1 of 3');
+	});
+
+	it('moves a row to the edge with Shift+Arrow', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { shiftKey: true }));
+		assert.deepEqual(titles(host), ['b', 'c', 'a']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 3 of 3');
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { shiftKey: true }));
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 1 of 3');
+	});
+
+	it('does nothing on an arrow that would pass an edge', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp'));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { shiftKey: true }));
+		await act(async () => press(rowFor(host, 'c'), 'ArrowDown'));
+		await act(async () => press(rowFor(host, 'c'), 'ArrowDown', { shiftKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+	});
+
+	it('ignores Ctrl, Cmd and Alt, including Ctrl+E', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { ctrlKey: true }));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { metaKey: true }));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { altKey: true }));
+		await act(async () => press(rowFor(host, 'b'), 'e', { ctrlKey: true }));
+		await act(async () => press(rowFor(host, 'b'), 'v', { metaKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(mounted.pushed.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+	});
+
+	it('moves the second copy of an item stored twice', async () => {
+		const ia = a();
+		const ib = { name_s: 'b' };
+		const mounted = await mount([ia, ia, ib]);
+		const second = mounted.host.querySelectorAll<HTMLElement>('.MuiListItemButton-root')[1];
+		await act(async () => press(second, 'ArrowDown'));
+		const next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ib && next[2] === ia);
+		assert.equal(liveMessage(mounted.host), 'Moved a to position 3 of 3');
+		assert.equal(document.activeElement?.getAttribute('data-reorder-index'), '2');
+	});
+
+	it('focuses the Move button of the row a button move lands on', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => moveControl(rowFor(host, 'a'), 'down').click());
+		assert.deepEqual(titles(host), ['b', 'a', 'c']);
+		assert.equal(document.activeElement, moveControl(rowFor(host, 'a'), 'down'));
+		assert.equal(liveMessage(host), 'Moved a to position 2 of 3');
+	});
+
+	it('focuses the next row after a remove, and the previous row when the last one goes', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		const rowB = rowFor(host, 'b');
+		await act(async () => deleteButton(rowFor(host, 'a')).click());
+		assert.deepEqual(titles(host), ['b', 'c']);
+		assert.equal(document.activeElement, rowB);
+		assert.equal(liveMessage(host), '');
+		const rowC = rowFor(host, 'c');
+		await act(async () => deleteButton(rowC).click());
+		assert.deepEqual(titles(host), ['b']);
+		assert.equal(document.activeElement, rowB);
+	});
+
+	it('focuses the Add button after the last row is removed', async () => {
+		const mounted = await mount([a()]);
+		const { host } = mounted;
+		const add = addButton(host);
+		await act(async () => deleteButton(rowFor(host, 'a')).click());
+		assert.deepEqual(titles(host), []);
+		assert.equal(document.activeElement, add);
+		assert.equal(add.disabled, false);
+	});
+
+	it('hides Move in the scoped item view, and arrow keys do not reorder', async () => {
+		const mounted = await mount(three(), { repeatItemIndex: 1 });
+		const { host } = mounted;
+		assert.deepEqual(titles(host), ['b']);
+		assert.equal(host.querySelector('button[data-reorder-control="up"]'), null);
+		assert.equal(host.querySelector('button[data-reorder-control="down"]'), null);
+		await act(async () => press(rowFor(host, 'b'), 'ArrowDown'));
+		await act(async () => press(rowFor(host, 'b'), 'ArrowUp', { shiftKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['a', 'b', 'c']);
 	});
 });

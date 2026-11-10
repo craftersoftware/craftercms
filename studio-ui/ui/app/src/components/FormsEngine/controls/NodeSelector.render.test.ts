@@ -27,6 +27,7 @@ import { afterEach, describe, it } from 'node:test';
 
 const {
 	React,
+	act,
 	FormHost,
 	baseItems,
 	createEntry,
@@ -91,5 +92,114 @@ describe('NodeSelector subscriptions', () => {
 		await updateItems(store, (items) => ({ ...items, [sourcePath]: { ...items[sourcePath], label: 'Renamed' } }));
 		assert.equal(counts.selector, before + 1);
 		assert.match(host.textContent, /Renamed/);
+	});
+});
+
+const alpha = '/site/components/alpha.xml';
+const beta = '/site/components/beta.xml';
+const gamma = '/site/components/gamma.xml';
+
+const selectorItem = (path: string, label: string) => ({
+	...baseItems()[sourcePath],
+	path,
+	label,
+	systemType: 'component',
+	mimeType: 'application/xml',
+	stateMap: {},
+	availableActionsMap: { edit: true }
+});
+
+const node = (path: string, label: string) => ({ key: path, value: label, include: path });
+
+const press = (element: HTMLElement, key: string, init: KeyboardEventInit = {}) => {
+	element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
+};
+
+const rowsOf = (host: HTMLElement) => Array.from(host.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+const rowLabelled = (host: HTMLElement, label: string) => rowsOf(host).find((row) => row.textContent?.includes(label));
+const liveMessage = (host: HTMLElement) => host.querySelector('[aria-live="polite"]')?.textContent ?? '';
+
+describe('NodeSelector keyboard reorder', () => {
+	async function mountSelector(labels: Array<[string, string]>) {
+		const stored = Object.fromEntries(labels.map(([path, label]) => [path, selectorItem(path, label)]));
+		const store = createItemsStore({ ...baseItems(), ...stored });
+		const entry = createEntry(['nodes_o']);
+		let current: Array<ReturnType<typeof node>> = labels.map(([path, label]) => node(path, label));
+		function Selector() {
+			const [value, setValue] = React.useState(current);
+			current = value;
+			return React.createElement(NodeSelector as never, {
+				field: fieldFor('nodes_o', 'node-selector'),
+				value,
+				setValue,
+				readonly: false,
+				autoFocus: false,
+				contentType: { id: '/component/thing', fields: {} }
+			});
+		}
+		const host = await mountTree(store, React.createElement(FormHost, { entry }, React.createElement(Selector)));
+		return { host, items: () => current };
+	}
+
+	it('moves a row with ArrowDown and Shift+Arrow, announces the new position, and focuses the moved row', async () => {
+		const { host, items } = await mountSelector([
+			[alpha, 'Alpha'],
+			[beta, 'Beta'],
+			[gamma, 'Gamma']
+		]);
+		assert.equal(rowsOf(host).length, 3);
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'ArrowDown'));
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Beta', 'Alpha', 'Gamma']
+		);
+		assert.equal(liveMessage(host), 'Moved Alpha to position 2 of 3');
+		assert.equal(document.activeElement, rowLabelled(host, 'Alpha'));
+		assert.equal(document.activeElement?.getAttribute('data-reorder-control'), 'row');
+
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'ArrowDown', { shiftKey: true }));
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Beta', 'Gamma', 'Alpha']
+		);
+		assert.equal(liveMessage(host), 'Moved Alpha to position 3 of 3');
+		assert.equal(document.activeElement, rowLabelled(host, 'Alpha'));
+	});
+
+	it('ignores a modifier arrow and focuses the next row after a remove', async () => {
+		const { host, items } = await mountSelector([
+			[alpha, 'Alpha'],
+			[beta, 'Beta'],
+			[gamma, 'Gamma']
+		]);
+		const betaRow = rowLabelled(host, 'Beta');
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'ArrowDown', { ctrlKey: true }));
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'ArrowUp', { altKey: true }));
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Alpha', 'Beta', 'Gamma']
+		);
+		assert.equal(liveMessage(host), '');
+		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
+		assert.ok(unlink);
+		await act(async () => unlink.click());
+		assert.deepEqual(
+			items().map((item) => item.value),
+			['Beta', 'Gamma']
+		);
+		assert.equal(document.activeElement, betaRow);
+		assert.equal(liveMessage(host), '');
+	});
+
+	it('focuses the field body after the last row is removed, because Add cannot take focus', async () => {
+		const { host } = await mountSelector([[alpha, 'Alpha']]);
+		const add = host.querySelector('[data-testid="AddRoundedIcon"]')?.closest('button') as HTMLButtonElement;
+		assert.equal(add.disabled, true);
+		const unlink = host.querySelector<HTMLButtonElement>('button[aria-label="Unlink Alpha"]');
+		await act(async () => unlink.click());
+		assert.equal(rowsOf(host).length, 0);
+		assert.notEqual(document.activeElement, add);
+		assert.equal(document.activeElement?.getAttribute('tabindex'), '-1');
+		assert.match(document.activeElement?.textContent ?? '', /No options are available for this control/);
 	});
 });
