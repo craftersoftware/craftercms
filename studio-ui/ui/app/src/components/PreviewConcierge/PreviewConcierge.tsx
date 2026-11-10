@@ -1577,21 +1577,23 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case contentEvent.type: {
 					const { user: person, targetPath } = payload as SocketEventBase;
-					const { theme } = upToDateRefs.current;
+					const { theme, store, contentTypes } = upToDateRefs.current;
 					// Notify for the active page itself, or a shared component it renders; skip other pages it only references.
 					if (
 						person.username !== user.username &&
 						guest &&
-						(guest.path === targetPath ||
-							// crafter-level-descriptor.level.xml lives under /site/website/, and its models are loaded so pages can resolve inherited fields (getModelIdFromInheritedField).
-							(Boolean(guest.modelIdByPath?.[targetPath]) &&
-								(!targetPath.startsWith('/site/website/') ||
-									targetPath.endsWith('/crafter-level-descriptor.level.xml'))))
+						(guest.path === targetPath || guest.modelIdByPath[targetPath])
 					) {
+						const item = store.getState().content.itemsByPath[targetPath];
+						const contentTypeName = contentTypes[item.contentTypeId]?.name ?? item.contentTypeId;
+						const itemLabel = `${item.label} (${contentTypeName})`;
 						enqueueSnackbar(
-							formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-								name: getPersonFullName(person)
-							}),
+							guest.path === targetPath
+								? formatMessage(guestMessages.currentContentChangedByAnotherUser, { name: getPersonFullName(person) })
+								: formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+										name: getPersonFullName(person),
+										content: itemLabel
+									}),
 							{
 								action: (
 									<IconButton
