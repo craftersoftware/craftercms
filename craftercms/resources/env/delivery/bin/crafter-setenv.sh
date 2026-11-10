@@ -91,7 +91,6 @@ export GIT_CONFIG_NOSYSTEM=${GIT_CONFIG_NOSYSTEM:="true"}
 # Please update this per installation and provide these tokens to the status monitors.
 export ENGINE_MANAGEMENT_TOKEN=${ENGINE_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export DEPLOYER_MANAGEMENT_TOKEN=${DEPLOYER_MANAGEMENT_TOKEN:="defaultManagementToken"}
-export STUDIO_MANAGEMENT_TOKEN=${STUDIO_MANAGEMENT_TOKEN:="defaultManagementToken"}
 # Token sent to Studio when listing sites. Must match STUDIO_SITE_MANAGEMENT_TOKEN on authoring.
 export STUDIO_SITE_MANAGEMENT_TOKEN=${STUDIO_SITE_MANAGEMENT_TOKEN:="defaultSiteManagementToken"}
 
