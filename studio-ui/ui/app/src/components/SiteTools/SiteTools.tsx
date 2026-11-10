@@ -39,8 +39,10 @@ import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDial
 import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
 import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
+import LoadingState from '../LoadingState/LoadingState';
 
 export interface Tool {
 	title: TranslationOrText;
@@ -104,6 +106,11 @@ export function SiteTools(props: SiteToolsProps) {
 		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
 		: undefined;
 	const tool = matchedTool?.widget;
+	const translatedToolTitle = matchedTool ? getPossibleTranslation(matchedTool.title, formatMessage) : '';
+	const activeToolHeading =
+		typeof translatedToolTitle === 'string' && translatedToolTitle ? translatedToolTitle : toolNotFoundLabel;
+	// Page mode is the document. Dialog mode sits under the host page's h1, so its fallback stays an h2.
+	const fallbackTitleComponent = isPage ? 'h1' : 'h2';
 	useEffect(() => {
 		if (!isPage) {
 			return;
@@ -112,14 +119,9 @@ export function SiteTools(props: SiteToolsProps) {
 		if (activeToolId && !tools) {
 			return;
 		}
-		const translatedTitle = matchedTool ? getPossibleTranslation(matchedTool.title, formatMessage) : '';
-		const pageTitle = !activeToolId
-			? projectToolsLabel
-			: typeof translatedTitle === 'string' && translatedTitle
-				? translatedTitle
-				: toolNotFoundLabel;
+		const pageTitle = !activeToolId ? projectToolsLabel : activeToolHeading;
 		document.title = studioDocumentTitle(pageTitle);
-	}, [activeToolId, formatMessage, isPage, matchedTool, projectToolsLabel, toolNotFoundLabel, tools]);
+	}, [activeToolHeading, activeToolId, isPage, projectToolsLabel, tools]);
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -150,9 +152,21 @@ export function SiteTools(props: SiteToolsProps) {
 			>
 				{activeToolId ? (
 					tool ? (
-						<Suspencified>
+						<Suspencified
+							fallback={
+								isPage ? (
+									<>
+										<Typography component="h1" sx={visuallyHidden}>
+											{activeToolHeading}
+										</Typography>
+										<LoadingState />
+									</>
+								) : undefined
+							}
+						>
 							<Widget
 								{...tool}
+								fallbackTitleComponent={fallbackTitleComponent}
 								overrideProps={{
 									embedded: false,
 									mountMode,
@@ -177,7 +191,7 @@ export function SiteTools(props: SiteToolsProps) {
 							<EmptyState
 								sxs={{ root: { height: '100%', margin: 0 } }}
 								title={toolNotFoundLabel}
-								titleComponent={isPage ? 'h1' : 'h2'}
+								titleComponent={fallbackTitleComponent}
 							/>
 						</Box>
 					)
@@ -185,7 +199,7 @@ export function SiteTools(props: SiteToolsProps) {
 					<EmptyState
 						sxs={{ root: { height: '100%', margin: 0 } }}
 						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
-						titleComponent={isPage ? 'h1' : 'h2'}
+						titleComponent={fallbackTitleComponent}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				)}
