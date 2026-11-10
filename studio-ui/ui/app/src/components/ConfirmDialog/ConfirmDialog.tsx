@@ -30,14 +30,14 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
 		disableCancelButton,
 		okButtonText,
 		cancelButtonText,
-		defaultFocus = 'ok',
+		defaultFocus = 'cancel',
 		...rest
 	} = props;
 	const { formatMessage } = useIntl();
 	const cancelEnabled = Boolean(onCancel) && !disableCancelButton;
 	const okEnabled = Boolean(onOk) && !disableOkButton;
-	// Default is the accept button. Cancel is focused only when the caller opts in, and never when
-	// that button is disabled (focus would otherwise fall through to the dialog container).
+	// Cancel is the default, so Enter does not accept a destructive confirm. If Cancel is missing or
+	// disabled, focus the enabled OK. A disabled button is never focused.
 	const focusCancel = defaultFocus === 'cancel' ? cancelEnabled : !okEnabled && cancelEnabled;
 	return (
 		<AlertDialog

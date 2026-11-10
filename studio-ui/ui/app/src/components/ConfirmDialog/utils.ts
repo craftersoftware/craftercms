@@ -40,9 +40,9 @@ export interface ConfirmDialogProps extends ConfirmDialogBaseProps, Omit<DialogP
 	onCancel?(): void;
 	onClosed?(): void;
 	/**
-	 * Which action receives focus when the dialog opens. Defaults to the accept button, matching
-	 * the previous behaviour. Set `cancel` only when Cancel is the non-destructive action
-	 * (for example, staying on a form instead of discarding unsaved changes).
+	 * Which action receives focus when the dialog opens. Defaults to Cancel, so Enter does not accept
+	 * a destructive confirm. If Cancel is missing or disabled, focus moves to the enabled OK button.
+	 * A disabled button is never focused.
 	 */
 	defaultFocus?: 'ok' | 'cancel';
 }

@@ -15,7 +15,7 @@
  */
 
 /**
- * defaultFocus="cancel" focuses Cancel, and focus never lands on a disabled action.
+ * Cancel is the default focus. defaultFocus="ok" focuses OK, and focus never lands on a disabled action.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -55,7 +55,6 @@ async function render(props: Record<string, unknown> = {}) {
 					body: 'Your changes will be discarded.',
 					onOk() {},
 					onCancel() {},
-					defaultFocus: 'cancel',
 					...props
 				})
 			)
@@ -72,11 +71,18 @@ function buttonByName(name: string): HTMLButtonElement {
 }
 
 describe('ConfirmDialog default focus', () => {
-	it('focuses Cancel when defaultFocus is cancel', async () => {
+	it('focuses Cancel when defaultFocus is omitted', async () => {
 		await render();
 		const cancel = buttonByName('Cancel');
 		assert.equal(document.activeElement, cancel);
 		assert.equal(cancel.disabled, false);
+	});
+
+	it('focuses OK when defaultFocus is ok', async () => {
+		await render({ defaultFocus: 'ok' });
+		const accept = buttonByName('Accept');
+		assert.equal(document.activeElement, accept);
+		assert.equal(accept.disabled, false);
 	});
 
 	it('does not focus a disabled Cancel, and focuses the enabled accept action instead', async () => {
