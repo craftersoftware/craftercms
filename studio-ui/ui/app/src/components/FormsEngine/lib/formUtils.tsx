@@ -367,7 +367,7 @@ const neverChanged: Atom<boolean> = atom(false);
  * and validation atoms), so the same call returns the same atom, and a subscriber is notified only when its own
  * flag flips, not when an unrelated field is added or removed.
  *
- * Pass companion ids from {@link getCompanionFieldIds} so a control that owns hidden additional fields (e.g.
+ * Pass companion ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
  * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the companion
  * was written.
  *
@@ -1340,7 +1340,7 @@ export function generateDefaultChangesComment(
 			namedFields[field.id] = field;
 		});
 	}
-	const companionParents = mapCompanionFieldsToParents(fields ?? Object.values(contentTypeFields), customControls);
+	const companionParents = mapAdditionalFieldsToParents(fields ?? Object.values(contentTypeFields), customControls);
 	const seenParentIds = new Set<string>();
 	const fieldsChangedNames: string[] = [];
 	for (const fieldId of changedFieldIds) {
@@ -1630,10 +1630,10 @@ export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor
 }
 
 /**
- * Companion (additional) field ids declared by `field`'s control descriptor after `{id}` expansion.
+ * Additional field ids declared by `field`'s control descriptor after `{id}` expansion.
  * Empty when the control type has no descriptor or no `additionalFields` metadata.
  */
-export function getCompanionFieldIds(
+export function getAdditionalFieldIds(
 	field: ContentTypeField,
 	customControls?: LookupTable<DescriptorContentType>
 ): string[] {
@@ -1648,7 +1648,7 @@ export function getCompanionFieldIds(
  * name lookup; callers still prefer `namedFields[id]` first.
  * Pass `customControls` so configured (ui.xml) controls with `additionalFields` are included alongside code defaults.
  */
-export function mapCompanionFieldsToParents(
+export function mapAdditionalFieldsToParents(
 	fields: ContentTypeField[],
 	customControls?: LookupTable<DescriptorContentType>
 ): LookupTable<ContentTypeField> {

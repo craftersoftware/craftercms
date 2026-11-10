@@ -103,7 +103,7 @@ import {
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
-	getCompanionFieldIds,
+	getAdditionalFieldIds,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	isEmbeddedForm,
@@ -455,7 +455,7 @@ function FormBootstrap(props: FormsEngineProps) {
 					? contentTypeFields?.[repeatFieldId]?.fields?.[fieldId]
 					: contentTypeFields?.[fieldId];
 				if (!field) return;
-				for (const companionId of getCompanionFieldIds(field, customControls)) {
+				for (const companionId of getAdditionalFieldIds(field, customControls)) {
 					internalRollbackValue(initialValues, companionId);
 				}
 			},

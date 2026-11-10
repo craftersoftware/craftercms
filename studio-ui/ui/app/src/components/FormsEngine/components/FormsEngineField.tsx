@@ -52,7 +52,7 @@ import {
 } from '../lib/formsEngineContext';
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
-import { changedFieldAtom, commitFormVisibility, getCompanionFieldIds, useStackSubmitting } from '../lib/formUtils';
+import { changedFieldAtom, commitFormVisibility, getAdditionalFieldIds, useStackSubmitting } from '../lib/formUtils';
 import { FieldValidityMessages } from './FieldValidityMessages';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { XmlKeys } from '../lib/formConsts';
@@ -163,7 +163,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
-	const companionFieldIds = useMemo(() => getCompanionFieldIds(field, customControls), [field, customControls]);
+	const companionFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, companionFieldIds));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
