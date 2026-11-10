@@ -1231,6 +1231,26 @@ public class ContentServiceInternalImplTest {
 	}
 
 	@Test
+	public void testCopyNavOrderCollision_preservesSourcePathAndOperation() throws Exception {
+		String parent = "/site/website/section";
+		String source = parent + "/page-b/index.xml";
+		String target = parent + "/page-b-copy/index.xml";
+		stubSiblingOrders(parent,
+				navItem(parent, "page-b", 2000d),
+				navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent copy = navPage(target, source, "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			ContentLifecycleItem rewritten = copy.get(target);
+			assertEquals("Collision rewrite should keep the source path", source, rewritten.sourcePath());
+			Map<String, LifecycleContent.LifecycleOperation> operations = serviceInternal.getOperationsByPath(
+					SITE_ID, List.of(source), copy.getItems().values(), DUPLICATE);
+			assertEquals("Collision rewrite should stay a duplicate", DUPLICATE, operations.get(target));
+		}
+	}
+
+	@Test
 	public void testCopyNavOrderCollision_appendsWhenTheCollidingOrderIsLast() throws Exception {
 		String parent = "/site/website/section";
 		stubSiblingOrders(parent,

@@ -94,19 +94,45 @@ public class LifecycleContent implements AutoCloseable {
 	}
 
 	/**
+	 * Write the content to the given path and keep the item's source path.
+	 * Used when an existing copy or move item is rewritten, such as a navigation-order fix.
+	 *
+	 * @param path       the path to write the content to
+	 * @param document   the Document to write
+	 * @param sourcePath the source path to retain, or null when the item has none
+	 * @throws IOException if an error occurs while writing the content
+	 */
+	public void write(String path, Document document, String sourcePath) throws IOException {
+		Path filePath = createTempFile(path, document);
+		write(path, filePath, sourcePath);
+	}
+
+	/**
 	 * Write the content to the given path in the repository.
 	 *
 	 * @param path     the path to write the content to
 	 * @param filePath the path containing the content to write
 	 */
 	public void write(String path, Path filePath) {
+		write(path, filePath, null);
+	}
+
+	/**
+	 * Write the content to the given path in the repository.
+	 *
+	 * @param path       the path to write the content to
+	 * @param filePath   the path containing the content to write
+	 * @param sourcePath the source path to retain, or null when the item has none
+	 */
+	public void write(String path, Path filePath, String sourcePath) {
 		try {
 			String normalizedPath = FilenameUtils.normalize(path);
 			// Remove the temporary file if it exists
 			exclude(normalizedPath);
 			// Add a new entry with amended=<path is the same as the original repoPath>
 			// If the paths are not the same, that means the content was added by the controller and should NOT be considered amended
-			this.items.put(normalizedPath, new ContentLifecycleItem(normalizedPath, ofPath(() -> filePath), repoPath.equals(normalizedPath)));
+			boolean amended = repoPath.equals(normalizedPath);
+			this.items.put(normalizedPath, new ContentLifecycleItem(normalizedPath, sourcePath, ofPath(() -> filePath), amended));
 		} catch (Exception e) {
 			// Clean the temporary file if it exists
 			if (filePath != null) {

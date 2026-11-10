@@ -2583,8 +2583,8 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 			Document document = item.contentAsDocument();
 			String sourcePathToIgnore = move ? item.sourcePath() : null;
 			if (resolveNavOrderCollision(siteId, item.repoPath(), sourcePathToIgnore, document, siblingsByParent, claimedOrdersByParent)) {
-				// This will update the ContentLifecycleItem and clean the resources of the previous version
-				target.lifecycleContent().write(item.repoPath(), document);
+				// Keep the source path so the item stays a copy or move when operations are calculated
+				target.lifecycleContent().write(item.repoPath(), document, item.sourcePath());
 			}
 		}
 	}
