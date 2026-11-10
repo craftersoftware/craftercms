@@ -33,8 +33,8 @@ const {
 	createFieldAtoms,
 	createFormStackData,
 	generateDefaultChangesComment,
-	getCompanionFieldIds,
-	mapCompanionFieldsToParents
+	getAdditionalFieldIds,
+	mapAdditionalFieldsToParents
 } = await import('./formUtils.tsx');
 const { createFormControllerContext } = await import('../formControllers/runtime.ts');
 
@@ -137,7 +137,7 @@ describe('changed ids as one atom', () => {
 		assert.equal(changedFieldAtom(null, 'a_s'), changedFieldAtom(undefined, 'b_s'));
 	});
 
-	it('lights a parent field atom when a related companion id is in the set', () => {
+	it('lights a parent field atom when a related additional field id is in the set', () => {
 		const { store, context } = openForm();
 		const placeInNav = changedFieldAtom(context.changedFieldIds, 'placeInNav', ['orderDefault_f']);
 		assert.equal(store.get(placeInNav), false);
@@ -148,22 +148,22 @@ describe('changed ids as one atom', () => {
 	});
 });
 
-describe('companion additional fields', () => {
+describe('additional fields', () => {
 	const placeInNav = fieldOf('placeInNav', 'Place in Nav', 'page-nav-order');
 	const title = fieldOf('title_s', 'Title');
 
 	it('maps orderDefault_f to the Place in Nav parent from the page-nav-order descriptor', () => {
-		assert.deepEqual(getCompanionFieldIds(placeInNav), ['orderDefault_f']);
-		assert.equal(mapCompanionFieldsToParents([placeInNav, title]).orderDefault_f, placeInNav);
+		assert.deepEqual(getAdditionalFieldIds(placeInNav), ['orderDefault_f']);
+		assert.equal(mapAdditionalFieldsToParents([placeInNav, title]).orderDefault_f, placeInNav);
 	});
 
-	it('names the parent in the default version comment when only the companion changed', () => {
+	it('names the parent in the default version comment when only the additional field changed', () => {
 		const byId = { placeInNav, title_s: title };
 		const comment = generateDefaultChangesComment(byId, [placeInNav, title], new Set(['orderDefault_f']), '');
 		assert.equal(comment, 'Updated Place in Nav');
 	});
 
-	it('dedupes the parent name when both the parent and companion are changed', () => {
+	it('dedupes the parent name when both the parent and additional field are changed', () => {
 		const byId = { placeInNav, title_s: title };
 		const comment = generateDefaultChangesComment(
 			byId,
@@ -174,7 +174,7 @@ describe('companion additional fields', () => {
 		assert.equal(comment, 'Updated Place in Nav and Title');
 	});
 
-	it('maps companions from configured custom control descriptors', () => {
+	it('maps additional fields from configured custom control descriptors', () => {
 		const customField = fieldOf('widget_s', 'Widget', 'custom-widget');
 		const customControls = {
 			'custom-widget': {
@@ -186,8 +186,8 @@ describe('companion additional fields', () => {
 				metadata: { additionalFields: ['{id}_extra'] }
 			}
 		};
-		assert.deepEqual(getCompanionFieldIds(customField, customControls), ['widget_s_extra']);
-		assert.equal(mapCompanionFieldsToParents([customField, title], customControls).widget_s_extra, customField);
+		assert.deepEqual(getAdditionalFieldIds(customField, customControls), ['widget_s_extra']);
+		assert.equal(mapAdditionalFieldsToParents([customField, title], customControls).widget_s_extra, customField);
 		const comment = generateDefaultChangesComment(
 			{ widget_s: customField, title_s: title },
 			[customField, title],
@@ -196,8 +196,8 @@ describe('companion additional fields', () => {
 			customControls
 		);
 		assert.equal(comment, 'Updated Widget');
-		// Without customControls, the companion id is unknown and omitted from the comment.
-		assert.equal(mapCompanionFieldsToParents([customField, title]).widget_s_extra, undefined);
+		// Without customControls, the additional field id is unknown and omitted from the comment.
+		assert.equal(mapAdditionalFieldsToParents([customField, title]).widget_s_extra, undefined);
 		assert.equal(
 			generateDefaultChangesComment(
 				{ widget_s: customField, title_s: title },

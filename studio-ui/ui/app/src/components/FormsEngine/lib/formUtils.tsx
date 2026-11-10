@@ -362,13 +362,13 @@ const changedFieldAtomsByIds = new WeakMap<ChangedFieldIdsAtom, Map<string, Atom
 const neverChanged: Atom<boolean> = atom(false);
 
 /**
- * Whether `fieldId` (or any of its companion/additional field ids) differs from the last checkpoint: a derived
+ * Whether `fieldId` (or any of its additional field ids) differs from the last checkpoint: a derived
  * boolean atom over the changed-ids atom. Cached per changed-ids atom, field id, and related-id set (like the value
  * and validation atoms), so the same call returns the same atom, and a subscriber is notified only when its own
  * flag flips, not when an unrelated field is added or removed.
  *
- * Pass companion ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
- * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the companion
+ * Pass additional field ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
+ * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the additional
  * was written.
  *
  * This is the way React components read the changed state. Imperative code reads the changed-ids atom with
@@ -378,12 +378,12 @@ const neverChanged: Atom<boolean> = atom(false);
  * @example
  * ```tsx
  * // In a component: re-renders only when this field's flag flips
- * const hasChanges = useAtomValue(changedFieldAtom(stableForm.changedFieldIds, field.id, companionIds));
+ * const hasChanges = useAtomValue(changedFieldAtom(stableForm.changedFieldIds, field.id, additionalFieldIds));
  * ```
  *
  * @param changedFieldIds The form's changed-ids atom, or null/undefined when the form tracks nothing.
  * @param fieldId The field to watch.
- * @param relatedFieldIds Optional companion/additional field ids that should also light up this field's chrome.
+ * @param relatedFieldIds Optional additional field ids that should also light up this field's chrome.
  * @see {@link ChangedFieldIdsAtom}
  */
 export function changedFieldAtom(
@@ -1322,7 +1322,7 @@ export function useUnlockOnClose(props: {
 
 /**
  * Generates a simple "save comment" stating the fields that having been modified.
- * Companion/additional field ids (e.g. `orderDefault_f`) resolve to their parent control's name and are deduped
+ * Additional field ids (e.g. `orderDefault_f`) resolve to their parent control's name and are deduped
  * against that parent when both appear in `changedFieldIds`.
  * TODO: plugin AI, or improve/revise comment generation.
  **/
@@ -1340,11 +1340,14 @@ export function generateDefaultChangesComment(
 			namedFields[field.id] = field;
 		});
 	}
-	const companionParents = mapAdditionalFieldsToParents(fields ?? Object.values(contentTypeFields), customControls);
+	const additionalFieldParents = mapAdditionalFieldsToParents(
+		fields ?? Object.values(contentTypeFields),
+		customControls
+	);
 	const seenParentIds = new Set<string>();
 	const fieldsChangedNames: string[] = [];
 	for (const fieldId of changedFieldIds) {
-		const field = namedFields[fieldId] ?? companionParents[fieldId];
+		const field = namedFields[fieldId] ?? additionalFieldParents[fieldId];
 		if (!field || seenParentIds.has(field.id)) continue;
 		seenParentIds.add(field.id);
 		fieldsChangedNames.push(field.name);
@@ -1642,8 +1645,8 @@ export function getAdditionalFieldIds(
 }
 
 /**
- * Maps each companion/additional field id to its parent content-type field.
- * Used so dirty chrome and the default version comment attribute companion writes (e.g. `orderDefault_f`) to the
+ * Maps each additional field id to its parent content-type field.
+ * Used so dirty chrome and the default version comment attribute additional field writes (e.g. `orderDefault_f`) to the
  * visible parent control. An id that already belongs to a content-type field is not overwritten when building the
  * name lookup; callers still prefer `namedFields[id]` first.
  * Pass `customControls` so configured (ui.xml) controls with `additionalFields` are included alongside code defaults.
@@ -1657,8 +1660,8 @@ export function mapAdditionalFieldsToParents(
 	for (const field of fields) {
 		const descriptor = descriptors[field.type];
 		if (!descriptor) continue;
-		for (const companionId of getAdditionalFieldsIdsFromDescriptor(field.id, descriptor)) {
-			if (!(companionId in map)) map[companionId] = field;
+		for (const additionalFieldId of getAdditionalFieldsIdsFromDescriptor(field.id, descriptor)) {
+			if (!(additionalFieldId in map)) map[additionalFieldId] = field;
 		}
 	}
 	return map;

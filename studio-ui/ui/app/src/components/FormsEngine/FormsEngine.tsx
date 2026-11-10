@@ -446,7 +446,7 @@ function FormBootstrap(props: FormsEngineProps) {
 			rollbackField(fieldId: string) {
 				const initialValues = getInitialValues();
 				internalRollbackValue(initialValues, fieldId);
-				// Companions (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
+				// Additional fields (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
 				const { itemMeta, props } = stableFormContextRef.current;
 				const contentTypeFields = itemMeta?.contentType?.fields;
 				const repeatFieldId = props?.repeat?.fieldId;
@@ -455,8 +455,8 @@ function FormBootstrap(props: FormsEngineProps) {
 					? contentTypeFields?.[repeatFieldId]?.fields?.[fieldId]
 					: contentTypeFields?.[fieldId];
 				if (!field) return;
-				for (const companionId of getAdditionalFieldIds(field, customControls)) {
-					internalRollbackValue(initialValues, companionId);
+				for (const additionalFieldId of getAdditionalFieldIds(field, customControls)) {
+					internalRollbackValue(initialValues, additionalFieldId);
 				}
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {

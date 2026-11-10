@@ -163,8 +163,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
-	const companionFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
-	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, companionFieldIds));
+	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
+	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
 	const lengthBlock = createLengthBlock({ length, max });
