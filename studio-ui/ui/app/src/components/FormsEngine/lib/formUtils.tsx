@@ -369,7 +369,7 @@ const neverChanged: Atom<boolean> = atom(false);
  *
  * Pass additional field ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
  * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the additional
- * was written.
+ * field was written.
  *
  * This is the way React components read the changed state. Imperative code reads the changed-ids atom with
  * `store.get` instead. Pass `null` (Type Builder's read-only chips have no changed-ids atom) to get a constant
