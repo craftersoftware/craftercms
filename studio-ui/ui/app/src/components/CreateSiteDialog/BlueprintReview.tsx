@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -83,6 +83,10 @@ const messages = defineMessages({
 		id: 'createSiteDialog.token',
 		defaultMessage: 'Token'
 	},
+	showPassword: {
+		id: 'passwordTextField.toggleVisibilityButtonText',
+		defaultMessage: 'Show password'
+	},
 	privateKey: {
 		id: 'createSiteDialog.privateKey',
 		defaultMessage: 'Private Key'
@@ -115,8 +119,10 @@ const messages = defineMessages({
 
 function BlueprintReview(props: BlueprintReviewProps) {
 	const { onGoTo, inputs, blueprint } = props;
-	const [passwordFields, setPasswordFields] = useState(null);
+	const [passwordFields, setPasswordFields] = useState<Record<string, boolean>>({});
 	const { formatMessage } = useIntl();
+	const idPrefix = useId();
+	const getParameterLabelId = (index: number) => `${idPrefix}-parameter-${index}`;
 
 	useEffect(() => {
 		if (blueprint.parameters) {
@@ -144,7 +150,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		setPasswordFields({ ...passwordFields, [parameter.name]: !passwordFields[parameter.name] });
 	}
 
-	function renderSingleParameter(parameter: MarketplacePluginParameter) {
+	function renderSingleParameter(parameter: MarketplacePluginParameter, index: number) {
 		if (inputs.blueprintFields[parameter.name] && parameter.type === 'STRING') {
 			return inputs.blueprintFields[parameter.name];
 		} else if (parameter.type === 'STRING') {
@@ -152,7 +158,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		} else if (inputs.blueprintFields[parameter.name] && parameter.type === 'PASSWORD') {
 			return (
 				<span>
-					{passwordFields && passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
+					{passwordFields[parameter.name] ? inputs.blueprintFields[parameter.name] : '********'}
 					<IconButton
 						edge="end"
 						sx={{
@@ -163,13 +169,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 								fontSize: '1rem'
 							}
 						}}
-						aria-label="toggle password visibility"
+						aria-label={formatMessage(messages.showPassword)}
+						aria-pressed={Boolean(passwordFields[parameter.name])}
+						aria-describedby={getParameterLabelId(index)}
 						onClick={() => {
 							showPassword(parameter);
 						}}
 						size="large"
 					>
-						{passwordFields && passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
+						{passwordFields[parameter.name] ? <VisibilityOff /> : <Visibility />}
 					</IconButton>
 				</span>
 			);
@@ -182,10 +190,10 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		return blueprint.parameters.map((parameter, index) => {
 			return (
 				<Typography variant="body2" gutterBottom key={index}>
-					<Box component="span" sx={{ fontWeight: 'bold' }}>
+					<Box component="span" id={getParameterLabelId(index)} sx={{ fontWeight: 'bold' }}>
 						{parameter.label}:{' '}
 					</Box>
-					{renderSingleParameter(parameter)}
+					{renderSingleParameter(parameter, index)}
 				</Typography>
 			);
 		});
