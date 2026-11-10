@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { register } from 'node:module';
+import { registerHooks } from 'node:module';
+import { load, resolve, resolveSync } from './ts-loader.mjs';
 
-register(new URL('./ts-loader.mjs', import.meta.url));
+// register() does not install resolveSync. formatjs needs it for its synchronous require.
+registerHooks({ load, resolve, resolveSync });

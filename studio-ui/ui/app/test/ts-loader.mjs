@@ -18,9 +18,16 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { formatjsPluginOptions } from '../formatjs.config.mjs';
 
 const require = createRequire(new URL('../package.json', import.meta.url));
-const { transformSync } = require('esbuild');
+const { transformSync: esbuildTransform } = require('esbuild');
+const { transformSync: babelTransform } = require('@babel/core');
+const formatjsPlugin = require.resolve('babel-plugin-formatjs');
+
+// @babel/plugin-syntax-typescript is not a dependency. The parser plugins are built into @babel/core.
+const typescriptParserPlugins = ['typescript', 'jsx'];
+const messageApi = /formatMessage|FormattedMessage|defineMessages|defineMessage/;
 
 const extensions = ['.ts', '.tsx', '.js', '.mjs', '.cjs', '.json'];
 
@@ -41,7 +48,7 @@ function resolveFile(base) {
  * node --test strips types but does not resolve extensionless TypeScript imports or JSX.
  * Tests that import the app register this hook, then dynamically import those modules.
  */
-export async function resolve(specifier, context, nextResolve) {
+function resolveSpecifier(specifier, context, nextResolve) {
 	if (specifier.endsWith('.css') || specifier.endsWith('.svg') || specifier.endsWith('.png')) {
 		return { url: 'data:text/javascript,', shortCircuit: true };
 	}
@@ -52,7 +59,7 @@ export async function resolve(specifier, context, nextResolve) {
 		if (file) return { url: pathToFileURL(file).href, shortCircuit: true };
 	}
 	try {
-		return await nextResolve(specifier, context);
+		return nextResolve(specifier, context);
 	} catch (error) {
 		// Some packages ship directory entry points that only CommonJS resolution understands.
 		if (error?.code !== 'ERR_UNSUPPORTED_DIR_IMPORT' || !context.parentURL?.startsWith('file:')) throw error;
@@ -61,18 +68,42 @@ export async function resolve(specifier, context, nextResolve) {
 	}
 }
 
-export async function load(url, context, nextLoad) {
+// registerHooks calls resolve synchronously. formatjs also requires resolveSync.
+export function resolve(specifier, context, nextResolve) {
+	return resolveSpecifier(specifier, context, nextResolve);
+}
+
+export function resolveSync(specifier, context, nextResolveSync) {
+	return resolveSpecifier(specifier, context, nextResolveSync);
+}
+
+export function load(url, context, nextLoad) {
 	if (url.startsWith('data:')) {
 		return { format: 'module', source: 'export default {};', shortCircuit: true };
 	}
 	const isAppSource = url.includes('/ui/app/src/') && (url.endsWith('.ts') || url.endsWith('.tsx'));
 	if (!isAppSource) return nextLoad(url, context);
 	const filename = fileURLToPath(url);
-	const result = transformSync(readFileSync(filename, 'utf8'), {
+	let source = readFileSync(filename, 'utf8');
+	// The app build injects message ids. The test runner does not, unless this pass does.
+	const assignsMessageIds = messageApi.test(source);
+	if (assignsMessageIds) {
+		const transformed = babelTransform(source, {
+			filename,
+			babelrc: false,
+			configFile: false,
+			sourceMaps: 'inline',
+			parserOpts: { sourceType: 'module', plugins: typescriptParserPlugins },
+			plugins: [[formatjsPlugin, { ...formatjsPluginOptions }]]
+		});
+		source = transformed.code ?? source;
+	}
+	const result = esbuildTransform(source, {
 		loader: url.endsWith('.tsx') ? 'tsx' : 'ts',
 		format: 'esm',
 		target: 'es2022',
 		sourcefile: filename,
+		sourcemap: assignsMessageIds ? 'inline' : false,
 		jsx: 'automatic'
 	});
 	return { format: 'module', source: result.code, shortCircuit: true };

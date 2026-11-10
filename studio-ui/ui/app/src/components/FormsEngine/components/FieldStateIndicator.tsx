@@ -53,11 +53,10 @@ const iconByKind: Record<FieldStateKind, ComponentType<SvgIconProps>> = {
 	invalid: ErrorOutlineRounded
 };
 
-// These ids are the formatjs hashes of the default messages, so a catalogue entry keeps matching after extraction.
 function FieldStateMessage({ kind }: { kind: FieldStateKind }) {
-	if (kind === 'complete') return <FormattedMessage id="U78NhE" defaultMessage="Complete" />;
-	if (kind === 'required') return <FormattedMessage id="Seanpx" defaultMessage="Required" />;
-	return <FormattedMessage id="89T/ze" defaultMessage="Invalid" />;
+	if (kind === 'complete') return <FormattedMessage defaultMessage="Complete" />;
+	if (kind === 'required') return <FormattedMessage defaultMessage="Required" />;
+	return <FormattedMessage defaultMessage="Invalid" />;
 }
 
 function fieldStateKind({ isValid, isRequired, isEmpty }: FieldStateIndicatorProps): FieldStateKind {

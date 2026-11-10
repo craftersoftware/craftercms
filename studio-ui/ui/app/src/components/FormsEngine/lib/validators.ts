@@ -235,15 +235,15 @@ function hashText(text: string): string {
 function withMessageId(value: unknown): MessageDescriptor | undefined {
 	if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
 	const { id, defaultMessage } = value as Record<string, unknown>;
-	if (
-		(id !== undefined && typeof id !== 'string') ||
-		(defaultMessage !== undefined && typeof defaultMessage !== 'string')
-	) {
+	// The app build precompiles defaultMessage into an AST. A string is the uncompiled form.
+	const text = typeof defaultMessage === 'string';
+	const precompiled = Array.isArray(defaultMessage);
+	if ((id !== undefined && typeof id !== 'string') || (defaultMessage !== undefined && !text && !precompiled)) {
 		return undefined;
 	}
 	if (id) return { ...(value as MessageDescriptor) };
-	if (!defaultMessage) return undefined;
-	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage as string)}` };
+	if (!text || !defaultMessage) return undefined;
+	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage)}` };
 }
 
 /**

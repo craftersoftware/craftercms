@@ -22,6 +22,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
+import { messageSource } from '../../../../test/messageSource.mjs';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
 import type { FieldValidityMessage } from './validators.ts';
@@ -38,7 +39,7 @@ function field(type: string, id: string, validations: Record<string, unknown> = 
 function texts(messages: FieldValidityMessage[]): Array<string | undefined> {
 	return messages.map((message) => {
 		const descriptor = Array.isArray(message) ? message[0] : message;
-		return typeof descriptor === 'string' ? descriptor : descriptor.defaultMessage;
+		return typeof descriptor === 'string' ? descriptor : messageSource(descriptor.defaultMessage);
 	});
 }
 
