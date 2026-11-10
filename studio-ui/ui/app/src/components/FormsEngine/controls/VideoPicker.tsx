@@ -45,7 +45,7 @@ import { EmptyState } from '../../EmptyState';
 export type VideoPickerProps = ControlProps<string>;
 
 export function VideoPicker(props: VideoPickerProps) {
-	const { field, value, setValue, readonly: formReadonly, dataSources } = props;
+	const { field, value, setValue, readonly: formReadonly, dataSources, labelId } = props;
 	const { guestBase } = useEnv();
 	const hasValue = Boolean(value);
 	const mediaUrl = value ? resolveMediaUrl(guestBase, value) : '';
@@ -94,7 +94,7 @@ export function VideoPicker(props: VideoPickerProps) {
 			>
 				{menuOptions}
 			</Menu>
-			<FormsEngineField field={field}>
+			<FormsEngineField field={field} labelId={labelId}>
 				<FieldAriaGroup>
 					{hasValue ? (
 						<Card sx={{ display: 'flex' }}>

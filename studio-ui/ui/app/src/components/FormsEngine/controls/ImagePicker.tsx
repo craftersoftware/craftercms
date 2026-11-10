@@ -55,7 +55,7 @@ import MenuList from '@mui/material/MenuList';
 export type ImagePickerProps = ControlProps<string | null>;
 
 export function ImagePicker(props: ImagePickerProps) {
-	const { field, value: valueProp, setValue, autoFocus, readonly: formReadonly, dataSources } = props;
+	const { field, value: valueProp, setValue, autoFocus, readonly: formReadonly, dataSources, labelId } = props;
 	const { guestBase } = useEnv();
 	const { formatMessage } = useIntl();
 	const dispatch = useDispatch();
@@ -165,7 +165,7 @@ export function ImagePicker(props: ImagePickerProps) {
 			>
 				{actionMenuItems}
 			</Menu>
-			<FormsEngineField field={field} isValid={rejectedExternalUrl ? false : undefined}>
+			<FormsEngineField field={field} labelId={labelId} isValid={rejectedExternalUrl ? false : undefined}>
 				<FieldAriaGroup>
 					{rejectedExternalUrl && (
 						<Alert

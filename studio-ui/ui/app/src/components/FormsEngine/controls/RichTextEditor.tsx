@@ -55,7 +55,7 @@ declare global {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-	const { field, value, setValue, readonly, defaultInitOptions, dataSources } = props;
+	const { field, value, setValue, readonly, defaultInitOptions, dataSources, labelId } = props;
 	const locale = getCurrentLocale();
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
@@ -112,11 +112,20 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		setValue(newValue);
 	};
 	if (!rteConfig || !scriptLoaded) {
-		return <FormsEngineField field={field} max={maxLength} length={value.length} children={<ControlSkeleton />} />;
+		return (
+			<FormsEngineField
+				field={field}
+				labelId={labelId}
+				max={maxLength}
+				length={value.length}
+				children={<ControlSkeleton />}
+			/>
+		);
 	}
 	return (
 		<FormsEngineField
 			field={field}
+			labelId={labelId}
 			max={maxLength}
 			length={currentLength}
 			sx={{
