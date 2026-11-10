@@ -15,7 +15,8 @@
  */
 
 /**
- * Blur announces an invalid field only after the user has edited it.
+ * Blur announces an invalid field only after its value atom changes.
+ * Select and the rich text editor commit through that atom, not a bubbling input event.
  * An untouched field stays quiet, including after Save.
  */
 
@@ -23,6 +24,7 @@ import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
+import type { ComponentType } from 'react';
 import type { ContentTypeField } from '../../../models/ContentType';
 
 const React = await import('react');
@@ -50,6 +52,8 @@ const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlo
 	await import('../lib/formsEngineContext.ts');
 const { FormSaveAttemptedContext, FormValidationAnnouncerContext } = await import('../lib/fieldA11y.ts');
 const { Text } = await import('../controls/Text.tsx');
+const { Dropdown } = await import('../controls/Dropdown.tsx');
+const { RichTextEditor } = await import('../controls/RichTextEditor.tsx');
 
 window.matchMedia = (query: string) =>
 	({
@@ -61,7 +65,6 @@ window.matchMedia = (query: string) =>
 		removeListener() {},
 		dispatchEvent: () => false
 	}) as MediaQueryList;
-globalThis.InputEvent ??= window.InputEvent ?? (class InputEvent extends Event {} as unknown as typeof InputEvent);
 
 const redux = configureStore({
 	reducer: {
@@ -81,16 +84,18 @@ const itemMeta = {
 	contentType
 };
 
-const field = {
-	id: 'title_s',
-	name: 'Title',
-	type: 'input',
-	description: 'The page title',
-	helpText: '',
-	validations: {},
-	properties: {},
-	defaultValue: ''
-} as ContentTypeField;
+function fieldFor(id: string, name: string, type: string): ContentTypeField {
+	return {
+		id,
+		name,
+		type,
+		description: `Describe ${name}`,
+		helpText: '',
+		validations: {},
+		properties: {},
+		defaultValue: ''
+	} as ContentTypeField;
+}
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -100,12 +105,19 @@ afterEach(async () => {
 	}
 });
 
-async function renderInvalidField(announcements: string[]) {
-	const validationAtom = atom({ isValid: false, messages: ['Title is required'] });
+async function renderInvalidField(
+	Control: ComponentType<any>,
+	field: ContentTypeField,
+	announcements: string[],
+	initial: unknown
+) {
+	const store = createStore();
+	const valueAtom = atom(initial);
+	const validationAtom = atom({ isValid: false, messages: [`${field.name} is required`] });
 	const stable = {
 		atoms: {
 			valueByFieldId: {
-				[field.id]: atom(''),
+				[field.id]: valueAtom,
 				'internal-name': atom('Home'),
 				orderDefault_f: atom(1)
 			},
@@ -139,7 +151,7 @@ async function renderInvalidField(announcements: string[]) {
 					{ value: intl as never },
 					React.createElement(
 						JotaiProvider,
-						{ store: createStore() },
+						{ store },
 						React.createElement(
 							StableGlobalContext.Provider,
 							{ value: { formsStackData: [], api: {} } },
@@ -158,10 +170,12 @@ async function renderInvalidField(announcements: string[]) {
 											React.createElement(
 												FormSaveAttemptedContext.Provider,
 												{ value: true },
-												React.createElement(Text, {
+												React.createElement(Control, {
 													field,
-													value: '',
-													setValue() {},
+													value: initial,
+													setValue(next: unknown) {
+														store.set(valueAtom, next);
+													},
 													contentType,
 													readonly: false,
 													autoFocus: false
@@ -178,19 +192,17 @@ async function renderInvalidField(announcements: string[]) {
 		);
 	});
 	mounted.push({ unmount: () => root.unmount(), host });
-	return host;
+	return { host, store, valueAtom };
 }
 
-/** Move focus out of the field. `edit` fires the input event the field treats as an edit. */
-async function leaveField(host: HTMLElement, edit: boolean) {
-	const input = host.querySelector('input');
-	assert.ok(input);
+/** Focus leaves the field. The value atom, not a DOM input event, is what marks it edited. */
+async function leaveField(host: HTMLElement) {
+	const fieldRoot = host.querySelector<HTMLElement>('[data-field-id]');
+	assert.ok(fieldRoot);
 	const outside = document.createElement('button');
 	document.body.appendChild(outside);
 	await act(async () => {
-		input.focus();
-		if (edit) input.dispatchEvent(new InputEvent('input', { bubbles: true }));
-		outside.focus();
+		fieldRoot.dispatchEvent(new window.FocusEvent('focusout', { bubbles: true, relatedTarget: outside }));
 	});
 	outside.remove();
 }
@@ -198,16 +210,43 @@ async function leaveField(host: HTMLElement, edit: boolean) {
 describe('field blur announcement', () => {
 	it('does not announce when an untouched invalid field blurs after Save', async () => {
 		const announcements: string[] = [];
-		const host = await renderInvalidField(announcements);
+		const field = fieldFor('title_s', 'Title', 'input');
+		const { host } = await renderInvalidField(Text, field, announcements, '');
 		assert.match(host.textContent ?? '', /Title is required/);
-		await leaveField(host, false);
+		await leaveField(host);
 		assert.deepEqual(announcements, []);
 	});
 
-	it('announces when an edited invalid field blurs', async () => {
+	it('announces when an edited invalid text field blurs', async () => {
 		const announcements: string[] = [];
-		const host = await renderInvalidField(announcements);
-		await leaveField(host, true);
+		const field = fieldFor('title_s', 'Title', 'input');
+		const { host, store, valueAtom } = await renderInvalidField(Text, field, announcements, '');
+		await act(async () => {
+			store.set(valueAtom, 'Hello');
+		});
+		await leaveField(host);
 		assert.deepEqual(announcements, ['Title: Title is required']);
+	});
+
+	it('announces when an edited invalid dropdown blurs', async () => {
+		const announcements: string[] = [];
+		const field = fieldFor('section_s', 'Section', 'dropdown');
+		const { host, store, valueAtom } = await renderInvalidField(Dropdown, field, announcements, '');
+		await act(async () => {
+			store.set(valueAtom, 'news');
+		});
+		await leaveField(host);
+		assert.deepEqual(announcements, ['Section: Section is required']);
+	});
+
+	it('announces when an edited invalid rich text field blurs', async () => {
+		const announcements: string[] = [];
+		const field = fieldFor('body_html', 'Body', 'rte');
+		const { host, store, valueAtom } = await renderInvalidField(RichTextEditor, field, announcements, '');
+		await act(async () => {
+			store.set(valueAtom, '<p>Hello</p>');
+		});
+		await leaveField(host);
+		assert.deepEqual(announcements, ['Body: Body is required']);
 	});
 });

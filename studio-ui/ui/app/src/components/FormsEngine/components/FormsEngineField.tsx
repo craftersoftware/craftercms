@@ -180,7 +180,14 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const isValid = props.isValid ?? (validityData.state === 'hasData' ? validityData?.data.isValid : true);
 	const dispatch = useDispatch();
 	const announceValidation = useContext(FormValidationAnnouncerContext);
+	// The value atom is the edit signal. Select, the rich-text iframe, pickers and the node selector
+	// change it without a bubbling input event, so a DOM listener would leave those fields silent on blur.
 	const editedRef = useRef(false);
+	const committedValueRef = useRef(value);
+	if (!Object.is(committedValueRef.current, value)) {
+		committedValueRef.current = value;
+		editedRef.current = true;
+	}
 	// The control links these ids through `useFieldControlA11y` with the same id it passes here.
 	const generatedId = useId();
 	const controlId = htmlFor || controlIdProp || generatedId;
@@ -215,9 +222,6 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			data-field-id={fieldId}
 			required={isRequired}
 			className={className}
-			onInput={() => {
-				editedRef.current = true;
-			}}
 			onBlur={handleFieldBlur}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
