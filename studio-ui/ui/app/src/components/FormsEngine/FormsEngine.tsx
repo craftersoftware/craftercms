@@ -105,6 +105,7 @@ import {
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
+	getAdditionalFieldIds,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	isEmbeddedForm,
@@ -459,14 +460,30 @@ function FormBootstrap(props: FormsEngineProps) {
 				});
 			},
 			rollbackField(fieldId: string) {
-				duringRollback(() => internalRollbackValue(getInitialValues(), fieldId));
+				// Tag the write so blur does not treat the restored values as the author's edit.
+				duringRollback(() => {
+					const initialValues = getInitialValues();
+					internalRollbackValue(initialValues, fieldId);
+					// Additional fields (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
+					const { itemMeta, props } = stableFormContextRef.current;
+					const contentTypeFields = itemMeta?.contentType?.fields;
+					const repeatFieldId = props?.repeat?.fieldId;
+					// Repeat-item forms edit child fields of the repeat group, not top-level content-type fields.
+					const field = repeatFieldId
+						? contentTypeFields?.[repeatFieldId]?.fields?.[fieldId]
+						: contentTypeFields?.[fieldId];
+					if (!field) return;
+					for (const additionalFieldId of getAdditionalFieldIds(field, customControls)) {
+						internalRollbackValue(initialValues, additionalFieldId);
+					}
+				});
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {
 				applyValuesCheckpoint(stableFormContextRef.current, values, store.set);
 			}
 		};
 		return api;
-	}, [store]);
+	}, [store, customControls]);
 
 	// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
 	const itemKey = create ? null : (effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path ?? null);
@@ -980,6 +997,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
+	const customControls = useSelection((state) => state.uiConfig.controls);
 	const containerRef = useRef<HTMLDivElement>(undefined);
 	const {
 		isFullScreen = false,
@@ -1093,6 +1111,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const effectRefs = useUpdateRefs({
 		// Comments name every changed field, including ones the launch scope is hiding.
 		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
+		customControls,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName
 	});
@@ -1159,7 +1178,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 				contentType.fields,
 				effectRefs.current.commentFields,
 				store.get(changedFieldIds),
-				store.get(versionCommentAtom).trim()
+				store.get(versionCommentAtom).trim(),
+				effectRefs.current.customControls
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);
 		});

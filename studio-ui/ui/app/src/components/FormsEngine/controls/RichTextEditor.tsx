@@ -16,6 +16,7 @@
 
 import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { FieldAriaGroup } from '../components/useControlAria';
 import { ControlProps } from '../types';
 import useRTEConfig from '../../../hooks/useRTEConfig';
 import { initRichTextEditorConfig } from '../../../state/actions/preview';
@@ -67,7 +68,7 @@ declare global {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-	const { field, value, setValue, readonly, defaultInitOptions, dataSources } = props;
+	const { field, value, setValue, readonly, defaultInitOptions, dataSources, labelId } = props;
 	const locale = getCurrentLocale();
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
@@ -139,6 +140,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 			<FormsEngineField
 				field={field}
 				controlId={controlId}
+				labelId={labelId}
 				max={maxLength}
 				length={value.length}
 				children={<ControlSkeleton />}
@@ -149,6 +151,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		<FormsEngineField
 			field={field}
 			controlId={controlId}
+			labelId={labelId}
 			max={maxLength}
 			length={currentLength}
 			sx={{
@@ -173,39 +176,41 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				}
 			}}
 		>
-			<Editor
-				licenseKey="gpl"
-				init={getTinyMceInitOptions(
-					field,
-					rteConfig,
-					locale,
-					defaultInitOptions,
-					dataSources,
-					openDataSourcePicker,
-					(editor) => {
-						editor.on('OpenWindow', () => {
-							setDisableEnforceFocus?.(true);
+			<FieldAriaGroup>
+				<Editor
+					licenseKey="gpl"
+					init={getTinyMceInitOptions(
+						field,
+						rteConfig,
+						locale,
+						defaultInitOptions,
+						dataSources,
+						openDataSourcePicker,
+						(editor) => {
+							editor.on('OpenWindow', () => {
+								setDisableEnforceFocus?.(true);
+							});
+							editor.on('CloseWindow', () => {
+								setDisableEnforceFocus?.(false);
+							});
+						}
+					)}
+					tinymceScriptSrc={tinymceScriptSrc}
+					onEditorChange={handleChange}
+					value={value}
+					ref={editorRef}
+					onInit={(event, editor) => {
+						setCurrentLength(editor.getContent({ format: 'text' }).length);
+						editor.once('focus', () => {
+							hasReceivedFocusRef.current = true;
 						});
-						editor.on('CloseWindow', () => {
-							setDisableEnforceFocus?.(false);
-						});
-					}
-				)}
-				tinymceScriptSrc={tinymceScriptSrc}
-				onEditorChange={handleChange}
-				value={value}
-				ref={editorRef}
-				onInit={(event, editor) => {
-					setCurrentLength(editor.getContent({ format: 'text' }).length);
-					editor.once('focus', () => {
-						hasReceivedFocusRef.current = true;
-					});
-					// The iframe exists from here on. Later changes are applied by the effect above.
-					iframeRef.current = editor.iframeElement;
-					linkEditorIframe(editor.iframeElement, iframeA11yRef.current);
-				}}
-				disabled={readonly}
-			/>
+						// The iframe exists from here on. Later changes are applied by the effect above.
+						iframeRef.current = editor.iframeElement;
+						linkEditorIframe(editor.iframeElement, iframeA11yRef.current);
+					}}
+					disabled={readonly}
+				/>
+			</FieldAriaGroup>
 			<Dialog open={Boolean(dataSourcePicker)} onClose={() => setDataSourcePicker(null)} fullWidth maxWidth="xs">
 				<DialogHeader
 					title={<FormattedMessage defaultMessage="Choose how to add media" />}

@@ -187,8 +187,8 @@ export interface StableFormContextProps {
 	 * save). An atom holding an immutable set of field ids; the set's reference changes only when its membership does.
 	 * Null in Type Builder's read-only chips, which track nothing.
 	 *
-	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId)`, so only the field whose
-	 *   flag flips re-renders.
+	 * - React components subscribe per field with `changedFieldAtom(changedFieldIds, fieldId, additionalFieldIds)`, so only the
+	 *   field whose flag flips re-renders (additional field writes light the parent control's chrome).
 	 * - Imperative code (save, Type Builder commit, pending-changes checks) reads with `store.get(changedFieldIds)`.
 	 * - Writers replace the set (`withChangedField`) and never mutate it. Clearing is setting `EMPTY_CHANGED_FIELD_IDS`.
 	 *
@@ -323,7 +323,7 @@ const missingFieldAtom = atom<unknown>(undefined);
 const noop = (): void => {};
 
 /**
- * Purpose-built access to a sibling field's value (e.g. a descriptor-declared companion
+ * Purpose-built access to a sibling field's value (e.g. a descriptor-declared additional
  * field such as `{id}_tz`) without exposing the atom map or Jotai to plugin controls.
  * Returns `[value, setValue, exists]`; when the field wasn't initialized, `value` is
  * `undefined`, `exists` is `false` and `setValue` is a no-op.

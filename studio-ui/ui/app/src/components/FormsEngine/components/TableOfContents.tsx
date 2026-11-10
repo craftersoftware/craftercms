@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -37,13 +37,10 @@ import {
 	scopeFieldCounts,
 	scopeToggleVisible
 } from '../lib/formVisibility';
-import { hasFieldValidator, hasValidationKeyValidator, isEmptyValue, isFieldRequired } from '../lib/validators';
 import { immutableEmptyArray } from '../../../utils/array';
-import useLoadableAtom from '../lib/useLoadableAtom';
 import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
-import FieldStateIndicator from './FieldStateIndicator';
-import { XmlKeys } from '../lib/formConsts';
+import FieldStateIndicator, { fieldIndicatorAtoms, useFieldStateIndicatorProps } from './FieldStateIndicator';
 import { useInvalidFieldIds } from '../lib/useInvalidFieldIds';
 
 export interface TableOfContentsProps {
@@ -264,26 +261,19 @@ function TreeItemLabel({
 	field: ContentTypeField;
 	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 }) {
-	const valueAtom = field.id === XmlKeys.fileName ? atoms.fileName : atoms.valueByFieldId[field.id];
-	const validationAtom = atoms.validationByFieldId[field.id];
+	const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
 	if (!valueAtom || !validationAtom) return null;
-	return <TreeItemLabelContent field={field} valueAtom={valueAtom} validationAtom={validationAtom} />;
+	return <TreeItemLabelContent field={field} atoms={atoms} />;
 }
 
 function TreeItemLabelContent({
 	field,
-	valueAtom,
-	validationAtom
+	atoms
 }: {
 	field: ContentTypeField;
-	valueAtom: NonNullable<FormsEngineAtoms['valueByFieldId'][string] | FormsEngineAtoms['fileName']>;
-	validationAtom: FormsEngineAtoms['validationByFieldId'][string];
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 }) {
-	const value = useAtomValue(valueAtom);
-	const validityData = useLoadableAtom(validationAtom);
-	const isValid = validityData.state === 'hasData' ? validityData?.data.isValid : true;
-	const isRequired = isFieldRequired(field);
-	const hasValidator = hasFieldValidator(field.type) || hasValidationKeyValidator(field);
+	const { loading, props } = useFieldStateIndicatorProps(field, atoms);
 	return (
 		<Box
 			sx={{
@@ -292,18 +282,14 @@ function TreeItemLabelContent({
 				alignItems: 'center'
 			}}
 		>
-			<span>{field.name}</span>
-
-			{validityData.state === 'loading' ? (
-				<Skeleton variant="circular" width={15} height={15} />
-			) : (
-				<FieldStateIndicator
-					isRequired={isRequired}
-					hasValidator={hasValidator}
-					isValid={isValid}
-					isEmpty={isEmptyValue(field, value)}
-				/>
-			)}
+			{[
+				<span key="name">{field.name}</span>,
+				loading ? (
+					<Skeleton key="state" variant="circular" width={15} height={15} />
+				) : (
+					<FieldStateIndicator key="state" {...props} />
+				)
+			]}
 		</Box>
 	);
 }
