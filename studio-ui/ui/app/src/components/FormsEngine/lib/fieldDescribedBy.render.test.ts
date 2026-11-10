@@ -105,6 +105,7 @@ const cssEscape = (value: string) =>
 		const listeners: Record<string, Array<(event: unknown, editor: unknown) => void>> = {};
 		const editor = {
 			iframeElement: iframe,
+			getContainer: () => iframe.parentElement ?? iframe,
 			initialized: true,
 			getContent: () => '',
 			setContent() {},
