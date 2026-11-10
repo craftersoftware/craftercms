@@ -253,9 +253,38 @@ export function fetchSiteConfigurationFiles(site: string, environment?: string):
 
 export interface StudioSiteConfig extends Pick<
 	GlobalState['uiConfig'],
-	'cdataEscapedFieldPatterns' | 'upload' | 'locale' | 'publishing' | 'remoteGitBranch'
+	'cdataEscapedFieldPatterns' | 'formEngine' | 'upload' | 'locale' | 'publishing' | 'remoteGitBranch'
 > {
 	site: string;
+}
+
+/**
+ * Variable-name postfix rules from `<form-engine>` in site-config.xml.
+ * Tag text is kept as a string: the default parser would turn `true` into a boolean.
+ * One `<field>` and several `<field>`s both become a string array.
+ */
+export function readFormEnginePostfixRules(dom: XMLDocument): GlobalState['uiConfig']['formEngine'] {
+	const node = dom.querySelector(':scope > form-engine');
+	if (!node) {
+		return { fieldNamePostfix: false, ignorePostfixFields: [] };
+	}
+	const parsed = deserialize(node, { parseTagValue: false })['form-engine'];
+	const formEngine: Record<string, unknown> =
+		parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+	const postfix = typeof formEngine['field-name-postfix'] === 'string' ? formEngine['field-name-postfix'].trim() : '';
+	const ignoreNode = formEngine['ignore-postfix-fields'];
+	const rawFields =
+		ignoreNode && typeof ignoreNode === 'object' && 'field' in ignoreNode
+			? (ignoreNode as { field?: unknown }).field
+			: undefined;
+	const fields = asArray(rawFields);
+	return {
+		fieldNamePostfix: postfix === 'true',
+		ignorePostfixFields: fields
+			.filter((field): field is string => typeof field === 'string')
+			.map((field) => field.trim())
+			.filter(Boolean)
+	};
 }
 
 export function fetchSiteConfig(site: string, environment: string): Observable<StudioSiteConfig> {
@@ -270,6 +299,7 @@ export function fetchSiteConfig(site: string, environment: string): Observable<S
 			remoteGitBranch: ((node) => (node ? deserialize(node).remoteGitBranch : null))(
 				dom.querySelector(':scope > remoteGitBranch')
 			),
+			formEngine: readFormEnginePostfixRules(dom),
 			publishing: ((node) => {
 				const commentSettings = Object.assign({ required: false }, deserialize(node)?.publishing?.comments);
 				return {

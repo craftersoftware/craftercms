@@ -19,7 +19,8 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 import visuallyHidden from '@mui/utils/visuallyHidden';
 import { useDispatch } from 'react-redux';
-import { ItemContext, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
+import { ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
+import { useFormItem } from '../lib/formItem';
 import { useAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import useLocale from '../../../hooks/useLocale';
 import { getFieldAtomValue } from '../lib/formUtils';
@@ -34,6 +35,7 @@ import { defineMessages, FormattedMessage, type MessageDescriptor, useIntl } fro
 import { EditOffOutlined, EditOutlined } from '@mui/icons-material';
 import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
 import ItemPublishingTargetIcon from '../../ItemPublishingTargetIcon';
+import { getFocusRingSx } from '../../../styles/focusRing';
 import { getItemPublishingTargetText, getItemStateText } from '../../ItemDisplay/utils';
 import ItemStateIcon from '../../ItemStateIcon';
 import Tooltip from '@mui/material/Tooltip';
@@ -94,12 +96,7 @@ const copyableValueSx: SxProps<Theme> = {
 	'&:focus': {
 		outline: 'none'
 	},
-	'&:focus-visible': {
-		outlineStyle: 'solid',
-		outlineWidth: 2,
-		outlineColor: 'primary.main',
-		outlineOffset: (theme) => theme.spacing(0.25)
-	}
+	'&:focus-visible': getFocusRingSx()
 };
 
 // Width of the small icon button, its end margin, and the title-row column gap.
@@ -185,7 +182,7 @@ function CopyableValue({ value, children }: { value: string; children: ReactNode
 
 export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 	const { atoms } = useContext(StableFormContext);
-	const item = useContext(ItemContext);
+	const item = useFormItem();
 	const store = useJotaiStore();
 	const readonly = useAtomValue(atoms.readonly);
 	const isLargeContainer = useAtomValue(atoms.isLargeContainer);
@@ -311,7 +308,7 @@ function DateBy({
 
 export function EditModeMetadata() {
 	const { id: objectId } = useContext(ItemMetaContext);
-	const item = useContext(ItemContext);
+	const item = useFormItem();
 	const localeConf = useLocale();
 	const { formatMessage } = useIntl();
 	const formattedCreator = prettyPrintPerson(item.creator);

@@ -35,7 +35,8 @@ import Typography from '@mui/material/Typography';
 import useSpreadState from '../../../hooks/useSpreadState';
 import { ApiResponse } from '../../../models';
 import { SortableList, type TItem } from '../components/SortableList';
-import { useItemContext, useItemMetaContext, useStableFormContext } from '../lib/formsEngineContext';
+import { useItemMetaContext, useStableFormContext } from '../lib/formsEngineContext';
+import { useFormItemLabel, useFormItemPath } from '../lib/formItem';
 import { DialogFooter } from '../../DialogFooter';
 import SecondaryButton from '../../SecondaryButton';
 import PrimaryButton from '../../PrimaryButton';
@@ -74,7 +75,8 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		order: null,
 		changedOrder: false
 	});
-	const contextItem = useItemContext();
+	const itemPath = useFormItemPath();
+	const itemLabel = useFormItemLabel();
 	const { pathInSite, contentType } = useItemMetaContext();
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
@@ -83,14 +85,13 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	const fileName = useAtomValue(formContext.atoms.fileName as PrimitiveAtom<string>);
 	const internalName = useAtomValue(formContext.atoms.valueByFieldId[XmlKeys.internalName] as PrimitiveAtom<string>);
 	// Create mode has no ContentItem yet — compose the eventual path from the create folder + file name.
-	const currentPath =
-		contextItem?.path ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
-	const pageLabel = contextItem?.label || internalName || fileName || currentPath || '';
+	const currentPath = itemPath ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
+	const pageLabel = itemLabel || internalName || fileName || currentPath || '';
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
 		PrimitiveAtom<number | string | null | undefined> | undefined;
 	if (!orderDefaultAtom) {
 		throw new Error(
-			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
+			`The Place in Nav field "${field.id}" cannot be displayed because its additional field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
 		);
 	}
 	const effectRefs = useUpdateRefs({

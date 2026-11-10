@@ -139,6 +139,7 @@ export const expiredDateDescriptor: DescriptorContentType = {
 		}
 	},
 	metadata: {
+		rootOnly: true,
 		suffixes: ['_dt'],
 		// DateTime control reads `${field.id}_tz`; bootstrap must create this atom.
 		additionalFields: ['{id}_tz']

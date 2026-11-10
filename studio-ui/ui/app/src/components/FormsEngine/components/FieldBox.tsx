@@ -14,11 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import Box, { BoxProps } from '@mui/material/Box';
+import { BoxProps } from '@mui/material/Box';
 import { consolidateSx } from '../../../utils/system';
+import { FieldAriaGroup } from './useControlAria';
 
 export const FieldBox = ({ dashed, sx, ...boxProps }: BoxProps & { dashed?: boolean }) => (
-	<Box
+	<FieldAriaGroup
 		{...boxProps}
 		sx={consolidateSx(
 			{
