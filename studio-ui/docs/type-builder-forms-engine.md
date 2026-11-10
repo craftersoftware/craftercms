@@ -57,10 +57,10 @@ Typical type folder contents:
 
 Last commit that still had the files: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) —
 
-| Module       | Historical entry                                                                 |
-| ------------ | -------------------------------------------------------------------------------- |
+| Module       | Historical entry                                                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Type Builder | [`cstudio-admin/mods/content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) |
-| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) |
+| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js)             |
 
 ### Next (React / `ui/app`)
 
@@ -109,6 +109,7 @@ A form has dozens to thousands of fields, so what a component subscribes to deci
 - **Read it when it runs.** Callbacks and effect bodies that need the item only when they execute (lock/unlock, save, `expandPath` macros, opening a dialog) call `StableFormContext.getItem()`. It reads the live Redux item with the current key, so it is fresh immediately after a dispatch and follows a rename, and its identity never changes. It returns `null` when the form has no item. Don't read the item into render just to use it in a callback, and don't put it in an effect's dependencies when only its path matters (`useAffectedPackagesRefetch` reads the path when the event arrives).
 - **Never subscribe to a whole slice from a field or control.** `useItemsByPath()` re-renders on any item change. Select the paths you show: `useItemsByPaths(paths)` (shallow-equal, per-path) or a one-path selector with `useSelection`.
 - **The wrapper watches existence only.** `FormBootstrap` (in `FormsEngine.tsx`) selects `Boolean(item exists)` through `useFormItemGate`, which also takes the form out of `ready` when the key's item is missing (a rename landing before the new path is stored) so prep runs again. It does not re-render for item content updates, and neither does the orchestrator's tree except through its own atoms.
+- **Invalid ids and save requirements are derived state, not `fieldUpdates$` subscribers.** `useInvalidFieldIds` reads the shared `invalidFieldIds` atom (membership updated per field when that field's validation settles); `useMinimumSaveRequirements` reads the file-name validity and internal-name value atoms. Neither re-reads every validation result on each edit. The remaining `fieldUpdates$` subscribers (pending flag, version comment, item-mode write-through) are side effects: they react to the act of a write, then read state.
 
 The stable form entry (`StableFormContextProps`) carries two members the host publishes for fields, both from `useFormEntryProvisioning` in a layout effect (not during render):
 
@@ -573,12 +574,12 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 **In FE2 code:**
 
-| Piece     | Location                                                                                                                                                                                                                                                                                                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                            |
-| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                 |
-| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                       |
-| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                              |
+| Piece     | Location                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Types     | `FormController` / `FormControllerContext` / `FormControllerRelevanceContext` / `FormFieldChange` in `formControllers/types.ts`. Their TSDoc is the authoritative contract: there is no doc generator, and `build:tsc` copies the comments into the emitted `.d.ts` files. These types are not re-exported from the package entry point, so editors show the comments only where they resolve the deep path; a blob-imported `form-controller.js` gets no type information from them. Change the contract in that TSDoc first, then keep this section in step. |
 
 **Load sequence:**
@@ -735,22 +736,22 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### Quick “where do I look?”
 
-| Question                          | Start here                                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
-| Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
-| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
-| New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
-| Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
-| Item reads, subscriptions         | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
-| Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
-| New TB catalog configuration      | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
-| Type XML out                      | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
-| Control property forms            | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
-| config.xml merge plan             | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
-| Plugin packaging / runtime        | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
-| Plugin / listing design           | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
+| Question                         | Start here                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Author form shell / save / stack | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
+| Form controller                  | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
+| Control rendering                | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
+| Legacy module protocol           | `cstudio-common/common-api.js` (`Module`)                                                             |
+| New FE DS interpretation         | `FormsEngine/dataSourceHooks/*`                                                                       |
+| Content XML in/out               | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
+| Item reads, subscriptions        | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
+| Type list / edit UI              | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
+| New TB catalog configuration     | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
+| Type XML out                     | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
+| Control property forms           | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
+| config.xml merge plan            | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
+| Plugin packaging / runtime       | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
+| Plugin / listing design          | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
 
 ---
 
@@ -907,6 +908,7 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-10** — Invalid-field ids and minimum save requirements are derived state (#9340), not `fieldUpdates$` subscribers. `atoms.invalidFieldIds` is updated per field when that field's validation settles (`watchInvalidFieldIds`); `useInvalidFieldIds` / `useMinimumSaveRequirements` read atoms (with the same display debounce). The remaining `fieldUpdates$` subscribers — pending flag, version comment, item-mode write-through — are side effects only. See "FE2 subscription rules" in §2.
 - **2026-11-05** — `FieldUpdate` stays `{ fieldId }` (no captured `value`). The `fieldChanges` and `onFieldChange` docs now say precisely when `value` is read: synchronously as each subscriber is notified, not once per write. If an earlier subscriber writes the same field during delivery, the nested change is delivered first and later subscribers get the newer value for the outer event too; filter by field or compare values when that matters. Pinned by a test in `fieldChanges.test.ts`. The TSDoc of the functions this PR adds or touches was completed.
 - **2026-11-05** — Review fixes for the `fieldChanges` TSDoc and docs (#9369). A bare `distinctUntilChanged()` on changes never dedupes (each `FormFieldChange` is a new object), so the loop guidance now says to filter by field or compare values. Operators that hold an inner observable (`switchMap`, `concatMap`, `mergeMap`) complete only when the inner settles, so the `switchMap` example now keeps its `Subscription` and unsubscribes it from the `initialize` cleanup; `debounceTime` flushes its pending value on completion. Only the change wrapper is frozen (shallow): `value` is the live value by reference, read when each subscriber is notified. `FormControllerRelevanceContext` declares `fieldChanges` (always `EMPTY`). The controller state's `fieldChangeUnsubscribers` set is now `fieldChangeTeardowns`. The types are not re-exported from the package entry point, so the docs no longer promise editor IntelliSense.
 - **2026-11-05** — Form controllers get a read-only `fieldChanges` observable of `{ fieldId, value }` next to `onFieldChange` (#9369). It is built through the same host bridge, so controllers never receive the subject and cannot push events. Disposing the controller context completes every subscriber, and the relevance context's `fieldChanges` completes immediately. `onFieldChange` behaves as before, and `FORM_CONTROLLER_API_VERSION` stays `1`. Internally `fieldUpdates$` now carries `FieldUpdate { fieldId }` objects instead of bare strings (declared once in `formsEngineContext.ts`, no `value` or `previousValue`). `onFieldChange`, `fieldChanges` and `FormFieldChange` carry full TSDoc in `formControllers/types.ts` (when to use which, lifecycle, examples), which `build:tsc` copies into the emitted `.d.ts` files.
