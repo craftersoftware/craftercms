@@ -62,9 +62,10 @@ function resolveSpecifier(specifier, context, nextResolve) {
 		return nextResolve(specifier, context);
 	} catch (error) {
 		// Vite resolves extensionless package subpaths. Node ESM does not, so retry with .js.
+		// registerHooks calls resolve synchronously, so this retry cannot await.
 		if (error?.code === 'ERR_MODULE_NOT_FOUND' && !specifier.endsWith('.js')) {
 			try {
-				return await nextResolve(`${specifier}.js`, context);
+				return nextResolve(`${specifier}.js`, context);
 			} catch {
 				// Keep the original error below.
 			}
