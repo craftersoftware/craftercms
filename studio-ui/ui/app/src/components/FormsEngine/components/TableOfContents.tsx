@@ -15,6 +15,8 @@
  */
 
 import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 'react';
+import visuallyHidden from '@mui/utils/visuallyHidden';
+import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
@@ -42,6 +44,7 @@ import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
 import FieldStateIndicator from './FieldStateIndicator';
 import { XmlKeys } from '../lib/formConsts';
+import { useInvalidFieldIds } from '../lib/useInvalidFieldIds';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
@@ -58,7 +61,15 @@ export interface TableOfContentsProps {
 
 export function TableOfContents({ containerRef, fields, sections, countFieldIds }: TableOfContentsProps) {
 	const store = useJotaiStore();
-	const atoms = useContext(StableFormContext).atoms;
+	const stableForm = useContext(StableFormContext);
+	const atoms = stableForm.atoms;
+	const invalidFieldIds = useInvalidFieldIds(
+		atoms.validationByFieldId,
+		stableForm.formControllerState?.irrelevantFieldPaths,
+		stableForm.props?.repeat?.fieldId,
+		stableForm.fieldUpdates$
+	);
+	const invalidFieldIdSet = useMemo(() => new Set(invalidFieldIds), [invalidFieldIds]);
 	const contentType = useContext(ItemMetaContext).contentType;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = sections ?? contentType.sections;
@@ -151,7 +162,12 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 								key={section.id}
 								itemId={section.id}
 								data-section-id={section.id}
-								label={section.title}
+								label={
+									<SectionNavLabel
+										title={section.title}
+										hasError={section.fields.some((fieldId) => invalidFieldIdSet.has(fieldId))}
+									/>
+								}
 								onClick={handleSectionClick}
 								children={section.fields.map((fieldId) => createFieldTreeItem(contentTypeFields[fieldId]))}
 							/>
@@ -211,6 +227,32 @@ export function FieldScopeNotice({ countFieldIds }: { countFieldIds: string[] })
 					<FormattedMessage defaultMessage="Open full form" />
 				)}
 			</Button>
+		</Box>
+	);
+}
+
+/**
+ * A section that contains an invalid field. The mark is an error icon (a different shape from the
+ * field asterisk) plus text, so the cue is not the red colour alone (WCAG 1.4.1). The text is
+ * visually hidden and the icon stays inline, so the row keeps the same height as a section title.
+ */
+export function SectionNavLabel({ title, hasError }: { title: string; hasError: boolean }) {
+	const { formatMessage } = useIntl();
+	const errorLabel = formatMessage({ defaultMessage: 'Section has errors' });
+	return (
+		<Box component="span" sx={{ display: 'inline' }}>
+			{title}
+			{hasError && (
+				<Box
+					component="span"
+					sx={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', ml: 0.5 }}
+				>
+					<ErrorOutlineRounded aria-hidden color="error" sx={{ fontSize: '1em' }} />
+					<Box component="span" sx={visuallyHidden}>
+						{errorLabel}
+					</Box>
+				</Box>
+			)}
 		</Box>
 	);
 }

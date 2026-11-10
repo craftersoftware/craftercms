@@ -62,6 +62,46 @@ export type DependencyDataState = {
 	items: LightItem[];
 };
 
+/** The footer reason and the button it describes. The button is disabled exactly when a reason is shown. */
+export function PublishDialogFooter({
+	reason,
+	reasonId,
+	isSubmitting,
+	submitDisabled,
+	submitLabel,
+	onCancel,
+	onSubmit
+}: {
+	reason: string;
+	reasonId: string;
+	isSubmitting: boolean;
+	submitDisabled: boolean;
+	submitLabel: React.ReactNode;
+	onCancel: (event: React.MouseEvent<HTMLButtonElement>) => void;
+	onSubmit: (event?: SyntheticEvent) => void;
+}) {
+	return (
+		<DialogFooter sx={{ flexWrap: 'wrap' }}>
+			{reason && (
+				<Typography id={reasonId} variant="body2" color="text.secondary" sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}>
+					{reason}
+				</Typography>
+			)}
+			<SecondaryButton onClick={onCancel} disabled={isSubmitting}>
+				<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
+			</SecondaryButton>
+			<PrimaryButton
+				onClick={onSubmit}
+				disabled={submitDisabled}
+				loading={isSubmitting}
+				aria-describedby={reason ? reasonId : undefined}
+			>
+				{submitLabel}
+			</PrimaryButton>
+		</DialogFooter>
+	);
+}
+
 export function DependencyChip({ type }: { type: DependencyType }) {
 	if (!type) return null;
 	const isSoft = type === 'soft';
@@ -597,29 +637,15 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 					</Typography>
 				)}
 			</DialogBody>
-			<DialogFooter sx={{ flexWrap: 'wrap' }}>
-				{publishSubmitReason && (
-					<Typography
-						id={publishSubmitReasonId}
-						variant="body2"
-						color="text.secondary"
-						sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}
-					>
-						{publishSubmitReason}
-					</Typography>
-				)}
-				<SecondaryButton onClick={onCloseButtonClick} disabled={isSubmitting}>
-					<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
-				</SecondaryButton>
-				<PrimaryButton
-					onClick={handleSubmit}
-					disabled={submitDisabled}
-					loading={isSubmitting}
-					aria-describedby={publishSubmitReason ? publishSubmitReasonId : undefined}
-				>
-					{submitLabel}
-				</PrimaryButton>
-			</DialogFooter>
+			<PublishDialogFooter
+				reason={publishSubmitReason}
+				reasonId={publishSubmitReasonId}
+				isSubmitting={isSubmitting}
+				submitDisabled={submitDisabled}
+				submitLabel={submitLabel}
+				onCancel={onCloseButtonClick}
+				onSubmit={handleSubmit}
+			/>
 		</>
 	);
 }

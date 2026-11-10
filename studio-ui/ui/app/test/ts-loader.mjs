@@ -54,6 +54,14 @@ export async function resolve(specifier, context, nextResolve) {
 	try {
 		return await nextResolve(specifier, context);
 	} catch (error) {
+		// Vite resolves extensionless package subpaths. Node ESM does not, so retry with .js.
+		if (error?.code === 'ERR_MODULE_NOT_FOUND' && !specifier.endsWith('.js')) {
+			try {
+				return await nextResolve(`${specifier}.js`, context);
+			} catch {
+				// Keep the original error below.
+			}
+		}
 		// Some packages ship directory entry points that only CommonJS resolution understands.
 		if (error?.code !== 'ERR_UNSUPPORTED_DIR_IMPORT' || !context.parentURL?.startsWith('file:')) throw error;
 		const resolved = createRequire(context.parentURL).resolve(specifier);

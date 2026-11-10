@@ -63,6 +63,8 @@ const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 export function PageNavOrder(props: PageNavOrderProps) {
 	const { value, setValue, field, autoFocus, readonly: formReadonly } = props;
 	const htmlId = useId();
+	// The group is a div, so the label's htmlFor cannot name it. The label id does.
+	const labelId = useId();
 	const a11y = useFieldControlA11y(field, htmlId);
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
@@ -177,7 +179,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
+		<FormsEngineField field={field} controlId={htmlId} labelId={labelId}>
 			{nou(currentPath) && (
 				<Alert severity="warning" variant="outlined" sx={{ my: 1 }}>
 					<FormattedMessage defaultMessage="This element doesn't have an identifier yet. You can't edit the navigation order until it has an identifier." />
@@ -192,6 +194,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 			>
 				<RadioGroup
 					{...a11y}
+					aria-labelledby={labelId}
 					row
 					value={String(value)}
 					onChange={handleChange}

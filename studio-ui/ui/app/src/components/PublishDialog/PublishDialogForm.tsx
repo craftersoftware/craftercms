@@ -121,7 +121,11 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 		onFetched: onFetchedPublishedTargets,
 		onError: onPublishingTargetsError
 	});
-	publishTargetCallbacksRef.current = { onFetched: onFetchedPublishedTargets, onError: onPublishingTargetsError };
+	// After commit, so a render React discards cannot publish callbacks that never committed.
+	// The fetch effect below is declared later, so it sees this update before it subscribes.
+	useEffect(() => {
+		publishTargetCallbacksRef.current = { onFetched: onFetchedPublishedTargets, onError: onPublishingTargetsError };
+	}, [onFetchedPublishedTargets, onPublishingTargetsError]);
 
 	const fetchPublishingTargetsFn = useCallback(
 		(
