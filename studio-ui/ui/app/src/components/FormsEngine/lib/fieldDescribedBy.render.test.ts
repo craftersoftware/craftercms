@@ -32,16 +32,7 @@ const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider, createIntl } = await import('react-intl');
 
-// The app build gives every message an id. Without that transform, use the default message as its own id.
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError() {} });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)
-};
+const intl = createIntl({ locale: 'en', messages: {}, onError() {} });
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
