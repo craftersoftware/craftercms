@@ -19,6 +19,7 @@
 	"zoneMarker.dropTargetInfo": "Zielbereich kompatibel mit {type} als {modes}",
 	"zoneMarker.existingShared": "bestehende gemeinsame",
 	"zoneMarker.lockedBy": "Gesperrt durch {username}",
+	"zoneMarker.maxCountReached": "Maximum erreicht",
 	"zoneMarker.modifiedItem": "Dieses Element wurde geändert. Aktualisieren Sie die Seite, um die Bearbeitung zu aktivieren.",
 	"zoneMarker.notEditable": "Nicht bearbeitbar",
 	"zoneMarker.required": "Erforderlich",

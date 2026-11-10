@@ -59,6 +59,8 @@ export interface ZoneMarkerProps {
 	inherited: boolean;
 	showZoneTooltip?: boolean;
 	hasFailedRequired?: boolean;
+	/** The item count has reached this field's maximum, a different message from a missing minimum. */
+	hasReachedMaxCount?: boolean;
 	menuItems?: ReactNode;
 	lockInfo?: Person;
 	isStale?: boolean;
@@ -129,6 +131,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 		classes,
 		inherited,
 		hasFailedRequired = false,
+		hasReachedMaxCount = false,
 		menuItems,
 		showZoneTooltip = true,
 		onPopperClick,
@@ -271,6 +274,11 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 						{hasFailedRequired && !isLockedItem && isEditable && !isStale && (
 							<Typography noWrap variant="body2" component="div">
 								<FormattedMessage id="zoneMarker.required" defaultMessage="Required" />
+							</Typography>
+						)}
+						{hasReachedMaxCount && !hasFailedRequired && !isLockedItem && isEditable && !isStale && (
+							<Typography noWrap variant="body2" component="div">
+								<FormattedMessage id="zoneMarker.maxCountReached" defaultMessage="Maximum reached" />
 							</Typography>
 						)}
 						{menuItems && <Box sx={sx.menuItemsContainer}>{menuItems}</Box>}

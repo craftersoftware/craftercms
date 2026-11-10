@@ -19,6 +19,7 @@
 	"zoneMarker.dropTargetInfo": "Objetivo de caída compatible con {type} como {modes}",
 	"zoneMarker.existingShared": "compartido existente",
 	"zoneMarker.lockedBy": "Bloqueado por {username}",
+	"zoneMarker.maxCountReached": "Máximo alcanzado",
 	"zoneMarker.modifiedItem": "El artículo fue modificado. Actualice para habilitar la edición.",
 	"zoneMarker.notEditable": "No editable",
 	"zoneMarker.required": "Necesario",
