@@ -137,6 +137,11 @@ public interface StudioConfiguration {
 	String CONFIGURATION_SITE_ROLE_MAPPINGS_FILE_NAME = "studio.configuration.site.roleMappingsFileName";
 	String CONFIGURATION_SITE_CONTENT_TYPES_CONFIG_FILE_NAME = "studio.configuration.site.contentTypes.configFileName";
 	String CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL = "studio.configuration.site.preview.destroy.context.url";
+	/**
+	 * Site id suffix appended for a site's staging publishing target.
+	 * Must match the suffix recognized by {@code crafter.engine.site.staging.pattern}.
+	 */
+	String CONFIGURATION_SITE_STAGING_ID_SUFFIX = "studio.configuration.site.staging.idSuffix";
 	String CONFIGURATION_DEFAULT_DEPENDENCY_RESOLVER_CONFIG_FILE_NAME =
 		"studio.configuration.default.dependencyResolver.configFileName";
 	String CONFIGURATION_DEFAULT_DEPENDENCY_RESOLVER_CONFIG_BASE_PATH =
@@ -156,6 +161,7 @@ public interface StudioConfiguration {
 	String CONFIGURATION_SITE_DEFAULT_AUTHORING_URL = "studio.configuration.site.defaultAuthoringUrl";
 	String CONFIGURATION_SITE_DEFAULT_GRAPHQL_SERVER_URL = "studio.configuration.site.defaultGraphqlServerUrl";
 	String CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN = "studio.configuration.management.authorizationToken";
+	String CONFIGURATION_MANAGEMENT_SITE_MANAGEMENT_TOKEN = "studio.configuration.management.siteManagementToken";
 	String CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN =
 			"studio.configuration.management.previewAuthorizationToken";
 	String CONFIGURATION_MANAGEMENT_DEPLOYER_AUTHORIZATION_TOKEN =

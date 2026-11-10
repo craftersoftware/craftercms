@@ -175,6 +175,19 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 	// 'locale-selector: 'locale-selector' // This one doesn't have a pre-set id
 };
 
+/** True when the control may only live at the content-type root (`metadata.rootOnly`). */
+export function isRootOnlyControl(descriptor?: DescriptorContentType | null): boolean {
+	return Boolean(descriptor?.metadata?.rootOnly);
+}
+
+/** True when an existing field may only live at the content-type root: its control is rootOnly, or it uses a reserved system field id (system fields can be stored as plain input/checkbox). */
+export function isFieldRootOnly(
+	field: Pick<ContentTypeField, 'id'>,
+	descriptor?: DescriptorContentType | null
+): boolean {
+	return isRootOnlyControl(descriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+}
+
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {
 	return pluckProps(type, false, ...typePropsToEdit) as ContentTypeValuesObject;
 }
@@ -360,6 +373,13 @@ export function reverseTypeFieldValuesObject(
 	return fieldWithReversedValues;
 }
 
+export type DescriptorContentTypeMetadata = {
+	suffixes?: string[];
+	additionalFields?: string[];
+	/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+	rootOnly?: boolean;
+};
+
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
 };
@@ -371,12 +391,7 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	sections: DescriptorSection[];
 	fields: LookupTable<DescriptorField>;
 	type?: 'image' | 'item' | 'audio' | 'flash' | 'video' | 'transcoded-video';
-	metadata?: {
-		suffixes?: string[];
-		additionalFields?: string[];
-		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
-		rootOnly?: boolean;
-	};
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorSection = Omit<ContentTypeSection, 'title' | 'description'> & {
@@ -431,6 +446,13 @@ export function createEmptyTypeStructure(mixin?: Partial<ContentType>): ContentT
 	};
 }
 
+/**
+ * Id of the "Basic Properties" section that field and data source panels prepend to the descriptor's own sections.
+ * It must differ from the descriptors' `properties` section id, since section ids key the accordions and their
+ * expanded state.
+ */
+export const commonPropertiesSectionId = 'commonProperties';
+
 export function createVirtualTypeForField(
 	controlDescriptor: DescriptorContentType,
 	formatMessage: IntlShape['formatMessage']
@@ -444,7 +466,7 @@ export function createVirtualTypeForField(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -487,7 +509,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -502,6 +524,7 @@ export function createVirtualTypeForDataSource(
 	return createEmptyTypeStructure(translatedDataSourceDescriptor);
 }
 
+/** Builds a section, filling in the defaults. An id is generated when the given data has none. */
 export function createVirtualSection<K extends ContentTypeSection | DescriptorSection>(
 	sectionData: Partial<K> & Pick<K, 'title' | 'fields'>
 ): K {
@@ -509,10 +532,10 @@ export function createVirtualSection<K extends ContentTypeSection | DescriptorSe
 		typeof sectionData.title === 'object' ? sectionData.title.defaultMessage : sectionData.title
 	);
 	return {
-		id: sectionData?.id || nanoid(),
 		description: '',
 		expandByDefault: true,
 		...sectionData,
+		id: sectionData?.id || nanoid(),
 		color: sectionData?.color ?? toColor(title)
 	} as K;
 }
@@ -570,7 +593,7 @@ export function createVirtualTypeFormContext(
 	context.atoms.validationByFieldId = {};
 	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject<FieldUpdate>();
+	context.fieldUpdates$ = mixin?.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);

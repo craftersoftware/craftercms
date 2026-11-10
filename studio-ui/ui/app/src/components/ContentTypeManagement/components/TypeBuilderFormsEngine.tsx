@@ -117,6 +117,21 @@ interface BaseProps extends Partial<FieldModeProps & SectionModeProps & DataSour
 
 export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | SectionModeProps | DataSourceModeProps);
 
+const typesWarnedAboutMissingSectionIds = new WeakSet<ContentType>();
+const fallbackKeysBySection = new WeakMap<ContentTypeSection, string>();
+
+/** Key for a section accordion. Uses the section id, or a stable generated key when the section has none. */
+function getSectionKey(typeId: string, virtualType: ContentType, section: ContentTypeSection): string {
+	if (section.id) return `${typeId}-${section.id}`;
+	if (!typesWarnedAboutMissingSectionIds.has(virtualType)) {
+		typesWarnedAboutMissingSectionIds.add(virtualType);
+		console.warn(`Section "${section.title}" has no id. Using a generated key for it instead.`);
+	}
+	// Tied to the section object rather than its position, so reordering sections doesn't remount them.
+	if (!fallbackKeysBySection.has(section)) fallbackKeysBySection.set(section, nanoid());
+	return `${typeId}-${fallbackKeysBySection.get(section)}`;
+}
+
 function FieldFormViewBody(props: FieldFormViewProps) {
 	const { virtualType, isPanelReady = true, onClose } = props;
 	const containerRef = useRef<HTMLDivElement>(undefined);
@@ -180,7 +195,7 @@ function FieldFormViewBody(props: FieldFormViewProps) {
 				{isPanelReady &&
 					virtualType.sections.map((section, sectionIndex) => (
 						<SectionAccordion
-							key={`${typeId}-${section.title}`}
+							key={getSectionKey(typeId, virtualType, section)}
 							section={section}
 							colorize={false}
 							renderControl={(fieldId, fieldIndex) => {
@@ -252,6 +267,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		field,
 		fieldIdPath,
 		sectionId,
+		controlDescriptor,
 		onDeleteField,
 		onMoveFieldToSection,
 		type,
@@ -325,6 +341,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 				field={field}
 				sectionId={sectionId}
 				type={type}
+				controlDescriptor={controlDescriptor}
 				open={openMoveFieldDialog}
 				onClose={() => setOpenMoveFieldDialog(false)}
 				onMoveFieldToSection={handleMoveFieldToSection}
