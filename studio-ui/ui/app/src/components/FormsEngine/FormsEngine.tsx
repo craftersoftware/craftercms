@@ -39,7 +39,7 @@ import {
 	FormsEngineFormContextApi,
 	FormsEngineGlobalApiContextProps,
 	FormsEngineItemMetaContextProps,
-	ItemContext,
+	FormItemKeyContext,
 	ItemMetaContext,
 	RenamedPathContext,
 	StableFormContext,
@@ -73,6 +73,8 @@ import LookupTable from '../../models/LookupTable';
 import { RepeatItem } from './controls/Repeat';
 import SecondaryButton from '../SecondaryButton';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { useFormItemGate, useFormEntryProvisioning } from './lib/useFormEntryWiring';
+import { useFormItemPath } from './lib/formItem';
 import { Fade } from '@mui/material';
 import AlertTitle from '@mui/material/AlertTitle';
 import { pushDialog } from '../../state/actions/dialogStack';
@@ -147,15 +149,7 @@ import { displayWithPendingChangesConfirm } from '../../utils/ui';
 import useActiveUser from '../../hooks/useActiveUser';
 import FormBackToTop from './components/FormBackToTop';
 import { createComponentId } from '../../utils/system';
-import {
-	workflowEventApprove,
-	workflowEventCancel,
-	workflowEventDirectPublish,
-	workflowEventReject,
-	workflowEventSubmit
-} from '../../state/actions/system';
-import { getHostToHostBus } from '../../utils/subjects';
-import { fetchAffectedPackages } from '../../services/workflow';
+import { useAffectedPackagesRefetch } from './lib/useAffectedPackagesRefetch';
 import useMount from '../../hooks/useMount';
 import { nnou, nou } from '../../utils/object';
 import { buildContentXml } from './lib/valueSerializers';
@@ -458,18 +452,12 @@ function FormBootstrap(props: FormsEngineProps) {
 		return api;
 	}, [store]);
 
-	const liveUpdatedItem = useSelection((state) =>
-		// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
-		create
-			? null
-			: state.content.itemsByPath[effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path]
-	);
+	// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
+	const itemKey = create ? null : (effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path ?? null);
+	const hasLiveItem = useFormItemGate({ itemKey, create: Boolean(create), repeat: Boolean(repeat), setReady });
+	useFormEntryProvisioning(stableFormContextRef, { itemKey, siteId, formsApi: api });
 
 	api.updateProps(stackIndex, effectiveProps);
-
-	useEffect(() => {
-		if (!create && !repeat && !liveUpdatedItem) setReady(false);
-	}, [liveUpdatedItem, create, repeat]);
 
 	useEffect(() => {
 		contentTypesById && setContentTypesLoaded(true);
@@ -925,13 +913,13 @@ function FormBootstrap(props: FormsEngineProps) {
 		ready &&
 		hasFormAtoms(stableFormContextRef.current) &&
 		// Create doesn't need the liveUpdateItem, but otherwise, it should be preset before proceeding to rendering a form
-		(create || repeat || liveUpdatedItem)
+		(create || repeat || hasLiveItem)
 	) {
 		const readyEntry = stableFormContextRef.current;
 		return (
 			<FormsEngineFormContextApi.Provider value={contextApi}>
 				<StableFormContext.Provider value={readyEntry}>
-					<ItemContext.Provider value={liveUpdatedItem}>
+					<FormItemKeyContext.Provider value={itemKey}>
 						<ItemMetaContext.Provider value={itemMeta}>
 							<RenamedPathContext.Provider
 								value={{ renamedPath, setRenamedPath, reloadNonce, triggerReload, setSavedCreatePath }}
@@ -939,7 +927,7 @@ function FormBootstrap(props: FormsEngineProps) {
 								{createElement(FormOrchestrator, effectiveProps)}
 							</RenamedPathContext.Provider>
 						</ItemMetaContext.Provider>
-					</ItemContext.Provider>
+					</FormItemKeyContext.Provider>
 				</StableFormContext.Provider>
 			</FormsEngineFormContextApi.Provider>
 		);
@@ -985,7 +973,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const { api: contextApi, formsStackData, rootFormActions } = useContext(StableGlobalContext);
 	const stableFormContext = useContext(StableFormContext);
 	const formContextApi = useContext(FormsEngineFormContextApi);
-	const item = useContext(ItemContext);
+	const itemPath = useFormItemPath();
 	const { contentType, sourceMap, pathInSite } = useContext(ItemMetaContext);
 	const { fieldUpdates$, changedFieldIds, atoms, formControllerState } = stableFormContext;
 	const irrelevantFieldPaths = formControllerState?.irrelevantFieldPaths ?? null;
@@ -1230,36 +1218,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 		parentEntry?.fieldUpdates$
 	);
 	// region Workflow item updates
-	useEffect(() => {
-		const events = [
-			workflowEventSubmit.type,
-			workflowEventDirectPublish.type,
-			workflowEventApprove.type,
-			workflowEventReject.type,
-			workflowEventCancel.type
-		];
-
-		const hostToHost$ = getHostToHostBus();
-		const subscription = hostToHost$.subscribe(({ type }) => {
-			if (!item || !events.includes(type)) return;
-			fetchAffectedPackages(siteId, item.path).subscribe({
-				next(packages) {
-					// Merge into the live lock record so a rename's path is not dropped.
-					setLockStatus((current) => ({
-						...current,
-						affectedPackages: packages
-					}));
-				},
-				error({ response }) {
-					console.error(response);
-				}
-			});
-		});
-
-		return () => {
-			subscription.unsubscribe();
-		};
-	}, [item, setLockStatus, siteId]);
+	useAffectedPackagesRefetch(siteId, itemPath, (affectedPackages) =>
+		// Merge into the live lock record so a rename's path is not dropped.
+		setLockStatus((current) => ({ ...current, affectedPackages }))
+	);
 
 	// Freeze formMainContent (content scroller) and formContainer (hosts the absolute drawer) while the ToC drawer is open.
 	// --scroll-top must live on formContainer so both drawers can inherit it.
@@ -1357,7 +1319,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 			setEnablingEditInProgress(true);
 			const previous = store.get(atoms.lockResult);
 			// Release the path that is actually locked. A saved rename has moved it off item.path.
-			const targetPath = (!enableEdit && previous.lockedPath) || item.path;
+			const targetPath = (!enableEdit && previous.lockedPath) || stableFormContext.getItem().path;
 			const service = enableEdit ? internalLockContentService : internalUnlockContentService;
 			service(siteId, targetPath).subscribe((lockResult) => {
 				setEnablingEditInProgress(false);
@@ -1822,7 +1784,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 												dispatch(
 													pushDialog({
 														component: createComponentId('ViewPackagesDialog'),
-														props: { item } as ViewPackagesDialogProps
+														props: { item: stableFormContext.getItem() } as ViewPackagesDialogProps
 													})
 												);
 											}}

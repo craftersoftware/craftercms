@@ -67,6 +67,9 @@ export const internalNameDescriptor: DescriptorContentType = {
 			defaultValue: undefined,
 			validations: immutableEmptyObject
 		}
+	},
+	metadata: {
+		rootOnly: true
 	}
 };
 

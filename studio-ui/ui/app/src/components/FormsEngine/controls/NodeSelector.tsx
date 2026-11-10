@@ -14,7 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useItemContext, useItemMetaContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import { useItemMetaContext, useStableFormContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import AddRounded from '@mui/icons-material/AddRounded';
@@ -73,7 +74,7 @@ import { useDispatch } from 'react-redux';
 import { nanoid } from 'nanoid';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useFetchContentItems from '../../../hooks/useFetchContentItems';
-import useItemsByPath from '../../../hooks/useItemsByPath';
+import useItemsByPaths from '../../../hooks/useItemsByPaths';
 import ItemDisplay from '../../ItemDisplay';
 import useActiveUser from '../../../hooks/useActiveUser';
 import { getFileExtension, processPathMacros } from '../../../utils/path';
@@ -203,9 +204,12 @@ function NodeSelector(props: NodeSelectorProps) {
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
-	const itemsByPath = useItemsByPath();
+	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
+	const itemsByPath = useItemsByPaths(value.flatMap((item) => [item.key, item.include].filter(Boolean) as string[]));
 	const user = useActiveUser();
-	const contextItem = useItemContext();
+	const stableForm = useStableFormContext();
+	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
+	const getContextItemPath = () => stableForm.getItem()?.path;
 	const { id, pathInSite } = useItemMetaContext();
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
@@ -281,7 +285,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			api.pushForm({
 				readonly: !edit,
 				update: {
-					path: item.include ?? contextItem.path,
+					path: item.include ?? getContextItemPath(),
 					// In the case of shared, item.component === undefined.
 					// The form interprets as a shared when modelId and values are not supplied and fetches.
 					modelId: isEmbedded ? (item.key as string | undefined) : undefined,
@@ -385,7 +389,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		choice: AllowedPathsData | CreateDataSourcePickerData
 	) => {
 		const processPath = (path: string) =>
-			processPathMacros({ path, objectId: id, fullParentPath: contextItem?.path ?? pathInSite });
+			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() ?? pathInSite });
 		switch (optionType) {
 			case 'browse': {
 				const pickerChoice = choice as AllowedPathsData;
@@ -475,7 +479,7 @@ function NodeSelector(props: NodeSelectorProps) {
 					invokeResolvedAction(owner, dataSources.context, {
 						type: 'create',
 						contentTypeId: pickerChoice.contentTypeId,
-						path: pickerChoice.strategy === 'embedded' ? contextItem.path : pickerChoice.path,
+						path: pickerChoice.strategy === 'embedded' ? getContextItemPath() : pickerChoice.path,
 						strategy: pickerChoice.strategy
 					})
 						.then((selection) => applyDataSourceSelection(selection, owner.dataSourceId, pickerChoice))
@@ -487,7 +491,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				api.pushForm({
 					create: {
 						contentTypeId: pickerChoice.contentTypeId,
-						path: pickerChoice.strategy === 'embedded' ? contextItem.path : processPath(pickerChoice.path),
+						path: pickerChoice.strategy === 'embedded' ? getContextItemPath() : processPath(pickerChoice.path),
 						embedded: isEmbedded
 					},
 					onSave(result) {
@@ -830,15 +834,7 @@ function NodeSelector(props: NodeSelectorProps) {
 										<ListItemText
 											primary={
 												isEmbedded ? (
-													<ItemDisplay
-														item={{
-															...contextItem,
-															label: item.value,
-															systemType: 'component'
-														}}
-														showWorkflowState={!isEmbedded}
-														showNavigableAsLinks={false}
-													/>
+													<EmbeddedItemDisplay label={item.value} showWorkflowState={!isEmbedded} />
 												) : itemsByPath[item.include] ? (
 													<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
 												) : (
@@ -1496,3 +1492,15 @@ function showDuplicatesWarning(dispatch: ReduxDispatch, duplicateItems: NodeSele
 }
 
 export default NodeSelector;
+
+/** An embedded component has no item of its own; it shows the form's item. Only these rows follow its updates. */
+function EmbeddedItemDisplay({ label, showWorkflowState }: { label: string; showWorkflowState: boolean }) {
+	const contextItem = useFormItem();
+	return (
+		<ItemDisplay
+			item={{ ...contextItem, label, systemType: 'component' }}
+			showWorkflowState={showWorkflowState}
+			showNavigableAsLinks={false}
+		/>
+	);
+}
