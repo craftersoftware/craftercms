@@ -38,7 +38,7 @@ function printStyle(style) {
 }
 
 function printOptions(element) {
-	return Object.entries(element.options)
+	return Object.entries(element.options ?? {})
 		.map(([key, option]) => `${key} {${printList(option.value)}}`)
 		.join(' ');
 }

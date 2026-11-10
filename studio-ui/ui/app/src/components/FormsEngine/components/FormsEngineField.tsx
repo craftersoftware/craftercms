@@ -161,7 +161,10 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const fieldState = useFieldStateIndicatorProps(field, atoms);
 	const { validityData, value } = fieldState;
 	const isRequired = fieldState.props.isRequired;
+	// A control may pass isValid (a rejected image, the file-name control). The border and the icon use that
+	// same verdict, so a red label is never paired with a green check.
 	const isValid = props.isValid ?? fieldState.props.isValid;
+	const indicatorProps = { ...fieldState.props, isValid };
 	const dispatch = useDispatch();
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
@@ -201,10 +204,10 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						component="label"
 						ref={labelRef}
 						tabIndex={autoFocus ? 0 : undefined}
-						sx={{ display: 'inline-flex', alignItems: 'center' }}
 					>
-						{[field.name, <FieldStateIndicator key="state" {...fieldState.props} />]}
+						{field.name}
 					</FormLabel>
+					<FieldStateIndicator {...indicatorProps} announce={false} />
 					{hasHelpText && (
 						<IconButton size="small" onClick={() => setShowHelp(!showHelp)}>
 							<HelpOutlineRounded fontSize="small" />

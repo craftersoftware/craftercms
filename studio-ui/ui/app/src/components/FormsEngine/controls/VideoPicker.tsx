@@ -22,6 +22,7 @@ import { listItemIconClasses } from '@mui/material/ListItemIcon';
 import { FormattedMessage, useIntl } from 'react-intl';
 import Box from '@mui/material/Box';
 import FormsEngineField from '../components/FormsEngineField';
+import { FieldAriaGroup } from '../components/useControlAria';
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import CardContent from '@mui/material/CardContent';
@@ -94,136 +95,138 @@ export function VideoPicker(props: VideoPickerProps) {
 				{menuOptions}
 			</Menu>
 			<FormsEngineField field={field}>
-				{hasValue ? (
-					<Card sx={{ display: 'flex' }}>
-						<CardMedia component="video" sx={{ width: '40%' }} image={mediaUrl} />
-						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
-							<CardContent sx={{ flex: '1 0 auto' }}>
-								<Typography
-									component="div"
-									variant="body1"
-									sx={{
-										marginBottom: 1
-									}}
-								>
-									{value}
-								</Typography>
-								<Typography
-									variant="body2"
-									component="div"
-									color="textSecondary"
-									sx={{
-										marginBottom: 1
-									}}
-								>
-									{isFetchingMetadata ? (
-										<>
+				<FieldAriaGroup>
+					{hasValue ? (
+						<Card sx={{ display: 'flex' }}>
+							<CardMedia component="video" sx={{ width: '40%' }} image={mediaUrl} />
+							<Box sx={{ display: 'flex', flexDirection: 'column' }}>
+								<CardContent sx={{ flex: '1 0 auto' }}>
+									<Typography
+										component="div"
+										variant="body1"
+										sx={{
+											marginBottom: 1
+										}}
+									>
+										{value}
+									</Typography>
+									<Typography
+										variant="body2"
+										component="div"
+										color="textSecondary"
+										sx={{
+											marginBottom: 1
+										}}
+									>
+										{isFetchingMetadata ? (
+											<>
+												<Skeleton variant="text" />
+												<Skeleton variant="text" />
+											</>
+										) : errorMetadata ? (
+											<Typography color="error" variant="body2">
+												<FormattedMessage defaultMessage="Error loading video metadata" />
+											</Typography>
+										) : (
+											<>
+												{videoInfo?.contentType}
+												<br />
+												{videoInfo?.size ? `${videoInfo.size} KB` : ''}
+												<br />
+											</>
+										)}
+										<br />
+										{isFetchingDimensions ? (
 											<Skeleton variant="text" />
-											<Skeleton variant="text" />
-										</>
-									) : errorMetadata ? (
-										<Typography color="error" variant="body2">
-											<FormattedMessage defaultMessage="Error loading video metadata" />
-										</Typography>
-									) : (
-										<>
-											{videoInfo?.contentType}
-											<br />
-											{videoInfo?.size ? `${videoInfo.size} KB` : ''}
-											<br />
-										</>
-									)}
-									<br />
-									{isFetchingDimensions ? (
-										<Skeleton variant="text" />
-									) : errorDimensions ? (
-										<Typography color="error" variant="body2">
-											<FormattedMessage defaultMessage="Error loading video dimensions" />
-										</Typography>
-									) : (
-										`${videoInfo?.width}x${videoInfo?.height}`
-									)}
-									<br />
-								</Typography>
-								<Box>
-									<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
-										<IconButton
-											disabled={readonly || !actionsReady}
-											aria-label={formatMessage({ defaultMessage: 'Replace' })}
-											size="small"
-											onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-												if (!actionsReady) return;
-												setAnchorEl(event.currentTarget);
-												setAddMenuOpen(true);
-											}}
-										>
-											<EditOutlined />
-										</IconButton>
-									</Tooltip>
-									<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
-										<IconButton
-											aria-label={formatMessage({ defaultMessage: 'Download' })}
-											size="small"
-											onClick={() => {
-												if (value) downloadMedia(guestBase, value);
-											}}
-										>
-											<DownloadOutlined />
-										</IconButton>
-									</Tooltip>
-									<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
-										<IconButton
-											disabled={readonly}
-											size="small"
-											onClick={handleRemove}
-											aria-label={formatMessage({ defaultMessage: 'Delete' })}
-										>
-											<DeleteOutlined />
-										</IconButton>
-									</Tooltip>
-								</Box>
-							</CardContent>
-						</Box>
-					</Card>
-				) : dataSourcesLoading ? (
-					<Skeleton variant="rounded" height={56} />
-				) : dataSourcesError ? (
-					<Typography color="error" variant="body2">
-						<FormattedMessage defaultMessage="Error loading video sources" />
-					</Typography>
-				) : !actionsReady ? (
-					<EmptyState
-						title={<FormattedMessage defaultMessage="No options are available for this control" />}
-						subtitle={
-							<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
-						}
-					/>
-				) : (
-					<MenuList
-						children={menuOptions}
-						sx={{
-							p: 1,
-							gap: 1,
-							py: 0.5,
-							display: 'flex',
-							flexDirection: 'row',
-							flexWrap: 'wrap',
-							color: 'primary.main',
-							justifyContent: 'center',
-							[`.${svgIconClasses.root}`]: {
-								color: 'primary.main'
-							},
-							[`.${menuItemClasses.root}`]: {
-								flexDirection: 'column',
-								justifyContent: 'center',
-								borderRadius: 1
-							},
-							[`.${listItemIconClasses.root}`]: {
-								justifyContent: 'center'
+										) : errorDimensions ? (
+											<Typography color="error" variant="body2">
+												<FormattedMessage defaultMessage="Error loading video dimensions" />
+											</Typography>
+										) : (
+											`${videoInfo?.width}x${videoInfo?.height}`
+										)}
+										<br />
+									</Typography>
+									<Box>
+										<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+											<IconButton
+												disabled={readonly || !actionsReady}
+												aria-label={formatMessage({ defaultMessage: 'Replace' })}
+												size="small"
+												onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+													if (!actionsReady) return;
+													setAnchorEl(event.currentTarget);
+													setAddMenuOpen(true);
+												}}
+											>
+												<EditOutlined />
+											</IconButton>
+										</Tooltip>
+										<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
+											<IconButton
+												aria-label={formatMessage({ defaultMessage: 'Download' })}
+												size="small"
+												onClick={() => {
+													if (value) downloadMedia(guestBase, value);
+												}}
+											>
+												<DownloadOutlined />
+											</IconButton>
+										</Tooltip>
+										<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+											<IconButton
+												disabled={readonly}
+												size="small"
+												onClick={handleRemove}
+												aria-label={formatMessage({ defaultMessage: 'Delete' })}
+											>
+												<DeleteOutlined />
+											</IconButton>
+										</Tooltip>
+									</Box>
+								</CardContent>
+							</Box>
+						</Card>
+					) : dataSourcesLoading ? (
+						<Skeleton variant="rounded" height={56} />
+					) : dataSourcesError ? (
+						<Typography color="error" variant="body2">
+							<FormattedMessage defaultMessage="Error loading video sources" />
+						</Typography>
+					) : !actionsReady ? (
+						<EmptyState
+							title={<FormattedMessage defaultMessage="No options are available for this control" />}
+							subtitle={
+								<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
 							}
-						}}
-					/>
-				)}
+						/>
+					) : (
+						<MenuList
+							children={menuOptions}
+							sx={{
+								p: 1,
+								gap: 1,
+								py: 0.5,
+								display: 'flex',
+								flexDirection: 'row',
+								flexWrap: 'wrap',
+								color: 'primary.main',
+								justifyContent: 'center',
+								[`.${svgIconClasses.root}`]: {
+									color: 'primary.main'
+								},
+								[`.${menuItemClasses.root}`]: {
+									flexDirection: 'column',
+									justifyContent: 'center',
+									borderRadius: 1
+								},
+								[`.${listItemIconClasses.root}`]: {
+									justifyContent: 'center'
+								}
+							}}
+						/>
+					)}
+				</FieldAriaGroup>
 			</FormsEngineField>
 		</>
 	);

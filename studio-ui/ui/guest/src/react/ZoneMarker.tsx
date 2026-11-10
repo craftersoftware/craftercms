@@ -16,9 +16,8 @@
 
 import React, { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { getZoneMarkerStyle } from '../utils/dom';
-import { Box, Paper, Popper, Theme, Typography, useTheme } from '@mui/material';
-import { SxProps } from '@mui/system';
-import { FullSxRecord, PartialClassRecord, PartialSxRecord } from '@craftercms/studio-ui/models/CustomRecord';
+import { Box, Paper, Popper, Typography, useTheme, type SxProps, type Theme } from '@mui/material';
+import { PartialClassRecord } from '@craftercms/studio-ui/models/CustomRecord';
 import LevelDescriptorIcon from '@craftercms/studio-ui/icons/LevelDescriptor';
 import FieldIcon from '@craftercms/studio-ui/icons/ContentTypeField';
 import LockedStateIcon from '@craftercms/studio-ui/icons/Lock';
@@ -49,9 +48,9 @@ const AllowedTypeCircle = styled('div')({
 
 export type ZoneMarkerClassKey = 'box' | 'paper' | 'icon' | 'tooltip' | 'menuItemsContainer';
 
-export type ZoneMarkerFullSx = FullSxRecord<ZoneMarkerClassKey>;
+export type ZoneMarkerFullSx = Record<ZoneMarkerClassKey, SxProps<Theme>>;
 
-export type ZoneMarkerPartialSx = PartialSxRecord<ZoneMarkerClassKey>;
+export type ZoneMarkerPartialSx = Partial<Record<ZoneMarkerClassKey, SxProps<Theme>>>;
 
 export interface ZoneMarkerProps {
 	rect: DOMRect;
@@ -185,12 +184,13 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 				>
 					<Paper className={classes?.paper} sx={sx.paper}>
 						<div style={{ display: 'flex', alignItems: 'center' }}>
+							{/* The icon components are typed against the app build's Theme. The guest program augments a second copy. */}
 							{isLockedItem || isStale ? (
-								<LockedStateIcon sx={sx.icon} />
+								<LockedStateIcon sx={sx.icon as React.ComponentProps<typeof LockedStateIcon>['sx']} />
 							) : inherited ? (
-								<LevelDescriptorIcon sx={sx.icon} />
+								<LevelDescriptorIcon sx={sx.icon as React.ComponentProps<typeof LevelDescriptorIcon>['sx']} />
 							) : (
-								<FieldIcon sx={sx.icon} />
+								<FieldIcon sx={sx.icon as React.ComponentProps<typeof FieldIcon>['sx']} />
 							)}
 							<UltraStyledTypography title={label} noWrap sx={{ color: (sx?.paper as SystemCssProperties).color }}>
 								{label}

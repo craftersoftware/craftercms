@@ -32,7 +32,7 @@ import { getStudioPaletteOptions } from './palette.ts';
 
 const SEVERITIES = ['error', 'warning', 'info', 'success'] as const;
 
-// MUI's two label colours: dark.text.primary is rgba(0, 0, 0, 0.87) and light.text.primary is white.
+// MUI's two label colours: dark.text.primary is white and light.text.primary is rgba(0, 0, 0, 0.87).
 const DARK_TEXT = { r: 0, g: 0, b: 0, a: 0.87 };
 const LIGHT_TEXT = '#FFFFFF';
 
@@ -73,19 +73,17 @@ const ratio = (fg: string | { r: number; g: number; b: number }, bg: string) => 
 };
 
 /**
- * MUI 9.5's `getContrastText` at the contrastThreshold 4.5 the theme sets. It tests the dark (black) label
- * first and falls back to the light (white) one:
- *   getContrastRatio(background, dark.text.primary) >= contrastThreshold ? dark : light
- * So white is the check that runs on every dark-mode fill, and black is the fallback. Getting this order
- * wrong would label a mid-tone fill with black when MUI labels it white.
+ * MUI 9.5's `getContrastText` at the contrastThreshold 4.5 the theme sets:
+ *   getContrastRatio(background, dark.text.primary) >= contrastThreshold ? dark.text.primary : light.text.primary
+ * dark.text.primary is white, so white is tested first and the 87% black label is the fallback.
  */
-const contrastText = (background: string) => (ratio(DARK_TEXT, background) >= 4.5 ? DARK_TEXT : LIGHT_TEXT);
+const contrastText = (background: string) => (ratio(LIGHT_TEXT, background) >= 4.5 ? LIGHT_TEXT : DARK_TEXT);
 
 describe('contrastText follows MUI getContrastText', () => {
-	it('checks the dark label first, as MUI does', () => {
-		// #FF7A73: black is 7.6:1, so MUI keeps the dark label rather than switching to white (4.8:1).
+	it('checks the white label first, as MUI does', () => {
+		// #FF7A73: white is 2.54:1, under the threshold, so MUI falls back to the 87% black label (7.23:1).
 		assert.deepEqual(contrastText('#FF7A73'), DARK_TEXT);
-		// #0068DA: black is 3.67:1, under the threshold, so MUI falls back to white (5.26:1).
+		// #0068DA: white is 5.26:1, so MUI keeps white.
 		assert.equal(contrastText('#0068DA'), LIGHT_TEXT);
 	});
 });

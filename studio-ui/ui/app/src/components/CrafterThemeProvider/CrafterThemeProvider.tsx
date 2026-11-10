@@ -155,7 +155,8 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 					styleOverrides: {
 						filled: ({ ownerState, theme }) => {
 							const severity = ownerState.color ?? ownerState.severity;
-							return { backgroundColor: theme.palette[severity]?.main };
+							const colour = paletteColour(theme, severity);
+							return colour ? { backgroundColor: colour.main } : {};
 						}
 					}
 				},

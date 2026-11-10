@@ -41,6 +41,8 @@ export type FieldStateIndicatorProps = {
 	hasValidator: boolean;
 	isValid: boolean;
 	isEmpty: boolean;
+	/** Hidden state words. The table of contents sets this; a field label does not, because the control already exposes required and invalid. */
+	announce?: boolean;
 };
 
 type FieldStateKind = 'complete' | 'required' | 'invalid';
@@ -97,7 +99,9 @@ export function useFieldStateIndicatorProps(
 	const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
 	const value = useAtomValue(valueAtom ?? atoms.valueByFieldId[field.id]);
 	const validityData = useLoadableAtom(validationAtom);
-	const isValid = validityData.state === 'hasData' ? Boolean(validityData.data?.isValid) : true;
+	// Loading counts as valid, matching the previous indicator. A failed validation run is not a pass.
+	const isValid =
+		validityData.state === 'hasData' ? Boolean(validityData.data?.isValid) : validityData.state !== 'hasError';
 	return {
 		loading: validityData.state === 'loading',
 		value,
@@ -111,7 +115,13 @@ export function useFieldStateIndicatorProps(
 	};
 }
 
-export function FieldStateIndicator({ isRequired, hasValidator, isValid, isEmpty }: FieldStateIndicatorProps) {
+export function FieldStateIndicator({
+	isRequired,
+	hasValidator,
+	isValid,
+	isEmpty,
+	announce = true
+}: FieldStateIndicatorProps) {
 	// If there is no requirement and no validator, and the field is empty, do not show any indicator
 	if (!isRequired && !hasValidator && isEmpty) return undefined;
 
@@ -130,10 +140,12 @@ export function FieldStateIndicator({ isRequired, hasValidator, isValid, isEmpty
 				sx={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', lineHeight: 0 }}
 			>
 				<Icon fontSize="small" color={kind === 'complete' ? 'success' : 'error'} aria-hidden />
-				<Box component="span" sx={visuallyHidden}>
-					{', '}
-					<FieldStateMessage kind={kind} />
-				</Box>
+				{announce && (
+					<Box component="span" sx={visuallyHidden}>
+						{', '}
+						<FieldStateMessage kind={kind} />
+					</Box>
+				)}
 			</Box>
 		</Tooltip>
 	);

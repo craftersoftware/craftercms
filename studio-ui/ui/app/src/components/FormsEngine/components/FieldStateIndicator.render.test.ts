@@ -173,6 +173,20 @@ describe('FieldStateIndicator', () => {
 		});
 	}
 
+	it('hides the words when announce is false', async () => {
+		const { host } = await render(
+			createElement(FieldStateIndicator, {
+				isRequired: true,
+				hasValidator: true,
+				isValid: false,
+				isEmpty: true,
+				announce: false
+			})
+		);
+		assert.equal(stateIcon(host)?.getAttribute('data-testid'), 'AsteriskIcon');
+		assert.equal(host.textContent?.includes('Required'), false);
+	});
+
 	it('renders nothing for an empty optional field with no validator', async () => {
 		for (const isValid of [true, false]) {
 			const { host } = await render(
@@ -281,12 +295,13 @@ describe('field label and table of contents', () => {
 			fields: Object.fromEntries(fields.map((field) => [field.id, field])),
 			sections: []
 		};
+		const jotai = createStore();
 		const tree = createElement(
 			ReduxProvider,
 			{ store: reduxStore },
 			createElement(
 				JotaiProvider,
-				{ store: createStore() },
+				{ store: jotai },
 				createElement(
 					StableGlobalContext.Provider,
 					{ value: { formsStackData: [], api: {} } as never },
@@ -333,17 +348,25 @@ describe('field label and table of contents', () => {
 			assert.ok(tocField, entry.id);
 			const labelIndicator = indicatorOf(labelField);
 			const tocIndicator = indicatorOf(tocField);
-			assert.deepEqual(labelIndicator, tocIndicator);
+			assert.equal(labelIndicator.icon, tocIndicator.icon);
 			assert.equal(labelIndicator.icon, entry.icon);
-			assert.equal(labelIndicator.text, entry.text);
+			assert.equal(labelIndicator.text, '');
+			assert.equal(tocIndicator.text, entry.text);
 			if (entry.icon) assert.equal(labelIndicator.ariaHidden, 'true');
 			const label = labelField.querySelector('label') as HTMLElement;
-			assert.equal(spoken(label), entry.spoken);
+			assert.equal(spoken(label), entry.name);
+			assert.equal(label.textContent?.includes(','), false);
 			assert.equal(spoken(tocField), entry.spoken);
 			if (entry.message) {
 				assert.equal(label.textContent?.includes(entry.message), false);
 				assert.equal(labelField.textContent?.includes(entry.message), true);
 			}
 		}
+		const body = labels.querySelector('[data-field-id="required_s"] label') as HTMLElement;
+		assert.equal(spoken(body), 'Body');
+		await act(async () => {
+			jotai.set(valueByFieldId.required_s, 'Hello');
+		});
+		assert.equal(spoken(body), 'Body');
 	});
 });

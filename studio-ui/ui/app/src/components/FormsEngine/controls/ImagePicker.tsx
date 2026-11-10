@@ -23,6 +23,7 @@ import CardMedia from '@mui/material/CardMedia';
 import IconButton from '@mui/material/IconButton';
 import { DeleteOutlined, DownloadOutlined, EditOutlined } from '@mui/icons-material';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { FieldAriaGroup } from '../components/useControlAria';
 import useEnv from '../../../hooks/useEnv';
 import { ControlProps } from '../types';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -165,171 +166,173 @@ export function ImagePicker(props: ImagePickerProps) {
 				{actionMenuItems}
 			</Menu>
 			<FormsEngineField field={field} isValid={rejectedExternalUrl ? false : undefined}>
-				{rejectedExternalUrl && (
-					<Alert
-						severity="error"
-						variant="outlined"
-						sx={{ border: 'none' }}
-						onClose={() => setRejectedExternalUrl(null)}
-					>
-						<FormattedMessage
-							defaultMessage="The image at {url} was not applied."
-							values={{ url: rejectedExternalUrl }}
-						/>{' '}
-						<ImageRestrictionSubtitle restrictions={restrictions} />{' '}
-						<FormattedMessage defaultMessage="External images can't be cropped. Select an image that meets the requirements." />
-					</Alert>
-				)}
-				{hasValue ? (
-					<Card sx={{ display: 'flex' }}>
-						<CardMedia component="img" sx={{ width: '40%' }} image={mediaUrl} alt="" />
-						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
-							<CardContent sx={{ flex: '1 0 auto' }}>
-								<Typography
-									component="div"
-									variant="body1"
-									sx={{
-										marginBottom: 1
-									}}
-								>
-									{value}
-								</Typography>
-								<Typography
-									variant="body2"
-									component="div"
-									color="textSecondary"
-									sx={{
-										marginBottom: 1
-									}}
-								>
-									{isFetchingMetadata ? (
-										<>
+				<FieldAriaGroup>
+					{rejectedExternalUrl && (
+						<Alert
+							severity="error"
+							variant="outlined"
+							sx={{ border: 'none' }}
+							onClose={() => setRejectedExternalUrl(null)}
+						>
+							<FormattedMessage
+								defaultMessage="The image at {url} was not applied."
+								values={{ url: rejectedExternalUrl }}
+							/>{' '}
+							<ImageRestrictionSubtitle restrictions={restrictions} />{' '}
+							<FormattedMessage defaultMessage="External images can't be cropped. Select an image that meets the requirements." />
+						</Alert>
+					)}
+					{hasValue ? (
+						<Card sx={{ display: 'flex' }}>
+							<CardMedia component="img" sx={{ width: '40%' }} image={mediaUrl} alt="" />
+							<Box sx={{ display: 'flex', flexDirection: 'column' }}>
+								<CardContent sx={{ flex: '1 0 auto' }}>
+									<Typography
+										component="div"
+										variant="body1"
+										sx={{
+											marginBottom: 1
+										}}
+									>
+										{value}
+									</Typography>
+									<Typography
+										variant="body2"
+										component="div"
+										color="textSecondary"
+										sx={{
+											marginBottom: 1
+										}}
+									>
+										{isFetchingMetadata ? (
+											<>
+												<Skeleton variant="text" />
+												<Skeleton variant="text" />
+											</>
+										) : errorMetadata ? (
+											<Typography color="error" variant="body2">
+												<FormattedMessage defaultMessage="Error loading image metadata" />
+											</Typography>
+										) : (
+											<>
+												{imageInfo?.contentType}
+												<br />
+												{imageInfo?.size ? `${imageInfo.size} Kb` : ''}
+												<br />
+											</>
+										)}
+										{isFetchingDimensions ? (
 											<Skeleton variant="text" />
-											<Skeleton variant="text" />
-										</>
-									) : errorMetadata ? (
-										<Typography color="error" variant="body2">
-											<FormattedMessage defaultMessage="Error loading image metadata" />
-										</Typography>
-									) : (
+										) : errorDimensions ? (
+											<Typography color="error" variant="body2">
+												<FormattedMessage defaultMessage="Error loading image dimensions" />
+											</Typography>
+										) : (
+											`${imageInfo?.width} x ${imageInfo?.height}`
+										)}
+									</Typography>
+									{Object.values(restrictions).some((restriction) => restriction) && (
 										<>
-											{imageInfo?.contentType}
-											<br />
-											{imageInfo?.size ? `${imageInfo.size} Kb` : ''}
-											<br />
+											<Typography
+												variant="caption"
+												sx={{
+													fontWeight: 'bold'
+												}}
+											>
+												<FormattedMessage defaultMessage="Image Requirements:" />
+											</Typography>
+											<Typography
+												variant="caption"
+												component="div"
+												color="textSecondary"
+												sx={{
+													marginBottom: 1
+												}}
+											>
+												<FormattedMessage defaultMessage="Width: " />
+												{imageRestrictionMessages.width}
+												<br />
+												<FormattedMessage defaultMessage="Height:" />
+												{imageRestrictionMessages.height}
+											</Typography>
 										</>
 									)}
-									{isFetchingDimensions ? (
-										<Skeleton variant="text" />
-									) : errorDimensions ? (
-										<Typography color="error" variant="body2">
-											<FormattedMessage defaultMessage="Error loading image dimensions" />
-										</Typography>
-									) : (
-										`${imageInfo?.width} x ${imageInfo?.height}`
-									)}
-								</Typography>
-								{Object.values(restrictions).some((restriction) => restriction) && (
-									<>
-										<Typography
-											variant="caption"
-											sx={{
-												fontWeight: 'bold'
-											}}
-										>
-											<FormattedMessage defaultMessage="Image Requirements:" />
-										</Typography>
-										<Typography
-											variant="caption"
-											component="div"
-											color="textSecondary"
-											sx={{
-												marginBottom: 1
-											}}
-										>
-											<FormattedMessage defaultMessage="Width: " />
-											{imageRestrictionMessages.width}
-											<br />
-											<FormattedMessage defaultMessage="Height:" />
-											{imageRestrictionMessages.height}
-										</Typography>
-									</>
-								)}
-								<Box>
-									<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
-										<IconButton
-											size="small"
-											disabled={readonly || !actionsReady}
-											autoFocus={autoFocus}
-											onClick={(event) => {
-												if (actionsReady) {
-													setAnchorEl(event.currentTarget);
-													setAddMenuOpen(true);
-												}
-											}}
-										>
-											<EditOutlined />
-										</IconButton>
-									</Tooltip>
-									<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
-										<IconButton
-											size="small"
-											onClick={() => {
-												if (value) downloadMedia(guestBase, value);
-											}}
-										>
-											<DownloadOutlined />
-										</IconButton>
-									</Tooltip>
-									<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
-										<IconButton size="small" onClick={handleRemoveImage} disabled={readonly}>
-											<DeleteOutlined />
-										</IconButton>
-									</Tooltip>
-								</Box>
-							</CardContent>
-						</Box>
-					</Card>
-				) : dataSourcesLoading ? (
-					<Skeleton variant="rounded" height={56} />
-				) : dataSourcesError ? (
-					<Typography color="error" variant="body2">
-						<FormattedMessage defaultMessage="Error loading image sources" />
-					</Typography>
-				) : !actionsReady ? (
-					<EmptyState
-						title={<FormattedMessage defaultMessage="No options are available for this control" />}
-						subtitle={
-							<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
-						}
-					/>
-				) : (
-					<Box
-						sx={{
-							p: 1,
-							gap: 1,
-							py: 0.5,
-							display: 'flex',
-							flexDirection: 'row',
-							flexWrap: 'wrap',
-							color: 'primary.main',
-							justifyContent: 'center',
-							[`.${svgIconClasses.root}`]: {
-								color: 'primary.main'
-							},
-							[`.${menuItemClasses.root}`]: {
-								flexDirection: 'column',
-								justifyContent: 'center',
-								borderRadius: 1
-							},
-							[`.${listItemIconClasses.root}`]: {
-								justifyContent: 'center'
+									<Box>
+										<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+											<IconButton
+												size="small"
+												disabled={readonly || !actionsReady}
+												autoFocus={autoFocus}
+												onClick={(event) => {
+													if (actionsReady) {
+														setAnchorEl(event.currentTarget);
+														setAddMenuOpen(true);
+													}
+												}}
+											>
+												<EditOutlined />
+											</IconButton>
+										</Tooltip>
+										<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
+											<IconButton
+												size="small"
+												onClick={() => {
+													if (value) downloadMedia(guestBase, value);
+												}}
+											>
+												<DownloadOutlined />
+											</IconButton>
+										</Tooltip>
+										<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+											<IconButton size="small" onClick={handleRemoveImage} disabled={readonly}>
+												<DeleteOutlined />
+											</IconButton>
+										</Tooltip>
+									</Box>
+								</CardContent>
+							</Box>
+						</Card>
+					) : dataSourcesLoading ? (
+						<Skeleton variant="rounded" height={56} />
+					) : dataSourcesError ? (
+						<Typography color="error" variant="body2">
+							<FormattedMessage defaultMessage="Error loading image sources" />
+						</Typography>
+					) : !actionsReady ? (
+						<EmptyState
+							title={<FormattedMessage defaultMessage="No options are available for this control" />}
+							subtitle={
+								<FormattedMessage defaultMessage="Update the content type definition to add options to this control" />
 							}
-						}}
-					>
-						<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{actionMenuItems}</MenuList>
-					</Box>
-				)}
+						/>
+					) : (
+						<Box
+							sx={{
+								p: 1,
+								gap: 1,
+								py: 0.5,
+								display: 'flex',
+								flexDirection: 'row',
+								flexWrap: 'wrap',
+								color: 'primary.main',
+								justifyContent: 'center',
+								[`.${svgIconClasses.root}`]: {
+									color: 'primary.main'
+								},
+								[`.${menuItemClasses.root}`]: {
+									flexDirection: 'column',
+									justifyContent: 'center',
+									borderRadius: 1
+								},
+								[`.${listItemIconClasses.root}`]: {
+									justifyContent: 'center'
+								}
+							}}
+						>
+							<MenuList sx={{ display: 'flex', flexDirection: 'row' }}>{actionMenuItems}</MenuList>
+						</Box>
+					)}
+				</FieldAriaGroup>
 			</FormsEngineField>
 		</>
 	);

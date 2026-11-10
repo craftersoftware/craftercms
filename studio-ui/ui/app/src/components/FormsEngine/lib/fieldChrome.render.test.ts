@@ -184,7 +184,7 @@ describe('plugin control field chrome', () => {
 		const wrappers = host.querySelectorAll('[data-field-id="thing_s"]');
 		assert.equal(wrappers.length, 1);
 		const label = wrappers[0].querySelector('label') as HTMLLabelElement;
-		assert.equal(label.textContent?.trim(), 'Label of thing_s, Complete');
+		assert.equal(label.textContent?.trim(), 'Label of thing_s');
 		const input = host.querySelector('[data-probe="thing_s"]') as HTMLInputElement;
 		assert.ok(wrappers[0].contains(input));
 		assert.equal(label.htmlFor, input.id);

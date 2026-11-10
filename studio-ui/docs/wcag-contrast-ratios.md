@@ -254,7 +254,7 @@ Zone marker label chips use `palette.highlightText` (`#121212`) on the `.light` 
 
 ## Guest overlay boundaries (experience builder)
 
-Zone markers and drop markers are drawn over the page the developer authored, so the Studio mode says nothing about the colour underneath. The boundary is therefore not the state colour: `ui/app/src/styles/overlayStroke.ts` stacks a white band, a black band and then the state colour inwards from the edge. One of the two bands is always at least 4.57:1 against the page (the worst case is a mid grey), and the state colour sits on the black band.
+Zone markers and drop markers are drawn over the page the developer authored, so the Studio mode says nothing about the colour underneath. The boundary is therefore not the state colour: `ui/app/src/styles/overlayStroke.ts` stacks a white band, a black band and then the state colour inwards from the edge. One of the two bands is always at least 4.57:1 against the page (the worst case is a mid-grey), and the state colour sits on the black band.
 
 | Authored page | white band | black band | Best band 3:1 |
 | ------------- | ---------- | ---------- | ------------- |

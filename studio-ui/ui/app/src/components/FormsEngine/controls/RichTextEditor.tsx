@@ -16,6 +16,7 @@
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { FieldAriaGroup } from '../components/useControlAria';
 import { ControlProps } from '../types';
 import useRTEConfig from '../../../hooks/useRTEConfig';
 import { initRichTextEditorConfig } from '../../../state/actions/preview';
@@ -140,36 +141,38 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				}
 			}}
 		>
-			<Editor
-				licenseKey="gpl"
-				init={getTinyMceInitOptions(
-					field,
-					rteConfig,
-					locale,
-					defaultInitOptions,
-					dataSources,
-					openDataSourcePicker,
-					(editor) => {
-						editor.on('OpenWindow', () => {
-							setDisableEnforceFocus?.(true);
+			<FieldAriaGroup>
+				<Editor
+					licenseKey="gpl"
+					init={getTinyMceInitOptions(
+						field,
+						rteConfig,
+						locale,
+						defaultInitOptions,
+						dataSources,
+						openDataSourcePicker,
+						(editor) => {
+							editor.on('OpenWindow', () => {
+								setDisableEnforceFocus?.(true);
+							});
+							editor.on('CloseWindow', () => {
+								setDisableEnforceFocus?.(false);
+							});
+						}
+					)}
+					tinymceScriptSrc={tinymceScriptSrc}
+					onEditorChange={handleChange}
+					value={value}
+					ref={editorRef}
+					onInit={(event, editor) => {
+						setCurrentLength(editor.getContent({ format: 'text' }).length);
+						editor.once('focus', () => {
+							hasReceivedFocusRef.current = true;
 						});
-						editor.on('CloseWindow', () => {
-							setDisableEnforceFocus?.(false);
-						});
-					}
-				)}
-				tinymceScriptSrc={tinymceScriptSrc}
-				onEditorChange={handleChange}
-				value={value}
-				ref={editorRef}
-				onInit={(event, editor) => {
-					setCurrentLength(editor.getContent({ format: 'text' }).length);
-					editor.once('focus', () => {
-						hasReceivedFocusRef.current = true;
-					});
-				}}
-				disabled={readonly}
-			/>
+					}}
+					disabled={readonly}
+				/>
+			</FieldAriaGroup>
 			<Dialog open={Boolean(dataSourcePicker)} onClose={() => setDataSourcePicker(null)} fullWidth maxWidth="xs">
 				<DialogHeader
 					title={<FormattedMessage defaultMessage="Choose how to add media" />}

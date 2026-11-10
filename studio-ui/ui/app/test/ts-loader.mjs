@@ -68,13 +68,9 @@ function resolveSpecifier(specifier, context, nextResolve) {
 	}
 }
 
-// registerHooks calls resolve synchronously. formatjs also requires resolveSync.
+// registerHooks calls this synchronously, including for require() from babel-plugin-formatjs.
 export function resolve(specifier, context, nextResolve) {
 	return resolveSpecifier(specifier, context, nextResolve);
-}
-
-export function resolveSync(specifier, context, nextResolveSync) {
-	return resolveSpecifier(specifier, context, nextResolveSync);
 }
 
 export function load(url, context, nextLoad) {

@@ -16,9 +16,12 @@
 
 import Box, { BoxProps } from '@mui/material/Box';
 import { consolidateSx } from '../../../utils/system';
+import { useControlAria } from './useControlAria';
 
 export const FieldBox = ({ dashed, sx, ...boxProps }: BoxProps & { dashed?: boolean }) => (
 	<Box
+		role="group"
+		{...useControlAria()}
 		{...boxProps}
 		sx={consolidateSx(
 			{

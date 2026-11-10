@@ -96,7 +96,7 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 				bgcolor: (theme) => theme.palette.grey[400],
 				color: palette.highlightText
 			},
-			box: getOverlayBoundarySx((theme) => theme.palette.border.control)
+			box: getOverlayBoundarySx(() => palette.gray.medium3)
 		}
 	},
 	dropMarker: {

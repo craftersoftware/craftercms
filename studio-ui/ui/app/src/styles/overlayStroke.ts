@@ -29,7 +29,7 @@ import type { CSSObject } from '@mui/material/styles';
  *   page | white 1px | black 1px | state colour 2px
  *
  * Whatever the page colour, one of the white and the black band is at least 4.57:1 against it (the worst
- * case is a mid grey), so the boundary is always visible. The state colour sits on the black band, where
+ * case is a mid-grey), so the boundary is always visible. The state colour sits on the black band, where
  * every guest state colour reaches at least 3.99:1, so it keeps its hue and its meaning.
  *
  * This is not the focus ring. The focus ring is styles/focusRing.ts: it marks the keyboard caret on Studio

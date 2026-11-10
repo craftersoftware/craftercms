@@ -15,7 +15,7 @@
  */
 
 import { registerHooks } from 'node:module';
-import { load, resolve, resolveSync } from './ts-loader.mjs';
+import { load, resolve } from './ts-loader.mjs';
 
-// register() does not install resolveSync. formatjs needs it for its synchronous require.
-registerHooks({ load, resolve, resolveSync });
+// registerHooks installs synchronous hooks, which also apply to require() (babel-plugin-formatjs uses it). Node >= 22.15.
+registerHooks({ load, resolve });
