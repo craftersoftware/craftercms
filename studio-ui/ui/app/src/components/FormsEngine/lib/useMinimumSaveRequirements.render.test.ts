@@ -17,6 +17,7 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
+import type { FieldUpdate } from './formsEngineContext.ts';
 import { afterEach, describe, it } from 'node:test';
 
 const React = await import('react');
@@ -55,7 +56,7 @@ afterEach(async () => {
 async function renderHook(
 	form: ReturnType<typeof createFormAtoms> | null,
 	flags: { isRepeatMode: boolean; isEmbedded: boolean },
-	fieldUpdates$?: InstanceType<typeof Subject<string>>
+	fieldUpdates$?: InstanceType<typeof Subject<FieldUpdate>>
 ) {
 	const results: string[][] = [];
 	function Probe() {
@@ -123,13 +124,13 @@ describe('useMinimumSaveRequirements', () => {
 
 	it('re-reads after a field update once the edit pause has passed', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: '' });
-		const fieldUpdates$ = new Subject<string>();
+		const fieldUpdates$ = new Subject<FieldUpdate>();
 		const { latest } = await renderHook(form, full, fieldUpdates$);
 		assert.deepEqual(latest(), ['internalName']);
 
 		await act(async () => {
 			form.store.set(form.internalName, 'Home');
-			fieldUpdates$.next('internal-name');
+			fieldUpdates$.next({ fieldId: 'internal-name' });
 		});
 		assert.deepEqual(latest(), ['internalName'], 'still the old read inside the pause');
 
@@ -140,7 +141,7 @@ describe('useMinimumSaveRequirements', () => {
 
 		await act(async () => {
 			form.store.set(form.internalName, '  ');
-			fieldUpdates$.next('internal-name');
+			fieldUpdates$.next({ fieldId: 'internal-name' });
 			await pause(debounceWait);
 		});
 		assert.deepEqual(latest(), ['internalName']);
@@ -148,11 +149,11 @@ describe('useMinimumSaveRequirements', () => {
 
 	it('keeps the same list when a re-read finds nothing new', async () => {
 		const form = createFormAtoms({ fileNameValid: true, internalName: '' });
-		const fieldUpdates$ = new Subject<string>();
+		const fieldUpdates$ = new Subject<FieldUpdate>();
 		const { latest } = await renderHook(form, full, fieldUpdates$);
 		const before = latest();
 		await act(async () => {
-			fieldUpdates$.next('title');
+			fieldUpdates$.next({ fieldId: 'title' });
 			await pause(debounceWait);
 		});
 		assert.equal(latest(), before);
