@@ -769,23 +769,6 @@ export function missedItemLaunch(
 	return { reveal, warning };
 }
 
-export type InvalidFieldReadSettlement = 'apply' | 'report' | 'ignore';
-
-/**
- * A current validity read replaces the invalid-field ids.
- * A current rejection is reported and the last ids stay.
- * A stale read, including a rejection that lost the race, is ignored so it cannot replace a newer result.
- */
-export function settleInvalidFieldRead(args: {
-	disposed: boolean;
-	seq: number;
-	latest: number;
-	rejected: boolean;
-}): InvalidFieldReadSettlement {
-	if (args.disposed || args.seq !== args.latest) return 'ignore';
-	return args.rejected ? 'report' : 'apply';
-}
-
 export type SaveRevealDecision =
 	{ status: 'revealed'; reveal: HiddenInvalidReveal } | { status: 'invalid' } | { status: 'write' };
 
