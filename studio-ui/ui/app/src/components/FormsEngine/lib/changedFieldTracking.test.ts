@@ -54,7 +54,7 @@ function openForm() {
 		context.atoms.validationByFieldId[field.id] = validationAtom;
 	}
 	const emitted: string[] = [];
-	context.fieldUpdates$.subscribe((id) => emitted.push(id));
+	context.fieldUpdates$.subscribe((update) => emitted.push(update.fieldId));
 	const changed = () => store.get(context.changedFieldIds);
 	return { store, context, valueAtoms, emitted, changed };
 }
@@ -184,7 +184,7 @@ describe('onFieldChange', () => {
 			isEmbedded: false,
 			fieldUpdates$: form.context.fieldUpdates$,
 			dispatch: (() => undefined) as never,
-			fieldChangeUnsubscribers: new Set(),
+			fieldChangeTeardowns: new Set(),
 			isDisposed: () => false
 		});
 	}
@@ -241,7 +241,7 @@ describe('controller setValue on a repeat row', () => {
 			isEmbedded: false,
 			fieldUpdates$: createFormStackData({ itemMeta: {} as never, originalValues: {} }).fieldUpdates$,
 			dispatch: (() => undefined) as never,
-			fieldChangeUnsubscribers: new Set(),
+			fieldChangeTeardowns: new Set(),
 			isDisposed: () => false
 		});
 		return { store, rows, rowsAtom, context, keys: repeatItemKeysFor<Record<string, unknown>>(rowsAtom) };
