@@ -73,4 +73,29 @@ describe('invalidFieldIdsAtom', () => {
 		store.set(title, 'ok');
 		assert.deepEqual(await store.get(idsAtom), []);
 	});
+
+	it('keeps the same array when a recompute leaves membership unchanged', async () => {
+		const title = atom('bad');
+		const tick = atom(0);
+		const validation = atom(async (get) => {
+			get(tick);
+			return { isValid: get(title) !== 'bad' };
+		});
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			validationByFieldId: { title_s: validation }
+		} as never;
+		const store = createStore();
+		const idsAtom = invalidFieldIdsAtom(entry);
+		const first = await store.get(idsAtom);
+		assert.deepEqual(first, ['title_s']);
+		store.set(tick, 1);
+		assert.equal(await store.get(idsAtom), first);
+		store.set(title, 'ok');
+		const empty = await store.get(idsAtom);
+		assert.deepEqual(empty, []);
+		store.set(tick, 2);
+		assert.equal(await store.get(idsAtom), empty);
+	});
 });

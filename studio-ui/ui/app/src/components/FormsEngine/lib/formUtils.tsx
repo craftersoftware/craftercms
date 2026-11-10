@@ -771,8 +771,16 @@ export async function readInvalidFieldIds(
 	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
 }
 
-const emptyInvalidFieldIds: Atom<Promise<string[]>> = atom(Promise.resolve([] as string[]));
+/** Shared "nothing invalid" list. Returned whenever the derived ids are empty so subscribers see one reference. */
+const EMPTY_INVALID_FIELD_IDS: string[] = Object.freeze([]) as string[];
+
+const emptyInvalidFieldIds: Atom<Promise<string[]>> = atom(Promise.resolve(EMPTY_INVALID_FIELD_IDS));
 const invalidFieldIdsAtomsByAtoms = new WeakMap<FormsEngineAtoms, Map<string, Atom<Promise<string[]>>>>();
+
+/** Whether both lists hold the same ids in the same order. */
+function sameInvalidFieldIds(left: readonly string[], right: readonly string[]): boolean {
+	return left.length === right.length && left.every((id, index) => id === right[index]);
+}
 
 /**
  * Invalid field ids for a form entry, derived from its validation atoms. Cached per entry and `parentPath`
@@ -780,6 +788,9 @@ const invalidFieldIdsAtomsByAtoms = new WeakMap<FormsEngineAtoms, Map<string, At
  * Recomputes when a validation result or {@link FormsEngineAtoms.relevanceVersion} changes; no `fieldUpdates$`.
  * The deny-list is read live from the entry. Pass the same `parentPath` the imperative read would use
  * (`repeat?.fieldId` for a repeat item; `undefined` for a parent form read).
+ *
+ * Returns the previous array when membership is unchanged (and a shared empty array when empty), so a settled edit
+ * that does not flip validity notifies nothing — same idea as {@link withChangedField}.
  */
 export function invalidFieldIdsAtom(
 	entry: StableFormContextProps | null | undefined,
@@ -795,9 +806,13 @@ export function invalidFieldIdsAtom(
 	}
 	let idsAtom = byPath.get(pathKey);
 	if (!idsAtom) {
+		let previous = EMPTY_INVALID_FIELD_IDS;
 		idsAtom = atom(async (get) => {
 			const atoms = entry.atoms;
-			if (!atoms) return [];
+			if (!atoms) {
+				previous = EMPTY_INVALID_FIELD_IDS;
+				return previous;
+			}
 			get(atoms.relevanceVersion);
 			const fields = relevantFieldValidations(
 				atoms.validationByFieldId,
@@ -805,7 +820,10 @@ export function invalidFieldIdsAtom(
 				parentPath
 			);
 			const states = await Promise.all(fields.map(({ atom: validityAtom }) => get(validityAtom)));
-			return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
+			const next = fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
+			if (sameInvalidFieldIds(previous, next)) return previous;
+			previous = next.length === 0 ? EMPTY_INVALID_FIELD_IDS : next;
+			return previous;
 		});
 		byPath.set(pathKey, idsAtom);
 	}
