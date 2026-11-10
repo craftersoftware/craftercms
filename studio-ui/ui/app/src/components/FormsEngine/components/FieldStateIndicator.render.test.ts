@@ -182,6 +182,7 @@ describe('FieldStateIndicator', () => {
 				assert.doesNotMatch(icon.getAttribute('fill') ?? '', /^#/);
 			}
 			assert.ok(icons[0].classList.contains(entry.colour));
+			assert.equal(host.querySelector('[aria-label]'), null);
 			assert.equal(icons[0].parentElement?.tagName, 'SPAN');
 			const badge = icons[1];
 			if (badge) {
@@ -418,6 +419,8 @@ describe('field label and table of contents', () => {
 			assert.equal(spoken(label), entry.name);
 			assert.equal(label.textContent?.includes(','), false);
 			assert.equal(spoken(tocField), entry.spoken);
+			assert.equal(labelField.querySelector('[aria-label]'), null);
+			assert.equal(tocField.querySelector('[aria-label]'), null);
 			if (entry.message) {
 				assert.equal(label.textContent?.includes(entry.message), false);
 				assert.equal(labelField.textContent?.includes(entry.message), true);

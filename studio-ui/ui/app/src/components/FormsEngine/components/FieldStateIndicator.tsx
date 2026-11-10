@@ -207,7 +207,7 @@ export function FieldStateIndicator({
 	const detailText = detail ? translateValidityMessage(detail, formatMessage) : undefined;
 	const words = stateWords(kind, isRequired, detailText, formatMessage);
 	return (
-		<Tooltip title={words}>
+		<Tooltip title={<>{words}</>}>
 			{/*
 			 * A span holds the tooltip ref. The icons are hidden from assistive tech; the same words are the
 			 * tooltip and, in the table of contents, the entry's name. The badge asterisk is not a second "required".
