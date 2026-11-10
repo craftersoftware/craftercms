@@ -46,6 +46,17 @@ const selectedBar = {
 	}
 };
 
+/**
+ * The palette entry for a component's `color` prop, or undefined when there is none. A plugin can pass a
+ * colour name through the `*PropsColorOverrides` augmentation without registering a palette entry, and
+ * MUI's own variants skip such a name (`createSimplePaletteValueFilter`). Reading `.main` off it here would
+ * throw, so the overrides fall through to MUI's default styling instead, the same way `MuiAlert` does.
+ */
+function paletteColour(theme: Theme, color: string | undefined) {
+	const entry = theme.palette[color ?? 'primary'];
+	return entry && typeof entry.main === 'string' ? entry : undefined;
+}
+
 export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 	const enableAnimations = useEnableAnimations();
@@ -96,7 +107,7 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 								backgroundColor:
 									ownerState.color === 'default'
 										? theme.palette.text.secondary
-										: theme.palette[ownerState.color ?? 'primary'].main
+										: paletteColour(theme, ownerState.color)?.main
 							}
 						}),
 						switchBase: ({ theme }) => ({
@@ -110,23 +121,30 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 						// MUI darkens the fill on hover. Dark text on the darkened tint is 3.9:1, so lighten it instead.
 						contained: ({ ownerState, theme }) =>
 							theme.palette.mode === 'dark' &&
-							ownerState.color !== 'inherit' && {
+							ownerState.color !== 'inherit' &&
+							paletteColour(theme, ownerState.color) && {
 								'@media (hover: hover)': {
-									'&:hover': { '--variant-containedBg': theme.palette[ownerState.color ?? 'primary'].light }
+									'&:hover': { '--variant-containedBg': paletteColour(theme, ownerState.color).light }
 								}
 							},
-						outlined: ({ ownerState, theme }) => ({
-							borderColor:
-								ownerState.color === 'inherit' ? 'currentColor' : theme.palette[ownerState.color ?? 'primary'].main
-						})
+						outlined: ({ ownerState, theme }) => {
+							if (ownerState.color === 'inherit') {
+								return { borderColor: 'currentColor' };
+							}
+							const colour = paletteColour(theme, ownerState.color);
+							return colour ? { borderColor: colour.main } : {};
+						}
 					}
 				},
 				MuiChip: {
 					styleOverrides: {
-						outlined: ({ ownerState, theme }) => ({
-							borderColor:
-								ownerState.color === 'default' ? theme.palette.border.control : theme.palette[ownerState.color].main
-						})
+						outlined: ({ ownerState, theme }) => {
+							if (ownerState.color === 'default') {
+								return { borderColor: theme.palette.border.control };
+							}
+							const colour = paletteColour(theme, ownerState.color);
+							return colour ? { borderColor: colour.main } : {};
+						}
 					}
 				},
 				// MUI fills a dark-mode Alert with palette[severity].dark but takes the label colour from .main,
