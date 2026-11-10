@@ -57,18 +57,12 @@ const reduxStore = configureStore({
 	}
 });
 
-// The test build adds no message ids, and react-intl throws on a descriptor without one. Fill `{name}` style
-// placeholders so the position announcement can be read; ICU plurals are left as written.
+// The test loader precompiles messages, so format them instead of returning the AST.
 const baseIntl = createIntl({ locale: 'en', onError: () => undefined });
 const intl = {
 	...baseIntl,
-	formatMessage: (descriptor: { defaultMessage?: string }, values?: Record<string, unknown>) => {
-		const template = String(descriptor.defaultMessage ?? '');
-		if (!values) return template;
-		return template.replace(/\{(\w+)\}/g, (token, key) =>
-			Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : token
-		);
-	}
+	formatMessage: (descriptor: { id?: string; defaultMessage?: unknown }, values?: Record<string, unknown>) =>
+		baseIntl.formatMessage(descriptor as never, values as never)
 };
 
 const field = {

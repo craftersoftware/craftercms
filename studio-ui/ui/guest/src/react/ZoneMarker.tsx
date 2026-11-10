@@ -16,14 +16,14 @@
 
 import React, { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { getZoneMarkerStyle } from '../utils/dom';
-import { Box, Paper, Popper, Theme, Typography, useTheme } from '@mui/material';
-import { SxProps } from '@mui/system';
-import { FullSxRecord, PartialClassRecord, PartialSxRecord } from '@craftercms/studio-ui/models/CustomRecord';
+import { Box, Paper, Popper, Typography, useTheme, type SxProps, type Theme } from '@mui/material';
+import { PartialClassRecord } from '@craftercms/studio-ui/models/CustomRecord';
 import LevelDescriptorIcon from '@craftercms/studio-ui/icons/LevelDescriptor';
 import FieldIcon from '@craftercms/studio-ui/icons/ContentTypeField';
 import LockedStateIcon from '@craftercms/studio-ui/icons/Lock';
 import Person from '@craftercms/studio-ui/models/Person';
 import { darken, styled } from '@mui/material/styles';
+import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import LookupTable from '@craftercms/studio-ui/src/models/LookupTable';
 import AllowedContentTypesData from '@craftercms/studio-ui/models/AllowedContentTypesData';
 import { ContentType, ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
@@ -48,15 +48,18 @@ const AllowedTypeCircle = styled('div')({
 
 export type ZoneMarkerClassKey = 'box' | 'paper' | 'icon' | 'tooltip' | 'menuItemsContainer';
 
-export type ZoneMarkerFullSx = FullSxRecord<ZoneMarkerClassKey>;
+export type ZoneMarkerFullSx = Record<ZoneMarkerClassKey, SxProps<Theme>>;
 
-export type ZoneMarkerPartialSx = PartialSxRecord<ZoneMarkerClassKey>;
+export type ZoneMarkerPartialSx = Partial<Record<ZoneMarkerClassKey, SxProps<Theme>>>;
 
 export interface ZoneMarkerProps {
 	rect: DOMRect;
 	label: string;
 	inherited: boolean;
 	showZoneTooltip?: boolean;
+	hasFailedRequired?: boolean;
+	/** The item count has reached this field's maximum, a different message from a missing minimum. */
+	hasReachedMaxCount?: boolean;
 	menuItems?: ReactNode;
 	lockInfo?: Person;
 	isStale?: boolean;
@@ -71,17 +74,19 @@ export interface ZoneMarkerProps {
 }
 
 function getStyles(sx: ZoneMarkerPartialSx): ZoneMarkerFullSx {
+	// The boundary is drawn on the authored page, so it cannot follow the Studio mode (a dark-mode light
+	// blue is 2.54:1 on a white page). The companion bands make it background-independent; see
+	// styles/overlayStroke.ts. The default is the select-mode colour; src/styles/styles.ts sets each state.
+	// A list, not a spread: the state colour arrives as an sx callback, and spreading a callback yields {}.
+	const boxDefaults = {
+		boxSizing: 'border-box' as const,
+		textAlign: 'center' as const,
+		position: 'absolute' as const,
+		zIndex: 'tooltip',
+		pointerEvents: 'none' as const
+	};
 	return {
-		box: {
-			boxSizing: 'border-box',
-			outline: (theme) => `2px solid ${theme.palette.success.main}`,
-			outlineOffset: '-2px',
-			textAlign: 'center',
-			position: 'absolute',
-			zIndex: 'tooltip',
-			pointerEvents: 'none',
-			...sx?.box
-		},
+		box: [boxDefaults, getOverlayBoundarySx((theme) => theme.palette.success.main), ...(sx?.box ? [sx.box] : [])],
 		paper: {
 			padding: [0.5, 1],
 			fontSize: '14px',
@@ -124,6 +129,8 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 		label,
 		classes,
 		inherited,
+		hasFailedRequired = false,
+		hasReachedMaxCount = false,
 		menuItems,
 		showZoneTooltip = true,
 		onPopperClick,
@@ -177,12 +184,13 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 				>
 					<Paper className={classes?.paper} sx={sx.paper}>
 						<div style={{ display: 'flex', alignItems: 'center' }}>
+							{/* The icon components are typed against the app build's Theme. The guest program augments a second copy. */}
 							{isLockedItem || isStale ? (
-								<LockedStateIcon sx={sx.icon} />
+								<LockedStateIcon sx={sx.icon as React.ComponentProps<typeof LockedStateIcon>['sx']} />
 							) : inherited ? (
-								<LevelDescriptorIcon sx={sx.icon} />
+								<LevelDescriptorIcon sx={sx.icon as React.ComponentProps<typeof LevelDescriptorIcon>['sx']} />
 							) : (
-								<FieldIcon sx={sx.icon} />
+								<FieldIcon sx={sx.icon as React.ComponentProps<typeof FieldIcon>['sx']} />
 							)}
 							<UltraStyledTypography title={label} noWrap sx={{ color: (sx?.paper as SystemCssProperties).color }}>
 								{label}
@@ -261,6 +269,16 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 									id="zoneMarker.modifiedItem"
 									defaultMessage="Item was modified. Refresh to enable editing."
 								/>
+							</Typography>
+						)}
+						{hasFailedRequired && !isLockedItem && isEditable && !isStale && (
+							<Typography noWrap variant="body2" component="div">
+								<FormattedMessage id="zoneMarker.required" defaultMessage="Required" />
+							</Typography>
+						)}
+						{hasReachedMaxCount && !hasFailedRequired && !isLockedItem && isEditable && !isStale && (
+							<Typography noWrap variant="body2" component="div">
+								<FormattedMessage id="zoneMarker.maxCountReached" defaultMessage="Maximum reached" />
 							</Typography>
 						)}
 						{menuItems && <Box sx={sx.menuItemsContainer}>{menuItems}</Box>}
