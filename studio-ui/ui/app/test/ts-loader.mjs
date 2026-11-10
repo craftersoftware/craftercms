@@ -51,7 +51,14 @@ export async function resolve(specifier, context, nextResolve) {
 		const file = resolveFile(path.resolve(path.dirname(parent), specifier));
 		if (file) return { url: pathToFileURL(file).href, shortCircuit: true };
 	}
-	return nextResolve(specifier, context);
+	try {
+		return await nextResolve(specifier, context);
+	} catch (error) {
+		// Some packages ship directory entry points that only CommonJS resolution understands.
+		if (error?.code !== 'ERR_UNSUPPORTED_DIR_IMPORT' || !context.parentURL?.startsWith('file:')) throw error;
+		const resolved = createRequire(context.parentURL).resolve(specifier);
+		return { url: pathToFileURL(resolved).href, shortCircuit: true };
+	}
 }
 
 export async function load(url, context, nextLoad) {

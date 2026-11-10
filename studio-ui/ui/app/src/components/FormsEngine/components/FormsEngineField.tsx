@@ -28,7 +28,6 @@ import FormHelperText from '@mui/material/FormHelperText';
 import React, { forwardRef, PropsWithChildren, ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { isEmptyValue, isFieldRequired } from '../lib/validators';
 import FormLabel from '@mui/material/FormLabel';
-import useItemsByPath from '../../../hooks/useItemsByPath';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
 import Menu from '@mui/material/Menu';
@@ -52,6 +51,7 @@ import { mergeSx } from '../lib/mergeSx';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useDispatch } from 'react-redux';
+import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 
@@ -142,12 +142,17 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const formApi = useFormApiContext();
 	const globalApi = useStableGlobalApiContext();
 	const { formatMessage } = useIntl();
-	const itemsByPath = useItemsByPath();
+	const fieldId = field.id;
+	const sourcePath = fieldId !== XmlKeys['fileName'] ? sourceMap?.[fieldId] : undefined;
+	// Subscribe to the one source item's label rather than the whole `itemsByPath` slice, so unrelated item updates
+	// don't re-render every field.
+	const sourceLabel = useSelection<string | undefined>((state) =>
+		sourcePath ? state.content.itemsByPath[sourcePath]?.label : undefined
+	);
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
-	const fieldId = field.id;
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id));
 	const hasHelpText = Boolean(field.helpText);
 	const hasDescription = Boolean(field.description);
@@ -290,7 +295,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					</Alert>
 				</Collapse>
 			)}
-			{sourceMap?.[fieldId] && fieldId !== XmlKeys['fileName'] && (
+			{sourcePath && (
 				<Alert
 					variant="standard"
 					severity="info"
@@ -316,7 +321,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 								sx={{ px: 0.5, minWidth: 0 }}
 								onClick={() => {
 									globalApi.pushForm({
-										update: { path: sourceMap[fieldId] }
+										update: { path: sourcePath }
 									});
 								}}
 								aria-label={formatMessage({ defaultMessage: 'Edit' })}
@@ -339,12 +344,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					{isEmptyValue(field, value) ? (
 						<FormattedMessage
 							defaultMessage="Value is inherited from {label}"
-							values={{ label: itemsByPath[sourceMap[fieldId]]?.label ?? sourceMap[fieldId] }}
+							values={{ label: sourceLabel ?? sourcePath }}
 						/>
 					) : (
 						<FormattedMessage
 							defaultMessage="Inherited value from {label} is overridden"
-							values={{ label: itemsByPath[sourceMap[fieldId]]?.label ?? sourceMap[fieldId] }}
+							values={{ label: sourceLabel ?? sourcePath }}
 						/>
 					)}
 				</Alert>
