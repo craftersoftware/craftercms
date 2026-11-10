@@ -75,7 +75,6 @@ import {
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 import { applySavedRenameToLock } from './unlockOnClose';
-
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
