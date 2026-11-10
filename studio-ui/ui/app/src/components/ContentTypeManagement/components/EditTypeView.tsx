@@ -696,7 +696,6 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					}
 				}
 				reportSubmittingOrPending({ isSubmitting: true });
-				const typeToSave = latestUpdate ?? type;
 				const isNew = Boolean((typeToSave as PossibleContentTypeDraft).NEW);
 				save(site, typeToSave.id, () => withPersistedJsController(typeToSave), configDescriptors).subscribe({
 					next() {
