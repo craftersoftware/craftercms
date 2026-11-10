@@ -19,6 +19,7 @@ import { createTheme, ThemeOptions, ThemeProvider } from '@mui/material/styles';
 import { createDefaultThemeOptions } from '../../styles/theme';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import palette from '../../styles/palette';
+import { getFocusRingThemeOptions } from '../../styles/focusRing';
 import { deepmerge } from '@mui/utils';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
@@ -43,6 +44,8 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 		const auxTheme = createTheme({ palette: { mode } });
 		const defaultThemeOptions = createDefaultThemeOptions({ mode });
 		return createTheme({
+			// Keyboard focus ring for every ButtonBase-based control (2.4.7, 1.4.11). See styles/focusRing.ts.
+			...getFocusRingThemeOptions(mode),
 			...(props.themeOptions ?? defaultThemeOptions),
 			// Animations: Disable MUI JavaScript/CSS transition helpers
 			...(!enableAnimations && {

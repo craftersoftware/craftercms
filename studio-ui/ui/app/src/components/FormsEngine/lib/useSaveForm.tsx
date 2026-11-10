@@ -21,7 +21,6 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import React, { useContext } from 'react';
 import {
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	RenamedPathContext,
 	StableFormContext,
@@ -124,7 +123,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const onSave = wrapOnSaveProp(props.onSave);
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
-	const item = useContext(ItemContext);
 	const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
 	const readCurrentValidity = async () => {
 		// Out-of-scope fields stay in this list. Only controller-irrelevant fields are skipped.
@@ -465,7 +463,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }
@@ -585,7 +583,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }

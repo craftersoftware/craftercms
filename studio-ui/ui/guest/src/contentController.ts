@@ -65,29 +65,19 @@ const operations$ = new Subject<Operation>();
 
 const operationsObs$ = operations$.asObservable();
 
-export const modelHierarchyMap: ModelHierarchyMap = {
-	/* [id]: [id, id, id] */
-};
+export const modelHierarchyMap: ModelHierarchyMap = {/* [id]: [id, id, id] */};
 
 let requestedPaths = {};
 
-const paths$ = new BehaviorSubject<LookupTable<string>>({
-	/* 'path': 'modelId' */
-});
+const paths$ = new BehaviorSubject<LookupTable<string>>({/* 'path': 'modelId' */});
 
-const models$ = new BehaviorSubject<LookupTable<ContentInstance>>({
-	/* 'modelId': { ...modelData } */
-});
+const models$ = new BehaviorSubject<LookupTable<ContentInstance>>({/* 'modelId': { ...modelData } */});
 
-const items$ = new BehaviorSubject<LookupTable<ContentItem>>({
-	/* 'path': { ...contentItem } */
-});
+const items$ = new BehaviorSubject<LookupTable<ContentItem>>({/* 'path': { ...contentItem } */});
 
 const permissions$ = new BehaviorSubject<string[]>([]);
 
-const contentTypes$ = new BehaviorSubject<LookupTable<ContentType>>({
-	/* 'contentTypeId': { ...contentTypeData } */
-});
+const contentTypes$ = new BehaviorSubject<LookupTable<ContentType>>({/* 'contentTypeId': { ...contentTypeData } */});
 
 // Share operator makes the behaviour subject's behaviour go away. New subscribers
 // don't receive the latest value as soon as they subscribe. Would need to multicast
@@ -453,8 +443,11 @@ export function insertComponent(
 	const models = getCachedModels();
 	const result = getCollection(models[modelId], fieldId, targetIndex)?.concat() ?? [];
 
+	// Dotted indexes address a nested collection that getCollection already resolved; only the last piece is the slot.
+	const insertAt = typeof targetIndex === 'number' ? targetIndex : parseInt(popPiece(targetIndex));
+
 	// Insert in desired position
-	result.splice(targetIndex as number, 0, instance.craftercms.id);
+	result.splice(insertAt, 0, instance.craftercms.id);
 
 	const model = setCollection(
 		models[modelId],
@@ -472,7 +465,7 @@ export function insertComponent(
 	modelHierarchyMap[instance.craftercms.id] = {
 		children: [],
 		modelId: instance.craftercms.id,
-		parentContainerFieldIndex: isSimple(targetIndex) ? null : removeLastPiece(targetIndex as string),
+		parentContainerFieldIndex: isSimple(targetIndex) ? null : (targetIndex as string),
 		parentContainerFieldPath: isSimple(fieldId) ? fieldId : removeLastPiece(fieldId),
 		parentId: modelId
 	};

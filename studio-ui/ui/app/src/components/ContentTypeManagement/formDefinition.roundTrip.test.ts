@@ -24,6 +24,7 @@ import '../../../test/registerTsLoader.mjs';
 const { parseLegacyFormDefinition } = await import('../../services/contentTypes.ts');
 const {
 	buildContentTypeXml,
+	createVirtualSection,
 	createTypeFieldValuesObject,
 	prepareSerializeToXmlTypeObject,
 	reverseTypeFieldValuesObject
@@ -549,5 +550,84 @@ describe('shipped form definitions', () => {
 			}
 		}
 		assert.deepEqual(losses, []);
+	});
+});
+
+describe('section ids', () => {
+	const section = (title: string, id?: string) => ({
+		...(id !== undefined && { id }),
+		title,
+		description: '',
+		defaultOpen: 'true',
+		fields: {
+			field: { id: `${title}_t`, title, description: '', type: 'input', iceId: '' }
+		}
+	});
+	const parseSections = (sections: unknown[]) =>
+		parseLegacyFormDefinition({
+			'content-type': '/page/custom',
+			title: 'Custom',
+			description: '',
+			objectType: 'page',
+			imageThumbnail: 'page.png',
+			sections: { section: sections }
+		} as never);
+	const reload = (type: ReturnType<typeof parseLegacyFormDefinition>) => parseXml(buildContentTypeXml(savedType(type)));
+
+	// Given sections that were saved with ids, loading keeps them instead of re-deriving ids from position.
+	it('keeps saved section ids on load', () => {
+		const parsed = parseSections([section('B', 'zzz'), section('A', 'aaa')]);
+		assert.deepEqual(
+			parsed.sections.map((item) => item.id),
+			['zzz', 'aaa']
+		);
+	});
+
+	// Given sections with no saved id, loading falls back to the position.
+	it('falls back to a positional id when a section has no saved id', () => {
+		const parsed = parseSections([section('A'), section('B', 'aaa'), section('C', '')]);
+		assert.deepEqual(
+			parsed.sections.map((item) => item.id),
+			['section-0', 'aaa', 'section-2']
+		);
+	});
+
+	// Given a type with new sections, ids are the same after save, reload and a second save.
+	it('preserves ids through save and reload, including after sections are reordered', () => {
+		const first = parseSections([section('A'), section('B'), section('C')]);
+		const created = {
+			...first,
+			sections: [
+				createVirtualSection({ title: 'New', fields: [] }),
+				...first.sections
+					.slice()
+					.reverse()
+					.map((item) => ({ ...item }))
+			]
+		};
+		const ids = created.sections.map((item) => item.id);
+		const reloaded = reload(created);
+		assert.deepEqual(
+			reloaded.sections.map((item) => item.id),
+			ids
+		);
+		assert.deepEqual(
+			reload(reloaded).sections.map((item) => item.id),
+			ids
+		);
+	});
+
+	// Given a repeated saved id, the first section keeps it and the repeat gets an id that is not used by any section.
+	it('gives a section with a repeated saved id a new unique id', () => {
+		const parsed = parseSections([section('A', 'dup'), section('B', 'dup'), section('C', 'section-1'), section('D')]);
+		const ids = parsed.sections.map((item) => item.id);
+		assert.equal(ids[0], 'dup');
+		assert.equal(ids[2], 'section-1');
+		assert.equal(new Set(ids).size, ids.length);
+		assert.ok(ids.every((id) => id.length > 0));
+		assert.deepEqual(
+			parsed.sections.map((item) => item.title),
+			['A', 'B', 'C', 'D']
+		);
 	});
 });
