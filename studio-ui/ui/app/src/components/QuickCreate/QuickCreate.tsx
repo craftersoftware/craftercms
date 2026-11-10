@@ -29,7 +29,6 @@ import CardContent from '@mui/material/CardContent';
 import Button from '@mui/material/Button';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import QuickCreateItem from '../../models/content/QuickCreateItem';
-import palette from '../../styles/palette';
 import Tooltip from '@mui/material/Tooltip';
 import { ContentItem } from '../../models/Item';
 import { useSelection } from '../../hooks/useSelection';
@@ -237,7 +236,7 @@ function QuickCreateSection(props: QuickCreateSectionProps) {
 							'& .MuiButton-root': {
 								fontSize: '14px',
 								textDecoration: 'underline',
-								color: palette.blue.main
+								color: (theme) => theme.palette.primary.main
 							}
 						}}
 					>

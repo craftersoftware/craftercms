@@ -32,11 +32,13 @@ const {
 	changedFieldAtom,
 	createFieldAtoms,
 	createFormStackData,
-	generateDefaultChangesComment
+	generateDefaultChangesComment,
+	getAdditionalFieldIds,
+	mapAdditionalFieldsToParents
 } = await import('./formUtils.tsx');
 const { createFormControllerContext } = await import('../formControllers/runtime.ts');
 
-const fieldOf = (id: string, name = id) => ({ id, name, type: 'input', validations: {} }) as ContentTypeField;
+const fieldOf = (id: string, name = id, type = 'input') => ({ id, name, type, validations: {} }) as ContentTypeField;
 const fields = ['a_s', 'b_s', 'c_s'].map((id) => fieldOf(id, id.toUpperCase()));
 
 function openForm() {
@@ -54,7 +56,7 @@ function openForm() {
 		context.atoms.validationByFieldId[field.id] = validationAtom;
 	}
 	const emitted: string[] = [];
-	context.fieldUpdates$.subscribe((id) => emitted.push(id));
+	context.fieldUpdates$.subscribe((update) => emitted.push(update.fieldId));
 	const changed = () => store.get(context.changedFieldIds);
 	return { store, context, valueAtoms, emitted, changed };
 }
@@ -134,6 +136,78 @@ describe('changed ids as one atom', () => {
 		assert.equal(store.get(changedFieldAtom(null, 'a_s')), false);
 		assert.equal(changedFieldAtom(null, 'a_s'), changedFieldAtom(undefined, 'b_s'));
 	});
+
+	it('lights a parent field atom when a related additional field id is in the set', () => {
+		const { store, context } = openForm();
+		const placeInNav = changedFieldAtom(context.changedFieldIds, 'placeInNav', ['orderDefault_f']);
+		assert.equal(store.get(placeInNav), false);
+		store.set(context.changedFieldIds, new Set(['orderDefault_f']));
+		assert.equal(store.get(placeInNav), true);
+		store.set(context.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+		assert.equal(store.get(placeInNav), false);
+	});
+});
+
+describe('additional fields', () => {
+	const placeInNav = fieldOf('placeInNav', 'Place in Nav', 'page-nav-order');
+	const title = fieldOf('title_s', 'Title');
+
+	it('maps orderDefault_f to the Place in Nav parent from the page-nav-order descriptor', () => {
+		assert.deepEqual(getAdditionalFieldIds(placeInNav), ['orderDefault_f']);
+		assert.equal(mapAdditionalFieldsToParents([placeInNav, title]).orderDefault_f, placeInNav);
+	});
+
+	it('names the parent in the default version comment when only the additional field changed', () => {
+		const byId = { placeInNav, title_s: title };
+		const comment = generateDefaultChangesComment(byId, [placeInNav, title], new Set(['orderDefault_f']), '');
+		assert.equal(comment, 'Updated Place in Nav');
+	});
+
+	it('dedupes the parent name when both the parent and additional field are changed', () => {
+		const byId = { placeInNav, title_s: title };
+		const comment = generateDefaultChangesComment(
+			byId,
+			[placeInNav, title],
+			new Set(['placeInNav', 'orderDefault_f', 'title_s']),
+			''
+		);
+		assert.equal(comment, 'Updated Place in Nav and Title');
+	});
+
+	it('maps additional fields from configured custom control descriptors', () => {
+		const customField = fieldOf('widget_s', 'Widget', 'custom-widget');
+		const customControls = {
+			'custom-widget': {
+				id: 'custom-widget',
+				name: 'Custom Widget',
+				description: '',
+				sections: [],
+				fields: {},
+				metadata: { additionalFields: ['{id}_extra'] }
+			}
+		};
+		assert.deepEqual(getAdditionalFieldIds(customField, customControls), ['widget_s_extra']);
+		assert.equal(mapAdditionalFieldsToParents([customField, title], customControls).widget_s_extra, customField);
+		const comment = generateDefaultChangesComment(
+			{ widget_s: customField, title_s: title },
+			[customField, title],
+			new Set(['widget_s_extra']),
+			'',
+			customControls
+		);
+		assert.equal(comment, 'Updated Widget');
+		// Without customControls, the additional field id is unknown and omitted from the comment.
+		assert.equal(mapAdditionalFieldsToParents([customField, title]).widget_s_extra, undefined);
+		assert.equal(
+			generateDefaultChangesComment(
+				{ widget_s: customField, title_s: title },
+				[customField, title],
+				new Set(['widget_s_extra']),
+				''
+			),
+			''
+		);
+	});
 });
 
 describe('clearing the changed ids', () => {
@@ -184,7 +258,7 @@ describe('onFieldChange', () => {
 			isEmbedded: false,
 			fieldUpdates$: form.context.fieldUpdates$,
 			dispatch: (() => undefined) as never,
-			fieldChangeUnsubscribers: new Set(),
+			fieldChangeTeardowns: new Set(),
 			isDisposed: () => false
 		});
 	}
@@ -241,7 +315,7 @@ describe('controller setValue on a repeat row', () => {
 			isEmbedded: false,
 			fieldUpdates$: createFormStackData({ itemMeta: {} as never, originalValues: {} }).fieldUpdates$,
 			dispatch: (() => undefined) as never,
-			fieldChangeUnsubscribers: new Set(),
+			fieldChangeTeardowns: new Set(),
 			isDisposed: () => false
 		});
 		return { store, rows, rowsAtom, context, keys: repeatItemKeysFor<Record<string, unknown>>(rowsAtom) };
