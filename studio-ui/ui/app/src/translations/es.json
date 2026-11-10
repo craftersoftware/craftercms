@@ -1662,5 +1662,6 @@
 	"R2xRHS": "Mover hacia arriba: {name}",
 	"rdK9AW": "Eliminar {item}",
 	"wmFdws": "Mover hacia arriba",
-	"xeB1YM": "Editar {item}"
+	"xeB1YM": "Editar {item}",
+	"coX6qx": "Se movió {name} a la posición {position} de {total}"
 }

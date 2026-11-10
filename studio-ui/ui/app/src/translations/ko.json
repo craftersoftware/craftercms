@@ -1662,5 +1662,6 @@
 	"R2xRHS": "위로 이동: {name}",
 	"rdK9AW": "{item} 삭제",
 	"wmFdws": "위로 이동",
-	"xeB1YM": "{item} 편집"
+	"xeB1YM": "{item} 편집",
+	"coX6qx": "{name}을(를) {total}개 중 {position}번째로 이동했습니다"
 }
