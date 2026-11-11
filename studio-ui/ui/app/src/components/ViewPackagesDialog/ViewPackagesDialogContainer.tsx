@@ -62,7 +62,6 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 	const disableContinue = onContinue ? cancelPackagesComment.trim() === '' : false;
 
 	const onShowPackageDetails = (pkg: PublishPackage) => {
-		onClose?.(null, null);
 		showPackageDetails({ pkg, dispatch });
 	};
 
