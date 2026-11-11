@@ -322,7 +322,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			dispatch(
 				showCodeEditorDialog({
 					path: item.include,
-					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain')
+					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain'),
+					readonly: !edit
 				})
 			);
 		}

@@ -36,6 +36,8 @@ const { default: NodeSelector } = await import('./NodeSelector.tsx');
 const intl = createTestIntl();
 const articlePath = '/site/components/article.xml';
 const photoPath = '/site/components/photo.xml';
+const scriptPath = '/static-assets/app.js';
+const dispatched: Array<{ type: string; payload?: Record<string, unknown> }> = [];
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -59,14 +61,29 @@ function storedItem(path: string, label: string, edit: boolean) {
 	};
 }
 
+function storedAsset(path: string, label: string) {
+	return {
+		...storedItem(path, label, true),
+		systemType: 'asset',
+		mimeType: 'application/javascript'
+	};
+}
+
 async function renderSelector(readonly: boolean) {
 	const store = createItemsStore({
 		...baseItems(),
 		// Embedded rows display the form item. It needs a state map or the publishing icon crashes.
 		[formPath]: { ...baseItems()[formPath], stateMap: {} },
 		[articlePath]: storedItem(articlePath, 'Article', true),
-		[photoPath]: storedItem(photoPath, 'Photo', false)
+		[photoPath]: storedItem(photoPath, 'Photo', false),
+		[scriptPath]: storedAsset(scriptPath, 'app.js')
 	});
+	dispatched.length = 0;
+	const dispatch = store.dispatch;
+	store.dispatch = ((action: (typeof dispatched)[number]) => {
+		dispatched.push(action);
+		return dispatch(action as never);
+	}) as never;
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -87,7 +104,8 @@ async function renderSelector(readonly: boolean) {
 							value: [
 								{ key: articlePath, value: 'Article', include: articlePath },
 								{ key: 'hero', value: 'Hero', component: { 'file-name': 'hero' } },
-								{ key: photoPath, value: 'Photo', include: photoPath }
+								{ key: photoPath, value: 'Photo', include: photoPath },
+								{ key: scriptPath, value: 'app.js', include: scriptPath }
 							],
 							setValue() {},
 							readonly,
@@ -110,6 +128,14 @@ async function renderSelector(readonly: boolean) {
 const labelsOf = (host: HTMLElement) =>
 	Array.from(host.querySelectorAll('button[aria-label]'), (button) => button.getAttribute('aria-label'));
 
+async function click(host: HTMLElement, label: string) {
+	const button = host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+	assert.ok(button, `expected a button named ${label}`);
+	await act(async () => {
+		button.click();
+	});
+}
+
 describe('NodeSelector row button names', () => {
 	it('names edit, view, delete and unlink with the item', async () => {
 		const host = await renderSelector(false);
@@ -121,6 +147,8 @@ describe('NodeSelector row button names', () => {
 		assert.ok(labels.includes('View Photo'));
 		assert.ok(labels.includes('Unlink Photo'));
 		assert.equal(labels.includes('Edit Photo'), false);
+		assert.ok(labels.includes('Edit app.js'));
+		assert.ok(labels.includes('Unlink app.js'));
 	});
 
 	it('names an editable row View when the form is read-only', async () => {
@@ -132,5 +160,21 @@ describe('NodeSelector row button names', () => {
 		assert.equal(labels.includes('Edit Article'), false);
 		assert.equal(labels.includes('Unlink Article'), false);
 		assert.equal(labels.includes('Delete Hero'), false);
+		assert.ok(labels.includes('View app.js'));
+		assert.equal(labels.includes('Edit app.js'), false);
+	});
+
+	it('opens an editable asset in the code editor, writable only when the form is editable', async () => {
+		const editable = await renderSelector(false);
+		await click(editable, 'Edit app.js');
+		const writable = dispatched.find((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
+		assert.equal(writable?.payload?.path, scriptPath);
+		assert.equal(writable?.payload?.readonly, false);
+
+		const readonly = await renderSelector(true);
+		await click(readonly, 'View app.js');
+		const readOnly = dispatched.find((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
+		assert.equal(readOnly?.payload?.path, scriptPath);
+		assert.equal(readOnly?.payload?.readonly, true);
 	});
 });
