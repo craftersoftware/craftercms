@@ -22,7 +22,6 @@ import { generatePlaceholderImageDataUrl } from './content';
 import { ensureSingleSlash, isEmpty, toColor } from './string';
 import { getRepeatMinimum } from './countLimits';
 import { darken } from '@mui/material/styles';
-import type { Theme } from '@mui/material';
 import type { ObjectTypeOption } from '../components/ContentTypeFilter/ContentTypesFilter';
 import { ContentItem } from '../models/Item';
 import type { BuiltInControlType } from '../components/FormsEngine/lib/controlMap';
@@ -192,7 +191,7 @@ export function getDefaultValue(field: ContentTypeField): string | number | bool
  */
 export function getAvatarWithIconColors(
 	colourBaseString: string,
-	theme: Theme,
+	theme: { palette: { mode: string; getContrastText(colour: string): string } },
 	darkenFn: typeof darken
 ): { backgroundColor: string; textColor: string } {
 	if (!(colourBaseString && theme && darkenFn)) {

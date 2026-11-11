@@ -16,6 +16,9 @@
 		"cms"
 	],
 	"license": "LGPL-3.0-only",
+	"engines": {
+		"node": ">=22.15"
+	},
 	"bic": {
 		"skip": [
 			"build",
@@ -67,6 +70,7 @@
 		"@mui/icons-material": "^9.5.0",
 		"@mui/lab": "9.0.0-beta.10",
 		"@mui/material": "^9.5.0",
+		"@mui/utils": "^9.5.0",
 		"@mui/x-data-grid": "^9.16.0",
 		"@mui/x-date-pickers": "^9.16.0",
 		"@mui/x-tree-view": "^9.16.0",

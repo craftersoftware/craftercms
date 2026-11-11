@@ -592,7 +592,7 @@ export function createVirtualTypeFormContext(
 	context.atoms.validationByFieldId = {};
 	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject<FieldUpdate>();
+	context.fieldUpdates$ = mixin?.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);
