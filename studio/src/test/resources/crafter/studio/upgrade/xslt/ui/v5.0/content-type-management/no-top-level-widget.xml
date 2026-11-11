@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ siteUi with no top-level widget. The nested tool reference must not be treated as the catalog.
+  -->
+<siteUi>
+    <version>4.5.0.0</version>
+    <studioCustom>keep-custom</studioCustom>
+    <references>
+        <reference id="craftercms.siteTools">
+            <tools>
+                <tool>
+                    <url>content-types</url>
+                    <widget id="craftercms.components.ContentTypeManagement"/>
+                </tool>
+            </tools>
+        </reference>
+    </references>
+</siteUi>

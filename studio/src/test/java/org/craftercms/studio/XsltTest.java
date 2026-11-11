@@ -16,11 +16,14 @@
 package org.craftercms.studio;
 
 import org.apache.commons.collections4.IterableUtils;
+import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.craftercms.commons.upgrade.impl.configuration.YamlConfigurationProvider;
 import org.craftercms.studio.impl.v2.utils.XsltUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -35,9 +38,15 @@ import org.w3c.dom.NodeList;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerException;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,6 +63,19 @@ import static org.testng.Assert.assertTrue;
 public class XsltTest {
 
 	private static final Logger logger = LoggerFactory.getLogger(XsltTest.class);
+
+	private static final String[] CONTENT_TYPE_MANAGEMENT_TEMPLATES = {
+		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.1.xslt",
+		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.2.xslt",
+		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.3.xslt"
+	};
+
+	private static final String UI_4500_FIXTURE =
+		"crafter/studio/upgrade/xslt/ui/v5.0/content-type-management/from-4.5.0.0.xml";
+	private static final String UI_CUSTOM_CATALOG_FIXTURE =
+		"crafter/studio/upgrade/xslt/ui/v5.0/content-type-management/custom-catalog.xml";
+	private static final String UI_NO_WIDGET_FIXTURE =
+		"crafter/studio/upgrade/xslt/ui/v5.0/content-type-management/no-top-level-widget.xml";
 
 	/**
 	 * Each array must follow this structure:
@@ -644,6 +666,350 @@ public class XsltTest {
 		assertFalse(sampleTools.contains("content-types"), sample);
 		assertTrue(sampleTools.contains("encrypt-tool"), sample);
 		assertTrue(sampleTools.contains("plugin-management"), sample);
+	}
+
+	/**
+	 * 4.5–4.7 ui.xml is version 4.5.0.0 and already contains the 5.0.0.0 i18n transform, but it has
+	 * no top-level ContentTypeManagement catalog. The pipeline must continue through the existing
+	 * 5.0.0.1, 5.0.0.2 and 5.0.0.3 steps. A nested tool reference is not that catalog.
+	 */
+	@Test
+	public void uiPipelineContinuesFrom4500ThroughContentTypeManagement() throws Exception {
+		HierarchicalConfiguration config = productionUpgradeConfig();
+
+		assertEquals(templatesFrom(config, "4.5.0.0"), Arrays.asList(CONTENT_TYPE_MANAGEMENT_TEMPLATES),
+			"4.5.0.0 must reach the ContentTypeManagement, TinyMCE and pages-datasource steps");
+		assertEquals(finalVersion(config, "4.5.0.0"), "5.0.0.3");
+
+		List<String> from4203 = templatesFrom(config, "4.2.0.3");
+		assertEquals(from4203.get(0), "crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt");
+		assertEquals(from4203.subList(1, from4203.size()), Arrays.asList(CONTENT_TYPE_MANAGEMENT_TEMPLATES));
+		assertEquals(finalVersion(config, "4.2.0.3"), "5.0.0.3");
+
+		assertTrue(templatesFrom(config, "5.0.0.3").isEmpty(),
+			"sites already at 5.0.0.3 must not run another ui.xml step");
+	}
+
+	/**
+	 * Representative 4.5 ui.xml: top-level widgets, a nested content-types tool reference, and custom
+	 * configuration. The catalog is inserted once. Custom widgets, tools and the version element stay.
+	 */
+	@Test
+	public void contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration() throws Exception {
+		String upgraded = applyTemplates(readResource(UI_4500_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+		Document document = parseXmlString(upgraded);
+		Element siteUi = document.getDocumentElement();
+
+		assertEquals(text(siteUi, "version"), "4.5.0.0");
+		assertEquals(catalogIds(topLevelContentTypeManagement(document), "control"),
+			shippedContentTypeCatalog("control"));
+		assertEquals(catalogIds(topLevelContentTypeManagement(document), "dataSource"),
+			shippedContentTypeCatalog("dataSource"));
+		assertEquals(childElements(toolWidget(document, "craftercms.components.ContentTypeManagement")).size(), 0);
+		assertEquals(text(widget(siteUi, "craftercms.components.CustomSiteWidget"), "keep"), "custom-value");
+		assertEquals(text(descendantWidget(siteUi, "acme.components.CustomTool"), "option"), "keep-me");
+
+		List<Element> children = childElements(siteUi);
+		assertTrue(indexOf(children, "widget", "craftercms.components.CustomSiteWidget")
+			< indexOf(children, "widget", "craftercms.components.ContentTypeManagement"));
+		assertTrue(indexOf(children, "widget", "craftercms.components.ContentTypeManagement")
+			< indexOf(children, "references", null));
+
+		String tinymce = text(widget(siteUi, "craftercms.components.TinyMCE"), "tinymceOptions");
+		assertFalse(tinymce.contains("autoresize_on_init"));
+		assertTrue(tinymce.contains("autoresize_bottom_margin"));
+		assertTrue(tinymce.contains("blocks | bold"));
+
+		assertIdempotent(upgraded);
+	}
+
+	/**
+	 * A site that already has its own top-level ContentTypeManagement widget keeps that catalog.
+	 * The standard controls are not merged in, and the pages datasource is added beside the custom ones.
+	 */
+	@Test
+	public void existingContentTypeManagementCatalogIsNotReplaced() throws Exception {
+		String upgraded = applyTemplates(readResource(UI_CUSTOM_CATALOG_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+		Document document = parseXmlString(upgraded);
+		Element catalog = topLevelContentTypeManagement(document);
+
+		assertEquals(catalogIds(catalog, "control"), List.of("input", "acme-custom"));
+		assertEquals(iconId(catalog, "control", "input"), "acme.icons.CustomInput");
+		assertEquals(iconId(catalog, "control", "acme-custom"), "acme.icons.Custom");
+		assertEquals(catalogIds(catalog, "dataSource"), List.of("pages", "components"));
+		assertEquals(iconId(catalog, "dataSource", "components"), "acme.icons.Components");
+		assertEquals(text(widget(document.getDocumentElement(), "craftercms.components.CustomSiteWidget"), "keep"),
+			"still-here");
+		assertFalse(text(widget(document.getDocumentElement(), "craftercms.components.TinyMCE"), "tinymceOptions")
+			.contains("autoresize_on_init"));
+
+		assertIdempotent(upgraded);
+	}
+
+	/**
+	 * siteUi with no top-level widget still receives the catalog. Existing elements stay in order,
+	 * and a nested tool reference is left as a reference.
+	 */
+	@Test
+	public void contentTypeManagementAddedWhenSiteUiHasNoTopLevelWidget() throws Exception {
+		String upgraded = applyTemplates(readResource(UI_NO_WIDGET_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+		Document document = parseXmlString(upgraded);
+		Element siteUi = document.getDocumentElement();
+
+		assertEquals(text(siteUi, "studioCustom"), "keep-custom");
+		assertEquals(text(siteUi, "version"), "4.5.0.0");
+		assertEquals(catalogIds(topLevelContentTypeManagement(document), "control"),
+			shippedContentTypeCatalog("control"));
+		assertEquals(catalogIds(topLevelContentTypeManagement(document), "dataSource"),
+			shippedContentTypeCatalog("dataSource"));
+		assertEquals(childElements(toolWidget(document, "craftercms.components.ContentTypeManagement")).size(), 0);
+
+		List<Element> children = childElements(siteUi);
+		assertTrue(indexOf(children, "studioCustom", null) < indexOf(children, "references", null));
+		assertTrue(indexOf(children, "references", null)
+			< indexOf(children, "widget", "craftercms.components.ContentTypeManagement"));
+
+		assertIdempotent(upgraded);
+	}
+
+	/**
+	 * New sites already ship the catalog at ui.xml 5.0.0.3. The sample has the same catalog and is not
+	 * a versioned site file.
+	 */
+	@Test
+	public void shippedUiContainsContentTypeManagementCatalog() throws Exception {
+		List<String> controls = shippedContentTypeCatalog("control");
+		List<String> dataSources = shippedContentTypeCatalog("dataSource");
+		assertEquals(new HashSet<>(controls).size(), controls.size(), "duplicate shipped controls");
+		assertEquals(new HashSet<>(dataSources).size(), dataSources.size(), "duplicate shipped data sources");
+		assertTrue(controls.contains("input"));
+		assertTrue(controls.contains("rte"));
+		assertTrue(dataSources.contains("pages"));
+		assertTrue(dataSources.contains("components"));
+
+		String[] blueprints = {
+			"repo-bootstrap/global/blueprints/1000_website_editorial/config/studio/ui.xml",
+			"repo-bootstrap/global/blueprints/2000_headless_store/config/studio/ui.xml",
+			"repo-bootstrap/global/blueprints/4000_empty/config/studio/ui.xml",
+			"repo-bootstrap/global/blueprints/5000_headless_blog/config/studio/ui.xml"
+		};
+		for (String path : blueprints) {
+			Document document = parseXml(path);
+			assertEquals(version(path), "5.0.0.3", path);
+			assertEquals(catalogIds(topLevelContentTypeManagement(document), "control"), controls, path);
+			assertEquals(catalogIds(topLevelContentTypeManagement(document), "dataSource"), dataSources, path);
+			assertEquals(childElements(toolWidget(document, "craftercms.components.ContentTypeManagement")).size(), 0,
+				path);
+		}
+
+		Document sample = parseXml("repo-bootstrap/global/configuration/samples/sample-ui.xml");
+		assertEquals(catalogIds(topLevelContentTypeManagement(sample), "control"), controls);
+		assertEquals(catalogIds(topLevelContentTypeManagement(sample), "dataSource"), dataSources);
+		assertEquals(childElements(toolWidget(sample, "craftercms.components.ContentTypeManagement")).size(), 0);
+	}
+
+	private HierarchicalConfiguration productionUpgradeConfig() throws Exception {
+		File xslt = new ClassPathResource(CONTENT_TYPE_MANAGEMENT_TEMPLATES[0]).getFile();
+		File pipelines = xslt.toPath().getParent().getParent().getParent().getParent()
+			.resolve("pipelines.yaml").toFile();
+		assertTrue(pipelines.isFile(), pipelines.getAbsolutePath());
+		return new YamlConfigurationProvider(new FileSystemResource(pipelines)).getConfiguration();
+	}
+
+	@SuppressWarnings("rawtypes")
+	private List<String> templatesFrom(HierarchicalConfiguration config, String startVersion) {
+		List<String> templates = new ArrayList<>();
+		String next = startVersion;
+		for (Object item : config.configurationsAt("configurations.ui.pipeline")) {
+			HierarchicalConfiguration step = (HierarchicalConfiguration) item;
+			if (!next.equals(step.getString("currentVersion"))) {
+				continue;
+			}
+			for (Object operationItem : step.configurationsAt("operations")) {
+				HierarchicalConfiguration operation = (HierarchicalConfiguration) operationItem;
+				String template = operation.getString("template");
+				if (template != null) {
+					templates.add(template);
+				}
+			}
+			next = step.getString("nextVersion");
+		}
+		return templates;
+	}
+
+	@SuppressWarnings("rawtypes")
+	private String finalVersion(HierarchicalConfiguration config, String startVersion) {
+		String next = startVersion;
+		for (Object item : config.configurationsAt("configurations.ui.pipeline")) {
+			HierarchicalConfiguration step = (HierarchicalConfiguration) item;
+			if (next.equals(step.getString("currentVersion"))) {
+				next = step.getString("nextVersion");
+			}
+		}
+		return next;
+	}
+
+	private String applyTemplates(String xml, String... templates) throws IOException, TransformerException {
+		String current = xml;
+		for (String template : templates) {
+			try (InputStream templateIs = new ClassPathResource(template).getInputStream();
+			     InputStream contentIs = toInputStream(current, UTF_8)) {
+				ByteArrayOutputStream output = new ByteArrayOutputStream();
+				XsltUtils.executeTemplate(templateIs, emptyMap(), null, contentIs, output);
+				current = new String(output.toByteArray(), UTF_8);
+			}
+		}
+		return current;
+	}
+
+	private void assertIdempotent(String xml) throws IOException, TransformerException {
+		String second = applyTemplates(xml, CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+		Diff diff = DiffBuilder.compare(xml).withTest(second)
+			.ignoreWhitespace()
+			.ignoreComments()
+			.checkForSimilar()
+			.build();
+		assertEquals(IterableUtils.size(diff.getDifferences()), 0,
+			"running the ui.xml 5.0.0.1 through 5.0.0.3 templates again should not change the document");
+	}
+
+	private String readResource(String path) throws IOException {
+		try (InputStream input = new ClassPathResource(path).getInputStream()) {
+			return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+		}
+	}
+
+	private Document parseXmlString(String xml) throws Exception {
+		DocumentBuilderFactory factory = xmlFactory();
+		return factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+	}
+
+	private List<String> shippedContentTypeCatalog(String elementName) throws Exception {
+		Document editorial = parseXml(
+			"repo-bootstrap/global/blueprints/1000_website_editorial/config/studio/ui.xml");
+		return catalogIds(topLevelContentTypeManagement(editorial), elementName);
+	}
+
+	private List<String> catalogIds(Element catalog, String elementName) {
+		Element container = childElement(childElement(catalog, "configuration"),
+			"control".equals(elementName) ? "controls" : "dataSources");
+		List<String> ids = new ArrayList<>();
+		for (Element element : childElements(container, elementName)) {
+			ids.add(element.getAttribute("id"));
+		}
+		return ids;
+	}
+
+	private String iconId(Element catalog, String elementName, String id) {
+		Element container = childElement(childElement(catalog, "configuration"),
+			"control".equals(elementName) ? "controls" : "dataSources");
+		for (Element element : childElements(container, elementName)) {
+			if (id.equals(element.getAttribute("id"))) {
+				return childElement(element, "icon").getAttribute("id");
+			}
+		}
+		throw new AssertionError("Missing " + elementName + " " + id);
+	}
+
+	private Element topLevelContentTypeManagement(Document document) {
+		List<Element> matches = new ArrayList<>();
+		for (Element widget : childElements(document.getDocumentElement(), "widget")) {
+			if ("craftercms.components.ContentTypeManagement".equals(widget.getAttribute("id"))) {
+				matches.add(widget);
+			}
+		}
+		assertEquals(matches.size(), 1, "top-level ContentTypeManagement widgets");
+		return matches.get(0);
+	}
+
+	private Element toolWidget(Document document, String id) {
+		Element references = childElement(document.getDocumentElement(), "references");
+		for (Element reference : childElements(references, "reference")) {
+			if (!"craftercms.siteTools".equals(reference.getAttribute("id"))) {
+				continue;
+			}
+			for (Element tool : childElements(childElement(reference, "tools"), "tool")) {
+				for (Element widget : childElements(tool, "widget")) {
+					if (id.equals(widget.getAttribute("id"))) {
+						return widget;
+					}
+				}
+			}
+		}
+		throw new AssertionError("Missing tool widget " + id);
+	}
+
+	private Element descendantWidget(Element parent, String id) {
+		NodeList widgets = parent.getElementsByTagName("widget");
+		Element found = null;
+		for (int i = 0; i < widgets.getLength(); i++) {
+			Element widget = (Element) widgets.item(i);
+			if (!id.equals(widget.getAttribute("id"))) {
+				continue;
+			}
+			if (found != null) {
+				throw new AssertionError("Multiple widgets " + id);
+			}
+			found = widget;
+		}
+		if (found == null) {
+			throw new AssertionError("Missing widget " + id);
+		}
+		return found;
+	}
+
+	private Element widget(Element parent, String id) {
+		for (Element widget : childElements(parent, "widget")) {
+			if (id.equals(widget.getAttribute("id"))) {
+				return widget;
+			}
+		}
+		throw new AssertionError("Missing widget " + id);
+	}
+
+	private int indexOf(List<Element> elements, String name, String id) {
+		for (int i = 0; i < elements.size(); i++) {
+			Element element = elements.get(i);
+			if (name.equals(element.getNodeName()) && (id == null || id.equals(element.getAttribute("id")))) {
+				return i;
+			}
+		}
+		throw new AssertionError("Missing " + name + " " + id);
+	}
+
+	private String text(Element parent, String childName) {
+		NodeList nodes = parent.getElementsByTagName(childName);
+		assertEquals(nodes.getLength(), 1, parent.getNodeName() + "/" + childName);
+		return nodes.item(0).getTextContent();
+	}
+
+	private Element childElement(Element parent, String name) {
+		List<Element> children = name == null ? childElements(parent) : childElements(parent, name);
+		assertEquals(children.size(), 1, parent.getNodeName() + "/" + name);
+		return children.get(0);
+	}
+
+	private List<Element> childElements(Element parent) {
+		return childElements(parent, null);
+	}
+
+	private List<Element> childElements(Element parent, String name) {
+		List<Element> result = new ArrayList<>();
+		NodeList children = parent.getChildNodes();
+		for (int i = 0; i < children.getLength(); i++) {
+			Node child = children.item(i);
+			if (child instanceof Element && (name == null || name.equals(child.getNodeName()))) {
+				result.add((Element) child);
+			}
+		}
+		return result;
+	}
+
+	private DocumentBuilderFactory xmlFactory() throws Exception {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		return factory;
 	}
 
 	private String version(String path) throws Exception {
