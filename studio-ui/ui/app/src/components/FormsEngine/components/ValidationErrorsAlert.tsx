@@ -48,6 +48,8 @@ function MinimumRequirementsMessage({ notice }: { notice: MinimumRequirementsNot
 }
 
 export function ValidationErrorsAlert(props: {
+	/** Lets the Save button point `aria-describedby` at this alert. */
+	id?: string;
 	count: number;
 	fieldName?: string;
 	/** Set when no save, not even a draft, would be written. Replaces the draft wording. */
@@ -59,7 +61,7 @@ export function ValidationErrorsAlert(props: {
 		? formatMessage({ defaultMessage: 'Show {field}' }, { field: props.fieldName })
 		: formatMessage({ defaultMessage: 'Show the field' });
 	return (
-		<Alert role="status" severity="warning" icon={<WarningAmberRounded fontSize="inherit" />}>
+		<Alert id={props.id} role="status" severity="warning" icon={<WarningAmberRounded fontSize="inherit" />}>
 			<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
 				{props.minimumRequirements ? (
 					<MinimumRequirementsMessage notice={props.minimumRequirements} />

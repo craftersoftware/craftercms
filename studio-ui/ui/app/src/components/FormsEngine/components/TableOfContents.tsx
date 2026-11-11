@@ -14,7 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 'react';
+import React, { RefObject, SyntheticEvent, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import visuallyHidden from '@mui/utils/visuallyHidden';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
@@ -29,6 +31,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import {
+	fieldVisibility,
 	isScopeActive,
 	revealField,
 	returnToLaunchScope,
@@ -38,7 +41,11 @@ import {
 import { immutableEmptyArray } from '../../../utils/array';
 import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
-import FieldStateIndicator, { fieldIndicatorAtoms, useFieldStateIndicatorProps } from './FieldStateIndicator';
+import FieldStateIndicator, {
+	type FieldStateIndicatorProps,
+	fieldIndicatorAtoms,
+	useFieldStateIndicatorProps
+} from './FieldStateIndicator';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
@@ -55,7 +62,18 @@ export interface TableOfContentsProps {
 
 export function TableOfContents({ containerRef, fields, sections, countFieldIds }: TableOfContentsProps) {
 	const store = useJotaiStore();
-	const atoms = useContext(StableFormContext).atoms;
+	const stableForm = useContext(StableFormContext);
+	const atoms = stableForm.atoms;
+	const [invalidFieldIds, setInvalidFieldIds] = useState<ReadonlySet<string>>(() => new Set());
+	const reportFieldInvalid = useCallback((fieldId: string, invalid: boolean) => {
+		setInvalidFieldIds((current) => {
+			if (current.has(fieldId) === invalid) return current;
+			const next = new Set(current);
+			if (invalid) next.add(fieldId);
+			else next.delete(fieldId);
+			return next;
+		});
+	}, []);
 	const contentType = useContext(ItemMetaContext).contentType;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = sections ?? contentType.sections;
@@ -121,8 +139,21 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 			/>
 		);
 	};
+	// A repeat-item editor lists its child fields and shows no sections, but `contentType` is still the
+	// parent's. Its atoms cover only the child fields, so there is nothing to probe for the section marks.
+	const sectionFields = fields
+		? []
+		: contentTypeSections
+				.flatMap((section) => section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean))
+				.filter((field) => {
+					const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
+					return Boolean(valueAtom && validationAtom);
+				});
 	return (
 		<>
+			{sectionFields.map((field) => (
+				<SectionFieldInvalidProbe key={field.id} field={field} atoms={atoms} report={reportFieldInvalid} />
+			))}
 			{countFieldIds && <FieldScopeNotice countFieldIds={countFieldIds} />}
 			<SearchBar
 				dense
@@ -148,7 +179,13 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 								key={section.id}
 								itemId={section.id}
 								data-section-id={section.id}
-								label={section.title}
+								label={
+									<SectionNavLabel
+										title={section.title}
+										hasError={section.fields.some((fieldId) => invalidFieldIds.has(fieldId))}
+										expanded={expandedSectionIds.includes(section.id)}
+									/>
+								}
 								onClick={handleSectionClick}
 								children={section.fields.map((fieldId) => createFieldTreeItem(contentTypeFields[fieldId]))}
 							/>
@@ -208,6 +245,83 @@ export function FieldScopeNotice({ countFieldIds }: { countFieldIds: string[] })
 					<FormattedMessage defaultMessage="Open full form" />
 				)}
 			</Button>
+		</Box>
+	);
+}
+
+/**
+ * A required field that is still empty is the asterisk, not an error. Anything else that fails is.
+ * Same split as {@link FieldStateIndicator}.
+ */
+function sectionFieldIsInvalid({ isValid, isRequired, isEmpty }: FieldStateIndicatorProps): boolean {
+	if (isValid) return false;
+	if (isRequired && isEmpty) return false;
+	return true;
+}
+
+function SectionFieldInvalidProbe({
+	field,
+	atoms,
+	report
+}: {
+	field: ContentTypeField;
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
+	report(fieldId: string, invalid: boolean): void;
+}) {
+	const stableForm = useContext(StableFormContext);
+	// A controller can hide a field after validation ran. Re-read when relevance changes.
+	useAtomValue(stableForm.atoms.relevanceVersion);
+	const { props } = useFieldStateIndicatorProps(field, atoms);
+	const irrelevant =
+		fieldVisibility({
+			fieldId: field.id,
+			irrelevantFieldPaths: stableForm.formControllerState?.irrelevantFieldPaths,
+			parentPath: stableForm.props?.repeat?.fieldId,
+			scopeFieldIds: null
+		}) === 'irrelevant';
+	const invalid = !irrelevant && sectionFieldIsInvalid(props);
+	useEffect(() => {
+		report(field.id, invalid);
+		return () => report(field.id, false);
+	}, [field.id, invalid, report]);
+	return null;
+}
+
+/**
+ * A section that contains a field the indicator would mark invalid. The hidden "Section has errors" words
+ * follow the title whenever there is an error, so the name never loses them. The warning icon is the
+ * visible cue and shows only while the section is collapsed: expanded, the field rows below carry their
+ * own indicators. The row is laid out like a field row: title left, icon at the right edge, same size.
+ */
+export function SectionNavLabel({
+	title,
+	hasError,
+	expanded = false
+}: {
+	title: string;
+	hasError: boolean;
+	expanded?: boolean;
+}) {
+	const { formatMessage } = useIntl();
+	const errorLabel = formatMessage({ defaultMessage: 'Section has errors' });
+	return (
+		<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+			<span>
+				{title}
+				{hasError && (
+					<>
+						{' '}
+						<Box component="span" sx={visuallyHidden}>
+							{errorLabel}
+						</Box>
+					</>
+				)}
+			</span>
+			{hasError && !expanded && (
+				<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0, ml: 0.5 }}>
+					<WarningAmberRounded aria-hidden fontSize="small" color="error" />
+				</Box>
+			)}
 		</Box>
 	);
 }
