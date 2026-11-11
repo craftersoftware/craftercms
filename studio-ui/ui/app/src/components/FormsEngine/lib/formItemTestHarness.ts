@@ -128,6 +128,7 @@ export async function mountTree(store: ItemsStore, tree: React.ReactElement): Pr
 }
 
 export function unmountAll() {
+	pushFormCalls.length = 0;
 	mounted.splice(0).forEach((unmount) => unmount());
 }
 
@@ -183,7 +184,16 @@ export function createEntry(fieldIds: string[]) {
 
 export type Entry = ReturnType<typeof createEntry>;
 
-const stableGlobal = { formsStackData: [], api: { pushForm() {} } };
+/** What the controls passed to `api.pushForm`, cleared by `unmountAll`. */
+export const pushFormCalls: Array<Record<string, unknown>> = [];
+const stableGlobal = {
+	formsStackData: [],
+	api: {
+		pushForm(props: Record<string, unknown>) {
+			pushFormCalls.push(props);
+		}
+	}
+};
 const formApi = { rollbackField() {} } as never;
 
 /**

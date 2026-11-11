@@ -39,6 +39,7 @@ const {
 	formPath,
 	mountTree,
 	profiled,
+	pushFormCalls,
 	sourcePath,
 	unmountAll,
 	unrelatedPath,
@@ -252,10 +253,15 @@ describe('NodeSelector E and V shortcuts', () => {
 		assert.equal(formDialogs().length, 2);
 	});
 
-	it('still edits an item the user can edit', async () => {
+	it('edits an item the user can edit on E and views it on V, through the forms API', async () => {
 		const { host, formDialogs } = await mountMixed();
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
-		assert.equal(formDialogs().length, 0, 'E opens the editable form through the forms API, not a view dialog');
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'v'));
+		assert.deepEqual(
+			pushFormCalls.map((call) => call.readonly),
+			[false, true]
+		);
+		assert.equal(formDialogs().length, 0, 'an editable item does not take the view dialog path');
 	});
 });
 
