@@ -29,12 +29,13 @@ import Checkbox from '@mui/material/Checkbox';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import { DraftChip } from '../DraftChip';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, type IntlShape } from 'react-intl';
 
 export function renderTreeNode(props: {
 	itemMap: LookupTable<LightItem>;
 	node: PathTreeNode;
 	onMenuClick: (e: React.MouseEvent<HTMLButtonElement>, path: string) => void;
+	formatMessage: IntlShape['formatMessage'];
 	dependencyTypeMap?: DependencyMap;
 	onCheckboxChange?: (e: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => void;
 	selectedDependencies?: string[];
@@ -46,6 +47,7 @@ export function renderTreeNode(props: {
 		itemsByPath,
 		node,
 		onMenuClick,
+		formatMessage,
 		dependencyTypeMap,
 		onCheckboxChange,
 		selectedDependencies,
@@ -96,16 +98,16 @@ export function renderTreeNode(props: {
 								}}
 							/>
 						</div>
-						<Box
-							sx={{
-								display: 'flex'
-							}}
-						>
+						<Box sx={{ display: 'flex' }}>
 							<IconButton
 								className="tree-item-more-section"
-								onClick={(e) => {
-									e.stopPropagation();
-									onMenuClick?.(e, node.path);
+								aria-label={formatMessage(
+									{ defaultMessage: 'Options for {name}' },
+									{ name: itemMap[node.path].label || node.path }
+								)}
+								onClick={(event) => {
+									event.stopPropagation();
+									onMenuClick?.(event, node.path);
 								}}
 							>
 								<MoreVertRounded />
@@ -125,9 +127,17 @@ export function renderTreeNode(props: {
 											size="small"
 											checked={selectedDependencies?.includes(node.path)}
 											disabled={!itemMap[node.path].canRequestPublish}
-											onClick={(e) => e.stopPropagation()}
-											onChange={(e, checked) => {
-												onCheckboxChange?.(e, checked, node.path);
+											onClick={(event) => event.stopPropagation()}
+											slotProps={{
+												input: {
+													'aria-label': formatMessage(
+														{ defaultMessage: 'Include {name}' },
+														{ name: itemMap[node.path].label || node.path }
+													)
+												}
+											}}
+											onChange={(event, checked) => {
+												onCheckboxChange?.(event, checked, node.path);
 											}}
 										/>
 									</span>
@@ -157,6 +167,7 @@ export function renderTreeNode(props: {
 								node: child,
 								dependencyTypeMap,
 								onMenuClick,
+								formatMessage,
 								onCheckboxChange,
 								selectedDependencies,
 								showItemTarget

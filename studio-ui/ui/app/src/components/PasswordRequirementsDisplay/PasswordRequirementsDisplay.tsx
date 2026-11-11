@@ -20,7 +20,6 @@ import Typography from '@mui/material/Typography';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import { passwordRequirementMessages } from '../../env/i18n-legacy';
-import palette from '../../styles/palette';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
 
@@ -67,7 +66,7 @@ export function PasswordRequirementsDisplay(props: PasswordRequirementsDisplayPr
 						sx={{
 							display: 'flex',
 							alignItems: 'center',
-							color: valid ? palette.green.shade : palette.yellow.shade,
+							color: (theme) => (valid ? theme.palette.success.main : theme.palette.warning.main),
 							...sxs?.conditionItem
 						}}
 					>

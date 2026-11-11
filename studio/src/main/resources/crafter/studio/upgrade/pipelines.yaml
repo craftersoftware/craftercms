@@ -1164,6 +1164,12 @@ configurations:
                         -   type: xsltFileUpgrader
                             template: crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.6.xslt
                             commitDetails: Add audio datasources
+                -   currentVersion: 4.0.6
+                    nextVersion: 4.0.7
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt
+                            commitDetails: Remove legacy content-types tool
 
     contextual-nav:
         module: studio

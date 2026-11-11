@@ -26,6 +26,7 @@ import React, {
 	useCallback,
 	useContext,
 	useEffect,
+	useId,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -103,6 +104,7 @@ import {
 	generateDefaultChangesComment,
 	generateDefaultCreationComment,
 	getAdditionalFieldsIdsFromDescriptor,
+	getAdditionalFieldIds,
 	resolveControlDescriptors,
 	getCurrentChildFormStateSummary,
 	isEmbeddedForm,
@@ -123,6 +125,8 @@ import {
 } from './lib/formUtils';
 import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
+import { FormValidationAnnouncerContext } from './lib/fieldA11y';
+import FormValidationLiveRegion, { type FormValidationLiveRegionHandle } from './components/FormValidationLiveRegion';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -435,22 +439,51 @@ function FormBootstrap(props: FormsEngineProps) {
 			if (!valueAtom) return;
 			rollbackAtom(valueAtom, initialValues[fieldId]);
 		};
+		// Rollback restores a previous value. Tag the write so blur does not treat it as the author's edit.
+		const duringRollback = (run: () => void) => {
+			const ctx = stableFormContextRef.current;
+			const previous = ctx.valueWriteOrigin;
+			ctx.valueWriteOrigin = 'rollback';
+			try {
+				run();
+			} finally {
+				ctx.valueWriteOrigin = previous;
+			}
+		};
 		const api: FormsEngineFormApiContextProps = {
 			rollback() {
-				const initialValues = getInitialValues();
-				Object.keys(initialValues).forEach((fieldId) => {
-					internalRollbackValue(initialValues, fieldId);
+				duringRollback(() => {
+					const initialValues = getInitialValues();
+					Object.keys(initialValues).forEach((fieldId) => {
+						internalRollbackValue(initialValues, fieldId);
+					});
 				});
 			},
 			rollbackField(fieldId: string) {
-				internalRollbackValue(getInitialValues(), fieldId);
+				// Tag the write so blur does not treat the restored values as the author's edit.
+				duringRollback(() => {
+					const initialValues = getInitialValues();
+					internalRollbackValue(initialValues, fieldId);
+					// Additional fields (e.g. orderDefault_f, {id}_tz) share the parent's chrome; roll them back together.
+					const { itemMeta, props } = stableFormContextRef.current;
+					const contentTypeFields = itemMeta?.contentType?.fields;
+					const repeatFieldId = props?.repeat?.fieldId;
+					// Repeat-item forms edit child fields of the repeat group, not top-level content-type fields.
+					const field = repeatFieldId
+						? contentTypeFields?.[repeatFieldId]?.fields?.[fieldId]
+						: contentTypeFields?.[fieldId];
+					if (!field) return;
+					for (const additionalFieldId of getAdditionalFieldIds(field, customControls)) {
+						internalRollbackValue(initialValues, additionalFieldId);
+					}
+				});
 			},
 			setValuesCheckpoint(values: LookupTable<unknown>) {
 				applyValuesCheckpoint(stableFormContextRef.current, values, store.set);
 			}
 		};
 		return api;
-	}, [store]);
+	}, [store, customControls]);
 
 	// If we're in create mode, there's no item yet. If updating, we can get the path from props or parent props in the case of repeat mode.
 	const itemKey = create ? null : (effectiveUpdatePath ?? formsStackData[stackIndex - 1]?.props?.update?.path ?? null);
@@ -960,9 +993,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
+	const validationAlertId = useId();
 	const dispatch = useDispatch();
 	const activeSite = useActiveSite();
 	const siteId = activeSite.id;
+	const customControls = useSelection((state) => state.uiConfig.controls);
 	const containerRef = useRef<HTMLDivElement>(undefined);
 	const {
 		isFullScreen = false,
@@ -1076,12 +1111,15 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const effectRefs = useUpdateRefs({
 		// Comments name every changed field, including ones the launch scope is hiding.
 		commentFields: isRepeatMode ? repeatOwnedFields : Object.values(contentTypeFields),
+		customControls,
 		versionCommentAtom: stableFormContext.atoms.versionComment,
 		fileNameAtom: stableFormContext.atoms.fileName
 	});
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
+	const liveRegionRef = useRef<FormValidationLiveRegionHandle>(null);
+	const announceValidation = useCallback((message: string) => liveRegionRef.current?.announce(message), []);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -1128,7 +1166,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 				contentType.fields,
 				effectRefs.current.commentFields,
 				store.get(changedFieldIds),
-				store.get(versionCommentAtom).trim()
+				store.get(versionCommentAtom).trim(),
+				effectRefs.current.customControls
 			);
 			if (newMessage) store.set(versionCommentAtom, newMessage);
 		});
@@ -1530,6 +1569,23 @@ function FormOrchestrator(props: FormsEngineProps) {
 		commitFormVisibility(store.set, parentAtoms, reveal.state, reveal.fieldId);
 		contextApi.popForm();
 	};
+	// A non-draft Save on an invalid form. The reveal scrolls to the first error and focuses it, and the field
+	// exposes its own error. The live region gives only the count, so the error is not spoken twice.
+	const handleInvalidSave = () => {
+		const count = validationErrors?.count ?? 0;
+		showValidationField();
+		announceValidation(
+			count > 0
+				? formatMessage(
+						{
+							defaultMessage:
+								'Cannot save yet. {count, plural, one {# field needs attention} other {# fields need attention}}'
+						},
+						{ count }
+					)
+				: formatMessage({ defaultMessage: 'Cannot save until all form requirements are satisfied.' })
+		);
+	};
 	const saveFromSelectedItem = async (_event: unknown, draft?: boolean | 'auto') => {
 		if (!parentAtoms || !parentEntry) return;
 		const choice = draft ?? false;
@@ -1683,6 +1739,12 @@ function FormOrchestrator(props: FormsEngineProps) {
 		setItemLaunchEntering(false);
 	}, []);
 
+	const minimizeLabel = formatMessage({ defaultMessage: 'Minimize' });
+	const closeLabel = formatMessage({ defaultMessage: 'Close' });
+	const fullscreenLabel = isFullScreen
+		? formatMessage({ defaultMessage: 'Exit full screen' })
+		: formatMessage({ defaultMessage: 'Enter full screen' });
+
 	const bodyFragment = (
 		<FormLayout
 			stackIndex={stackIndex}
@@ -1708,21 +1770,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Typography>
 						<Box sx={[isDialog && { position: 'absolute', top: theme.spacing(1), right: theme.spacing(1) }]}>
 							{props.onMinimize && (
-								<Tooltip title={<FormattedMessage defaultMessage="Minimize" />}>
+								<Tooltip title={minimizeLabel}>
 									<IconButton size="small" onClick={props.onMinimize}>
 										<MinimizeIconRounded />
 									</IconButton>
 								</Tooltip>
 							)}
 							{(props.onCancelFullScreen || props.onFullScreen) && (
-								<Tooltip title={<FormattedMessage defaultMessage="Maximize" />}>
+								<Tooltip title={fullscreenLabel}>
 									<IconButton size="small" onClick={isFullScreen ? props.onCancelFullScreen : props.onFullScreen}>
 										{isFullScreen ? <CloseFullscreenOutlined /> : <MaximiseIcon fontSize="small" />}
 									</IconButton>
 								</Tooltip>
 							)}
 							{handleClose && (
-								<Tooltip title={<FormattedMessage defaultMessage="Close" />}>
+								<Tooltip title={closeLabel}>
 									<IconButton size="small" onClick={handleClose}>
 										<Close />
 									</IconButton>
@@ -1752,7 +1814,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						<Grid size={useCollapsedToC ? 'auto' : 'grow'}>
 							<StickyBox data-area-id="stickySidebar" sx={{ height: 'auto' }}>
 								{useCollapsedToC ? (
-									<IconButton size="small" onClick={handleOpenDrawerSidebar}>
+									<IconButton
+										size="small"
+										onClick={handleOpenDrawerSidebar}
+										aria-label={formatMessage({ defaultMessage: 'Open table of contents' })}
+									>
 										<MenuRounded />
 									</IconButton>
 								) : (
@@ -1892,6 +1958,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 												}
 												minimumRequirements={minimumNotice ?? undefined}
 												onShow={showValidationField}
+												id={validationAlertId}
 											/>
 										)}
 										<SaveCard
@@ -1902,6 +1969,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 											validationErrorCount={validationErrors?.count ?? 0}
 											minimumRequirements={minimumNotice ?? undefined}
 											onSave={useParentSaveCard ? saveFromSelectedItem : (_event, draft) => saveFn(draft)}
+											onInvalidSave={handleInvalidSave}
+											validationAlertId={alertVariant ? validationAlertId : undefined}
 										/>
 										{showReleaseLockControl && (
 											<SecondaryButton
@@ -2019,7 +2088,10 @@ function FormOrchestrator(props: FormsEngineProps) {
 	return (
 		// TODO: The transition doesn't seem to be carried out. Check forwarding the style prop.
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
-		isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment
+		<FormValidationAnnouncerContext.Provider value={announceValidation}>
+			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
+			<FormValidationLiveRegion ref={liveRegionRef} />
+		</FormValidationAnnouncerContext.Provider>
 	);
 }
 

@@ -188,7 +188,8 @@ function getInitialCreatePickerValue(
 }
 
 function NodeSelector(props: NodeSelectorProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources, labelId } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -321,7 +322,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			dispatch(
 				showCodeEditorDialog({
 					path: item.include,
-					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain')
+					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain'),
+					readonly: !edit
 				})
 			);
 		}
@@ -662,6 +664,10 @@ function NodeSelector(props: NodeSelectorProps) {
 	const maxCount = countLimitValue(field.validations?.maxCount?.value);
 	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
+	const addItemsLabel =
+		isAddDisabled && maxLimitReached
+			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
+			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
 	return (
 		<>
 			<Menu
@@ -743,6 +749,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			</Dialog>
 			<FormsEngineField
 				field={field}
+				labelId={labelId}
 				min={countLimitValue(field.validations?.minCount?.value)}
 				max={maxCount}
 				length={value.length}
@@ -766,6 +773,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
+								aria-label={addItemsLabel}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {
@@ -799,11 +807,6 @@ function NodeSelector(props: NodeSelectorProps) {
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
 								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
-								const iconTooltip = isEmbedded ? (
-									<FormattedMessage defaultMessage="Delete" />
-								) : (
-									<FormattedMessage defaultMessage="Unlink" />
-								);
 								const isComponent = isItemComponent(item);
 								const canBeEdited =
 									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
@@ -818,11 +821,25 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
+								const itemName =
+									(item.include && itemsByPath[item.include]?.label) || item.value || item.include || item.key;
+								// A read-only form still offers the edit icon for a row the user could edit, but it opens
+								// the form read-only, so the name is View.
+								const openLabel =
+									canBeEdited && !readonly
+										? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemName })
+										: formatMessage({ defaultMessage: 'View {item}' }, { item: itemName });
+								const removeLabel = isEmbedded
+									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemName })
+									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemName });
 								return (
 									<ListItemButton
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
 										divider={index !== value.length - 1}
-										onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
+										onClick={(e) =>
+											// A component row opens its form read-only. An asset row follows the form's mode.
+											canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
+										}
 										onKeyDown={(e) => handleItemKeyDown(e, index)}
 									>
 										<ListItemText
@@ -847,21 +864,25 @@ function NodeSelector(props: NodeSelectorProps) {
 										/>
 										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
 											{canBeEdited ? (
-												<Tooltip title="Edit">
-													<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
-														<EditOutlined fontSize="small" />
+												<Tooltip title={openLabel}>
+													<IconButton
+														size="small"
+														aria-label={openLabel}
+														onClick={(e) => handleEditItem(e, index, !readonly)}
+													>
+														{readonly ? <VisibilityOutlinedIcon fontSize="small" /> : <EditOutlined fontSize="small" />}
 													</IconButton>
 												</Tooltip>
 											) : (
-												<Tooltip title="View">
-													<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
+												<Tooltip title={openLabel}>
+													<IconButton size="small" aria-label={openLabel} onClick={(e) => handleViewItem(e, index)}>
 														<VisibilityOutlinedIcon fontSize="small" />
 													</IconButton>
 												</Tooltip>
 											)}
 											{!readonly && (
-												<Tooltip title={iconTooltip}>
-													<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
+												<Tooltip title={removeLabel}>
+													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
 														<Icon fontSize="small" />
 													</IconButton>
 												</Tooltip>

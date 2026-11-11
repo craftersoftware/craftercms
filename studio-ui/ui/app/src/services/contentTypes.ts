@@ -766,33 +766,57 @@ export function associateTemplate(site: string, contentTypeId: string, displayTe
 	);
 }
 
+function findDisplayTemplateProperty(doc: ParentNode): Element | undefined {
+	return Array.from(doc.querySelectorAll('properties > property')).find(
+		(node) => node.querySelector('name').textContent.trim() === 'display-template'
+	);
+}
+
+/**
+ * Sets the form-definition's `display-template` property via `textContent` (creates the property if missing).
+ * Paths are stored as literal text; XML escaping is left to `XMLSerializer`.
+ */
+export function setDisplayTemplateOnFormDefinition(doc: XMLDocument, displayTemplate: string): void {
+	const property = findDisplayTemplateProperty(doc);
+	if (property) {
+		property.querySelector('value').textContent = displayTemplate;
+		return;
+	}
+	const created = doc.createElement('property');
+	const name = doc.createElement('name');
+	const label = doc.createElement('label');
+	const value = doc.createElement('value');
+	const type = doc.createElement('type');
+	name.textContent = 'display-template';
+	label.textContent = 'Display Template';
+	value.textContent = displayTemplate;
+	type.textContent = 'template';
+	created.appendChild(name);
+	created.appendChild(label);
+	created.appendChild(value);
+	created.appendChild(type);
+	doc.querySelector('properties').appendChild(created);
+}
+
+/**
+ * Clears the form-definition's `display-template` value via `textContent`.
+ * Returns `false` when the property is absent.
+ */
+export function clearDisplayTemplateOnFormDefinition(doc: XMLDocument): boolean {
+	const property = findDisplayTemplateProperty(doc);
+	if (!property) {
+		return false;
+	}
+	property.querySelector('value').textContent = '';
+	return true;
+}
+
 function associateTemplateNow(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
 		switchMap((doc) => {
-			const properties = doc.querySelectorAll('properties > property');
-			const property = Array.from(properties).find(
-				(node) => node.querySelector('name').innerHTML.trim() === 'display-template'
-			);
-			if (property) {
-				property.querySelector('value').innerHTML = displayTemplate;
-			} else {
-				const property = document.createElement('property');
-				const name = document.createElement('name');
-				const label = document.createElement('label');
-				const value = document.createElement('value');
-				const type = document.createElement('type');
-				name.innerHTML = 'display-template';
-				label.innerHTML = 'Display Template';
-				value.innerHTML = displayTemplate;
-				type.innerHTML = 'template';
-				property.appendChild(name);
-				property.appendChild(label);
-				property.appendChild(value);
-				property.appendChild(type);
-				doc.querySelector('properties').appendChild(property);
-			}
+			setDisplayTemplateOnFormDefinition(doc, displayTemplate);
 			return fromPromise(beautify(serialize(doc))).pipe(
 				switchMap((xml) => writeConfiguration(site, path, module, xml))
 			);
@@ -867,18 +891,12 @@ function dissociateTemplateNow(site: string, contentTypeId: string): Observable<
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
 		switchMap((doc) => {
-			const properties = doc.querySelectorAll('properties > property');
-			const property = Array.from(properties).find(
-				(node) => node.querySelector('name').innerHTML.trim() === 'display-template'
-			);
-			if (property) {
-				property.querySelector('value').innerHTML = '';
-				return fromPromise(beautify(serialize(doc))).pipe(
-					switchMap((xml) => writeConfiguration(site, path, module, xml))
-				);
-			} else {
+			if (!clearDisplayTemplateOnFormDefinition(doc)) {
 				return of(false);
 			}
+			return fromPromise(beautify(serialize(doc))).pipe(
+				switchMap((xml) => writeConfiguration(site, path, module, xml))
+			);
 		})
 	);
 }

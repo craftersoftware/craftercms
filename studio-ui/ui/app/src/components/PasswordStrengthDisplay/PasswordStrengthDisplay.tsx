@@ -85,7 +85,7 @@ function getStyles(sx?: PasswordStrengthDisplayPartialSx): PasswordStrengthDispl
 			width: '40px',
 			textAlign: 'center',
 			borderTop: '4px solid',
-			borderColor: (theme) => theme.palette.grey.A400,
+			borderColor: (theme) => theme.palette.border.control,
 			...sx?.scoreListItemDisplay
 		},
 		scoreListItemText: {
@@ -93,23 +93,23 @@ function getStyles(sx?: PasswordStrengthDisplayPartialSx): PasswordStrengthDispl
 			...sx?.scoreListItemText
 		},
 		scoreActive20: {
-			borderColor: (theme) => theme.palette.error.light,
+			borderColor: (theme) => theme.palette.error.main,
 			...sx?.scoreActive20
 		},
 		scoreActive40: {
-			borderColor: '#FB8C00',
+			borderColor: (theme) => theme.palette.warning.main,
 			...sx?.scoreActive40
 		},
 		scoreActive60: {
-			borderColor: '#FFB400',
+			borderColor: (theme) => theme.palette.yellow.main,
 			...sx?.scoreActive60
 		},
 		scoreActive80: {
-			borderColor: (theme) => theme.palette.info.light,
+			borderColor: (theme) => theme.palette.info.main,
 			...sx?.scoreActive80
 		},
 		scoreActive100: {
-			borderColor: (theme) => theme.palette.success.light,
+			borderColor: (theme) => theme.palette.success.main,
 			...sx?.scoreActive100
 		},
 		yourScoreText: {
@@ -215,7 +215,16 @@ export function PasswordStrengthDisplay(props: PasswordStrengthDisplayProps) {
 									})
 								}}
 							>
-								<ListItemText primary={getDisplayScore(i)} sx={sx.scoreListItemText} />
+								<ListItemText
+									primary={getDisplayScore(i)}
+									sx={sx.scoreListItemText}
+									slotProps={{
+										primary: {
+											// Weight marks a filled segment so the score is not colour alone.
+											sx: { fontWeight: passwordScore >= getDisplayScore(i) ? 700 : 400 }
+										}
+									}}
+								/>
 							</Box>
 						</ListItem>
 					))}

@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-11-05
+Last updated: 2026-11-09
 
 ---
 
@@ -57,10 +57,10 @@ Typical type folder contents:
 
 Last commit that still had the files: [`4a6b57d9`](https://github.com/craftersoftware/craftercms/tree/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components) —
 
-| Module       | Historical entry                                                                 |
-| ------------ | -------------------------------------------------------------------------------- |
+| Module       | Historical entry                                                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Type Builder | [`cstudio-admin/mods/content-types.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-admin/mods/content-types.js) |
-| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js) |
+| Forms Engine | [`cstudio-forms/forms-engine.js`](https://github.com/craftersoftware/craftercms/blob/4a6b57d91ff816d7d7d731c70a87266e93dc06d3/studio-ui/static-assets/components/cstudio-forms/forms-engine.js)             |
 
 ### Next (React / `ui/app`)
 
@@ -230,7 +230,7 @@ The current implementation **does use `/config/studio/ui.xml`**, confirmed in `E
 
 #### Expected XML shape: `descriptor/metadata/additionalFields` (and `suffixes`)
 
-A custom descriptor lives on a `<control>` entry under the `ContentTypeManagement` widget in `/config/studio/ui.xml`. Its `<metadata>` declares the field-id suffixes the control owns and any **companion (additional) fields** FE must create atoms for alongside the field itself:
+A custom descriptor lives on a `<control>` entry under the `ContentTypeManagement` widget in `/config/studio/ui.xml`. Its `<metadata>` declares the field-id suffixes the control owns and any **additional fields** FE must create atoms for alongside the field itself:
 
 ```xml
 <widget id="craftercms.components.ContentTypeManagement">
@@ -263,9 +263,11 @@ Shape rules (this is the `ui.xml` descriptor shape — not the per-field shape p
   </metadata>
   ```
 - **Deserialization is single-vs-array.** `deserialize` (fast-xml-parser) yields a bare `string` for one `<additionalFields>` and a `string[]` for two or more. The Redux `uiConfig` reducer (`state/reducers/uiConfig.ts`, reading `controls > control > descriptor`) normalizes both `metadata.suffixes` and `metadata.additionalFields` with `asArray` into `string[] | null`. `EditTypeView`'s `parseConfigPlugins` likewise normalizes `metadata.additionalFields` with `asArray` (`[]` when absent), so consumers of TB-parsed descriptors receive an array there; it still does **not** normalize `metadata.suffixes`. `variableValidator` still `asArray`s `meta.additionalFields` itself defensively, because a single string otherwise has no `.map` and would be spread/iterated incorrectly.
-- **`{id}` is the only macro.** Each entry is a template expanded by `processAdditionalFieldMacro` (`lib/formUtils.tsx`): `{id}` is replaced with the field's own id, so `{id}_tz` on field `starts_dt` declares the companion `starts_dt_tz`. An entry without `{id}` is used verbatim (e.g. `page-nav-order` declares `orderDefault_f`). Code descriptors declare the same thing as a plain array: `metadata: { suffixes: ['_dt'], additionalFields: ['{id}_tz'] }` (`date-time`, `expired-date`).
-- **Effect.** Form bootstrap expands the templates for every field (`getAdditionalFieldsIdsFromDescriptor` in `FormsEngine.tsx` / `lib/formUtils.tsx`) and creates a value atom for each companion id even though it is not a `contentType.fields` entry; validators also expand them so a variable name cannot collide with a sibling's companion. A control that reads a companion that was never declared fails at runtime — built-in `DateTime` throws when `${field.id}_tz` has no atom. Plugin controls read/write companions through the host's `useFieldValue` (see §5.5), not through the atom map.
-- **Do not conflate with `form-definition.xml`.** In a saved form definition the _expanded_ companions are persisted per field as `<additionalFields><id>date_dt_tz</id></additionalFields>` (child `<id>` elements, already macro-expanded). The repeated-leaf `<additionalFields>{id}_tz</additionalFields>` template shape above exists only in `ui.xml` descriptors (and as `string[]` in code descriptors).
+- **`{id}` is the only macro.** Each entry is a template expanded by `processAdditionalFieldMacro` (`lib/formUtils.tsx`): `{id}` is replaced with the field's own id, so `{id}_tz` on field `starts_dt` declares the additional field `starts_dt_tz`. An entry without `{id}` is used verbatim (e.g. `page-nav-order` declares `orderDefault_f`). Code descriptors declare the same thing as a plain array: `metadata: { suffixes: ['_dt'], additionalFields: ['{id}_tz'] }` (`date-time`, `expired-date`).
+- **Effect.** Form bootstrap expands the templates for every field (`getAdditionalFieldsIdsFromDescriptor` in `FormsEngine.tsx` / `lib/formUtils.tsx`) and creates a value atom for each additional field id even though it is not a `contentType.fields` entry; validators also expand them so a variable name cannot collide with a sibling's additional field. A control that reads an additional field that was never declared fails at runtime — built-in `DateTime` throws when `${field.id}_tz` has no atom. Plugin controls read/write additional fields through the host's `useFieldValue` (see §5.5), not through the atom map.
+- **Do not conflate with `form-definition.xml`.** In a saved form definition the _expanded_ additional fields are persisted per field as `<additionalFields><id>date_dt_tz</id></additionalFields>` (child `<id>` elements, already macro-expanded). The repeated-leaf `<additionalFields>{id}_tz</additionalFields>` template shape above exists only in `ui.xml` descriptors (and as `string[]` in code descriptors).
+
+**Site-config field-name postfix rules** (`form-engine/field-name-postfix` and `ignore-postfix-fields` in `/config/studio/site-config.xml`) are separate from the descriptor `<suffixes>` catalog above. When the flag is `true`, TB validates top-level field ids against each control's declared suffixes (`ContentTypeManagement/fieldNamePostfix.ts`): exemptions match the whole name exactly; required postfixes must be at the end (`endsWith`), not anywhere in the name as TB1's `indexOf` allowed. Nested fields inside repeats are not checked; the repeat itself needs `_o`. Details and TB1 contrast live on the helper comment.
 
 Current behavior differs from the intent documented in `proposal.xml`:
 
@@ -297,7 +299,7 @@ The runtime control contract is `ControlProps<V>` (`value: V`, `setValue(newValu
 
 `ResolvedControlRenderer` wraps plugin controls in `FormsEngineField` by default, wired to the generated `inputId` / `labelId` (built-ins and Type Builder controls wrap themselves and are rendered bare). A contribution opts out with `fieldChrome: false` and wraps its input itself; `fieldSx` styles the default wrapper. The load-error placeholder wraps itself and is never wrapped twice: `controlPluginLoader` reports `fieldChrome: false` for it. Contract details and the `FormsEngineField` public props are in the plugins doc §6.
 
-`useFieldValue(fieldId)` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`) is the supported way for a plugin control to read/write a **sibling field** — typically a descriptor-declared additional field such as `{id}_tz` (date/time) or `{id}_bk` (see §5.4 for the `metadata/additionalFields` XML that declares those companions and gets their atoms created at bootstrap). It is a React hook returning `[value, setValue, exists]`: when the field was not initialized, `value` is `undefined`, `exists` is `false`, and `setValue` is a no-op instead of throwing — compare built-in `DateTime`, which throws on a missing `${field.id}_tz` atom. Plugins must use the host's instance (hooks/context identity), so the hook is exposed here rather than imported or bundled by the plugin:
+`useFieldValue(fieldId)` (`formsEngineControlsHost` in `dataSources/host.ts`; implementation in `lib/formsEngineContext.ts`) is the supported way for a plugin control to read/write a **sibling field** — typically a descriptor-declared additional field such as `{id}_tz` (date/time) or `{id}_bk` (see §5.4 for the `metadata/additionalFields` XML that declares those additional fields and gets their atoms created at bootstrap). It is a React hook returning `[value, setValue, exists]`: when the field was not initialized, `value` is `undefined`, `exists` is `false`, and `setValue` is a no-op instead of throwing — compare built-in `DateTime`, which throws on a missing `${field.id}_tz` atom. Plugins must use the host's instance (hooks/context identity), so the hook is exposed here rather than imported or bundled by the plugin:
 
 ```js
 const { useFieldValue } = globalThis.craftercms?.formsEngine?.controls ?? {};
@@ -573,12 +575,12 @@ Helper: `getFormControllerUrl(site, contentTypeId)` in `services/contentTypes.ts
 
 **In FE2 code:**
 
-| Piece     | Location                                                                                                                                                                                                                                                                                                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                            |
-| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                 |
-| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                       |
-| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                              |
+| Piece     | Location                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Module    | `FormsEngine/formControllers/` — `types`, `loader`, `runtime`, `relevance`, `fieldPaths`, `host`, `stub`                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Call site | Form bootstrap in `FormsEngine.tsx` / `FormBootstrap` (where content type + value atoms are already known), **before** field render                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Relevance | `attachFormController` stores an `irrelevantFieldPaths` deny-list; FormOrchestrator / ToC / save snapshot exclude those paths                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Save      | `lib/useSaveForm.tsx` before `buildContentXml` / write                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Types     | `FormController` / `FormControllerContext` / `FormControllerRelevanceContext` / `FormFieldChange` in `formControllers/types.ts`. Their TSDoc is the authoritative contract: there is no doc generator, and `build:tsc` copies the comments into the emitted `.d.ts` files. These types are not re-exported from the package entry point, so editors show the comments only where they resolve the deep path; a blob-imported `form-controller.js` gets no type information from them. Change the contract in that TSDoc first, then keep this section in step. |
 
 **Load sequence:**
@@ -735,22 +737,22 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### Quick “where do I look?”
 
-| Question                          | Start here                                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Author form shell / save / stack  | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
-| Form controller                   | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                 | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
-| Legacy module protocol            | `cstudio-common/common-api.js` (`Module`)                                                             |
-| New FE DS interpretation          | `FormsEngine/dataSourceHooks/*`                                                                       |
-| Content XML in/out                | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
-| Item reads, subscriptions         | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
-| Type list / edit UI               | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
-| New TB catalog configuration      | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
-| Type XML out                      | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
-| Control property forms            | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
-| config.xml merge plan             | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
-| Plugin packaging / runtime        | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
-| Plugin / listing design           | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
+| Question                         | Start here                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Author form shell / save / stack | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
+| Form controller                  | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
+| Control rendering                | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
+| Legacy module protocol           | `cstudio-common/common-api.js` (`Module`)                                                             |
+| New FE DS interpretation         | `FormsEngine/dataSourceHooks/*`                                                                       |
+| Content XML in/out               | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
+| Item reads, subscriptions        | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
+| Type list / edit UI              | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
+| New TB catalog configuration     | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
+| Type XML out                     | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
+| Control property forms           | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
+| config.xml merge plan            | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
+| Plugin packaging / runtime       | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
+| Plugin / listing design          | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
 
 ---
 
@@ -773,6 +775,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [x] **Stacked drawer FormBootstrap remount** — drawer mounts only the top stacked form; `key` includes `stackFormCount` so the parent slot remounts when a child closes. Prep restores existing `formsStackData[stackIndex].atoms` / `itemMeta` on first mount of that instance so in-memory parent edits (e.g. NodeSelector) survive embedded create from a stacked form; reload and later prep effect runs still re-fetch.
 - [x] **Plugin control valueRetriever / valueSerializer** — optional on `ControlPluginContribution`; registered with the control; FE preloads plugin locators before form parse and save.
 - [x] **Plugin control validator** — optional on `ControlPluginContribution`; looked up via `getFieldValidator` after built-in `validatorsMap`; ToC uses `hasFieldValidator`. Required/empty remains host-owned.
+- [x] **Field state indicator** — one component on the field label and the table of contents. An empty required field is an asterisk. A required field that is filled keeps that cue as a small asterisk on the upper-left of the state icon (check when valid, rounded warning triangle when invalid). The badge is `aria-hidden`; the tooltip and the table-of-contents name say "Required", "Required, complete", or "Required." plus the first validation message. An unchecked checkbox and an RTE with no text (for example `<p></p>`) count as empty. A control's `isValid` override applies to that label and its control only; the table of contents and the form alert follow the validation atom.
 
 ### Remaining implementation / validation
 
@@ -908,6 +911,7 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 Keep newest first. One short bullet per meaningful session.
 
 - **2026-11-09** — Removed the legacy Project Tools admin console: `cstudio-admin/base.js` and `mods/`, `/legacy-site-config`, `LegacySiteToolsFrame`, the `ui/legacy` workspace, blueprint/sample `site-config-tools.xml` (and its `config-list` entries). Appendix A / `4a6b57d9` permalinks for TB1/FE1 history are unchanged.
+- **2026-11-06** — Documented site-config field-name postfix enforcement in §5.4 next to descriptor `suffixes`: exact ignore match, `endsWith` (not TB1 anywhere-in-name), top-level-only; helper is `ContentTypeManagement/fieldNamePostfix.ts` (#9352).
 - **2026-11-05** — `FieldUpdate` stays `{ fieldId }` (no captured `value`). The `fieldChanges` and `onFieldChange` docs now say precisely when `value` is read: synchronously as each subscriber is notified, not once per write. If an earlier subscriber writes the same field during delivery, the nested change is delivered first and later subscribers get the newer value for the outer event too; filter by field or compare values when that matters. Pinned by a test in `fieldChanges.test.ts`. The TSDoc of the functions this PR adds or touches was completed.
 - **2026-11-05** — Review fixes for the `fieldChanges` TSDoc and docs (#9369). A bare `distinctUntilChanged()` on changes never dedupes (each `FormFieldChange` is a new object), so the loop guidance now says to filter by field or compare values. Operators that hold an inner observable (`switchMap`, `concatMap`, `mergeMap`) complete only when the inner settles, so the `switchMap` example now keeps its `Subscription` and unsubscribes it from the `initialize` cleanup; `debounceTime` flushes its pending value on completion. Only the change wrapper is frozen (shallow): `value` is the live value by reference, read when each subscriber is notified. `FormControllerRelevanceContext` declares `fieldChanges` (always `EMPTY`). The controller state's `fieldChangeUnsubscribers` set is now `fieldChangeTeardowns`. The types are not re-exported from the package entry point, so the docs no longer promise editor IntelliSense.
 - **2026-11-05** — Form controllers get a read-only `fieldChanges` observable of `{ fieldId, value }` next to `onFieldChange` (#9369). It is built through the same host bridge, so controllers never receive the subject and cannot push events. Disposing the controller context completes every subscriber, and the relevance context's `fieldChanges` completes immediately. `onFieldChange` behaves as before, and `FORM_CONTROLLER_API_VERSION` stays `1`. Internally `fieldUpdates$` now carries `FieldUpdate { fieldId }` objects instead of bare strings (declared once in `formsEngineContext.ts`, no `value` or `previousValue`). `onFieldChange`, `fieldChanges` and `FormFieldChange` carry full TSDoc in `formControllers/types.ts` (when to use which, lifecycle, examples), which `build:tsc` copies into the emitted `.d.ts` files.
