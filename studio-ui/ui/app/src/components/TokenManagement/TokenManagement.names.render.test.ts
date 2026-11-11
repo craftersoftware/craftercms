@@ -131,4 +131,18 @@ describe('TokenManagement control names', () => {
 		const switches = labelsOf(host, 'input[role="switch"]');
 		assert.deepEqual(switches, ['Enable CI build', 'Enable Deploy']);
 	});
+
+	it('leaves one visible select-all checkbox once a token is checked', async () => {
+		const host = await render();
+		const selectAll = () =>
+			Array.from(host.querySelectorAll<HTMLInputElement>('input[aria-label="Select all"]')).filter(
+				(input) => window.getComputedStyle(input.closest('.MuiCheckbox-root') ?? input).visibility !== 'hidden'
+			);
+		assert.equal(selectAll().length, 1);
+		await act(async () => {
+			host.querySelector<HTMLInputElement>('input[aria-label="Select CI build"]')?.click();
+		});
+		assert.equal(host.querySelectorAll('input[aria-label="Select all"]').length, 2, 'the bar and the header');
+		assert.equal(selectAll().length, 1, 'the header checkbox is hidden under the bar');
+	});
 });

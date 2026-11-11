@@ -338,6 +338,9 @@ export function TokenManagement() {
 												disabled={checkedCount > 0}
 												checked={false}
 												color="primary"
+												// The actions bar covers the header while anything is checked and has its own select-all.
+												// Hidden, not removed, so the header keeps its height.
+												sx={checkedCount > 0 ? { visibility: 'hidden' } : undefined}
 												slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 												onClick={() => {
 													onToggleSelectAll(true);
