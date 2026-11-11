@@ -23,7 +23,10 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it } from 'node:test';
+
+// MUI's dialog focus trap checks `instanceof ShadowRoot`, which the shared DOM setup does not expose.
+Object.defineProperty(globalThis, 'ShadowRoot', { value: window.ShadowRoot, configurable: true, writable: true });
 
 const {
 	React,
@@ -253,5 +256,59 @@ describe('NodeSelector E and V shortcuts', () => {
 		const { host, formDialogs } = await mountMixed();
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
 		assert.equal(formDialogs().length, 0, 'E opens the editable form through the forms API, not a view dialog');
+	});
+});
+
+describe('NodeSelector reorder dialog', () => {
+	beforeEach(() => {
+		(window as unknown as Record<string, unknown>).ontouchstart = null;
+	});
+	afterEach(() => {
+		delete (window as unknown as Record<string, unknown>).ontouchstart;
+	});
+
+	it('names rows the way the field does: the stored label first, never an empty or outdated name', async () => {
+		const store = createItemsStore({
+			...baseItems(),
+			[alpha]: selectorItem(alpha, 'Alpha'),
+			[beta]: selectorItem(beta, 'Renamed beta'),
+			[gamma]: selectorItem(gamma, '')
+		});
+		const entry = createEntry(['nodes_o']);
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry },
+				React.createElement(NodeSelector as never, {
+					field: fieldFor('nodes_o', 'node-selector'),
+					value: [
+						{ key: alpha, value: '', include: alpha },
+						{ key: beta, value: 'Old beta', include: beta },
+						{ key: gamma, value: '', include: gamma }
+					],
+					setValue: () => undefined,
+					readonly: false,
+					autoFocus: false,
+					contentType: { id: '/component/thing', fields: {} }
+				})
+			)
+		);
+		await act(async () => {
+			host.querySelector<HTMLElement>('[data-testid="MoreVertRoundedIcon"]').closest('button').click();
+		});
+		const entryItem = Array.from(document.body.querySelectorAll('li')).find((li) => li.textContent === 'Reorder Items');
+		await act(async () => entryItem.click());
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+		const dialog = document.body.querySelector('.MuiDialog-root');
+		assert.deepEqual(
+			Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent),
+			['Alpha', 'Renamed beta', gamma]
+		);
+		assert.ok(dialog.querySelector('button[aria-label="Move up: Renamed beta"]'));
+		assert.ok(dialog.querySelector(`button[aria-label="Move down: Alpha"]`));
+		assert.ok(dialog.querySelector(`button[aria-label="Move up: ${gamma}"]`));
 	});
 });

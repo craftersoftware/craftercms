@@ -218,15 +218,18 @@ function NodeSelector(props: NodeSelectorProps) {
 	const { rootRef, remember, announcement } = useReorderFocus(value);
 	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
 	const rowKeys = useOccurrenceKeys(value);
-	const sortItems = useMemo(
-		() => value.map((item, index) => ({ key: rowKeys[index], value: item.value, data: item })),
-		[value, rowKeys]
-	);
 	const onSortChange = (next: TItem<NodeSelectorItem>[]) => setValue(next.map((item) => item.data));
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
 	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
 	const itemsByPath = useItemsByPaths(value.flatMap((item) => [item.key, item.include].filter(Boolean) as string[]));
+	const getItemLabel = (item: NodeSelectorItem) =>
+		(item.component ? item.value : itemsByPath[item.include]?.label || item.value) || item.include || String(item.key);
+	const sortItems = useMemo(
+		() => value.map((item, index) => ({ key: rowKeys[index], value: getItemLabel(item), data: item })),
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- getItemLabel only reads itemsByPath.
+		[value, rowKeys, itemsByPath]
+	);
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
 	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
@@ -851,10 +854,7 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
-								const itemLabel =
-									(isEmbedded ? item.value : itemsByPath[item.include]?.label || item.value) ||
-									item.include ||
-									String(item.key);
+								const itemLabel = getItemLabel(item);
 								// The row opens the item read-only. The pencil edits it. Those are different actions.
 								// View (read-only field, or an item that cannot be edited) is the same action as the row,
 								// so that button stays out of the tab order.
