@@ -326,6 +326,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			onClose: onConfirmDialogClose,
 			onClosed: onConfirmDialogClosed,
 			imageUrl: informationGraphicUrl,
+			title: formatMessage(translations.encryptMarked),
+			sxs: { title: { typography: 'subtitle1', textAlign: 'left', paddingBottom: '1em' } },
 			children: (
 				<Box
 					component="section"
@@ -336,9 +338,6 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						}
 					}}
 				>
-					<Typography className="text-margin" variant="subtitle1">
-						{formatMessage(translations.encryptMarked)}
-					</Typography>
 					<Typography className="text-margin" variant="body2">
 						{formatMessage(translations.encryptHintPt1)}
 					</Typography>
