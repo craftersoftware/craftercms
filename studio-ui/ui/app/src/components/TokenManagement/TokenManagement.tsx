@@ -338,6 +338,7 @@ export function TokenManagement() {
 												disabled={checkedCount > 0}
 												checked={false}
 												color="primary"
+												slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 												onClick={() => {
 													onToggleSelectAll(true);
 												}}
@@ -373,6 +374,11 @@ export function TokenManagement() {
 												<Checkbox
 													checked={!!checkedLookup[token.id]}
 													color="primary"
+													slotProps={{
+														input: {
+															'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: token.label })
+														}
+													}}
 													onChange={(event, checked) => {
 														onItemChecked(token.id, checked);
 													}}
@@ -439,6 +445,14 @@ export function TokenManagement() {
 													>
 														<Switch
 															checked={token.enabled}
+															slotProps={{
+																input: {
+																	'aria-label': formatMessage(
+																		{ defaultMessage: 'Enable {name}' },
+																		{ name: token.label }
+																	)
+																}
+															}}
 															onChange={(e, checked) => {
 																onSetEnabled(token.id, checked);
 															}}
