@@ -798,7 +798,7 @@ export function PageExplorerUI(props: PageExplorerUIProps) {
 			{Boolean(breadcrumbs.length > 1) && (
 				<MuiBreadcrumbs
 					maxItems={2}
-					aria-label="Breadcrumbs"
+					aria-label={formatMessage({ defaultMessage: 'Breadcrumbs' })}
 					separator={<NavigateNextIcon fontSize="small" />}
 					sx={{
 						[`& .${breadcrumbsClasses.ol}`]: {

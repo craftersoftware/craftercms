@@ -254,6 +254,7 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 															checked={allItemsSelected}
 															indeterminate={someItemsSelected}
 															onChange={onSelectAll}
+															slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 														/>
 													</Tooltip>
 													<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />

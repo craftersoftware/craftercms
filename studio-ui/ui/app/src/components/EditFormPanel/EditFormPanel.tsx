@@ -241,8 +241,8 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 		// TODO: Implement Multi-mode...
 		return (
 			<>
-				<ToolPanel BackIcon={CloseRounded} title="Not Implemented.">
-					<Typography>This condition is not implemented yet.</Typography>
+				<ToolPanel BackIcon={CloseRounded} title={formatMessage({ defaultMessage: 'Not Implemented.' })}>
+					<Typography>{formatMessage({ defaultMessage: 'This condition is not implemented yet.' })}</Typography>
 				</ToolPanel>
 			</>
 		);
