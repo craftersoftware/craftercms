@@ -67,6 +67,10 @@ const initialState: GlobalState['uiConfig'] = {
 		submissionCommentMaxLength: 250
 	},
 	cdataEscapedFieldPatterns: [],
+	formEngine: {
+		fieldNamePostfix: false,
+		ignorePostfixFields: []
+	},
 	remoteGitBranch: null
 };
 
@@ -181,7 +185,7 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 			}
 		}))
 		.addCase(fetchSiteConfigComplete, (state, { payload }) => {
-			const { cdataEscapedFieldPatterns, locale, publishing, upload, remoteGitBranch } = payload;
+			const { cdataEscapedFieldPatterns, formEngine, locale, publishing, upload, remoteGitBranch } = payload;
 			return {
 				...state,
 				upload: {
@@ -189,6 +193,7 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 					...upload
 				},
 				cdataEscapedFieldPatterns,
+				formEngine: formEngine ?? initialState.formEngine,
 				locale: {
 					...state.locale,
 					// If localization config is not present in the config, use the browser's resolved options.

@@ -83,7 +83,7 @@ const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
 /** Repeating group. Add stops at maxCount; delete stops at minCount. See utils/countLimits.ts. */
 export function Repeat(props: RepeatProps) {
-	const { field, value, setValue, readonly, autoFocus } = props;
+	const { field, value, setValue, readonly, autoFocus, labelId } = props;
 	const { formatMessage } = useIntl();
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
@@ -188,6 +188,7 @@ export function Repeat(props: RepeatProps) {
 			</Dialog>
 			<FormsEngineField
 				field={field}
+				labelId={labelId}
 				min={minCount}
 				max={maxCount}
 				length={count}
