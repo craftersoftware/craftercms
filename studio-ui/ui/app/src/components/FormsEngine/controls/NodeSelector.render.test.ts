@@ -253,6 +253,17 @@ describe('NodeSelector E and V shortcuts', () => {
 		assert.equal(formDialogs().length, 2);
 	});
 
+	it('agrees with the row click: a component row opens read-only, E edits and V views', async () => {
+		const { host } = await mountMixed();
+		await act(async () => rowLabelled(host, 'Alpha').click());
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'v'));
+		assert.deepEqual(
+			pushFormCalls.map((call) => call.readonly),
+			[true, false, true]
+		);
+	});
+
 	it('edits an item the user can edit on E and views it on V, through the forms API', async () => {
 		const { host, formDialogs } = await mountMixed();
 		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
