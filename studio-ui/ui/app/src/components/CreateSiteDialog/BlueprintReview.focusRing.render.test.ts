@@ -28,10 +28,13 @@ import { afterEach, describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { default: CrafterThemeProvider } = await import('../CrafterThemeProvider/CrafterThemeProvider.tsx');
 const { default: BlueprintReview } = await import('./BlueprintReview.tsx');
 const { focusRingColor, focusRingWidth } = await import('../../styles/focusRing.ts');
+
+const intl = createTestIntl();
 
 (globalThis as any).localStorage ??= window.localStorage;
 
@@ -74,8 +77,8 @@ async function render(enableAnimations: boolean) {
 				CrafterThemeProvider,
 				null,
 				React.createElement(
-					IntlProvider,
-					{ locale: 'en', messages: {}, onError() {} },
+					RawIntlProvider,
+					{ value: intl },
 					React.createElement(BlueprintReview, { inputs, blueprint, onGoTo: () => undefined } as never)
 				)
 			) as never
