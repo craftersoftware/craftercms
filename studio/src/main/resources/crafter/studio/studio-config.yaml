@@ -230,6 +230,9 @@ studio.configuration.defaultAdminGroup: site_admin
 studio.configuration.site.dataSources.configLocation: /config/studio/data-sources/cmis-config.xml
 # Destroy site context url for preview engine
 studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}&token=${studio.configuration.management.previewAuthorizationToken}
+# Site id suffix appended when listing a site's staging publishing target.
+# Must match the suffix recognized by crafter.engine.site.staging.pattern.
+studio.configuration.site.staging.idSuffix: -staging
 # Location pattern where default dependency resolver specific configuration for is stored
 studio.configuration.default.dependencyResolver.configBasePath: /configuration/dependency
 # File name where default dependency specific configuration is stored
@@ -263,6 +266,10 @@ studio.configuration.site.translation: ${studio.configuration.site.configBasePat
 # Studio management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.authorizationToken: defaultManagementToken
+# Studio management token for the site management API.
+# Delivery sends this value in the X-Crafter-Management-Token header when listing sites.
+# Please update this per installation and provide this token to delivery.
+studio.configuration.management.siteManagementToken: ${env:STUDIO_SITE_MANAGEMENT_TOKEN}
 # Preview engine management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}
@@ -358,6 +365,7 @@ studio.security.activity.cache.config: initialCapacity=25,maximumSize=100
 # The regex should not include extension and should match the query string too.
 studio.security.publicUrls: >
   /api/1/services/api/1/server/get-available-languages.*,/api/1/services/api/1/server/get-ui-resource-override.*,
+  /api/2/management/sites.*,
   /api/2/monitoring/.+,/api/2/users/forgot_password.*,/api/2/users/set_password.*,/static-assets/.+,
   /api/2/users/validate_token.*,/api/1/services/api/1/security/login.*,/api/2/users/forgot_password.*,
   /api/2/plugin/script/reload.*

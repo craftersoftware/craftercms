@@ -36,7 +36,8 @@ dependencies {
 	implementation libs.opensearch.java
 	implementation libs.tika.core
 	implementation libs.tika.parsers.standard.package
-	implementation libs.poi.scratchpad
+	implementation libs.jakarta.activation.api
+	implementation libs.angus.activation
 	implementation libs.jdom2
 	implementation libs.bcmail.jdk18on
 	implementation libs.metadata.extractor
