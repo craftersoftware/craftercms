@@ -16,7 +16,6 @@
 
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import visuallyHidden from '@mui/utils/visuallyHidden';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import useActiveSite from '../../hooks/useActiveSite';
@@ -127,6 +126,7 @@ import {
 import { renderFieldControl } from './lib/renderControl';
 import { createFormLockReleaseSession, prepareStackedFormPop, releaseLockToggleFailed } from './lib/unlockOnClose';
 import { FormValidationAnnouncerContext } from './lib/fieldA11y';
+import FormValidationLiveRegion, { type FormValidationLiveRegionHandle } from './components/FormValidationLiveRegion';
 import {
 	ContentTypeNotFoundError,
 	ItemNotFoundError,
@@ -1118,20 +1118,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 	// Holds the create mode comment generated last, so that a comment written by the user isn't overwritten. Starts off
 	// with the default comment the version comment atom was created with.
 	const lastCreationCommentRef = useRef(generateDefaultCreationComment('', formatMessage));
-	const [validationStatusMessage, setValidationStatusMessage] = useState('');
-	const validationStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const announceValidation = useCallback((message: string) => {
-		setValidationStatusMessage('');
-		if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
-		// Clear first so a repeated message still changes the live region's text.
-		validationStatusTimer.current = setTimeout(() => setValidationStatusMessage(message), 40);
-	}, []);
-	useEffect(
-		() => () => {
-			if (validationStatusTimer.current) clearTimeout(validationStatusTimer.current);
-		},
-		[]
-	);
+	const liveRegionRef = useRef<FormValidationLiveRegionHandle>(null);
+	const announceValidation = useCallback((message: string) => liveRegionRef.current?.announce(message), []);
 
 	useMount(() => {
 		// If 'update.changeTypeId' has content, it means the content type has changed, so we set pending changes to true
@@ -2092,9 +2080,7 @@ function FormOrchestrator(props: FormsEngineProps) {
 		// The Fade provides some transitioning for the stacked forms that show without the Slide transition since the Drawer is already open and there's only one.
 		<FormValidationAnnouncerContext.Provider value={announceValidation}>
 			{isStackedForm ? <Fade mountOnEnter in={stackTransitionEnded} children={bodyFragment} /> : bodyFragment}
-			<Box role="status" aria-live="polite" aria-atomic="true" sx={visuallyHidden}>
-				{validationStatusMessage}
-			</Box>
+			<FormValidationLiveRegion ref={liveRegionRef} />
 		</FormValidationAnnouncerContext.Provider>
 	);
 }
