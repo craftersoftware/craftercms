@@ -16,7 +16,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useStore } from 'react-redux';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useSpreadState } from '../../hooks/useSpreadState';
 import { HistoryDialogContainerProps, Menu, menuInitialState, menuOptions } from './utils';
@@ -67,6 +67,7 @@ import { nanoid } from 'nanoid';
 import { pushConfirmDialog } from '../../utils/system';
 import { popDialog } from '../../state/actions/dialogStack';
 import { checkAndCancelAffectedPackages } from '../ViewPackagesDialog/utils';
+import GlobalState from '../../models/GlobalState';
 
 export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	const { versionsBranch, error } = props;
@@ -78,6 +79,7 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	const [openSelector, setOpenSelector] = useState(false);
 	const { formatMessage } = useIntl();
 	const dispatch = useDispatch();
+	const store = useStore<GlobalState>();
 	const site = useActiveSiteId();
 	const timeoutRef = useRef(null);
 	const isItemPreviewable = isPreviewable(item);
@@ -213,6 +215,15 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 
 	const confirmAndRevert = (versionTitle: string, onRevert: () => void) => {
 		const dialogId = nanoid();
+		const siteId = site;
+		const continueRevertIfSameSite = () => {
+			// Package check/cancel and revert must stay on the site that initiated them.
+			// onContinue can fire after async work / dialogs; do not revert against a newly selected site.
+			if (store.getState().sites.active !== siteId) {
+				return;
+			}
+			onRevert();
+		};
 		dispatch(
 			pushConfirmDialog({
 				id: dialogId,
@@ -223,11 +234,11 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 					onOk: () => {
 						dispatch(popDialog({ id: dialogId }));
 						if (!item) {
-							onRevert();
+							continueRevertIfSameSite();
 							return;
 						}
 						checkAndCancelAffectedPackages({
-							siteId: site,
+							siteId,
 							item,
 							dispatch,
 							formatMessage,
@@ -238,7 +249,7 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 							subtitle: (
 								<FormattedMessage defaultMessage="The item is part of one or more publishing packages. Reverting it will cancel the packages." />
 							),
-							onContinue: onRevert
+							onContinue: continueRevertIfSameSite
 						});
 					}
 				}
