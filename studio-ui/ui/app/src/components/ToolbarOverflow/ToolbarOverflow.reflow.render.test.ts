@@ -15,7 +15,7 @@
  */
 
 /**
- * Focus of the More button when the bar is resized (zoom, window width).
+ * Focus and ARIA state of the More button when the bar is resized (zoom, window width).
  * Each toolbar control is 100px wide and the More button 40px.
  */
 
@@ -197,5 +197,54 @@ describe('ToolbarOverflow focus when the bar shrinks', () => {
 		await resize(TWO_FIT);
 		assert.ok(document.activeElement === outside, 'focus stays outside the bar');
 		outside.remove();
+	});
+});
+
+describe('ToolbarOverflow More button state', () => {
+	it('exposes aria-expanded and aria-controls for the dialog it opens', async () => {
+		await renderBar('start', TWO_FIT);
+		await act(async () => {});
+		const more = button(MORE);
+		assert.equal(more.getAttribute('aria-haspopup'), 'dialog');
+		assert.equal(more.getAttribute('aria-expanded'), 'false');
+		assert.equal(more.hasAttribute('aria-controls'), false);
+
+		await openMore();
+		assert.equal(more.getAttribute('aria-expanded'), 'true');
+		const controls = more.getAttribute('aria-controls');
+		assert.ok(controls, 'aria-controls is set while open');
+		assert.equal(dialog()?.id, controls);
+		assert.equal(dialog()?.getAttribute('aria-label'), MORE);
+
+		await act(async () => {
+			document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+			dialog()?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		});
+		await act(async () => {});
+		assert.equal(more.getAttribute('aria-expanded'), 'false');
+		assert.equal(more.hasAttribute('aria-controls'), false);
+	});
+});
+
+describe('ToolbarOverflow focus when the menu closes because everything fits again', () => {
+	it('moves focus from the menu to the same control in the bar', async () => {
+		await renderBar('start', TWO_FIT);
+		await act(async () => {});
+		await openMore();
+		await act(async () => button('C').focus());
+		assertFocused('C');
+		await resize(ALL_FIT);
+		assert.equal(document.querySelector(`button[aria-label="${MORE}"]`), null);
+		assertFocused('C');
+		assert.ok(button('C').closest('[data-toolbar-overflow]'), 'C is back in the bar');
+	});
+
+	it('moves focus on the menu itself to the first control that comes back', async () => {
+		await renderBar('start', TWO_FIT);
+		await act(async () => {});
+		await openMore();
+		await act(async () => dialog()?.focus());
+		await resize(ALL_FIT);
+		assertFocused('C');
 	});
 });

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { Children, Suspense, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { Children, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Popover from '@mui/material/Popover';
@@ -119,15 +119,6 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 
 	useLayoutEffect(() => {
 		visibleCountRef.current = visibleCount;
-		const pendingFocus = pendingFocusRef.current;
-		if (pendingFocus && visibleCount >= itemCount) {
-			// The menu closed and its items moved back into the bar. Focus the same control there, so it does
-			// not fall to the document body (the More button that would get it back is gone).
-			pendingFocusRef.current = null;
-			const wrapper = itemRefs.current[pendingFocus.item];
-			const controls = wrapper?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-			(controls?.[pendingFocus.control] ?? controls?.[0])?.focus();
-		}
 		if (focusMoreRef.current && visibleCount < itemCount) {
 			// The focused control now lives in the closed menu and was unmounted from the bar, so focus
 			// would fall to the document body. The More button holds its place.
@@ -204,6 +195,20 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 		});
 		return () => observer.disconnect();
 	}, [align, itemCount, itemsSignature, visibleCount]);
+
+	// Passive effects run after the closing menu's focus trap has released focus. In a layout effect the trap's
+	// focusin handler is still active and pulls focus back into the menu.
+	useEffect(() => {
+		const pendingFocus = pendingFocusRef.current;
+		if (pendingFocus && visibleCount >= itemCount) {
+			// The menu closed and its items moved back into the bar. Focus the same control there, so it does
+			// not fall to the document body (the More button that would get it back is gone).
+			pendingFocusRef.current = null;
+			const wrapper = itemRefs.current[pendingFocus.item];
+			const controls = wrapper?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+			(controls?.[pendingFocus.control] ?? controls?.[0])?.focus();
+		}
+	}, [itemCount, visibleCount]);
 
 	// Item indexes stay absolute, so `itemRefs` and the cached widths line up whichever end is kept.
 	const firstVisible = align === 'end' ? itemCount - visibleCount : 0;
