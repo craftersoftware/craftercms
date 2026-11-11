@@ -520,7 +520,8 @@ describe('Repeat reorder', () => {
 	});
 });
 
-const addButton = (host: HTMLElement) => host.querySelector('button[aria-label="Add items"]') as HTMLButtonElement;
+const addButton = (host: HTMLElement) =>
+	host.querySelector('button[aria-label="Add items to Rows"]') as HTMLButtonElement;
 const withLimits = (limits: { minCount?: number; maxCount?: number }) =>
 	({
 		...field,
@@ -733,7 +734,7 @@ describe('Repeat keyboard reorder', () => {
 		await act(async () => deleteButton(rowFor(host, 'a')).click());
 		assert.deepEqual(titles(host), []);
 		assert.equal(document.activeElement, add);
-		assert.equal(add.getAttribute('aria-label'), 'Add items');
+		assert.equal(add.getAttribute('aria-label'), 'Add items to Rows');
 		assert.equal(add.disabled, false);
 	});
 

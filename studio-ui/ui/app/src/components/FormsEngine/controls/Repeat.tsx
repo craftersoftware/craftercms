@@ -75,6 +75,7 @@ import {
 } from '../../../utils/countLimits';
 const repeatMessages = defineMessages({
 	addItems: { defaultMessage: 'Add items' },
+	addItemsTo: { defaultMessage: 'Add items to {fieldName}' },
 	maxReached: { defaultMessage: 'Maximum of {max, plural, one {# item} other {# items}} reached' },
 	minRequired: { defaultMessage: 'At least {min, plural, one {# item is} other {# items are}} required' }
 });
@@ -240,7 +241,7 @@ export function Repeat(props: RepeatProps) {
 							<span>
 								<IconButton
 									ref={addButtonRef}
-									aria-label={formatMessage(repeatMessages.addItems)}
+									aria-label={formatMessage(repeatMessages.addItemsTo, { fieldName: field.name })}
 									size="small"
 									color="primary"
 									onClick={handleAddItem}
