@@ -28,12 +28,14 @@ const { React, FormHost, baseItems, createEntry, createItemsStore, fieldFor, for
 	await import('../lib/formItemTestHarness');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { RawIntlProvider } = await import('react-intl');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
-const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { default: NodeSelector } = await import('./NodeSelector.tsx');
 
-const intl = createTestIntl();
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
+
 const articlePath = '/site/components/article.xml';
 const photoPath = '/site/components/photo.xml';
 const scriptPath = '/static-assets/app.js';

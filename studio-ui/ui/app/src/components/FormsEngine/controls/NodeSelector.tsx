@@ -825,14 +825,13 @@ function NodeSelector(props: NodeSelectorProps) {
 									(item.include && itemsByPath[item.include]?.label) || item.value || item.include || item.key;
 								// A read-only form still offers the edit icon for a row the user could edit, but it opens
 								// the form read-only, so the name is View.
-								const openLabel = formatMessage(
-									canBeEdited && !readonly ? { defaultMessage: 'Edit {item}' } : { defaultMessage: 'View {item}' },
-									{ item: itemName }
-								);
-								const removeLabel = formatMessage(
-									isEmbedded ? { defaultMessage: 'Delete {item}' } : { defaultMessage: 'Unlink {item}' },
-									{ item: itemName }
-								);
+								const openLabel =
+									canBeEdited && !readonly
+										? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemName })
+										: formatMessage({ defaultMessage: 'View {item}' }, { item: itemName });
+								const removeLabel = isEmbedded
+									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemName })
+									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemName });
 								return (
 									<ListItemButton
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)

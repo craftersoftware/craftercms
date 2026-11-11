@@ -26,12 +26,15 @@ import { afterEach, describe, it } from 'node:test';
 
 const { React, createEntry, createItemsStore, baseItems, mountTree, unmountAll } =
 	await import('../../FormsEngine/lib/formItemTestHarness');
-const { RawIntlProvider } = await import('react-intl');
-const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { default: TypeBuilderFormsEngine } = await import('./TypeBuilderFormsEngine.tsx');
 
 // jsdom doesn't implement element scrolling.
 (window.HTMLElement.prototype as { scroll: () => void }).scroll = () => undefined;
+
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const strictIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 afterEach(() => {
 	unmountAll();
@@ -45,7 +48,7 @@ async function renderBuilder(modeProps: Record<string, unknown>) {
 		createItemsStore(baseItems()),
 		React.createElement(
 			RawIntlProvider,
-			{ value: createTestIntl() },
+			{ value: strictIntl },
 			React.createElement(TypeBuilderFormsEngine, {
 				virtualType,
 				formApiContext: { rollbackField() {} },

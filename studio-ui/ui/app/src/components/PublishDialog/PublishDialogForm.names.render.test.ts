@@ -27,10 +27,9 @@ import { afterEach, describe, it } from 'node:test';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider } = await import('react-intl');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
-const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { PublishDialogForm } = await import('./PublishDialogForm.tsx');
 
 class FakeXhr extends EventTarget {
@@ -67,6 +66,10 @@ class FakeXhr extends EventTarget {
 (window as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = FakeXhr;
 (globalThis as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = FakeXhr;
 
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const strictIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
+
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
 	await act(async () => {
@@ -95,7 +98,7 @@ async function render() {
 				{ store },
 				React.createElement(
 					RawIntlProvider,
-					{ value: createTestIntl() },
+					{ value: strictIntl },
 					React.createElement(PublishDialogForm, {
 						onSubmit() {},
 						onInputChange() {},
