@@ -31,6 +31,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import {
+	fieldVisibility,
 	isScopeActive,
 	revealField,
 	returnToLaunchScope,
@@ -259,8 +260,18 @@ function SectionFieldInvalidProbe({
 	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 	report(fieldId: string, invalid: boolean): void;
 }) {
+	const stableForm = useContext(StableFormContext);
+	// A controller can hide a field after validation ran. Re-read when relevance changes.
+	useAtomValue(stableForm.atoms.relevanceVersion);
 	const { props } = useFieldStateIndicatorProps(field, atoms);
-	const invalid = sectionFieldIsInvalid(props);
+	const irrelevant =
+		fieldVisibility({
+			fieldId: field.id,
+			irrelevantFieldPaths: stableForm.formControllerState?.irrelevantFieldPaths,
+			parentPath: stableForm.props?.repeat?.fieldId,
+			scopeFieldIds: null
+		}) === 'irrelevant';
+	const invalid = !irrelevant && sectionFieldIsInvalid(props);
 	useEffect(() => {
 		report(field.id, invalid);
 		return () => report(field.id, false);
