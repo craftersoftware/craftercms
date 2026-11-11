@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import TextFieldWithMax from '../TextFieldWithMax';
@@ -114,6 +114,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 
 	const siteId = useActiveSiteId();
 	const { formatMessage } = useIntl();
+	const schedulingLegendId = useId();
+	const publishingTargetLegendId = useId();
 	const requestApprovalHelpLabel = formatMessage({ defaultMessage: 'More information about request approval' });
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const [publishingTargetsStatus, setPublishingTargetsStatus] = useState('Loading');
@@ -232,10 +234,11 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				fullWidth
 				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
 			>
-				<FormLabel component="legend">
+				<FormLabel component="legend" id={schedulingLegendId}>
 					<FormattedMessage defaultMessage="Scheduling" />
 				</FormLabel>
 				<RadioGroup
+					aria-labelledby={schedulingLegendId}
 					value={formState.scheduling}
 					onChange={onInputChange}
 					name="scheduling"
@@ -316,12 +319,13 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				fullWidth
 				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
 			>
-				<FormLabel component="legend">
+				<FormLabel component="legend" id={publishingTargetLegendId}>
 					<FormattedMessage defaultMessage="Publishing Target" />
 				</FormLabel>
 				{publishingTargets ? (
 					publishingTargets.length ? (
 						<RadioGroup
+							aria-labelledby={publishingTargetLegendId}
 							value={formState.publishingTarget}
 							onChange={onInputChange}
 							name="publishingTarget"
