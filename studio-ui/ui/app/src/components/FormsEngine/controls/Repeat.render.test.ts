@@ -30,8 +30,7 @@ import type { PrimitiveAtom } from 'jotai';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider } = await import('react-intl');
-const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider: ReduxProvider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, useAtomValue, Provider: JotaiProvider } = await import('jotai');
@@ -58,7 +57,9 @@ const reduxStore = configureStore({
 	}
 });
 
-const intl = createTestIntl();
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 const field = {
 	id: 'rows_o',

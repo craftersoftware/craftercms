@@ -27,8 +27,7 @@ import type { ContentTypeField } from '../../../models/ContentType';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider } = await import('react-intl');
-const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
+const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -98,7 +97,9 @@ export function dispatchItems(store: ItemsStore, change: (items: ItemsByPath) =>
 	});
 }
 
-const intl = createTestIntl();
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 const mounted: Array<() => void> = [];
 
