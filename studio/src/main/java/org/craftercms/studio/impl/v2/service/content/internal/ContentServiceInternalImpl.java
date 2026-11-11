@@ -166,6 +166,7 @@ import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.exception.content.ContentExistException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.exception.content.ContentLockedByAnotherUserException;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.contentType.ContentTypeInvalidLocationException;
 import org.craftercms.studio.api.v2.exception.repository.RepositoryException;
 import org.craftercms.studio.api.v2.repository.ContentWriteItem;
@@ -220,6 +221,7 @@ import org.craftercms.studio.model.contentType.ContentType;
 import org.craftercms.studio.model.contentType.CopyDependency;
 import org.craftercms.studio.model.history.ItemVersion;
 import org.craftercms.studio.model.history.RepositoryVersion;
+import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.Person;
 import org.craftercms.studio.model.rest.content.DeleteContentResult;
 import org.craftercms.studio.model.rest.content.GetChildrenBulkRequest.PathParams;
@@ -628,7 +630,7 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 					throw new InvalidParametersException(format("Content type '%s' is not allowed at site '%s' for path '%s'", contentType, siteId, path));
 				}
 				if (isPageDescriptor(path)) {
-					updateNavOrder(siteId, path, document, false);
+					updateNavOrder(siteId, path, document);
 				}
 				Map<String, ContentWriteItem> dependencies = updateContentOnWrite(siteId, sourcePath, path, newItemLabel, operation, document.getRootElement());
 				Path tempFile = createTempFile(path, document);
@@ -661,16 +663,16 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	}
 
 	/**
-	 * Update the content XML with the new label and update the dependencies if needed.
+	 * Set the navigation order for a new page that does not have one yet.
+	 * Pages that already have an order are left unchanged. Copy, duplicate, and move resolve collisions separately.
 	 *
 	 * @param siteId   the site id
 	 * @param path     the content path
 	 * @param document the content XML document
-	 * @param force    if true, the nav order will be updated even if it already has a value. This is used for move operations, where we want to update the nav order to the end of the list
 	 * @return true if the document was updated and needs to be saved, false otherwise
 	 * @throws ServiceLayerException if any error occurs during the update
 	 */
-	private boolean updateNavOrder(String siteId, String path, Document document, boolean force) throws ServiceLayerException {
+	private boolean updateNavOrder(String siteId, String path, Document document) throws ServiceLayerException {
 		Element root = document.getRootElement();
 		boolean placeInNav = Boolean.parseBoolean(readSingleDocumentFromXPath(root, PLACE_IN_NAV_XPATH));
 		if (!placeInNav) {
@@ -679,8 +681,8 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 		}
 
 		String order = readSingleDocumentNodeText(root, ELM_ORDER_DEFAULT);
-		if (StringUtils.isNotEmpty(order) && !force) {
-			// Order already exists, and we are not forcing the update, no need to update the order
+		if (StringUtils.isNotEmpty(order)) {
+			// Order already exists, no need to update the order
 			return false;
 		}
 
@@ -1098,14 +1100,14 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	 * @param previousPath the path of the previous item, null if it should be before a reference item
 	 * @param nextPath     the path of the next item, null if it should be after a reference item
 	 * @return the new order value for the item being reordered
-	 * @throws ContentNotFoundException   if any of the previous or next items does not exist
-	 * @throws InvalidParametersException if the order values of the previous or next items are not valid, or if the previous item order is greater or equal to the next item order
+	 * @throws ContentNotFoundException if any of the previous or next items does not exist
+	 * @throws NavOrderException        if the reference items do not share a parent, lack an order value, or their order values cannot be used to calculate a new order
 	 */
 	protected double reorderItem(String siteId, String previousPath, String nextPath) throws ServiceLayerException {
 		String previousParent = getParentUrl(previousPath);
 		String nextParent = getParentUrl(nextPath);
 		if (previousPath != null && nextPath != null && !CS.equals(previousParent, nextParent)){
-			throw new InvalidParametersException(format("Previous item '%s' and next item '%s' for site '%s' do not have the same parent, cannot reorder item",
+			throw new NavOrderException(ApiResponse.NAV_ORDER_DIFFERENT_PARENT, format("Previous item '%s' and next item '%s' for site '%s' do not have the same parent, cannot reorder item",
 					previousPath, nextPath, siteId));
 		}
 
@@ -1113,19 +1115,22 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 		if (previousPath != null) {
 			beforeOrder = getItemOrder(siteId, previousPath);
 			if (beforeOrder == null) {
-				throw new InvalidParametersException(format("Previous item '%s' for site '%s' does not have an order value, cannot reorder item", previousPath, siteId));
+				throw new NavOrderException(ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER, format("Previous item '%s' for site '%s' does not have an order value, cannot reorder item", previousPath, siteId));
 			}
 		}
 		Double afterOrder = null;
 		if (nextPath != null) {
 			afterOrder = getItemOrder(siteId, nextPath);
 			if (afterOrder == null) {
-				throw new InvalidParametersException(format("Next item '%s' for site '%s' does not have an order value, cannot reorder item", nextPath, siteId));
+				throw new NavOrderException(ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER, format("Next item '%s' for site '%s' does not have an order value, cannot reorder item", nextPath, siteId));
 			}
 		}
 		if (beforeOrder != null && afterOrder != null) {
-			if (beforeOrder >= afterOrder) {
-				throw new InvalidParametersException(format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
+			if (beforeOrder > afterOrder) {
+				throw new NavOrderException(ApiResponse.NAV_ORDER_PREVIOUS_GREATER_THAN_NEXT, format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
+			}
+			if (beforeOrder.equals(afterOrder)) {
+				throw new NavOrderException(ApiResponse.NAV_ORDER_SAME_VALUE, format("Previous item '%s' and next item '%s' for site '%s' have the same order value, cannot reorder item", previousPath, nextPath, siteId));
 			}
 			return (beforeOrder + afterOrder) / 2;
 		}
@@ -1134,7 +1139,11 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 			return beforeOrder + pageNavOrderIncrement;
 		}
 
-		return afterOrder - pageNavOrderIncrement;
+		if (afterOrder != null) {
+			return afterOrder - pageNavOrderIncrement;
+		}
+
+		throw new NavOrderException(ApiResponse.NAV_ORDER_NO_REFERENCE, format("Invalid order for site '%s' previousPath '%s' and nextPath '%s'", siteId, previousPath, nextPath));
 	}
 
 	/**
@@ -1408,11 +1417,8 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 											  String newLabel, LifecycleOperation operation)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException, DocumentException, IOException {
 		String siteId = site.getSiteId();
-		Set<String> sourcePathChildren = new HashSet<>(itemDao.getChildrenPaths(site.getId(), sourcePath));
-		if (!ContentUtils.areSiblings(sourcePath, targetPath)) {
-			// If the parent is the same, let's keep the nav order the same (so copy and original will be next to each other in the nav)
-			updateNavOrderForCopyOrMove(siteId, targetPath, lifecycleContents, sourcePathChildren);
-		}
+		// Includes same-parent duplicate, where the copy would otherwise keep the source order
+		updateNavOrderForCopyOrMove(siteId, lifecycleContents, false);
 		Map<String, ContentLifecycleItem> lifecycleItems = mergeLifecycleContents(lifecycleContents);
 		Map<String, ContentWriteItem> dependencies =
 				lifecycleContents.stream()
@@ -2339,7 +2345,7 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 											  Collection<LifecycleContent> lifecycleContents, Set<String> sourcePathChildren)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException, DocumentException, IOException {
 		String siteId = site.getSiteId();
-		updateNavOrderForCopyOrMove(siteId, sourcePath, lifecycleContents, sourcePathChildren);
+		updateNavOrderForCopyOrMove(siteId, lifecycleContents, true);
 		// Consolidate the items into a single map
 		Map<String, ContentLifecycleItem> lifecycleItems = mergeLifecycleContents(lifecycleContents);
 		List<String> workflowAffectedPaths = getMoveOrCopyWorkflowAffectedPaths(targetPath, lifecycleItems);
@@ -2543,38 +2549,157 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	}
 
 	/**
-	 * Update the navigation order for the copied/moved items.
-	 * This method will update the navigation order for all page items that are not in the sourcePathChildren set
-	 * Notice that the paths in the sourcePathChildren set are the ones that were copied/moved, so they do not need to be
-	 * updated (because they have the same parent)
+	 * Give each copied or moved page a navigation order that is free among the pages already in its destination folder.
+	 * An unused order is kept. A colliding order is placed in the open slot immediately after that value: halfway to the
+	 * next sibling order, or one increment past it when nothing sorts after it. Orders assigned earlier in this
+	 * operation count as taken, so several pages written together do not receive the same value.
+	 * <p>
+	 * On a move, each item's source path is ignored. The source row is still this item until the move is committed,
+	 * and a same-folder rename must not treat that row as a collision.
 	 *
-	 * @param siteId             the site id
-	 * @param targetPath         the root target path of the move operation
-	 * @param lifecycleContents  the lifecycle contents containing the items to update
-	 * @param sourcePathChildren the set of source path children that were moved
-	 * @throws DocumentException if there is an error parsing the document
-	 * @throws IOException       if there is an error reading the document or writing it back to the lifecycleContent
+	 * @param siteId            the site id
+	 * @param lifecycleContents the lifecycle contents containing the items to update
+	 * @param move              true when the operation is a move or rename
+	 * @throws DocumentException     if there is an error parsing the document
+	 * @throws IOException           if there is an error reading the document or writing it back to the lifecycleContent
+	 * @throws ServiceLayerException if the sibling orders cannot be loaded
 	 */
-	protected void updateNavOrderForCopyOrMove(String siteId, String targetPath, Collection<LifecycleContent> lifecycleContents,
-											   Set<String> sourcePathChildren)
+	protected void updateNavOrderForCopyOrMove(String siteId, Collection<LifecycleContent> lifecycleContents, boolean move)
 			throws DocumentException, IOException, ServiceLayerException {
+		Map<String, List<ItemOrder>> siblingsByParent = new HashMap<>();
+		Map<String, List<Double>> claimedOrdersByParent = new HashMap<>();
+		List<NavOrderTarget> targets = new ArrayList<>();
 		for (LifecycleContent lifecycleContent : lifecycleContents) {
-			List<ContentLifecycleItem> itemsToUpdate =
-					lifecycleContent.getItems().values().stream()
-							.filter(item -> isPageDescriptor(item.sourcePath()))
-							// Update the nav order if the item is the root of the move operation OR if it was added by the lifecycle
-							.filter(item -> CS.equals(targetPath, CS.removeEnd(item.repoPath(), SLASH_INDEX_FILE))
-									|| !sourcePathChildren.contains(item.sourcePath()))
-							.toList();
-
-			for (ContentLifecycleItem navUpdated : itemsToUpdate) {
-				Document document = navUpdated.contentAsDocument();
-				if (updateNavOrder(siteId, navUpdated.repoPath(), document, true)) {
-					// This will update the ContentLifecycleItem and clean the resources of the previous version
-					lifecycleContent.write(navUpdated.repoPath(), document);
+			for (ContentLifecycleItem item : lifecycleContent.getItems().values()) {
+				if (item.repoPath() != null && isPageDescriptor(item.repoPath())) {
+					targets.add(new NavOrderTarget(lifecycleContent, item));
 				}
 			}
 		}
+		targets.sort(Comparator.comparing(target -> target.item().repoPath()));
+
+		for (NavOrderTarget target : targets) {
+			ContentLifecycleItem item = target.item();
+			Document document = item.contentAsDocument();
+			String sourcePathToIgnore = move ? item.sourcePath() : null;
+			if (resolveNavOrderCollision(siteId, item.repoPath(), sourcePathToIgnore, document, siblingsByParent, claimedOrdersByParent)) {
+				// Keep the source path so the item stays a copy or move when operations are calculated
+				target.lifecycleContent().write(item.repoPath(), document, item.sourcePath());
+			}
+		}
+	}
+
+	/**
+	 * Keep a page's navigation order when it is free at the destination. When it collides, or the page has no order,
+	 * write a new value and record it in {@code claimedOrdersByParent}.
+	 *
+	 * @param siteId                the site id
+	 * @param path                  the destination path of the page
+	 * @param sourcePathToIgnore    source path to omit from the sibling orders, used for move so the item does not collide with itself
+	 * @param document              the page descriptor
+	 * @param siblingsByParent      navigation orders already stored, keyed by parent path
+	 * @param claimedOrdersByParent orders assigned to other pages in this operation, keyed by parent path
+	 * @return true if the document was updated and needs to be saved
+	 * @throws ServiceLayerException if the sibling orders cannot be loaded
+	 */
+	private boolean resolveNavOrderCollision(String siteId, String path, String sourcePathToIgnore, Document document,
+											 Map<String, List<ItemOrder>> siblingsByParent,
+											 Map<String, List<Double>> claimedOrdersByParent) throws ServiceLayerException {
+		Element root = document.getRootElement();
+		boolean placeInNav = Boolean.parseBoolean(readSingleDocumentFromXPath(root, PLACE_IN_NAV_XPATH));
+		if (!placeInNav) {
+			return false;
+		}
+
+		String orderText = readSingleDocumentNodeText(root, ELM_ORDER_DEFAULT);
+		Double currentOrder = null;
+		if (StringUtils.isNotEmpty(orderText)) {
+			try {
+				currentOrder = Double.parseDouble(orderText);
+			} catch (NumberFormatException e) {
+				logger.debug("Invalid order value '{}' for site '{}' path '{}', leaving it unchanged", orderText, siteId, path);
+				return false;
+			}
+		}
+
+		String parentPath = getParentUrl(path);
+		List<ItemOrder> siblings = siblingsByParent.get(parentPath);
+		if (siblings == null) {
+			siblings = getItemsOrder(siteId, parentPath);
+			siblingsByParent.put(parentPath, siblings);
+		}
+		List<Double> claimedOrders = claimedOrdersByParent.computeIfAbsent(parentPath, ignored -> new ArrayList<>());
+		List<Double> orders = siblingOrders(path, sourcePathToIgnore, siblings);
+		orders.addAll(claimedOrders);
+		orders.sort(naturalOrder());
+
+		if (currentOrder != null && !containsOrder(orders, currentOrder)) {
+			claimedOrders.add(currentOrder);
+			return false;
+		}
+
+		double newOrder = currentOrder == null ? orderAtEnd(orders) : orderAfter(currentOrder, orders);
+		if (currentOrder != null) {
+			logger.debug("Nav order '{}' for site '{}' path '{}' collides with an existing item, updating to '{}'",
+					currentOrder, siteId, path, newOrder);
+		}
+		claimedOrders.add(newOrder);
+		addOrUpdateSingleDocumentNode(root, ELM_ORDER_DEFAULT, String.valueOf(newOrder));
+		return true;
+	}
+
+	/**
+	 * Orders of sibling pages, excluding the page being written and, on move, its source path.
+	 */
+	private static List<Double> siblingOrders(String path, String sourcePathToIgnore, List<ItemOrder> siblings) {
+		List<Double> orders = new ArrayList<>(siblings.size());
+		for (ItemOrder sibling : siblings) {
+			if (CS.equals(path, sibling.getPath()) || CS.equals(sourcePathToIgnore, sibling.getPath())) {
+				continue;
+			}
+			if (sibling.getOrder() != null) {
+				orders.add(sibling.getOrder());
+			}
+		}
+		return orders;
+	}
+
+	/**
+	 * The order of the last sibling plus one increment, or the increment itself when the parent has no orders.
+	 */
+	private double orderAtEnd(List<Double> sortedOrders) {
+		if (sortedOrders.isEmpty()) {
+			return pageNavOrderIncrement;
+		}
+		return sortedOrders.getLast() + pageNavOrderIncrement;
+	}
+
+	/**
+	 * The open slot immediately after {@code selectedOrder}. Halfway to the next higher sibling when one exists,
+	 * otherwise one increment past {@code selectedOrder}.
+	 */
+	private double orderAfter(double selectedOrder, List<Double> sortedOrders) {
+		for (double order : sortedOrders) {
+			if (order > selectedOrder) {
+				return (selectedOrder + order) / 2;
+			}
+		}
+		return selectedOrder + pageNavOrderIncrement;
+	}
+
+	private static boolean containsOrder(List<Double> orders, double order) {
+		for (double existing : orders) {
+			if (Double.compare(existing, order) == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * A page descriptor whose navigation order may be adjusted during copy, duplicate, or move.
+	 */
+	private record NavOrderTarget(LifecycleContent lifecycleContent, ContentLifecycleItem item) {
 	}
 
 	/**

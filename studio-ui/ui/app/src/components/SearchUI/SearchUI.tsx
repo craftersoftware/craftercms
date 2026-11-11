@@ -275,7 +275,7 @@ export function SearchUI(props: SearchUIProps) {
 														component="span"
 														key={content[0] as string}
 														sx={{
-															color: '#FFB400',
+															color: (theme) => theme.palette.warning.main,
 															marginLeft: '2px'
 														}}
 													>
