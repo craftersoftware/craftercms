@@ -25,6 +25,10 @@ const { act } = await import('react');
 const { RawIntlProvider, createIntl } = await import('react-intl');
 const { default: ActionsBar } = await import('./ImageEditorDialog/ActionsBar.tsx');
 const { ToolsPanelListItemButton } = await import('./ToolsPanelListItemButton/ToolsPanelListItemButton.tsx');
+const { ToolsPanelListItemDispatchButton } =
+	await import('./ToolsPanelListItemDispatchButton/ToolsPanelListItemDispatchButton.tsx');
+const { Provider: ReduxProvider } = await import('react-redux');
+const { configureStore } = await import('@reduxjs/toolkit');
 const { DraggablePanelListItem } = await import('./DraggablePanelListItem/DraggablePanelListItem.tsx');
 const { default: PluginCard } = await import('./PluginCard/PluginCard.tsx');
 
@@ -109,6 +113,34 @@ describe('accessible names', () => {
 		assert.ok(trailing);
 		await act(async () => trailing.click());
 		assert.equal(clicked, 1);
+	});
+
+	it('names the dispatch button trailing action, including a caller-supplied label', async () => {
+		const store = configureStore({ reducer: (state = {}) => state });
+		const host = await render(
+			React.createElement(
+				ReduxProvider,
+				{ store },
+				React.createElement(ToolsPanelListItemDispatchButton, {
+					title: 'Templates',
+					onSecondaryActionClick: { type: 'open' }
+				})
+			)
+		);
+		assert.ok(host.querySelector('button[aria-label="Open Templates"]'));
+		const named = await render(
+			React.createElement(
+				ReduxProvider,
+				{ store },
+				React.createElement(ToolsPanelListItemDispatchButton, {
+					title: 'Templates',
+					secondaryActionLabel: 'Preview Templates',
+					onSecondaryActionClick: { type: 'preview' }
+				})
+			)
+		);
+		assert.ok(named.querySelector('button[aria-label="Preview Templates"]'));
+		assert.equal(named.querySelector('button[aria-label="Open Templates"]'), null);
 	});
 
 	it('names the options button of a draggable panel item and leaves the mouse-only row out of the tab order', async () => {

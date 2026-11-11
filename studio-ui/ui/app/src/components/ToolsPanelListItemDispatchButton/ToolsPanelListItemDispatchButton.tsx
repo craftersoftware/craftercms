@@ -27,16 +27,30 @@ export interface ToolsPanelListItemDispatchButtonProps extends Omit<ListItemButt
 	subtitle?: string;
 	icon?: SystemIconDescriptor;
 	secondaryActionIcon?: React.ReactNode;
+	/** Accessible name for the trailing action. Defaults to "Open {title}". */
+	secondaryActionLabel?: string;
 	onClick?: StandardAction;
 	onSecondaryActionClick?: StandardAction;
 }
 
 export function ToolsPanelListItemDispatchButton(props: ToolsPanelListItemDispatchButtonProps) {
-	const { onClick: onClickProp, onSecondaryActionClick: onSecondaryActionClickProp, ...otherProps } = props;
+	const {
+		onClick: onClickProp,
+		onSecondaryActionClick: onSecondaryActionClickProp,
+		secondaryActionLabel,
+		...otherProps
+	} = props;
 	const dispatch = useDispatch();
 	const onClick = () => dispatch(onClickProp);
 	const onSecondaryActionClick = () => dispatch(onSecondaryActionClickProp);
-	return <ToolsPanelListItemButton onClick={onClick} onSecondaryActionClick={onSecondaryActionClick} {...otherProps} />;
+	return (
+		<ToolsPanelListItemButton
+			onClick={onClick}
+			onSecondaryActionClick={onSecondaryActionClick}
+			secondaryActionLabel={secondaryActionLabel}
+			{...otherProps}
+		/>
+	);
 }
 
 export default ToolsPanelListItemDispatchButton;
