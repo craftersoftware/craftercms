@@ -845,6 +845,7 @@
 	"passwordTextField.toggleVisibilityButtonText": "Passwort anzeigen",
 	"pastePolicy.confirm": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis. • Ursprünglicher Pfad: „{path}“, • Vorgeschlagener Pfad ist: „{modifiedPath}“. Möchten Sie den vorgeschlagenen Pfad verwenden?",
 	"pastePolicy.error": "Das ausgewählte {action}-Ziel verstößt gegen Projektrichtlinien für das Zielverzeichnis.",
+	"pathNavigator.headerOptions": "{title}-Optionen",
 	"pathNavigator.noChildren": "Element hat keine Unterebenen",
 	"pathNavigator.noItemsAtLocation": "Kein Element an diesem Standort",
 	"pathNavigator.pathFilterInputPlaceholder": "Unterebenen von {name} filtern ...",

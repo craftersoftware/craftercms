@@ -845,6 +845,7 @@
 	"passwordTextField.toggleVisibilityButtonText": "Mostrar contraseña",
 	"pastePolicy.confirm": "El destino {action} seleccionado va en contra de las políticas del proyecto para el directorio de destino. • Ruta original: \"{path}\", • La ruta sugerida es: \"{modifiedPath}\". ¿Le gustaría utilizar la ruta sugerida?",
 	"pastePolicy.error": "El destino {action} seleccionado va en contra de las políticas del proyecto para el directorio de destino.",
+	"pathNavigator.headerOptions": "{title}: opciones",
 	"pathNavigator.noChildren": "El artículo no tiene hijos",
 	"pathNavigator.noItemsAtLocation": "No hay elementos en esta ubicación",
 	"pathNavigator.pathFilterInputPlaceholder": "Filtrar hijos de {name}...",
