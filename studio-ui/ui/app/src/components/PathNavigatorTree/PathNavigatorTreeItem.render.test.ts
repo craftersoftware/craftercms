@@ -83,6 +83,10 @@ async function press(element: Element, key: string) {
 	return event;
 }
 
+// The row buttons carry the item's label, which is 'Home' in render().
+const FILTER_LABEL = 'Filter Home';
+const OPTIONS_LABEL = 'Options for Home';
+
 const byLabel = (host: HTMLElement, label: string) => host.querySelector<HTMLElement>(`button[aria-label="${label}"]`);
 
 describe('PathNavigatorTreeItem keyboard', () => {
@@ -97,7 +101,7 @@ describe('PathNavigatorTreeItem keyboard', () => {
 		const { host, treeItem, labelClicks } = await render();
 		await act(async () => treeItem.focus());
 		await act(async () => {
-			byLabel(host, 'Filter')?.click();
+			byLabel(host, FILTER_LABEL)?.click();
 		});
 		const close = byLabel(host, 'Close');
 		assert.ok(close, 'Close button of the open filter');
@@ -108,11 +112,11 @@ describe('PathNavigatorTreeItem keyboard', () => {
 
 	it('shows the Options and Filter buttons while the treeitem has focus', async () => {
 		const { host, treeItem } = await render();
-		assert.equal(byLabel(host, 'Filter'), null);
-		assert.equal(byLabel(host, 'Options'), null);
+		assert.equal(byLabel(host, FILTER_LABEL), null);
+		assert.equal(byLabel(host, OPTIONS_LABEL), null);
 		await act(async () => treeItem.focus());
-		assert.ok(byLabel(host, 'Filter'), 'Filter is reachable from the focused item');
-		assert.ok(byLabel(host, 'Options'), 'Options is reachable from the focused item');
-		assert.equal(byLabel(host, 'Filter')?.tabIndex, 0);
+		assert.ok(byLabel(host, FILTER_LABEL), 'Filter is reachable from the focused item');
+		assert.ok(byLabel(host, OPTIONS_LABEL), 'Options is reachable from the focused item');
+		assert.equal(byLabel(host, FILTER_LABEL)?.tabIndex, 0);
 	});
 });
