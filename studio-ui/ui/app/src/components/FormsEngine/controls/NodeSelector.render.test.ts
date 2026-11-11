@@ -203,3 +203,55 @@ describe('NodeSelector keyboard reorder', () => {
 		assert.match(document.activeElement?.textContent ?? '', /No options are available for this control/);
 	});
 });
+
+describe('NodeSelector E and V shortcuts', () => {
+	const lockedByOther = { username: 'max' };
+
+	async function mountMixed() {
+		const stored = {
+			[alpha]: selectorItem(alpha, 'Alpha'),
+			// A shared component that someone else has locked, so this user cannot edit it.
+			[beta]: { ...selectorItem(beta, 'Beta'), lockOwner: lockedByOther }
+		};
+		const store = createItemsStore({ ...baseItems(), ...stored });
+		const dispatched: Array<{ type?: string; payload?: { component?: string } }> = [];
+		const dispatch = store.dispatch;
+		store.dispatch = ((action: never) => {
+			dispatched.push(action);
+			return dispatch(action);
+		}) as never;
+		const entry = createEntry(['nodes_o']);
+		const host = await mountTree(
+			store,
+			React.createElement(
+				FormHost,
+				{ entry },
+				React.createElement(NodeSelector as never, {
+					field: fieldFor('nodes_o', 'node-selector'),
+					value: [node(alpha, 'Alpha'), node(beta, 'Beta')],
+					setValue: () => undefined,
+					readonly: false,
+					autoFocus: false,
+					contentType: { id: '/component/thing', fields: {} }
+				})
+			)
+		);
+		const formDialogs = () =>
+			dispatched.filter((action) => String(action?.payload?.component ?? '').includes('FormsEngineDialog'));
+		return { host, formDialogs };
+	}
+
+	it('opens an item that cannot be edited read-only, for both E and V', async () => {
+		const { host, formDialogs } = await mountMixed();
+		await act(async () => press(rowLabelled(host, 'Beta'), 'e'));
+		assert.equal(formDialogs().length, 1, 'E opens the read-only view, not a writable form');
+		await act(async () => press(rowLabelled(host, 'Beta'), 'v'));
+		assert.equal(formDialogs().length, 2);
+	});
+
+	it('still edits an item the user can edit', async () => {
+		const { host, formDialogs } = await mountMixed();
+		await act(async () => press(rowLabelled(host, 'Alpha'), 'e'));
+		assert.equal(formDialogs().length, 0, 'E opens the editable form through the forms API, not a view dialog');
+	});
+});

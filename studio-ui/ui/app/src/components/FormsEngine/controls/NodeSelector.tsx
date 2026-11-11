@@ -354,7 +354,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			);
 		}
 	};
-	const handleItemKeyDown = (e: KeyDownEvent, index: number, itemLabel: string) => {
+	const handleItemKeyDown = (e: KeyDownEvent, index: number, itemLabel: string, canBeEdited: boolean) => {
 		if (readonly && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) {
 			return;
 		}
@@ -365,7 +365,9 @@ function NodeSelector(props: NodeSelectorProps) {
 			(newList) => {
 				if (!readonly) setValue(newList);
 			},
-			(itemIndex, edit) => handleEditItem(e, itemIndex, edit && !readonly),
+			(itemIndex, edit) =>
+				// Same branch as Enter and the row click: an item that can't be edited opens read-only.
+				canBeEdited ? handleEditItem(e, itemIndex, edit && !readonly) : handleViewItem(e, itemIndex),
 			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
 	};
@@ -880,7 +882,7 @@ function NodeSelector(props: NodeSelectorProps) {
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
 											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
-											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel)}
+											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
 										>
 											<ListItemText
 												primary={
