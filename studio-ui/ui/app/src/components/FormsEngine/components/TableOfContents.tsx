@@ -183,6 +183,7 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 									<SectionNavLabel
 										title={section.title}
 										hasError={section.fields.some((fieldId) => invalidFieldIds.has(fieldId))}
+										expanded={expandedSectionIds.includes(section.id)}
 									/>
 								}
 								onClick={handleSectionClick}
@@ -287,22 +288,28 @@ function SectionFieldInvalidProbe({
 }
 
 /**
- * A section that contains a field the indicator would mark invalid. The mark is that same warning
- * icon plus hidden text, so the cue is not colour alone. The text stays visually hidden and the icon
- * stays inline, so the row keeps the same height as a section title.
+ * A section that contains a field the indicator would mark invalid, while it is collapsed. The mark is
+ * that same warning icon plus hidden text, so the cue is not colour alone. Expanded, the field rows below
+ * carry their own indicators and the tree item exposes aria-expanded, so the section cue steps aside.
+ * The row is laid out like a field row: title left, icon at the right edge with the same size.
  */
-export function SectionNavLabel({ title, hasError }: { title: string; hasError: boolean }) {
+export function SectionNavLabel({
+	title,
+	hasError,
+	expanded = false
+}: {
+	title: string;
+	hasError: boolean;
+	expanded?: boolean;
+}) {
 	const { formatMessage } = useIntl();
 	const errorLabel = formatMessage({ defaultMessage: 'Section has errors' });
 	return (
-		<Box component="span" sx={{ display: 'inline' }}>
-			{title}
-			{hasError && (
-				<Box
-					component="span"
-					sx={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'text-bottom', ml: 0.5 }}
-				>
-					<WarningAmberRounded aria-hidden color="error" sx={{ fontSize: '1em' }} />
+		<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+			<span>{title}</span>
+			{hasError && !expanded && (
+				<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0, ml: 0.5 }}>
+					<WarningAmberRounded aria-hidden fontSize="small" color="error" />
 					<Box component="span" sx={visuallyHidden}>
 						{errorLabel}
 					</Box>

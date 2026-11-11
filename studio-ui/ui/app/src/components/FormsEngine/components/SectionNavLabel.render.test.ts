@@ -40,7 +40,7 @@ afterEach(async () => {
 	}
 });
 
-async function render(hasError: boolean) {
+async function render(hasError: boolean, expanded = false) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -49,7 +49,7 @@ async function render(hasError: boolean) {
 			React.createElement(
 				RawIntlProvider,
 				{ value: intl as never },
-				React.createElement(SectionNavLabel, { title: 'Page Properties', hasError })
+				React.createElement(SectionNavLabel, { title: 'Page Properties', hasError, expanded })
 			)
 		);
 	});
@@ -75,8 +75,16 @@ describe('section navigation error cue', () => {
 		assert.ok(text);
 		assert.equal(text.getAttribute('aria-hidden'), null);
 		const row = host.firstElementChild as HTMLElement;
-		assert.equal(row.tagName, 'SPAN');
+		assert.equal(row.tagName, 'DIV');
+		assert.equal(row.firstElementChild?.textContent, 'Page Properties');
 		const cue = icon.parentElement as HTMLElement;
 		assert.equal(cue.tagName, 'SPAN');
+		assert.equal(row.lastElementChild, cue);
+	});
+
+	it('hides the icon and the hidden words while the section is expanded', async () => {
+		const host = await render(true, true);
+		assert.equal(host.textContent?.trim(), 'Page Properties');
+		assert.equal(host.querySelector('svg'), null);
 	});
 });

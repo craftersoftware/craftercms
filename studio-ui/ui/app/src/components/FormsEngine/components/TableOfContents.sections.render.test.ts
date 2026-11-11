@@ -92,6 +92,8 @@ async function setup(options: {
 	irrelevant?: Set<string> | null;
 	repeatFieldId?: string;
 	repeatFields?: ContentTypeField[];
+	/** Sections start collapsed unless listed. */
+	expanded?: string[];
 }) {
 	const valueByFieldId: Record<string, ReturnType<typeof atom>> = {};
 	const validationByFieldId: Record<string, ReturnType<typeof atom>> = {};
@@ -102,7 +104,9 @@ async function setup(options: {
 	const atoms = {
 		valueByFieldId,
 		validationByFieldId,
-		expandedStateBySectionId: Object.fromEntries(options.sections.map((section) => [section.id, atom(true)])),
+		expandedStateBySectionId: Object.fromEntries(
+			options.sections.map((section) => [section.id, atom(options.expanded?.includes(section.id) ?? false)])
+		),
 		tableOfContentsDrawerOpen: atom(false),
 		relevanceVersion: atom(0),
 		...createFormVisibilityAtoms()
@@ -221,6 +225,64 @@ describe('table of contents section error mark', () => {
 			jotai.set(atoms.relevanceVersion, (version: number) => version + 1);
 		});
 		assert.equal(hasErrorMark(sectionRow(host, 'sec_main')), true);
+	});
+});
+
+describe('table of contents section error mark and expansion', () => {
+	function cue(host: HTMLElement) {
+		const row = sectionRow(host, 'sec_main');
+		const label = row.querySelector('.MuiTreeItem-label') as HTMLElement;
+		return { icon: label.querySelector('svg'), text: label.textContent?.includes('Section has errors') ?? false };
+	}
+
+	it('shows the cue on a collapsed section: icon, hidden words, and a row laid out like a field row', async () => {
+		const { host } = await setup({
+			sections,
+			contentTypeFields,
+			withAtoms: ['title_s', 'summary_s'],
+			validation: { summary_s: invalidState }
+		});
+		const { icon, text } = cue(host);
+		assert.ok(icon);
+		assert.equal(icon.getAttribute('aria-hidden'), 'true');
+		assert.equal(icon.getAttribute('data-testid'), 'WarningAmberRoundedIcon');
+		assert.ok(icon.classList.contains('MuiSvgIcon-fontSizeSmall'));
+		assert.equal(text, true);
+		const label = sectionRow(host, 'sec_main').querySelector('.MuiTreeItem-label') as HTMLElement;
+		const rowBox = label.firstElementChild as HTMLElement;
+		assert.equal(rowBox.tagName, 'DIV');
+		assert.equal(rowBox.firstElementChild?.textContent, 'Main');
+		assert.equal(rowBox.lastElementChild?.contains(icon), true);
+	});
+
+	it('shows no cue, icon or hidden words, while the section is expanded', async () => {
+		const { host } = await setup({
+			sections,
+			contentTypeFields,
+			withAtoms: ['title_s', 'summary_s'],
+			validation: { summary_s: invalidState },
+			expanded: ['sec_main']
+		});
+		const { icon, text } = cue(host);
+		assert.equal(icon, null);
+		assert.equal(text, false);
+		assert.equal(sectionRow(host, 'sec_main').querySelector('.MuiTreeItem-label')?.textContent, 'Main');
+	});
+
+	it('flips the cue when the section is expanded and collapsed', async () => {
+		const { host, atoms, jotai } = await setup({
+			sections,
+			contentTypeFields,
+			withAtoms: ['title_s', 'summary_s'],
+			validation: { summary_s: invalidState }
+		});
+		assert.ok(cue(host).icon);
+		await act(async () => jotai.set(atoms.expandedStateBySectionId.sec_main, true));
+		assert.equal(cue(host).icon, null);
+		assert.equal(cue(host).text, false);
+		await act(async () => jotai.set(atoms.expandedStateBySectionId.sec_main, false));
+		assert.ok(cue(host).icon);
+		assert.equal(cue(host).text, true);
 	});
 });
 
