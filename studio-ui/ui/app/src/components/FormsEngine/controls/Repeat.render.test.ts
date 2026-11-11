@@ -30,7 +30,8 @@ import type { PrimitiveAtom } from 'jotai';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider: ReduxProvider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, useAtomValue, Provider: JotaiProvider } = await import('jotai');
@@ -57,13 +58,7 @@ const reduxStore = configureStore({
 	}
 });
 
-// The test loader precompiles messages, so format them instead of returning the AST.
-const baseIntl = createIntl({ locale: 'en', onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: unknown }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(descriptor as never, values as never)
-};
+const intl = createTestIntl();
 
 const field = {
 	id: 'rows_o',
@@ -513,8 +508,7 @@ describe('Repeat reorder', () => {
 	});
 });
 
-const addButton = (host: HTMLElement) =>
-	host.querySelector('[data-testid="AddRoundedIcon"]').closest('button') as HTMLButtonElement;
+const addButton = (host: HTMLElement) => host.querySelector('button[aria-label="Add items"]') as HTMLButtonElement;
 const withLimits = (limits: { minCount?: number; maxCount?: number }) =>
 	({
 		...field,
@@ -723,9 +717,11 @@ describe('Repeat keyboard reorder', () => {
 		const mounted = await mount([a()]);
 		const { host } = mounted;
 		const add = addButton(host);
+		assert.ok(add, 'the header Add button is found by its accessible name');
 		await act(async () => deleteButton(rowFor(host, 'a')).click());
 		assert.deepEqual(titles(host), []);
 		assert.equal(document.activeElement, add);
+		assert.equal(add.getAttribute('aria-label'), 'Add items');
 		assert.equal(add.disabled, false);
 	});
 

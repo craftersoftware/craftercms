@@ -229,6 +229,7 @@ export function Repeat(props: RepeatProps) {
 							<span>
 								<IconButton
 									ref={addButtonRef}
+									aria-label={formatMessage(repeatMessages.addItems)}
 									size="small"
 									color="primary"
 									onClick={handleAddItem}
