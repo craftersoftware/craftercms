@@ -37,6 +37,8 @@ const MORE_BUTTON_FALLBACK_WIDTH = 48;
  * edge. The bar pads itself by this much on every side and cancels it with a negative margin.
  */
 const FOCUS_RING_ROOM = 4;
+/** Marks a pending focus that stays in the open menu, on the first control still there. */
+const STAY_IN_MENU = -1;
 const FOCUSABLE_SELECTOR =
 	'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -173,15 +175,18 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				visibleCountRef.current = resolved;
 				setVisibleCount(resolved);
 			}
-			if (resolved >= itemCount) {
-				const menuPaper = menuContentRef.current?.parentElement;
-				if (resolved !== current && menuPaper?.contains(document.activeElement)) {
+			const menuPaper = menuContentRef.current?.parentElement;
+			if (resolved !== current && menuPaper?.contains(document.activeElement)) {
+				const focused = locateFocus(document.activeElement);
+				if (resolved >= itemCount) {
 					// Focus on the menu itself (not on an item) goes to the first item that moves back.
-					pendingFocusRef.current = locateFocus(document.activeElement) ?? {
-						item: align === 'end' ? 0 : current,
-						control: 0
-					};
+					pendingFocusRef.current = focused ?? { item: align === 'end' ? 0 : current, control: 0 };
+				} else if (focused && (align === 'end' ? focused.item >= itemCount - resolved : focused.item < resolved)) {
+					// The focused control moves back into the bar, behind the open menu. Keep focus in the menu.
+					pendingFocusRef.current = { item: STAY_IN_MENU, control: 0 };
 				}
+			}
+			if (resolved >= itemCount) {
 				setMenuAnchor(null);
 			}
 		};
@@ -200,7 +205,12 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	// focusin handler is still active and pulls focus back into the menu.
 	useEffect(() => {
 		const pendingFocus = pendingFocusRef.current;
-		if (pendingFocus && visibleCount >= itemCount) {
+		if (pendingFocus?.item === STAY_IN_MENU) {
+			pendingFocusRef.current = null;
+			if (visibleCount < itemCount) {
+				menuContentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+			}
+		} else if (pendingFocus && visibleCount >= itemCount) {
 			// The menu closed and its items moved back into the bar. Focus the same control there, so it does
 			// not fall to the document body (the More button that would get it back is gone).
 			pendingFocusRef.current = null;

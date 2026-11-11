@@ -250,3 +250,39 @@ describe('ToolbarOverflow focus when the menu closes because everything fits aga
 		assertFocused('C');
 	});
 });
+
+describe('ToolbarOverflow focus when the open menu gives controls back to the bar', () => {
+	it('keeps focus in the menu, on the first control still there', async () => {
+		await renderBar('start', NONE_FIT);
+		await act(async () => {});
+		await openMore();
+		await act(async () => button('A').focus());
+		assertFocused('A');
+		await resize(TWO_FIT);
+		assert.ok(button('A').closest('[data-toolbar-overflow]'), 'A is back in the bar');
+		assert.ok(dialog(), 'the menu stays open');
+		assert.ok(dialog()?.contains(button('C')), 'C stays in the menu');
+		assertFocused('C');
+	});
+
+	it('does the same for an end-aligned bar, which gives back its trailing controls first', async () => {
+		await renderBar('end', NONE_FIT);
+		await act(async () => {});
+		await openMore();
+		await act(async () => button('C').focus());
+		await resize(TWO_FIT);
+		assert.ok(button('C').closest('[data-toolbar-overflow]'), 'C is back in the bar');
+		assert.ok(dialog()?.contains(button('A')), 'A stays in the menu');
+		assertFocused('A');
+	});
+
+	it('leaves focus alone when the focused control stays in the menu', async () => {
+		await renderBar('start', NONE_FIT);
+		await act(async () => {});
+		await openMore();
+		await act(async () => button('C').focus());
+		await resize(TWO_FIT);
+		assert.ok(dialog()?.contains(button('C')));
+		assertFocused('C');
+	});
+});
