@@ -25,8 +25,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
 
@@ -46,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,14 +55,92 @@ import java.util.Set;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static org.apache.commons.io.IOUtils.toInputStream;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
 
 /**
  * @author joseross
  */
+@RunWith(Parameterized.class)
 public class XsltTest {
+
+	private enum Scenario {
+		XSLT,
+		SHIPPED_SITE_CONFIG_TOOLS,
+		UI_PIPELINE,
+		CONTENT_TYPE_FROM_4500,
+		IDENTIFIED_TRANSLATIONS,
+		CUSTOM_CATALOG,
+		NO_TOP_LEVEL_WIDGET,
+		SHIPPED_UI
+	}
+
+	private final Scenario scenario;
+	private final Resource template;
+	private final Resource content;
+	private final Resource expected;
+	private final Map<String, Object> params;
+
+	public XsltTest(String name, Scenario scenario, Resource template, Resource content, Resource expected,
+					Map<String, Object> params) {
+		this.scenario = scenario;
+		this.template = template;
+		this.content = content;
+		this.expected = expected;
+		this.params = params;
+	}
+
+	@Parameterized.Parameters(name = "{0}")
+	public static Collection<Object[]> parameters() {
+		List<Object[]> rows = new ArrayList<>();
+		addXsltCases(rows, "xsltData", getTestData());
+		addXsltCases(rows, "permissions500Test", permissions500TestData());
+		addXsltCases(rows, "globalPermissions500Test", globalPermissions500TestData());
+		addXsltCases(rows, "globalRoles500Test", globalRoles500TestData());
+		addXsltCases(rows, "depResolver5001Test", depResolver5001TestData());
+		addXsltCases(rows, "siteConfig5000Test", siteConfig5000TestData());
+		addXsltCases(rows, "globalPermissions50010Test", globalPermissions50010TestData());
+		addXsltCases(rows, "ui5000Test", ui5000TestData());
+		addXsltCases(rows, "ui5001Test", ui5001TestData());
+		addXsltCases(rows, "ui5002Test", ui5002TestData());
+		addXsltCases(rows, "ui5003Test", ui5003TestData());
+		addXsltCases(rows, "globalPermissions50023Test", globalPermissions50023TestData());
+		addXsltCases(rows, "globalPermissions50025Test", globalPermissions50025TestData());
+		addXsltCases(rows, "siteConfigTools407Test", siteConfigTools407TestData());
+		addScenario(rows, "shippedSiteConfigToolsRemoveLegacyContentTypesTool", Scenario.SHIPPED_SITE_CONFIG_TOOLS);
+		addScenario(rows, "uiPipelineContinuesFrom4500ThroughContentTypeManagement", Scenario.UI_PIPELINE);
+		addScenario(rows, "contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration", Scenario.CONTENT_TYPE_FROM_4500);
+		addScenario(rows, "stockTextLocalizationPreservesIdentifiedTranslations", Scenario.IDENTIFIED_TRANSLATIONS);
+		addScenario(rows, "existingContentTypeManagementCatalogIsNotReplaced", Scenario.CUSTOM_CATALOG);
+		addScenario(rows, "contentTypeManagementAddedWhenSiteUiHasNoTopLevelWidget", Scenario.NO_TOP_LEVEL_WIDGET);
+		addScenario(rows, "shippedUiContainsContentTypeManagementCatalog", Scenario.SHIPPED_UI);
+		return rows;
+	}
+
+	private static void addXsltCases(List<Object[]> rows, String name, Object[][] data) {
+		for (int i = 0; i < data.length; i++) {
+			rows.add(new Object[]{name + "[" + i + "]", Scenario.XSLT, data[i][0], data[i][1], data[i][2], data[i][3]});
+		}
+	}
+
+	private static void addScenario(List<Object[]> rows, String name, Scenario scenario) {
+		rows.add(new Object[]{name, scenario, null, null, null, null});
+	}
+
+	@Test
+	public void execute() throws Exception {
+		switch (scenario) {
+			case XSLT -> testXsltTemplate(template, content, expected, params);
+			case SHIPPED_SITE_CONFIG_TOOLS -> shippedSiteConfigToolsRemoveLegacyContentTypesTool();
+			case UI_PIPELINE -> uiPipelineContinuesFrom4500ThroughContentTypeManagement();
+			case CONTENT_TYPE_FROM_4500 -> contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration();
+			case IDENTIFIED_TRANSLATIONS -> stockTextLocalizationPreservesIdentifiedTranslations();
+			case CUSTOM_CATALOG -> existingContentTypeManagementCatalogIsNotReplaced();
+			case NO_TOP_LEVEL_WIDGET -> contentTypeManagementAddedWhenSiteUiHasNoTopLevelWidget();
+			case SHIPPED_UI -> shippedUiContainsContentTypeManagementCatalog();
+			default -> throw new AssertionError(scenario);
+		}
+	}
+
+
 
 	private static final Logger logger = LoggerFactory.getLogger(XsltTest.class);
 
@@ -89,8 +169,7 @@ public class XsltTest {
 	 * 2: resource for the expected XML
 	 * 3: a map of strings to add as parameters for the XSLT template
 	 */
-	@DataProvider(name = "xsltData")
-	public Object[][] getTestData() {
+	public static Object[][] getTestData() {
 		return new Object[][]{
 			new Object[]{
 				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config/site-config-v9.xslt"),
@@ -385,8 +464,7 @@ public class XsltTest {
 		};
 	}
 
-	@DataProvider(name = "permissions500TestData")
-	public Object[][] permissions500TestData() {
+	public static Object[][] permissions500TestData() {
 		return new Object[][]{
 				{
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.0.xslt"),
@@ -397,8 +475,7 @@ public class XsltTest {
 		};
 	}
 
-	@DataProvider(name = "globalPermissions500TestData")
-	public Object[][] globalPermissions500TestData() {
+	public static Object[][] globalPermissions500TestData() {
 		return new Object[][]{
 			{
 				new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.1.xslt"),
@@ -415,8 +492,7 @@ public class XsltTest {
 		};
 	}
 
-	@DataProvider(name = "globalRoles500TestData")
-	public Object[][] globalRoles500TestData() {
+	public static Object[][] globalRoles500TestData() {
 		return new Object[][]{
 			new Object[] {
 				new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-role-mappings-config-v5.0.0.4.xslt"),
@@ -427,28 +503,23 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "permissions500TestData")
 	public void permissions500Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-    @Test(dataProvider = "globalPermissions500TestData")
-    public void globalPermissions500Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
-        testXsltTemplate(template, content, expected, params);
-    }
+	public void globalPermissions500Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
+		testXsltTemplate(template, content, expected, params);
+	}
 
-	@Test(dataProvider = "globalRoles500TestData")
 	public void globalRoles500Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@Test(dataProvider = "xsltData")
 	public void testXsltData(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "depResolver5001TestData")
-	public Object[][] depResolver5001TestData() {
+	public static Object[][] depResolver5001TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/config/resolver-config/resolver-config-v5.0.0.1.xslt"),
@@ -459,13 +530,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "depResolver5001TestData")
 	public void depResolver5001Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "siteConfig5000TestData")
-	public Object[][] siteConfig5000TestData() {
+	public static Object[][] siteConfig5000TestData() {
 		return new Object[][]{
 			new Object[] {
 				new ClassPathResource("crafter/studio/upgrade/5.0.x/config/site-config/site-config-v5.0.0.0.xslt"),
@@ -482,13 +551,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "siteConfig5000TestData")
 	public void siteConfig5000Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "globalPermissions50010TestData")
-	public Object[][] globalPermissions50010TestData() {
+	public static Object[][] globalPermissions50010TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.10.xslt"),
@@ -499,13 +566,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "globalPermissions50010TestData")
 	public void globalPermissions50010Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "ui5000TestData")
-	public Object[][] ui5000TestData() {
+	public static Object[][] ui5000TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt"),
@@ -516,13 +581,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "ui5000TestData")
 	public void ui5000Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "ui5001TestData")
-	public Object[][] ui5001TestData() {
+	public static Object[][] ui5001TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.1.xslt"),
@@ -533,18 +596,15 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "ui5001TestData")
 	public void ui5001Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@Test(dataProvider = "ui5002TestData")
 	public void ui5002Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "ui5002TestData")
-	public Object[][] ui5002TestData() {
+	public static Object[][] ui5002TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.2.xslt"),
@@ -555,13 +615,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "ui5003TestData")
 	public void ui5003Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "ui5003TestData")
-	public Object[][] ui5003TestData() {
+	public static Object[][] ui5003TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.3.xslt"),
@@ -572,8 +630,7 @@ public class XsltTest {
 		};
 	}
 
-	@DataProvider(name = "globalPermissions50023TestData")
-	public Object[][] globalPermissions50023TestData() {
+	public static Object[][] globalPermissions50023TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.23.xslt"),
@@ -584,13 +641,11 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "globalPermissions50023TestData")
 	public void globalPermissions50023Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
 
-	@DataProvider(name = "globalPermissions50025TestData")
-	public Object[][] globalPermissions50025TestData() {
+	public static Object[][] globalPermissions50025TestData() {
 		return new Object[][]{
 				new Object[] {
 						new ClassPathResource("crafter/studio/upgrade/5.0.x/system/global-permission-mappings-config-v5.0.0.25.xslt"),
@@ -601,7 +656,6 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "globalPermissions50025TestData")
 	public void globalPermissions50025Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
@@ -612,8 +666,7 @@ public class XsltTest {
 	 * so the editorial fixture covers all of them. The sample fixture keeps the other sample tools.
 	 * Custom tool entries outside content-types are preserved, including when that tool is already absent.
 	 */
-	@DataProvider(name = "siteConfigTools407TestData")
-	public Object[][] siteConfigTools407TestData() {
+	public static Object[][] siteConfigTools407TestData() {
 		return new Object[][]{
 			new Object[]{
 				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt"),
@@ -642,7 +695,6 @@ public class XsltTest {
 		};
 	}
 
-	@Test(dataProvider = "siteConfigTools407TestData")
 	public void siteConfigTools407Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
 	}
@@ -651,7 +703,6 @@ public class XsltTest {
 	 * Shipped blueprints and the sample are already at the post-migration version, so new sites do not
 	 * run the 4.0.6 to 4.0.7 step. The XSLT version element is updated by the upgrade manager, not the template.
 	 */
-	@Test
 	public void shippedSiteConfigToolsRemoveLegacyContentTypesTool() throws Exception {
 		String[] blueprints = {
 			"repo-bootstrap/global/blueprints/1000_website_editorial/config/studio/administration/site-config-tools.xml",
@@ -678,7 +729,6 @@ public class XsltTest {
 	 * on the way to 5.0.0.0, then the ContentTypeManagement, TinyMCE, and pages-datasource steps.
 	 * A site already at 5.0.0.0 does not run the i18n transform again.
 	 */
-	@Test
 	public void uiPipelineContinuesFrom4500ThroughContentTypeManagement() throws Exception {
 		HierarchicalConfiguration config = productionUpgradeConfig();
 		List<String> from4x = Arrays.asList(templatesFrom4500());
@@ -705,7 +755,6 @@ public class XsltTest {
 	 * configuration. The catalog is inserted once. A leftover stock label is translated. An existing
 	 * translation descriptor and a custom label stay. Custom widgets, tools and the version element stay.
 	 */
-	@Test
 	public void contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration() throws Exception {
 		String[] templates = templatesFrom4500();
 		String upgraded = applyTemplates(readResource(UI_4500_FIXTURE), templates);
@@ -744,7 +793,6 @@ public class XsltTest {
 	 * Plain stock text is localized. An element that already has an id keeps that id, its defaultMessage,
 	 * and its text. The same rule applies to Preview Audiences name, label, and helpText.
 	 */
-	@Test
 	public void stockTextLocalizationPreservesIdentifiedTranslations() throws Exception {
 		String upgraded = applyTemplates(readResource(UI_I18N_PRESERVE_FIXTURE), UI_I18N_TEMPLATE);
 		Document document = parseXmlString(upgraded);
@@ -777,7 +825,6 @@ public class XsltTest {
 	 * A site that already has its own top-level ContentTypeManagement widget keeps that catalog.
 	 * The standard controls are not merged in, and the pages datasource is added beside the custom ones.
 	 */
-	@Test
 	public void existingContentTypeManagementCatalogIsNotReplaced() throws Exception {
 		String upgraded = applyTemplates(readResource(UI_CUSTOM_CATALOG_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
 		Document document = parseXmlString(upgraded);
@@ -800,7 +847,6 @@ public class XsltTest {
 	 * siteUi with no top-level widget still receives the catalog. Existing elements stay in order,
 	 * and a nested tool reference is left as a reference.
 	 */
-	@Test
 	public void contentTypeManagementAddedWhenSiteUiHasNoTopLevelWidget() throws Exception {
 		String upgraded = applyTemplates(readResource(UI_NO_WIDGET_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
 		Document document = parseXmlString(upgraded);
@@ -826,7 +872,6 @@ public class XsltTest {
 	 * New sites already ship the catalog at ui.xml 5.0.0.3. The sample has the same catalog and is not
 	 * a versioned site file.
 	 */
-	@Test
 	public void shippedUiContainsContentTypeManagementCatalog() throws Exception {
 		List<String> controls = shippedContentTypeCatalog("control");
 		List<String> dataSources = shippedContentTypeCatalog("dataSource");
@@ -1215,6 +1260,31 @@ public class XsltTest {
 
 			}
 		}
+	}
+
+
+	private static void assertEquals(Object actual, Object expected) {
+		org.junit.Assert.assertEquals(expected, actual);
+	}
+
+	private static void assertEquals(Object actual, Object expected, String message) {
+		org.junit.Assert.assertEquals(message, expected, actual);
+	}
+
+	private static void assertTrue(boolean condition) {
+		org.junit.Assert.assertTrue(condition);
+	}
+
+	private static void assertTrue(boolean condition, String message) {
+		org.junit.Assert.assertTrue(message, condition);
+	}
+
+	private static void assertFalse(boolean condition) {
+		org.junit.Assert.assertFalse(condition);
+	}
+
+	private static void assertFalse(boolean condition, String message) {
+		org.junit.Assert.assertFalse(message, condition);
 	}
 
 }
