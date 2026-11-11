@@ -17,7 +17,7 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, describe, it, mock } from 'node:test';
 
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
@@ -70,7 +70,7 @@ async function renderHook(
 		);
 	});
 	mounted.push({ unmount: () => root.unmount(), host });
-	return { latest: () => results[results.length - 1] };
+	return { latest: () => results[results.length - 1], renders: () => results.length };
 }
 
 const full = { isRepeatMode: false, isEmbedded: false };
@@ -149,5 +149,59 @@ describe('useMinimumSaveRequirements', () => {
 		});
 		await act(async () => pause(invalidFieldReadDebounceMs + 50));
 		assert.equal(latest(), before);
+	});
+
+	it('does not re-render when typing in a non-blank internal name', async () => {
+		const form = createFormAtoms({ fileNameValid: true, internalName: 'About us' });
+		const { latest, renders } = await renderHook(form, full);
+		await act(async () => pause(20));
+		assert.deepEqual(latest(), []);
+		const settled = renders();
+		await act(async () => pause(20));
+		assert.equal(renders(), settled, 'quiet before typing');
+
+		await act(async () => {
+			form.store.set(form.internalName, 'About us!');
+		});
+		await act(async () => {
+			// New validity result, still valid. The missing list does not change.
+			form.store.set(form.fileName, Promise.resolve({ isValid: true }));
+		});
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
+		assert.equal(renders(), settled);
+		assert.deepEqual(latest(), []);
+	});
+
+	it('keeps the last list when the file-name validator rejects', async () => {
+		const fail = atom(false);
+		const fileName = atom(async (get) => {
+			if (get(fail)) throw new Error('boom');
+			return { isValid: false };
+		});
+		const internalName = atom<unknown>('About us');
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName,
+			atoms: {
+				validationByFieldId: { 'file-name': fileName },
+				valueByFieldId: { 'internal-name': internalName }
+			}
+		};
+		const error = mock.method(console, 'error', () => undefined);
+		try {
+			const { latest } = await renderHook(form, full);
+			assert.deepEqual(latest(), ['fileName']);
+
+			await act(async () => {
+				store.set(fail, true);
+			});
+			await act(async () => pause(invalidFieldReadDebounceMs + 50));
+			assert.deepEqual(latest(), ['fileName']);
+			assert.ok(error.mock.callCount() >= 1);
+		} finally {
+			error.mock.restore();
+		}
 	});
 });
