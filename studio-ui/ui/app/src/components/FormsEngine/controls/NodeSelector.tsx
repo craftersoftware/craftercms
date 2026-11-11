@@ -836,7 +836,10 @@ function NodeSelector(props: NodeSelectorProps) {
 									<ListItemButton
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
 										divider={index !== value.length - 1}
-										onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
+										onClick={(e) =>
+											// A component row opens its form read-only. An asset row follows the form's mode.
+											canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
+										}
 										onKeyDown={(e) => handleItemKeyDown(e, index)}
 									>
 										<ListItemText

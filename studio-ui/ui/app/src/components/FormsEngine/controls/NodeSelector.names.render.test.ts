@@ -141,6 +141,18 @@ async function click(host: HTMLElement, label: string) {
 	});
 }
 
+async function clickRow(host: HTMLElement, text: string) {
+	const row = Array.from(host.querySelectorAll<HTMLElement>('[role="button"]')).find((element) =>
+		element.textContent?.includes(text)
+	);
+	assert.ok(row, `expected a row containing ${text}`);
+	await act(async () => {
+		row.click();
+	});
+}
+
+const lastCodeEditorAction = () => dispatched.findLast((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
+
 describe('NodeSelector row button names', () => {
 	it('names edit, view, delete and unlink with the item', async () => {
 		const host = await renderSelector(false);
@@ -189,5 +201,17 @@ describe('NodeSelector row button names', () => {
 		const readOnly = dispatched.find((action) => action.type === 'SHOW_CODE_EDITOR_DIALOG');
 		assert.equal(readOnly?.payload?.path, scriptPath);
 		assert.equal(readOnly?.payload?.readonly, true);
+	});
+
+	it('opens an asset row writable in an editable form and read-only in a read-only form', async () => {
+		const editable = await renderSelector(false);
+		await clickRow(editable, scriptPath);
+		assert.equal(lastCodeEditorAction()?.payload?.path, scriptPath);
+		assert.equal(lastCodeEditorAction()?.payload?.readonly, false);
+
+		const readonly = await renderSelector(true);
+		await clickRow(readonly, scriptPath);
+		assert.equal(lastCodeEditorAction()?.payload?.path, scriptPath);
+		assert.equal(lastCodeEditorAction()?.payload?.readonly, true);
 	});
 });
