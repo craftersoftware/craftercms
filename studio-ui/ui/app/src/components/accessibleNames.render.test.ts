@@ -141,6 +141,15 @@ describe('accessible names', () => {
 		);
 		assert.ok(named.querySelector('button[aria-label="Preview Templates"]'));
 		assert.equal(named.querySelector('button[aria-label="Open Templates"]'), null);
+		const plain = await render(
+			React.createElement(
+				ReduxProvider,
+				{ store },
+				React.createElement(ToolsPanelListItemDispatchButton, { title: 'Templates' })
+			)
+		);
+		assert.equal(plain.querySelector('button[aria-label]'), null);
+		assert.ok(plain.querySelector('[data-testid="ChevronRightRoundedIcon"]'));
 	});
 
 	it('names the options button of a draggable panel item and leaves the mouse-only row out of the tab order', async () => {

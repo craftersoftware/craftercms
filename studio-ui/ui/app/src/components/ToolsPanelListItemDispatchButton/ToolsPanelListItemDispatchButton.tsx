@@ -46,7 +46,7 @@ export function ToolsPanelListItemDispatchButton(props: ToolsPanelListItemDispat
 	return (
 		<ToolsPanelListItemButton
 			onClick={onClick}
-			onSecondaryActionClick={onSecondaryActionClick}
+			onSecondaryActionClick={onSecondaryActionClickProp ? onSecondaryActionClick : undefined}
 			secondaryActionLabel={secondaryActionLabel}
 			{...otherProps}
 		/>
