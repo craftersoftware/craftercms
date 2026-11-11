@@ -247,8 +247,9 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: align === 'end' ? 'flex-end' : 'flex-start',
-					// Never narrower than the More button, so it cannot be clipped away.
-					minWidth: (hasOverflow ? moreWidth : 0) + FOCUS_RING_ROOM * 2,
+					// Never narrower than the More button, so it cannot be clipped away. The minimum does not depend on
+					// whether the button is shown, so a squeezed bar does not flip between showing and hiding it.
+					minWidth: moreWidth + FOCUS_RING_ROOM * 2,
 					flex: naturalWidth > 0 ? `1 1 ${naturalWidth + FOCUS_RING_ROOM * 2}px` : '1 1 auto',
 					overflow: 'hidden',
 					padding: `${FOCUS_RING_ROOM}px`,
