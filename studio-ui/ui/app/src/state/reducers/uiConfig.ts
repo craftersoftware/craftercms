@@ -67,6 +67,10 @@ const initialState: GlobalState['uiConfig'] = {
 		submissionCommentMaxLength: 250
 	},
 	cdataEscapedFieldPatterns: [],
+	formEngine: {
+		fieldNamePostfix: false,
+		ignorePostfixFields: []
+	},
 	remoteGitBranch: null
 };
 
@@ -111,14 +115,17 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 					.querySelectorAll('[id="craftercms.components.ContentTypeManagement"] > configuration > controls')
 					.forEach((tag) => {
 						const deserialized = deserialize(tag.innerHTML);
-						asArray(deserialized?.descriptor).forEach((descriptor) => {
+						// Deserializing the <controls> element yields { control: [...] }:
+						// each control entry carries its own nested <descriptor>.
+						asArray(deserialized?.control).forEach((control) => {
+							const descriptor = control?.descriptor;
 							if (!descriptor?.id) return;
 							// Normalize XML-deserialized shapes (single nodes vs arrays, empty fields tag, etc.)
 							controls[descriptor.id] = {
 								...descriptor,
 								id: descriptor.id,
-								// empty <fields /> deserializes as []; treat as empty object map
-								fields: Array.isArray(descriptor.fields) ? {} : (descriptor.fields ?? {}),
+								// empty <fields /> deserializes as ''/[]; treat as empty object map
+								fields: Array.isArray(descriptor.fields) || !descriptor.fields ? {} : descriptor.fields,
 								sections: descriptor.sections
 									? asArray(descriptor.sections).map((section) => ({
 											...section,
@@ -178,7 +185,7 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 			}
 		}))
 		.addCase(fetchSiteConfigComplete, (state, { payload }) => {
-			const { cdataEscapedFieldPatterns, locale, publishing, upload, remoteGitBranch } = payload;
+			const { cdataEscapedFieldPatterns, formEngine, locale, publishing, upload, remoteGitBranch } = payload;
 			return {
 				...state,
 				upload: {
@@ -186,6 +193,7 @@ const reducer = createReducer<GlobalState['uiConfig']>(initialState, (builder) =
 					...upload
 				},
 				cdataEscapedFieldPatterns,
+				formEngine: formEngine ?? initialState.formEngine,
 				locale: {
 					...state.locale,
 					// If localization config is not present in the config, use the browser's resolved options.

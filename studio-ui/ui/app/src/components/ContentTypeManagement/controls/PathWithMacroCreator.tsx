@@ -36,9 +36,7 @@ import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { useDispatch } from 'react-redux';
 
-export interface PathWithMacroCreatorProps extends TypeBuilderControl {
-	value: string;
-}
+export type PathWithMacroCreatorProps = TypeBuilderControl<string>;
 
 export const macroCreatorLookupTable = {
 	objectId: {

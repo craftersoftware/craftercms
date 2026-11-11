@@ -174,80 +174,6 @@ export function isValidCutPastePath(targetPath: string, sourcePath: string): boo
 	);
 }
 
-export function getEditFormSrc({
-	path,
-	selectedFields,
-	site,
-	authoringBase,
-	readonly,
-	isHidden,
-	modelId,
-	changeTemplate,
-	contentTypeId,
-	isNewContent,
-	iceGroupId,
-	newEmbedded,
-	canEdit,
-	fieldsIndexes
-}: {
-	path: string;
-	selectedFields?: string;
-	site: string;
-	authoringBase: string;
-	readonly?: boolean;
-	isHidden?: boolean;
-	modelId?: string;
-	changeTemplate?: string;
-	contentTypeId?: string;
-	isNewContent?: boolean;
-	iceGroupId?: string;
-	newEmbedded?: string;
-	canEdit?: boolean;
-	fieldsIndexes?: string;
-}): string {
-	const qs = toQueryString({
-		site,
-		path,
-		selectedFields,
-		readonly,
-		isHidden,
-		modelId,
-		changeTemplate,
-		contentTypeId,
-		isNewContent,
-		iceId: iceGroupId,
-		newEmbedded,
-		canEdit,
-		fieldsIndexes
-	});
-	return `${authoringBase}/legacy/form${qs}`;
-}
-
-export function getCodeEditorSrc({
-	path,
-	site,
-	type,
-	contentType,
-	authoringBase,
-	readonly
-}: {
-	path: string;
-	site: string;
-	type: string;
-	contentType?: string;
-	authoringBase: string;
-	readonly: boolean;
-}): string {
-	const qs = toQueryString({
-		site,
-		path,
-		type,
-		contentType,
-		readonly
-	});
-	return `${authoringBase}/legacy/form${qs}`;
-}
-
 // TODO: Dupe of ensureSingleSlash
 export function stripDuplicateSlashes(str: string): string {
 	return str.replace(/\/+/g, '/');
@@ -264,6 +190,11 @@ export function getItemTemplatePath(item: ContentItem, contentTypes: LookupTable
 
 export function getControllerPath(type: SystemType): string {
 	return `/scripts/${type === 'page' ? 'pages' : 'components'}`;
+}
+
+/** The `objectGroupId` of an item: the first 4 characters of its `objectId`. */
+export function createObjectGroupId(objectId: string): string {
+	return objectId.substring(0, 4);
 }
 
 // For nested embedded components, parentPath will be the last non-embedded (shared) path, meaning that the parent
@@ -293,7 +224,7 @@ export function processPathMacros(dependencies: {
 
 	// The objectGroupId is the first 4 characters of the objectId, so compute if not provided.
 	if (objectGroupId === undefined && objectId) {
-		objectGroupId = objectId.substring(0, 4);
+		objectGroupId = createObjectGroupId(objectId);
 	}
 
 	if (processedPath.includes('{objectId}')) {

@@ -47,7 +47,8 @@ import {
 import { clearAndListen$ } from '../store/subjects';
 import { startListening } from '../store/actions';
 import { ElementRecord } from '../models/InContextEditing';
-import { extractCollection, findParentModelId } from '@craftercms/studio-ui/utils/model';
+import { countLimitValue } from '@craftercms/studio-ui/utils/countLimits';
+import { extractCollection, extractCollectionPiece, findParentModelId } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
 import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
@@ -67,6 +68,24 @@ import Divider from '@mui/material/Divider';
 import { unlockItem } from '@craftercms/studio-ui/state/actions/content';
 import { showItemMegaMenu } from '@craftercms/studio-ui/state/actions/dialogs';
 import { FormattedMessage } from 'react-intl';
+import type { ContentTypeField } from '@craftercms/studio-ui/models/ContentType';
+
+/** Item count stored on a model field. A missing field is an empty collection. */
+function collectionItemCount(value: unknown): number {
+	return Array.isArray(value) ? value.length : 0;
+}
+
+/**
+ * minCount and maxCount of the field that contains an item.
+ * A repeat item and a node-selector item both store that field on the item record.
+ * 0 is unlimited. See utils/countLimits.ts.
+ */
+function containerCountLimits(field?: ContentTypeField | null): { minCount?: number; maxCount?: number } {
+	return {
+		minCount: countLimitValue(field?.validations?.minCount?.value),
+		maxCount: countLimitValue(field?.validations?.maxCount?.value)
+	};
+}
 
 export interface ZoneMenuProps {
 	record: ElementRecord;
@@ -201,23 +220,30 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const isEmbedded = useMemo(() => !Boolean(getCachedModel(modelId)?.craftercms.path), [modelId]);
 	const showCodeEditOptions =
 		hasEditAction && !isHeadlessMode && !isItemFile && ['component', 'page', 'node-selector-item'].includes(recordType);
-	const showAddItem = hasEditAction && recordType === 'field' && field.type === 'repeat';
+	// A field record's index is empty, so this is the repeat collection itself. Item menus use `collection` above.
+	const repeatFieldCount =
+		recordType === 'field' && field?.type === 'repeat'
+			? collectionItemCount(extractCollectionPiece(getCachedModel(modelId), fieldId, index))
+			: 0;
+	const repeatAddAtMax =
+		recordType === 'field' &&
+		field?.type === 'repeat' &&
+		Boolean(runValidation(record.iceIds[0], 'maxCount', [repeatFieldCount]));
+	const showAddItem = hasEditAction && recordType === 'field' && field.type === 'repeat' && !repeatAddAtMax;
 	const { isTrashable, showDuplicate } = useMemo(() => {
 		const actions = {
 			isTrashable: false,
 			showDuplicate: false
 		};
 
-		const nodeSelectorEntries = Boolean(nodeSelectorItemRecord) ? getReferentialEntries(nodeSelectorItemRecord) : null;
-
+		// The item record's field is the containing repeat or node-selector, for both record types.
+		// A component zone uses the parent item record from placement. Trash and duplicate share this read.
+		const containerField = nodeSelectorItemRecord ? getReferentialEntries(nodeSelectorItemRecord).field : undefined;
 		if (containerHasEditAction && Boolean(collection)) {
-			const validations = nodeSelectorEntries?.field?.validations;
-			const maxValidation = validations?.maxCount?.value;
-			const minValidation = validations?.minCount?.value;
-			const trashableValidation = minValidation ? minValidation < numOfItemsInContainerCollection : true;
+			const { maxCount, minCount } = containerCountLimits(containerField);
+			const trashableValidation = minCount == null || minCount < numOfItemsInContainerCollection;
 			const duplicateValidation =
-				permissions.includes('content_create') &&
-				(maxValidation ? maxValidation > numOfItemsInContainerCollection : true);
+				permissions.includes('content_create') && (maxCount == null || maxCount > numOfItemsInContainerCollection);
 
 			// The trash/duplicate are not applicable outside of item selector or repeat group type fields:
 			if (
@@ -335,9 +361,16 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	};
 
 	const onAddRepeatItem = (e) => {
-		execOperation(() => {
-			insertItem(modelId, fieldId, index, contentType);
-		});
+		// Same gate as doTrash: the container record's maxCount against the current collection length.
+		const count = collectionItemCount(extractCollectionPiece(getCachedModel(modelId), fieldId, index));
+		const maxCount = runValidation(record.iceIds[0], 'maxCount', [count]);
+		if (maxCount) {
+			post(snackGuestMessage(maxCount));
+		} else {
+			execOperation(() => {
+				insertItem(modelId, fieldId, index, contentType);
+			});
+		}
 	};
 
 	const onDuplicateItem = (e) => {

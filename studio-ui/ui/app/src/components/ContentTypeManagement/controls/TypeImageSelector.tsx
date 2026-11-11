@@ -29,7 +29,7 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import { useStableFormContext } from '../../FormsEngine/lib/formsEngineContext';
 import { TypeBuilderControl } from '../utils';
 import type { ImageRestrictions } from '../../ImageEditorDialog/types';
-import { showImageCropDialog } from '../../FormsEngine/lib/controlHelpers';
+import { showImageCropDialog } from '../../FormsEngine/lib/mediaDialogs';
 import { validateImageRestrictions } from '../../../utils/content';
 import { showSystemNotification } from '../../../state/actions/system';
 import { ensureSingleSlash } from '../../../utils/string';
@@ -37,9 +37,7 @@ import { getFileNameFromPath } from '../../../utils/path';
 import { uploadFile } from '../../../services/content';
 import { pushErrorDialog } from '../../../utils/system';
 
-export interface TypeImageSelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type TypeImageSelectorProps = TypeBuilderControl<string>;
 
 /** Content-type thumbnail size caps (WIDTHCONSTRAINS / HEIGHTCONSTRAINS). */
 const TYPE_IMAGE_RESTRICTIONS: ImageRestrictions = {

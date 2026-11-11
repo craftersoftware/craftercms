@@ -43,12 +43,10 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { svgIconClasses } from '@mui/material/SvgIcon';
 import { listItemIconClasses } from '@mui/material/ListItemIcon';
 
-export interface TranscodedVideoPickerProps extends ControlProps {
-	value: { url: string }[];
-}
+export type TranscodedVideoPickerProps = ControlProps<{ url: string }[]>;
 
 export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
-	const { field, value, setValue, readonly: formReadOnly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly: formReadOnly, autoFocus, dataSources, labelId } = props;
 	const htmlId = useId();
 	const dispatch = useDispatch();
 	const hasValue = Array.isArray(value) ? value.length > 0 : nnou(value);
@@ -106,7 +104,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
+		<FormsEngineField htmlFor={htmlId} labelId={labelId} field={field}>
 			{hasValue ? (
 				<FieldBox dashed={true}>
 					<List dense>

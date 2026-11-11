@@ -32,6 +32,8 @@ import Box from '@mui/material/Box';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 import TextField from '@mui/material/TextField';
 
+const sectionWarningAlertSx = { borderRadius: 0 };
+
 export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 	const {
 		items,
@@ -67,57 +69,63 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 						selectedItems={selectedItems}
 						disabled={isDisabled}
 					/>
-					<ListItem divider dense disableGutters={!Boolean(dependentItems)}>
+					<ListItem divider dense sx={{ borderTop: 1, borderColor: 'divider' }}>
 						<ListItemText
 							primary={
-								<Typography variant="subtitle1" component="span">
+								<Typography variant="subtitle1" component="h2">
 									<FormattedMessage defaultMessage="Items that reference the selected item" />
-
-									{` • `}
-									<FormattedMessage id="deleteDialog.brokenItems" defaultMessage="Will have broken references" />
 								</Typography>
 							}
 						/>
 					</ListItem>
 					{dependentItems.length ? (
-						<List>
-							{dependentItems.map(({ path }) => {
-								return (
-									<ListItem
-										dense
-										key={path}
-										secondaryAction={
-											<Button
-												color="primary"
-												onClick={(e) => onEditDependantClick(e, path)}
-												size="small"
-												sx={{
-													marginLeft: 'auto',
-													fontWeight: 'bold',
-													verticalAlign: 'baseline'
-												}}
-											>
-												<FormattedMessage id="words.edit" defaultMessage="Edit" />
-											</Button>
-										}
-									>
-										<ListItemText
-											primary={path}
-											slotProps={{
-												primary: {
-													title: path,
-													sx: {
-														overflow: 'hidden',
-														whiteSpace: 'nowrap',
-														textOverflow: 'ellipsis'
+						<>
+							<Alert severity="warning" sx={sectionWarningAlertSx}>
+								<FormattedMessage
+									id="deleteDialog.brokenReferencesWarning"
+									defaultMessage="Deleting the selected items will break references in {count, plural, one {the item} other {the # items}} below."
+									values={{ count: dependentItems.length }}
+								/>
+							</Alert>
+							<List>
+								{dependentItems.map(({ path }) => {
+									return (
+										<ListItem
+											dense
+											key={path}
+											secondaryAction={
+												<Button
+													color="primary"
+													onClick={(e) => onEditDependantClick(e, path)}
+													size="small"
+													sx={{
+														marginLeft: 'auto',
+														fontWeight: 'bold',
+														verticalAlign: 'baseline'
+													}}
+												>
+													<FormattedMessage id="words.edit" defaultMessage="Edit" />
+												</Button>
+											}
+										>
+											<ListItemText
+												primary={path}
+												slotProps={{
+													primary: {
+														title: path,
+														sx: {
+															overflow: 'hidden',
+															whiteSpace: 'nowrap',
+															textOverflow: 'ellipsis'
+														}
 													}
-												}
-											}}
-										/>
-									</ListItem>
-								);
-							})}
-						</List>
+												}}
+											/>
+										</ListItem>
+									);
+								})}
+							</List>
+						</>
 					) : (
 						<Box
 							sx={{
@@ -137,7 +145,17 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 					)}
 					<SelectionList
 						title={<FormattedMessage id="deleteDialog.childItemsText" defaultMessage="Child Items" />}
-						subtitle={<FormattedMessage id="deleteDialog.willGetDeleted" defaultMessage="Will get deleted" />}
+						banner={
+							childItems.length ? (
+								<Alert severity="warning" sx={sectionWarningAlertSx}>
+									<FormattedMessage
+										id="deleteDialog.childItemsWillBeDeletedWarning"
+										defaultMessage="{count, plural, one {This child item} other {These # child items}} will also be deleted."
+										values={{ count: childItems.length }}
+									/>
+								</Alert>
+							) : undefined
+						}
 						emptyMessage={<FormattedMessage id="deleteDialog.emptyChildItems" defaultMessage="No child items" />}
 						paths={childItems.map(({ path }) => path)}
 						displayItemTitle={false}

@@ -27,9 +27,7 @@ import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
 import { createTypeTemplate, editTypeTemplate, TypeBuilderControl } from '../utils';
 
-export interface TemplateSelectorProps extends TypeBuilderControl {
-	value: string;
-}
+export type TemplateSelectorProps = TypeBuilderControl<string>;
 
 /**
  * Enables template selection through the BrowseFilesDialog. It also allows template edition.

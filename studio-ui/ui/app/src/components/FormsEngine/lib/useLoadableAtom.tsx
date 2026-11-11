@@ -28,7 +28,8 @@ export type Loadable<Value> =
  */
 function loadable<Value>(anAtom: Atom<Value>) {
 	const LOADING = { state: 'loading' } as const;
-	const unwrappedAtom = unwrap(anAtom, () => LOADING);
+	// Keep the previous result while a re-run is pending, so a field that is validating again doesn't flash `loading`.
+	const unwrappedAtom = unwrap(anAtom, (prev) => prev ?? LOADING);
 	return atom((get): Loadable<Value> => {
 		try {
 			const data = get(unwrappedAtom);

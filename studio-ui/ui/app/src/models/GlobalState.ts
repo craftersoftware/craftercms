@@ -55,7 +55,6 @@ import { CreateFileStateProps } from '../components/CreateFileDialog/utils';
 import { UploadDialogStateProps } from '../components/UploadDialog/util';
 import { PreviewDialogStateProps } from '../components/PreviewDialog/utils';
 import { EditSiteDialogStateProps } from '../components/EditSiteDialog/utils';
-import { LegacyFormDialogStateProps } from '../components/LegacyFormDialog/utils';
 import { SingleFileUploadDialogStateProps } from '../components/SingleFileUploadDialog';
 import { ModelHierarchyMap } from '../utils/content';
 import { UIBlockerStateProps } from '../components/UIBlocker';
@@ -276,6 +275,11 @@ export interface GlobalState {
 			submissionCommentMaxLength: number;
 		};
 		cdataEscapedFieldPatterns: string[];
+		/** Variable-name postfix rules from site-config `<form-engine>`. Off until that config is loaded. */
+		formEngine: {
+			fieldNamePostfix: boolean;
+			ignorePostfixFields: string[];
+		};
 		references: LookupTable;
 		xml: string;
 		remoteGitBranch: string;

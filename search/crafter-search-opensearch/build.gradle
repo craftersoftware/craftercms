@@ -38,7 +38,6 @@ dependencies {
 	implementation libs.tika.parsers.standard.package
 	implementation libs.jakarta.activation.api
 	implementation libs.angus.activation
-	implementation libs.poi.scratchpad
 	implementation libs.jdom2
 	implementation libs.bcmail.jdk18on
 	implementation libs.metadata.extractor

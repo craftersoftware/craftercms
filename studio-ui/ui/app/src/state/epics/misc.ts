@@ -29,13 +29,14 @@ import {
 import { createFile, fetchContentItem } from '../../services/content';
 import { reloadContentItem } from '../actions/content';
 import { blockUI, showEditItemSuccessNotification, unblockUI } from '../actions/system';
+import { saveSuccessFollowUps } from '../../utils/contentFormLaunch';
 import { CrafterCMSEpic } from '../store';
 import { translations } from '../../components/ItemActionsMenu/translations';
 import { getFileNameFromPath, getParentPath } from '../../utils/path';
 import { popPiece } from '../../utils/string';
 import { associateTemplate } from '../actions/preview';
 import { pushDialog } from '../actions/dialogStack';
-import { createComponentId, pickShowContentFormAction, pushErrorDialog } from '../../utils/system';
+import { createComponentId, showContentFormAction, pushErrorDialog } from '../../utils/system';
 import { nanoid } from 'nanoid';
 import { popCodeEditorDialog } from '../actions/dialogs';
 
@@ -49,13 +50,17 @@ const epics = [
 				const path = payload.path;
 				if (payload.originalContentTypeId !== newContentTypeId) {
 					return of(
-						pickShowContentFormAction({
+						showContentFormAction({
 							site: state.sites.active,
 							path,
 							authoringBase: state.env.authoringBase,
 							changeTemplate: newContentTypeId,
-							onSaveSuccess: ({ action }) =>
-								store.dispatch(batchActions([showEditItemSuccessNotification({ action }), reloadContentItem({ path })]))
+							onSaveSuccess: ({ draft }) =>
+								store.dispatch(
+									batchActions(
+										saveSuccessFollowUps(draft, showEditItemSuccessNotification(), [reloadContentItem({ path })])
+									)
+								)
 						})
 					);
 				}

@@ -24,7 +24,7 @@ import {
 	showExternalAssetUploadDialog,
 	showSearchDialog,
 	showSingleFileUploadDialog
-} from '../lib/controlHelpers';
+} from '../lib/mediaDialogs';
 import type { DataSourceServices } from './types';
 
 /** Redux dispatch + site + forms API needed to bridge dialog / `pushForm` UI into promise services. */

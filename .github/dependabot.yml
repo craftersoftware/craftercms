@@ -12,6 +12,9 @@ updates:
             all-gradle-deps:
                 patterns:
                     - "*"
+        ignore:
+            -   dependency-name: "commons-codec:commons-codec"
+                versions: [ ">=1.22.1" ]
 
     -   package-ecosystem: "gradle"
         directories:
@@ -34,6 +37,8 @@ updates:
                 versions: [ ">=5.0.0" ]
             -   dependency-name: "org.junit.jupiter:junit-jupiter-engine"
                 versions: [ ">=6.0.0" ]
+            -   dependency-name: "commons-codec:commons-codec"
+                versions: [ ">=1.22.1" ]
 
     - package-ecosystem: "npm" # See documentation for possible values
       directories: # Location of package manifests

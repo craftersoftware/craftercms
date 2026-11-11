@@ -193,6 +193,13 @@ export function renderActivity(
 					values={{ render_package_link }}
 				/>
 			);
+		case 'UPDATE_PUBLISH_PACKAGE':
+			return (
+				<FormattedMessage
+					defaultMessage="Updated <render_package_link>a package</render_package_link>"
+					values={{ render_package_link }}
+				/>
+			);
 		default:
 			console.log('[INFO] An unknown activity was received from the server.', activity);
 			return <FormattedMessage defaultMessage="Unlabelled activity" />;
@@ -222,7 +229,8 @@ export const activityNameLookup: Record<Activities | 'ALL', any> = {
 	REVERT: <FormattedMessage id="words.revert" defaultMessage="Revert" />,
 	UPDATE: <FormattedMessage id="words.update" defaultMessage="Update" />,
 	PUBLISH_ALL_COMPLETE: <FormattedMessage defaultMessage="Publish All" />,
-	CANCEL_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Cancel" />
+	CANCEL_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Cancel" />,
+	UPDATE_PUBLISH_PACKAGE: <FormattedMessage defaultMessage="Update Publishing Package" />
 };
 
 function getSelectedKeys<K extends string>(selection: Partial<Record<K, boolean>>): K[] {

@@ -23,7 +23,16 @@ import {
 } from '../controls/registry';
 import { dataSourceModuleRegistry, registerDataSourceModule } from './registry';
 import { DATA_SOURCE_API_VERSION } from './types';
+import { CONTROL_API_VERSION } from '../types';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { useFieldValue } from '../lib/formsEngineContext';
+import {
+	XML_ATTRIBUTE_PREFIX,
+	XML_CDATA_KEY,
+	XML_ITEM_LIST_ATTRIBUTE,
+	XML_LIST_ITEM_KEY,
+	XML_TEXT_KEY
+} from '../lib/controlValueTypes';
 
 /**
  * Public runtime surface for the data-source *module registry* (built-ins and
@@ -35,12 +44,12 @@ import { FormsEngineField } from '../components/FormsEngineField';
  * `importPlugin` / `registerPlugin` over calling `register` from plugin code.
  * See docs/type-builder-forms-engine-plugins.md §9.
  */
-export const formsEngineDataSourcesHost = {
+export const formsEngineDataSourcesHost = Object.freeze({
 	apiVersion: DATA_SOURCE_API_VERSION,
 	register: registerDataSourceModule,
 	get: dataSourceModuleRegistry.get.bind(dataSourceModuleRegistry),
 	getAll: dataSourceModuleRegistry.getAll.bind(dataSourceModuleRegistry)
-};
+});
 
 /**
  * Public runtime surface for control-extension binding metadata and contributions.
@@ -49,15 +58,33 @@ export const formsEngineDataSourcesHost = {
  * for UMD-style loaders.
  *
  * `FormsEngineField` is the field chrome built-in controls use (label, required/invalid
- * state, validity messages, field menu, inheritance notice). Plugin controls are rendered
- * bare, so they must wrap their input in it to display validation state like built-ins do.
+ * state, validity messages, field menu, inheritance notice). The host wraps plugin controls
+ * in it by default. A contribution that sets `fieldChrome: false` renders bare and wraps its
+ * input in `FormsEngineField` itself, using the `inputId` / `labelId` control props.
+ *
+ * `useFieldValue(fieldId)` is the supported way for plugin controls to access sibling
+ * fields — e.g. a descriptor-declared additional field such as `{id}_tz` (date/time) or
+ * `{id}_bk`. It returns `[value, setValue, exists]` (`exists` is `false` when the field
+ * wasn't initialized, instead of throwing) and keeps the atom map and Jotai internal.
+ * The hook must be the host's own instance, so it is exposed here rather than
+ * imported/bundled by the plugin.
  */
-export const formsEngineControlsHost = {
+export const formsEngineControlsHost = Object.freeze({
+	apiVersion: CONTROL_API_VERSION,
 	registerDataSourceBindings: registerControlDataSourceBindings,
 	getDataSourceBindings: getControlDataSourceBindings,
 	getControl: getRegisteredControlContribution,
 	getValueRetriever: getPluginControlValueRetriever,
 	getValueSerializer: getPluginControlValueSerializer,
 	getValidator: getPluginControlValidator,
-	FormsEngineField
-};
+	useFieldValue,
+	FormsEngineField,
+	/** Special keys a `valueSerializer` may use in the shape it returns. See the plugins doc. */
+	xmlKeys: Object.freeze({
+		attributePrefix: XML_ATTRIBUTE_PREFIX,
+		cdata: XML_CDATA_KEY,
+		text: XML_TEXT_KEY,
+		listItem: XML_LIST_ITEM_KEY,
+		itemListAttribute: XML_ITEM_LIST_ATTRIBUTE
+	})
+});

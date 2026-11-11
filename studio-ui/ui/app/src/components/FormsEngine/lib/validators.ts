@@ -18,7 +18,8 @@ import ContentType, { type ContentTypeField } from '../../../models/ContentType'
 import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
-import { defineMessage, type MessageDescriptor } from 'react-intl';
+import { isInternalNameFilled, missingMinimumSaveRequirements } from './minimumSaveRequirements';
+import { defineMessage, defineMessages, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
 import { checkPathExistence } from '../../../services/content';
@@ -27,24 +28,42 @@ import {
 	getBasePath,
 	getPropertyValue,
 	getValidationValue,
-	processAdditionalFieldMacro
+	processAdditionalFieldMacro,
+	rootPagePath
 } from './formUtils';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, timer } from 'rxjs';
+import { switchMap, takeUntil } from 'rxjs/operators';
 import { isPagePath, withIndex } from '../../../utils/path';
+import { applyContentNameRules } from '../../../utils/content';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
-import { validateDatePopulateExpression } from './controlHelpers';
+import { validateDatePopulateExpression } from './dateExpressions';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
+import type { AnyValue } from '../types';
 import type { RepeatItem } from '../controls/Repeat';
 import type { NodeSelectorItem } from '../controls/NodeSelector';
 import type { CheckboxGroupProps } from '../controls/CheckboxGroup';
 import { macroCreatorLookupTable } from '../../ContentTypeManagement/controls/PathWithMacroCreator';
-import { getPluginControlValidator } from '../controls/registry';
-import { isFieldPathIrrelevant } from '../formControllers/runtime';
+import { getPluginControlValidator, getRegisteredControlContribution } from '../controls/registry';
+import { isFieldPathIrrelevant } from './formVisibility';
+import {
+	countLimitValue,
+	getRepeatOccurrenceViolations,
+	isItemCountMaxEditorValue,
+	isItemCountMinEditorValue,
+	isItemCountRangeValid,
+	readItemCountEditorSpec
+} from '../../../utils/countLimits';
 import { evaluateRteConstraints, measureRteValue } from './rtePlainText';
+import { asArray } from '../../../utils/array';
+import { freezeForPlugin } from './pluginHooks';
+import { checkFieldNamePostfix, formatPostfixList } from '../../ContentTypeManagement/fieldNamePostfix';
 
+/**
+ * Everything the host knows when it validates a field. Internal: built-in validators read it through
+ * {@link BuiltInValidatorContext.meta}. Plugin validators never see it, only {@link ValidatorContext}.
+ */
 export interface ValidatorMetaData {
 	siteId: string;
-	fileName: string;
 	itemMeta: FormsEngineItemMetaContextProps;
 	contentTypesById?: LookupTable<ContentType>;
 	/** IDs at the same level as the field/data source being edited (for variable name uniqueness). */
@@ -65,114 +84,291 @@ export interface ValidatorMetaData {
 		component: Record<string, unknown>,
 		path?: string
 	): Promise<Set<string> | null>;
+	/**
+	 * Current value of a field at the level being validated: the form's top-level fields at the root, the item's
+	 * fields inside a repeat item, the component's fields inside an embedded component. See {@link scopeGetValue}.
+	 * Item-count editors use it for min ≤ max.
+	 */
+	getValue?(fieldId: string): unknown;
+	/** Aborted when the value being validated is superseded. Created per run when the caller has none. */
+	signal?: AbortSignal;
+	/**
+	 * The field is in a nested scope: a repeat item, inline or opened as its own form. The item's file-name rules
+	 * (implicit required, name format, path collision) belong to the root item only, so a `file-name` control here
+	 * is an ordinary field and only the constraints its content type declares apply. See {@link validateFieldValue}.
+	 */
+	nested?: boolean;
+	/**
+	 * Type Builder variable-name postfix rules from site-config. Present only for top-level field forms when
+	 * `<field-name-postfix>` is `true`. See {@link variableValidator}.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 }
-export type ValidatorFunctionDef = (
-	field: ContentTypeField,
-	currentValue: unknown,
-	messages: FieldValidityState['messages'],
-	meta: ValidatorMetaData
-) => Promise<boolean> | boolean;
-export const validatorsMap: Partial<Record<BuiltInControlType | DescriptorControlType, ValidatorFunctionDef>> = {
-	repeat: (field, currentValue, messages, meta) =>
-		repeatGroupValidator(field, currentValue as Array<RepeatItem>, messages, meta),
-	'auto-filename': undefined,
-	'aws-file-upload': undefined,
-	'checkbox-group': (field, currentValue, messages) =>
-		checkboxGroupValidator(field, currentValue as CheckboxGroupProps['value'], messages),
-	checkbox: (field, currentValue, messages) => checkboxValidator(field, currentValue as boolean, messages),
-	'date-time': (field, currentValue, messages) => dateTimeValidator(field, currentValue as string, messages),
-	disabled: undefined,
-	dropdown: undefined,
-	'file-name': (field, currentValue, messages, meta) =>
-		fileNameValidator(field, currentValue as string, messages, meta),
-	forcehttps: undefined,
-	'image-picker': undefined,
-	input: (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
-	'internal-name': undefined,
-	label: undefined,
-	'locale-selector': undefined,
-	'node-selector': (field, currentValue, messages, meta) =>
-		nodeSelectorValidator(field, currentValue as NodeSelectorItem[], messages, meta),
-	'numeric-input': (field, currentValue, messages) => numericInputValidator(field, currentValue as number, messages),
-	'page-nav-order': undefined,
-	rte: (field, currentValue, messages) => rteValidator(field, currentValue as string, messages),
-	textarea: (field, currentValue, messages) => inputValidator(field, currentValue as string, messages),
-	time: undefined,
-	'transcoded-video-picker': undefined,
-	uuid: undefined,
-	'video-picker': undefined,
-	colorPicker: undefined,
-	'date-time-expression-input': (field, currentValue, messages) =>
-		dateTimeExpressionInputValidator(field, currentValue as string, messages),
-	'input-email': (field, currentValue, messages) => inputEmailValidator(field, currentValue as string, messages),
-	'input-link': (field, currentValue, messages) => inputLinkValidator(field, currentValue as string, messages),
-	'input-phone': (field, currentValue, messages) => inputPhoneValidator(field, currentValue as string, messages),
-	'path-with-macro-creator': (field, currentValue, messages) =>
-		pathWithMacroValidator(field, currentValue as string, messages),
-	variable: (field, currentValue, messages, meta) => variableValidator(field, currentValue as string, messages, meta)
-};
 
+/**
+ * A message a validator reports for display under the field.
+ * Contract for plugin validators. A plain string is shown as is. A `MessageDescriptor` is translated.
+ * A tuple is a `MessageDescriptor` plus the values to format it with.
+ */
 // TODO: Fix FormatXMLElementFn generics
 export type FieldValidityMessage =
 	| string
 	| MessageDescriptor
 	| [MessageDescriptor, values?: Record<string, PrimitiveType | FormatXMLElementFn<any, any>>];
 
+/** Internal validity state of a field, as kept in the validation atoms. */
 export interface FieldValidityState {
 	isValid: boolean;
 	messages: FieldValidityMessage[];
 }
 
-/**
- * Validates the uniqueness of a file name within a specific site and path.
- *
- * @param {ContentTypeField} field - The field metadata for the file name being validated.
- * @param {string} _ - Unused parameter, representing the current value of the field.
- * @param {FieldValidityState['messages']} messages - An array to store validation messages.
- * @param {ValidatorMetaData} meta - Metadata containing site ID, file name, and item context.
- * @returns {Promise<boolean> | boolean} - A promise resolving to `true` if the file name is valid,
- * or `false` if it is invalid.
- *
- */
-export async function fileNameValidator(
-	field: ContentTypeField,
-	_: string,
-	messages: FieldValidityState['messages'],
-	meta: ValidatorMetaData
-): Promise<boolean> {
-	const siteId: string = meta.siteId;
-	const currentValue = meta.fileName;
-
-	if (nou(currentValue)) return false;
-
-	const initialPath = meta.itemMeta.path ?? meta.itemMeta.pathInSite;
-	const isPage = isPagePath(withIndex(initialPath));
-	const basePath = nnou(meta.itemMeta.path) ? getBasePath(initialPath, isPage) : meta.itemMeta.pathInSite;
-	const newPath = computePathFromFileName(currentValue, isPage, basePath);
-
-	if (initialPath === newPath || nou(siteId)) return true;
-
-	try {
-		const exists = await firstValueFrom(checkPathExistence(siteId, newPath));
-		if (exists) {
-			messages?.push([defineMessage({ defaultMessage: 'An item with that name already exists.' })]);
-		}
-		return !exists;
-	} catch {
-		return false;
-	}
+/** What a validator returns. A validator is valid only when `valid` is `true`. */
+export interface ValidatorResult {
+	valid: boolean;
+	/** Shown under the field when invalid. Messages are listed in the order given. */
+	messages?: readonly FieldValidityMessage[];
 }
+
+/**
+ * Second argument of a plugin {@link Validator}. These members are the whole contract.
+ * New members may be added; existing ones are stable.
+ */
+export interface ValidatorContext {
+	readonly field: Readonly<ContentTypeField>;
+	/**
+	 * Aborted when this validation run is superseded before it settles: any re-run, such as the value changing,
+	 * a field read through `getValue` changing, or the form's relevance changing.
+	 * Pass it to `fetch` and similar. The result of a superseded run is discarded: the host uses the latest run's.
+	 */
+	readonly signal: AbortSignal;
+	readonly siteId: string;
+	/**
+	 * Current value of a field that lives next to the one being validated, by field id.
+	 * For a top-level field that is the open form's own fields. For a field inside a repeat item it is that item's
+	 * fields. For a field inside an embedded component it is that component's fields. It never reaches the page
+	 * from inside a repeat item or an embedded component, so the same data gets the same verdict wherever it is
+	 * validated. Returns `undefined` for an id that level does not have.
+	 * Reading a field makes this field validate again when that field changes.
+	 */
+	getValue(fieldId: string): unknown;
+}
+
+/**
+ * Type-specific validation. Value first, then one context object. May be async.
+ * Required/empty checks stay host-owned and run before the validator.
+ */
+export type Validator<V = unknown> = (value: V, ctx: ValidatorContext) => ValidatorResult | Promise<ValidatorResult>;
+
+/** What built-in validators receive: the public context plus the host's internal metadata. */
+interface BuiltInValidatorContext extends ValidatorContext {
+	readonly meta: ValidatorMetaData;
+}
+
+type BuiltInValidator = (value: AnyValue, ctx: BuiltInValidatorContext) => ValidatorResult | Promise<ValidatorResult>;
+
+const validatorsMap: Partial<Record<BuiltInControlType | DescriptorControlType, BuiltInValidator>> = {
+	repeat: repeatGroupValidator,
+	'auto-filename': undefined,
+	'aws-file-upload': undefined,
+	'checkbox-group': checkboxGroupValidator,
+	checkbox: checkboxValidator,
+	'date-time': dateTimeValidator,
+	disabled: undefined,
+	dropdown: undefined,
+	'file-name': fileNameValidator,
+	forcehttps: undefined,
+	'image-picker': undefined,
+	input: inputValidator,
+	'internal-name': undefined,
+	label: undefined,
+	'locale-selector': undefined,
+	'node-selector': nodeSelectorValidator,
+	'numeric-input': numericInputValidator,
+	'page-nav-order': undefined,
+	rte: rteValidator,
+	textarea: inputValidator,
+	time: undefined,
+	'transcoded-video-picker': undefined,
+	uuid: undefined,
+	'video-picker': undefined,
+	colorPicker: undefined,
+	'date-time-expression-input': dateTimeExpressionInputValidator,
+	'input-email': inputEmailValidator,
+	'input-link': inputLinkValidator,
+	'input-phone': inputPhoneValidator,
+	'path-with-macro-creator': pathWithMacroValidator,
+	variable: variableValidator
+};
+
+/**
+ * Control types whose validator applies the required constraint itself.
+ * {@link validateFieldValue} does not add a required message for these. The validator emits that message.
+ */
+const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>([
+	'file-name',
+	// Unchecked is empty, but the message is "must be checked", not the host's "required".
+	'checkbox'
+]);
+
+/**
+ * Validators selected by a validation key on the field, not by its control type.
+ * A key runs only when that validation is present. `required` is applied the same way in
+ * {@link validateFieldValue}. `minValue`, `maxValue` and pattern/regex stay with the controls
+ * that already read those keys. See utils/countLimits.ts for the item-count spec.
+ */
+const validationValidators: Partial<Record<string, BuiltInValidator>> = {
+	itemCount: itemCountEditorValidator
+};
+
+const pluginValidatorMessages = defineMessages({
+	validationFailed: {
+		defaultMessage: "This value couldn't be validated. Try again or contact your administrator."
+	}
+});
+
+/** Stable 32-bit FNV-1a hash of `text`, as hex. */
+function hashText(text: string): string {
+	let hash = 0x811c9dc5;
+	for (let i = 0; i < text.length; i++) {
+		hash ^= text.charCodeAt(i);
+		hash = Math.imul(hash, 0x01000193);
+	}
+	return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * react-intl throws when it formats a descriptor with no `id`. Studio's build adds ids to the descriptors written
+ * in its source, but a plugin bundle may not use that transform. A descriptor with no usable `id` gets one derived
+ * from its `defaultMessage`, so it formats the default message, with its values, in every locale.
+ * Returns `undefined` for a descriptor that has neither a usable `id` nor a `defaultMessage`.
+ */
+function withMessageId(value: unknown): MessageDescriptor | undefined {
+	if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+	const { id, defaultMessage } = value as Record<string, unknown>;
+	// The app build precompiles defaultMessage into an AST. A string is the uncompiled form.
+	const text = typeof defaultMessage === 'string';
+	const precompiled = Array.isArray(defaultMessage);
+	if ((id !== undefined && typeof id !== 'string') || (defaultMessage !== undefined && !text && !precompiled)) {
+		return undefined;
+	}
+	if (id) return { ...(value as MessageDescriptor) };
+	if (!text || !defaultMessage) return undefined;
+	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage)}` };
+}
+
+/**
+ * A string, a `MessageDescriptor` or a `[MessageDescriptor, values?]` tuple. See {@link FieldValidityMessage}.
+ * Returns the message in a form the renderer can always format, or `undefined` when it is malformed.
+ */
+function normalizeMessage(message: unknown): FieldValidityMessage | undefined {
+	if (typeof message === 'string') return message;
+	if (Array.isArray(message)) {
+		const [descriptor, values] = message;
+		const normalized = withMessageId(descriptor);
+		if (
+			message.length > 2 ||
+			!normalized ||
+			(values !== undefined && (values === null || typeof values !== 'object' || Array.isArray(values)))
+		) {
+			return undefined;
+		}
+		return values === undefined ? [normalized] : [normalized, values];
+	}
+	return withMessageId(message);
+}
+
+/** Normalizes every message of a plugin result, or returns `undefined` when the list or any entry is malformed. */
+function normalizeMessageList(messages: unknown): FieldValidityMessage[] | undefined {
+	if (!Array.isArray(messages)) return undefined;
+	const normalized: FieldValidityMessage[] = [];
+	for (const message of messages) {
+		const next = normalizeMessage(message);
+		if (next === undefined) return undefined;
+		normalized.push(next);
+	}
+	return normalized;
+}
+
+const validationFailedMessage = withMessageId(pluginValidatorMessages.validationFailed) as MessageDescriptor;
+
+/** The reason shown when a plugin validator could not produce a verdict. Technical detail goes to the console. */
+function validationFailedResult(): ValidatorResult {
+	return { valid: false, messages: [validationFailedMessage] };
+}
+
+/**
+ * Wraps a plugin validator for the host. The plugin gets a fresh context with only the public members,
+ * so host internals cannot leak. A result that is not `{ valid: true }` is invalid, and a malformed one is reported.
+ * A validator that throws or rejects is invalid too, so a failed request never rejects the field's validation.
+ * Both cases show the user a generic "couldn't be validated" message and log the detail to the console. The log is
+ * skipped for an `AbortError` when the host's own signal aborted: that run was superseded, its outcome is discarded
+ * and no message is shown. A plugin aborting its own controller is still logged and shown.
+ * Messages are normalized so a descriptor without an `id` formats instead of crashing the field.
+ */
+function adaptPluginValidator(validator: Validator): BuiltInValidator {
+	return async (value, ctx) => {
+		const pluginCtx: ValidatorContext = {
+			field: freezeForPlugin(ctx.field),
+			signal: ctx.signal,
+			siteId: ctx.siteId,
+			getValue: ctx.getValue
+		};
+		const pluginId = () => getRegisteredControlContribution(ctx.field.type)?.pluginId;
+		let result: ValidatorResult;
+		try {
+			result = await validator(value, pluginCtx);
+		} catch (error) {
+			if ((error as Error | undefined)?.name === 'AbortError' && pluginCtx.signal.aborted) {
+				return { valid: false, messages: [] };
+			}
+			console.error(
+				`The validator of plugin "${pluginId()}" for field "${ctx.field.id}" (control type "${ctx.field.type}") ` +
+					`threw. The field is treated as invalid.`,
+				error
+			);
+			return validationFailedResult();
+		}
+		const messages =
+			result != null && typeof result === 'object' && typeof result.valid === 'boolean'
+				? result.messages === undefined
+					? []
+					: normalizeMessageList(result.messages)
+				: undefined;
+		if (messages === undefined) {
+			console.error(
+				`The validator of plugin "${pluginId()}" for field "${ctx.field.id}" (control type "${ctx.field.type}") ` +
+					`must return { valid: boolean, messages?: [] }. The field is treated as invalid.`,
+				result
+			);
+			return validationFailedResult();
+		}
+		return { valid: result.valid, messages: result.valid ? [] : messages };
+	};
+}
+
+const adaptedPluginValidators = new WeakMap<Validator, BuiltInValidator>();
 
 /**
  * Built-in map first (including explicit `undefined` = no type validator).
  * Plugin contributions only for types absent from the built-in map.
- * Required/empty checks stay in {@link validateFieldValue}, not here.
+ * Required stays in {@link validateFieldValue}, except for types in {@link validatorsOwningRequired}.
  */
-export function getFieldValidator(fieldType: string): ValidatorFunctionDef | undefined {
+function getFieldValidator(fieldType: string): BuiltInValidator | undefined {
 	if (Object.hasOwn(validatorsMap, fieldType)) {
 		return validatorsMap[fieldType as BuiltInControlType | DescriptorControlType];
 	}
-	return getPluginControlValidator(fieldType);
+	const pluginValidator = getPluginControlValidator(fieldType);
+	if (!pluginValidator) return undefined;
+	let adapted = adaptedPluginValidators.get(pluginValidator);
+	if (!adapted) {
+		adapted = adaptPluginValidator(pluginValidator);
+		adaptedPluginValidators.set(pluginValidator, adapted);
+	}
+	return adapted;
 }
 
 /** True when a built-in or plugin type validator is registered for `fieldType`. */
@@ -180,12 +376,40 @@ export function hasFieldValidator(fieldType: string): boolean {
 	return nnou(getFieldValidator(fieldType));
 }
 
+/** True when the field carries a validation key that has its own validator, such as `itemCount`. */
+export function hasValidationKeyValidator(field: ContentTypeField): boolean {
+	const validations = field.validations;
+	if (!validations) return false;
+	return Object.keys(validations).some((key) => Object.hasOwn(validationValidators, key));
+}
+
+/**
+ * `getValue` for a nested run: reads `values`, the item or component being validated, never the root form.
+ * `values` is already part of the enclosing field's own value, so a change to it re-runs that field's validation.
+ */
+function scopeGetValue(values: unknown): (fieldId: string) => unknown {
+	return (fieldId) =>
+		values != null && typeof values === 'object' && Object.hasOwn(values, fieldId)
+			? (values as Record<string, unknown>)[fieldId]
+			: undefined;
+}
+
+function createBuiltInContext(field: ContentTypeField, meta: ValidatorMetaData): BuiltInValidatorContext {
+	return {
+		field,
+		signal: meta.signal ?? new AbortController().signal,
+		siteId: meta.siteId,
+		getValue: (fieldId) => meta.getValue?.(fieldId),
+		meta
+	};
+}
+
 /**
  * Validates the value of a field based on its type, requirements, and metadata.
  *
  * @param {ContentTypeField} field - The field metadata, including its type and validation rules.
  * @param {unknown} currentValue - The current value of the field to be validated.
- * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and file name.
+ * @param {ValidatorMetaData} meta - Metadata containing additional context such as site ID and item meta.
  * @returns {Promise<FieldValidityState>} - A promise resolving to the validity state of the field,
  * including whether it is valid and any associated validation messages.
  *
@@ -195,20 +419,90 @@ export async function validateFieldValue(
 	currentValue: unknown,
 	meta: ValidatorMetaData
 ): Promise<FieldValidityState> {
-	const validateValue = field.id === 'file-name' ? meta.fileName : currentValue;
 	const messages: FieldValidityState['messages'] = [];
-	const isRequired = isFieldRequired(field);
-	const isEmpty = isEmptyValue(field, validateValue);
+	const isEmpty = isFieldValueEmpty(field, currentValue);
+	const requiredByConstraint = Boolean(field.validations?.required?.value);
+	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
+	const minimum = countLimitValue(field.validations?.minCount?.value);
+	// This control's validator applies required itself, against the value it actually edits.
+	// A nested `file-name` control has no item file-name semantics, so the host applies its declared required.
+	const nestedFileName = Boolean(meta.nested) && field.type === 'file-name';
+	const ownsRequired =
+		!nestedFileName && validatorsOwningRequired.has(field.type as BuiltInControlType | DescriptorControlType);
 
-	// If it's required, and the value is empty, then it's invalid. For file-name, if path is root it's ok to be empty.
-	if ((isRequired || (field.id === 'file-name' && meta.itemMeta.path !== '/site/website/index.xml')) && isEmpty) {
+	// A required constraint with an empty value is invalid. Types that own required decide that themselves.
+	if (!ownsRequired && requiredByConstraint && isEmpty && minimum == null) {
 		messages.push(defineMessage({ defaultMessage: 'This field is required.' }));
 		return Promise.resolve({ isValid: false, messages });
 	}
-	const validator = getFieldValidator(field.type);
-	// If there's a validator, run it. If not, it's valid.
-	const isValid = nnou(validator) ? await validator(field, validateValue, messages, meta) : true;
+	const validator = nestedFileName ? undefined : getFieldValidator(field.type);
+	const ctx = createBuiltInContext(field, meta);
+	let isValid = true;
+	// The type validator runs for the control. Validation-key validators run only for keys this field has.
+	if (nnou(validator)) {
+		const result = await validator(currentValue, ctx);
+		isValid = result.valid;
+		messages.push(...(result.messages ?? []));
+	}
+	for (const key of Object.keys(field.validations ?? {})) {
+		// Own keys only, same as hasValidationKeyValidator. A prototype name is not a validator.
+		if (!Object.hasOwn(validationValidators, key)) continue;
+		const keyed = await validationValidators[key](currentValue, ctx);
+		if (!keyed.valid) isValid = false;
+		messages.push(...(keyed.messages ?? []));
+	}
 	return Promise.resolve({ isValid, messages });
+}
+
+const minItemsMessage = defineMessage({
+	defaultMessage: 'At least {minCount, plural, one {# item is} other {# items are}} required.'
+});
+const maxItemsMessage = defineMessage({
+	defaultMessage: 'No more than {maxCount, plural, one {# item is} other {# items are}} allowed.'
+});
+
+/** Same occurrence errors for every item-count control. See utils/countLimits.ts. Empty when the count is allowed. */
+function itemCountViolationMessages(count: number, field: ContentTypeField): FieldValidityMessage[] {
+	const minCount = countLimitValue(getValidationValue(field.validations, 'minCount'));
+	const maxCount = countLimitValue(getValidationValue(field.validations, 'maxCount'));
+	return getRepeatOccurrenceViolations(count, minCount, maxCount).map((violation): FieldValidityMessage =>
+		violation.kind === 'min'
+			? [minItemsMessage, { minCount: violation.limit }]
+			: [maxItemsMessage, { maxCount: violation.limit }]
+	);
+}
+
+/** Type Builder min/max. Blank and '*' are unlimited. 0 is not a maximum. See utils/countLimits.ts. */
+function itemCountEditorValidator(currentValue: unknown, ctx: ValidatorContext): ValidatorResult {
+	const { field } = ctx;
+	const spec = readItemCountEditorSpec(getValidationValue(field.validations, 'itemCount'));
+	if (!spec) return { valid: true };
+	const { role } = spec;
+	const partner = spec.partner ? ctx.getValue(spec.partner) : undefined;
+	const formatValid =
+		role === 'max' ? isItemCountMaxEditorValue(currentValue) : isItemCountMinEditorValue(currentValue);
+	if (!formatValid) {
+		return {
+			valid: false,
+			messages: [
+				role === 'max'
+					? field.type === 'string'
+						? defineMessage({
+								defaultMessage: "Enter '*' or an integer of 1 or more. Leave blank for no maximum."
+							})
+						: defineMessage({
+								defaultMessage: 'Enter an integer of 1 or more, or leave blank for no maximum.'
+							})
+					: defineMessage({ defaultMessage: 'Enter a non-negative integer, or leave blank for no minimum.' })
+			]
+		};
+	}
+	const minValue = role === 'min' ? currentValue : partner;
+	const maxValue = role === 'max' ? currentValue : partner;
+	if (!isItemCountRangeValid(minValue, maxValue)) {
+		return { valid: false, messages: [defineMessage({ defaultMessage: 'Minimum cannot be greater than maximum.' })] };
+	}
+	return { valid: true };
 }
 
 /**
@@ -229,6 +523,18 @@ export function isEmptyValue(field: ContentTypeField, currentValue: unknown): bo
 }
 
 /**
+ * Whether `value` is empty for this control, for the required marker and the host required check.
+ * A checkbox is empty until it is checked (`false` is unchecked, not a filled value).
+ * An RTE is empty when {@link measureRteValue} finds no text, so markup such as `<p></p>` counts as empty.
+ * Every other control uses {@link isEmptyValue}.
+ */
+export function isFieldValueEmpty(field: ContentTypeField, value: unknown): boolean {
+	if (field.type === 'checkbox') return value !== true;
+	if (field.type === 'rte') return measureRteValue(value) === '';
+	return isEmptyValue(field, value);
+}
+
+/**
  * Determines if a field is required based on its validation metadata.
  *
  * @param {ContentTypeField} field - The metadata of the field, including validation rules.
@@ -236,7 +542,8 @@ export function isEmptyValue(field: ContentTypeField, currentValue: unknown): bo
  *
  */
 export function isFieldRequired(field: ContentTypeField): boolean {
-	return Boolean(field.validations?.required?.value);
+	// The marker is the required constraint, or a positive minimum. See utils/countLimits.ts.
+	return Boolean(field.validations?.required?.value) || countLimitValue(field.validations?.minCount?.value) != null;
 }
 
 /**
@@ -251,8 +558,15 @@ export async function checkMinimumSaveRequirementsFulfilled(
 	fileNameValidation: Promise<FieldValidityState>,
 	values: LookupTable<unknown>
 ): Promise<boolean> {
-	const { isValid: isFileNameValid } = await fileNameValidation;
-	return isFileNameValid && isInternalNameValid(values);
+	const { isValid: fileNameValid } = await fileNameValidation;
+	return (
+		missingMinimumSaveRequirements({
+			isRepeatMode: false,
+			isEmbedded: false,
+			fileNameValid,
+			internalName: values[XmlKeys.internalName]
+		}).length === 0
+	);
 }
 
 /**
@@ -263,74 +577,133 @@ export async function checkMinimumSaveRequirementsFulfilled(
  *
  */
 export function isInternalNameValid(values: LookupTable<unknown>): boolean {
-	return (values[XmlKeys.internalName]?.toString() ?? '').trim() !== '';
+	return isInternalNameFilled(values[XmlKeys.internalName]);
 }
 
-export function dateTimeValidator(
-	field: ContentTypeField,
-	currentValue: string,
-	messages: FieldValidityMessage[]
-): boolean {
-	let isValid = true;
-	const allowPastDate: boolean = getPropertyValue(field.properties, 'allowPastDate') as boolean;
+/** How long the file-name uniqueness check waits after the latest value before calling the server. */
+const fileNameExistenceDebounceMs = 300;
+
+/**
+ * File-name rules: required, max length after {@link applyContentNameRules}, then uniqueness.
+ * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
+ * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
+ * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
+ * Required and unchanged-path checks stay synchronous. The path-existence request is debounced and tied to
+ * `ctx.signal` so a newer value cancels the wait and any in-flight check.
+ *
+ * @param {string} currentValue - The file name being validated.
+ * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID and item context.
+ * @returns {Promise<ValidatorResult>} - Valid when the file name is allowed, otherwise invalid with the reason.
+ *
+ */
+export async function fileNameValidator(currentValue: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
+	const { field, meta, signal } = ctx;
+	const siteId: string = meta.siteId;
+	const blank = isEmptyValue(field, currentValue);
+	const storedRequired = Boolean(field.validations?.required?.value);
+	// Blank is invalid, except on the home page, where it is allowed unless the stored constraint requires it.
+	if (blank && (meta.itemMeta?.path !== rootPagePath || storedRequired)) {
+		return { valid: false, messages: [defineMessage({ defaultMessage: 'This field is required.' })] };
+	}
+	if (blank) return { valid: true };
+
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const normalizedName = applyContentNameRules(currentValue);
+	if (nnou(maxLength) && normalizedName.length > maxLength) {
+		return {
+			valid: false,
+			messages: [
+				[
+					defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
+					{ maxLength }
+				]
+			]
+		};
+	}
+
+	const initialPath = meta.itemMeta.path ?? meta.itemMeta.pathInSite;
+	const isPage = isPagePath(withIndex(initialPath));
+	const basePath = nnou(meta.itemMeta.path) ? getBasePath(initialPath, isPage) : meta.itemMeta.pathInSite;
+	const newPath = computePathFromFileName(currentValue, isPage, basePath);
+
+	if (initialPath === newPath || nou(siteId)) return { valid: true };
+
+	// Already superseded: fromEvent('abort') will not re-emit a past abort.
+	if (signal.aborted) {
+		return { valid: false, messages: [] };
+	}
+
+	try {
+		// Debounce, then check existence. Abort completes the stream (takeUntil) so the wait and request cancel.
+		const exists = await firstValueFrom(
+			timer(fileNameExistenceDebounceMs).pipe(
+				switchMap(() => checkPathExistence(siteId, newPath)),
+				takeUntil(fromEvent(signal, 'abort'))
+			),
+			{ defaultValue: undefined }
+		);
+		// Superseded run: the host discards this result. Match plugin AbortError handling (no user message).
+		if (signal.aborted) {
+			return { valid: false, messages: [] };
+		}
+		if (exists === undefined) {
+			return { valid: false };
+		}
+		return exists
+			? { valid: false, messages: [[defineMessage({ defaultMessage: 'An item with that name already exists.' })]] }
+			: { valid: true };
+	} catch {
+		return { valid: false };
+	}
+}
+
+export function dateTimeValidator(currentValue: string, ctx: ValidatorContext): ValidatorResult {
+	const allowPastDate: boolean = getPropertyValue(ctx.field.properties, 'allowPastDate') as boolean;
 	const fieldDate = new Date(currentValue as string);
 	const currentDate = new Date();
 	if (!allowPastDate && !isNaN(fieldDate.valueOf()) && fieldDate < currentDate) {
-		messages.push(defineMessage({ defaultMessage: 'The date cannot be in the past.' }));
-		isValid = false;
+		return { valid: false, messages: [defineMessage({ defaultMessage: 'The date cannot be in the past.' })] };
 	}
-	return isValid;
+	return { valid: true };
 }
 
-export function dateTimeExpressionInputValidator(field, currentValue: string, messages) {
-	const isValid = validateDatePopulateExpression(currentValue);
-	if (!isValid) {
-		messages.push(defineMessage({ defaultMessage: 'The expression is not valid.' }));
-	}
-	return isValid;
+export function dateTimeExpressionInputValidator(currentValue: string): ValidatorResult {
+	return validateDatePopulateExpression(currentValue)
+		? { valid: true }
+		: { valid: false, messages: [defineMessage({ defaultMessage: 'The expression is not valid.' })] };
 }
 
+/**
+ * Validates a repeat group's size against minCount/maxCount, then each item's fields.
+ * The minimum comes only from minOccurs. A count equal to either bound is valid.
+ */
 export async function repeatGroupValidator(
-	field: ContentTypeField,
 	currentValue: Array<RepeatItem>,
-	messages: FieldValidityState['messages'],
-	meta: ValidatorMetaData
-): Promise<boolean> {
-	let isValid = true;
-	const minOccurs: number = getValidationValue(field.validations, 'minOccurs') as number;
-	const maxOccurs: number = getValidationValue(field.validations, 'maxOccurs') as number;
-
-	// Validate repeat group restrictions (min/max occurrences)
-	if (nnou(minOccurs) && currentValue.length < minOccurs) {
-		messages?.push([
-			defineMessage({ defaultMessage: 'At least {minOccurs} occurrence(s) are required.' }),
-			{ minOccurs }
-		]);
-		isValid = false;
-	}
-	if (nnou(maxOccurs) && currentValue.length > maxOccurs) {
-		messages?.push([
-			defineMessage({ defaultMessage: 'No more than {maxOccurs} occurrence(s) are allowed.' }),
-			{ maxOccurs }
-		]);
-		isValid = false;
-	}
+	ctx: BuiltInValidatorContext
+): Promise<ValidatorResult> {
+	const { field, meta } = ctx;
+	const items = Array.isArray(currentValue) ? currentValue : [];
+	// minCount/maxCount are the mapped limits. See utils/countLimits.ts.
+	const messages = itemCountViolationMessages(items.length, field);
+	let valid = messages.length === 0;
 
 	// If there are no items, return validation result (items validation is not needed if there are no items)
-	if (currentValue.length === 0) return isValid;
+	if (items.length === 0) return { valid, messages };
 
 	const fields = field.fields;
-	if (!fields) return isValid;
+	if (!fields) return { valid, messages };
 
 	const validationPromises: Promise<FieldValidityState>[] = [];
 
 	// Validate fields of each repeat group item. Min/max occurrence checks above still apply.
-	currentValue?.forEach((item) => {
+	items.forEach((item) => {
+		// Sub-fields see their own item, not the page. See ValidatorContext.getValue.
+		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item), nested: true };
 		Object.values(fields).forEach((subField) => {
 			if (isFieldPathIrrelevant(meta.irrelevantFieldPaths, subField.id, field.id)) return;
 			const id = subField.id;
 			const value = item[id];
-			const validationPromise = validateFieldValue(subField, value, meta);
+			const validationPromise = validateFieldValue(subField, value, childMeta);
 			validationPromises.push(validationPromise);
 		});
 	});
@@ -338,69 +711,62 @@ export async function repeatGroupValidator(
 	const results = await Promise.all(validationPromises);
 	results.forEach((result) => {
 		if (!result.isValid) {
-			isValid = false;
+			valid = false;
 		}
 	});
-	return isValid;
+	return { valid, messages };
 }
 
 /**
  * Validates the input value of a field based on its pattern and maximum length.
  *
- * @param {ContentTypeField} field - The metadata of the field being validated, including its validation rules.
  * @param {string} currentValue - The current value of the field to validate.
- * @param {FieldValidityMessage[]} [messages] - An optional array to store validation messages if the value is invalid.
- * @returns {boolean} - Returns `true` if the input value is valid; otherwise, `false`.
+ * @param {ValidatorContext} ctx - The field being validated, including its validation rules.
  * @param customValidationMessages - An optional lookup table of custom validation messages for specific validation rules.
+ * @returns {ValidatorResult} - Valid when the input value is valid; otherwise invalid with the reasons.
  *
  */
 export function inputValidator(
-	field: ContentTypeField,
 	currentValue: string,
-	messages?: FieldValidityMessage[],
+	ctx: ValidatorContext,
 	customValidationMessages?: LookupTable<MessageDescriptor>
-): boolean {
-	let isValid = true;
+): ValidatorResult {
+	const { field } = ctx;
+	const messages: FieldValidityMessage[] = [];
 	// Skip validation if value is empty and field is not required
 	if (currentValue == null || (typeof currentValue === 'string' && currentValue.trim() === '')) {
-		return isValid;
+		return { valid: true };
 	}
 	const pattern = field.validations.pattern?.value as string;
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxlength');
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	// If there's a pattern and it doesn't match, it's invalid.
 	if (pattern && !String(currentValue).match(pattern)) {
-		messages?.push([
+		messages.push([
 			customValidationMessages?.['pattern'] ??
 				defineMessage({ defaultMessage: 'The value does not match the required pattern.' })
 		]);
-		isValid = false;
 	}
 
 	if (nnou(maxLength) && currentValue.length > maxLength) {
-		messages?.push([
+		messages.push([
 			defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
 			{ maxLength }
 		]);
-		isValid = false;
 	}
-	return isValid;
+	return { valid: messages.length === 0, messages };
 }
 
 /**
  * Validates a numeric input value based on its pattern, maximum value, and minimum value.
  *
- * @param {ContentTypeField} field - The metadata of the field being validated, including its validation rules.
  * @param {number} currentValue - The current numeric value of the field to validate.
- * @param {FieldValidityMessage[]} messages - An array to store validation messages if the value is invalid.
- * @returns {boolean} - Returns `true` if the numeric value is valid; otherwise, `false`.
+ * @param {ValidatorContext} ctx - The field being validated, including its validation rules.
+ * @returns {ValidatorResult} - Valid when the numeric value is valid; otherwise invalid with the reasons.
  *
  */
-export function numericInputValidator(
-	field: ContentTypeField,
-	currentValue: number,
-	messages: FieldValidityMessage[]
-): boolean {
-	let isValid = true;
+export function numericInputValidator(currentValue: number, ctx: ValidatorContext): ValidatorResult {
+	const { field } = ctx;
+	const messages: FieldValidityMessage[] = [];
 	const pattern: string = getValidationValue(field.validations, 'pattern');
 	const maxValue: number = getValidationValue(field.validations, 'maxValue');
 	const minValue: number = getValidationValue(field.validations, 'minValue');
@@ -408,11 +774,10 @@ export function numericInputValidator(
 	const numType = lastUnderscore !== -1 ? field.id.substring(lastUnderscore) : '_i';
 
 	if (nou(currentValue)) {
-		return isValid;
+		return { valid: true };
 	}
 	if (Number.isNaN(Number(currentValue))) {
-		messages.push([defineMessage({ defaultMessage: 'Please enter a valid number.' })]);
-		return false;
+		return { valid: false, messages: [[defineMessage({ defaultMessage: 'Please enter a valid number.' })]] };
 	}
 
 	let numTypeRegex;
@@ -420,13 +785,11 @@ export function numericInputValidator(
 		// with decimals
 		numTypeRegex = /^[+-]?\d+(\.\d+)?$/;
 		if (!String(currentValue).match(numTypeRegex)) {
-			isValid = false;
 			messages.push([defineMessage({ defaultMessage: 'Please enter a valid decimal number.' })]);
 		}
 	} else {
 		numTypeRegex = /^([+-]?[1-9]\d*|0)$/;
 		if (!String(currentValue).match(numTypeRegex)) {
-			isValid = false;
 			messages.push([defineMessage({ defaultMessage: "Decimals aren't allowed on this input." })]);
 		}
 	}
@@ -434,7 +797,6 @@ export function numericInputValidator(
 	// If there's a pattern and it doesn't match
 	if (pattern && !String(currentValue).match(pattern)) {
 		messages.push([defineMessage({ defaultMessage: 'The value does not match the required pattern.' })]);
-		isValid = false;
 	}
 	// If there's a max and the value is greater than the max
 	if (maxValue != null && Number(currentValue) > Number(maxValue)) {
@@ -442,7 +804,6 @@ export function numericInputValidator(
 			defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxValue}).` }),
 			{ maxValue }
 		]);
-		isValid = false;
 	}
 	// If there's a min and the value is less than the min
 	if (minValue != null && Number(currentValue) < Number(minValue)) {
@@ -450,38 +811,26 @@ export function numericInputValidator(
 			defineMessage({ defaultMessage: 'The value is less than the minimum ({minValue}).' }),
 			{ minValue }
 		]);
-		isValid = false;
 	}
-	return isValid;
+	return { valid: messages.length === 0, messages };
 }
 
 export async function nodeSelectorValidator(
-	field: ContentTypeField,
 	currentValue: Array<NodeSelectorItem>,
-	messages: FieldValidityState['messages'],
-	meta: ValidatorMetaData
-): Promise<boolean> {
-	let isValid = true;
-	if (!Array.isArray(currentValue)) return isValid;
+	ctx: BuiltInValidatorContext
+): Promise<ValidatorResult> {
+	const { field, meta } = ctx;
+	const items = Array.isArray(currentValue) ? currentValue : [];
 	// This set is used to keep track of visited content items during validation to prevent infinite loops in case of circular references.
 	const visited = new Set<string>();
-	const minSize: number = getPropertyValue(field.properties, 'minSize') as number;
-	const maxSize: number = getPropertyValue(field.properties, 'maxSize') as number;
-	const embeddedContent = currentValue.filter((item) => nnou(item.component));
-
-	// Validate node selector restrictions (min/max occurrences)
-	if (nnou(minSize) && currentValue.length < minSize) {
-		messages?.push([defineMessage({ defaultMessage: 'At least {minSize} item(s) are required.' }), { minSize }]);
-		isValid = false;
-	}
-	if (nnou(maxSize) && currentValue.length > maxSize) {
-		messages?.push([defineMessage({ defaultMessage: 'No more than {maxSize} item(s) are allowed.' }), { maxSize }]);
-		isValid = false;
-	}
+	// minCount/maxCount are the mapped limits. 0 is unlimited. See utils/countLimits.ts.
+	const messages = itemCountViolationMessages(items.length, field);
+	let valid = messages.length === 0;
+	const embeddedContent = items.filter((item) => nnou(item.component));
 
 	// If there are no embedded items, return validation result (items validation is not needed if there are no items)
-	if (embeddedContent.length === 0) return isValid;
-	if (!meta.contentTypesById) return isValid;
+	if (embeddedContent.length === 0) return { valid, messages };
+	if (!meta.contentTypesById) return { valid, messages };
 
 	const validationPromises: Promise<FieldValidityState>[] = [];
 
@@ -499,9 +848,18 @@ export async function nodeSelectorValidator(
 		const denyList =
 			(await meta.resolveEmbeddedRelevance?.(contentType, component as Record<string, unknown>, meta.itemMeta?.path)) ??
 			null;
-		const childMeta: ValidatorMetaData = { ...meta, irrelevantFieldPaths: denyList };
+		const childMeta: ValidatorMetaData = {
+			...meta,
+			irrelevantFieldPaths: denyList,
+			signal: ctx.signal,
+			getValue: scopeGetValue(component),
+			nested: true
+		};
 		Object.values(fields).forEach((embeddedField) => {
 			if (isFieldPathIrrelevant(denyList, embeddedField.id)) return;
+			// An embedded component has no file name of its own: its content has no `file-name` key, so even a declared
+			// required would count it blank.
+			if (embeddedField.id === XmlKeys.fileName) return;
 			const value = component[embeddedField.id];
 			const validationPromise = validateFieldValue(embeddedField, value, childMeta);
 			validationPromises.push(validationPromise);
@@ -513,108 +871,69 @@ export async function nodeSelectorValidator(
 	results.forEach((result) => {
 		if (!result.isValid) {
 			invalidEmbedded = true;
-			isValid = false;
+			valid = false;
 		}
 	});
 	if (invalidEmbedded) {
 		messages.push(defineMessage({ defaultMessage: 'One or more embedded content items are invalid.' }));
 	}
-	return isValid;
+	return { valid, messages };
 }
 
 export function checkboxGroupValidator(
-	field: ContentTypeField,
 	currentValue: CheckboxGroupProps['value'],
-	messages: FieldValidityMessage[]
-) {
-	const minSelected = Number(field.validations?.minSize?.value ?? 0);
+	ctx: ValidatorContext
+): ValidatorResult {
+	// minCount is the mapped limit. 0 and blank are no minimum. There is no maximum. See utils/countLimits.ts.
 	const selectedCount = Array.isArray(currentValue) ? currentValue.length : 0;
-	const isValid = selectedCount >= minSelected;
-	if (!isValid)
-		messages.push([
-			defineMessage({ defaultMessage: 'Please select at least the minimum required items ({minSelected}).' }),
-			{ minSelected }
-		]);
-	return isValid;
+	const messages = itemCountViolationMessages(selectedCount, ctx.field);
+	return { valid: messages.length === 0, messages };
 }
 
-export function checkboxValidator(field: ContentTypeField, currentValue: boolean, messages: FieldValidityMessage[]) {
-	const isRequired = isFieldRequired(field);
-	let isValid = true;
+export function checkboxValidator(currentValue: boolean, ctx: ValidatorContext): ValidatorResult {
+	const isRequired = isFieldRequired(ctx.field);
 	// For checkboxes, being required means it must be checked (true)
 	if (isRequired && !currentValue) {
-		isValid = false;
-		messages.push(defineMessage({ defaultMessage: 'This checkbox must be checked.' }));
+		return { valid: false, messages: [defineMessage({ defaultMessage: 'This checkbox must be checked.' })] };
 	}
-	return isValid;
+	return { valid: true };
 }
 
-/**
- * Validates an email input field using a predefined email pattern message.
- *
- * @param {ContentTypeField} field - The metadata of the field being validated.
- * @param {string} currentValue - The current value of the field to validate.
- * @param {FieldValidityMessage[]} [messages] - Optional array to store validation messages if the value is invalid.
- * @returns {boolean} - Returns true if the input value is a valid email address or empty (when not required), otherwise false.
- */
-const inputEmailValidator = (
-	field: ContentTypeField,
-	currentValue: string,
-	messages?: FieldValidityMessage[]
-): boolean => {
-	return inputValidator(field, currentValue, messages, {
+/** Validates an email input field using a predefined email pattern message. */
+function inputEmailValidator(currentValue: string, ctx: ValidatorContext): ValidatorResult {
+	return inputValidator(currentValue, ctx, {
 		pattern: defineMessage({ defaultMessage: 'Please enter a valid email address.' })
 	});
-};
+}
 
-/**
- * Validates a link (URL) input field using a predefined URL pattern message.
- *
- * @param {ContentTypeField} field - The metadata of the field being validated.
- * @param {string} currentValue - The current value of the field to validate.
- * @param {FieldValidityMessage[]} [messages] - Optional array to store validation messages if the value is invalid.
- * @returns {boolean} - Returns true if the input value is a valid URL or empty (when not required), otherwise false.
- */
-const inputLinkValidator = (
-	field: ContentTypeField,
-	currentValue: string,
-	messages?: FieldValidityMessage[]
-): boolean => {
-	return inputValidator(field, currentValue, messages, {
+/** Validates a link (URL) input field using a predefined URL pattern message. */
+function inputLinkValidator(currentValue: string, ctx: ValidatorContext): ValidatorResult {
+	return inputValidator(currentValue, ctx, {
 		pattern: defineMessage({ defaultMessage: 'Please enter a valid URL.' })
 	});
-};
+}
 
-/**
- * Validates a phone number input field using a predefined phone number pattern message.
- *
- * @param {ContentTypeField} field - The metadata of the field being validated.
- * @param {string} currentValue - The current value of the field to validate.
- * @param {FieldValidityMessage[]} [messages] - Optional array to store validation messages if the value is invalid.
- * @returns {boolean} - Returns true if the input value is a valid phone number or empty (when not required), otherwise false.
- */
-const inputPhoneValidator = (
-	field: ContentTypeField,
-	currentValue: string,
-	messages?: FieldValidityMessage[]
-): boolean => {
-	return inputValidator(field, currentValue, messages, {
+/** Validates a phone number input field using a predefined phone number pattern message. */
+function inputPhoneValidator(currentValue: string, ctx: ValidatorContext): ValidatorResult {
+	return inputValidator(currentValue, ctx, {
 		pattern: defineMessage({ defaultMessage: 'Please enter a valid phone number.' })
 	});
-};
+}
 
-const rteValidator = (field: ContentTypeField, currentValue: string, messages?: FieldValidityMessage[]): boolean => {
-	if (nou(field)) return true;
+function rteValidator(currentValue: string, ctx: ValidatorContext): ValidatorResult {
+	const { field } = ctx;
+	if (nou(field)) return { valid: true };
+	const messages: FieldValidityMessage[] = [];
 	const isRequired = isFieldRequired(field);
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	const trimmedContent = measureRteValue(currentValue); // Get only the text and remove white space
 	const { isValid, requiredFailed, maxLengthExceeded } = evaluateRteConstraints(trimmedContent, isRequired, maxLength);
 
 	if (requiredFailed) {
-		messages?.push(defineMessage({ defaultMessage: 'This field is required.' }));
+		messages.push(defineMessage({ defaultMessage: 'This field is required.' }));
 	}
 	if (maxLengthExceeded) {
-		messages?.push([
+		messages.push([
 			defineMessage({
 				defaultMessage: `The value is greater than the allowed maximum ({maxLength}).`
 			}),
@@ -622,16 +941,12 @@ const rteValidator = (field: ContentTypeField, currentValue: string, messages?: 
 		]);
 	}
 
-	return isValid;
-};
+	return { valid: isValid, messages };
+}
 
-const pathWithMacroValidator = (
-	field: ContentTypeField,
-	currentValue: string,
-	messages: FieldValidityMessage[]
-): boolean => {
+function pathWithMacroValidator(currentValue: string): ValidatorResult {
 	if (currentValue.trim() === '') {
-		return true;
+		return { valid: true };
 	}
 	const validMacros = Object.values(macroCreatorLookupTable).map(({ macro }) => macro);
 	// Find all macros in the currentValue (e.g., {macroName})
@@ -642,36 +957,50 @@ const pathWithMacroValidator = (
 	const invalidMacros = foundMacros.filter((macro) => !validMacros.includes(macro));
 
 	if (invalidMacros.length > 0) {
-		messages.push([
-			defineMessage({ defaultMessage: 'The following are invalid macros: {invalidMacros}.' }),
-			{ invalidMacros: invalidMacros.join(', ') }
-		]);
-		return false;
+		return {
+			valid: false,
+			messages: [
+				[
+					defineMessage({ defaultMessage: 'The following are invalid macros: {invalidMacros}.' }),
+					{ invalidMacros: invalidMacros.join(', ') }
+				]
+			]
+		};
 	}
 
-	return true;
-};
+	return { valid: true };
+}
 
-const variableValidator = (
-	field: ContentTypeField,
-	currentValue: string,
-	messages: FieldValidityMessage[],
-	meta: ValidatorMetaData
-): boolean => {
-	if (!currentValue?.trim() || !meta.siblingIds?.length) {
-		return true;
+function variableValidator(currentValue: string, ctx: BuiltInValidatorContext): ValidatorResult {
+	const { meta } = ctx;
+	if (!currentValue?.trim()) {
+		return { valid: true };
 	}
-	const ownIds = new Set(meta.currentIds ?? []);
-	const candidateIds = [
-		currentValue,
-		...(meta.additionalFields ?? []).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
-	];
-	const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
-	if (isDuplicate) {
-		messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
-		return false;
+	const messages: FieldValidityMessage[] = [];
+	const postfix = meta.fieldNamePostfix;
+	if (postfix?.enabled) {
+		const result = checkFieldNamePostfix(currentValue, postfix.ignoreFields, postfix.suffixes);
+		if (result === 'missing') {
+			messages.push([
+				defineMessage({
+					defaultMessage: 'The variable name must end with {postfixes}.'
+				}),
+				{ postfixes: formatPostfixList(postfix.suffixes) }
+			]);
+		}
 	}
-	return true;
-};
+	if (meta.siblingIds?.length) {
+		const ownIds = new Set(meta.currentIds ?? []);
+		const candidateIds = [
+			currentValue,
+			...asArray(meta.additionalFields).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
+		];
+		const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
+		if (isDuplicate) {
+			messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
+		}
+	}
+	return { valid: messages.length === 0, messages };
+}
 
 export default validateFieldValue;

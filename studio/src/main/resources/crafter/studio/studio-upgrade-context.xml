@@ -139,6 +139,9 @@
 		<constructor-arg name="integrityValidator" ref="crafter.databaseValidator"/>
 	</bean>
 
+	<bean id="databaseCollationUpgrader" scope="prototype" parent="upgradeOperation"
+	      class="org.craftercms.studio.impl.v2.upgrade.operations.db.DatabaseCollationUpgradeOperation"/>
+
 	<bean id="globalRepoUpgrader" scope="prototype" parent="upgradeOperation"
 	      class="org.craftercms.studio.impl.v2.upgrade.operations.global.GlobalRepoUpgradeOperation">
 	</bean>

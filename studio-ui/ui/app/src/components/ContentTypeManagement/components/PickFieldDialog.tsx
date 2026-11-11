@@ -17,7 +17,7 @@
 import { EnhancedDialog, EnhancedDialogProps } from '../../EnhancedDialog';
 import { ContentType, ContentTypeField, DataSource } from '../../../models';
 import { FormattedMessage, useIntl } from 'react-intl';
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import { applyTranslations, DescriptorContentType, DescriptorField, PartialContentType } from '../utils';
 import { DialogBody } from '../../DialogBody';
 import { SearchBar, SearchBarProps } from '../../SearchBar';
@@ -42,12 +42,17 @@ import Divider from '@mui/material/Divider';
 import LookupTable from '../../../models/LookupTable';
 import { SystemIcon } from '../../SystemIcon';
 import ComponentIcon from '../../../icons/Component';
+import Button from '@mui/material/Button';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 
 export interface PickFieldDialogProps extends EnhancedDialogProps {
 	type: ContentType;
 	configLookup?: LookupTable<{ descriptor?: DescriptorContentType; icon: { id: string }; id: string }>; // TODO: not a li
 	typesFullList: DescriptorContentType[];
 	typesCurrentList: DescriptorField[] | DataSource[];
+	/** Fields already present in the insertion target (root or repeat group). Defaults to type.fields. */
+	currentFields?: LookupTable<ContentTypeField>;
 	title: ReactNode;
 	onInsert: (fieldType: string, position: number) => void;
 	systemFieldsIds?: string[];
@@ -57,8 +62,17 @@ export interface PickFieldDialogProps extends EnhancedDialogProps {
 export interface PickFieldDialogBodyProps extends Omit<PickFieldDialogProps, 'title'> {}
 
 export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
-	const { configLookup, typesFullList, typesCurrentList, onInsert, onClose, systemFieldsTitle, systemFieldsIds, type } =
-		props;
+	const {
+		configLookup,
+		typesFullList,
+		typesCurrentList,
+		currentFields,
+		onInsert,
+		onClose,
+		systemFieldsTitle,
+		systemFieldsIds,
+		type
+	} = props;
 	const [selectedField, setSelectedField] = useState<PartialContentType>(undefined);
 	const [selectedView, setSelectedView] = useState<number>(0);
 	const [position, setPosition] = useState<number>(typesCurrentList?.length ?? 0);
@@ -95,7 +109,7 @@ export function PickFieldDialogBody(props: PickFieldDialogBodyProps) {
 				{selectedView === 0 ? (
 					<SelectField
 						configLookup={configLookup}
-						currentFields={type.fields}
+						currentFields={currentFields ?? type.fields}
 						typesFullList={typesFullList}
 						selectedField={selectedField}
 						setSelectedField={onSelectField}
@@ -199,6 +213,7 @@ export function PickFieldDialog({
 	onInsert,
 	typesFullList,
 	typesCurrentList,
+	currentFields,
 	systemFieldsTitle,
 	systemFieldsIds,
 	...dialogProps
@@ -211,6 +226,7 @@ export function PickFieldDialog({
 				onInsert={onInsert}
 				typesFullList={typesFullList}
 				typesCurrentList={typesCurrentList}
+				currentFields={currentFields}
 				systemFieldsTitle={systemFieldsTitle}
 				systemFieldsIds={systemFieldsIds}
 			/>
@@ -237,36 +253,46 @@ export function SelectField(props: {
 		currentFields = {}
 	} = props;
 	const [searchTerm, setSearchTerm] = useState('');
-	const { formatMessage } = useIntl();
+	const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('ascending');
+	const { formatMessage, locale } = useIntl();
+	const collator = useMemo(() => new Intl.Collator(locale), [locale]);
 	const currentFieldTypes = Object.values(currentFields).map((field) => field.type);
 
-	const systemFields = typesFullList
-		.map((type) => applyTranslations(type, formatMessage))
-		.filter(
-			(type) =>
-				(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-				systemFieldsIds.includes(type.id) &&
-				// Type is not in 'currentTypeIds'
-				!currentFieldTypes.includes(type.id) &&
-				// id is not in currentFields
-				!currentFields[type.id] &&
-				// If type is file-name and `currentTypeIds` has auto-filename, or
-				// type is auto-filename and `currentTypeIds` has file-name, then filter out
-				!(
-					(type.id === 'file-name' && currentFieldTypes.includes('auto-filename')) ||
-					(type.id === 'auto-filename' && currentFieldTypes.includes('file-name'))
-				)
-		);
+	const systemFields = sortFieldsByName(
+		typesFullList
+			.map((type) => applyTranslations(type, formatMessage))
+			.filter(
+				(type) =>
+					(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+						type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+					systemFieldsIds.includes(type.id) &&
+					// Type is not in 'currentTypeIds'
+					!currentFieldTypes.includes(type.id) &&
+					// id is not in currentFields
+					!currentFields[type.id] &&
+					// If type is file-name and `currentTypeIds` has auto-filename, or
+					// type is auto-filename and `currentTypeIds` has file-name, then filter out
+					!(
+						(type.id === 'file-name' && currentFieldTypes.includes('auto-filename')) ||
+						(type.id === 'auto-filename' && currentFieldTypes.includes('file-name'))
+					)
+			),
+		sortOrder,
+		collator
+	);
 
-	const filteredFields = typesFullList
-		.map((type) => applyTranslations(type, formatMessage))
-		.filter(
-			(type) =>
-				(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-				!systemFieldsIds.includes(type.id)
-		);
+	const filteredFields = sortFieldsByName(
+		typesFullList
+			.map((type) => applyTranslations(type, formatMessage))
+			.filter(
+				(type) =>
+					(type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+						type.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+					!systemFieldsIds.includes(type.id)
+			),
+		sortOrder,
+		collator
+	);
 
 	const handleSearchChange: SearchBarProps['onChange'] = (value) => {
 		setSearchTerm(value);
@@ -274,10 +300,50 @@ export function SelectField(props: {
 
 	return (
 		<>
-			<SearchBar keyword={searchTerm} onChange={handleSearchChange} autoFocus={true} />
+			<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+				<SearchBar keyword={searchTerm} onChange={handleSearchChange} autoFocus={true} sx={{ flexGrow: 1 }} />
+				<Tooltip
+					title={
+						sortOrder === 'ascending' ? (
+							<FormattedMessage defaultMessage="Sort by name (ascending)" />
+						) : (
+							<FormattedMessage defaultMessage="Sort by name (descending)" />
+						)
+					}
+				>
+					<Button
+						variant="text"
+						aria-label={
+							sortOrder === 'ascending'
+								? formatMessage({ defaultMessage: 'Sort by name (ascending)' })
+								: formatMessage({ defaultMessage: 'Sort by name (descending)' })
+						}
+						endIcon={
+							sortOrder === 'ascending' ? (
+								<ArrowUpwardRoundedIcon color="primary" />
+							) : (
+								<ArrowDownwardRoundedIcon color="primary" />
+							)
+						}
+						onClick={() => setSortOrder((order) => (order === 'ascending' ? 'descending' : 'ascending'))}
+						sx={{
+							color: 'text.primary',
+							fontWeight: 'normal',
+							fontSize: (theme) => theme.typography.fontSize,
+							flexShrink: 0
+						}}
+					>
+						<FormattedMessage defaultMessage="Sort" />
+					</Button>
+				</Tooltip>
+			</Box>
 			<Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', mt: 1, mb: 2 }}>
 				{filteredFields.map((field, index) => (
-					<ListItemButton key={index} onClick={() => setSelectedField(field)} selected={selectedField?.id === field.id}>
+					<ListItemButton
+						key={field.id}
+						onClick={() => setSelectedField(field)}
+						selected={selectedField?.id === field.id}
+					>
 						<ListItemIcon>
 							{configLookup?.[field.id]?.icon?.id ? (
 								<SystemIcon icon={configLookup[field.id].icon} />
@@ -317,6 +383,20 @@ export function SelectField(props: {
 			)}
 		</>
 	);
+}
+
+/**
+ * Sorts an array of fields alphabetically by their name property, either in ascending or descending order.
+ */
+function sortFieldsByName(
+	fields: PartialContentType[],
+	order: 'ascending' | 'descending',
+	collator: Intl.Collator
+): PartialContentType[] {
+	return [...fields].sort((a, b) => {
+		const result = collator.compare(a.name, b.name);
+		return order === 'ascending' ? result : -result;
+	});
 }
 
 export default PickFieldDialog;

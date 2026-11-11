@@ -40,7 +40,6 @@ import { extractErrorPayload } from '../../utils/ajax';
 export interface RenameItemViewProps {
 	name: string;
 	disabled: boolean;
-	newNameExists: boolean;
 	dependantItems: LightItem[];
 	isSubmitting: boolean;
 	confirmBrokenReferences: boolean;
@@ -50,6 +49,8 @@ export interface RenameItemViewProps {
 	onRename: () => void;
 	onInputChanges: (event: React.ChangeEvent<HTMLInputElement>) => void;
 	helperText?: ReactNode;
+	maxLength?: number;
+	nameInvalid: boolean;
 	fetchDependant(): void;
 }
 
@@ -58,16 +59,17 @@ export function RenameItemView(props: RenameItemViewProps) {
 		name,
 		disabled,
 		dependantItems,
-		newNameExists,
 		isSubmitting,
 		confirmBrokenReferences,
 		fetchingDependantItems,
 		error,
 		helperText,
+		maxLength,
 		setConfirmBrokenReferences,
 		onRename,
 		onInputChanges,
-		fetchDependant
+		fetchDependant,
+		nameInvalid
 	} = props;
 	const { authoringBase } = useEnv();
 	const siteId = useActiveSiteId();
@@ -109,12 +111,13 @@ export function RenameItemView(props: RenameItemViewProps) {
 					value={name}
 					autoFocus
 					required
-					error={newNameExists}
+					error={nameInvalid}
 					helperText={helperText}
 					disabled={isSubmitting}
 					margin="normal"
 					slotProps={{
-						inputLabel: { shrink: true }
+						inputLabel: { shrink: true },
+						...(maxLength != null ? { htmlInput: { maxLength } } : {})
 					}}
 					onChange={onInputChanges}
 					autoComplete="off"

@@ -18,7 +18,6 @@ import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
 	FormsEngineFormApiContextProps,
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	StableFormContext,
 	StableFormContextProps,
@@ -44,7 +43,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ContentTypeFieldIcon from '../../../icons/ContentTypeField';
 import ListItemText from '@mui/material/ListItemText';
 import SectionAccordion from '../../FormsEngine/components/SectionAccordion';
-import { renderFieldControl } from '../../FormsEngine/lib/controlHelpers';
+import { renderFieldControl } from '../../FormsEngine/lib/renderControl';
 import FormBackToTop from '../../FormsEngine/components/FormBackToTop';
 import type {
 	ContentType,
@@ -118,6 +117,21 @@ interface BaseProps extends Partial<FieldModeProps & SectionModeProps & DataSour
 
 export type FieldFormViewProps = BaseProps & (TypeModeProps | FieldModeProps | SectionModeProps | DataSourceModeProps);
 
+const typesWarnedAboutMissingSectionIds = new WeakSet<ContentType>();
+const fallbackKeysBySection = new WeakMap<ContentTypeSection, string>();
+
+/** Key for a section accordion. Uses the section id, or a stable generated key when the section has none. */
+function getSectionKey(typeId: string, virtualType: ContentType, section: ContentTypeSection): string {
+	if (section.id) return `${typeId}-${section.id}`;
+	if (!typesWarnedAboutMissingSectionIds.has(virtualType)) {
+		typesWarnedAboutMissingSectionIds.add(virtualType);
+		console.warn(`Section "${section.title}" has no id. Using a generated key for it instead.`);
+	}
+	// Tied to the section object rather than its position, so reordering sections doesn't remount them.
+	if (!fallbackKeysBySection.has(section)) fallbackKeysBySection.set(section, nanoid());
+	return `${typeId}-${fallbackKeysBySection.get(section)}`;
+}
+
 function FieldFormViewBody(props: FieldFormViewProps) {
 	const { virtualType, isPanelReady = true, onClose } = props;
 	const containerRef = useRef<HTMLDivElement>(undefined);
@@ -181,7 +195,7 @@ function FieldFormViewBody(props: FieldFormViewProps) {
 				{isPanelReady &&
 					virtualType.sections.map((section, sectionIndex) => (
 						<SectionAccordion
-							key={`${typeId}-${section.title}`}
+							key={getSectionKey(typeId, virtualType, section)}
 							section={section}
 							colorize={false}
 							renderControl={(fieldId, fieldIndex) => {
@@ -217,11 +231,9 @@ export function TypeBuilderFormsEngine(props: FieldFormViewProps) {
 			<StableGlobalContext.Provider value={fooStableGlobalContext}>
 				<FormsEngineFormContextApi.Provider value={formApiContext}>
 					<StableFormContext.Provider value={stableFormContext}>
-						<ItemContext.Provider value={null}>
-							<ItemMetaContext.Provider value={itemMetaContext}>
-								{createElement(FieldFormViewBody, props)}
-							</ItemMetaContext.Provider>
-						</ItemContext.Provider>
+						<ItemMetaContext.Provider value={itemMetaContext}>
+							{createElement(FieldFormViewBody, props)}
+						</ItemMetaContext.Provider>
 					</StableFormContext.Provider>
 				</FormsEngineFormContextApi.Provider>
 			</StableGlobalContext.Provider>
@@ -255,6 +267,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		field,
 		fieldIdPath,
 		sectionId,
+		controlDescriptor,
 		onDeleteField,
 		onMoveFieldToSection,
 		type,
@@ -328,6 +341,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 				field={field}
 				sectionId={sectionId}
 				type={type}
+				controlDescriptor={controlDescriptor}
 				open={openMoveFieldDialog}
 				onClose={() => setOpenMoveFieldDialog(false)}
 				onMoveFieldToSection={handleMoveFieldToSection}
@@ -345,7 +359,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 const fileNameTypeIds = ['file-name', 'auto-filename'];
 
 function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
-	const { field, sectionId, controlDescriptor, onSwapField } = props;
+	const { field, fieldIdPath, sectionId, controlDescriptor, onSwapField } = props;
 	const swapFieldDialogState = useEnhancedDialogState();
 	if (!props.field) return;
 
@@ -359,7 +373,8 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 			<ListItem
 				component="div"
 				secondaryAction={
-					field.id === 'file-name' && (
+					field.id === 'file-name' &&
+					!fieldIdPath?.includes('.') && (
 						<Tooltip title={<FormattedMessage defaultMessage="Swap Field" />}>
 							<IconButton onClick={() => swapFieldDialogState.onOpen()}>
 								<SwapCallsOutlined />

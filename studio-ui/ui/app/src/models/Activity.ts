@@ -30,7 +30,8 @@ export type Activities =
 	| 'INITIAL_PUBLISH_COMPLETE'
 	| 'CANCEL_PUBLISH_PACKAGE'
 	| 'PUBLISH'
-	| 'PUBLISH_ALL_COMPLETE';
+	| 'PUBLISH_ALL_COMPLETE'
+	| 'UPDATE_PUBLISH_PACKAGE';
 
 export interface Activity {
 	id: number;

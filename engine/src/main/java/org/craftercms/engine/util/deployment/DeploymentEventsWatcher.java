@@ -23,6 +23,7 @@ import org.craftercms.core.service.Context;
 import org.craftercms.engine.event.*;
 import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.service.context.SiteContextManager;
+import org.craftercms.engine.store.s3.S3ContentStoreAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEvent;
@@ -90,7 +91,9 @@ public class DeploymentEventsWatcher implements ApplicationListener<ApplicationE
 
 		try {
 			currentDeploymentEvents = loadDeploymentEvents(siteContext);
-		} catch (IOException e) {
+		} catch (IOException | RuntimeException e) {
+			// A failed read, including an unchecked SDK error from a lazy stream, must not abort
+			// the poll for the remaining sites.
 			logger.error("Unable to load deployment events for site '{}'", siteName, e);
 			return;
 		}
@@ -98,13 +101,36 @@ public class DeploymentEventsWatcher implements ApplicationListener<ApplicationE
 		logger.debug("Checking deployment events for site {}...", siteName);
 
 		if (latestDeploymentEvents == null) {
-			logger.debug("No previous deployment events detected for site {}. Saving latest...", siteName);
+			logger.debug("No previous deployment events detected for site {}. Refreshing content store manifest and saving latest...", siteName);
+
+			// createContext may have loaded the manifest before a publish wrote a newer one.
+			// Refresh once here so that publish is visible without waiting for a later event.
+			try {
+				S3ContentStoreAdapter.refreshContentStoreManifest(siteContext.getContext());
+			} catch (RuntimeException e) {
+				logger.warn("Unable to load content store manifest for site '{}'", siteName, e);
+			}
 
 			latestDeploymentEventsPerSite.put(siteName, currentDeploymentEvents);
 		} else if (Objects.equals(currentDeploymentEvents, latestDeploymentEvents)) {
-			logger.debug("No new deployment events for site {}", siteName);
+			if (S3ContentStoreAdapter.isContentStoreManifestLoadFailed(siteContext.getContext())) {
+				logger.debug("Retrying content store manifest load for site {}", siteName);
+				try {
+					S3ContentStoreAdapter.refreshContentStoreManifest(siteContext.getContext());
+				} catch (RuntimeException e) {
+					logger.warn("Unable to load content store manifest for site '{}'", siteName, e);
+				}
+			} else {
+				logger.debug("No new deployment events for site {}", siteName);
+			}
 		} else {
 			logger.debug("New deployment events received for site {}", siteName);
+
+			try {
+				S3ContentStoreAdapter.refreshContentStoreManifest(siteContext.getContext());
+			} catch (RuntimeException e) {
+				logger.warn("Unable to load content store manifest for site '{}'", siteName, e);
+			}
 
 			long latestRebuildContextEvent = getEventProperty(latestDeploymentEvents, REBUILD_CONTEXT_EVENT_KEY);
 			long currentRebuildContextEvent = getEventProperty(currentDeploymentEvents, REBUILD_CONTEXT_EVENT_KEY);

@@ -68,6 +68,7 @@ import {
 	unblockUI
 } from '../actions/system';
 import { batchActions } from '../actions/misc';
+import { saveSuccessFollowUps } from '../../utils/contentFormLaunch';
 import {
 	getItemGroovyPath,
 	getItemTemplatePath,
@@ -88,7 +89,7 @@ import { isBlank } from '../../utils/string';
 import SocketEvent, { MoveContentEventPayload } from '../../models/SocketEvent';
 import { popDialog, pushDialog } from '../actions/dialogStack';
 import { nanoid } from 'nanoid';
-import { createComponentId, pickShowContentFormAction, pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+import { createComponentId, showContentFormAction, pushConfirmDialog, pushErrorDialog } from '../../utils/system';
 import type { ContentItem } from '../../models';
 import { popCodeEditorDialog, showItemMegaMenu } from '../actions/dialogs';
 
@@ -230,19 +231,22 @@ const content: CrafterCMSEpic[] = [
 					duplicate(state.sites.active, payload.path).pipe(
 						switchMap(({ item: path }) => [
 							unblockUI(),
-							pickShowContentFormAction({
+							showContentFormAction({
 								site: state.sites.active,
 								path,
 								authoringBase: state.env.authoringBase,
-								onSaveSuccess: () => store.dispatch(payload.onSuccess)
+								onSaveSuccess: ({ draft }) => {
+									const followUps = saveSuccessFollowUps(draft, payload.onSuccess, []);
+									if (followUps.length) store.dispatch(batchActions(followUps));
+								}
 							})
-						])
+						]),
+						catchAjaxError(
+							() => unblockUI(),
+							(error) => pushErrorDialog({ props: { error: error.response } })
+						)
 					)
 				)
-			),
-			catchAjaxError(
-				() => unblockUI(),
-				(error) => pushErrorDialog({ props: { error: error.response } })
 			)
 		),
 	// endregion
@@ -404,7 +408,8 @@ const content: CrafterCMSEpic[] = [
 								}
 							});
 						}
-					})
+					}),
+					catchAjaxError((error) => pushErrorDialog({ props: { error: error.response } }))
 				)
 			)
 		),

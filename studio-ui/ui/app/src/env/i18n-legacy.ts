@@ -695,14 +695,6 @@ export const rteControlMessages = defineMessages({
 	}
 });
 
-export const embeddedLegacyFormMessages = defineMessages({
-	contentFormFailedToLoadErrorMessage: {
-		id: 'embeddedLegacyFormMessages.openContentFormFailedError',
-		defaultMessage:
-			'An error occurred opening the content form. Please try again momentarily. Contact the administrator if the error persists.'
-	}
-});
-
 export const componentsMessages = defineMessages({
 	components: {
 		id: 'componentsMessages.components',
@@ -837,10 +829,6 @@ export const itemSuccessMessages = defineMessages({
 	itemContentTypeChanged: {
 		id: 'item.contentTypeChanged',
 		defaultMessage: 'Item type changed successfully'
-	},
-	itemSavedAsDraft: {
-		id: 'item.savedAsDraft',
-		defaultMessage: 'Draft saved. Required fields left blank may cause errors when previewed or deployed.'
 	},
 	folderCreated: {
 		id: 'folder.created',

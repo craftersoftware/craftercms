@@ -21,6 +21,7 @@ import type {
 	DataSource,
 	LegacyDataSource,
 	LegacyFormDefinitionField,
+	LegacyFormDefinitionProperty,
 	NewContentTypeField,
 	NewDataSource,
 	ValidationKeys
@@ -29,6 +30,7 @@ import type LookupTable from '../../models/LookupTable';
 import type { ContentType, SerializeToXmlContentTypeStructure } from '../../models/ContentType';
 import { createLookupTable, noOp, pluckProps } from '../../utils/object';
 import {
+	FieldUpdate,
 	FormsEngineFormApiContextProps,
 	FormsEngineItemMetaContextProps,
 	StableFormContextProps,
@@ -36,6 +38,7 @@ import {
 } from '../FormsEngine/lib/formsEngineContext';
 import {
 	buildSectionExpandedStateAtoms,
+	createChangedFieldIdsAtom,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -44,6 +47,8 @@ import {
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
+import { createFormVisibilityAtoms } from '../FormsEngine/lib/formVisibility';
+import { createFormLockReleaseSession } from '../FormsEngine/lib/unlockOnClose';
 import { createParsedValueForField } from '../FormsEngine/lib/valueRetrievers';
 import { toBooleanString, toColor } from '../../utils/string';
 import { getXmlBuilder, valueSerializersLookup } from '../FormsEngine/lib/valueSerializers';
@@ -58,7 +63,21 @@ import { editController, editTemplate } from '../../state/actions/misc';
 import { popDialog, pushDialog } from '../../state/actions/dialogStack';
 import type { BuiltInControlType } from '../FormsEngine/lib/controlMap';
 import { asArray } from '../../utils/array';
-import { componentsDataSourceContentTypesPropertyNames, systemValidationsKeysMap } from '../../utils/contentType';
+import {
+	componentsDataSourceContentTypesPropertyNames,
+	normalizeThumbnailFileName,
+	systemValidationsKeysMap
+} from '../../utils/contentType';
+import {
+	countLimitEditorOverrides,
+	countLimitValidationKeys,
+	countLimitsFromEditorValues,
+	getCountLimitStorage,
+	storageRefreshesVirtualCount,
+	virtualCountValidationIds,
+	writeCountLimitXml,
+	type ItemCountEditorSpec
+} from '../../utils/countLimits';
 import { XmlKeys } from '../FormsEngine/lib/formConsts';
 import { getPossibleTranslation } from '../../utils/i18n';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
@@ -79,7 +98,12 @@ export const CONTENT_TYPES_BASE_PATH = '/config/studio/content-types';
 const contentTypeFieldToXmlNameMap = { name: 'title', helpText: 'help' };
 
 type ContentTypeFieldProperties = keyof ContentTypeField;
-const ignoredContentTypeFieldProps: Array<ContentTypeFieldProperties> = ['sortable', 'values', 'type'];
+const ignoredContentTypeFieldProps: Array<ContentTypeFieldProperties> = [
+	'sortable',
+	'values',
+	'type',
+	'rawConstraints'
+];
 
 export type TypePropsToEdit = Pick<
 	ContentType,
@@ -95,6 +119,7 @@ export type TypePropsToEdit = Pick<
 	| 'displayTemplate'
 	| 'isHeadless'
 	| 'paths'
+	| 'allowedRoles'
 	| 'sections'
 	| 'delete-dependencies'
 	| 'copy-dependencies'
@@ -116,6 +141,7 @@ export const typePropsToEdit: Array<keyof TypePropsToEdit> = [
 	'displayTemplate',
 	'isHeadless',
 	'paths',
+	'allowedRoles',
 	'sections',
 	'delete-dependencies',
 	'copy-dependencies',
@@ -148,6 +174,19 @@ export const systemFieldsIdsMap: Partial<Record<BuiltInControlType, readOnlyFiel
 	// 'locale-selector: 'locale-selector' // This one doesn't have a pre-set id
 };
 
+/** True when the control may only live at the content-type root (`metadata.rootOnly`). */
+export function isRootOnlyControl(descriptor?: DescriptorContentType | null): boolean {
+	return Boolean(descriptor?.metadata?.rootOnly);
+}
+
+/** True when an existing field may only live at the content-type root: its control is rootOnly, or it uses a reserved system field id (system fields can be stored as plain input/checkbox). */
+export function isFieldRootOnly(
+	field: Pick<ContentTypeField, 'id'>,
+	descriptor?: DescriptorContentType | null
+): boolean {
+	return isRootOnlyControl(descriptor) || (readOnlyFieldsIds as string[]).includes(field.id);
+}
+
 export function createTypeFormValuesObject(type: ContentType): ContentTypeValuesObject {
 	return pluckProps(type, false, ...typePropsToEdit) as ContentTypeValuesObject;
 }
@@ -175,6 +214,8 @@ export function createTypeFieldValuesObject(field: ContentTypeField): LookupTabl
 			values[contentTypeFieldToXmlNameMap[property] ?? property] = field[property];
 		}
 	}
+	// Virtual editor fields (checkbox minSize) come from minCount. Property-backed bounds are already copied.
+	Object.assign(values, countLimitEditorOverrides(getCountLimitStorage(field.type), field.validations));
 	return values;
 }
 
@@ -275,16 +316,18 @@ export function reverseTypeFieldValuesObject(
 				}
 				const fieldDescriptor = datasourceFields[property];
 				if (!fieldDescriptor) {
-					// TODO: remove - development purposes
-					console.log('Warning: property not found in descriptor', property, field.id);
-					// Drop unknown/obsolete property not present in descriptor
+					// Drop unknown/obsolete property not present in descriptor. The stored property is no longer defined by the
+					// control, so there is nothing to serialize it with; it is dropped on purpose, and silently.
+					// Known lossy collision: a stored property named like one of commonControlFieldsDescriptors (title, id,
+					// description, help, defaultValue) is also a form value, so it reaches this branch and is deleted on save.
+					// Tracked under #9288 (RT-1).
 					continue;
 				}
 				properties[property] = { ...mergedProperties[property] };
 				// Serialize field properties
 				const serializer = valueSerializersLookup[fieldDescriptor.type];
 				properties[property].value = serializer
-					? serializer(fieldDescriptor, values[property])
+					? serializer(values[property], { field: fieldDescriptor, contentTypesById: {} })
 					: (values[property] as never);
 			}
 		} else if (property === 'validations') {
@@ -292,7 +335,10 @@ export function reverseTypeFieldValuesObject(
 			const validations = fieldWithReversedValues.validations;
 			const mergedValidations = { ...defaults.validations, ...(field.validations ?? {}) };
 			let validationKey: ValidationKeys;
+			const countLimitKeys = new Set(countLimitValidationKeys(getCountLimitStorage(field.type)));
 			for (validationKey in mergedValidations) {
+				// A count-limit constraint is not a runtime validation. Save writes it from minCount.
+				if (countLimitKeys.has(validationKey)) continue;
 				validations[validationKey as ValidationKeys] = { ...mergedValidations[validationKey as ValidationKeys] };
 				validations[validationKey as ValidationKeys].value =
 					// TODO: Should we use upgrade manager to remove from properties and into constraints?
@@ -305,8 +351,33 @@ export function reverseTypeFieldValuesObject(
 			fieldWithReversedValues[property] = values[contentTypeFieldToXmlNameMap[property] ?? property];
 		}
 	}
+	// Rebuild virtual minCount/maxCount from editor fields that are not stored as properties.
+	const countStorage = getCountLimitStorage(field.type);
+	if (countStorage && storageRefreshesVirtualCount(countStorage)) {
+		const limits = countLimitsFromEditorValues(countStorage, values);
+		const validations = { ...(fieldWithReversedValues.validations ?? {}) };
+		for (const name of countLimitValidationKeys(countStorage)) {
+			delete validations[name as keyof typeof validations];
+		}
+		fieldWithReversedValues.validations = validations;
+		if (countStorage.min && (countStorage.min.editorFromVirtual || countStorage.min.sources.includes('constraint'))) {
+			if (limits.minCount == null) delete validations.minCount;
+			else validations.minCount = { id: 'minCount', value: limits.minCount, level: 'required' };
+		}
+		if (countStorage.max && (countStorage.max.editorFromVirtual || countStorage.max.sources.includes('constraint'))) {
+			if (limits.maxCount == null) delete validations.maxCount;
+			else validations.maxCount = { id: 'maxCount', value: limits.maxCount, level: 'required' };
+		}
+	}
 	return fieldWithReversedValues;
 }
+
+export type DescriptorContentTypeMetadata = {
+	suffixes?: string[];
+	additionalFields?: string[];
+	/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
+	rootOnly?: boolean;
+};
 
 export type PartialContentType = Pick<ContentType, 'id' | 'name' | 'description' | 'sections' | 'fields'> & {
 	dataSources?: DataSource[];
@@ -319,12 +390,7 @@ export type DescriptorContentType = Pick<ContentType, 'id'> & {
 	sections: DescriptorSection[];
 	fields: LookupTable<DescriptorField>;
 	type?: 'image' | 'item' | 'audio' | 'flash' | 'video' | 'transcoded-video';
-	metadata?: {
-		suffixes?: string[];
-		additionalFields?: string[];
-		/** When true, control may only be inserted at the content-type root (not inside repeats/nested fields). E.g. placeInNav / orderDefault_f should not be nested/ */
-		rootOnly?: boolean;
-	};
+	metadata?: DescriptorContentTypeMetadata;
 };
 
 export type DescriptorSection = Omit<ContentTypeSection, 'title' | 'description'> & {
@@ -340,7 +406,7 @@ export type DescriptorField = Omit<ContentTypeField, 'name' | 'description' | 'f
 	validations: Partial<DescriptorFieldValidations>;
 };
 
-export type DescriptorFieldValidationKeys = ValidationKeys | 'root' | 'regex' | 'type';
+export type DescriptorFieldValidationKeys = ValidationKeys | 'root' | 'regex' | 'type' | 'itemCount';
 
 export type DescriptorContentTypeFieldValidation = Omit<ContentTypeFieldValidation, 'id'> & {
 	id: DescriptorFieldValidationKeys;
@@ -348,7 +414,7 @@ export type DescriptorContentTypeFieldValidation = Omit<ContentTypeFieldValidati
 
 export type DescriptorFieldValidations = Record<DescriptorFieldValidationKeys, DescriptorContentTypeFieldValidation>;
 
-export interface TypeBuilderControl extends Omit<ControlProps, 'field'> {
+export interface TypeBuilderControl<V = unknown> extends Omit<ControlProps<V>, 'field'> {
 	field: ContentTypeField & {
 		validations: Partial<DescriptorFieldValidations>;
 	};
@@ -372,11 +438,19 @@ export function createEmptyTypeStructure(mixin?: Partial<ContentType>): ContentT
 		'delete-dependencies': null,
 		'copy-dependencies': null,
 		previewable: false,
+		allowedRoles: [],
 		fields: {},
 		sections: [],
 		...mixin
 	};
 }
+
+/**
+ * Id of the "Basic Properties" section that field and data source panels prepend to the descriptor's own sections.
+ * It must differ from the descriptors' `properties` section id, since section ids key the accordions and their
+ * expanded state.
+ */
+export const commonPropertiesSectionId = 'commonProperties';
 
 export function createVirtualTypeForField(
 	controlDescriptor: DescriptorContentType,
@@ -391,7 +465,7 @@ export function createVirtualTypeForField(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -434,7 +508,7 @@ export function createVirtualTypeForDataSource(
 			},
 			sections: [
 				{
-					id: 'properties',
+					id: commonPropertiesSectionId,
 					color: null,
 					title: 'Basic Properties',
 					description: '',
@@ -449,6 +523,7 @@ export function createVirtualTypeForDataSource(
 	return createEmptyTypeStructure(translatedDataSourceDescriptor);
 }
 
+/** Builds a section, filling in the defaults. An id is generated when the given data has none. */
 export function createVirtualSection<K extends ContentTypeSection | DescriptorSection>(
 	sectionData: Partial<K> & Pick<K, 'title' | 'fields'>
 ): K {
@@ -456,10 +531,10 @@ export function createVirtualSection<K extends ContentTypeSection | DescriptorSe
 		typeof sectionData.title === 'object' ? sectionData.title.defaultMessage : sectionData.title
 	);
 	return {
-		id: sectionData?.id || nanoid(),
 		description: '',
 		expandByDefault: true,
 		...sectionData,
+		id: sectionData?.id || nanoid(),
 		color: sectionData?.color ?? toColor(title)
 	} as K;
 }
@@ -490,9 +565,18 @@ export const fooStableGlobalContext: StableGlobalContextProps = Object.freeze<St
 		popForm: noOp,
 		updateProps: noOp,
 		setStateCache: noOp
-	}
+	},
+	rootFormActions: {
+		save: () => Promise.resolve()
+	},
+	lockReleaseSession: createFormLockReleaseSession<StableFormContextProps>()
 });
 
+/**
+ * A form context for a content type's own definition, as the Type Builder edits it: one value and validity atom per type
+ * field, a changed-ids atom of its own, and `originalValues` as the checkpoint. `mixin.fieldUpdates$` lets the caller
+ * share an existing stream of {@link FieldUpdate}s; otherwise a new one is created.
+ */
 export function createVirtualTypeFormContext(
 	type: ContentType,
 	values: LookupTable<unknown>,
@@ -506,9 +590,9 @@ export function createVirtualTypeFormContext(
 	const formValues: LookupTable<unknown> = {};
 	context.atoms.valueByFieldId = {};
 	context.atoms.validationByFieldId = {};
-	context.changedFieldIds = new Set();
+	context.changedFieldIds = createChangedFieldIdsAtom();
 	context.originalValues = values;
-	context.fieldUpdates$ = mixin.fieldUpdates$ ?? new Subject();
+	context.fieldUpdates$ = mixin?.fieldUpdates$ ?? new Subject<FieldUpdate>();
 	Object.values(contentTypeFields).forEach((field) => {
 		formValues[field.id] = createParsedValueForField(values[field.id], field, contentTypesLookup);
 		setFieldAtoms(contextRef, type, type.fields, field.id, context.atoms, formValues[field.id], validatorsData);
@@ -562,9 +646,13 @@ export const createStableFormContextProps = (
 			tableOfContentsDrawerOpen: undefined,
 			closeAfterSave: undefined,
 			minimizeAfterSave: undefined,
+			releaseLockOnClose: undefined,
+			saveAsDraft: undefined,
 			// Field validation atoms always read this, even where no form controller attaches.
-			relevanceVersion: atom(0)
+			relevanceVersion: atom(0),
+			...createFormVisibilityAtoms()
 		},
+		itemFormMode: null,
 		changedFieldIds: null,
 		fieldUpdates$: null,
 		itemMeta: createFieldItemMetaContext(type), // TODO: Property may be removed from this context altogether
@@ -572,7 +660,9 @@ export const createStableFormContextProps = (
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
-		formControllerState: null
+		formControllerState: null,
+		// The virtual form has no content item. It also leaves `dataSourceServices` unset, so each control builds its own.
+		getItem: () => null
 	};
 	if (createRootTypeSections) {
 		Object.assign(
@@ -591,6 +681,98 @@ export function makeIntoTypeFieldStructPath(fieldPath: string): string {
 		.replace(/.fields$/, '');
 }
 
+/**
+ * The three form properties Type Builder edits. A parsed type updates those entries in place and
+ * keeps every other property where it was. A new type (no snapshot) still writes all three.
+ */
+function buildFormProperties(type: ContentType): LegacyFormDefinitionProperty[] {
+	const canonical: LegacyFormDefinitionProperty[] = [
+		{
+			label: 'Display Template',
+			name: XmlKeys.displayTemplate,
+			type: 'template',
+			value: type.displayTemplate
+		},
+		{
+			label: 'No Template Required',
+			name: XmlKeys.templateNotRequired,
+			type: 'boolean',
+			value: toBooleanString(type.isHeadless)
+		},
+		{
+			label: 'Merge Strategy',
+			name: XmlKeys.mergeStrategy,
+			type: 'string',
+			value: type.mergeStrategy
+		}
+	];
+	if (!type.formProperties) return canonical;
+
+	const byName = new Map(canonical.map((property) => [property.name, property]));
+	const seen = new Set<string>();
+	const written = type.formProperties.map((property) => {
+		const next = byName.get(property.name);
+		if (!next) return property;
+		seen.add(property.name);
+		const original = typeof property.value === 'string' ? property.value.trim() : '';
+		const unchanged =
+			property.name === XmlKeys.templateNotRequired
+				? (original === 'true') === Boolean(type.isHeadless)
+				: (original || null) === (next.value || null);
+		// Keep label and type. Only the value changes, and only when the model disagrees.
+		return unchanged ? property : { ...property, value: next.value };
+	});
+	for (const property of canonical) {
+		if (seen.has(property.name)) continue;
+		const hasValue = property.name === XmlKeys.templateNotRequired ? Boolean(type.isHeadless) : Boolean(property.value);
+		if (hasValue) written.push(property);
+	}
+	return written;
+}
+
+/** undefined, or a blank string. A string constraint editor clears to '', not undefined. */
+function isClearedConstraintValue(value: unknown): boolean {
+	return value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
+/** A stored count of blank or 0 is already "no limit". Leaving it unchanged must not drop the constraint. */
+function isUnchangedUnlimitedCount(value: unknown): boolean {
+	if (isClearedConstraintValue(value)) return true;
+	if (typeof value === 'number') return value === 0;
+	return typeof value === 'string' && value.trim() === '0';
+}
+
+/** Keep the stored `<type>` when the new value still fits it. A string type fits any value. */
+function updatedConstraintType(raw: { type?: string }, update: { type?: string; value: unknown }): string | undefined {
+	if (raw.type && valueFitsStoredType(raw.type, update.value)) return raw.type;
+	return update.type || raw.type;
+}
+
+function valueFitsStoredType(storedType: string, value: unknown): boolean {
+	if (storedType === 'string') return true;
+	if (storedType === 'boolean') {
+		return value === true || value === false || value === 'true' || value === 'false';
+	}
+	if (storedType === 'int' || storedType === 'number') {
+		if (typeof value === 'number') return Number.isFinite(value);
+		return typeof value === 'string' && value.trim() !== '' && /^-?\d+$/.test(value.trim());
+	}
+	return true;
+}
+
+function allowedRolesXml(roles: string[] | null | undefined): { role: string[] } | undefined {
+	const seen = new Set<string>();
+	const role: string[] = [];
+	for (const entry of roles ?? []) {
+		if (typeof entry !== 'string') continue;
+		const trimmed = entry.trim();
+		if (!trimmed || seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		role.push(trimmed);
+	}
+	return role.length > 0 ? { role } : undefined;
+}
+
 export function prepareSerializeToXmlTypeObject(
 	type: ContentType,
 	configDescriptors?: {
@@ -598,6 +780,8 @@ export function prepareSerializeToXmlTypeObject(
 		dataSourceDescriptors: LookupTable<DescriptorContentType>;
 	}
 ): SerializeToXmlContentTypeStructure {
+	const imageThumbnail = normalizeThumbnailFileName(type.thumbnailFileName);
+	const allowedRoles = allowedRolesXml(type.allowedRoles);
 	return {
 		'content-type': type.id,
 		title: type.name,
@@ -606,32 +790,14 @@ export function prepareSerializeToXmlTypeObject(
 		objectType: type.type,
 		quickCreate: toBooleanString(type.quickCreate),
 		quickCreatePath: type.quickCreatePath,
-		imageThumbnail: type.thumbnailFileName,
+		...(imageThumbnail ? { imageThumbnail } : {}),
 		paths: type.paths,
 		'delete-dependencies': type['delete-dependencies'],
 		'copy-dependencies': type['copy-dependencies'],
 		previewable: type.previewable,
+		...(allowedRoles ? { 'allowed-roles': allowedRoles } : {}),
 		properties: {
-			property: [
-				{
-					label: 'Display Template',
-					name: 'display-template',
-					type: 'template',
-					value: type.displayTemplate
-				},
-				{
-					label: 'No Template Required',
-					name: 'no-template-required',
-					type: 'boolean',
-					value: toBooleanString(type.isHeadless)
-				},
-				{
-					label: 'Merge Strategy',
-					name: 'merge-strategy',
-					type: 'string',
-					value: type.mergeStrategy
-				}
-			]
+			property: buildFormProperties(type)
 		},
 		sections: {
 			section: type.sections.map((section) => ({
@@ -662,14 +828,31 @@ export function buildContentTypeXml(serializeTypeStructureObject: SerializeToXml
 }
 
 function convertFieldStructToXmlStruct(field: ContentTypeField): Required<LegacyFormDefinitionField> {
-	const minOccurs = field.properties?.minOccurs?.value as string;
-	const maxOccurs = field.properties?.maxOccurs?.value as string;
+	// Count-limit XML comes from the storage table: elements, property types, and positive constraints.
+	const countXml = (() => {
+		const storage = getCountLimitStorage(field.type);
+		return storage ? writeCountLimitXml(storage, field) : undefined;
+	})();
+	const minOccurs = countXml?.elements.minOccurs ?? (field.properties?.minOccurs?.value as string);
+	const maxOccurs = countXml?.elements.maxOccurs ?? (field.properties?.maxOccurs?.value as string);
+	const propertiesSource =
+		countXml && Object.keys(countXml.properties).length > 0
+			? {
+					...field.properties,
+					...Object.fromEntries(
+						Object.entries(countXml.properties).map(([name, written]) => [
+							name,
+							{ ...field.properties?.[name], ...written }
+						])
+					)
+				}
+			: field.properties;
 
 	// 'plugin' comes in 'field.properties'. (see ContentTypeField['properties'], but it's a separate object in the XML.
 	let plugin: LegacyFormDefinitionField['plugin'];
-	const properties: LegacyFormDefinitionField['properties'] = field.properties
+	const properties: LegacyFormDefinitionField['properties'] = propertiesSource
 		? ({
-				property: Object.entries(field.properties ?? {})
+				property: Object.entries(propertiesSource)
 					.filter(([key, value]) => {
 						if (key === 'plugin') plugin = value as LegacyFormDefinitionField['plugin'];
 						return key !== 'plugin';
@@ -678,23 +861,65 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 			} as LegacyFormDefinitionField['properties'])
 		: undefined;
 
-	const invertedSystemValidationsNames = [
+	const strippedValidationNames = [
 		...Object.values(systemValidationsKeysMap),
-		...componentsDataSourceContentTypesPropertyNames
+		...virtualCountValidationIds,
+		...componentsDataSourceContentTypesPropertyNames,
+		...(countXml?.stripConstraints ?? [])
 	];
 
-	const constraints =
+	const handledConstraints =
 		field.validations && Object.keys(field.validations).length > 0
-			? {
-					constraint: Object.values(field.validations)
-						.map((validation) => ({
-							name: validation.id,
-							value: validation.value,
-							type: typeof validation.value
-						}))
-						.filter((validation) => !invertedSystemValidationsNames.includes(validation.name))
-				}
-			: undefined;
+			? Object.values(field.validations)
+					.map((validation) => ({
+						name: validation.id,
+						value: validation.value,
+						type: typeof validation.value
+					}))
+					.filter((validation) => validation.name && !strippedValidationNames.includes(validation.name))
+			: [];
+	for (const constraint of countXml?.constraints ?? []) {
+		const existing = handledConstraints.findIndex((item) => item.name === constraint.name);
+		// The table stores the constraint name as a string. The list's name is the validation-id union.
+		const written = {
+			name: constraint.name as (typeof handledConstraints)[number]['name'],
+			value: constraint.value,
+			type: constraint.type as (typeof handledConstraints)[number]['type']
+		};
+		if (existing === -1) handledConstraints.push(written);
+		else if (handledConstraints[existing].value === undefined) handledConstraints[existing] = written;
+	}
+	// Original constraint order. Handled names are updated in place. undefined and a blank string are cleared.
+	const handledByName = new Map<string, (typeof handledConstraints)[number]>(
+		handledConstraints.map((item) => [item.name, item])
+	);
+	const countStorage = getCountLimitStorage(field.type);
+	const omittedConstraintNames = new Set<string>(countStorage?.stripConstraints ?? []);
+	for (const name of countLimitValidationKeys(countStorage)) {
+		if (!handledByName.has(name)) omittedConstraintNames.add(name);
+	}
+	const seenConstraintNames = new Set<string>();
+	const constraintList: Array<(typeof handledConstraints)[number] | LegacyFormDefinitionProperty> = [];
+	for (const raw of field.rawConstraints ?? []) {
+		if (!raw?.name) continue;
+		// A count-limit the editor is not writing back. Keep the stored constraint when this save
+		// did not change it: a blank value or 0 already means no limit. A positive stored value
+		// with no editor value was cleared, so it is omitted.
+		if (omittedConstraintNames.has(raw.name) && !isUnchangedUnlimitedCount(raw.value)) continue;
+		const update = handledByName.get(raw.name);
+		// A cleared editor value must not bring the stored constraint back, or write type "undefined".
+		if (update && isClearedConstraintValue(update.value)) continue;
+		seenConstraintNames.add(raw.name);
+		constraintList.push(
+			update ? { ...raw, value: update.value, type: updatedConstraintType(raw, update) } : { ...raw }
+		);
+	}
+	for (const constraint of handledConstraints) {
+		if (seenConstraintNames.has(constraint.name) || omittedConstraintNames.has(constraint.name)) continue;
+		if (isClearedConstraintValue(constraint.value)) continue;
+		constraintList.push(constraint);
+	}
+	const constraints = constraintList.length > 0 ? { constraint: constraintList } : undefined;
 
 	// Note: `undefined` suppresses nodes in the XML, empty strings doesn't.
 	return {
@@ -704,7 +929,6 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		defaultValue: field.defaultValue,
 		type: field.type,
 		help: field.helpText,
-		iceId: undefined, // TODO: drop?
 		// region Repeat Groups
 		maxOccurs,
 		minOccurs,
@@ -756,6 +980,17 @@ function convertDataSourceStructToXmlStruct(
 	};
 }
 
+/** An `itemCount` validation carries its role and, when the control has two bounds, its partner field id. */
+export function createValidation(
+	key: 'itemCount',
+	value: ItemCountEditorSpec,
+	level?: ContentTypeFieldValidation['level']
+): DescriptorContentTypeFieldValidation;
+export function createValidation<T = unknown>(
+	key: DescriptorFieldValidationKeys,
+	value: T,
+	level?: ContentTypeFieldValidation['level']
+): DescriptorContentTypeFieldValidation;
 export function createValidation<T = unknown>(
 	key: DescriptorFieldValidationKeys,
 	value: T,

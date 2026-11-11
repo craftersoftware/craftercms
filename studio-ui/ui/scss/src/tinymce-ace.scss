@@ -16,6 +16,8 @@
  *
  */
 
+@import 'focus-ring';
+
 .tox-dialog {
 	&.acecode {
 		.tox-dialog__header {
@@ -180,6 +182,10 @@
 		vertical-align: top;
 		min-height: 1.8em;
 		box-sizing: content-box;
+
+		&:focus-visible {
+			@include focus-ring;
+		}
 	}
 	.ace_searchbtn {
 		border: 1px solid #cbcbcb;

@@ -15,15 +15,16 @@
  */
 
 import { useSpreadState } from '../../hooks/useSpreadState';
-import React, { SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import React, { SyntheticEvent, useEffect, useId, useMemo, useState } from 'react';
 import { PublishingTarget, PublishParams } from '../../models/Publishing';
 import LookupTable from '../../models/LookupTable';
 import { InternalDialogState, itemsArrayChanged, PublishDialogContainerProps, usePublishState } from './utils';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useDispatch, useSelector } from 'react-redux';
 import { calculatePackage, publish } from '../../services/publishing';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { isBlank } from '../../utils/string';
+import { getPublishSubmitReason, type PublishSubmitReason } from './publishSubmitReason';
 import { ContentItem, GlobalState, LightItem } from '../../models';
 import { createAtLeastHalfHourInFutureDate } from '../../utils/datetime';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
@@ -61,6 +62,46 @@ export type DependencyDataState = {
 	items: LightItem[];
 };
 
+/** The footer reason and the button it describes. The button is disabled exactly when a reason is shown. */
+export function PublishDialogFooter({
+	reason,
+	reasonId,
+	isSubmitting,
+	submitDisabled,
+	submitLabel,
+	onCancel,
+	onSubmit
+}: {
+	reason: string;
+	reasonId: string;
+	isSubmitting: boolean;
+	submitDisabled: boolean;
+	submitLabel: React.ReactNode;
+	onCancel: (event: React.MouseEvent<HTMLButtonElement>) => void;
+	onSubmit: (event?: SyntheticEvent) => void;
+}) {
+	return (
+		<DialogFooter sx={{ flexWrap: 'wrap' }}>
+			{reason && (
+				<Typography id={reasonId} variant="body2" color="text.secondary" sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}>
+					{reason}
+				</Typography>
+			)}
+			<SecondaryButton onClick={onCancel} disabled={isSubmitting}>
+				<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
+			</SecondaryButton>
+			<PrimaryButton
+				onClick={onSubmit}
+				disabled={submitDisabled}
+				loading={isSubmitting}
+				aria-describedby={reason ? reasonId : undefined}
+			>
+				{submitLabel}
+			</PrimaryButton>
+		</DialogFooter>
+	);
+}
+
 export function DependencyChip({ type }: { type: DependencyType }) {
 	if (!type) return null;
 	const isSoft = type === 'soft';
@@ -73,6 +114,22 @@ export function DependencyChip({ type }: { type: DependencyType }) {
 		/>
 	);
 }
+
+const publishSubmitReasonMessages = defineMessages<PublishSubmitReason>({
+	loading: { defaultMessage: 'Wait for the items to finish loading before publishing.' },
+	targetsFailed: { defaultMessage: 'Publishing targets could not be loaded. Retry before publishing.' },
+	noTarget: { defaultMessage: 'Wait for a publishing target to become available.' },
+	selectTarget: { defaultMessage: 'Select a publishing target to publish.' },
+	packageTitle: { defaultMessage: 'Enter a package title to publish.' },
+	submissionComment: { defaultMessage: 'Enter a submission comment to publish.' },
+	pendingDependencies: { defaultMessage: 'Apply or discard the dependency changes before publishing.' },
+	error: { defaultMessage: 'Resolve the error shown in this dialog before publishing.' },
+	pastSchedule: { defaultMessage: 'Choose a schedule time in the future.' },
+	emptyFolders: { defaultMessage: 'Select items that are not empty folders to publish.' },
+	dependenciesFailed: { defaultMessage: 'Dependency validation could not complete. Try again before publishing.' },
+	dependenciesPending: { defaultMessage: 'Wait for dependency validation to finish before publishing.' },
+	noPermission: { defaultMessage: 'This package has required references you do not have permission to publish.' }
+});
 
 export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const { items: initialItems, scheduling = 'now', onSuccess, onClose, isSubmitting } = props;
@@ -97,6 +154,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	const [childrenItems, setChildrenItems] = useState<LightItem[]>([]);
 	const [published, setPublished] = useState<boolean>(null);
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
+	const [publishingTargetsFailed, setPublishingTargetsFailed] = useState(false);
 	const {
 		itemsDataSummary,
 		dependencyData,
@@ -147,12 +205,13 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			(item) => !item.canRequestPublish && dependencyData.typeByPath[item.path] === 'hard'
 		);
 	}, [dependencyData, packageDependenciesFetchFailed]);
-	const dependencyValidationIncomplete =
-		packageDependenciesFetchFailed || (!dependencyData && Boolean(state.publishingTarget));
 
 	// Auto-generate submission comment based on mainItems labels if comment is blank
 	useEffect(() => {
-		if (state && mainItems && Array.isArray(mainItems) && isBlank(state.submissionComment)) {
+		if (!nnou(published) || !isBlank(state.submissionComment)) return;
+		if (!published) {
+			setState({ submissionComment: formatMessage({ defaultMessage: 'Initial publish' }) });
+		} else if (Array.isArray(mainItems)) {
 			const labels = mainItems.map((item) => item.label).filter(Boolean);
 			const base = `${formatMessage({ defaultMessage: 'Publishing' })}: `;
 
@@ -187,7 +246,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 			}
 		}
 		// Only run when mainItems or submissionComment changes
-	}, [mainItems, state, setState, formatMessage, commentMaxLength]);
+	}, [mainItems, state, setState, formatMessage, commentMaxLength, published]);
 
 	const isRequestPublish = !hasPublishPermission || state.requestApproval;
 	const showRequestApproval = hasPublishPermission;
@@ -210,86 +269,82 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 		return allItems.length > 0 && allItems.every((item) => item.systemType === 'folder');
 	}, [mainItems, childrenItems]);
 
-	// Submit button should be disabled when:
-	const submitDisabled =
-		// Detailed items haven't loaded
-		isFetchingItems ||
-		// While fetching dependencies
-		state.fetchingItems ||
-		!contentItems ||
-		// While submitting
-		isSubmitting ||
-		// If package title is blank
-		isBlank(state.packageTitle) ||
-		// If package comment is blank
-		isBlank(state.submissionComment) ||
-		// When there are no available/loaded publishing targets
-		!publishingTargets?.length ||
-		// When there are selected dependencies not applied.
-		Boolean(selectedDependenciesPaths?.length) ||
-		// When no publishing target is selected
-		!state.publishingTarget ||
-		// When there's an error
-		Boolean(state.error) ||
-		// The scheduled date is in the past
-		state.scheduledDateTime < new Date() ||
-		// All items to publish are empty folders.
-		arePublishingItemsFolders ||
-		// When dependency validation did not complete successfully
-		dependencyValidationIncomplete ||
-		// When there are hard dependencies without publish permission
-		hardDependenciesWithoutPublishPermission;
+	// The reason is the only list of conditions, so the button is disabled exactly when one is shown.
+	const publishSubmitReasonKey = getPublishSubmitReason({
+		isFetchingItems,
+		fetchingPackage: state.fetchingItems,
+		hasContentItems: Boolean(contentItems),
+		publishingTargetsFailed,
+		publishingTargetCount: publishingTargets?.length ?? null,
+		hasPublishingTarget: Boolean(state.publishingTarget),
+		packageTitle: state.packageTitle,
+		submissionComment: state.submissionComment,
+		pendingDependencyCount: selectedDependenciesPaths?.length ?? 0,
+		hasError: Boolean(state.error),
+		scheduling: state.scheduling,
+		scheduledDateTime: state.scheduledDateTime,
+		now: new Date(),
+		allItemsAreFolders: arePublishingItemsFolders,
+		dependenciesFetchFailed: packageDependenciesFetchFailed,
+		dependencyDataMissing: !dependencyData,
+		hardDependenciesWithoutPublishPermission
+	});
+	const submitDisabled = isSubmitting || publishSubmitReasonKey !== null;
 
 	useEffect(() => {
-		setState({ fetchingItems: true });
-		if (state.publishingTarget) {
-			const sub = calculatePackage(siteId, {
-				publishingTarget: state.publishingTarget,
-				paths: itemsDataSummary.itemPaths.map((path) => ({
-					path,
-					includeChildren,
-					includeSoftDeps: false
-				}))
-			}).subscribe({
-				next(dependenciesByType) {
-					const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
-					const depMap: DependencyMap = {};
-					const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
-					dependenciesByType.hardDependencies.forEach(({ path }) => {
-						depMap[path] = 'hard';
-					});
-					dependenciesByType.softDependencies.forEach(({ path }) => {
-						depMap[path] = 'soft';
-					});
-					setState({ fetchingItems: false });
-					setPackageDependenciesFetchFailed(false);
-					if (includeChildren && dependenciesByType.items) {
-						if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
-							setChildrenItems(dependenciesByType.items);
-						}
-					} else {
-						if (effectRefs.current.childrenItems.length !== 0) {
-							setChildrenItems([]);
-						}
-					}
-					setSelectedDependenciesMap({});
-					setDependencyData({
-						typeByPath: depMap,
-						paths: Object.keys(depMap),
-						itemsByPath: depLookup,
-						items: itemsList
-					});
-				},
-				error() {
-					setState({ fetchingItems: false });
-					setIsFetchingItems(false);
-					setSelectedDependenciesMap({});
-					setDependencyData(null);
-					setPackageDependenciesFetchFailed(true);
-				}
-			});
-			return () => sub.unsubscribe();
+		// Package calculation only runs once a target exists. Leaving fetchingItems true with no
+		// target made the disabled-button reason stay on "items are loading" and hid the real cause.
+		if (!state.publishingTarget) {
+			setState({ fetchingItems: false });
+			return;
 		}
+		setState({ fetchingItems: true });
+		const sub = calculatePackage(siteId, {
+			publishingTarget: state.publishingTarget,
+			paths: itemsDataSummary.itemPaths.map((path) => ({
+				path,
+				includeChildren,
+				includeSoftDeps: false
+			}))
+		}).subscribe({
+			next(dependenciesByType) {
+				const itemsList = [...dependenciesByType.hardDependencies, ...dependenciesByType.softDependencies];
+				const depMap: DependencyMap = {};
+				const depLookup: LookupTable<LightItem> = createLookupTable(itemsList, 'path');
+				dependenciesByType.hardDependencies.forEach(({ path }) => {
+					depMap[path] = 'hard';
+				});
+				dependenciesByType.softDependencies.forEach(({ path }) => {
+					depMap[path] = 'soft';
+				});
+				setState({ fetchingItems: false });
+				setPackageDependenciesFetchFailed(false);
+				if (includeChildren && dependenciesByType.items) {
+					if (itemsArrayChanged(effectRefs.current.childrenItems, dependenciesByType.items)) {
+						setChildrenItems(dependenciesByType.items);
+					}
+				} else {
+					if (effectRefs.current.childrenItems.length !== 0) {
+						setChildrenItems([]);
+					}
+				}
+				setSelectedDependenciesMap({});
+				setDependencyData({
+					typeByPath: depMap,
+					paths: Object.keys(depMap),
+					itemsByPath: depLookup,
+					items: itemsList
+				});
+			},
+			error() {
+				setState({ fetchingItems: false });
+				setIsFetchingItems(false);
+				setSelectedDependenciesMap({});
+				setDependencyData(null);
+				setPackageDependenciesFetchFailed(true);
+			}
+		});
+		return () => sub.unsubscribe();
 	}, [
 		itemsDataSummary.itemPaths,
 		setState,
@@ -379,6 +434,11 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 	};
 
 	const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
+	const publishSubmitReasonId = useId();
+	// Visible reason for a disabled Publish/Schedule/Request Publish button. Hidden while submitting,
+	// since the button shows its own progress then.
+	const publishSubmitReason =
+		!isSubmitting && publishSubmitReasonKey ? formatMessage(publishSubmitReasonMessages[publishSubmitReasonKey]) : '';
 
 	const onDependencyCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, checked: boolean, path: string) => {
 		setSelectedDependenciesMap({ ...selectedDependenciesMap, [path]: checked });
@@ -451,9 +511,11 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 									isRequestPublish={isRequestPublish}
 									disabled={disabled}
 									onFetchedPublishedTargets={({ targets, published }) => {
+										setPublishingTargetsFailed(false);
 										setPublished(published);
 										setPublishingTargets(targets);
 									}}
+									onPublishingTargetsError={() => setPublishingTargetsFailed(true)}
 								/>
 								<Divider />
 								<PublishReferencesLegend />
@@ -575,14 +637,15 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 					</Typography>
 				)}
 			</DialogBody>
-			<DialogFooter>
-				<SecondaryButton onClick={onCloseButtonClick} disabled={isSubmitting}>
-					<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
-				</SecondaryButton>
-				<PrimaryButton onClick={handleSubmit} disabled={submitDisabled} loading={isSubmitting}>
-					{submitLabel}
-				</PrimaryButton>
-			</DialogFooter>
+			<PublishDialogFooter
+				reason={publishSubmitReason}
+				reasonId={publishSubmitReasonId}
+				isSubmitting={isSubmitting}
+				submitDisabled={submitDisabled}
+				submitLabel={submitLabel}
+				onCancel={onCloseButtonClick}
+				onSubmit={handleSubmit}
+			/>
 		</>
 	);
 }

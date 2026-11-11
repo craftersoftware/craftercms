@@ -21,7 +21,6 @@ import { WidgetDialogProps } from '../../components/WidgetDialog/utils';
 import { popDialog, pushDialog, pushNonDialog, updateDialogState, updateNonDialogState } from '../actions/dialogStack';
 import type { CodeEditorDialogProps } from '../../components/CodeEditorDialog';
 import type { FormsEngineDialogProps } from '../../components/FormsEngine';
-import type { LegacyFormDialogProps } from '../../components/LegacyFormDialog/utils';
 
 const reducer = createReducer<GlobalState['dialogStack']>(
 	{
@@ -31,14 +30,13 @@ const reducer = createReducer<GlobalState['dialogStack']>(
 	(builder) => {
 		builder.addCase(pushDialog, (state, { payload }) => {
 			const component = payload.component;
-			// If the dialog is a CodeEditorDialog, FormsEngineDialog or LegacyFormDialog, we run extra verification.
+			// If the dialog is a CodeEditorDialog or FormsEngineDialog, we run extra verification.
 			// If the same type of dialog is already open for the same path, we set minimized to false.
 			if (
 				component === 'craftercms.components.CodeEditorDialog' ||
-				component === 'craftercms.components.LegacyFormDialog' ||
 				component === 'craftercms.components.FormsEngineDialog'
 			) {
-				const payloadProps = payload.props as CodeEditorDialogProps | LegacyFormDialogProps;
+				const payloadProps = payload.props as CodeEditorDialogProps;
 				const dialogState = Object.values(state.byId).find((dialog) => {
 					if (dialog.component === 'craftercms.components.FormsEngineDialog') {
 						return (
@@ -47,15 +45,13 @@ const reducer = createReducer<GlobalState['dialogStack']>(
 								(payload.props as FormsEngineDialogProps).formProps.update?.path
 						);
 					} else {
-						const dialogProps = dialog.props as CodeEditorDialogProps | LegacyFormDialogProps;
+						const dialogProps = dialog.props as CodeEditorDialogProps;
 						return dialog.component === component && dialogProps.path === payloadProps.path;
 					}
 				});
 				if (dialogState) {
 					const byIdState = state.byId[dialogState.id] as
-						| DialogStackItem<CodeEditorDialogProps>
-						| DialogStackItem<LegacyFormDialogProps>
-						| DialogStackItem<FormsEngineDialogProps>;
+						DialogStackItem<CodeEditorDialogProps> | DialogStackItem<FormsEngineDialogProps>;
 					state.byId[dialogState.id].props = {
 						...byIdState.props,
 						isMinimized: false

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,35 +14,66 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { RefObject, SyntheticEvent, useContext, useMemo, useState } from 'react';
+import React, { RefObject, SyntheticEvent, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import visuallyHidden from '@mui/utils/visuallyHidden';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
 import { ContentTypeField } from '../../../models';
 import type { ContentTypeSection } from '../../../models/ContentType';
 import { FormsEngineAtoms, ItemMetaContext, StableFormContext } from '../lib/formsEngineContext';
-import { getScrollContainer } from '../lib/formUtils';
+import { commitFormVisibility, useStackSubmitting } from '../lib/formUtils';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import SearchBar from '../../SearchBar';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
 import Box from '@mui/material/Box';
 import { atom, useAtomValue, useSetAtom, useStore as useJotaiStore } from 'jotai';
-import { hasFieldValidator, isEmptyValue, isFieldRequired } from '../lib/validators';
+import { FormattedMessage, useIntl } from 'react-intl';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import {
+	fieldVisibility,
+	isScopeActive,
+	revealField,
+	returnToLaunchScope,
+	scopeFieldCounts,
+	scopeToggleVisible
+} from '../lib/formVisibility';
 import { immutableEmptyArray } from '../../../utils/array';
-import useLoadableAtom from '../lib/useLoadableAtom';
 import Skeleton from '@mui/material/Skeleton';
 import ErrorBoundary from '../../ErrorBoundary';
-import FieldStateIndicator from './FieldStateIndicator';
-import { XmlKeys } from '../lib/formConsts';
+import FieldStateIndicator, {
+	type FieldStateIndicatorProps,
+	fieldIndicatorAtoms,
+	useFieldStateIndicatorProps
+} from './FieldStateIndicator';
 
 export interface TableOfContentsProps {
 	containerRef: RefObject<HTMLDivElement>;
-	fieldsToRender: ContentTypeField[];
+	/** Flat field list for a repeat-item editor, which has no sections. */
+	fields?: ContentTypeField[];
 	/** When provided (full form), ToC sections follow the same filtered field lists as the form body. */
 	sections?: ContentTypeSection[];
+	/**
+	 * Field ids of the unscoped form (already past the embedded file-name filter).
+	 * Present when this form was opened with a launch scope.
+	 */
+	countFieldIds?: string[];
 }
 
-export function TableOfContents({ containerRef, fieldsToRender, sections }: TableOfContentsProps) {
+export function TableOfContents({ containerRef, fields, sections, countFieldIds }: TableOfContentsProps) {
 	const store = useJotaiStore();
-	const atoms = useContext(StableFormContext).atoms;
+	const stableForm = useContext(StableFormContext);
+	const atoms = stableForm.atoms;
+	const [invalidFieldIds, setInvalidFieldIds] = useState<ReadonlySet<string>>(() => new Set());
+	const reportFieldInvalid = useCallback((fieldId: string, invalid: boolean) => {
+		setInvalidFieldIds((current) => {
+			if (current.has(fieldId) === invalid) return current;
+			const next = new Set(current);
+			if (invalid) next.add(fieldId);
+			else next.delete(fieldId);
+			return next;
+		});
+	}, []);
 	const contentType = useContext(ItemMetaContext).contentType;
 	const contentTypeFields = contentType.fields;
 	const contentTypeSections = sections ?? contentType.sections;
@@ -58,7 +89,6 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 		// Wait for the drawer to hide so the transition focus doesn't impede the scrollIntoView.
 		// When the sidebar is a drawer, the hide transition is set to 0 for this to work with minimal timeout.
 		setTimeout(() => {
-			getScrollContainer(containerRef.current).style.overflowY = '';
 			target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 		});
 	};
@@ -86,7 +116,7 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 	const [searchFieldValue, setSearchFieldValue] = useState('');
 	const [filteredFields, setFilteredFields] = useState<ContentTypeField[]>(null);
 	const contentTypeFieldsArray =
-		fieldsToRender ??
+		fields ??
 		contentTypeSections.flatMap((section) =>
 			section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean)
 		);
@@ -109,8 +139,22 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 			/>
 		);
 	};
+	// A repeat-item editor lists its child fields and shows no sections, but `contentType` is still the
+	// parent's. Its atoms cover only the child fields, so there is nothing to probe for the section marks.
+	const sectionFields = fields
+		? []
+		: contentTypeSections
+				.flatMap((section) => section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean))
+				.filter((field) => {
+					const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
+					return Boolean(valueAtom && validationAtom);
+				});
 	return (
 		<>
+			{sectionFields.map((field) => (
+				<SectionFieldInvalidProbe key={field.id} field={field} atoms={atoms} report={reportFieldInvalid} />
+			))}
+			{countFieldIds && <FieldScopeNotice countFieldIds={countFieldIds} />}
 			<SearchBar
 				dense
 				sx={{ mb: 1, mt: 1 }}
@@ -129,13 +173,19 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 					expandedItems={expandedSectionIds}
 				>
 					{filteredFields?.map(createFieldTreeItem) ??
-						fieldsToRender?.map(createFieldTreeItem) ??
+						fields?.map(createFieldTreeItem) ??
 						contentTypeSections.map((section) => (
 							<TreeItem
 								key={section.id}
 								itemId={section.id}
 								data-section-id={section.id}
-								label={section.title}
+								label={
+									<SectionNavLabel
+										title={section.title}
+										hasError={section.fields.some((fieldId) => invalidFieldIds.has(fieldId))}
+										expanded={expandedSectionIds.includes(section.id)}
+									/>
+								}
 								onClick={handleSectionClick}
 								children={section.fields.map((fieldId) => createFieldTreeItem(contentTypeFields[fieldId]))}
 							/>
@@ -148,6 +198,134 @@ export function TableOfContents({ containerRef, fieldsToRender, sections }: Tabl
 	);
 }
 
+export function FieldScopeNotice({ countFieldIds }: { countFieldIds: string[] }) {
+	const { formatMessage } = useIntl();
+	const store = useJotaiStore();
+	const stableForm = useContext(StableFormContext);
+	const stackSubmitting = useStackSubmitting();
+	const visibility = useAtomValue(stableForm.atoms.formVisibility);
+	useAtomValue(stableForm.atoms.relevanceVersion);
+	const repeatFieldId = stableForm.props?.repeat?.fieldId;
+	if (!scopeToggleVisible(visibility)) return null;
+	const viewingFullForm = !isScopeActive(visibility.active);
+	const { showing, total } = scopeFieldCounts(countFieldIds, {
+		irrelevantFieldPaths: stableForm.formControllerState?.irrelevantFieldPaths,
+		parentPath: repeatFieldId,
+		scopeFieldIds: visibility.active.fieldIds
+	});
+	return (
+		<Box role="status" sx={{ mb: 1 }}>
+			<Typography variant="body2" color="textSecondary">
+				{viewingFullForm
+					? formatMessage({ defaultMessage: 'Showing all {total, plural, one {# field} other {# fields}}' }, { total })
+					: formatMessage(
+							{ defaultMessage: 'Showing {showing} of {total, plural, one {# field} other {# fields}}' },
+							{ showing, total }
+						)}
+			</Typography>
+			<Button
+				size="small"
+				sx={{ px: 0, minWidth: 0 }}
+				disabled={!viewingFullForm && stackSubmitting}
+				onClick={() => {
+					const current = store.get(stableForm.atoms.formVisibility);
+					if (viewingFullForm) {
+						commitFormVisibility(store.set, stableForm.atoms, returnToLaunchScope(current));
+						if (stableForm.itemFormMode) store.set(stableForm.itemFormMode, 'selected');
+						return;
+					}
+					const reveal = revealField(current);
+					commitFormVisibility(store.set, stableForm.atoms, reveal.state);
+					if (stableForm.itemFormMode) store.set(stableForm.itemFormMode, 'full');
+				}}
+			>
+				{viewingFullForm ? (
+					<FormattedMessage defaultMessage="Back to selected fields" />
+				) : (
+					<FormattedMessage defaultMessage="Open full form" />
+				)}
+			</Button>
+		</Box>
+	);
+}
+
+/**
+ * A required field that is still empty is the asterisk, not an error. Anything else that fails is.
+ * Same split as {@link FieldStateIndicator}.
+ */
+function sectionFieldIsInvalid({ isValid, isRequired, isEmpty }: FieldStateIndicatorProps): boolean {
+	if (isValid) return false;
+	if (isRequired && isEmpty) return false;
+	return true;
+}
+
+function SectionFieldInvalidProbe({
+	field,
+	atoms,
+	report
+}: {
+	field: ContentTypeField;
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
+	report(fieldId: string, invalid: boolean): void;
+}) {
+	const stableForm = useContext(StableFormContext);
+	// A controller can hide a field after validation ran. Re-read when relevance changes.
+	useAtomValue(stableForm.atoms.relevanceVersion);
+	const { props } = useFieldStateIndicatorProps(field, atoms);
+	const irrelevant =
+		fieldVisibility({
+			fieldId: field.id,
+			irrelevantFieldPaths: stableForm.formControllerState?.irrelevantFieldPaths,
+			parentPath: stableForm.props?.repeat?.fieldId,
+			scopeFieldIds: null
+		}) === 'irrelevant';
+	const invalid = !irrelevant && sectionFieldIsInvalid(props);
+	useEffect(() => {
+		report(field.id, invalid);
+		return () => report(field.id, false);
+	}, [field.id, invalid, report]);
+	return null;
+}
+
+/**
+ * A section that contains a field the indicator would mark invalid. The hidden "Section has errors" words
+ * follow the title whenever there is an error, so the name never loses them. The warning icon is the
+ * visible cue and shows only while the section is collapsed: expanded, the field rows below carry their
+ * own indicators. The row is laid out like a field row: title left, icon at the right edge, same size.
+ */
+export function SectionNavLabel({
+	title,
+	hasError,
+	expanded = false
+}: {
+	title: string;
+	hasError: boolean;
+	expanded?: boolean;
+}) {
+	const { formatMessage } = useIntl();
+	const errorLabel = formatMessage({ defaultMessage: 'Section has errors' });
+	return (
+		<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+			<span>
+				{title}
+				{hasError && (
+					<>
+						{' '}
+						<Box component="span" sx={visuallyHidden}>
+							{errorLabel}
+						</Box>
+					</>
+				)}
+			</span>
+			{hasError && !expanded && (
+				<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0, ml: 0.5 }}>
+					<WarningAmberRounded aria-hidden fontSize="small" color="error" />
+				</Box>
+			)}
+		</Box>
+	);
+}
+
 function TreeItemLabel({
 	field,
 	atoms
@@ -155,26 +333,19 @@ function TreeItemLabel({
 	field: ContentTypeField;
 	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 }) {
-	const valueAtom = field.id === XmlKeys.fileName ? atoms.fileName : atoms.valueByFieldId[field.id];
-	const validationAtom = atoms.validationByFieldId[field.id];
+	const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
 	if (!valueAtom || !validationAtom) return null;
-	return <TreeItemLabelContent field={field} valueAtom={valueAtom} validationAtom={validationAtom} />;
+	return <TreeItemLabelContent field={field} atoms={atoms} />;
 }
 
 function TreeItemLabelContent({
 	field,
-	valueAtom,
-	validationAtom
+	atoms
 }: {
 	field: ContentTypeField;
-	valueAtom: NonNullable<FormsEngineAtoms['valueByFieldId'][string] | FormsEngineAtoms['fileName']>;
-	validationAtom: FormsEngineAtoms['validationByFieldId'][string];
+	atoms: Pick<FormsEngineAtoms, 'valueByFieldId' | 'validationByFieldId' | 'fileName'>;
 }) {
-	const value = useAtomValue(valueAtom);
-	const validityData = useLoadableAtom(validationAtom);
-	const isValid = validityData.state === 'hasData' ? validityData?.data.isValid : true;
-	const isRequired = isFieldRequired(field);
-	const hasValidator = hasFieldValidator(field.type);
+	const { loading, props } = useFieldStateIndicatorProps(field, atoms);
 	return (
 		<Box
 			sx={{
@@ -183,18 +354,14 @@ function TreeItemLabelContent({
 				alignItems: 'center'
 			}}
 		>
-			<span>{field.name}</span>
-
-			{validityData.state === 'loading' ? (
-				<Skeleton variant="circular" width={15} height={15} />
-			) : (
-				<FieldStateIndicator
-					isRequired={isRequired}
-					hasValidator={hasValidator}
-					isValid={isValid}
-					isEmpty={isEmptyValue(field, value)}
-				/>
-			)}
+			{[
+				<span key="name">{field.name}</span>,
+				loading ? (
+					<Skeleton key="state" variant="circular" width={15} height={15} />
+				) : (
+					<FieldStateIndicator key="state" {...props} />
+				)
+			]}
 		</Box>
 	);
 }

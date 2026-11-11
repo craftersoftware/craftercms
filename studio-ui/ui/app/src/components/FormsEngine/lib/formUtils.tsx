@@ -21,26 +21,34 @@ import validateFieldValue, { FieldValidityState } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
+	FieldUpdate,
 	FormRequirementsResponse,
 	FormsEngineAtoms,
 	FormsEngineEditContextProps,
 	FormsEngineItemMetaContextProps,
 	FormsEngineSourceMap,
-	ItemContext,
-	StableFormContext,
 	StableFormContextProps,
 	StableGlobalContext,
 	StableGlobalContextProps
 } from './formsEngineContext';
 import { fetchContentItem, fetchContentXML, fetchDescriptorXML, lock, unlock } from '../../../services/content';
+import { getGlobalHeaders } from '../../../utils/ajax';
 import { AjaxError } from 'rxjs/ajax';
 import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
-import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
-import React, { ReactNode, RefObject, useContext, useEffect, useRef, type SetStateAction } from 'react';
-import { fromString, getInnerHtml } from '../../../utils/xml';
+import { atom, Atom, Getter, PrimitiveAtom, Setter, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import React, {
+	ReactNode,
+	RefObject,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	type SetStateAction
+} from 'react';
+import { fromString, getInnerHtml, getParsedField } from '../../../utils/xml';
 import { nanoid } from 'nanoid';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import alertDialogUrl from '../../../assets/warning.svg';
@@ -55,6 +63,7 @@ import {
 	ItemNotFoundError,
 	NoSiteIdError,
 	PropsChangedError,
+	preservedElements,
 	systemFieldsNotInType,
 	UnknownError,
 	XmlKeys
@@ -65,23 +74,45 @@ import { useDispatch } from 'react-redux';
 import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
+import useActiveUser from '../../../hooks/useActiveUser';
 import { areAllPairsEqual } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
-import { isFieldPathIrrelevant } from '../formControllers/runtime';
+import {
+	createFormVisibilityAtoms,
+	fieldVisibility,
+	aggregateStackFlags,
+	hasFormAtoms,
+	stackEntryFlagsAtom,
+	type FormVisibilityState,
+	type LaunchFieldsLookup,
+	visibilityFromLaunch
+} from './formVisibility';
 import { createEmbeddedRelevanceResolver } from '../formControllers/relevance';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import ApiResponse from '../../../models/ApiResponse';
 import {
 	getFormsEngineCloseAfterSave,
 	getFormsEngineCollapseToCKey,
-	getFormsEngineMinimizeAfterSave
+	getFormsEngineMinimizeAfterSave,
+	getFormsEngineReleaseLockOnClose,
+	getFormsEngineSaveAsDraft,
+	getStoredFormsEngineReleaseLockOnClose
 } from '../../../utils/state';
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { isPagePath } from '../../../utils/path';
-import { nou } from '../../../utils/object';
+import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { nnou, nou } from '../../../utils/object';
+import {
+	postUnlockKeepalive,
+	releaseFormSessionLocks,
+	sharedPerUserAtom,
+	shouldUnlockOnPageHide,
+	unlockErrorPayload,
+	unlockStateForEntry,
+	type UnlockOnCloseState
+} from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
@@ -93,6 +124,21 @@ export function getScrollContainer(container: HTMLElement): HTMLElement {
 	return mainContent instanceof HTMLElement ? mainContent : container;
 }
 
+const focusableControl =
+	'input:not([type=hidden]):not([aria-hidden="true"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], [role="combobox"], [tabindex="0"]';
+
+/** Attribute selector for a field. Ids are not a closed set, so the value is escaped. */
+export function fieldIdSelector(fieldId: string): string {
+	return `[data-field-id="${CSS.escape(fieldId)}"]`;
+}
+
+function focusField(field: HTMLElement): void {
+	const inner = field.querySelector<HTMLElement>(focusableControl);
+	const target = inner ?? field;
+	if (target === field && !field.hasAttribute('tabindex')) field.tabIndex = -1;
+	target.focus({ preventScroll: true });
+}
+
 /**
  * Scrolls to a field after the form body layout settles (e.g. lazy controls, RTEs, images).
  * Observes `[data-area-id="formBody"]` — the content that grows — not the fixed-height scroll container.
@@ -101,14 +147,16 @@ export function getScrollContainer(container: HTMLElement): HTMLElement {
 export function scrollToFieldWhenSettled(
 	root: HTMLElement,
 	fieldId: string,
-	{ quietMs = 250, maxWaitMs = 2500 }: { quietMs?: number; maxWaitMs?: number } = {}
+	{ quietMs = 250, maxWaitMs = 2500, focus = false }: { quietMs?: number; maxWaitMs?: number; focus?: boolean } = {}
 ): () => void {
 	const formBody = root.querySelector('[data-area-id="formBody"]');
 	const scroll = () => {
-		(formBody
-			? formBody.querySelector(`[data-field-id="${fieldId}"]`)
-			: root.querySelector(`[data-field-id="${fieldId}"]`)
-		)?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		const selector = fieldIdSelector(fieldId);
+		const field = formBody ? formBody.querySelector(selector) : root.querySelector(selector);
+		if (!(field instanceof HTMLElement)) return;
+		field.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+		// Plain `fieldToScroll` passes focus off. A reveal sets it so opening a hidden field moves focus.
+		if (focus) focusField(field);
 	};
 
 	if (!formBody) {
@@ -164,7 +212,7 @@ export const internalLockContentService: (siteId: string, path: string) => Obser
 	path
 ) =>
 	lock(siteId, path).pipe(
-		map(() => ({ locked: true, lockError: null })),
+		map(() => ({ locked: true, lockError: null, lockedPath: path })),
 		catchError((error: AjaxError) => {
 			// switch (error.status) {
 			//   case 404: {
@@ -174,7 +222,7 @@ export const internalLockContentService: (siteId: string, path: string) => Obser
 			//     // content already locked...
 			//   }
 			// }
-			return of({ locked: false, lockError: error.response?.response });
+			return of({ locked: false, lockError: error.response?.response, lockedPath: null });
 		}),
 		switchMap((lockResult) =>
 			fetchAffectedPackages(siteId, path).pipe(
@@ -189,8 +237,9 @@ export const internalUnlockContentService: (siteId: string, path: string) => Obs
 	path: string
 ) =>
 	unlock(siteId, path).pipe(
-		map(() => ({ locked: false, lockError: null })),
-		catchError((error) => of({ locked: true, lockError: error.response?.response }))
+		map(() => ({ locked: false, lockError: null, lockedPath: null })),
+		// Still holding the lock. Keep `path` so a later close can release it. The caller shows the error.
+		catchError((error: AjaxError) => of({ locked: true, lockError: unlockErrorPayload(error), lockedPath: path }))
 	);
 
 export function createSourceMap(descriptorXml: string): FormsEngineSourceMap {
@@ -236,6 +285,8 @@ export const getTargetHeight = (isDialog: boolean, isFullScreen: boolean, theme:
 	isDialog ? `calc(100vh - ${isFullScreen ? 0 : theme.spacing(4)})` : '100%';
 
 export type ValidatorsData = {
+	/** The fields belong to a nested scope (a repeat item form). See {@link ValidatorMetaData.nested}. */
+	nested?: boolean;
 	siteId?: string;
 	contentTypesById?: LookupTable<ContentType>;
 	siblingIds?: string[];
@@ -243,6 +294,15 @@ export type ValidatorsData = {
 	currentIds?: string[];
 	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
 	additionalFields?: string[];
+	/**
+	 * Site-config variable-name postfix rules for a top-level Type Builder field form.
+	 * Omitted for nested fields, data sources, and when `<field-name-postfix>` is not `true`.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
 	resolveEmbeddedRelevance?: (
 		contentType: ContentType,
@@ -253,41 +313,188 @@ export type ValidatorsData = {
 
 type FieldTrackingContext = Pick<
 	StableFormContextProps,
-	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta' | 'formControllerState'
+	| 'fieldUpdates$'
+	| 'changedFieldIds'
+	| 'originalValues'
+	| 'atoms'
+	| 'itemMeta'
+	| 'formControllerState'
+	| 'valueWriteOrigin'
 >;
 
 /**
- * Records whether `field` differs from the value it was opened with.
- * `file-name` is compared to the original path; every other field is compared to `originalValues`.
- * Callers pass the value just written. Does not emit — the writer does that once.
+ * The shared "nothing changed" set. Set it on {@link ChangedFieldIdsAtom} to clear every changed marker (a save
+ * checkpoint, a Type Builder commit), and {@link withChangedField} returns it when the last id is removed, so
+ * "nothing changed" is always this one reference.
+ *
+ * Never add to it. `Object.freeze` does not stop a `Set` from being mutated; the `ReadonlySet` type is what keeps it
+ * empty, so treat every changed-ids set as immutable.
+ *
+ * @example
+ * ```ts
+ * store.set(stableFormContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+ * ```
  */
-function trackFieldChange(field: ContentTypeField, value: unknown, formContext: FieldTrackingContext): void {
+export const EMPTY_CHANGED_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
+
+/**
+ * The atom behind {@link StableFormContextProps.changedFieldIds}: the source of truth for which fields differ from
+ * the last checkpoint. It holds an immutable set whose reference changes only when membership changes, so a write
+ * that leaves the membership alone notifies nothing. Insertion order is the order fields were first changed
+ * (`generateDefaultChangesComment` treats the last one as "last added").
+ *
+ * - Components: subscribe through the cached per-field {@link changedFieldAtom}, not by reading this atom, so only the
+ *   affected field re-renders.
+ * - Imperative code (save, Type Builder commit): `store.get(atom)`.
+ * - Writes: build the next set with {@link withChangedField}. Never mutate the stored set. Clear with
+ *   {@link EMPTY_CHANGED_FIELD_IDS}.
+ *
+ * This is state. The internal `fieldUpdates$` stream is the event side: it announces each value write after this atom
+ * is updated, and does not announce clears.
+ *
+ * @see {@link StableFormContextProps.fieldUpdates$}
+ */
+export type ChangedFieldIdsAtom = PrimitiveAtom<ReadonlySet<string>>;
+
+/**
+ * Creates a changed-ids atom, starting at {@link EMPTY_CHANGED_FIELD_IDS}. One per form stack entry. Atoms are not
+ * tied to a store, so creating one has no side effects.
+ *
+ * @example
+ * ```ts
+ * const changedFieldIds = createChangedFieldIdsAtom();
+ * store.get(changedFieldIds) === EMPTY_CHANGED_FIELD_IDS; // true
+ * ```
+ *
+ * @see {@link ChangedFieldIdsAtom}
+ */
+export function createChangedFieldIdsAtom(): ChangedFieldIdsAtom {
+	return atom(EMPTY_CHANGED_FIELD_IDS);
+}
+
+const changedFieldAtomsByIds = new WeakMap<ChangedFieldIdsAtom, Map<string, Atom<boolean>>>();
+// A context created without the atom (Type Builder's read-only chips) has nothing to track.
+const neverChanged: Atom<boolean> = atom(false);
+
+/**
+ * Whether `fieldId` (or any of its additional field ids) differs from the last checkpoint: a derived
+ * boolean atom over the changed-ids atom. Cached per changed-ids atom, field id, and related-id set (like the value
+ * and validation atoms), so the same call returns the same atom, and a subscriber is notified only when its own
+ * flag flips, not when an unrelated field is added or removed.
+ *
+ * Pass additional field ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
+ * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the additional
+ * field was written.
+ *
+ * This is the way React components read the changed state. Imperative code reads the changed-ids atom with
+ * `store.get` instead. Pass `null` (Type Builder's read-only chips have no changed-ids atom) to get a constant
+ * `false` atom.
+ *
+ * @example
+ * ```tsx
+ * // In a component: re-renders only when this field's flag flips
+ * const hasChanges = useAtomValue(changedFieldAtom(stableForm.changedFieldIds, field.id, additionalFieldIds));
+ * ```
+ *
+ * @param changedFieldIds The form's changed-ids atom, or null/undefined when the form tracks nothing.
+ * @param fieldId The field to watch.
+ * @param relatedFieldIds Optional additional field ids that should also light up this field's chrome.
+ * @see {@link ChangedFieldIdsAtom}
+ */
+export function changedFieldAtom(
+	changedFieldIds: ChangedFieldIdsAtom | null | undefined,
+	fieldId: string,
+	relatedFieldIds?: readonly string[]
+): Atom<boolean> {
+	if (!changedFieldIds) return neverChanged;
+	let byField = changedFieldAtomsByIds.get(changedFieldIds);
+	if (!byField) {
+		byField = new Map();
+		changedFieldAtomsByIds.set(changedFieldIds, byField);
+	}
+	const related = relatedFieldIds?.length ? relatedFieldIds : undefined;
+	const cacheKey = related ? `${fieldId}\0${related.join('\0')}` : fieldId;
+	let fieldAtom = byField.get(cacheKey);
+	if (!fieldAtom) {
+		fieldAtom = atom((get) => {
+			const ids = get(changedFieldIds);
+			if (ids.has(fieldId)) return true;
+			return related ? related.some((id) => ids.has(id)) : false;
+		});
+		byField.set(cacheKey, fieldAtom);
+	}
+	return fieldAtom;
+}
+
+/**
+ * The next changed-ids set after `fieldId` was found changed or not. This is how a writer updates the set: it never
+ * mutates `ids`.
+ *
+ * Returns `ids` itself (same reference) when the membership already matches, so the caller can skip the write and
+ * nothing is notified. Otherwise returns a copy with `fieldId` added last (insertion order is preserved) or removed,
+ * and {@link EMPTY_CHANGED_FIELD_IDS} when the copy would be empty.
+ *
+ * @example
+ * ```ts
+ * const current = get(changedFieldIds);
+ * const next = withChangedField(current, field.id, value !== original);
+ * if (next !== current) set(changedFieldIds, next);
+ * ```
+ *
+ * @param ids The current set. Not modified.
+ * @param fieldId The field whose state was just evaluated.
+ * @param changed Whether the field now differs from the checkpoint.
+ */
+export function withChangedField(ids: ReadonlySet<string>, fieldId: string, changed: boolean): ReadonlySet<string> {
+	if (ids.has(fieldId) === changed) return ids;
+	const next = new Set(ids);
+	if (changed) next.add(fieldId);
+	else next.delete(fieldId);
+	return next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next;
+}
+
+/**
+ * Records whether `field` differs from the value it was opened with, by updating the changed-ids atom (only when the
+ * membership changes; see {@link withChangedField}).
+ * `file-name` is compared to the original path; every other field is compared to `originalValues`.
+ * Callers pass the value just written, and call this before emitting on `fieldUpdates$` so synchronous subscribers
+ * read the new set. It does not emit — the writer does that once.
+ */
+function trackFieldChange(
+	field: ContentTypeField,
+	value: unknown,
+	formContext: FieldTrackingContext,
+	get: Getter,
+	set: Setter
+): void {
+	let changed: boolean;
 	if (field.id === XmlKeys.fileName) {
 		const currentFileName = value as string;
 		const originalPath = formContext.itemMeta.path;
-
 		if (nou(originalPath)) {
 			// If no originalPath exists => creating content
-			if (currentFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			changed = Boolean(currentFileName);
 		} else {
 			// If originalPath exists, validate if differs from original value
-			const isPage = isPagePath(originalPath);
-			const originalFileName = getFileNameValueFromPath(originalPath, isPage);
-			if (currentFileName !== originalFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			const originalFileName = getFileNameValueFromPath(originalPath, isPagePath(originalPath));
+			changed = currentFileName !== originalFileName;
 		}
-	} else if (value !== formContext.originalValues[field.id]) {
-		formContext.changedFieldIds.add(field.id);
 	} else {
-		formContext.changedFieldIds.delete(field.id);
+		changed = value !== formContext.originalValues[field.id];
 	}
+	const current = get(formContext.changedFieldIds);
+	const next = withChangedField(current, field.id, changed);
+	if (next !== current) set(formContext.changedFieldIds, next);
+}
+
+/** Makes `values` the checkpoint that edits are compared with, and clears every changed marker. */
+export function applyValuesCheckpoint(
+	context: Pick<StableFormContextProps, 'originalValues' | 'changedFieldIds'>,
+	values: LookupTable<unknown>,
+	set: Setter
+): void {
+	context.originalValues = values;
+	set(context.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
 }
 
 function applyAtomUpdate<T>(
@@ -296,6 +503,12 @@ function applyAtomUpdate<T>(
 	update: SetStateAction<T>
 ): T {
 	return typeof update === 'function' ? (update as (prev: T) => T)(get(baseAtom)) : update;
+}
+
+/** A value write. `origin` is set only while rollback or a controller `setValue` is in progress. */
+function fieldUpdate(fieldId: string, formContext: FieldTrackingContext): FieldUpdate {
+	const origin = formContext.valueWriteOrigin;
+	return origin ? { fieldId, origin } : { fieldId };
 }
 
 /**
@@ -321,8 +534,8 @@ function createTrackedFileNameAtom(
 			}
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
-			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(XmlKeys.fileName);
+			trackFieldChange(field, next, formContext, get, set);
+			formContext.fieldUpdates$.next(fieldUpdate(XmlKeys.fileName, formContext));
 		}
 	);
 }
@@ -352,25 +565,35 @@ export function createFieldAtoms(
 				}
 				return;
 			}
-			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(field.id);
+			trackFieldChange(field, next, formContext, get, set);
+			formContext.fieldUpdates$.next(fieldUpdate(field.id, formContext));
 		}
 	);
-	const validationAtom = atom(async (get) => {
+	const validationAtom = atom(async (get, { signal }) => {
 		// Relevance is stored after these atoms are created. Depending on the version forces a fresh verdict.
-		get(formContextRef.current.atoms.relevanceVersion);
+		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
+		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
 		return validateFieldValue(field, value, {
+			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
 			contentTypesById: validatorsData?.contentTypesById,
 			siblingIds: validatorsData?.siblingIds,
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
+			fieldNamePostfix: validatorsData?.fieldNamePostfix,
+			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
-			fileName: formContextRef.current.atoms.fileName ? get(formContextRef.current.atoms.fileName) : '',
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
-			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance
+			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
+			// Item-count fields compare min and max. Reading the partner subscribes this atom to it.
+			getValue: (fieldId: string) => {
+				const valueByFieldId = formContextRef.current.atoms?.valueByFieldId;
+				// Own ids only. `constructor` or `toString` is not a field.
+				const partner = valueByFieldId && Object.hasOwn(valueByFieldId, fieldId) ? valueByFieldId[fieldId] : undefined;
+				return partner ? get(partner) : undefined;
+			}
 		});
 	});
 	return [valueAtom, validationAtom];
@@ -392,8 +615,21 @@ export function createFileNameAtom(
 	formContextRef: RefObject<FieldTrackingContext>,
 	initialValue?: string
 ): PrimitiveAtom<string> {
-	const initial = initialValue ?? (path ? getFileNameValueFromPath(path, isPagePath(path)) : '');
+	const initial = initialValue ?? fileNameFromItemPath(path);
 	return createTrackedFileNameAtom(initial, formContextRef);
+}
+
+/** Site root index. Its file name is fixed, so a blank file name is allowed there. */
+export const rootPagePath = '/site/website/index.xml';
+
+/**
+ * File name for an item path. {@link createFileNameAtom} starts here when no initial value is given, and
+ * {@link setFieldAtoms} starts the `file-name` field's value from it, so the two cannot drift.
+ * The home page, and a form that has no path yet, are blank.
+ */
+export function fileNameFromItemPath(path?: string | null): string {
+	if (!path) return '';
+	return getFileNameValueFromPath(path, isPagePath(path));
 }
 
 /**
@@ -406,7 +642,7 @@ export function createFileNameAtom(
  */
 export const getBasePath = (path: string, isPage: boolean): string => {
 	// If home page
-	if (path === '/site/website/index.xml' && isPage) return '/site/website/';
+	if (path === rootPagePath && isPage) return '/site/website/';
 
 	const pathParts = path.split('/');
 	return isPage
@@ -424,7 +660,7 @@ export const getBasePath = (path: string, isPage: boolean): string => {
  */
 export const getFileNameValueFromPath = (path: string, isPage: boolean): string => {
 	// If home page, return empty string
-	if (path === '/site/website/index.xml' && isPage) return '';
+	if (path === rootPagePath && isPage) return '';
 
 	const basePath = getBasePath(path, isPage);
 	return path.replace(basePath, '').replace(isPage ? '/index.xml' : '.xml', '');
@@ -444,17 +680,23 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 	return ensureSingleSlash(`${basePath}/${fullFileName}`);
 };
 
+/**
+ * A new stack entry's data: no atoms yet, an empty changed-ids atom ({@link createChangedFieldIdsAtom}) and a new
+ * `fieldUpdates$` stream of {@link FieldUpdate}s. `mixin` overrides any of the defaults.
+ */
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,
-		changedFieldIds: new Set<string>(),
-		fieldUpdates$: new Subject<string>(),
+		itemFormMode: null,
+		changedFieldIds: createChangedFieldIdsAtom(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		itemMeta: null,
 		originalValues: null,
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
 		formControllerState: null,
+		getItem: () => null,
 		...mixin
 	};
 	return data;
@@ -516,22 +758,60 @@ export const extractAtomValues: (store: JotaiStore, valueAtoms: LookupTable<Atom
 	}, {});
 
 /**
- * Validation atoms for the save / invalid-form snapshot.
+ * Fields for the save / invalid-form snapshot.
  * The deny-list is qualified (`repeatFieldId.subFieldId`). Only the unqualified entry applies
  * at this form's level, unless `parentPath` names the repeat group these atoms belong to.
  * Atoms the controller never rejected (descriptor additional fields, `folder-name`, …) stay.
+ * Out-of-scope fields stay in the list.
  */
+export function relevantFieldValidations(
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
+	parentPath?: string
+): Array<{ fieldId: string; atom: Atom<Promise<FieldValidityState>> }> {
+	return Object.entries(validationByFieldId).flatMap(([fieldId, atom]) =>
+		fieldVisibility({ fieldId, irrelevantFieldPaths, parentPath, scopeFieldIds: null }) === 'irrelevant'
+			? []
+			: [{ fieldId, atom }]
+	);
+}
+
+/**
+ * The verdict of the latest validation run. A run that is superseded while it is awaited (a value it reads changed)
+ * is aborted and its result is discarded, so a validator that stops on abort can't make the field look invalid.
+ */
+async function readSettledValidity(
+	store: { get<Value>(atom: Atom<Value>): Value },
+	validityAtom: Atom<Promise<FieldValidityState>>
+): Promise<FieldValidityState> {
+	let pending = store.get(validityAtom);
+	for (;;) {
+		const state = await pending;
+		const latest = store.get(validityAtom);
+		if (latest === pending) return state;
+		pending = latest;
+	}
+}
+
+/** Live invalid field ids. The alert and a selected-item save both read through this. */
+export async function readInvalidFieldIds(
+	store: { get<Value>(atom: Atom<Value>): Value },
+	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
+	parentPath?: string
+): Promise<string[]> {
+	if (!validationByFieldId) return [];
+	const fields = relevantFieldValidations(validationByFieldId, irrelevantFieldPaths, parentPath);
+	const states = await Promise.all(fields.map(({ atom: validityAtom }) => readSettledValidity(store, validityAtom)));
+	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
+}
+
 export function getValidationAtomsExcludingIrrelevant(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
-	irrelevantFieldPaths: Set<string> | null | undefined,
+	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
 	parentPath?: string
 ): Array<Atom<Promise<FieldValidityState>>> {
-	if (!irrelevantFieldPaths?.size) {
-		return Object.values(validationByFieldId);
-	}
-	return Object.entries(validationByFieldId)
-		.filter(([fieldId]) => !isFieldPathIrrelevant(irrelevantFieldPaths, fieldId, parentPath))
-		.map(([, validityAtom]) => validityAtom);
+	return relevantFieldValidations(validationByFieldId, irrelevantFieldPaths, parentPath).map(({ atom }) => atom);
 }
 
 /**
@@ -559,7 +839,12 @@ export function fetchUpdateRequirements({
 	// requirements service.
 	return (
 		readonly
-			? of({ locked: false, lockError: null, affectedPackages: null } as FormsEngineEditContextProps)
+			? of({
+					locked: false,
+					lockError: null,
+					affectedPackages: null,
+					lockedPath: null
+				} as FormsEngineEditContextProps)
 			: internalLockContentService(siteId, path)
 	).pipe(
 		switchMap((lockResult) =>
@@ -602,6 +887,7 @@ export function fetchUpdateRequirements({
 				locked: lockResult.locked,
 				lockError: lockResult.lockError,
 				affectedPackages: lockResult.affectedPackages,
+				lockedPath: lockResult.locked ? (lockResult.lockedPath ?? path) : null,
 				// If opening as readonly, lock result is of no consequence. If opened for edit, will set to readonly
 				// if there was an error locking the content (the item is not locked).
 				// readonly: readonly || !lockResult.locked,
@@ -618,8 +904,14 @@ export function fetchUpdateRequirements({
  **/
 export function createFormsEngineAtoms(
 	username: string,
-	mixin: Partial<FormsEngineAtoms> & Pick<FormsEngineAtoms, 'readonly' | 'lockResult' | 'fileName'>
+	mixin: Partial<FormsEngineAtoms> & Pick<FormsEngineAtoms, 'readonly' | 'lockResult' | 'fileName'>,
+	launch?: {
+		selectedFields?: readonly string[];
+		index?: string | number;
+		fields: LaunchFieldsLookup;
+	}
 ): FormsEngineAtoms {
+	const visibility = visibilityFromLaunch(launch);
 	const atoms: FormsEngineAtoms = {
 		isSubmitting: atom(false),
 		hasPendingChanges: atom(false),
@@ -639,14 +931,71 @@ export function createFormsEngineAtoms(
 		minimizeAfterSave: atomWithStorage(getFormsEngineMinimizeAfterSave(username), false, undefined, {
 			getOnInit: true
 		}) as unknown as AtomWithStorage,
+		// One atom per user. A second form must not keep its own copy or a toggle on a stacked form is invisible to the root.
+		releaseLockOnClose: sharedPerUserAtom(
+			getFormsEngineReleaseLockOnClose(username),
+			() =>
+				atomWithStorage(getFormsEngineReleaseLockOnClose(username), true, undefined, {
+					getOnInit: true
+				}) as unknown as AtomWithStorage
+		),
+		// False or absent is Save. One atom per user, same as the release-lock switch.
+		saveAsDraft: sharedPerUserAtom(
+			getFormsEngineSaveAsDraft(username),
+			() =>
+				atomWithStorage(getFormsEngineSaveAsDraft(username), false, undefined, {
+					getOnInit: true
+				}) as unknown as AtomWithStorage
+		),
 		...mixin,
-		relevanceVersion: atom(0)
+		relevanceVersion: atom(0),
+		...createFormVisibilityAtoms(visibility.state, visibility.scrollFieldId)
 	};
 	return atoms;
 }
 
+/** The one write for a visibility change: scope notice, View in form, and a hidden-invalid save. */
+export function commitFormVisibility(
+	set: <Value>(atom: PrimitiveAtom<Value>, value: Value) => void,
+	atoms: {
+		formVisibility: PrimitiveAtom<FormVisibilityState>;
+		pendingScrollFieldId: PrimitiveAtom<string | null>;
+		pendingScrollFocus: PrimitiveAtom<boolean>;
+	},
+	next: FormVisibilityState,
+	scrollFieldId?: string
+): void {
+	set(atoms.formVisibility, next);
+	if (scrollFieldId) {
+		set(atoms.pendingScrollFieldId, scrollFieldId);
+		set(atoms.pendingScrollFocus, true);
+	}
+}
+
+/**
+ * The values a form opened with, for `originalValues`. Rollback writes them back, so the `file-name` entry is the
+ * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
+ * untouched form would rename the item.
+ *
+ * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
+ * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
+ * own value and is returned as is. Values with no `file-name` are returned as is too.
+ */
+export function withPathFileName(
+	values: LookupTable<unknown>,
+	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
+	path?: string | null
+): LookupTable<unknown> {
+	return atoms?.fileName && path != null && XmlKeys.fileName in values
+		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
+		: values;
+}
+
 /**
  * Creates the value and validity atoms for a field and sets them on to the target object.
+ *
+ * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
+ * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -656,7 +1005,8 @@ export function setFieldAtoms(
 	atomsTarget: FormsEngineAtoms,
 	value: unknown,
 	validatorsData?: ValidatorsData,
-	isAdditional?: boolean
+	isAdditional?: boolean,
+	itemPath?: string | null
 ): void {
 	let field = fieldLookup[fieldId];
 	if (!field) {
@@ -695,7 +1045,19 @@ export function setFieldAtoms(
 			return;
 		}
 	}
-	const [valueAtom, validityAtom] = createFieldAtoms(field, value, stableFormContextRef, validatorsData);
+	// The file-name field has two sources: the `file-name` element in the XML, and the item path, which the
+	// file-name atom, rename and save use. They can disagree at load, for example on legacy or migrated content,
+	// after a rename done outside the form, or when the element is missing.
+	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
+	// context), so the value must start from the path. Starting from the XML would validate a name that save
+	// never uses.
+	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
+	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
+	// again only on a copy collision.
+	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
+	const initialValue =
+		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
+	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;
 }
@@ -703,6 +1065,7 @@ export function setFieldAtoms(
 export type SystemPropsObject = Pick<
 	Record<XmlKeys, string | boolean>,
 	| XmlKeys.modelId
+	| XmlKeys.groupId
 	| XmlKeys.internalName
 	| XmlKeys.contentTypeId
 	| XmlKeys.displayTemplate
@@ -734,8 +1097,10 @@ export function createObjectWithSystemProps(
 	mixin?: Partial<SystemPropsObject>
 ): CreatedSystemPropsObject {
 	const dateIsoString = new Date().toISOString();
+	const objectId = (mixin?.[XmlKeys.modelId] as string) ?? uuid();
 	const contentObject: CreatedSystemPropsObject = {
-		[XmlKeys.modelId]: mixin?.[XmlKeys.modelId] ?? uuid(),
+		[XmlKeys.modelId]: objectId,
+		[XmlKeys.groupId]: mixin?.[XmlKeys.groupId] ?? createObjectGroupId(objectId),
 		[XmlKeys.internalName]: mixin?.[XmlKeys.internalName] ?? '',
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.displayTemplate]: contentType.displayTemplate ?? '',
@@ -748,6 +1113,35 @@ export function createObjectWithSystemProps(
 		[XmlKeys.savedAsDraft]: mixin?.[XmlKeys.savedAsDraft] ?? 'false'
 	};
 	return contentObject;
+}
+
+/** Adds the system props and preserved elements that `values` doesn't have. Values already there are kept. */
+export function complementValuesWithSystemProps(
+	id: string,
+	values: LookupTable<unknown>,
+	contentObject: LookupTable<unknown>,
+	contentType: ContentType,
+	saveAsDraft: boolean
+): void {
+	const systemProps = createObjectWithSystemProps(contentType, {
+		[XmlKeys.modelId]: id,
+		[XmlKeys.internalName]: values[XmlKeys.internalName] as string,
+		[XmlKeys.dateCreated]: getParsedField(contentObject, XmlKeys.dateCreated) as string,
+		[XmlKeys.dateCreatedDt]: getParsedField(contentObject, XmlKeys.dateCreatedDt) as string,
+		[XmlKeys.savedAsDraft]: saveAsDraft
+	});
+
+	// Do not overwrite any existing value.
+	preservedElements.forEach((key) => {
+		if (!(key in values) && nnou(contentObject[key])) {
+			values[key] = contentObject[key];
+		}
+	});
+	for (const key in systemProps) {
+		if (!(key in values)) {
+			values[key] = systemProps[key];
+		}
+	}
 }
 
 export function produceChangedFieldsMessage(changedFieldNames: string[]): string {
@@ -764,7 +1158,7 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 	const siteId = useActiveSiteId();
 	const previousProps = usePreviousValue(props);
 	const propsChangedRef = useRef(false);
-	const { create, update, repeat, fieldsToRender, readonly } = props;
+	const { create, update, repeat, fieldIds, repeatIndex, readonly } = props;
 	if (!siteId) {
 		throw NoSiteIdError;
 	} else if (
@@ -784,7 +1178,8 @@ export function useValidateFormProps(props: Partial<FormsEngineProps>): void {
 			// Note: Make sure to include all relevant props here
 			!areAllPairsEqual([
 				[create, previousProps.create],
-				[fieldsToRender, previousProps.fieldsToRender],
+				[fieldIds, previousProps.fieldIds],
+				[repeatIndex, previousProps.repeatIndex],
 				[readonly, previousProps.readonly],
 				[repeat?.fieldId, previousProps.repeat?.fieldId],
 				[repeat?.values, previousProps.repeat?.values],
@@ -820,132 +1215,165 @@ export function getMessageForErrorSymbol(errorSymbol: unknown): ReactNode {
 	}
 }
 
-export interface ShouldUnlockArguments {
-	isRepeatMode: boolean;
-	isCreateMode: boolean;
-	readonly: boolean;
-	isEmbedded: boolean;
-	isStackedForm: boolean;
-	isParentReadonly: boolean;
-	siteId: string;
-	isRenamed: boolean;
-	saveAsDraft: boolean;
-	invalidForm: boolean;
-	itemSavedAsDraft: boolean;
-}
-
 /**
- * Determines if an item should be unlocked when its form is being unmounted.
- **/
-export function shouldUnlockItem(props: ShouldUnlockArguments): boolean {
-	const {
-		isRepeatMode,
-		isCreateMode,
-		readonly,
-		isEmbedded,
-		isStackedForm,
-		isParentReadonly,
-		isRenamed,
-		saveAsDraft,
-		invalidForm,
-		itemSavedAsDraft
-	} = props;
-	return (
-		!invalidForm &&
-		!saveAsDraft &&
-		!isRenamed &&
-		!isRepeatMode &&
-		!isCreateMode &&
-		!readonly &&
-		!itemSavedAsDraft &&
-		// Note these "Or" statements below build on top of the previous one (i.e. it only gets to the next if the previous is false).
-		// If it's not embedded, unlock the item.
-		(!isEmbedded ||
-			// If is embedded but not stacked, unlock as the embedded is the root form.
-			!isStackedForm ||
-			// If the parent form is readonly, release the lock to put the parent back in sync with its readonly mode.
-			isParentReadonly)
-	);
-}
-
-/**
- * When the consumer component is being unmounted, checks if it should be unlocked and unlocks if so.
- * @param props {FormsEngineProps}
- **/
-export function useUnlockOnClose(
-	props: FormsEngineProps & { saveAsDraft?: boolean; invalidForm?: boolean; itemSavedAsDraft?: boolean }
-) {
-	const { create, update, repeat, stackIndex = 0, saveAsDraft = false, invalidForm, itemSavedAsDraft } = props;
-	const itemPath = useContext(ItemContext)?.path;
-	const { atoms } = useContext(StableFormContext);
-	const { formsStackData } = useContext(StableGlobalContext);
+ * Releases this form's lock when the form session ends, not when a dependency changes.
+ * Mount it on the bootstrap that stays up across reload and minimize. A stacked form has its own.
+ * Repeat, create, readonly, and an embedded form on an editable parent do not unlock.
+ * A user choice to keep the lock is read from storage at close time, including pagehide.
+ */
+export function useUnlockOnClose(props: {
+	stackIndex?: number;
+	stableFormContextRef: RefObject<StableFormContextProps>;
+	formsStackData: StableGlobalContextProps['formsStackData'];
+}) {
+	const { stackIndex = 0, stableFormContextRef, formsStackData } = props;
+	const globalContext = useContext(StableGlobalContext);
 	const store = useJotaiStore();
-	const isEmbedded = Boolean(update?.modelId);
-	const isCreateMode = Boolean(create?.path);
-	const isRepeatMode = Boolean(repeat?.fieldId);
-	const isStackedForm = stackIndex > 0;
 	const dispatch = useDispatch();
-	const readonly = useAtomValue(atoms.readonly);
 	const siteId = useActiveSiteId();
-	// Check fileName atom to determine if renamed (renamedPath context is not updated until saving, so if we use that here
-	// it will have an outdated value).
-	const currentFileName = useAtomValue(atoms.fileName);
-	const isRenamed = itemPath ? currentFileName !== getFileNameValueFromPath(itemPath, isPagePath(itemPath)) : false;
-
-	const unlockEffectRefs = useUpdateRefs<ShouldUnlockArguments & { dispatch: ReduxDispatch }>({
+	const username = useActiveUser()?.username ?? '';
+	const readEntryState = (entry: StableFormContextProps | undefined, index: number): UnlockOnCloseState => {
+		const atoms = entry?.atoms ?? null;
+		const lockResult = atoms ? store.get(atoms.lockResult) : null;
+		const parentAtoms = stackEntryAtoms(index > 0 ? formsStackData[index - 1] : null);
+		const props = entry?.props;
+		const liveParentReadonly = parentAtoms ? store.get(parentAtoms.readonly) : false;
+		return unlockStateForEntry({
+			atomsReady: atoms != null,
+			index,
+			repeatFieldId: props?.repeat?.fieldId,
+			createPath: props?.create?.path,
+			updateModelId: props?.update?.modelId,
+			readonly: atoms ? store.get(atoms.readonly) : true,
+			locked: Boolean(lockResult?.locked),
+			recordedLockedPath: lockResult?.lockedPath,
+			itemPath: entry?.itemMeta?.path,
+			// A mounted top unmounts after root reload has popped its parent. The remembered flag
+			// is the parent that was still on the stack when this entry was popped.
+			parentReadonly: entry
+				? (globalContext?.lockReleaseSession.parentReadonly(entry, liveParentReadonly) ?? liveParentReadonly)
+				: liveParentReadonly,
+			siteId,
+			// Storage is shared across dialog stores. The atom covers a missing or unreadable value.
+			storedReleaseLockOnClose: getStoredFormsEngineReleaseLockOnClose(username),
+			atomReleaseLockOnClose: atoms ? store.get(atoms.releaseLockOnClose) : undefined
+		});
+	};
+	const unlockEffectRefs = useUpdateRefs({
 		dispatch,
-		isRepeatMode,
-		isCreateMode,
-		readonly,
-		isEmbedded,
-		isStackedForm,
-		isParentReadonly: formsStackData[stackIndex - 1] ? store.get(formsStackData[stackIndex - 1].atoms.readonly) : false,
-		siteId,
-		isRenamed,
-		saveAsDraft,
-		invalidForm,
-		itemSavedAsDraft
+		readState: (): UnlockOnCloseState => readEntryState(stableFormContextRef.current, stackIndex),
+		readCovered: (index: number): UnlockOnCloseState => readEntryState(formsStackData[index], index),
+		stackLength: () => formsStackData.length,
+		isRoot: stackIndex === 0,
+		// A deeper form replaces this bootstrap. The entry is still in the stack until popForm.
+		entryStillOnStack: () => stackIndex > 0 && formsStackData[stackIndex] === stableFormContextRef.current,
+		coveredByDeeperForm: () => formsStackData.length > stackIndex + 1
 	});
-	useEffect(
-		() => () => {
-			if (shouldUnlockItem(unlockEffectRefs.current)) {
-				unlock(unlockEffectRefs.current.siteId, itemPath).subscribe({
-					next: () => {
-						unlockEffectRefs.current.dispatch(showUnlockItemSuccessNotification());
-					},
-					error: (e) => {
-						// If error is 404, assume rename (itemPath changed, and the renamed item is not locked) and do not show error dialog.
-						if (e.status !== 404) {
-							unlockEffectRefs.current.dispatch(showErrorDialog({ error: e.response?.response }));
-						}
-					}
-				});
+	// Only the top stacked bootstrap is mounted. popForm uses this to skip the entry that will unmount.
+	useLayoutEffect(() => {
+		const session = globalContext?.lockReleaseSession;
+		if (!session || stackIndex === 0) return;
+		const entry = stableFormContextRef.current;
+		session.setMountedEntry(entry);
+		return () => session.clearMountedEntry(entry);
+	}, [globalContext, stackIndex, stableFormContextRef]);
+	// Stable dep: the ref identity does not change. Save Draft must not re-run this cleanup while the form is open.
+	useEffect(() => {
+		const session = globalContext?.lockReleaseSession;
+		const sendUnlock = (entry: StableFormContextProps, state: UnlockOnCloseState, via: 'pagehide' | 'unmount') => {
+			session?.releaseOnce(entry, state, (path) => sendUnlockRequest(state.siteId, path, via));
+		};
+		const sendUnlockRequest = (siteId: string, path: string, via: 'pagehide' | 'unmount') => {
+			if (via === 'pagehide') {
+				postUnlockKeepalive(siteId, path, getGlobalHeaders());
+				return;
 			}
-		},
-		[itemPath, unlockEffectRefs, saveAsDraft]
-	);
+			unlock(siteId, path).subscribe({
+				next: () => {
+					unlockEffectRefs.current.dispatch(showUnlockItemSuccessNotification());
+				},
+				error: (error: AjaxError) => {
+					unlockEffectRefs.current.dispatch(showErrorDialog({ error: unlockErrorPayload(error) }));
+				}
+			});
+		};
+		const release = (via: 'pagehide' | 'unmount') => {
+			const refs = unlockEffectRefs.current;
+			releaseFormSessionLocks({
+				via,
+				entry: stableFormContextRef.current,
+				state: refs.readState(),
+				entryStillOnStack: refs.entryStillOnStack(),
+				coveredByDeeperForm: refs.coveredByDeeperForm(),
+				isRoot: refs.isRoot,
+				// Covered forms are not mounted, so closing the session must release the locks they still hold.
+				readCovered: () => {
+					const covered: Array<{ entry: StableFormContextProps | undefined; state: UnlockOnCloseState }> = [];
+					for (let index = 1; index < refs.stackLength() - 1; index++) {
+						covered.push({ entry: formsStackData[index], state: refs.readCovered(index) });
+					}
+					return covered;
+				},
+				session,
+				send: (_entry, state, path) => sendUnlockRequest(state.siteId, path, via)
+			});
+		};
+		if (session && stackIndex === 0) {
+			session.setReleaseUnmounted((entry) => {
+				const index = formsStackData.lastIndexOf(entry);
+				if (index <= 0) return;
+				const state = unlockEffectRefs.current.readCovered(index);
+				sendUnlock(entry, state, 'unmount');
+			});
+		}
+		const onPageHide = (event: PageTransitionEvent) => {
+			if (!shouldUnlockOnPageHide(event)) return;
+			release('pagehide');
+		};
+		window.addEventListener('pagehide', onPageHide);
+		return () => {
+			if (session && stackIndex === 0) session.setReleaseUnmounted(null);
+			window.removeEventListener('pagehide', onPageHide);
+			release('unmount');
+		};
+		// Intentional: the session lives for the whole form. Everything the effect reads that changes goes through
+		// unlockEffectRefs. Re-running on globalContext, formsStackData or stackIndex would release the lock mid-session.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [unlockEffectRefs]);
 }
 
 /**
  * Generates a simple "save comment" stating the fields that having been modified.
+ * Additional field ids (e.g. `orderDefault_f`) resolve to their parent control's name and are deduped
+ * against that parent when both appear in `changedFieldIds`.
  * TODO: plugin AI, or improve/revise comment generation.
  **/
 export function generateDefaultChangesComment(
 	contentTypeFields: LookupTable<ContentTypeField>,
-	fieldsToRenderSubset: ContentTypeField[],
-	changedFieldIds: Set<string>,
-	currentMessage: string
+	fields: ContentTypeField[],
+	changedFieldIds: ReadonlySet<string>,
+	currentMessage: string,
+	customControls?: LookupTable<DescriptorContentType>
 ): string | undefined {
-	let fieldsToRender = contentTypeFields;
-	if (fieldsToRenderSubset) {
-		fieldsToRender = {};
-		fieldsToRenderSubset.forEach((field) => {
-			fieldsToRender[field.id] = field;
+	let namedFields = contentTypeFields;
+	if (fields) {
+		namedFields = {};
+		fields.forEach((field) => {
+			namedFields[field.id] = field;
 		});
 	}
-	const fieldsChangedNames: string[] = Array.from(changedFieldIds).flatMap(
-		(fieldId) => fieldsToRender[fieldId]?.name ?? []
+	const additionalFieldParents = mapAdditionalFieldsToParents(
+		fields ?? Object.values(contentTypeFields),
+		customControls
 	);
+	const seenParentIds = new Set<string>();
+	const fieldsChangedNames: string[] = [];
+	for (const fieldId of changedFieldIds) {
+		const field = namedFields[fieldId] ?? additionalFieldParents[fieldId];
+		if (!field || seenParentIds.has(field.id)) continue;
+		seenParentIds.add(field.id);
+		fieldsChangedNames.push(field.name);
+	}
 	const newMessage = produceChangedFieldsMessage(fieldsChangedNames);
 	if (
 		// If message is blank, no point in checking if the user has altered the message.
@@ -1000,9 +1428,26 @@ export function generateDefaultCreationComment(
 	return newMessage;
 }
 
+/** True while any form on the stack is saving. Open full form and close both read this. */
+export function useStackSubmitting(): boolean {
+	const flags = useAtomValue(stackEntryFlagsAtom);
+	return aggregateStackFlags(flags).submitting;
+}
+
+/** True for an embedded component: an existing one (`update.modelId`) or a new one (`create.embedded`). */
+export function isEmbeddedForm(props: { update?: { modelId?: string }; create?: { embedded?: boolean } }): boolean {
+	return Boolean(props.update?.modelId) || Boolean(props.create?.embedded);
+}
+
+/** Atoms of a stack entry, or null while prep has not finished. */
+export function stackEntryAtoms(entry: { atoms: FormsEngineAtoms | null } | null | undefined): FormsEngineAtoms | null {
+	return hasFormAtoms(entry) ? entry.atoms : null;
+}
+
 /**
- * Creates a summary of the state the current stacked form being rendered (last one on the stack)
- **/
+ * The top stacked form's submit, pending-changes and readonly state, read from the store. Pending includes any changed
+ * field id, not only the `hasPendingChanges` flag. Readonly when the entry has no atoms yet.
+ */
 export function getCurrentChildFormStateSummary(
 	store: JotaiStore,
 	formsStackData: StableGlobalContextProps['formsStackData']
@@ -1011,10 +1456,14 @@ export function getCurrentChildFormStateSummary(
 	hasPendingChanges: boolean;
 	readonly: boolean;
 } {
+	const atoms = stackEntryAtoms(formsStackData[formsStackData.length - 1]);
+	if (!atoms) return { isSubmitting: false, hasPendingChanges: false, readonly: true };
 	return {
-		isSubmitting: store.get(formsStackData[formsStackData.length - 1].atoms.isSubmitting),
-		hasPendingChanges: store.get(formsStackData[formsStackData.length - 1].atoms.hasPendingChanges),
-		readonly: store.get(formsStackData[formsStackData.length - 1].atoms.readonly)
+		isSubmitting: store.get(atoms.isSubmitting),
+		hasPendingChanges:
+			store.get(atoms.hasPendingChanges) ||
+			store.get(formsStackData[formsStackData.length - 1].changedFieldIds).size > 0,
+		readonly: store.get(atoms.readonly)
 	};
 }
 
@@ -1048,7 +1497,11 @@ export function prepareEmbeddedItemForm(props: {
 	locked: boolean;
 	lockError: ApiResponse;
 	affectedPackages: PublishPackage[];
+	/** Path this form locked. Null when it is using the parent's lock. */
+	lockedPath?: string | null;
 	update: FormsEngineProps['update'];
+	fieldIds?: string[];
+	repeatIndex?: string | number;
 	parentStackData: StableFormContextProps;
 	stableFormContextRef: RefObject<StableFormContextProps>;
 	parentPathInSite: string;
@@ -1060,12 +1513,15 @@ export function prepareEmbeddedItemForm(props: {
 		username,
 		contentType,
 		update,
+		fieldIds,
+		repeatIndex,
 		parentStackData,
 		stableFormContextRef,
 		parentPathInSite,
 		locked,
 		lockError,
 		affectedPackages,
+		lockedPath,
 		siteId,
 		contentTypesById,
 		customControls
@@ -1073,14 +1529,19 @@ export function prepareEmbeddedItemForm(props: {
 	const lockResultAtom = atom<FormsEngineEditContextProps>({
 		locked,
 		lockError,
-		affectedPackages
+		affectedPackages,
+		lockedPath: locked ? (lockedPath ?? null) : null
 	});
-	const atoms = createFormsEngineAtoms(username, {
-		lockResult: lockResultAtom,
-		readonly: createReadonlyAtom(lockResultAtom),
-		expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-		fileName: createFileNameAtom('', stableFormContextRef, update.modelId)
-	});
+	const atoms = createFormsEngineAtoms(
+		username,
+		{
+			lockResult: lockResultAtom,
+			readonly: createReadonlyAtom(lockResultAtom),
+			expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
+			fileName: createFileNameAtom('', stableFormContextRef, update.modelId)
+		},
+		{ selectedFields: fieldIds, index: repeatIndex, fields: contentType.fields }
+	);
 	const values = { ...update.values };
 	delete values[XmlKeys.fileName];
 	const validatorsData: ValidatorsData = {
@@ -1099,7 +1560,7 @@ export function prepareEmbeddedItemForm(props: {
 	});
 	// Ensure descriptor additional fields exist in values so atoms are created (same as main/repeat bootstrap).
 	additionalFieldsIds.forEach((additionalFieldId) => {
-		if (!(additionalFieldId in values)) {
+		if (!Object.prototype.hasOwnProperty.call(values, additionalFieldId)) {
 			values[additionalFieldId] = undefined;
 		}
 	});
@@ -1128,7 +1589,9 @@ export function prepareEmbeddedItemForm(props: {
 		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
 		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
 		contentObject = (
-			parentStackData.itemMeta.contentObject[fieldId] as { item: Array<{ component: LookupTable<unknown> }> }
+			getParsedField(parentStackData.itemMeta.contentObject, fieldId) as {
+				item: Array<{ component: LookupTable<unknown> }>;
+			}
 		).item[index].component;
 		contentXml = element.outerHTML;
 	} else {
@@ -1189,6 +1652,41 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
 	const additionalFields = descriptor.metadata?.additionalFields ?? [];
 	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+}
+
+/**
+ * Additional field ids declared by `field`'s control descriptor after `{id}` expansion.
+ * Empty when the control type has no descriptor or no `additionalFields` metadata.
+ */
+export function getAdditionalFieldIds(
+	field: ContentTypeField,
+	customControls?: LookupTable<DescriptorContentType>
+): string[] {
+	const descriptor = resolveControlDescriptors(customControls)[field.type];
+	return descriptor ? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor) : [];
+}
+
+/**
+ * Maps each additional field id to its parent content-type field.
+ * Used so dirty chrome and the default version comment attribute additional field writes (e.g. `orderDefault_f`) to the
+ * visible parent control. An id that already belongs to a content-type field is not overwritten when building the
+ * name lookup; callers still prefer `namedFields[id]` first.
+ * Pass `customControls` so configured (ui.xml) controls with `additionalFields` are included alongside code defaults.
+ */
+export function mapAdditionalFieldsToParents(
+	fields: ContentTypeField[],
+	customControls?: LookupTable<DescriptorContentType>
+): LookupTable<ContentTypeField> {
+	const descriptors = resolveControlDescriptors(customControls);
+	const map: LookupTable<ContentTypeField> = {};
+	for (const field of fields) {
+		const descriptor = descriptors[field.type];
+		if (!descriptor) continue;
+		for (const additionalFieldId of getAdditionalFieldsIdsFromDescriptor(field.id, descriptor)) {
+			if (!(additionalFieldId in map)) map[additionalFieldId] = field;
+		}
+	}
+	return map;
 }
 
 /**

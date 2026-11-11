@@ -53,6 +53,7 @@ import { hasApproveAction, hasRejectAction } from '../../utils/content';
 import { pushErrorDialog } from '../../utils/system';
 import { useEnhancedDialogContext } from '../EnhancedDialog';
 import { isBlank } from '../../utils/string';
+import { PACKAGE_APPROVED, PACKAGE_REJECTED } from '../../utils/constants';
 
 export type PackageReviewAction = 'approve' | 'reject';
 interface InternalDialogState {
@@ -125,9 +126,22 @@ export function PublishingPackageReviewDialogContainer(props: PublishingPackageR
 	}, [siteId, packageId]);
 
 	useEffect(() => {
+		// If the package already has a review, pre-fill the corresponding comment field
+		// (and pre-select the matching action) with the previous reviewer comment.
+		let previousReview: Partial<InternalDialogState> = {};
+		if (publishingPackage?.reviewer && !isBlank(publishingPackage.reviewerComment ?? '')) {
+			if (publishingPackage.approvalState === PACKAGE_APPROVED) {
+				previousReview = { action: 'approve', approverComment: publishingPackage.reviewerComment };
+			} else if (publishingPackage.approvalState === PACKAGE_REJECTED) {
+				previousReview = { action: 'reject', rejectComment: publishingPackage.reviewerComment };
+			}
+		}
 		setState({
 			scheduling: publishingPackage?.schedule ? 'keep' : 'now',
-			schedule: publishingPackage?.schedule ? new Date(publishingPackage.schedule) : createAtLeastHalfHourInFutureDate()
+			schedule: publishingPackage?.schedule
+				? new Date(publishingPackage.schedule)
+				: createAtLeastHalfHourInFutureDate(),
+			...previousReview
 		});
 	}, [publishingPackage, setState]);
 

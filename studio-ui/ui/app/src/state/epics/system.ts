@@ -217,18 +217,13 @@ const systemEpics: CrafterCMSEpic[] = [
 	(action$, state$, { getIntl }) =>
 		action$.pipe(
 			ofType(showEditItemSuccessNotification.type),
-			tap(({ payload: { action } }) => {
-				let message;
-				if (action === 'save') {
-					message = getIntl().formatMessage(itemSuccessMessages.itemSavedAsDraft);
-				} else {
-					message = getIntl().formatMessage(itemSuccessMessages.itemEdited);
-				}
+			tap(() => {
+				// Draft saves never dispatch this. The form already announced the draft.
 				const hostToHost$ = getHostToHostBus();
 				hostToHost$.next(
 					showSystemNotification({
-						message,
-						options: { variant: action === 'save' ? 'warning' : 'default' }
+						message: getIntl().formatMessage(itemSuccessMessages.itemEdited),
+						options: { variant: 'default' }
 					})
 				);
 			}),

@@ -34,9 +34,7 @@ import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions } from '../dataSourceHooks/useDataSourceListOptions';
 import type { DataSourceListItem } from '../dataSources/types';
 
-export interface CheckboxGroupProps extends ControlProps {
-	value: Array<{ key: string; value_smv: string }>;
-}
+export type CheckboxGroupProps = ControlProps<Array<{ key: string; value_smv: string }>>;
 
 export function CheckboxGroup(props: CheckboxGroupProps) {
 	const theme = useTheme();
@@ -47,6 +45,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 	const numColumns = windowWidth >= 900 ? 2 : 1;
 
 	// region field properties/validations
+	// The minimum is validations.minCount (the minSize constraint). checkboxGroupValidator enforces it. See utils/countLimits.ts.
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 	const selectAll: boolean = getPropertyValue(field.properties, 'selectAll') as boolean;
 	const listDirection: 'horizontal' | 'vertical' = useMemo(() => {

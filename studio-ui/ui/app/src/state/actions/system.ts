@@ -35,8 +35,6 @@ import SocketEventBase, {
 } from '../../models/SocketEvent';
 import { ContentItem, MarketplacePlugin } from '../../models';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
-import type { CommonSaveOptions } from '../../components/MultiChoiceSaveButton';
-
 // region Item Events
 
 export const itemReverted = /*#__PURE__*/ createAction<{ target: string }>('ITEM_REVERTED');
@@ -92,9 +90,7 @@ export const showCreateFolderSuccessNotification = /*#__PURE__*/ createAction(
 	'SHOW_CREATE_FOLDER_SUCCESS_NOTIFICATION'
 );
 
-export const showEditItemSuccessNotification = /*#__PURE__*/ createAction<{
-	action: CommonSaveOptions;
-}>('SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION');
+export const showEditItemSuccessNotification = /*#__PURE__*/ createAction('SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION');
 
 export const showCopyItemSuccessNotification = /*#__PURE__*/ createAction<
 	StandardAction<{

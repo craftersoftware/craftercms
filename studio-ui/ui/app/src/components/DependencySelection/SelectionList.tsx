@@ -40,6 +40,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 export interface SelectionListProps {
 	title: ReactNode;
 	subtitle?: ReactNode;
+	banner?: ReactNode;
 	emptyMessage?: ReactNode;
 	items?: ContentItem[];
 	paths?: string[];
@@ -58,6 +59,7 @@ export function SelectionList(props: SelectionListProps) {
 	const {
 		title,
 		subtitle,
+		banner,
 		emptyMessage,
 		items,
 		paths = items.map((item) => item.path),
@@ -119,6 +121,7 @@ export function SelectionList(props: SelectionListProps) {
 					}}
 				/>
 			</ListItem>
+			{banner}
 			{items ? (
 				<List sx={{ paddingTop: 0 }}>
 					{items.map((item) => {

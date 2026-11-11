@@ -142,16 +142,17 @@ public class ContentUtils {
 	}
 
 	/**
-	 * Helper method to add or update a single node element with the indicated value
+	 * Helper method to add or update a single child element of the root with the indicated value.
+	 * Elements of the same name in nested (embedded) components are not affected.
 	 *
 	 * @param root     root element
 	 * @param nodeName name of the node to update
 	 * @param value    new text value of the node
 	 */
 	public static void addOrUpdateSingleDocumentNode(final Element root, final String nodeName, final String value) {
-		Node node = root.selectSingleNode(format("//%s", nodeName));
-		if (node != null) {
-			node.setText(value);
+		Element element = root.element(nodeName);
+		if (element != null) {
+			element.setText(value);
 		} else {
 			root.addElement(nodeName).setText(value);
 		}
@@ -172,14 +173,15 @@ public class ContentUtils {
 	}
 
 	/**
-	 * Reads the text of a single node in a document.
+	 * Reads the text of a single child element of the root.
+	 * Elements of the same name in nested (embedded) components are not read.
 	 *
 	 * @param root     root element of the document
 	 * @param nodeName name of the node to read
 	 * @return the text of the node, or null if the node is not found
 	 */
 	public static String readSingleDocumentNodeText(final Element root, final String nodeName) {
-		return readSingleDocumentFromXPath(root, format("//%s", nodeName));
+		return root.elementTextTrim(nodeName);
 	}
 
 	/**

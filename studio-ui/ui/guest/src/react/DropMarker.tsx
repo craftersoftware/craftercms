@@ -22,7 +22,12 @@ import { notNullOrUndefined } from '@craftercms/studio-ui/utils/object';
 import { forEach } from '@craftercms/studio-ui/utils/array';
 import { findClosestRect, getDropMarkerPosition, getInRectStats, splitRect } from '../utils/dom';
 import { FullSxRecord, PartialSxRecord } from '@craftercms/studio-ui/models/CustomRecord';
-import { Box } from '@mui/material';
+import { Box, Theme, useTheme } from '@mui/material';
+import { overlayBandSx } from '@craftercms/studio-ui/styles/overlayStroke';
+
+// The state colour of a drop marker: a theme token, not a literal. It is the same red the marker has always
+// used, and the companion bands make it read on any authored page.
+const DROP_COLOUR = 'error.main';
 
 export type DropMarkerClassKey = 'root' | 'tips' | 'horizontal' | 'vertical';
 
@@ -40,7 +45,7 @@ export interface DropMarkerProps {
 	sx?: DropMarkerPartialSx;
 }
 
-function getSx(sx: DropMarkerPartialSx): DropMarkerFullSx {
+function getSx(sx: DropMarkerPartialSx, theme: Theme): DropMarkerFullSx {
 	return {
 		root: {
 			zIndex: 'tooltip',
@@ -52,8 +57,11 @@ function getSx(sx: DropMarkerPartialSx): DropMarkerFullSx {
 			content: '""',
 			width: '8px',
 			height: '8px',
-			backgroundColor: 'error.main',
+			// The tips are the line's end caps, so they carry the same bands rather than sitting on the page
+			// as a bare red square.
+			...overlayBandSx(theme),
 			borderRadius: 1,
+			backgroundColor: DROP_COLOUR,
 			marginTop: '-3px',
 			marginLeft: '-4.5px',
 			position: 'absolute',
@@ -62,8 +70,9 @@ function getSx(sx: DropMarkerPartialSx): DropMarkerFullSx {
 		vertical: {
 			height: 2,
 			visibility: 'visible',
-			backgroundColor: 'error.main',
-			boxShadow: 1,
+			// The marker is drawn on the authored page, so it carries the companion bands too.
+			...overlayBandSx(theme),
+			backgroundColor: DROP_COLOUR,
 			'&::before': {
 				left: 0
 			},
@@ -76,9 +85,9 @@ function getSx(sx: DropMarkerPartialSx): DropMarkerFullSx {
 			width: 2,
 			minHeight: '5px',
 			marginLeft: '3px',
-			border: 1,
-			borderColor: 'error.main',
-			boxShadow: 1,
+			...overlayBandSx(theme),
+			// A filled line has no outline to carry the state colour, so it is the fill.
+			backgroundColor: DROP_COLOUR,
 			'&::before': {
 				top: 0
 			},
@@ -101,7 +110,8 @@ export function DropMarker(props: DropMarkerProps) {
 	} = props;
 	const refs = useRef({ targetIndex: null });
 	const [style, setStyle] = useState({});
-	const sx = getSx(props.sx);
+	const theme = useTheme();
+	const sx = getSx(props.sx, theme);
 	const arrangement = dropZone.arrangement;
 
 	useEffect(() => {

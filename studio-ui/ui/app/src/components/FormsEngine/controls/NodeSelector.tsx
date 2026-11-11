@@ -14,7 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useItemContext, useItemMetaContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import { useItemMetaContext, useStableFormContext, useStableGlobalApiContext } from '../lib/formsEngineContext';
+import { useFormItem } from '../lib/formItem';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import AddRounded from '@mui/icons-material/AddRounded';
@@ -73,7 +74,7 @@ import { useDispatch } from 'react-redux';
 import { nanoid } from 'nanoid';
 import useUpdateRefs from '../../../hooks/useUpdateRefs';
 import useFetchContentItems from '../../../hooks/useFetchContentItems';
-import useItemsByPath from '../../../hooks/useItemsByPath';
+import useItemsByPaths from '../../../hooks/useItemsByPaths';
 import ItemDisplay from '../../ItemDisplay';
 import useActiveUser from '../../../hooks/useActiveUser';
 import { getFileExtension, processPathMacros } from '../../../utils/path';
@@ -83,15 +84,16 @@ import FieldBox from '../components/FieldBox';
 import { isTouchDevice, KeyDownEvent, sortableListKeyDownHandler } from '../lib/sortableListUtil';
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
-import { XmlKeys } from '../lib/formConsts';
-import { showBrowseFilesDialog, showSearchDialog } from '../lib/controlHelpers';
+import { xmlDataSourceAttribute, XmlKeys } from '../lib/formConsts';
+import { withDataSourceId } from '../lib/withDataSourceId';
+import { showBrowseFilesDialog, showSearchDialog } from '../lib/mediaDialogs';
 import { Dispatch as ReduxDispatch } from 'redux';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import type { FileUploadResult } from '../../SingleFileUpload';
 import type { SingleFileUploadDialogProps } from '../../SingleFileUploadDialog';
 import { showCodeEditorDialog } from '../../../state/actions/dialogs';
 import { getEditorMode, isAudio, isEditableAsset, isPdfDocument, isVideo } from '../../../utils/content';
-import { createComponentId, pickShowContentFormAction } from '../../../utils/system';
+import { createComponentId, showContentFormAction } from '../../../utils/system';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
 	getEditorMode as getItemEditorMode,
@@ -105,6 +107,7 @@ import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
 import { filterTypesByKeywordsAndObjectType } from '../../../utils/contentType';
+import { countLimitValue } from '../../../utils/countLimits';
 import {
 	buildActionGroups,
 	consolidateItemActions,
@@ -120,13 +123,13 @@ import { MenuList } from '@mui/material';
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
 
-export interface NodeSelectorProps extends ControlProps {
-	value: NodeSelectorItem[];
-}
+export type NodeSelectorProps = ControlProps<NodeSelectorItem[]>;
 
 export interface NodeSelectorItem {
 	key: string;
 	value: string;
+	/** The `datasource` attribute: the id of the data source the item was added with. */
+	[xmlDataSourceAttribute]?: string;
 	include?: string;
 	disableFlattening?: boolean;
 	component?: Record<string, Primitive>;
@@ -185,7 +188,7 @@ function getInitialCreatePickerValue(
 }
 
 function NodeSelector(props: NodeSelectorProps) {
-	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources } = props;
+	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources, labelId } = props;
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -200,9 +203,12 @@ function NodeSelector(props: NodeSelectorProps) {
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
-	const itemsByPath = useItemsByPath();
+	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
+	const itemsByPath = useItemsByPaths(value.flatMap((item) => [item.key, item.include].filter(Boolean) as string[]));
 	const user = useActiveUser();
-	const contextItem = useItemContext();
+	const stableForm = useStableFormContext();
+	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
+	const getContextItemPath = () => stableForm.getItem()?.path;
 	const { id, pathInSite } = useItemMetaContext();
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
@@ -242,7 +248,7 @@ function NodeSelector(props: NodeSelectorProps) {
 
 		if (isEditableViaFormEditor(item)) {
 			// If the item is editable via form editor (page, component or taxonomy), open the form editor in read-only mode
-			dispatch(pickShowContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
+			dispatch(showContentFormAction({ path: item.path, authoringBase, site: siteId, readonly: true }));
 		} else {
 			// Otherwise, open the preview dialog, it may be a preview of media (image, video, audio) or document (pdf) or code editor for other text-based files
 			const dialogProps =
@@ -278,7 +284,7 @@ function NodeSelector(props: NodeSelectorProps) {
 			api.pushForm({
 				readonly: !edit,
 				update: {
-					path: item.include ?? contextItem.path,
+					path: item.include ?? getContextItemPath(),
 					// In the case of shared, item.component === undefined.
 					// The form interprets as a shared when modelId and values are not supplied and fetches.
 					modelId: isEmbedded ? (item.key as string | undefined) : undefined,
@@ -298,6 +304,8 @@ function NodeSelector(props: NodeSelectorProps) {
 					}
 
 					const newItem: NodeSelectorItem = {
+						// Keeps the item's other children and its attributes (e.g. `datasource`).
+						...item,
 						key,
 						value: values[XmlKeys.internalName] as string,
 						[isEmbedded ? 'component' : 'include']: isEmbedded ? (values as LookupTable<Primitive>) : key,
@@ -329,6 +337,7 @@ function NodeSelector(props: NodeSelectorProps) {
 	};
 	const applyDataSourceSelection = (
 		selection: DataSourceSelection | DataSourceSelection[] | null,
+		dataSourceId: string,
 		createChoice?: CreateDataSourcePickerData
 	) => {
 		const selections = Array.isArray(selection) ? selection : selection ? [selection] : [];
@@ -366,7 +375,11 @@ function NodeSelector(props: NodeSelectorProps) {
 				}
 			];
 		});
-		const { validItems, duplicateItems } = validateNewItems(newItems, value, allowDuplicates);
+		const { validItems, duplicateItems } = validateNewItems(
+			withDataSourceId(newItems, dataSourceId),
+			value,
+			allowDuplicates
+		);
 		if (newItems.length) setValue(validItems);
 		if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 	};
@@ -375,13 +388,13 @@ function NodeSelector(props: NodeSelectorProps) {
 		choice: AllowedPathsData | CreateDataSourcePickerData
 	) => {
 		const processPath = (path: string) =>
-			processPathMacros({ path, objectId: id, fullParentPath: contextItem?.path ?? pathInSite });
+			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() ?? pathInSite });
 		switch (optionType) {
 			case 'browse': {
 				const pickerChoice = choice as AllowedPathsData;
 				if (pickerChoice.actionChoice && dataSources?.context) {
 					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
-						.then(applyDataSourceSelection)
+						.then((selection) => applyDataSourceSelection(selection, pickerChoice.actionChoice.action.dataSourceId))
 						.catch(console.error);
 					break;
 				}
@@ -407,7 +420,11 @@ function NodeSelector(props: NodeSelectorProps) {
 								...(fileType ? getFileMetaData({ fileType, useSingleValueFilename, useMVS }) : {})
 							});
 						});
-						const { validItems, duplicateItems } = validateNewItems(newNodeSelectorItems, value, allowDuplicates);
+						const { validItems, duplicateItems } = validateNewItems(
+							withDataSourceId(newNodeSelectorItems, pickerChoice.actionChoice?.action.dataSourceId),
+							value,
+							allowDuplicates
+						);
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -418,7 +435,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				const pickerChoice = choice as AllowedPathsData;
 				if (pickerChoice.actionChoice && dataSources?.context) {
 					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
-						.then(applyDataSourceSelection)
+						.then((selection) => applyDataSourceSelection(selection, pickerChoice.actionChoice.action.dataSourceId))
 						.catch(console.error);
 					break;
 				}
@@ -442,7 +459,11 @@ function NodeSelector(props: NodeSelectorProps) {
 								disableFlattening
 							});
 						});
-						const { validItems, duplicateItems } = validateNewItems(newNodeSelectorItems, value, allowDuplicates);
+						const { validItems, duplicateItems } = validateNewItems(
+							withDataSourceId(newNodeSelectorItems, pickerChoice.actionChoice?.action.dataSourceId),
+							value,
+							allowDuplicates
+						);
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 					}
@@ -457,10 +478,10 @@ function NodeSelector(props: NodeSelectorProps) {
 					invokeResolvedAction(owner, dataSources.context, {
 						type: 'create',
 						contentTypeId: pickerChoice.contentTypeId,
-						path: pickerChoice.strategy === 'embedded' ? contextItem.path : pickerChoice.path,
+						path: pickerChoice.strategy === 'embedded' ? getContextItemPath() : pickerChoice.path,
 						strategy: pickerChoice.strategy
 					})
-						.then((selection) => applyDataSourceSelection(selection, pickerChoice))
+						.then((selection) => applyDataSourceSelection(selection, owner.dataSourceId, pickerChoice))
 						.catch(console.error);
 					break;
 				}
@@ -469,7 +490,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				api.pushForm({
 					create: {
 						contentTypeId: pickerChoice.contentTypeId,
-						path: pickerChoice.strategy === 'embedded' ? contextItem.path : processPath(pickerChoice.path),
+						path: pickerChoice.strategy === 'embedded' ? getContextItemPath() : processPath(pickerChoice.path),
 						embedded: isEmbedded
 					},
 					onSave(result) {
@@ -480,7 +501,11 @@ function NodeSelector(props: NodeSelectorProps) {
 							[isEmbedded ? 'component' : 'include']: isEmbedded ? (result.values as LookupTable<Primitive>) : key,
 							disableFlattening
 						};
-						const { validItems, duplicateItems } = validateNewItems([newItem], value, allowDuplicates);
+						const { validItems, duplicateItems } = validateNewItems(
+							withDataSourceId([newItem], owner?.dataSourceId),
+							value,
+							allowDuplicates
+						);
 						setValue(validItems);
 						if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						return Promise.resolve({ close: true });
@@ -492,7 +517,7 @@ function NodeSelector(props: NodeSelectorProps) {
 				const pickerChoice = choice as AllowedPathsData;
 				if (pickerChoice.actionChoice && dataSources?.context) {
 					invokeActionChoice(pickerChoice.actionChoice, dataSources.context)
-						.then(applyDataSourceSelection)
+						.then((selection) => applyDataSourceSelection(selection, pickerChoice.actionChoice.action.dataSourceId))
 						.catch(console.error);
 					break;
 				}
@@ -516,7 +541,11 @@ function NodeSelector(props: NodeSelectorProps) {
 									...(fileType ? getFileMetaData({ fileType, fileSize, useSingleValueFilename, useMVS }) : {})
 								});
 							});
-							const { validItems, duplicateItems } = validateNewItems(newNodeSelectorItems, value, allowDuplicates);
+							const { validItems, duplicateItems } = validateNewItems(
+								withDataSourceId(newNodeSelectorItems, pickerChoice.actionChoice?.action.dataSourceId),
+								value,
+								allowDuplicates
+							);
 							setValue(validItems);
 							if (!allowDuplicates && duplicateItems.length) showDuplicatesWarning(dispatch, duplicateItems);
 						}
@@ -624,12 +653,14 @@ function NodeSelector(props: NodeSelectorProps) {
 				actions={customActions}
 				context={dataSources.context}
 				disabled={readonly}
-				onResult={applyDataSourceSelection}
+				onResult={(selection, action) => applyDataSourceSelection(selection, action.dataSourceId)}
 				onError={console.error}
 				onMenuClose={() => setAddMenuOpen(false)}
 			/>
 		) : null;
-	const maxLimitReached = value.length >= field.validations.maxCount?.value;
+	// minCount/maxCount are the mapped limits. 0 is unlimited. See utils/countLimits.ts.
+	const maxCount = countLimitValue(field.validations?.maxCount?.value);
+	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
 	return (
 		<>
@@ -712,8 +743,9 @@ function NodeSelector(props: NodeSelectorProps) {
 			</Dialog>
 			<FormsEngineField
 				field={field}
-				min={field.validations.minCount?.value}
-				max={field.validations.maxCount?.value}
+				labelId={labelId}
+				min={countLimitValue(field.validations?.minCount?.value)}
+				max={maxCount}
 				length={value.length}
 				action={
 					<Tooltip
@@ -797,15 +829,7 @@ function NodeSelector(props: NodeSelectorProps) {
 										<ListItemText
 											primary={
 												isEmbedded ? (
-													<ItemDisplay
-														item={{
-															...contextItem,
-															label: item.value,
-															systemType: 'component'
-														}}
-														showWorkflowState={!isEmbedded}
-														showNavigableAsLinks={false}
-													/>
+													<EmbeddedItemDisplay label={item.value} showWorkflowState={!isEmbedded} />
 												) : itemsByPath[item.include] ? (
 													<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
 												) : (
@@ -1463,3 +1487,15 @@ function showDuplicatesWarning(dispatch: ReduxDispatch, duplicateItems: NodeSele
 }
 
 export default NodeSelector;
+
+/** An embedded component has no item of its own; it shows the form's item. Only these rows follow its updates. */
+function EmbeddedItemDisplay({ label, showWorkflowState }: { label: string; showWorkflowState: boolean }) {
+	const contextItem = useFormItem();
+	return (
+		<ItemDisplay
+			item={{ ...contextItem, label, systemType: 'component' }}
+			showWorkflowState={showWorkflowState}
+			showNavigableAsLinks={false}
+		/>
+	);
+}

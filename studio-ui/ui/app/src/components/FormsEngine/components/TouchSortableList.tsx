@@ -34,13 +34,17 @@ export interface TouchSortableListProps<T = unknown> {
 	selectedItemId?: string;
 }
 
+/**
+ * Reorder list for touch devices: move buttons instead of drag handles. Rows are keyed by `item.key`, so a row keeps
+ * its DOM node when its item moves.
+ */
 export function TouchSortableList({ items, onChange, selectedItemId }: TouchSortableListProps) {
 	const handleMove = (action: SortAction, moveToEdge: boolean, index: number) =>
 		sortableListActionProcessor(action, moveToEdge, items, index, onChange);
 	return (
 		<List>
 			{items.map((item, index) => (
-				<ListItem key={index} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
+				<ListItem key={item.key} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
 					<ListItemText
 						disableTypography
 						primary={

@@ -16,7 +16,7 @@
 
 import React, { useEffect } from 'react';
 import SplitButtonUI from './SplitButtonUI';
-import { SplitButtonProps } from './utils';
+import { indexOfOption, planMenuPick, resolveSelectedIndex, SplitButtonProps } from './utils';
 import {
 	getStoredSaveButtonSubAction,
 	removeStoredSaveButtonSubAction,
@@ -28,47 +28,52 @@ export function SplitButton(props: SplitButtonProps) {
 	const {
 		options,
 		defaultSelected = options?.[0].id,
+		selectedId,
+		onSelect,
+		onClick,
 		disablePortal = true,
 		disabled,
 		loading,
 		storageKey,
-		fullWidth
+		fullWidth,
+		describedBy
 	} = props;
+	const controlled = selectedId !== undefined;
 	const [open, setOpen] = React.useState(false);
 	const user = useActiveUser();
 	const anchorRef = React.useRef<HTMLDivElement>(null);
 
-	const indexFromDefaultSelected = options.findIndex((option) => option.id === defaultSelected);
-	const [selectedIndex, setSelectedIndex] = React.useState(
-		indexFromDefaultSelected !== -1 ? indexFromDefaultSelected : 0
-	);
+	const [selectedIndexState, setSelectedIndex] = React.useState(() => indexOfOption(options, defaultSelected));
+	const selectedIndex = resolveSelectedIndex({ options, selectedId, stateIndex: selectedIndexState });
 
 	useEffect(() => {
-		if (storageKey) {
-			const storedValue = getStoredSaveButtonSubAction(user.username, storageKey);
-			if (storedValue) {
-				const index = options.findIndex((option) => option.id === storedValue);
-				if (index !== -1) {
-					setSelectedIndex(index);
-				} else {
-					removeStoredSaveButtonSubAction(user.username, storageKey);
-				}
+		if (controlled || !storageKey) return;
+		const storedValue = getStoredSaveButtonSubAction(user.username, storageKey);
+		if (storedValue) {
+			const index = options.findIndex((option) => option.id === storedValue);
+			if (index !== -1) {
+				setSelectedIndex(index);
+			} else {
+				removeStoredSaveButtonSubAction(user.username, storageKey);
 			}
 		}
-	}, [storageKey, options, user.username]);
+	}, [controlled, storageKey, options, user.username]);
 
 	const handleClick = (e) => {
-		options[selectedIndex]?.callback(e);
+		if (onClick) onClick(e);
+		else options[selectedIndex]?.callback(e);
 	};
 
 	const handleMenuItemClick = (event: React.MouseEvent<Element, MouseEvent>, index: number) => {
-		setSelectedIndex(index);
-
-		if (storageKey) {
-			const storageValue = options[index].id;
-			setStoredSaveButtonSubAction(user.username, storageKey, storageValue);
+		// A save can start with this menu still open. Ignore the pick so it cannot change that save.
+		const pick = planMenuPick({ disabled, loading, controlled, storageKey });
+		if (pick.ignore) {
+			setOpen(false);
+			return;
 		}
-
+		if (pick.remember) setSelectedIndex(index);
+		if (pick.persist) setStoredSaveButtonSubAction(user.username, storageKey, options[index].id);
+		onSelect?.(options[index].id);
 		setOpen(false);
 		options[index]?.callback(event);
 	};
@@ -99,6 +104,7 @@ export function SplitButton(props: SplitButtonProps) {
 			handleClose={handleClose}
 			handleMenuItemClick={handleMenuItemClick}
 			fullWidth={fullWidth}
+			describedBy={describedBy}
 		/>
 	);
 }

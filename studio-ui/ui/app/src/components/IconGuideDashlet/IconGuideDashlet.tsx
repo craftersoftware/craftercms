@@ -168,7 +168,13 @@ export function IconGuideDashlet(props: IconGuideDashletProps) {
 									sxs={{ icon: { mr: 1 } }}
 								/>
 								<Typography variant="body2" component="span">
-									<FormattedMessage defaultMessage="Disabled" />
+									<FormattedMessage defaultMessage="Disabled Component" />
+								</Typography>
+							</Grid>
+							<Grid size={{ xs: 6, sm: 4, md: 3, lg: 2 }} sx={{ display: 'flex', alignItems: 'center' }}>
+								<DisabledItemIcon item={types['page'] as LightItem} itemTypeIconProps={{}} sxs={{ icon: { mr: 1 } }} />
+								<Typography variant="body2" component="span">
+									<FormattedMessage defaultMessage="Disabled Page" />
 								</Typography>
 							</Grid>
 						</Grid>
