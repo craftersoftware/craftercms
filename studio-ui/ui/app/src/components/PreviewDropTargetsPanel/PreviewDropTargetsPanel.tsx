@@ -236,7 +236,10 @@ export function PreviewDropTargetsPanel() {
 					</>
 				)
 			) : (
-				<EmptyState title="No drop targets were found on the current view." sxs={{ title: { textAlign: 'center' } }} />
+				<EmptyState
+					title={<FormattedMessage defaultMessage="No drop targets were found on the current view." />}
+					sxs={{ title: { textAlign: 'center' } }}
+				/>
 			)}
 		</>
 	);
