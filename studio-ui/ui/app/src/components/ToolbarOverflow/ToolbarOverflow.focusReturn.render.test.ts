@@ -70,7 +70,8 @@ Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { default: Dialog } = await import('@mui/material/Dialog');
 const { default: Popover } = await import('@mui/material/Popover');
@@ -79,6 +80,7 @@ const { getFocusRingThemeOptions } = await import('../../styles/focusRing.ts');
 
 (globalThis as { localStorage?: Storage }).localStorage ??= window.localStorage;
 
+const intl = createTestIntl();
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 
 afterEach(async () => {
@@ -103,7 +105,7 @@ function install() {
 					React.createElement(
 						ThemeProvider,
 						{ theme },
-						React.createElement(IntlProvider, { locale: 'en', messages: {}, onError() {} }, node)
+						React.createElement(RawIntlProvider, { value: intl as never }, node)
 					)
 				);
 			});

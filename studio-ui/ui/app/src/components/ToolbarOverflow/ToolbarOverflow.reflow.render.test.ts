@@ -71,13 +71,15 @@ Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { ToolbarOverflow } = await import('./ToolbarOverflow.tsx');
 const { getFocusRingThemeOptions } = await import('../../styles/focusRing.ts');
 
 (globalThis as { localStorage?: Storage }).localStorage ??= window.localStorage;
 
+const intl = createTestIntl();
 const MORE = 'More toolbar actions';
 // Three controls need 300px. At 108px of bar (100px after the focus ring room) none fit next to More,
 // at 258px (250px) the first two do, and at 1000px all three do.
@@ -110,8 +112,8 @@ async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT) {
 				ThemeProvider,
 				{ theme },
 				React.createElement(
-					IntlProvider,
-					{ locale: 'en', messages: {}, onError() {} },
+					RawIntlProvider,
+					{ value: intl as never },
 					React.createElement(
 						ToolbarOverflow,
 						{ align },
