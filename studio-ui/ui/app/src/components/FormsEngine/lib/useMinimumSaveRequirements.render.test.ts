@@ -21,17 +21,16 @@ import { afterEach, describe, it, mock } from 'node:test';
 
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { act } = await import('react');
+const { act, useState } = await import('react');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
 const { useMinimumSaveRequirements } = await import('./useMinimumSaveRequirements.ts');
 const { invalidFieldReadDebounceMs } = await import('./useInvalidFieldIds.ts');
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function createFormAtoms(initial: { fileNameValid: boolean; internalName: unknown }) {
+function createFormAtoms(initial: { fileNameValid: boolean; internalName: unknown }, store = createStore()) {
 	const fileName = atom(Promise.resolve({ isValid: initial.fileNameValid }));
 	const internalName = atom<unknown>(initial.internalName);
-	const store = createStore();
 	return {
 		store,
 		fileName,
@@ -172,7 +171,7 @@ describe('useMinimumSaveRequirements', () => {
 		assert.deepEqual(latest(), []);
 	});
 
-	it('keeps the last list when the file-name validator rejects', async () => {
+	it('keeps the last file-name verdict when its validator rejects, without logging each keystroke', async () => {
 		const fail = atom(false);
 		const fileName = atom(async (get) => {
 			if (get(fail)) throw new Error('boom');
@@ -191,7 +190,7 @@ describe('useMinimumSaveRequirements', () => {
 		};
 		const error = mock.method(console, 'error', () => undefined);
 		try {
-			const { latest } = await renderHook(form, full);
+			const { latest, renders } = await renderHook(form, full);
 			assert.deepEqual(latest(), ['fileName']);
 
 			await act(async () => {
@@ -199,9 +198,75 @@ describe('useMinimumSaveRequirements', () => {
 			});
 			await act(async () => pause(invalidFieldReadDebounceMs + 50));
 			assert.deepEqual(latest(), ['fileName']);
-			assert.ok(error.mock.callCount() >= 1);
+			const logged = error.mock.callCount();
+			const settled = renders();
+
+			await act(async () => {
+				store.set(internalName, 'About us!');
+			});
+			await act(async () => pause(invalidFieldReadDebounceMs + 50));
+			assert.equal(renders(), settled);
+			assert.equal(error.mock.callCount(), logged);
+			assert.deepEqual(latest(), ['fileName']);
 		} finally {
 			error.mock.restore();
 		}
+	});
+
+	it('shows a cleared internal name while the file-name check never settles', async () => {
+		const fileName = atom(new Promise(() => {}));
+		const internalName = atom<unknown>('Home');
+		const store = createStore();
+		const form = {
+			store,
+			fileName,
+			internalName,
+			atoms: {
+				validationByFieldId: { 'file-name': fileName },
+				valueByFieldId: { 'internal-name': internalName }
+			}
+		};
+		const { latest } = await renderHook(form, full);
+		assert.deepEqual(latest(), []);
+
+		await act(async () => {
+			store.set(internalName, '');
+		});
+		await act(async () => pause(20));
+		assert.deepEqual(latest(), [], 'the banner still waits out the pause');
+		await act(async () => pause(invalidFieldReadDebounceMs));
+		assert.deepEqual(latest(), ['internalName']);
+	});
+
+	it('does not show the previous form list when a new atoms object arrives after null', async () => {
+		const store = createStore();
+		const first = createFormAtoms({ fileNameValid: true, internalName: '' }, store);
+		const second = createFormAtoms({ fileNameValid: true, internalName: 'Home' }, store);
+		const results: string[][] = [];
+		let setForm!: (form: typeof first | null) => void;
+		function Probe() {
+			const [form, update] = useState<typeof first | null>(first);
+			setForm = update;
+			results.push(useMinimumSaveRequirements((form?.atoms ?? null) as never, full));
+			return null;
+		}
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(React.createElement(JotaiProvider, { store }, React.createElement(Probe)));
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		assert.deepEqual(results[results.length - 1], ['internalName']);
+
+		const mark = results.length;
+		await act(async () => setForm(null));
+		await act(async () => setForm(second));
+		await act(async () => pause(invalidFieldReadDebounceMs + 50));
+		assert.equal(
+			results.slice(mark).some((list) => list.length === 1 && list[0] === 'internalName'),
+			false
+		);
+		assert.deepEqual(results[results.length - 1], []);
 	});
 });
