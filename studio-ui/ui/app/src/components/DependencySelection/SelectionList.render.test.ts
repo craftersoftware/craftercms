@@ -22,20 +22,13 @@ import { describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { SelectionList } = await import('./SelectionList.tsx');
 
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)
-};
+const intl = createTestIntl();
 const store = configureStore({ reducer: { uiConfig: (state = { locale: {} }) => state } as never });
 
 async function render(props: Record<string, unknown>): Promise<HTMLElement> {

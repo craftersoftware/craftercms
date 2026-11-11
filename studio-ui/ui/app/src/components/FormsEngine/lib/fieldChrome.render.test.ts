@@ -33,7 +33,8 @@ import type PluginDescriptor from '../../../models/PluginDescriptor';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -99,19 +100,6 @@ function loadedControl(entry: Record<string, unknown> = {}) {
 
 function fieldFor(id: string, type: string): ContentTypeField {
 	return { id, name: `Label of ${id}`, type, validations: {}, helpText: '' } as ContentTypeField;
-}
-
-// The app build gives every message an id. Without that transform, use the default message as its own id.
-function createTestIntl(messages: Record<string, string> = {}) {
-	const baseIntl = createIntl({ locale: 'en', messages, onError: () => undefined });
-	return {
-		...baseIntl,
-		formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-			baseIntl.formatMessage(
-				{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-				values as never
-			)
-	};
 }
 
 const intl = createTestIntl();
