@@ -1684,6 +1684,15 @@
 	"t4hwRC": "{fieldName}의 최대 항목 수에 도달함",
 	"xeB1YM": "{item} 편집",
 	"y3ckvk": "왼쪽으로 회전",
+	"H/r5m6": "아래로 이동",
+	"HGKQHG": "맨 아래로 이동",
+	"iMy+or": "맨 위로 이동",
+	"JsHF72": "아래로 이동: {name}",
+	"KXN1W9": "맨 위로 이동: {name}",
+	"PoXfiL": "맨 아래로 이동: {name}",
+	"R2xRHS": "위로 이동: {name}",
+	"wmFdws": "위로 이동",
+	"coX6qx": "{name}을(를) {total}개 중 {position}번째로 이동했습니다",
 	"AjpOzY": "게시하기 전에 종속성 변경을 적용하거나 취소하세요.",
 	"hyt6Fi": "양식의 모든 요구 사항이 충족될 때까지 저장할 수 없습니다.",
 	"KXgZZU": "아직 저장할 수 없습니다. {count, plural, one {#개 필드를 확인해야 합니다} other {#개 필드를 확인해야 합니다}}",
@@ -1717,5 +1726,6 @@
 	"w9pRps": "{name} 사용",
 	"CsDXpZ": "{name} 풀",
 	"l6B//v": "{name} 푸시",
-	"/xPSui": "현재 보기에서 드롭 존을 찾을 수 없습니다."
+	"/xPSui": "현재 보기에서 드롭 존을 찾을 수 없습니다.",
+	"JpoWiv": "항목 {position}"
 }

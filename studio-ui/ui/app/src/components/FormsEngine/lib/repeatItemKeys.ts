@@ -87,6 +87,21 @@ export function carryReplacedItem<T>(
 
 export { findRepeatItemIndex } from './repeatItemForm';
 
+/**
+ * One key per position in `items`. The same object twice (a form controller can write that), or two objects that share
+ * a carried key, would otherwise get one key; later occurrences get a suffix so each row, and each reorder entry, is
+ * its own. A non-object item has no key and falls back to its position.
+ */
+export function repeatOccurrenceKeys<T>(items: readonly T[], keys: Pick<RepeatItemKeys<T>, 'keyOf'>): string[] {
+	const seen = new Map<string, number>();
+	return items.map((item, index) => {
+		const key = keys.keyOf(item) ?? String(index);
+		const occurrence = seen.get(key) ?? 0;
+		seen.set(key, occurrence + 1);
+		return occurrence === 0 ? key : `${key}~${occurrence}`;
+	});
+}
+
 /** Removes the item at `index` from the current array. */
 export function removeRepeatItem<T>(items: readonly T[], index: number): T[] {
 	const next = items.concat();
