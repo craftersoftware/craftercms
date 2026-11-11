@@ -139,9 +139,16 @@ export function TableOfContents({ containerRef, fields, sections, countFieldIds 
 			/>
 		);
 	};
-	const sectionFields = contentTypeSections.flatMap((section) =>
-		section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean)
-	);
+	// A repeat-item editor lists its child fields and shows no sections, but `contentType` is still the
+	// parent's. Its atoms cover only the child fields, so there is nothing to probe for the section marks.
+	const sectionFields = fields
+		? []
+		: contentTypeSections
+				.flatMap((section) => section.fields.map((fieldId) => contentTypeFields[fieldId]).filter(Boolean))
+				.filter((field) => {
+					const { valueAtom, validationAtom } = fieldIndicatorAtoms(field.id, atoms);
+					return Boolean(valueAtom && validationAtom);
+				});
 	return (
 		<>
 			{sectionFields.map((field) => (

@@ -223,3 +223,32 @@ describe('table of contents section error mark', () => {
 		assert.equal(hasErrorMark(sectionRow(host, 'sec_main')), true);
 	});
 });
+
+describe('table of contents without atoms for a section field', () => {
+	it('renders a repeat-item editor that has atoms only for the repeat child fields', async () => {
+		const child = fieldOf('child_s', 'Child');
+		const { host, errors } = await setup({
+			sections,
+			contentTypeFields: [...contentTypeFields, child],
+			withAtoms: ['child_s'],
+			validation: { child_s: invalidState },
+			repeatFieldId: 'items_o',
+			repeatFields: [child]
+		});
+		assert.ok(host.querySelector('[data-field-id="child_s"]'));
+		assert.equal(host.querySelector('[data-section-id]'), null);
+		assert.equal(host.textContent?.includes('Section has errors'), false);
+		assert.deepEqual(errors, []);
+	});
+
+	it('skips a section field that has no atoms and still marks the section for one that does', async () => {
+		const { host, errors } = await setup({
+			sections,
+			contentTypeFields,
+			withAtoms: ['summary_s'],
+			validation: { summary_s: invalidState }
+		});
+		assert.equal(hasErrorMark(sectionRow(host, 'sec_main')), true);
+		assert.deepEqual(errors, []);
+	});
+});
