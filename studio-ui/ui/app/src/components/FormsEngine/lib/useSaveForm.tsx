@@ -58,7 +58,7 @@ import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
 import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
-import { of, switchMap } from 'rxjs';
+import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
 import { nanoid } from 'nanoid';
