@@ -308,6 +308,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		{ defaultMessage: 'Move {fieldName} to another section' },
 		{ fieldName: field.name }
 	);
+	const deleteFieldLabel = formatMessage({ defaultMessage: 'Delete {fieldName}' }, { fieldName: field.name });
 
 	return (
 		<>
@@ -326,7 +327,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 			{field.id !== XmlKeys.internalName && field.id !== XmlKeys.fileName && (
 				<ConfirmDropdown
 					icon={DeleteRounded}
-					iconTooltip={<FormattedMessage defaultMessage="Delete field" />}
+					iconTooltip={deleteFieldLabel}
 					confirmHelperText={
 						!(field as NewContentTypeField).NEW ? (
 							<FormattedMessage
@@ -432,6 +433,7 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 		{ section: section.title }
 	);
 	const addFieldLabel = formatMessage({ defaultMessage: 'Add field to {section}' }, { section: section.title });
+	const deleteSectionLabel = formatMessage({ defaultMessage: 'Delete {section}' }, { section: section.title });
 
 	return (
 		<>
@@ -451,7 +453,7 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 			{!isMainSection && (
 				<ConfirmDropdown
 					icon={DeleteRounded}
-					iconTooltip={<FormattedMessage defaultMessage="Delete Section" />}
+					iconTooltip={deleteSectionLabel}
 					confirmHelperText={
 						<FormattedMessage defaultMessage={'Delete "{title}"?'} values={{ title: section.title }} />
 					}
@@ -472,12 +474,13 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 
 function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
 	const { dataSource, onDeleteDataSource } = props;
+	const { formatMessage } = useIntl();
 	if (!dataSource) return;
 	return (
 		<>
 			<ConfirmDropdown
 				icon={DeleteRounded}
-				iconTooltip={<FormattedMessage defaultMessage="Delete Data Source" />}
+				iconTooltip={formatMessage({ defaultMessage: 'Delete {name}' }, { name: dataSource.title })}
 				confirmHelperText={<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />}
 				cancelText={<FormattedMessage defaultMessage="No" />}
 				confirmText={<FormattedMessage defaultMessage="Yes" />}

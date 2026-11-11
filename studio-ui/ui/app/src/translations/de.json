@@ -1711,5 +1711,8 @@
 	"dnCbcG": "{field}: {error}",
 	"1EOGjb": "Verknüpfung mit {item} aufheben",
 	"6wHz/d": "{item} anzeigen",
-	"rdK9AW": "{item} löschen"
+	"rdK9AW": "{item} löschen",
+	"CC8oAF": "{fieldName} löschen",
+	"7+UMkr": "{section} löschen",
+	"JpsXCp": "{name} löschen"
 }

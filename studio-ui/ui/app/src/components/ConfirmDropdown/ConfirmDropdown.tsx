@@ -48,6 +48,11 @@ interface ConfirmDropdownProps {
 	icon?: OverridableComponent<SvgIconTypeMap>;
 	iconColor?: IconButtonProps['color'];
 	iconTooltip?: React.ReactNode;
+	/**
+	 * The accessible name of the icon button. Defaults to `iconTooltip` when it is a string, otherwise to "Confirm".
+	 * Pass the item in the name (e.g. "Delete {name}") when the dropdown repeats on a page.
+	 **/
+	iconLabel?: string;
 	buttonProps?: ButtonProps;
 	onConfirm(): any;
 	onCancel?(): any;
@@ -85,6 +90,7 @@ export function ConfirmDropdown(props: ConfirmDropdownProps) {
 		icon: Icon,
 		iconColor,
 		iconTooltip,
+		iconLabel,
 		size = 'medium',
 		buttonProps = {}
 	} = props;
@@ -104,6 +110,9 @@ export function ConfirmDropdown(props: ConfirmDropdownProps) {
 		onCancel?.();
 	};
 
+	const iconAriaLabel =
+		iconLabel ?? (typeof iconTooltip === 'string' ? iconTooltip : formatMessage({ defaultMessage: 'Confirm' }));
+
 	// Not memorizing causes the menu to get misplaced upon opening.
 	const iconButton = useMemo(
 		() =>
@@ -113,12 +122,12 @@ export function ConfirmDropdown(props: ConfirmDropdownProps) {
 					onClick={(e) => setAnchorEl(e.currentTarget)}
 					size={size}
 					disabled={disabled}
-					aria-label={formatMessage({ defaultMessage: 'Confirm' })}
+					aria-label={iconAriaLabel}
 				>
 					<Icon />
 				</IconButton>
 			) : null,
-		[Icon, disabled, iconColor, size]
+		[Icon, disabled, iconColor, size, iconAriaLabel]
 	);
 
 	return (

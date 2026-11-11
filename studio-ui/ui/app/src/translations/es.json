@@ -1711,5 +1711,8 @@
 	"dnCbcG": "{field}: {error}",
 	"1EOGjb": "Desvincular {item}",
 	"6wHz/d": "Ver {item}",
-	"rdK9AW": "Borrar {item}"
+	"rdK9AW": "Borrar {item}",
+	"CC8oAF": "Borrar {fieldName}",
+	"7+UMkr": "Borrar {section}",
+	"JpsXCp": "Borrar {name}"
 }
