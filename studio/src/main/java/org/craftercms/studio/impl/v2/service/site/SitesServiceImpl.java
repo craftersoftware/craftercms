@@ -182,4 +182,9 @@ public class SitesServiceImpl implements SitesService {
     public List<Site> getAllSites() {
         return sitesServiceInternal.getAllSites();
     }
+
+	@Override
+	public List<String> getDeliverableSiteIds() {
+		return sitesServiceInternal.getDeliverableSiteIds();
+	}
 }
