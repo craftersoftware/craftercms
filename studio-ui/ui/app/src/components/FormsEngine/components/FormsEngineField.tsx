@@ -30,12 +30,16 @@ import React, {
 	PropsWithChildren,
 	ReactNode,
 	SyntheticEvent,
+	useContext,
 	useEffect,
+	useId,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState
 } from 'react';
 import { isEmptyValue } from '../lib/validators';
+import { fieldDescribedById, fieldDescriptionId, fieldErrorId, FormValidationAnnouncerContext } from '../lib/fieldA11y';
 import FormLabel from '@mui/material/FormLabel';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HelpOutlineRounded } from '@mui/icons-material';
@@ -53,7 +57,7 @@ import {
 import { useAtomValue, useStore as useJotaiStore } from 'jotai';
 import { isScopeActive, revealField } from '../lib/formVisibility';
 import { changedFieldAtom, commitFormVisibility, getAdditionalFieldIds, useStackSubmitting } from '../lib/formUtils';
-import { FieldValidityMessages } from './FieldValidityMessages';
+import { FieldValidityMessages, translateValidityMessage } from './FieldValidityMessages';
 import { FieldDescribedByProvider } from './useControlAria';
 import { XmlKeys } from '../lib/formConsts';
 import { mergeSx } from '../lib/mergeSx';
@@ -83,6 +87,11 @@ export type FormsEngineFieldProps = PropsWithChildren<{
 	field: ContentTypeField;
 	autoFocus?: boolean;
 	htmlFor?: string;
+	/**
+	 * Id the description and error ids derive from, for a control the label's `htmlFor` does not point at
+	 * (a select, the rich text editor). Ignored when `htmlFor` is set. See `useFieldControlA11y`.
+	 */
+	controlId?: string;
 	labelId?: string;
 	value?: unknown;
 	min?: number;
@@ -133,6 +142,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		length,
 		action,
 		htmlFor,
+		controlId: controlIdProp,
 		labelId,
 		autoFocus,
 		menu = true,
@@ -175,8 +185,52 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const isValid = fieldState.props.isValid;
 	const indicatorProps = fieldState.props;
 	const dispatch = useDispatch();
+	const announceValidation = useContext(FormValidationAnnouncerContext);
+	// The value atom is the edit signal. Select, the rich-text iframe, pickers and the node selector
+	// change it without a bubbling input event. The flag is recorded after commit, before paint, so the
+	// first blur after an edit still sees it. Controller setValue and rollback tag the write and are ignored.
+	const editedRef = useRef(false);
+	const committedValueRef = useRef(value);
+	const systemWriteRef = useRef(false);
+	const fieldUpdates$ = stableForm.fieldUpdates$;
+	useLayoutEffect(() => {
+		if (!fieldUpdates$) return undefined;
+		const subscription = fieldUpdates$.subscribe((update) => {
+			if (update.fieldId !== fieldId) return;
+			// The latest write decides. A same-value controller setValue or rollback still emits, and the
+			// value effect does not run, so leaving the flag true would swallow the author's next edit.
+			systemWriteRef.current = Boolean(update.origin);
+		});
+		return () => subscription.unsubscribe();
+	}, [fieldUpdates$, fieldId]);
+	useLayoutEffect(() => {
+		if (Object.is(committedValueRef.current, value)) return;
+		committedValueRef.current = value;
+		if (systemWriteRef.current) {
+			systemWriteRef.current = false;
+			return;
+		}
+		editedRef.current = true;
+	}, [value]);
+	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
+	const generatedId = useId();
+	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
+	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget;
+		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		if (isValid || validityData.state !== 'hasData') return;
+		const errorText = (validityData.data?.messages ?? [])
+			.map((messageData) => translateValidityMessage(messageData, formatMessage))
+			.join(' ');
+		if (!errorText) return;
+		// Blur announces only edited fields, to cut noise while tabbing.
+		// Untouched invalid fields still expose their error on focus through aria-describedby, and a failed
+		// Save still announces the full error count and summary, so nothing is lost.
+		if (!editedRef.current) return;
+		announceValidation(formatMessage({ defaultMessage: '{field}: {error}' }, { field: field.name, error: errorText }));
+	};
 	useEffect(() => {
 		// Offer controls the option to focus on the label when the field is rendered.
 		if (autoFocus) {
@@ -184,9 +238,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		}
 	}, [autoFocus]);
 	const errorShown = !isValid && validityData.state === 'hasData';
-	const helpId = labelId && hasHelpText && showHelp ? `${labelId}-help` : undefined;
-	const descriptionId = labelId && hasDescription ? `${labelId}-description` : undefined;
-	const errorId = labelId && errorShown ? `${labelId}-error` : undefined;
+	const helpId = hasHelpText && showHelp ? `${describedByBase}-help` : undefined;
+	const descriptionId = hasDescription ? fieldDescriptionId(describedByBase) : undefined;
+	const errorId = errorShown ? fieldErrorId(describedByBase) : undefined;
 	const describedByIds = [helpId, descriptionId, errorId].filter((id): id is string => Boolean(id));
 	return (
 		<FormControl
@@ -197,6 +251,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			data-field-id={fieldId}
 			required={isRequired}
 			className={className}
+			onBlur={handleFieldBlur}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
 			<FieldDescribedByProvider value={{ labelId, describedByIds }}>
@@ -376,14 +431,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				)}
 				{children}
 				{hasDescription && <FormHelperText id={descriptionId}>{field.description}</FormHelperText>}
-				{errorShown &&
-					(errorId ? (
-						<Box id={errorId}>
-							<FieldValidityMessages messages={validityData.data?.messages} />
-						</Box>
-					) : (
+				{/* Rendered while invalid, even with no messages, so the control's aria-describedby always resolves. */}
+				{errorShown && (
+					<Box id={errorId}>
 						<FieldValidityMessages messages={validityData.data?.messages} />
-					))}
+					</Box>
+				)}
 			</FieldDescribedByProvider>
 		</FormControl>
 	);
