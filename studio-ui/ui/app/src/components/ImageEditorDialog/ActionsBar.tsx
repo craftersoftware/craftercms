@@ -47,6 +47,9 @@ const shouldRenderFlip = (tools: ImageEditorDialogProps['tools']) => tools && to
 export function ActionsBar(props: ActionsBarProps) {
 	const { tools, currentMode, setMode: setEditorMode, onRotate, onFlip } = props;
 	const { formatMessage } = useIntl();
+
+	// MUI's `Tooltip` only copies its `title` onto the button as an `aria-label` when the title
+	// is a plain string so these need to stay `formatMessage` instead of `<FormattedMessage />`
 	const cropLabel = formatMessage({ defaultMessage: 'Crop' });
 	const rotateLeftLabel = formatMessage({ defaultMessage: 'Rotate left' });
 	const rotateRightLabel = formatMessage({ defaultMessage: 'Rotate right' });
