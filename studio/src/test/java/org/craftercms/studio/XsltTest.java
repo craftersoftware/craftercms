@@ -79,6 +79,8 @@ public class XsltTest {
 		"crafter/studio/upgrade/xslt/ui/v5.0/content-type-management/custom-catalog.xml";
 	private static final String UI_NO_WIDGET_FIXTURE =
 		"crafter/studio/upgrade/xslt/ui/v5.0/content-type-management/no-top-level-widget.xml";
+	private static final String UI_I18N_PRESERVE_FIXTURE =
+		"crafter/studio/upgrade/xslt/ui/v5.0/i18n-preserve/input.xml";
 
 	/**
 	 * Each array must follow this structure:
@@ -734,6 +736,39 @@ public class XsltTest {
 	}
 
 	/**
+	 * Plain stock text is localized. An element that already has an id keeps that id, its defaultMessage,
+	 * and its text. The same rule applies to Preview Audiences name, label, and helpText.
+	 */
+	@Test
+	public void stockTextLocalizationPreservesIdentifiedTranslations() throws Exception {
+		String upgraded = applyTemplates(readResource(UI_I18N_PRESERVE_FIXTURE), UI_I18N_TEMPLATE);
+		Document document = parseXmlString(upgraded);
+		Element siteUi = document.getDocumentElement();
+
+		assertTranslation(siteUi, "label", "pathNavigatorTree.pages", "Pages", "");
+		assertTranslation(siteUi, "label", "acme.pages", "Project pages", "Pages");
+		assertTranslation(siteUi, "label", "pathNavigatorTree.components", "Custom components", "Components");
+		assertTranslation(siteUi, "label", "pathNavigatorTree.items", "Items", "");
+		Element sitePages = unlabeled(siteUi, "label", "Site Pages");
+		assertEquals(sitePages.getAttribute("id"), "");
+		assertEquals(sitePages.getAttribute("defaultMessage"), "");
+
+		assertTranslation(siteUi, "name", "previewAudiencesPanel.segmentLabel", "Segment", "");
+		assertTranslation(siteUi, "name", "acme.segment", "Audience", "Segment");
+		assertTranslation(siteUi, "name", "previewAudiencesPanel.nameLabel", "Display name", "Name");
+		assertTranslation(siteUi, "label", "previewAudiencesPanel.guyValueLabel", "Guy", "");
+		assertTranslation(siteUi, "label", "acme.guy", "Person", "Guy");
+		assertTranslation(siteUi, "helpText", "previewAudiencesPanel.segmentHelpText",
+			"Setting the segment will change content targeting to the audience selected", "");
+		assertTranslation(siteUi, "helpText", "acme.help", "Custom targeting note",
+			"Setting the segment will change content targeting to the audience selected.");
+		Element nickname = unlabeled(siteUi, "name", "Nickname");
+		assertEquals(nickname.getAttribute("id"), "");
+
+		assertIdempotent(upgraded, UI_I18N_TEMPLATE);
+	}
+
+	/**
 	 * A site that already has its own top-level ContentTypeManagement widget keeps that catalog.
 	 * The standard controls are not merged in, and the pages datasource is added beside the custom ones.
 	 */
@@ -973,6 +1008,44 @@ public class XsltTest {
 			throw new AssertionError("Missing widget " + id);
 		}
 		return found;
+	}
+
+	private void assertTranslation(Element parent, String tag, String id, String defaultMessage, String text) {
+		List<Element> matches = elementsById(parent, tag, id);
+		assertEquals(matches.size(), 1, tag + " " + id);
+		assertEquals(matches.get(0).getAttribute("defaultMessage"), defaultMessage, id);
+		assertEquals(matches.get(0).getTextContent().trim(), text, id);
+	}
+
+	private Element unlabeled(Element parent, String tag, String text) {
+		NodeList nodes = parent.getElementsByTagName(tag);
+		Element found = null;
+		for (int i = 0; i < nodes.getLength(); i++) {
+			Element element = (Element) nodes.item(i);
+			if (!text.equals(element.getTextContent().trim()) || element.hasAttribute("id")) {
+				continue;
+			}
+			if (found != null) {
+				throw new AssertionError("Multiple unlabeled " + tag + " elements with text " + text);
+			}
+			found = element;
+		}
+		if (found == null) {
+			throw new AssertionError("Missing unlabeled " + tag + " " + text);
+		}
+		return found;
+	}
+
+	private List<Element> elementsById(Element parent, String tag, String id) {
+		List<Element> matches = new ArrayList<>();
+		NodeList nodes = parent.getElementsByTagName(tag);
+		for (int i = 0; i < nodes.getLength(); i++) {
+			Element element = (Element) nodes.item(i);
+			if (id.equals(element.getAttribute("id"))) {
+				matches.add(element);
+			}
+		}
+		return matches;
 	}
 
 	private Element labelById(Element parent, String id) {

@@ -1465,9 +1465,10 @@ configurations:
                         commitDetails: Add i18n to PathNavigator/PathNavigatorTree
             # 4.5–4.7 sites record ui.xml as 4.5.0.0. Run the PathNavigator i18n transform
             # again so a leftover literal label such as <label>Pages</label> is updated.
-            # A label that already has a translation id has no text node, and a custom label
-            # that is not the stock English string does not match, so both stay. Continue at
-            # 5.0.0.0 for ContentTypeManagement, TinyMCE, and the pages datasource.
+            # An element that already has an id is left unchanged, including its defaultMessage,
+            # even when its text is the stock English string. Text that is not a stock string
+            # does not match. Continue at 5.0.0.0 for ContentTypeManagement, TinyMCE, and the
+            # pages datasource.
             # This entry must stay ahead of 5.0.0.0 so the forward pipeline walk still reaches it.
             -   currentVersion: 4.5.0.0
                 nextVersion: 5.0.0.0
