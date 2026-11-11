@@ -185,11 +185,11 @@ export function createEntry(fieldIds: string[]) {
 export type Entry = ReturnType<typeof createEntry>;
 
 /** What the controls passed to `api.pushForm`, cleared by `unmountAll`. */
-export const pushFormCalls: Array<Record<string, unknown>> = [];
+export const pushFormCalls: Array<{ readonly?: boolean }> = [];
 const stableGlobal = {
 	formsStackData: [],
 	api: {
-		pushForm(props: Record<string, unknown>) {
+		pushForm(props: { readonly?: boolean }) {
 			pushFormCalls.push(props);
 		}
 	}
