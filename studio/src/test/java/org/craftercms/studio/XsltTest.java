@@ -674,22 +674,27 @@ public class XsltTest {
 	}
 
 	/**
-	 * 4.5–4.7 ui.xml is version 4.5.0.0. The pipeline reapplies the PathNavigator i18n transform,
-	 * then continues through 5.0.0.1, 5.0.0.2 and 5.0.0.3 for the ContentTypeManagement catalog.
-	 * A nested tool reference is not that catalog.
+	 * Supported 4.x ui.xml versions join at 5.0-t with no operations. The i18n transform runs once
+	 * on the way to 5.0.0.0, then the ContentTypeManagement, TinyMCE, and pages-datasource steps.
+	 * A site already at 5.0.0.0 does not run the i18n transform again.
 	 */
 	@Test
 	public void uiPipelineContinuesFrom4500ThroughContentTypeManagement() throws Exception {
 		HierarchicalConfiguration config = productionUpgradeConfig();
+		List<String> from4x = Arrays.asList(templatesFrom4500());
 
-		assertEquals(templatesFrom(config, "4.5.0.0"), Arrays.asList(templatesFrom4500()),
-			"4.5.0.0 must reach the i18n, ContentTypeManagement, TinyMCE and pages-datasource steps");
+		assertEquals(templatesFrom(config, "4.5.0.0"), from4x,
+			"4.5.0.0 must reach i18n once, then ContentTypeManagement, TinyMCE, and pages datasource");
+		assertEquals(templatesFrom(config, "4.2.0.3"), from4x,
+			"4.2.0.3 must use the same 5.0-t entry as 4.5.0.0");
+		assertEquals(templatesFrom(config, "4.2.0.2"), from4x,
+			"earlier 4.x ui.xml versions must reach the single 5.0-t i18n step");
 		assertEquals(finalVersion(config, "4.5.0.0"), "5.0.0.3");
-
-		List<String> from4203 = templatesFrom(config, "4.2.0.3");
-		assertEquals(from4203.get(0), "crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt");
-		assertEquals(from4203.subList(1, from4203.size()), Arrays.asList(CONTENT_TYPE_MANAGEMENT_TEMPLATES));
 		assertEquals(finalVersion(config, "4.2.0.3"), "5.0.0.3");
+		assertEquals(finalVersion(config, "4.2.0.2"), "5.0.0.3");
+		assertEquals(templatesFrom(config, "5.0.0.0"), Arrays.asList(CONTENT_TYPE_MANAGEMENT_TEMPLATES),
+			"5.0.0.0 must not run the i18n transform again");
+		assertEquals(finalVersion(config, "5.0.0.0"), "5.0.0.3");
 
 		assertTrue(templatesFrom(config, "5.0.0.3").isEmpty(),
 			"sites already at 5.0.0.3 must not run another ui.xml step");

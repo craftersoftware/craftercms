@@ -1458,19 +1458,12 @@ configurations:
                         replacement: "blocks"
                         commitDetails: Update the RTE configuration to work with TinyMCE 7
             -   currentVersion: 4.2.0.3
-                nextVersion: 5.0.0.0
-                operations:
-                    -   type: xsltFileUpgrader
-                        template: crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt
-                        commitDetails: Add i18n to PathNavigator/PathNavigatorTree
-            # 4.5–4.7 sites record ui.xml as 4.5.0.0. Run the PathNavigator i18n transform
-            # again so a leftover literal label such as <label>Pages</label> is updated.
-            # An element that already has an id is left unchanged, including its defaultMessage,
-            # even when its text is the stock English string. Text that is not a stock string
-            # does not match. Continue at 5.0.0.0 for ContentTypeManagement, TinyMCE, and the
-            # pages datasource.
-            # This entry must stay ahead of 5.0.0.0 so the forward pipeline walk still reaches it.
+                nextVersion: 5.0-t
             -   currentVersion: 4.5.0.0
+                nextVersion: 5.0-t
+            # Entry point for 5.0 upgrade. The i18n transform runs once. An element that already
+            # has an id is left unchanged, even when its text is the stock English string.
+            -   currentVersion: 5.0-t
                 nextVersion: 5.0.0.0
                 operations:
                     -   type: xsltFileUpgrader
