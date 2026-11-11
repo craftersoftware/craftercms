@@ -1,5 +1,9 @@
 # SDK Changelog
 
+## 5.0.0
+## @craftercms/redux@5.0.0
+- **Breaking:** `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
+
 ## 4.5.0
 ## @craftercms/content@4.5.0
 - Deprecated "Get Descriptor" API (use getItem instead)
@@ -8,7 +12,6 @@
 
 ## @craftercms/redux@4.5.0
 - Deprecated `getDescriptor` API (use `getItem` instead)
-- `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
 
 ## @craftercms/classes4.4.1
 - New `crafterConf.flatten` property which controls the `flatten` parameter of content services to recursively include linked content items
