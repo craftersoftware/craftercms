@@ -1222,7 +1222,7 @@
 	"siteConfig.postfixes": "Suffixe",
 	"siteConfig.switchToMessage": "Wechseln Sie zu {type}",
 	"siteConfig.toolNotFound": "\"{tool}\" Werkzeug nicht gefunden.",
-	"siteConfigurationManagement.activeEnvironment": "{environment} Umgebung",
+	"siteConfigurationManagement.activeEnvironment": "{environment}-Umgebung",
 	"siteConfigurationManagement.configurationFiles": "Konfigurationsdateien",
 	"siteConfigurationManagement.confTabAssetProcessing": "Dateiverarbeitung",
 	"siteConfigurationManagement.confTabAssetProcessingDesc": "Konfigurationsdatei für die Dateiverarbeitung.",

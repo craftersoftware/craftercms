@@ -1222,7 +1222,7 @@
 	"siteConfig.postfixes": "Sufijos",
 	"siteConfig.switchToMessage": "Cambiar a {type}",
 	"siteConfig.toolNotFound": "No se encontró la herramienta \"{tool}\".",
-	"siteConfigurationManagement.activeEnvironment": "{environment} Entorno",
+	"siteConfigurationManagement.activeEnvironment": "Entorno {environment}",
 	"siteConfigurationManagement.configurationFiles": "Archivos de configuración",
 	"siteConfigurationManagement.confTabAssetProcessing": "Procesamiento de activos",
 	"siteConfigurationManagement.confTabAssetProcessingDesc": "Archivo de configuración de procesamiento de activos.",
