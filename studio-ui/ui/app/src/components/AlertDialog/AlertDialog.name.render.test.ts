@@ -17,6 +17,8 @@
 /**
  * The dialog's aria-labelledby must point at an element that is rendered, and two open dialogs must not
  * share ids. With no title the body text names the dialog, and with neither the dialog has no labelledby.
+ * The description is chosen the same way and never repeats the name: the body text describes a titled dialog,
+ * a dialog named by its body text has no description, and the content describes a dialog with no body text.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -72,13 +74,25 @@ function nameOf(dialog: HTMLElement) {
 		.join(' ');
 }
 
+/** The accessible description, resolved from aria-describedby the way a browser does. Null when absent. */
+function descriptionOf(dialog: HTMLElement) {
+	const ids = (dialog.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
+	if (!ids.length) return null;
+	return ids
+		.map((id) => {
+			const target = document.getElementById(id);
+			assert.ok(target, `aria-describedby points at "${id}", which is not rendered`);
+			return target.textContent?.trim();
+		})
+		.join(' ');
+}
+
 describe('AlertDialog accessible name', () => {
 	it('names an AlertDialog by its title', async () => {
 		await render(AlertDialog, { title: 'Leave this form?', body: 'Your changes will be discarded.' });
 		const [dialog] = dialogs();
 		assert.equal(nameOf(dialog), 'Leave this form?');
 		assert.equal(document.getElementById(dialog.getAttribute('aria-labelledby'))?.tagName, 'H2');
-		assert.ok(document.getElementById(dialog.getAttribute('aria-describedby')));
 	});
 
 	it('names a ConfirmDialog by its title', async () => {
@@ -95,7 +109,7 @@ describe('AlertDialog accessible name', () => {
 		await render(AlertDialog, { children: React.createElement('p', null, 'Only children') });
 		const [dialog] = dialogs();
 		assert.equal(dialog.hasAttribute('aria-labelledby'), false);
-		assert.ok(document.getElementById(dialog.getAttribute('aria-describedby')));
+		assert.equal(descriptionOf(dialog), 'Only children');
 	});
 
 	it('gives stacked dialogs their own title ids', async () => {
@@ -108,5 +122,41 @@ describe('AlertDialog accessible name', () => {
 		assert.equal(nameOf(second), 'Second');
 		const ids = [...document.querySelectorAll('[id]')].map((node) => node.id);
 		assert.equal(new Set(ids).size, ids.length, 'duplicate ids');
+	});
+});
+
+describe('AlertDialog accessible description', () => {
+	it('describes a titled dialog by its body text, not by the title', async () => {
+		await render(AlertDialog, { title: 'Leave this form?', body: 'Your changes will be discarded.' });
+		const [dialog] = dialogs();
+		assert.equal(nameOf(dialog), 'Leave this form?');
+		assert.equal(descriptionOf(dialog), 'Your changes will be discarded.');
+	});
+
+	it('describes a titled dialog the same way when it has buttons and children', async () => {
+		await render(ConfirmDialog, {
+			title: 'Delete item?',
+			body: 'This cannot be undone.',
+			children: React.createElement('p', null, 'Extra content'),
+			onOk() {},
+			onCancel() {}
+		});
+		const [dialog] = dialogs();
+		assert.equal(nameOf(dialog), 'Delete item?');
+		assert.equal(descriptionOf(dialog), 'This cannot be undone.');
+	});
+
+	it('has no description when the body text is the name', async () => {
+		await render(ConfirmDialog, { body: 'This cannot be undone.', onOk() {}, onCancel() {} });
+		const [dialog] = dialogs();
+		assert.equal(nameOf(dialog), 'This cannot be undone.');
+		assert.equal(dialog.hasAttribute('aria-describedby'), false);
+	});
+
+	it('describes a dialog with no body text by its content', async () => {
+		await render(AlertDialog, { title: 'Encrypt Marked', children: React.createElement('p', null, 'How it works') });
+		const [dialog] = dialogs();
+		assert.equal(nameOf(dialog), 'Encrypt Marked');
+		assert.match(descriptionOf(dialog) ?? '', /How it works/);
 	});
 });

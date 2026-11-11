@@ -40,6 +40,10 @@ export function AlertDialog(props: AlertDialogProps) {
 	// Never point at an element that is not rendered. Without a title, the body text names the dialog, and
 	// with neither, the dialog stays unnamed rather than carrying a dangling reference.
 	const labelledBy = rest.title ? titleId : rest.body ? bodyTextId : undefined;
+	// The description is chosen the same way, and never repeats the name. The content element holds the title,
+	// so it describes the dialog only when there is no body text to point at. When the body text is the
+	// name, there is nothing left to describe.
+	const describedBy = rest.body ? (rest.title ? bodyTextId : undefined) : bodyId;
 
 	const onCloseHandler = useOnClose({
 		onClose: onClose,
@@ -52,7 +56,7 @@ export function AlertDialog(props: AlertDialogProps) {
 			open={open}
 			onClose={onCloseHandler}
 			aria-labelledby={labelledBy}
-			aria-describedby={bodyId}
+			aria-describedby={describedBy}
 			// MUI generates an aria-labelledby for its own DialogTitle when none is given. This dialog renders no
 			// DialogTitle, so without a label the paper must drop it instead of pointing at nothing.
 			slotProps={labelledBy ? undefined : { paper: { 'aria-labelledby': undefined } }}
