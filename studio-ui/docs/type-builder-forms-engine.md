@@ -401,7 +401,7 @@ Keep three mechanisms distinct:
 Important findings:
 
 - The public FE control/DS plugin docs still describe the FE1 `CStudioForms`/`CStudioAuthoring.Module.moduleLoaded` contract ([Appendix A.3](#a3-plugin-transport-getplugininfo-and-the-controlpluginname-gotcha)). FE1 itself was removed in [#9197](https://github.com/craftersoftware/craftercms/issues/9197).
-- Existing `form-control` / `form-datasource` package installation still auto-wires `site-config-tools.xml` (the file TB1 read, [Appendix A.1](#a1-tb1-catalog-and-plugin-discovery)), but new TB discovers its catalog from `ui.xml`.
+- `form-control` / `form-datasource` package installation writes the plugin element into the `ui.xml` catalog (`ContentTypeManagement` `controls` / `dataSources`). TB1 read the same kind of element from `site-config-tools.xml` ([Appendix A.1](#a1-tb1-catalog-and-plugin-discovery)).
 - New FE control and DS plugins load through `importPlugin` / `PluginDescriptor.controls` and `.dataSources` (not the widget registry).
 - FE2 control/DS plugins use `PluginDescriptor`; form controllers do **not** (see §5.9).
 - The local `authoring-ui-plugin-examples` `component-library` is the representative modern bundle/build pattern.
@@ -785,7 +785,7 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [ ] Reconcile new TB's code-default catalog proposal with current `ui.xml` allow-list behavior.
 - [ ] Implement/clarify descriptor merge precedence and plugin-coordinate propagation from `ui.xml` (and make lookup order consistent across insert/edit/save).
 - [ ] Decide whether `EditTypeView` should consume Redux `uiConfig` instead of fetching `/ui.xml` independently.
-- [ ] Align project-plugin auto-wiring with TB2 catalog discovery (`site-config-tools.xml` vs `ui.xml`) and define FE1 package migration.
+- [ ] Define FE1 package migration: catalog `id` / `<descriptor>`, `<datasource>` vs `dataSource`, and entries already installed only in `site-config-tools.xml`. Auto-wiring for new installs targets the `ui.xml` catalog.
 - [ ] Normalize plugin identity/locator vocabulary and resolve `file` vs `filename` across XML, frontend, docs, and backend.
 - [ ] **S3 / WebDAV capability stubs** — All remote browse and upload modules work via `browseExternalAssets` / `uploadExternalAssets`. Remaining gap: `video-S3-transcoding` still hard-fails via `unsupportedRemoteError` until dedicated transcoding platform support exists.
 - [ ] **Non-rendering control-map entries** — `disabled`, `internal-name`, `link-input`, `link-textarea` (and any other null map slots) need real FE2 controls or an explicit retire/alias decision.

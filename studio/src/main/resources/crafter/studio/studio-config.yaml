@@ -1015,11 +1015,11 @@ studio.marketplace.plugin.wire.mapping:
         template: crafter/studio/marketplace/wiring/ui.xslt
     form-control:
         module: studio
-        path: administration/site-config-tools.xml
+        path: ui.xml
         template: crafter/studio/marketplace/wiring/control.xslt
     form-datasource:
         module: studio
-        path: administration/site-config-tools.xml
+        path: ui.xml
         template: crafter/studio/marketplace/wiring/datasource.xslt
     site-filter:
         module: engine
