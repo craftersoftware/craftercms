@@ -50,7 +50,7 @@ export interface MediaCardProps {
 	 * covers the header in the tab order: Enter or Space runs `onClick`, and `aria-pressed` reports
 	 * this value. The toggle is not an ancestor of the title heading or the path, so both stay exposed.
 	 * Its accessible name is the item name and, when the path is shown, the path. Clicking the card
-	 * works as before.
+	 * works as before. The toggle uses the header's action slot, so `action` is not rendered in this mode.
 	 */
 	isSelected?: boolean;
 	classes?: Partial<Record<MediaCardClassKey, string>>;
