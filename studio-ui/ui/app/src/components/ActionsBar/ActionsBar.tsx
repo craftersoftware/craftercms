@@ -89,8 +89,10 @@ export function ActionsBar(props: ActionsBarProps) {
 								color="primary"
 								className={props.classes?.button}
 								sx={sxs?.button}
-								disabled={disabled}
 								{...buttonProps}
+								// Placeholders, not controls: after the spread so buttonProps cannot enable or name them.
+								disabled
+								aria-hidden
 							>
 								<Skeleton animation="pulse" height="12px" width={`${rand(40, 60)}px`} />
 							</Button>

@@ -72,4 +72,23 @@ describe('ActionsBar select-all checkbox', () => {
 		const host = await render({ showCheckbox: false });
 		assert.equal(checkboxOf(host), null);
 	});
+
+	it('renders the loading placeholders disabled and hidden from assistive technology', async () => {
+		const host = await render({ isLoading: true, numOfSkeletonItems: 3, buttonProps: { disabled: false } });
+		const placeholders = Array.from(host.querySelectorAll('button'));
+		assert.equal(placeholders.length, 3);
+		for (const button of placeholders) {
+			assert.equal(button.disabled, true);
+			assert.equal(button.getAttribute('aria-hidden'), 'true');
+		}
+		assert.equal(checkboxOf(host)?.getAttribute('aria-label'), 'Select all');
+	});
+
+	it('does not hide the option buttons once loaded', async () => {
+		const host = await render({ buttonProps: { disabled: false } });
+		for (const button of host.querySelectorAll('button')) {
+			assert.equal(button.disabled, false);
+			assert.equal(button.getAttribute('aria-hidden'), null);
+		}
+	});
 });
