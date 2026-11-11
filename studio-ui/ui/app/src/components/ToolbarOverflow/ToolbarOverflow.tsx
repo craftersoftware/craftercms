@@ -23,7 +23,6 @@ import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
 import { defineMessages, useIntl } from 'react-intl';
 import { countVisibleToolbarItems } from './countVisibleToolbarItems';
 import { toolbarItemSignature } from './toolbarItemSignature';
-import { getFocusRingSx } from '../../styles/focusRing';
 
 const messages = defineMessages({
 	moreActions: {
@@ -229,8 +228,7 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				}}
 				sx={{
 					flex: '0 0 auto',
-					position: 'relative',
-					'&:focus-visible, &.Mui-focusVisible': getFocusRingSx()
+					position: 'relative'
 				}}
 			>
 				<MoreHorizRoundedIcon />
