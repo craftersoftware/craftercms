@@ -257,6 +257,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		>
 			<FieldDescribedByProvider value={{ labelId, describedByIds }}>
 				<Box
+					data-field-header
 					sx={{
 						display: 'flex',
 						justifyContent: 'space-between',
