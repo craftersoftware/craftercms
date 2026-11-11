@@ -18,7 +18,6 @@ import { ReactNode } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import { getFocusRingSx } from '../../../styles/focusRing';
 
 export type ReorderControl = 'up' | 'down' | 'top' | 'bottom';
 
@@ -67,7 +66,6 @@ export function ReorderMoveButton({
 			size={size}
 			color={color}
 			disabled={disabled}
-			sx={{ '&.Mui-focusVisible': getFocusRingSx() }}
 			aria-label={label}
 			data-reorder-index={index}
 			data-reorder-control={control}
