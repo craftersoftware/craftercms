@@ -17,6 +17,7 @@
 import '../../../test/stringListDomSetup.mjs';
 import '../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, it } from 'node:test';
 
 const React = await import('react');
@@ -37,7 +38,7 @@ afterEach(async () => {
 	}
 });
 
-async function render() {
+async function render(renderIntl: typeof intl = intl) {
 	const labelClicks: string[] = [];
 	const path = '/site/website';
 	const props = {
@@ -64,7 +65,7 @@ async function render() {
 		root.render(
 			React.createElement(
 				RawIntlProvider,
-				{ value: intl as never },
+				{ value: renderIntl as never },
 				React.createElement(SimpleTreeView, null, React.createElement(PathNavigatorTreeItem, props as never))
 			)
 		);
@@ -118,5 +119,75 @@ describe('PathNavigatorTreeItem keyboard', () => {
 		assert.ok(byLabel(host, FILTER_LABEL), 'Filter is reachable from the focused item');
 		assert.ok(byLabel(host, OPTIONS_LABEL), 'Options is reachable from the focused item');
 		assert.equal(byLabel(host, FILTER_LABEL)?.tabIndex, 0);
+	});
+});
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The accessible name of a button is its aria-label only if nothing points aria-labelledby at another element.
+// MUI Tooltip sets aria-labelledby on its child while open when the title is not a string.
+async function hoverAndWait(button: HTMLElement) {
+	await act(async () => {
+		button.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		// Past the Tooltip enter delay (100ms by default).
+		await wait(300);
+	});
+}
+
+function assertNamedWhileTooltipOpen(
+	host: HTMLElement,
+	button: HTMLElement,
+	expectedName: string,
+	tooltipText: string
+) {
+	const tooltip = document.body.querySelector('[role="tooltip"]');
+	assert.ok(tooltip, 'the tooltip is open');
+	assert.equal(tooltip.textContent, tooltipText);
+	assert.equal(button.hasAttribute('aria-labelledby'), false, 'the open tooltip leaves aria-labelledby unset');
+	assert.equal(button.getAttribute('aria-label'), expectedName);
+	assert.ok(byLabel(host, expectedName), 'the button is still found by its full name');
+}
+
+describe('PathNavigatorTreeItem row button names while the tooltip is open', () => {
+	it('keeps the Options button name when its tooltip opens', async () => {
+		const { host, treeItem } = await render();
+		await act(async () => treeItem.focus());
+		const options = byLabel(host, OPTIONS_LABEL);
+		assert.ok(options, 'Options button');
+		await hoverAndWait(options);
+		assertNamedWhileTooltipOpen(host, options, OPTIONS_LABEL, 'Options');
+	});
+
+	it('keeps the Filter button name when its tooltip opens', async () => {
+		const { host, treeItem } = await render();
+		await act(async () => treeItem.focus());
+		const filter = byLabel(host, FILTER_LABEL);
+		assert.ok(filter, 'Filter button');
+		await hoverAndWait(filter);
+		assertNamedWhileTooltipOpen(host, filter, FILTER_LABEL, 'Filter');
+	});
+});
+
+describe('PathNavigatorTreeItem row button names with the Spanish catalog', () => {
+	const messages = JSON.parse(readFileSync(new URL('../../translations/es.json', import.meta.url), 'utf8'));
+	const esIntl = createTestIntl({ locale: 'es', messages });
+
+	it('names the Options and Filter buttons from the es messages, and translates their tooltips', async () => {
+		const { host, treeItem } = await render(esIntl);
+		await act(async () => treeItem.focus());
+		const options = byLabel(host, 'Opciones para Home');
+		const filter = byLabel(host, 'Filtrar Home');
+		assert.ok(options, 'Opciones para Home');
+		assert.ok(filter, 'Filtrar Home');
+		assert.equal(byLabel(host, OPTIONS_LABEL), null);
+		assert.equal(byLabel(host, FILTER_LABEL), null);
+		await hoverAndWait(options);
+		assertNamedWhileTooltipOpen(host, options, 'Opciones para Home', 'Opciones');
+		await act(async () => {
+			options.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+			await wait(300);
+		});
+		await hoverAndWait(filter);
+		assertNamedWhileTooltipOpen(host, filter, 'Filtrar Home', 'Filtrar');
 	});
 });
