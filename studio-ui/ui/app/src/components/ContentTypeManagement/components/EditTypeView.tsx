@@ -950,6 +950,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			<TypeControllerFlagContext.Provider value={typeControllerFlagContext}>
 				{createElement(TypeBuilderFormsEngine, {
 					...fieldFormViewProps,
+					// Keep `type` current so delete-confirmation can list fields that still reference a data source.
+					type,
 					isPanelReady: drawerOpenTransitionEnded,
 					onOpenInsertFieldDialog,
 					performCurrentFormErrorCheckAndWarning
