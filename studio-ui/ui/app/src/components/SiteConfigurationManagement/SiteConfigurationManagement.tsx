@@ -337,7 +337,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 					}}
 				>
 					<Typography className="text-margin" variant="subtitle1">
-						{formatMessage(translations.encryptMarked)} asd
+						{formatMessage(translations.encryptMarked)}
 					</Typography>
 					<Typography className="text-margin" variant="body2">
 						{formatMessage(translations.encryptHintPt1)}
@@ -813,7 +813,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
 												{formatMessage(translations.encryptMarked)}
 											</SecondaryButton>
-											<Button size="small" onClick={onEncryptHelpClick}>
+											<Button
+												size="small"
+												onClick={onEncryptHelpClick}
+												aria-label={formatMessage({
+													id: 'siteConfigurationManagement.encryptionHelp',
+													defaultMessage: 'Encryption help'
+												})}
+											>
 												<HelpOutlineRoundedIcon />
 											</Button>
 										</ButtonGroup>

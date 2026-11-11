@@ -1300,6 +1300,7 @@
 	"siteConfigurationManagement.confTabWebDAVProfilesDesc": "WebDAV 프로필 구성 파일.",
 	"siteConfigurationManagement.confTabWorkflowConf": "워크플로 구성",
 	"siteConfigurationManagement.confTabWorkflowConfDesc": "시스템에서 사용 가능한 워크플로 정의",
+	"siteConfigurationManagement.encryptionHelp": "암호화 도움말",
 	"siteConfigurationManagement.environment": "Active Environment: {environment}",
 	"siteConfigurationManagement.hideConfigurationFiles": "구성 파일 숨기기",
 	"siteConfigurationManagement.hideSample": "샘플 숨기기",

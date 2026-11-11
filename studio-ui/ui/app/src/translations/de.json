@@ -1300,6 +1300,7 @@
 	"siteConfigurationManagement.confTabWebDAVProfilesDesc": "Konfigurationsdatei für WebDAV-Profile.",
 	"siteConfigurationManagement.confTabWorkflowConf": "Workflow-Konfiguration",
 	"siteConfigurationManagement.confTabWorkflowConfDesc": "Definiert im System verfügbare Workflows",
+	"siteConfigurationManagement.encryptionHelp": "Hilfe zur Verschlüsselung",
 	"siteConfigurationManagement.environment": "Active Environment: {environment}",
 	"siteConfigurationManagement.hideConfigurationFiles": "Konfigurationsdateien ausblenden",
 	"siteConfigurationManagement.hideSample": "Beispiel ausblenden",
