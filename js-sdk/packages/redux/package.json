@@ -1,6 +1,6 @@
 {
 	"name": "@craftercms/redux",
-	"version": "4.5.1",
+	"version": "5.0.0-next",
 	"description": "Crafter CMS bindings for Redux",
 	"main": "./bundles/redux.umd.js",
 	"module": "./esm5/redux.js",

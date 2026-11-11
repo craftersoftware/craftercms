@@ -1,5 +1,9 @@
 # SDK Changelog
 
+## 5.0.0
+## @craftercms/redux@5.0.0
+- **Breaking:** `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
+
 ## @craftercms/content@4.5.0
 - Deprecated "Get Descriptor" API (use getItem instead)
 - `getDescriptor` now calls `getItem` and completes the descriptor from the item response (including `localId`)
@@ -7,7 +11,6 @@
 
 ## @craftercms/redux@4.5.0
 - Deprecated `getDescriptor` API (use `getItem` instead)
-- `getItem` action payload is now an object with `url` and optional `config` properties (previously a string URL)
 
 ## @craftercms/content@4.4.1
 - Fix the published README for links to work on npmjs.com
