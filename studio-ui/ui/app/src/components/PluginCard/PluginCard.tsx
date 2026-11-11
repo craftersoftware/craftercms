@@ -80,6 +80,13 @@ const messages = defineMessages({
 	}
 });
 
+/** An icon passed as `useLabel` does not contribute text, so the button name has to carry the verb. */
+function isAriaHiddenIcon(label: PluginCardProps['useLabel']): boolean {
+	if (!label || typeof label === 'string' || !React.isValidElement(label)) return false;
+	const hidden = (label.props as { 'aria-hidden'?: unknown })['aria-hidden'];
+	return hidden === true || hidden === 'true';
+}
+
 function PluginCard(props: PluginCardProps) {
 	const [index, setIndex] = useState(0);
 	const [play, setPlay] = useState(false);
@@ -348,7 +355,9 @@ function PluginCard(props: PluginCardProps) {
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
 							<Box component="span" sx={visuallyHidden}>
-								{` ${pluginLabel}`}
+								{isAriaHiddenIcon(useLabel)
+									? formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })
+									: ` ${pluginLabel}`}
 							</Box>
 						</SecondaryButton>
 					)}

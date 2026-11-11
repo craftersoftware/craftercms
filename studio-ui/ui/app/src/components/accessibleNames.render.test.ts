@@ -149,6 +149,9 @@ describe('accessible names', () => {
 		const textual = await renderCard();
 		assert.match(textual.querySelector('.cardActions button')?.textContent ?? '', /^Use\s+Example plugin$/);
 		const iconOnly = await renderCard(React.createElement('svg', { 'aria-hidden': 'true' }));
-		assert.match(iconOnly.querySelector('.cardActions button')?.textContent ?? '', /Example plugin/);
+		assert.equal(
+			iconOnly.querySelector('.cardActions button')?.textContent?.replace(/\s+/g, ' ').trim(),
+			'Use Example plugin'
+		);
 	});
 });
