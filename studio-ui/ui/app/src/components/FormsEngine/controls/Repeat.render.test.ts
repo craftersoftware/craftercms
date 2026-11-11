@@ -22,7 +22,7 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
 import type { PrimitiveAtom } from 'jotai';
@@ -782,5 +782,89 @@ describe('Repeat rows with no text', () => {
 		assert.equal(liveMessage(host), 'Moved Item 2 to position 3 of 3');
 		await act(async () => byLabel(host, 'Move up: Item 3').click());
 		assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+	});
+});
+
+describe('Repeat repeated announcements', () => {
+	const untitled = () => [{}, {}, {}] as Item[];
+
+	it('clears and sets again an identical announcement, so a screen reader speaks it twice', async () => {
+		const { host } = await mount(untitled());
+		const first = 'Moved Item 1 to position 2 of 3';
+		await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+		assert.equal(liveMessage(host), first);
+
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			// The moved row is now Item 2, and the row that took its place is Item 1: the same sentence again.
+			await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+			assert.equal(liveMessage(host), '', 'the text is cleared so the next set is a change');
+			await act(async () => mock.timers.tick(39));
+			assert.equal(liveMessage(host), '');
+			await act(async () => mock.timers.tick(1));
+			assert.equal(liveMessage(host), first);
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('sets a different announcement right away and drops the pending repeat', async () => {
+		const { host } = await mount(untitled());
+		await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+			assert.equal(liveMessage(host), '');
+			await act(async () => press(rowFor(host, 'Item 3'), 'ArrowUp'));
+			assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+			await act(async () => mock.timers.tick(100));
+			assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('announces both moves of an item listed twice', async () => {
+		const ia = a();
+		const mounted = await mount([ia, ia, { name_s: 'b' }]);
+		const rows = () => Array.from(mounted.host.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+		await act(async () => press(rows()[0], 'ArrowDown'));
+		assert.equal(liveMessage(mounted.host), 'Moved a to position 2 of 3');
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			await act(async () => press(rows()[0], 'ArrowDown'));
+			assert.equal(liveMessage(mounted.host), '');
+			await act(async () => mock.timers.tick(40));
+			assert.equal(liveMessage(mounted.host), 'Moved a to position 2 of 3');
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('clears the pending announcement timer when the control unmounts', async () => {
+		const mounted = await mount(untitled());
+		await act(async () => press(rowFor(mounted.host, 'Item 1'), 'ArrowDown'));
+		mock.timers.enable({ apis: ['setTimeout'] });
+		const announceTimers: unknown[] = [];
+		const fakeSetTimeout = globalThis.setTimeout;
+		const setTimeoutSpy = mock.method(globalThis, 'setTimeout', ((...args: Parameters<typeof setTimeout>) => {
+			const handle = fakeSetTimeout(...args);
+			if (args[1] === 40) announceTimers.push(handle);
+			return handle;
+		}) as typeof setTimeout);
+		const clearTimeoutSpy = mock.method(globalThis, 'clearTimeout');
+		try {
+			await act(async () => press(rowFor(mounted.host, 'Item 1'), 'ArrowDown'));
+			assert.equal(announceTimers.length, 1, 'an identical message waits to be set again');
+			await mounted.unmount();
+			assert.ok(
+				clearTimeoutSpy.mock.calls.some((call) => call.arguments[0] === announceTimers[0]),
+				'unmount clears the timer'
+			);
+		} finally {
+			setTimeoutSpy.mock.restore();
+			clearTimeoutSpy.mock.restore();
+			mock.timers.reset();
+		}
 	});
 });

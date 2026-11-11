@@ -19,7 +19,8 @@ import visuallyHidden from '@mui/utils/visuallyHidden';
 
 /**
  * Polite live region for the `announcement` from useReorderFocus ("Moved Alpha to position 2 of 3").
- * Render it outside the list and keep it mounted, so the change is what gets read.
+ * Render it outside the list and keep it mounted, so the change is what gets read. useReorderFocus clears the text
+ * before it repeats a sentence, so an identical announcement is still a change.
  */
 export function ReorderAnnouncement({ message }: { message: string }) {
 	return (

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import { ListItemButtonProps } from '@mui/material/ListItemButton';
 
@@ -117,14 +117,20 @@ const reorderMessages = defineMessages({
 	moved: { defaultMessage: 'Moved {name} to position {position} of {total}' }
 });
 
+/** Time the live region stays empty before a repeated message is set again, as in FormValidationLiveRegion. */
+const REPEAT_ANNOUNCEMENT_DELAY = 40;
+
 /**
  * After a reorder, focus the control that belongs to the moved item. With a `name`, `remember` also sets
  * `announcement`, the text for a polite live region (see ReorderAnnouncement), since the new position is not read
- * otherwise.
+ * otherwise. A sentence identical to the previous one (rows named by position, or an item listed twice) clears the
+ * text first and sets it again, because a live region only speaks when its text changes.
  */
 export function useReorderFocus<T>(list: T[]) {
 	const { formatMessage } = useIntl();
 	const [announcement, setAnnouncement] = useState('');
+	const lastAnnouncedRef = useRef('');
+	const announceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const rootRef = useRef<HTMLUListElement | null>(null);
 	const pendingRef = useRef<{ index: number; control: string } | null>(null);
 	useLayoutEffect(() => {
@@ -145,11 +151,27 @@ export function useReorderFocus<T>(list: T[]) {
 			}
 		}
 	}, [list]);
+	useEffect(
+		() => () => {
+			if (announceTimerRef.current) clearTimeout(announceTimerRef.current);
+		},
+		[]
+	);
+	const announce = (message: string) => {
+		if (announceTimerRef.current) clearTimeout(announceTimerRef.current);
+		if (message !== lastAnnouncedRef.current) {
+			lastAnnouncedRef.current = message;
+			setAnnouncement(message);
+			return;
+		}
+		setAnnouncement('');
+		announceTimerRef.current = setTimeout(() => setAnnouncement(message), REPEAT_ANNOUNCEMENT_DELAY);
+	};
 	/** `name` is the moved item's label. Leave it out when nothing moved (a remove). A move keeps the list length. */
 	const remember = (index: number, control: string, name?: string) => {
 		pendingRef.current = { index, control };
 		if (name !== undefined) {
-			setAnnouncement(formatMessage(reorderMessages.moved, { name, position: index + 1, total: list.length }));
+			announce(formatMessage(reorderMessages.moved, { name, position: index + 1, total: list.length }));
 		}
 	};
 	return { rootRef, remember, announcement };
