@@ -72,7 +72,7 @@ export function ContentPathInput(props: ContentPathInputProps) {
 				disabled={readonly}
 				endAdornment={
 					<IconButton
-						aria-label={formatMessage({ defaultMessage: 'Maximize' })}
+						aria-label={formatMessage({ defaultMessage: 'Select path' })}
 						onClick={() => onOpenPathSelectionDialog()}
 					>
 						<SearchRoundedIcon />
