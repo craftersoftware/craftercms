@@ -27,10 +27,11 @@ import { afterEach, describe, it } from 'node:test';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { SectionNavLabel } = await import('./TableOfContents.tsx');
 
-const intl = createIntl({ locale: 'en', messages: {}, onError() {} });
+const intl = createTestIntl();
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {

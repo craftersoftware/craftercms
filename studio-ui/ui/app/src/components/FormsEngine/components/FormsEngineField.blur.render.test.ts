@@ -33,9 +33,10 @@ globalThis.DOMParser = window.DOMParser;
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 
-const intl = createIntl({ locale: 'en', messages: {}, onError() {} });
+const intl = createTestIntl();
 
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
