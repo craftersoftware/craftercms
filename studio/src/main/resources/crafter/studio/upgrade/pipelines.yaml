@@ -1463,12 +1463,18 @@ configurations:
                     -   type: xsltFileUpgrader
                         template: crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt
                         commitDetails: Add i18n to PathNavigator/PathNavigatorTree
-            # 4.5–4.7 sites record ui.xml as 4.5.0.0. That release already applied the same
-            # PathNavigator i18n transform as 5.0.0.0, so continue there. The following steps
-            # add ContentTypeManagement, then the TinyMCE and pages-datasource updates.
+            # 4.5–4.7 sites record ui.xml as 4.5.0.0. Run the PathNavigator i18n transform
+            # again so a leftover literal label such as <label>Pages</label> is updated.
+            # A label that already has a translation id has no text node, and a custom label
+            # that is not the stock English string does not match, so both stay. Continue at
+            # 5.0.0.0 for ContentTypeManagement, TinyMCE, and the pages datasource.
             # This entry must stay ahead of 5.0.0.0 so the forward pipeline walk still reaches it.
             -   currentVersion: 4.5.0.0
                 nextVersion: 5.0.0.0
+                operations:
+                    -   type: xsltFileUpgrader
+                        template: crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt
+                        commitDetails: Add i18n to PathNavigator/PathNavigatorTree
             -   currentVersion: 5.0.0.0
                 nextVersion: 5.0.0.1
                 operations:

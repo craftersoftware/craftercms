@@ -64,6 +64,9 @@ public class XsltTest {
 
 	private static final Logger logger = LoggerFactory.getLogger(XsltTest.class);
 
+	private static final String UI_I18N_TEMPLATE =
+		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.0.xslt";
+
 	private static final String[] CONTENT_TYPE_MANAGEMENT_TEMPLATES = {
 		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.1.xslt",
 		"crafter/studio/upgrade/5.0.x/config/ui/ui-v5.0.0.2.xslt",
@@ -669,16 +672,16 @@ public class XsltTest {
 	}
 
 	/**
-	 * 4.5–4.7 ui.xml is version 4.5.0.0 and already contains the 5.0.0.0 i18n transform, but it has
-	 * no top-level ContentTypeManagement catalog. The pipeline must continue through the existing
-	 * 5.0.0.1, 5.0.0.2 and 5.0.0.3 steps. A nested tool reference is not that catalog.
+	 * 4.5–4.7 ui.xml is version 4.5.0.0. The pipeline reapplies the PathNavigator i18n transform,
+	 * then continues through 5.0.0.1, 5.0.0.2 and 5.0.0.3 for the ContentTypeManagement catalog.
+	 * A nested tool reference is not that catalog.
 	 */
 	@Test
 	public void uiPipelineContinuesFrom4500ThroughContentTypeManagement() throws Exception {
 		HierarchicalConfiguration config = productionUpgradeConfig();
 
-		assertEquals(templatesFrom(config, "4.5.0.0"), Arrays.asList(CONTENT_TYPE_MANAGEMENT_TEMPLATES),
-			"4.5.0.0 must reach the ContentTypeManagement, TinyMCE and pages-datasource steps");
+		assertEquals(templatesFrom(config, "4.5.0.0"), Arrays.asList(templatesFrom4500()),
+			"4.5.0.0 must reach the i18n, ContentTypeManagement, TinyMCE and pages-datasource steps");
 		assertEquals(finalVersion(config, "4.5.0.0"), "5.0.0.3");
 
 		List<String> from4203 = templatesFrom(config, "4.2.0.3");
@@ -692,15 +695,22 @@ public class XsltTest {
 
 	/**
 	 * Representative 4.5 ui.xml: top-level widgets, a nested content-types tool reference, and custom
-	 * configuration. The catalog is inserted once. Custom widgets, tools and the version element stay.
+	 * configuration. The catalog is inserted once. A leftover stock label is translated. An existing
+	 * translation descriptor and a custom label stay. Custom widgets, tools and the version element stay.
 	 */
 	@Test
 	public void contentTypeManagementUpgradeFrom4500PreservesCustomConfiguration() throws Exception {
-		String upgraded = applyTemplates(readResource(UI_4500_FIXTURE), CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+		String[] templates = templatesFrom4500();
+		String upgraded = applyTemplates(readResource(UI_4500_FIXTURE), templates);
 		Document document = parseXmlString(upgraded);
 		Element siteUi = document.getDocumentElement();
 
 		assertEquals(text(siteUi, "version"), "4.5.0.0");
+		assertEquals(labelById(siteUi, "pathNavigatorTree.pages").getAttribute("defaultMessage"), "Pages");
+		assertEquals(labelById(siteUi, "pathNavigatorTree.pages").getTextContent().trim(), "");
+		assertEquals(labelById(siteUi, "pathNavigatorTree.components").getAttribute("defaultMessage"), "Components");
+		assertEquals(labelText(siteUi, "Site Pages"), "Site Pages");
+		assertFalse(labelTexts(siteUi).contains("Pages"));
 		assertEquals(catalogIds(topLevelContentTypeManagement(document), "control"),
 			shippedContentTypeCatalog("control"));
 		assertEquals(catalogIds(topLevelContentTypeManagement(document), "dataSource"),
@@ -720,7 +730,7 @@ public class XsltTest {
 		assertTrue(tinymce.contains("autoresize_bottom_margin"));
 		assertTrue(tinymce.contains("blocks | bold"));
 
-		assertIdempotent(upgraded);
+		assertIdempotent(upgraded, templates);
 	}
 
 	/**
@@ -743,7 +753,7 @@ public class XsltTest {
 		assertFalse(text(widget(document.getDocumentElement(), "craftercms.components.TinyMCE"), "tinymceOptions")
 			.contains("autoresize_on_init"));
 
-		assertIdempotent(upgraded);
+		assertIdempotent(upgraded, CONTENT_TYPE_MANAGEMENT_TEMPLATES);
 	}
 
 	/**
@@ -769,7 +779,7 @@ public class XsltTest {
 		assertTrue(indexOf(children, "references", null)
 			< indexOf(children, "widget", "craftercms.components.ContentTypeManagement"));
 
-		assertIdempotent(upgraded);
+		assertIdempotent(upgraded, CONTENT_TYPE_MANAGEMENT_TEMPLATES);
 	}
 
 	/**
@@ -862,8 +872,15 @@ public class XsltTest {
 		return current;
 	}
 
-	private void assertIdempotent(String xml) throws IOException, TransformerException {
-		String second = applyTemplates(xml, CONTENT_TYPE_MANAGEMENT_TEMPLATES);
+	private String[] templatesFrom4500() {
+		String[] templates = new String[1 + CONTENT_TYPE_MANAGEMENT_TEMPLATES.length];
+		templates[0] = UI_I18N_TEMPLATE;
+		System.arraycopy(CONTENT_TYPE_MANAGEMENT_TEMPLATES, 0, templates, 1, CONTENT_TYPE_MANAGEMENT_TEMPLATES.length);
+		return templates;
+	}
+
+	private void assertIdempotent(String xml, String... templates) throws IOException, TransformerException {
+		String second = applyTemplates(xml, templates);
 		Diff diff = DiffBuilder.compare(xml).withTest(second)
 			.ignoreWhitespace()
 			.ignoreComments()
@@ -956,6 +973,35 @@ public class XsltTest {
 			throw new AssertionError("Missing widget " + id);
 		}
 		return found;
+	}
+
+	private Element labelById(Element parent, String id) {
+		NodeList labels = parent.getElementsByTagName("label");
+		for (int i = 0; i < labels.getLength(); i++) {
+			Element label = (Element) labels.item(i);
+			if (id.equals(label.getAttribute("id"))) {
+				return label;
+			}
+		}
+		throw new AssertionError("Missing label " + id);
+	}
+
+	private String labelText(Element parent, String text) {
+		List<String> texts = labelTexts(parent);
+		assertTrue(texts.contains(text), text);
+		return text;
+	}
+
+	private List<String> labelTexts(Element parent) {
+		List<String> texts = new ArrayList<>();
+		NodeList labels = parent.getElementsByTagName("label");
+		for (int i = 0; i < labels.getLength(); i++) {
+			String text = labels.item(i).getTextContent().trim();
+			if (!text.isEmpty()) {
+				texts.add(text);
+			}
+		}
+		return texts;
 	}
 
 	private Element widget(Element parent, String id) {

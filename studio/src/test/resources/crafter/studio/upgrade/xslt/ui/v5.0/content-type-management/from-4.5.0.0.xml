@@ -6,6 +6,13 @@
 <siteUi>
     <version>4.5.0.0</version>
     <widget id="craftercms.components.Preview" initialEditModeOn="true" initialHighlightMode="all"/>
+    <widget id="craftercms.components.PathNavigatorTree">
+        <configuration>
+            <label>Pages</label>
+            <label id="pathNavigatorTree.components" defaultMessage="Components"/>
+            <label>Site Pages</label>
+        </configuration>
+    </widget>
     <widget id="craftercms.components.TinyMCE">
         <configuration>
             <setups>
