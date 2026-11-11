@@ -135,6 +135,7 @@ export function ToolBar() {
 				<Tooltip title={formatMessage(translations.toggleSidebarTooltip)}>
 					<LogoAndMenuBundleButton
 						aria-label={formatMessage(translations.openToolsPanel)}
+						aria-expanded={showToolsPanel}
 						onClick={() => dispatch(showToolsPanel ? closeToolsPanel() : openToolsPanel())}
 					/>
 				</Tooltip>
