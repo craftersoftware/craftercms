@@ -27,7 +27,7 @@ import {
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedList, FormattedMessage, useIntl } from 'react-intl';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import NavigateNextIcon from '@mui/icons-material/NavigateNextRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -68,6 +68,7 @@ import { useEnhancedDialogState } from '../../../hooks/useEnhancedDialogState';
 import { SwapFieldDialog } from './SwapFieldDialog';
 import { nanoid } from 'nanoid';
 import MoveDownIcon from '@mui/icons-material/MoveDown';
+import { findFieldsReferencingDataSource } from './editTypeWorkingCopy';
 import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 
@@ -473,15 +474,29 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 }
 
 function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
-	const { dataSource, onDeleteDataSource } = props;
+	const { dataSource, onDeleteDataSource, type } = props;
 	const { formatMessage } = useIntl();
 	if (!dataSource) return;
+	const referencingFields = type ? findFieldsReferencingDataSource(type, dataSource.id) : [];
+	const referencingFieldNames = (
+		<FormattedList type="conjunction" value={referencingFields.map((field) => field.name)} />
+	);
 	return (
 		<>
 			<ConfirmDropdown
 				icon={DeleteRounded}
 				iconTooltip={formatMessage({ defaultMessage: 'Delete {name}' }, { name: dataSource.title })}
-				confirmHelperText={<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />}
+				confirmHelperText={
+					referencingFields.length > 0 ? (
+						<FormattedMessage
+							defaultMessage={'Delete "{name}"? It is used by: {fields}'}
+							values={{ name: dataSource.title, fields: referencingFieldNames }}
+						/>
+					) : (
+						<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />
+					)
+				}
+				sx={{ menuPaper: { maxWidth: 360 } }}
 				cancelText={<FormattedMessage defaultMessage="No" />}
 				confirmText={<FormattedMessage defaultMessage="Yes" />}
 				onConfirm={() => {
