@@ -17,21 +17,6 @@
 import { createIntl } from 'react-intl';
 
 /**
- * Keys of an options argument. Anything else is read as a map of message id to translation.
- * A message id that equals one of these names would be read as an option, which real ids never do.
- */
-const optionKeys = new Set([
-	'messages',
-	'locale',
-	'defaultLocale',
-	'formats',
-	'timeZone',
-	'onError',
-	'defaultRichTextElements',
-	'textComponent'
-]);
-
-/**
  * A react-intl instance for render tests. Pass it to `RawIntlProvider`, or give `formatMessage` to code
  * that takes one.
  *
@@ -43,26 +28,19 @@ const optionKeys = new Set([
  * branch whose test loader does not have the formatjs transform yet. `onError` is silent, so a missing
  * translation does not print.
  *
- * Call it with nothing, with a map of message id to translation, or with options. Both forms take the
- * same options, so these are equivalent:
- *   createTestIntl({ 'org.example.limit': 'Translated limit' })
- *   createTestIntl({ messages: { 'org.example.limit': 'Translated limit' } })
- *   createTestIntl({ 'org.example.limit': 'Translated limit' }, { locale: 'es' })
- * Options are react-intl's `createIntl` config: `locale` (default 'en'), `messages`, `onError` and the rest.
+ * Pass a `createIntl` options object, or nothing. `locale` defaults to `'en'`.
+ *   createTestIntl()
+ *   createTestIntl({ messages: { 'org.example.limit': 'Translated limit' }, locale: 'es' })
  *
- * @param {Record<string, string> | import('react-intl').IntlConfig | undefined} [messagesOrOptions]
  * @param {Partial<import('react-intl').IntlConfig>} [options]
  * @returns {import('react-intl').IntlShape}
  */
-export function createTestIntl(messagesOrOptions, options) {
-	const first = messagesOrOptions ?? {};
-	const firstIsOptions = Object.keys(first).some((key) => optionKeys.has(key));
-	const config = firstIsOptions ? { ...first, ...options } : { messages: first, ...options };
+export function createTestIntl(options = {}) {
 	const baseIntl = createIntl({
 		locale: 'en',
 		messages: {},
 		onError: () => undefined,
-		...config
+		...options
 	});
 	return {
 		...baseIntl,
