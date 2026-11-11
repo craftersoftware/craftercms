@@ -104,6 +104,9 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	const menuContentRef = useRef<HTMLDivElement>(null);
 	// Set when the menu closes because everything fits again while focus was inside it.
 	const pendingFocusRef = useRef<{ item: number; control: number } | null>(null);
+	// Set when a control that had focus in the bar moves into the closed menu.
+	const focusMoreRef = useRef(false);
+	const menuOpenRef = useRef(false);
 	const itemCount = items.length;
 	const itemsSignature = getItemsSignature(items);
 	const lastSignatureRef = useRef(itemsSignature);
@@ -125,6 +128,14 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			const wrapper = itemRefs.current[pendingFocus.item];
 			const controls = wrapper?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 			(controls?.[pendingFocus.control] ?? controls?.[0])?.focus();
+		}
+		if (focusMoreRef.current && visibleCount < itemCount) {
+			// The focused control now lives in the closed menu and was unmounted from the bar, so focus
+			// would fall to the document body. The More button holds its place.
+			focusMoreRef.current = false;
+			if (!menuOpenRef.current) {
+				moreRef.current?.focus();
+			}
 		}
 		const bar = barRef.current;
 		if (!bar) {
@@ -164,6 +175,11 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			const current = visibleCountRef.current;
 			const resolved = next;
 			if (resolved !== current) {
+				const focusedItem = itemRefs.current.findIndex((node) => node?.contains(document.activeElement));
+				const movesToMenu = align === 'end' ? focusedItem < itemCount - resolved : focusedItem >= resolved;
+				if (focusedItem >= 0 && resolved < itemCount && movesToMenu) {
+					focusMoreRef.current = true;
+				}
 				visibleCountRef.current = resolved;
 				setVisibleCount(resolved);
 			}
@@ -196,6 +212,7 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 	const overflowItems = align === 'end' ? items.slice(0, firstVisible) : items.slice(visibleCount);
 	const firstOverflow = align === 'end' ? 0 : visibleCount;
 	const hasOverflow = overflowItems.length > 0;
+	menuOpenRef.current = Boolean(menuAnchor) && hasOverflow;
 	const moreButton = (
 		<Tooltip title={moreLabel}>
 			<IconButton
