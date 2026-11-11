@@ -27,7 +27,8 @@ import type { ContentTypeField } from '../../../models/ContentType';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -97,16 +98,7 @@ export function dispatchItems(store: ItemsStore, change: (items: ItemsByPath) =>
 	});
 }
 
-// The test build doesn't add message ids, so derive them from the default message.
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: ((descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)) as never
-};
+const intl = createTestIntl();
 
 const mounted: Array<() => void> = [];
 
