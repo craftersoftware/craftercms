@@ -454,6 +454,7 @@ export function TokenManagement() {
 													})}
 													icon={DeleteIcon}
 													iconTooltip={<FormattedMessage defaultMessage="Delete" />}
+													iconLabel={formatMessage({ defaultMessage: 'Delete {name}' }, { name: token.label })}
 													onConfirm={() => {
 														onDeleteToken(token.id);
 													}}
