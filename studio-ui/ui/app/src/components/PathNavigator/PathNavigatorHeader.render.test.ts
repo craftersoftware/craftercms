@@ -81,10 +81,10 @@ describe('PathNavigatorHeader button names', () => {
 	it('uses the translated messages', async () => {
 		const intl = createTestIntl({
 			locale: 'es',
-			messages: { 'words.language': 'Idioma', 'pathNavigator.headerOptions': '{title}: opciones' }
+			messages: { 'words.language': 'Idioma', 'pathNavigator.headerOptions': 'Opciones de {title}' }
 		});
 		const host = await render({ title: 'Paginas' }, intl);
-		assert.deepEqual(labels(host), ['Idioma', 'Paginas: opciones']);
+		assert.deepEqual(labels(host), ['Idioma', 'Opciones de Paginas']);
 	});
 
 	it('falls back to plain Options when the title is not text', async () => {
