@@ -506,6 +506,18 @@ describe('Repeat reorder', () => {
 		const next = mounted.setValueCalls.at(-1);
 		assert.deepEqual(names(next), ['b', 'a', 'c', 'added']);
 	});
+
+	it('labels rows with no text by position in the reorder list, its Move buttons and its announcement', async () => {
+		const mounted = await mount([{ name_s: 'a' }, {}, {}]);
+		await openReorder(mounted);
+		const dialog = document.body.querySelector('.MuiDialog-root');
+		const order = () => Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent);
+		assert.deepEqual(order(), ['a', 'Item 2', 'Item 3']);
+		const moveUp = dialog.querySelector<HTMLButtonElement>('button[aria-label="Move up: Item 2"]');
+		assert.ok(moveUp, 'the Move up button names the row by position');
+		await act(async () => moveUp.click());
+		assert.equal(dialog.querySelector('[aria-live="polite"]')?.textContent, 'Moved Item 2 to position 1 of 3');
+	});
 });
 
 const addButton = (host: HTMLElement) => host.querySelector('button[aria-label="Add items"]') as HTMLButtonElement;
@@ -736,5 +748,37 @@ describe('Repeat keyboard reorder', () => {
 		assert.equal(mounted.setValueCalls.length, 0);
 		assert.equal(liveMessage(host), '');
 		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['a', 'b', 'c']);
+	});
+});
+
+describe('Repeat rows with no text', () => {
+	// Children that are node selectors, or a new item with nothing typed yet, give a row no title.
+	const untitled = () => [{}, {}, {}] as Item[];
+	const byLabel = (host: HTMLElement, label: string) =>
+		host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+
+	it('names each row, its Edit, Delete and Move buttons by position', async () => {
+		const { host } = await mount(untitled());
+		assert.deepEqual(titles(host), ['Item 1', 'Item 2', 'Item 3']);
+		assert.ok(byLabel(host, 'Edit Item 2'));
+		assert.ok(byLabel(host, 'Delete Item 2'));
+		assert.ok(byLabel(host, 'Move up: Item 2'));
+		assert.ok(byLabel(host, 'Move down: Item 2'));
+		assert.equal(host.querySelector('button[aria-label="Edit "]'), null);
+		assert.equal(host.querySelector('button[aria-label="Move up: "]'), null);
+	});
+
+	it('keeps the title of a row that has text and numbers only the rest', async () => {
+		const { host } = await mount([a(), {}, { name_s: 'c' }]);
+		assert.deepEqual(titles(host), ['a', 'Item 2', 'c']);
+		assert.ok(byLabel(host, 'Move down: Item 2'));
+	});
+
+	it('announces a keyboard move and a button move with the position name', async () => {
+		const { host } = await mount(untitled());
+		await act(async () => press(rowFor(host, 'Item 2'), 'ArrowDown'));
+		assert.equal(liveMessage(host), 'Moved Item 2 to position 3 of 3');
+		await act(async () => byLabel(host, 'Move up: Item 3').click());
+		assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
 	});
 });

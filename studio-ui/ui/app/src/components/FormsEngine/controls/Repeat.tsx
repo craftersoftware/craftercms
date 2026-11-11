@@ -177,7 +177,7 @@ export function Repeat(props: RepeatProps) {
 		if (index === -1) return;
 		const next = destinationIndex(action, moveToEdge, index, stored.length);
 		if (next == null) return;
-		remember(next, control, getRepeatItemTitle(item, displayFieldIds));
+		remember(next, control, repeatItemLabel(item, near));
 		sortableListActionProcessor(action, moveToEdge, stored, index, setValue);
 	};
 	/** Opens the item's form at the item's current position in the stored array, which may differ from this render's. */
@@ -193,9 +193,20 @@ export function Repeat(props: RepeatProps) {
 		openItemForm();
 	};
 	const displayFieldIds = useMemo(() => repeatDisplayFieldIds(field.fields), [field.fields]);
+	/** The row's title, or its position when no child has text, so names and announcements are never blank. */
+	const repeatItemLabel = (item: RepeatItem, index: number) =>
+		getRepeatItemTitle(item, displayFieldIds) ||
+		formatMessage({ defaultMessage: 'Item {position}' }, { position: index + 1 });
 	const sortList = useMemo<Array<TItem<RepeatItem>>>(
-		() => (sortMode ? repeatSortItems(value, displayFieldIds, itemKeys) : []),
-		[sortMode, value, displayFieldIds, itemKeys]
+		() =>
+			sortMode
+				? repeatSortItems(value, displayFieldIds, itemKeys).map((row, index) => ({
+						...row,
+						value: repeatItemLabel(row.data, index)
+					}))
+				: [],
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- repeatItemLabel only reads displayFieldIds and formatMessage.
+		[sortMode, value, displayFieldIds, itemKeys, formatMessage]
 	);
 	/** Stores the new order, built from the latest stored array so an item saved since the list was built is kept. */
 	const onSortChange = (newList: TItem<RepeatItem>[]) => {
@@ -254,7 +265,7 @@ export function Repeat(props: RepeatProps) {
 					{hasContent ? (
 						<List dense ref={rootRef}>
 							{visibleItems.map(({ item, index }, position) => {
-								const itemLabel = getRepeatItemTitle(item, displayFieldIds);
+								const itemLabel = repeatItemLabel(item, index);
 								const editLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel });
 								const deleteLabel = formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel });
 								// A scoped list shows one item, so there is nothing to reorder it against.

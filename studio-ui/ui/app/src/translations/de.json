@@ -1686,5 +1686,6 @@
 	"brPqJq": "Warten Sie, bis ein Veröffentlichungsziel verfügbar ist.",
 	"d8GgwP": "Warten Sie, bis die Abhängigkeitsprüfung abgeschlossen ist, bevor Sie veröffentlichen.",
 	"Gy8/Dq": "Warten Sie, bis die Elemente geladen sind, bevor Sie veröffentlichen.",
-	"dnCbcG": "{field}: {error}"
+	"dnCbcG": "{field}: {error}",
+	"JpoWiv": "Element {position}"
 }

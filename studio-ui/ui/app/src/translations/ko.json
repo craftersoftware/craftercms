@@ -1686,5 +1686,6 @@
 	"brPqJq": "게시 대상을 사용할 수 있을 때까지 기다리세요.",
 	"d8GgwP": "게시하기 전에 종속성 유효성 검사가 끝날 때까지 기다리세요.",
 	"Gy8/Dq": "게시하기 전에 항목 로드가 끝날 때까지 기다리세요.",
-	"dnCbcG": "{field}: {error}"
+	"dnCbcG": "{field}: {error}",
+	"JpoWiv": "항목 {position}"
 }
