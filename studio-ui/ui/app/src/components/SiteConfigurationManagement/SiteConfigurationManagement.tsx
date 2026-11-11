@@ -73,11 +73,14 @@ import { MaxLengthCircularProgress } from '../MaxLengthCircularProgress';
 import useUnmount from '../../hooks/useUnmount';
 import useActiveUser from '../../hooks/useActiveUser';
 import { ProjectToolsRoutes } from '../../env/routes';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import { SiteToolsContext } from '../SiteTools/siteToolsContext';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+
+const SKELETON_ROW_COUNT = 15;
 
 interface SiteConfigurationManagementProps {
 	embedded?: boolean;
@@ -754,10 +757,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 										/>
 									</ListItemButton>
 								))
-						: Array(15)
+						: Array(SKELETON_ROW_COUNT)
 								.fill(null)
 								.map((x, i) => (
-									<ListItemButton key={i} dense divider={i < Array.length - 1}>
+									<ListItem component="div" aria-hidden="true" key={i} dense divider={i < SKELETON_ROW_COUNT - 1}>
 										<ListItemText
 											primary={<Skeleton height={15} width="80%" />}
 											secondary={<Skeleton height={15} width="60%" />}
@@ -767,7 +770,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												}
 											}}
 										/>
-									</ListItemButton>
+									</ListItem>
 								))}
 				</List>
 			</ResizeableDrawer>
