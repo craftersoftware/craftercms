@@ -806,11 +806,6 @@ function NodeSelector(props: NodeSelectorProps) {
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
 								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
-								const iconTooltip = isEmbedded ? (
-									<FormattedMessage defaultMessage="Delete" />
-								) : (
-									<FormattedMessage defaultMessage="Unlink" />
-								);
 								const isComponent = isItemComponent(item);
 								const canBeEdited =
 									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
@@ -825,6 +820,18 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
+								const itemName =
+									(item.include && itemsByPath[item.include]?.label) || item.value || item.include || item.key;
+								// A read-only form still offers the edit icon for a row the user could edit, but it opens
+								// the form read-only, so the name is View.
+								const openLabel = formatMessage(
+									canBeEdited && !readonly ? { defaultMessage: 'Edit {item}' } : { defaultMessage: 'View {item}' },
+									{ item: itemName }
+								);
+								const removeLabel = formatMessage(
+									isEmbedded ? { defaultMessage: 'Delete {item}' } : { defaultMessage: 'Unlink {item}' },
+									{ item: itemName }
+								);
 								return (
 									<ListItemButton
 										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
@@ -854,21 +861,25 @@ function NodeSelector(props: NodeSelectorProps) {
 										/>
 										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
 											{canBeEdited ? (
-												<Tooltip title="Edit">
-													<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
+												<Tooltip title={openLabel}>
+													<IconButton
+														size="small"
+														aria-label={openLabel}
+														onClick={(e) => handleEditItem(e, index, !readonly)}
+													>
 														<EditOutlined fontSize="small" />
 													</IconButton>
 												</Tooltip>
 											) : (
-												<Tooltip title="View">
-													<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
+												<Tooltip title={openLabel}>
+													<IconButton size="small" aria-label={openLabel} onClick={(e) => handleViewItem(e, index)}>
 														<VisibilityOutlinedIcon fontSize="small" />
 													</IconButton>
 												</Tooltip>
 											)}
 											{!readonly && (
-												<Tooltip title={iconTooltip}>
-													<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
+												<Tooltip title={removeLabel}>
+													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
 														<Icon fontSize="small" />
 													</IconButton>
 												</Tooltip>

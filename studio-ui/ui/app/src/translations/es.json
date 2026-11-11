@@ -1708,5 +1708,8 @@
 	"brPqJq": "Espere a que haya un destino de publicación disponible.",
 	"d8GgwP": "Espere a que termine la validación de dependencias antes de publicar.",
 	"Gy8/Dq": "Espere a que los elementos terminen de cargarse antes de publicar.",
-	"dnCbcG": "{field}: {error}"
+	"dnCbcG": "{field}: {error}",
+	"1EOGjb": "Desvincular {item}",
+	"6wHz/d": "Ver {item}",
+	"rdK9AW": "Borrar {item}"
 }

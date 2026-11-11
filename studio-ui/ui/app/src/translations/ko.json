@@ -1663,7 +1663,7 @@
 	"G65XME": "{name} 선택",
 	"HLprRI": "목차 열기",
 	"HsQXYw": "{fieldName}의 필드 순서 변경",
-	"OHzR26": "{path} 편집하다",
+	"OHzR26": "{path} 편집",
 	"PwSxBm": "{fieldName}에 항목 추가",
 	"QqavBC": "전체 화면 시작",
 	"RNRpjD": "자르기",
@@ -1684,7 +1684,7 @@
 	"qsVU0J": "가로로 뒤집기",
 	"sLLTbJ": "대비",
 	"t4hwRC": "{fieldName}의 최대 항목 수에 도달함",
-	"xeB1YM": "{item} 편집하다",
+	"xeB1YM": "{item} 편집",
 	"y3ckvk": "왼쪽으로 회전",
 	"AjpOzY": "게시하기 전에 종속성 변경을 적용하거나 취소하세요.",
 	"hyt6Fi": "양식의 모든 요구 사항이 충족될 때까지 저장할 수 없습니다.",
@@ -1708,5 +1708,8 @@
 	"brPqJq": "게시 대상을 사용할 수 있을 때까지 기다리세요.",
 	"d8GgwP": "게시하기 전에 종속성 유효성 검사가 끝날 때까지 기다리세요.",
 	"Gy8/Dq": "게시하기 전에 항목 로드가 끝날 때까지 기다리세요.",
-	"dnCbcG": "{field}: {error}"
+	"dnCbcG": "{field}: {error}",
+	"1EOGjb": "{item} 연결 해제",
+	"6wHz/d": "{item} 보기",
+	"rdK9AW": "{item} 삭제"
 }
