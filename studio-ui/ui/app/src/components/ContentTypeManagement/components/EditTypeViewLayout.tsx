@@ -16,13 +16,13 @@
 
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import Typography from '@mui/material/Typography';
 import Button, { ButtonProps } from '@mui/material/Button';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
-import React, { forwardRef, useRef, useState } from 'react';
+import React, { forwardRef, useId, useRef, useState } from 'react';
 import Layout, { LayoutProps } from './Layout';
 import Menu, { MenuProps } from '@mui/material/Menu';
 import MenuItem, { MenuItemProps } from '@mui/material/MenuItem';
@@ -52,6 +52,8 @@ const actionsMap: Record<EditAppLayoutAction, EditAppLayoutAction> = {
 
 export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>((props, ref) => {
 	const [open, setOpen] = useState(false);
+	const menuButtonId = useId();
+	const { formatMessage } = useIntl();
 	const anchorElRef = useRef(undefined);
 	const handleOpenMenuButton: IconButtonProps['onClick'] = () => setOpen(true);
 	const handleClose: MenuProps['onClose'] = () => setOpen(false);
@@ -114,14 +116,19 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 								<FormattedMessage defaultMessage="Save" />
 							</Button>
 						)}
-						<IconButton ref={anchorElRef} onClick={handleOpenMenuButton}>
+						<IconButton
+							id={menuButtonId}
+							ref={anchorElRef}
+							onClick={handleOpenMenuButton}
+							aria-label={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}
+						>
 							<MoreVertRounded />
 						</IconButton>
 						<Menu
 							open={open}
 							anchorEl={anchorElRef.current}
 							onClose={handleClose}
-							slotProps={{ list: { 'aria-labelledby': '' } }}
+							slotProps={{ list: { 'aria-labelledby': menuButtonId } }}
 						>
 							<MenuItem onClick={handleMenuItemClick} data-action-id={actionsMap.viewXml}>
 								<FormattedMessage defaultMessage="View XML" />

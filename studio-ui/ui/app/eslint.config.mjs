@@ -16,6 +16,8 @@
 
 import { fixupConfigRules } from '@eslint/compat';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import formatjs from 'eslint-plugin-formatjs';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
 import path from 'node:path';
@@ -69,6 +71,31 @@ export default [
 			],
 			// Enable the TypeScript-specific rule with allowShortCircuit option
 			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }]
+		}
+	},
+	{
+		// FE2 renders Type Builder property forms, so both modules share this guard.
+		files: ['src/components/FormsEngine/**/*.{ts,tsx}', 'src/components/ContentTypeManagement/**/*.{ts,tsx}'],
+		plugins: {
+			formatjs,
+			'jsx-a11y': jsxA11y
+		},
+		rules: {
+			// Pre-existing literal JSX in these modules; warn until those strings are translated.
+			'formatjs/no-literal-string-in-jsx': 'warn',
+			// Icon buttons and other controls need an accessible name (text, aria-label, or aria-labelledby).
+			'jsx-a11y/alt-text': 'error',
+			'jsx-a11y/anchor-has-content': 'error',
+			'jsx-a11y/aria-props': 'error',
+			// 36 pre-existing icon-only buttons (including Repeat, owned by #9412). Warn until those names land.
+			'jsx-a11y/control-has-associated-label': [
+				'warn',
+				{
+					// Icon components are not accessible names. Listing them keeps an icon-only IconButton unlabeled.
+					controlComponents: ['IconButton', '*Icon', '*Rounded', '*Outlined', '*TwoTone', '*Sharp']
+				}
+			],
+			'jsx-a11y/label-has-associated-control': 'error'
 		}
 	}
 ];
