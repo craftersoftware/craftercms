@@ -78,6 +78,7 @@ export function ActionsBar(props: ActionsBarProps) {
 						checked={isChecked}
 						className={props.classes?.checkbox}
 						onChange={onCheckboxChange}
+						slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 					/>
 				)}
 				{!isLoading && !isIndeterminate && !isChecked && noSelectionContent}
