@@ -435,6 +435,14 @@ describe('repeatItemInValues with a shifted saved array', () => {
 		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, 'rows_o', 1), { item: b, gone: false });
 		assert.deepEqual(repeatItemInValues({ rows_o: [a, b] }, undefined, undefined), { item: undefined, gone: false });
 	});
+
+	it('marks a field that is not an array in the saved values as absent', () => {
+		assert.deepEqual(repeatItemInValues({ sections_o: [{ id: 'a' }] }, 'inner_o', 0, { id: 'nested' }), {
+			item: undefined,
+			gone: false,
+			absent: true
+		});
+	});
 });
 
 describe('clearStackPendingFlags with a shifted saved array', () => {
@@ -444,9 +452,10 @@ describe('clearStackPendingFlags with a shifted saved array', () => {
 		keys: ReturnType<typeof testKeys>,
 		launchIndex: number,
 		launchItem: { id: string },
-		current: { id: string }
+		current: { id: string },
+		fieldId = 'rows_o'
 	) {
-		const looked = repeatItemInValues(saved, 'rows_o', launchIndex, launchItem, keys);
+		const looked = repeatItemInValues(saved, fieldId, launchIndex, launchItem, keys);
 		const calls = {
 			checkpoint: undefined as unknown,
 			pending: undefined as boolean | undefined,
@@ -463,9 +472,10 @@ describe('clearStackPendingFlags with a shifted saved array', () => {
 				setPending(value: boolean) {
 					calls.pending = value;
 				},
-				fieldId: 'rows_o',
+				fieldId,
 				savedItem: looked.item,
 				itemGone: looked.gone,
+				absent: looked.absent,
 				currentItem: current,
 				setCheckpoint(values: Record<string, unknown>) {
 					calls.checkpoint = values;
@@ -494,5 +504,18 @@ describe('clearStackPendingFlags with a shifted saved array', () => {
 		const gone = entryFor({ rows_o: [a] }, keys, 1, b, { id: 'b-edited' });
 		clearStackPendingFlags([gone.entry]);
 		assert.deepEqual(gone.calls, { checkpoint: undefined, pending: undefined, ids: undefined });
+	});
+
+	// A nested selected entry's field is not on the root save. Its dirty state must stay; a direct child still clears.
+	it('leaves a nested entry alone when its field is missing from the saved values', () => {
+		const keys = testKeys();
+		const child = { id: 'child' };
+		const saved = { rows_o: [child] };
+		const nested = entryFor(saved, keys, 0, { id: 'nested' }, { id: 'nested-edited' }, 'inner_o');
+		const direct = entryFor(saved, keys, 0, child, { id: 'child' });
+		clearStackPendingFlags([nested.entry, direct.entry]);
+		assert.deepEqual(nested.calls, { checkpoint: undefined, pending: undefined, ids: undefined });
+		assert.ok(direct.calls.checkpoint === child);
+		assert.equal(direct.calls.pending, false);
 	});
 });

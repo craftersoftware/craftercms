@@ -239,14 +239,17 @@ export function useSaveForm(props: UseSaveFormProps) {
 						const entries = formsStackData.map((entry) => {
 							const repeat = entry.props?.repeat;
 							const repeatAtom = repeat?.fieldId ? stableFormContext.atoms.valueByFieldId[repeat.fieldId] : undefined;
-							// The index at launch can be behind the saved array, so find the item by its row key.
-							const saved = repeatItemInValues(
-								values,
-								repeat?.fieldId,
-								repeat?.index,
-								repeat?.values,
-								repeatAtom ? repeatItemKeysFor<unknown>(repeatAtom) : undefined
-							);
+							// A nested repeat's field is not on this form. Do not look it up in this snapshot.
+							const saved =
+								repeat?.fieldId && !repeatAtom
+									? { item: undefined, gone: false, absent: true as const }
+									: repeatItemInValues(
+											values,
+											repeat?.fieldId,
+											repeat?.index,
+											repeat?.values,
+											repeatAtom ? repeatItemKeysFor<unknown>(repeatAtom) : undefined
+										);
 							return {
 								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
 								changedFieldIds: jotai.get(entry.changedFieldIds),
@@ -256,6 +259,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								fieldId: repeat?.fieldId,
 								savedItem: saved.item,
 								itemGone: saved.gone,
+								absent: saved.absent,
 								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
 								setCheckpoint(next: Record<string, unknown>) {
 									entry.originalValues = next;
