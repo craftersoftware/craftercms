@@ -22,7 +22,8 @@ import { afterEach, describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
@@ -33,15 +34,7 @@ const { ToolsPanelPage } = await import('../ToolsPanelPage/ToolsPanelPage.tsx');
 const { WidgetsAccordion } = await import('../WidgetsAccordion/WidgetsAccordion.tsx');
 const { components } = await import('../../utils/constants.ts');
 
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError() {} });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)
-};
+const intl = createTestIntl();
 
 const store = configureStore({
 	reducer: {
