@@ -288,10 +288,10 @@ function SectionFieldInvalidProbe({
 }
 
 /**
- * A section that contains a field the indicator would mark invalid, while it is collapsed. The mark is
- * that same warning icon plus hidden text, so the cue is not colour alone. Expanded, the field rows below
- * carry their own indicators and the tree item exposes aria-expanded, so the section cue steps aside.
- * The row is laid out like a field row: title left, icon at the right edge with the same size.
+ * A section that contains a field the indicator would mark invalid. The hidden "Section has errors" words
+ * follow the title whenever there is an error, so the name never loses them. The warning icon is the
+ * visible cue and shows only while the section is collapsed: expanded, the field rows below carry their
+ * own indicators. The row is laid out like a field row: title left, icon at the right edge, same size.
  */
 export function SectionNavLabel({
 	title,
@@ -306,13 +306,20 @@ export function SectionNavLabel({
 	const errorLabel = formatMessage({ defaultMessage: 'Section has errors' });
 	return (
 		<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-			<span>{title}</span>
+			<span>
+				{title}
+				{hasError && (
+					<>
+						{' '}
+						<Box component="span" sx={visuallyHidden}>
+							{errorLabel}
+						</Box>
+					</>
+				)}
+			</span>
 			{hasError && !expanded && (
 				<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0, ml: 0.5 }}>
 					<WarningAmberRounded aria-hidden fontSize="small" color="error" />
-					<Box component="span" sx={visuallyHidden}>
-						{errorLabel}
-					</Box>
 				</Box>
 			)}
 		</Box>

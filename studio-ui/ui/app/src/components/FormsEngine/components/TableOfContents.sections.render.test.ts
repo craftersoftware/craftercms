@@ -230,56 +230,65 @@ describe('table of contents section error mark', () => {
 
 describe('table of contents section error mark and expansion', () => {
 	function cue(host: HTMLElement) {
-		const row = sectionRow(host, 'sec_main');
-		const label = row.querySelector('.MuiTreeItem-label') as HTMLElement;
-		return { icon: label.querySelector('svg'), text: label.textContent?.includes('Section has errors') ?? false };
+		const label = sectionRow(host, 'sec_main').querySelector('.MuiTreeItem-label') as HTMLElement;
+		return {
+			label,
+			icon: label.querySelector('svg'),
+			text: label.textContent?.includes('Section has errors') ?? false
+		};
 	}
 
-	it('shows the cue on a collapsed section: icon, hidden words, and a row laid out like a field row', async () => {
-		const { host } = await setup({
-			sections,
-			contentTypeFields,
-			withAtoms: ['title_s', 'summary_s'],
-			validation: { summary_s: invalidState }
-		});
-		const { icon, text } = cue(host);
+	const invalidSetup = {
+		sections,
+		contentTypeFields,
+		withAtoms: ['title_s', 'summary_s'],
+		validation: { summary_s: invalidState }
+	};
+
+	it('collapsed and invalid: icon and hidden words, in a row laid out like a field row', async () => {
+		const { host } = await setup(invalidSetup);
+		const { label, icon, text } = cue(host);
 		assert.ok(icon);
 		assert.equal(icon.getAttribute('aria-hidden'), 'true');
 		assert.equal(icon.getAttribute('data-testid'), 'WarningAmberRoundedIcon');
 		assert.ok(icon.classList.contains('MuiSvgIcon-fontSizeSmall'));
 		assert.equal(text, true);
-		const label = sectionRow(host, 'sec_main').querySelector('.MuiTreeItem-label') as HTMLElement;
 		const rowBox = label.firstElementChild as HTMLElement;
 		assert.equal(rowBox.tagName, 'DIV');
-		assert.equal(rowBox.firstElementChild?.textContent, 'Main');
+		assert.match(rowBox.firstElementChild?.textContent ?? '', /^Main\s+Section has errors$/);
 		assert.equal(rowBox.lastElementChild?.contains(icon), true);
 	});
 
-	it('shows no cue, icon or hidden words, while the section is expanded', async () => {
-		const { host } = await setup({
-			sections,
-			contentTypeFields,
-			withAtoms: ['title_s', 'summary_s'],
-			validation: { summary_s: invalidState },
-			expanded: ['sec_main']
-		});
-		const { icon, text } = cue(host);
+	it('expanded and invalid: hidden words but no icon and no right-hand wrapper', async () => {
+		const { host } = await setup({ ...invalidSetup, expanded: ['sec_main'] });
+		const { label, icon, text } = cue(host);
 		assert.equal(icon, null);
-		assert.equal(text, false);
-		assert.equal(sectionRow(host, 'sec_main').querySelector('.MuiTreeItem-label')?.textContent, 'Main');
+		assert.equal(text, true);
+		assert.equal((label.firstElementChild as HTMLElement).children.length, 1);
 	});
 
-	it('flips the cue when the section is expanded and collapsed', async () => {
-		const { host, atoms, jotai } = await setup({
-			sections,
-			contentTypeFields,
-			withAtoms: ['title_s', 'summary_s'],
-			validation: { summary_s: invalidState }
-		});
+	it('valid: neither the icon nor the hidden words, expanded or collapsed', async () => {
+		for (const expanded of [[], ['sec_main']]) {
+			const { host } = await setup({
+				sections,
+				contentTypeFields,
+				withAtoms: ['title_s', 'summary_s'],
+				expanded
+			});
+			const { label, icon, text } = cue(host);
+			assert.equal(icon, null);
+			assert.equal(text, false);
+			assert.equal(label.textContent, 'Main');
+		}
+	});
+
+	it('toggling expansion flips only the icon; the hidden words stay', async () => {
+		const { host, atoms, jotai } = await setup(invalidSetup);
 		assert.ok(cue(host).icon);
+		assert.equal(cue(host).text, true);
 		await act(async () => jotai.set(atoms.expandedStateBySectionId.sec_main, true));
 		assert.equal(cue(host).icon, null);
-		assert.equal(cue(host).text, false);
+		assert.equal(cue(host).text, true);
 		await act(async () => jotai.set(atoms.expandedStateBySectionId.sec_main, false));
 		assert.ok(cue(host).icon);
 		assert.equal(cue(host).text, true);

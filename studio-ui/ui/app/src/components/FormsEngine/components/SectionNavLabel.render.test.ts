@@ -57,34 +57,46 @@ async function render(hasError: boolean, expanded = false) {
 	return host;
 }
 
+function hiddenWords(host: HTMLElement) {
+	return [...host.querySelectorAll('span')].find((span) => span.textContent === 'Section has errors') ?? null;
+}
+
 describe('section navigation error cue', () => {
-	it('shows only the title when the section is valid', async () => {
-		const host = await render(false);
-		assert.equal(host.textContent?.trim(), 'Page Properties');
-		assert.equal(host.querySelector('svg'), null);
+	it('shows neither the icon nor the hidden words when the section is valid', async () => {
+		for (const expanded of [false, true]) {
+			const host = await render(false, expanded);
+			assert.equal(host.textContent?.trim(), 'Page Properties');
+			assert.equal(host.querySelector('svg'), null);
+			assert.equal(hiddenWords(host), null);
+		}
 	});
 
-	it('adds an error icon and accessible text without leaving the title line', async () => {
-		const host = await render(true);
+	it('collapsed and invalid: icon on the right of a flex row and the hidden words after the title', async () => {
+		const host = await render(true, false);
 		const icon = host.querySelector('svg');
 		assert.ok(icon);
 		assert.equal(icon.getAttribute('aria-hidden'), 'true');
-		assert.match(host.textContent ?? '', /Page Properties/);
-		assert.match(host.textContent ?? '', /Section has errors/);
-		const text = [...host.querySelectorAll('span')].find((span) => span.textContent === 'Section has errors');
+		const text = hiddenWords(host);
 		assert.ok(text);
 		assert.equal(text.getAttribute('aria-hidden'), null);
 		const row = host.firstElementChild as HTMLElement;
 		assert.equal(row.tagName, 'DIV');
-		assert.equal(row.firstElementChild?.textContent, 'Page Properties');
+		const title = row.firstElementChild as HTMLElement;
+		assert.match(title.textContent ?? '', /^Page Properties\s+Section has errors$/);
+		assert.equal(title.contains(text), true);
 		const cue = icon.parentElement as HTMLElement;
 		assert.equal(cue.tagName, 'SPAN');
 		assert.equal(row.lastElementChild, cue);
+		assert.equal(cue.textContent, '');
 	});
 
-	it('hides the icon and the hidden words while the section is expanded', async () => {
+	it('expanded and invalid: the hidden words stay, the icon goes, and no wrapper is left on the right', async () => {
 		const host = await render(true, true);
-		assert.equal(host.textContent?.trim(), 'Page Properties');
 		assert.equal(host.querySelector('svg'), null);
+		const text = hiddenWords(host);
+		assert.ok(text);
+		const row = host.firstElementChild as HTMLElement;
+		assert.equal(row.children.length, 1);
+		assert.equal(row.firstElementChild?.contains(text), true);
 	});
 });
