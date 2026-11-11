@@ -22,6 +22,7 @@ import { cancelPackages, fetchAffectedPackages } from '../../services/workflow';
 import { IntlShape } from 'react-intl';
 import { createComponentId } from '../../utils/system';
 import { hasApproveAction, hasRejectAction } from '../../utils/content';
+import type { ReactNode } from 'react';
 
 export function showPackageDetails({ pkg, dispatch }: { pkg: PublishPackage; dispatch: Dispatch }) {
 	if (
@@ -58,7 +59,8 @@ export function checkAndCancelAffectedPackages({
 	onContinue,
 	onClose,
 	cancelPackagesComment,
-	formatMessage
+	formatMessage,
+	subtitle
 }: {
 	siteId: string;
 	item: ContentItem;
@@ -67,6 +69,7 @@ export function checkAndCancelAffectedPackages({
 	onClose?: () => void;
 	cancelPackagesComment?: string;
 	formatMessage: IntlShape['formatMessage'];
+	subtitle?: ReactNode;
 }) {
 	const cancelPackagesInitialComment =
 		cancelPackagesComment ??
@@ -84,6 +87,7 @@ export function checkAndCancelAffectedPackages({
 						props: {
 							item,
 							cancelPackagesInitialComment,
+							...(subtitle && { subtitle }),
 							onContinue: (cancelPackagesUpdatedComment: string) => {
 								cancelPackages(siteId, {
 									packageIds: affectedPackages.map((p) => p.id),

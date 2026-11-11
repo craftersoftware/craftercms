@@ -66,6 +66,7 @@ import { isComparableAsset, isPdfDocument, isVideo } from '../../utils/content';
 import { nanoid } from 'nanoid';
 import { pushConfirmDialog } from '../../utils/system';
 import { popDialog } from '../../state/actions/dialogStack';
+import { checkAndCancelAffectedPackages } from '../ViewPackagesDialog/utils';
 
 export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	const { versionsBranch, error } = props;
@@ -210,25 +211,45 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 		);
 	};
 
-	const revertToPrevious = (activeItem: ItemHistoryEntry) => {
-		const previousBranch = getPreviousBranch(activeItem);
+	const confirmAndRevert = (versionTitle: string, onRevert: () => void) => {
 		const dialogId = nanoid();
-
 		dispatch(
 			pushConfirmDialog({
 				id: dialogId,
 				props: {
 					title: formatMessage(translations.confirmRevertTitle),
-					body: formatMessage(translations.confirmRevertBody, {
-						versionTitle: asDayMonthDateTime(previousBranch.modifiedDate)
-					}),
+					body: formatMessage(translations.confirmRevertBody, { versionTitle }),
 					onCancel: () => dispatch(popDialog({ id: dialogId })),
 					onOk: () => {
 						dispatch(popDialog({ id: dialogId }));
-						dispatch(revertToPreviousVersion({ path, id: activeItem.versionNumber }));
+						if (!item) {
+							onRevert();
+							return;
+						}
+						checkAndCancelAffectedPackages({
+							siteId: site,
+							item,
+							dispatch,
+							formatMessage,
+							cancelPackagesComment: formatMessage(
+								{ defaultMessage: 'Cancel packages to revert "{path}"' },
+								{ path: item.path }
+							),
+							subtitle: (
+								<FormattedMessage defaultMessage="The item is part of one or more publishing packages. Reverting it will cancel the packages." />
+							),
+							onContinue: onRevert
+						});
 					}
 				}
 			})
+		);
+	};
+
+	const revertToPrevious = (activeItem: ItemHistoryEntry) => {
+		const previousBranch = getPreviousBranch(activeItem);
+		confirmAndRevert(asDayMonthDateTime(previousBranch.modifiedDate), () =>
+			dispatch(revertToPreviousVersion({ path, id: activeItem.versionNumber }))
 		);
 	};
 
@@ -239,23 +260,8 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	};
 
 	const revertTo = (activeItem: ItemHistoryEntry) => {
-		const dialogId = nanoid();
-
-		dispatch(
-			pushConfirmDialog({
-				id: dialogId,
-				props: {
-					title: formatMessage(translations.confirmRevertTitle),
-					body: formatMessage(translations.confirmRevertBody, {
-						versionTitle: asDayMonthDateTime(activeItem.modifiedDate)
-					}),
-					onCancel: () => dispatch(popDialog({ id: dialogId })),
-					onOk: () => {
-						dispatch(popDialog({ id: dialogId }));
-						dispatch(revertContent({ path, versionNumber: activeItem.versionNumber }));
-					}
-				}
-			})
+		confirmAndRevert(asDayMonthDateTime(activeItem.modifiedDate), () =>
+			dispatch(revertContent({ path, versionNumber: activeItem.versionNumber }))
 		);
 	};
 
