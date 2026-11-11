@@ -92,6 +92,7 @@ export interface PublishDialogFormProps {
 	disablePublishingTarget?: boolean;
 	isPromote?: boolean;
 	onFetchedPublishedTargets?: ({ published, targets }: { published: boolean; targets: PublishingTarget[] }) => void;
+	onPublishingTargetsError?: () => void;
 	sxs?: PartialSxRecord<PublishDialogFormSxKeys>;
 }
 
@@ -107,6 +108,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 		disablePublishingTarget = false,
 		isPromote = false,
 		onFetchedPublishedTargets,
+		onPublishingTargetsError,
 		sxs
 	} = props;
 
@@ -116,8 +118,15 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const [publishingTargetsStatus, setPublishingTargetsStatus] = useState('Loading');
 	const [published, setPublished] = useState<boolean>(null);
-	const onFetchedPublishedTargetsRef = useRef(null);
-	onFetchedPublishedTargetsRef.current = onFetchedPublishedTargets;
+	const publishTargetCallbacksRef = useRef({
+		onFetched: onFetchedPublishedTargets,
+		onError: onPublishingTargetsError
+	});
+	// After commit, so a render React discards cannot publish callbacks that never committed.
+	// The fetch effect below is declared later, so it sees this update before it subscribes.
+	useEffect(() => {
+		publishTargetCallbacksRef.current = { onFetched: onFetchedPublishedTargets, onError: onPublishingTargetsError };
+	}, [onFetchedPublishedTargets, onPublishingTargetsError]);
 
 	const fetchPublishingTargetsFn = useCallback(
 		(
@@ -127,7 +136,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 			setPublishingTargetsStatus('Loading');
 			return fetchPublishingTargets(siteId).subscribe({
 				next({ publishingTargets: targets, published }) {
-					onFetchedPublishedTargetsRef.current?.({ targets, published });
+					publishTargetCallbacksRef.current.onFetched?.({ targets, published });
 					setPublished(published);
 					setPublishingTargets(targets);
 					setPublishingTargetsStatus('Success');
@@ -135,6 +144,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				},
 				error(e) {
 					setPublishingTargetsStatus('Error');
+					publishTargetCallbacksRef.current.onError?.();
 					error?.(e);
 				}
 			});
@@ -158,7 +168,14 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				onChange={onInputChange}
 				label={<FormattedMessage defaultMessage="Package Title" />}
 				helperText={
-					<FormattedMessage defaultMessage="Dashboard and other places will use this title to display this package." />
+					formState.packageTitle.trim()
+						? formatMessage({
+								defaultMessage: 'Dashboard and other places will use this title to display this package.'
+							})
+						: formatMessage({
+								defaultMessage:
+									'Enter a package title to publish. Dashboard and other places will use this title to display this package.'
+							})
 				}
 				required
 			/>
