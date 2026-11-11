@@ -125,6 +125,9 @@ async function renderSelector(readonly: boolean) {
 	return host;
 }
 
+const iconOf = (host: HTMLElement, label: string) =>
+	host.querySelector(`button[aria-label="${label}"] svg`)?.getAttribute('data-testid');
+
 const labelsOf = (host: HTMLElement) =>
 	Array.from(host.querySelectorAll('button[aria-label]'), (button) => button.getAttribute('aria-label'));
 
@@ -162,6 +165,14 @@ describe('NodeSelector row button names', () => {
 		assert.equal(labels.includes('Delete Hero'), false);
 		assert.ok(labels.includes('View app.js'));
 		assert.equal(labels.includes('Edit app.js'), false);
+	});
+
+	it('shows the view icon instead of the pencil on editable rows of a read-only form', async () => {
+		const editable = await renderSelector(false);
+		assert.equal(iconOf(editable, 'Edit Article'), 'EditOutlinedIcon');
+		const readonly = await renderSelector(true);
+		assert.equal(iconOf(readonly, 'View Article'), 'VisibilityOutlinedIcon');
+		assert.equal(iconOf(readonly, 'View app.js'), 'VisibilityOutlinedIcon');
 	});
 
 	it('opens an editable asset in the code editor, writable only when the form is editable', async () => {

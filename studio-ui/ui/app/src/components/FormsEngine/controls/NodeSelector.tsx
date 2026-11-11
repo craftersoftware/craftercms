@@ -868,7 +868,7 @@ function NodeSelector(props: NodeSelectorProps) {
 														aria-label={openLabel}
 														onClick={(e) => handleEditItem(e, index, !readonly)}
 													>
-														<EditOutlined fontSize="small" />
+														{readonly ? <VisibilityOutlinedIcon fontSize="small" /> : <EditOutlined fontSize="small" />}
 													</IconButton>
 												</Tooltip>
 											) : (
