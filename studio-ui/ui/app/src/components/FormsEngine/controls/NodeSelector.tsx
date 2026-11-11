@@ -352,7 +352,8 @@ function NodeSelector(props: NodeSelectorProps) {
 			dispatch(
 				showCodeEditorDialog({
 					path: item.include,
-					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain')
+					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain'),
+					readonly: !edit
 				})
 			);
 		}
@@ -369,7 +370,8 @@ function NodeSelector(props: NodeSelectorProps) {
 				if (!readonly) setValue(newList);
 			},
 			(itemIndex, edit) =>
-				// Same branch as Enter and the row click: an item that can't be edited opens read-only.
+				// An item that can't be edited opens read-only, as the row click does. V always opens read-only.
+				// E edits only when the item and the field allow it.
 				canBeEdited ? handleEditItem(e, itemIndex, edit && !readonly) : handleViewItem(e, itemIndex),
 			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
@@ -701,6 +703,10 @@ function NodeSelector(props: NodeSelectorProps) {
 	const maxCount = countLimitValue(field.validations?.maxCount?.value);
 	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
+	const addItemsLabel =
+		isAddDisabled && maxLimitReached
+			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
+			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
 	return (
 		<>
 			<Menu
@@ -807,6 +813,7 @@ function NodeSelector(props: NodeSelectorProps) {
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
+								aria-label={addItemsLabel}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {
@@ -855,9 +862,10 @@ function NodeSelector(props: NodeSelectorProps) {
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
 								const itemLabel = getItemLabel(item);
-								// The row opens the item read-only. The pencil edits it. Those are different actions.
-								// View (read-only field, or an item that cannot be edited) is the same action as the row,
-								// so that button stays out of the tab order.
+								// A component row opens its form read-only and the pencil edits it, so those are different
+								// actions. An asset row follows the form's mode, like the pencil. The View button (read-only
+								// field, or an item that cannot be edited) is the same action as the row, so it stays out of
+								// the tab order.
 								const opensForEdit = canBeEdited && !readonly;
 								const openLabel = opensForEdit
 									? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel })
@@ -881,7 +889,10 @@ function NodeSelector(props: NodeSelectorProps) {
 											data-reorder-index={index}
 											data-reorder-control="row"
 											sx={{ flex: 1, minWidth: 0 }}
-											onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
+											onClick={(e) =>
+												// A component row opens its form read-only. An asset row follows the form's mode.
+												canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
+											}
 											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
 										>
 											<ListItemText

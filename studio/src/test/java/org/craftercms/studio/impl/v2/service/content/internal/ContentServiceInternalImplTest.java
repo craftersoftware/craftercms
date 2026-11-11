@@ -44,6 +44,7 @@ import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v2.content.ContentLifecycle;
 import org.craftercms.studio.api.v2.content.LifecycleContent;
+import org.craftercms.studio.api.v2.content.LifecycleContentProvider;
 import org.craftercms.studio.api.v2.content.LifecycleContent.ContentLifecycleItem;
 import static org.craftercms.studio.api.v2.content.LifecycleContent.LifecycleOperation.DUPLICATE;
 import static org.craftercms.studio.api.v2.content.LifecycleContent.LifecycleOperation.NEW;
@@ -56,6 +57,7 @@ import org.craftercms.studio.api.v2.dal.item.ContentItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
 import org.craftercms.studio.api.v2.exception.content.ContentExistException;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.repository.GitContentRepository;
 import org.craftercms.studio.api.v2.repository.RepositoryItem;
@@ -83,6 +85,7 @@ import org.craftercms.studio.impl.v2.service.content.internal.ContentServiceInte
 import org.craftercms.studio.impl.v2.utils.db.DBUtils;
 import org.craftercms.studio.impl.v2.utils.security.SecurityUtils;
 import org.craftercms.studio.model.AuthenticatedUser;
+import org.craftercms.studio.model.rest.ApiResponse;
 import org.craftercms.studio.model.rest.content.PasteContentResult;
 import org.craftercms.studio.model.rest.content.WriteContentResult;
 import org.craftercms.studio.model.rest.content.order.ItemOrder;
@@ -93,6 +96,7 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import org.junit.Before;
 import org.junit.Test;
@@ -435,6 +439,8 @@ public class ContentServiceInternalImplTest {
 			String path = a.getArgument(2);
 			ContentLifecycleItem item = mock(ContentLifecycleItem.class);
 			when(item.repoPath()).thenReturn(path);
+			// No placeInNav value, so the move does not rewrite the navigation order
+			doReturn(mock(Document.class)).when(item).contentAsDocument();
 			LifecycleContent lifecycleContent = mock(LifecycleContent.class);
 			when(lifecycleContent.getItems()).thenReturn(Map.of(path, item));
 			return lifecycleContent;
@@ -1045,6 +1051,61 @@ public class ContentServiceInternalImplTest {
 	}
 
 	@Test
+	public void testReorderInsertDifferentParent() {
+		ReorderItemRequest.Insert request = insertRequest(
+				"/site/website/section-a/page1/index.xml",
+				"/site/website/section-b/page2/index.xml");
+
+		assertNavOrderException(request, ApiResponse.NAV_ORDER_DIFFERENT_PARENT);
+	}
+
+	@Test
+	public void testReorderInsertPreviousMissingOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(null).when(serviceInternal).getItemOrder(SITE_ID, previous);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER);
+	}
+
+	@Test
+	public void testReorderInsertNextMissingOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(null).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_REFERENCE_MISSING_ORDER);
+	}
+
+	@Test
+	public void testReorderInsertPreviousOrderGreaterThanNext() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(10.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_PREVIOUS_GREATER_THAN_NEXT);
+	}
+
+	@Test
+	public void testReorderInsertSameOrder() throws ServiceLayerException {
+		String previous = "/site/website/page1/index.xml";
+		String next = "/site/website/page2/index.xml";
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, previous);
+		doReturn(4.0).when(serviceInternal).getItemOrder(SITE_ID, next);
+
+		assertNavOrderException(insertRequest(previous, next), ApiResponse.NAV_ORDER_SAME_VALUE);
+	}
+
+	@Test
+	public void testReorderNoReference() {
+		NavOrderException exception = assertThrows(NavOrderException.class,
+				() -> serviceInternal.reorderItem(SITE_ID, null, null));
+		assertSame(ApiResponse.NAV_ORDER_NO_REFERENCE, exception.getResponse());
+	}
+
+	@Test
 	public void testGetItemsOrder_returnsSortedListWhenChildrenHaveValidNavOrder() throws Exception {
 		String parentPath = "/site/website/section";
 
@@ -1152,6 +1213,164 @@ public class ContentServiceInternalImplTest {
 
 		assertNotNull("Result should not be null", result);
 		assertTrue("Result should be empty", result.isEmpty());
+	}
+
+	@Test
+	public void testCopyNavOrderCollision_placesItemInTheSlotAfterTheCollidingOrder() throws Exception {
+		String parent = "/site/website/section";
+		stubSiblingOrders(parent,
+				navItem(parent, "page-a", 1000d),
+				navItem(parent, "page-b", 2000d),
+				navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent copy = navPage(parent + "/page-b-copy/index.xml", parent + "/page-b/index.xml", "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			assertEquals("Copy should sit between the colliding order and the next sibling", 5000d, readOrder(copy), 0.001);
+		}
+	}
+
+	@Test
+	public void testCopyNavOrderCollision_preservesSourcePathAndOperation() throws Exception {
+		String parent = "/site/website/section";
+		String source = parent + "/page-b/index.xml";
+		String target = parent + "/page-b-copy/index.xml";
+		stubSiblingOrders(parent,
+				navItem(parent, "page-b", 2000d),
+				navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent copy = navPage(target, source, "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			ContentLifecycleItem rewritten = copy.get(target);
+			assertEquals("Collision rewrite should keep the source path", source, rewritten.sourcePath());
+			Map<String, LifecycleContent.LifecycleOperation> operations = serviceInternal.getOperationsByPath(
+					SITE_ID, List.of(source), copy.getItems().values(), DUPLICATE);
+			assertEquals("Collision rewrite should stay a duplicate", DUPLICATE, operations.get(target));
+		}
+	}
+
+	@Test
+	public void testCopyNavOrderCollision_appendsWhenTheCollidingOrderIsLast() throws Exception {
+		String parent = "/site/website/section";
+		stubSiblingOrders(parent,
+				navItem(parent, "page-a", 1000d),
+				navItem(parent, "page-b", 2000d));
+
+		try (LifecycleContent copy = navPage(parent + "/page-b-copy/index.xml", parent + "/page-b/index.xml", "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			assertEquals("Copy of the last order should move one increment past it", 2010d, readOrder(copy), 0.001);
+		}
+	}
+
+	@Test
+	public void testCopyNavOrder_keepsAnUnusedOrder() throws Exception {
+		String parent = "/site/website/section";
+		stubSiblingOrders(parent,
+				navItem(parent, "page-a", 1000d),
+				navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent copy = navPage(parent + "/page-b-copy/index.xml", parent + "/page-b/index.xml", "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			assertEquals("An unused order should be left unchanged", 2000d, readOrder(copy), 0.001);
+		}
+	}
+
+	@Test
+	public void testCopyNavOrderCollision_laterPagesUseOrdersClaimedInTheSameOperation() throws Exception {
+		String parent = "/site/website/section";
+		stubSiblingOrders(parent, navItem(parent, "page-b", 2000d), navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent first = navPage(parent + "/a-copy/index.xml", parent + "/page-b/index.xml", "2000", true);
+			 LifecycleContent second = navPage(parent + "/b-copy/index.xml", parent + "/page-b/index.xml", "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(first, second), false);
+
+			assertEquals(5000d, readOrder(first), 0.001);
+			assertEquals("The second copy should take the next open slot after the same order", 3500d, readOrder(second), 0.001);
+		}
+	}
+
+	@Test
+	public void testMoveNavOrder_keepsOrderWhenTheOnlyMatchIsTheSourceItem() throws Exception {
+		String parent = "/site/website/section";
+		String source = parent + "/page-b/index.xml";
+		stubSiblingOrders(parent, navItem(parent, "page-b", 2000d), navItem(parent, "page-c", 8000d));
+
+		try (LifecycleContent moved = navPage(parent + "/page-b-renamed/index.xml", source, "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(moved), true);
+
+			assertEquals("A rename should not collide with the item's own source path", 2000d, readOrder(moved), 0.001);
+		}
+	}
+
+	@Test
+	public void testMoveNavOrderCollision_placesItemInTheSlotAfterTheCollidingOrder() throws Exception {
+		String parent = "/site/website/news";
+		stubSiblingOrders(parent, navItem(parent, "story", 2000d), navItem(parent, "archive", 8000d));
+
+		try (LifecycleContent moved = navPage(parent + "/page-b/index.xml", "/site/website/section/page-b/index.xml", "2000", true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(moved), true);
+
+			assertEquals(5000d, readOrder(moved), 0.001);
+		}
+	}
+
+	@Test
+	public void testCopyNavOrder_assignsTheEndWhenThePageHasNoOrder() throws Exception {
+		String parent = "/site/website/section";
+		stubSiblingOrders(parent, navItem(parent, "page-a", 1000d), navItem(parent, "page-c", 3000d));
+
+		try (LifecycleContent copy = navPage(parent + "/page-b-copy/index.xml", parent + "/page-b/index.xml", null, true)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			assertEquals(3010d, readOrder(copy), 0.001);
+		}
+	}
+
+	@Test
+	public void testCopyNavOrder_leavesAPageThatIsNotInTheNav() throws Exception {
+		try (LifecycleContent copy = navPage("/site/website/section/page-b-copy/index.xml",
+				"/site/website/section/page-b/index.xml", "2000", false)) {
+			serviceInternal.updateNavOrderForCopyOrMove(SITE_ID, List.of(copy), false);
+
+			assertEquals(2000d, readOrder(copy), 0.001);
+			verify(serviceInternal, never()).getItemsOrder(anyString(), anyString());
+		}
+	}
+
+	private void stubSiblingOrders(String parent, ItemOrder... orders) throws ServiceLayerException {
+		doReturn(List.of(orders)).when(serviceInternal).getItemsOrder(SITE_ID, parent);
+	}
+
+	private static ItemOrder navItem(String parent, String name, double order) {
+		return new ItemOrder(parent + "/" + name + "/index.xml", name, order);
+	}
+
+	private static LifecycleContent navPage(String repoPath, String sourcePath, String order, boolean placeInNav) {
+		String orderElement = order == null ? "" : "<orderDefault_f>" + order + "</orderDefault_f>";
+		String xml = "<page><placeInNav>" + placeInNav + "</placeInNav>" + orderElement + "</page>";
+		return new LifecycleContent(repoPath, sourcePath, "/page/entry",
+				LifecycleContentProvider.ofStream(repoPath, () -> toInputStream(xml, "UTF-8")), DUPLICATE);
+	}
+
+	private static double readOrder(LifecycleContent content) throws Exception {
+		ContentLifecycleItem item = content.get(content.getRepoPath());
+		return Double.parseDouble(item.contentAsDocument().getRootElement().elementTextTrim("orderDefault_f"));
+	}
+
+	private ReorderItemRequest.Insert insertRequest(String previousPath, String nextPath) {
+		ReorderItemRequest.Insert request = new ReorderItemRequest.Insert();
+		request.setPreviousPath(previousPath);
+		request.setNextPath(nextPath);
+		return request;
+	}
+
+	private void assertNavOrderException(ReorderItemRequest request, ApiResponse expectedResponse) {
+		NavOrderException exception = assertThrows(NavOrderException.class,
+				() -> serviceInternal.reorderItem(SITE_ID, request));
+		assertSame(expectedResponse, exception.getResponse());
 	}
 
 	private ContentItem createMockContentItem(String path) {
