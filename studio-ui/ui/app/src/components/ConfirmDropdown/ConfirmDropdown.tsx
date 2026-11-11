@@ -111,7 +111,8 @@ export function ConfirmDropdown(props: ConfirmDropdownProps) {
 	};
 
 	const iconAriaLabel =
-		iconLabel ?? (typeof iconTooltip === 'string' ? iconTooltip : formatMessage({ defaultMessage: 'Confirm' }));
+		iconLabel ??
+		(typeof iconTooltip === 'string' ? iconTooltip : formatMessage({ id: 'words.confirm', defaultMessage: 'Confirm' }));
 
 	// Not memorizing causes the menu to get misplaced upon opening.
 	const iconButton = useMemo(
