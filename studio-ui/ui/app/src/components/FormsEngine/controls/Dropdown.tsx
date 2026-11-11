@@ -31,7 +31,8 @@ export function Dropdown(props: DropdownProps) {
 	const maxLength = field.validations.maxLength?.value;
 	const handleChange = (event: SelectChangeEvent) => setValue(event.target.value);
 	const optionGroups = useDataSourceListOptions(dataSources);
-	const controlId = inputId || useId();
+	const generatedId = useId();
+	const controlId = inputId || generatedId;
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 	if (!optionGroups) {
 		return (

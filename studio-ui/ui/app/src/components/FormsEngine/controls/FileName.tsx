@@ -44,7 +44,8 @@ export function FileName(props: ControlProps<string>) {
 	const formContext = useStableFormContext();
 	const atoms = formContext.atoms;
 	const isNewForm = nnou(formContext.props?.create);
-	const htmlId = inputId || useId();
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
 	if (field.id === 'fileName') {
 		throw new Error('Detected field ID "fileName" instead "file-name" at the "FileName" Control.');
 	}

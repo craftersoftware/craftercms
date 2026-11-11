@@ -30,7 +30,8 @@ export function Checkbox(props: CheckboxProps) {
 	const readonly = isFieldReadOnly(field, formReadonly);
 	// endregion
 
-	const htmlId = inputId || useId();
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
 	// `aria-required` is not allowed on role="switch", so only the description and invalid state are passed.
 	const { 'aria-describedby': describedBy, 'aria-invalid': invalid } = useFieldControlA11y(
 		field,

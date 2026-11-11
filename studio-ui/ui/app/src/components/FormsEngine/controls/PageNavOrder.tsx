@@ -109,7 +109,8 @@ function PageNavChoices({
 export function PageNavOrder(props: PageNavOrderProps) {
 	const { value, setValue, field, autoFocus, readonly: formReadonly, labelId: labelIdProp } = props;
 	// The group is a div, so the label's htmlFor cannot name it. The label id does.
-	const labelId = labelIdProp || useId();
+	const generatedLabelId = useId();
+	const labelId = labelIdProp || generatedLabelId;
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
 	const [pagesOrderState, setPagesOrderState] = useSpreadState<{

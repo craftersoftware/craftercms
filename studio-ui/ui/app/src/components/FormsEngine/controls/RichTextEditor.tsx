@@ -73,7 +73,8 @@ export function RichTextEditor(props: RichTextEditorProps) {
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
 	const hasReceivedFocusRef = useRef(false);
-	const controlId = inputId || useId();
+	const generatedId = useId();
+	const controlId = inputId || generatedId;
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 	const describedBy = a11y['aria-describedby'];
 	const invalid = a11y['aria-invalid'];

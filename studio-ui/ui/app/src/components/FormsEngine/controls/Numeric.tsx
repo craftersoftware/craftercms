@@ -59,7 +59,8 @@ const OutlinedInputWithRef = forwardRef<HTMLInputElement, OutlinedInputProps>((p
 
 export function Numeric(props: NumberProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, inputId, labelId } = props;
-	const htmlId = inputId || useId();
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations

@@ -50,7 +50,8 @@ export function LocaleSelector(props: LocaleSelectorProps) {
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 	const refs = useUpdateRefs({ value, readonly });
 	const fetchSubscriptionRef = useRef<Subscription | null>(null);
-	const controlId = inputId || useId();
+	const generatedId = useId();
+	const controlId = inputId || generatedId;
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
 
 	const fetchLocales = useCallback(() => {

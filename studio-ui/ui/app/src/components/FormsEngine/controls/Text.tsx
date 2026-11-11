@@ -25,7 +25,8 @@ export type TextProps = ControlProps<string>;
 
 export function Text(props: TextProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, inputId, labelId } = props;
-	const htmlId = inputId || useId();
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations
