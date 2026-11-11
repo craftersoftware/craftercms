@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License version 3 as published by
+  ~ the Free Software Foundation.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<!--
+    Site Configuration Tools
+
+    This file helps configure the Site Config section with tools. The tools specified here appear on the left-
+    hand-side of the Site Config section.
+
+    The file has the the following structure:
+    <config>
+        <tools>
+            <tool>
+                <name>sync-from-repository</name>
+                <label>Sync From Repository</label>
+                <icon>          (Optional icon configuration)
+                    <styles>    ( Change default icon styles - using css rules )
+                        <color>#409a00</color>
+                        <font-size>16px</font-size>
+                        <font-width>bold</font-width>
+                    </styles>
+                </icon>
+                <... tool specific configuration ../>
+            </tool>
+        </tools>
+    </config>
+-->
+<config>
+	<version>4.0.6</version>
+	<tools>
+		<tool>
+			<name>content-types</name>
+			<label>Content Types</label>
+			<formSection>
+				<icon>
+					<class>fa-object-group</class>
+				</icon>
+			</formSection>
+			<repeatSection>
+				<icon>
+					<class>fa-repeat</class>
+				</icon>
+			</repeatSection>
+			<controls>
+				<control>
+					<name>input</name>
+					<icon>
+						<class>fa-pencil-square-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>numeric-input</name>
+					<icon>
+						<class>fa-pencil-square</class>
+					</icon>
+				</control>
+				<control>
+					<name>textarea</name>
+					<icon>
+						<class>fa-paragraph</class>
+					</icon>
+				</control>
+				<control>
+					<name>rte</name>
+					<icon>
+						<class>fa-code</class>
+					</icon>
+				</control>
+				<control>
+					<name>dropdown</name>
+					<icon>
+						<class>fa-sort-desc</class>
+					</icon>
+				</control>
+				<control>
+					<name>time</name>
+					<icon>
+						<class>fa-clock-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>date-time</name>
+					<icon>
+						<class>fa-calendar</class>
+						<stackedclass>fa-clock-o</stackedclass>
+					</icon>
+				</control>
+				<control>
+					<name>checkbox</name>
+					<icon>
+						<class>fa-check-square-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>checkbox-group</name>
+					<icon>
+						<class>fa-check-square-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>node-selector</name>
+					<icon>
+						<class>fa-crosshairs</class>
+					</icon>
+				</control>
+				<control>
+					<name>image-picker</name>
+					<icon>
+						<class>fa-picture-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>video-picker</name>
+					<icon>
+						<class>fa-video-camera</class>
+					</icon>
+				</control>
+				<control>
+					<name>transcoded-video-picker</name>
+					<icon>
+						<class>fa-video-camera</class>
+					</icon>
+				</control>
+				<control>
+					<name>label</name>
+					<icon>
+						<class>fa-tag</class>
+					</icon>
+				</control>
+				<control>
+					<name>page-nav-order</name>
+					<icon>
+						<class>fa-sort</class>
+					</icon>
+				</control>
+				<control>
+					<name>file-name</name>
+					<icon>
+						<class>fa-file-o</class>
+					</icon>
+				</control>
+				<control>
+					<name>auto-filename</name>
+					<icon>
+						<class>fa-file-o</class>
+						<stackedclass>fa-magic</stackedclass>
+					</icon>
+				</control>
+				<control>
+					<name>internal-name</name>
+					<icon>
+						<class>fa-font</class>
+					</icon>
+				</control>
+				<control>
+					<name>locale-selector</name>
+					<icon>
+						<class>fa-globe</class>
+					</icon>
+				</control>
+			</controls>
+			<datasources>
+				<datasource>
+					<name>components</name>
+					<icon>
+						<class>fa-puzzle-piece</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>shared-content</name>
+					<icon>
+						<class>fa-share-alt</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>embedded-content</name>
+					<icon>
+						<class>fa-dot-circle-o</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-desktop-upload</name>
+					<icon>
+						<class>fa-picture-o</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-repository-upload</name>
+					<icon>
+						<class>fa-file-image-o</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>file-desktop-upload</name>
+					<icon>
+						<class>fa-upload</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>file-browse-repo</name>
+					<icon>
+						<class>fa-hand-o-up</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>WebDAV-repo</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-WebDAV-repo</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-WebDAV-repo</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>WebDAV-upload</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-WebDAV-upload</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-WebDAV-upload</name>
+					<icon>
+						<class>fa-square-o fa-server</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>S3-repo</name>
+					<icon>
+						<class>fa-file-o</class>
+						<stackedclass>fa-amazon</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-S3-repo</name>
+					<icon>
+						<class>fa-square</class>
+						<stackedclass>fa-amazon fa-inverse</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-S3-repo</name>
+					<icon>
+						<class>fa-film</class>
+						<stackedclass>fa-amazon</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>S3-upload</name>
+					<icon>
+						<class>fa-file-o</class>
+						<stackedclass>fa-amazon</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>img-S3-upload</name>
+					<icon>
+						<class>fa-square</class>
+						<stackedclass>fa-amazon fa-inverse</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-S3-upload</name>
+					<icon>
+						<class>fa-film</class>
+						<stackedclass>fa-amazon</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-S3-transcoding</name>
+					<icon>
+						<class>fa-film</class>
+						<stackedclass>fa-amazon</stackedclass>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-desktop-upload</name>
+					<icon>
+						<class>fa-video-camera</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>video-browse-repo</name>
+					<icon>
+						<class>fa-file-video-o</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>key-value-list</name>
+					<icon>
+						<class>fa-key</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>simpleTaxonomy</name>
+					<icon>
+						<class>fa-tags</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>audio-desktop-upload</name>
+					<icon>
+						<class>fa-volume-up</class>
+					</icon>
+				</datasource>
+				<datasource>
+					<name>audio-browse-repo</name>
+					<icon>
+						<class>fa-file-audio-o</class>
+					</icon>
+				</datasource>
+			</datasources>
+			<objectTypes>
+				<type>
+					<label>Page</label>
+					<name>page</name>
+					<properties>
+						<property>
+							<name>display-template</name>
+							<label>Display Template</label>
+							<value></value>
+							<type>template</type>
+						</property>
+						<property>
+							<name>no-template-required</name>
+							<label>No Template Required</label>
+							<value></value>
+							<type>boolean</type>
+						</property>
+						<property>
+							<name>merge-strategy</name>
+							<label>Merge Strategy</label>
+							<value>inherit-levels</value>
+							<type>string</type>
+						</property>
+					</properties>
+				</type>
+				<type>
+					<label>Component</label>
+					<name>component</name>
+					<properties>
+						<property>
+							<name>display-template</name>
+							<label>Display Template</label>
+							<value></value>
+							<type>template</type>
+						</property>
+						<property>
+							<name>no-template-required</name>
+							<label>No Template Required</label>
+							<value></value>
+							<type>boolean</type>
+						</property>
+						<property>
+							<name>merge-strategy</name>
+							<label>Merge Strategy</label>
+							<value>inherit-levels</value>
+							<type>string</type>
+						</property>
+					</properties>
+				</type>
+
+			</objectTypes>
+		</tool>
+	</tools>
+</config>

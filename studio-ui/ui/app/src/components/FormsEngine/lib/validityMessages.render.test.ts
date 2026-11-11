@@ -33,7 +33,8 @@ import type { FieldValidityState, Validator } from './validators.ts';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { IntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider, createIntl } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
@@ -83,8 +84,8 @@ function Harness(props: { validity: FieldValidityState; messages: Record<string,
 		Provider,
 		{ store },
 		React.createElement(
-			IntlProvider,
-			{ locale: 'en', messages: props.messages, onError: () => undefined },
+			RawIntlProvider,
+			{ value: createTestIntl({ messages: props.messages }) },
 			React.createElement(
 				StableGlobalContext.Provider,
 				{ value: { formsStackData: [], api: {} } },

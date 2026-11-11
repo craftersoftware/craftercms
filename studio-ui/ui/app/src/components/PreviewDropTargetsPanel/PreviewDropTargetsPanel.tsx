@@ -81,6 +81,7 @@ export function PreviewDropTargetsPanel() {
 		? Object.values(contentTypesBranch.byId).filter((contentType) => contentType.type === 'component')
 		: null;
 	const { formatMessage } = useIntl();
+	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
 	const [listMode, setListMode] = useState(true);
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
@@ -206,7 +207,7 @@ export function PreviewDropTargetsPanel() {
 								</Select>
 							</FormControl>
 							{dropTargetsBranch?.selectedContentType && (
-								<Tooltip title={<FormattedMessage defaultMessage="Cancel selection" />}>
+								<Tooltip title={cancelSelectionLabel}>
 									<IconButton edge="end" sx={{ ml: 0.625 }} onClick={() => resetState()}>
 										<CloseRoundedIcon />
 									</IconButton>
@@ -235,7 +236,10 @@ export function PreviewDropTargetsPanel() {
 					</>
 				)
 			) : (
-				<EmptyState title="No drop targets were found on the current view." sxs={{ title: { textAlign: 'center' } }} />
+				<EmptyState
+					title={<FormattedMessage defaultMessage="No drop targets were found on the current view." />}
+					sxs={{ title: { textAlign: 'center' } }}
+				/>
 			)}
 		</>
 	);
@@ -282,12 +286,14 @@ interface DropTargetsListProps {
 function DropTargetsList(props: DropTargetsListProps) {
 	const { dropTargets } = props;
 	return dropTargets?.map((dropTarget: ContentTypeDropTarget) => (
-		<ListItemButton key={dropTarget.id} onClick={() => props.onSelectedDropZone(dropTarget)}>
-			<ListItemIcon>
-				<ContentTypeField />
-			</ListItemIcon>
-			<ListItemText primary={dropTarget.label} />
-		</ListItemButton>
+		<Box component="li" key={dropTarget.id} sx={{ display: 'flex', alignItems: 'center' }}>
+			<ListItemButton onClick={() => props.onSelectedDropZone(dropTarget)} sx={{ flex: 1, minWidth: 0 }}>
+				<ListItemIcon>
+					<ContentTypeField />
+				</ListItemIcon>
+				<ListItemText primary={dropTarget.label} />
+			</ListItemButton>
+		</Box>
 	));
 }
 
