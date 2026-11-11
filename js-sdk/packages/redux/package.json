@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@craftercms/content": "5.0.1-alpha.0",
-    "@reduxjs/toolkit": "^2.13.0",
+    "@reduxjs/toolkit": "^2.14.0",
     "redux": "^5.0.1",
     "redux-observable": "^3.0.0-rc.3",
     "rxjs": "^7.8.2"
@@ -38,12 +38,12 @@
     "@types/mocha": "^10.0.10",
     "chai": "^6.3.0",
     "mocha": "^12.0.3",
-    "nock": "^15.0.5",
+    "nock": "^15.0.6",
     "node-fetch": "3.3.2",
-    "rollup": "^4.65.1",
+    "rollup": "^4.68.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.51.2",
-    "tslib": "^2.8.1",
+    "tslib": "^2.9.1",
     "xhr-mock": "^2.5.1"
   }
 }
