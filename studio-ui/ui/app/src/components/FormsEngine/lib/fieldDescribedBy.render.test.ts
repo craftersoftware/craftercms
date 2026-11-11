@@ -313,4 +313,18 @@ describe('wired control descriptions', () => {
 		assert.equal(label.getAttribute('for'), null);
 		assert.equal(group.getAttribute('aria-invalid'), null);
 	});
+
+	it('keeps the page navigation Required description target exposed to assistive technology', async () => {
+		const field = {
+			...fieldFor('placeInNav_b'),
+			validations: { required: { id: 'required', value: true, level: 'required' } }
+		} as ContentTypeField;
+		const host = await renderControl(PageNavOrder, field, true, false);
+		const group = host.querySelector('[role="radiogroup"]');
+		assert.ok(group);
+		const required = Array.from(group.querySelectorAll('span')).find((span) => span.textContent === 'Required');
+		assert.ok(required?.id);
+		assert.equal(required.hasAttribute('aria-hidden'), false);
+		assert.ok(group.getAttribute('aria-describedby')?.split(/\s+/).includes(required.id));
+	});
 });

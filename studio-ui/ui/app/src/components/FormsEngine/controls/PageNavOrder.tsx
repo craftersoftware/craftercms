@@ -86,7 +86,7 @@ function PageNavChoices({
 			autoFocus={autoFocus}
 		>
 			{aria.requiredId && (
-				<Box component="span" id={aria.requiredId} aria-hidden sx={visuallyHidden}>
+				<Box component="span" id={aria.requiredId} sx={visuallyHidden}>
 					<FormattedMessage defaultMessage="Required" />
 				</Box>
 			)}
