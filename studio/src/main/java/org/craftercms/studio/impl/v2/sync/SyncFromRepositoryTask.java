@@ -80,7 +80,7 @@ import org.craftercms.studio.api.v2.dal.Item;
 import org.craftercms.studio.api.v2.dal.ItemDAO;
 import static org.craftercms.studio.api.v2.dal.ItemState.DISABLED;
 import static org.craftercms.studio.api.v2.dal.ItemState.NEW;
-import static org.craftercms.studio.api.v2.dal.ItemState.SAVE_AND_CLOSE_OFF_MASK;
+import static org.craftercms.studio.api.v2.dal.ItemState.SYNC_FROM_REPOSITORY_OFF_MASK;
 import static org.craftercms.studio.api.v2.dal.ItemState.SAVE_AND_CLOSE_ON_MASK;
 import org.craftercms.studio.api.v2.dal.ProcessedCommitsDAO;
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
@@ -659,7 +659,7 @@ public class SyncFromRepositoryTask implements ApplicationEventPublisherAware {
 		}
 		ItemMetadata metadata = getItemMetadata(site.getSiteId(), repoOperation.getPath());
 		long onStateBitMap = SAVE_AND_CLOSE_ON_MASK;
-		long offStateBitmap = SAVE_AND_CLOSE_OFF_MASK;
+		long offStateBitmap = SYNC_FROM_REPOSITORY_OFF_MASK;
 		if (metadata.disabled) {
 			onStateBitMap = onStateBitMap | DISABLED.value;
 		} else {
@@ -696,7 +696,7 @@ public class SyncFromRepositoryTask implements ApplicationEventPublisherAware {
 		processAncestors(itemDao, site.getSiteId(), repoOperation.getMoveToPath(), user.getId(),
 				repoOperation.getDateTime(), allAncestors);
 		long onStateBitMap = SAVE_AND_CLOSE_ON_MASK;
-		long offStateBitmap = SAVE_AND_CLOSE_OFF_MASK;
+		long offStateBitmap = SYNC_FROM_REPOSITORY_OFF_MASK;
 		if (metadata.disabled) {
 			onStateBitMap = onStateBitMap | DISABLED.value;
 		} else {
