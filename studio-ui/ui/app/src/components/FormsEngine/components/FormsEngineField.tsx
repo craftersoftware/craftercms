@@ -168,6 +168,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const sourceLabel = useSelection<string | undefined>((state) =>
 		sourcePath ? state.content.itemsByPath[sourcePath]?.label : undefined
 	);
+	const editSourceLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: sourceLabel ?? sourcePath });
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
@@ -410,8 +411,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 											update: { path: sourcePath }
 										});
 									}}
-									aria-label={formatMessage({ defaultMessage: 'Edit' })}
-									title={formatMessage({ defaultMessage: 'Edit' })}
+									aria-label={editSourceLabel}
+									title={editSourceLabel}
 								>
 									<EditOutlined fontSize="small" />
 								</IconButton>
