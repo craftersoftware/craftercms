@@ -179,4 +179,67 @@ describe('invalidFieldIdsAtom', () => {
 			unsubscribe();
 		}
 	});
+
+	it('updates another field while one validator never settles', async () => {
+		const title = atom('bad');
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
+			validationByFieldId: {
+				slow_s: atom(new Promise<never>(() => {})),
+				title_s: atom(async (get) => ({ isValid: get(title) !== 'bad' }))
+			}
+		} as never;
+		const store = createStore();
+		const { unsubscribe } = watchInvalidFieldIds(store, entry.atoms!);
+		try {
+			const idsAtom = invalidFieldIdsAtom(entry);
+			await until(() => store.get(idsAtom).includes('title_s'));
+			assert.deepEqual([...store.get(idsAtom)], ['title_s']);
+
+			store.set(title, 'ok');
+			await until(() => store.get(idsAtom).length === 0);
+			assert.deepEqual([...store.get(idsAtom)], []);
+		} finally {
+			unsubscribe();
+		}
+	});
+
+	it('does not let a superseded validation put a field back', async () => {
+		let releaseStale: ((value: { isValid: boolean }) => void) | undefined;
+		const generation = atom(0);
+		const validation = atom(async (get) => {
+			const current = get(generation);
+			if (current === 1) {
+				return await new Promise<{ isValid: boolean }>((resolve) => {
+					releaseStale = resolve;
+				});
+			}
+			return { isValid: current === 2 };
+		});
+		const entry = createFormStackData({ itemMeta: {} as never, originalValues: {} });
+		entry.atoms = {
+			relevanceVersion: atom(0),
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
+			validationByFieldId: { title_s: validation }
+		} as never;
+		const store = createStore();
+		const { unsubscribe } = watchInvalidFieldIds(store, entry.atoms!);
+		try {
+			const idsAtom = invalidFieldIdsAtom(entry);
+			await until(() => store.get(idsAtom).includes('title_s'));
+
+			store.set(generation, 1);
+			store.set(generation, 2);
+			await until(() => store.get(idsAtom).length === 0);
+			assert.deepEqual([...store.get(idsAtom)], []);
+
+			releaseStale?.({ isValid: false });
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			assert.deepEqual([...store.get(idsAtom)], []);
+		} finally {
+			unsubscribe();
+		}
+	});
 });

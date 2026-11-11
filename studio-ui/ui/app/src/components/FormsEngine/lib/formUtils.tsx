@@ -821,39 +821,52 @@ type InvalidFieldIdsStore = {
 	sub: JotaiStore['sub'];
 };
 
-/** Serializes membership writes per form. A parent is watched by its own alert and by a stacked child. */
-const invalidFieldWrites = new WeakMap<FormsEngineAtoms, Promise<void>>();
-
 /** Whether both lists hold the same ids in the same order. */
 function sameInvalidFieldIds(left: readonly string[], right: readonly string[]): boolean {
 	return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
-function recordInvalidField(
+/**
+ * Writes one field's membership once its validation has settled on the current run.
+ * The read-modify-write after the await is synchronous, so two fields cannot interleave there.
+ * A result is written only when its promise is still the atom's current one, in that same turn:
+ * a slower, superseded run cannot put the field back after a newer run.
+ */
+async function recordInvalidField(
 	store: InvalidFieldIdsStore,
 	atoms: FormsEngineAtoms,
 	fieldId: string,
 	validityAtom: Atom<Promise<FieldValidityState>>
 ): Promise<void> {
-	const run = async () => {
+	let pending = store.get(validityAtom);
+	for (;;) {
+		let state: FieldValidityState;
 		try {
-			const state = await readSettledValidity(store, validityAtom);
-			const current = store.get(atoms.invalidFieldIds);
-			const next = withInvalidField(current, fieldId, !state.isValid);
-			if (next !== current) store.set(atoms.invalidFieldIds, next);
+			state = await pending;
 		} catch (error) {
+			// A superseded run can reject. Only the current promise is a real failure.
+			if (store.get(validityAtom) !== pending) return;
 			// A plugin validator can reject. Keep this field's last membership.
 			console.error(error);
+			return;
 		}
-	};
-	const write = (invalidFieldWrites.get(atoms) ?? Promise.resolve()).then(run, run);
-	invalidFieldWrites.set(atoms, write);
-	return write;
+		const latest = store.get(validityAtom);
+		if (latest !== pending) {
+			pending = latest;
+			continue;
+		}
+		const current = store.get(atoms.invalidFieldIds);
+		const next = withInvalidField(current, fieldId, !state.isValid);
+		if (next !== current) store.set(atoms.invalidFieldIds, next);
+		return;
+	}
 }
 
 /**
  * Subscribes each validation atom and updates only that field's membership in {@link FormsEngineAtoms.invalidFieldIds}.
- * `ready` settles after the first pass. The caller unsubscribes; writes stay ordered per form.
+ * `ready` settles after the first pass. The caller unsubscribes. Each field awaits its own validation;
+ * a slow or hanging validator does not hold the others back. `ready` therefore waits for the slowest
+ * field, not the sum.
  */
 export function watchInvalidFieldIds(
 	store: InvalidFieldIdsStore,
