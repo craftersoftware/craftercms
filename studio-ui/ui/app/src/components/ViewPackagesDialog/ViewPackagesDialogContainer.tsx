@@ -58,11 +58,16 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 		fetching: false,
 		error: null
 	});
+	const [refreshCount, setRefreshCount] = useState(0);
 	const [cancelPackagesComment, setCancelPackagesComment] = useState(cancelPackagesInitialComment ?? '');
 	const disableContinue = onContinue ? cancelPackagesComment.trim() === '' : false;
 
 	const onShowPackageDetails = (pkg: PublishPackage) => {
-		showPackageDetails({ pkg, dispatch });
+		showPackageDetails({
+			pkg,
+			dispatch,
+			onSuccess: () => setRefreshCount((count) => count + 1)
+		});
 	};
 
 	const onContinueClick = (e: React.MouseEvent) => {
@@ -80,7 +85,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 				setState({ fetching: false, error: response.response });
 			}
 		});
-	}, [siteId, item, setState]);
+	}, [siteId, item, setState, refreshCount]);
 
 	return (
 		<>

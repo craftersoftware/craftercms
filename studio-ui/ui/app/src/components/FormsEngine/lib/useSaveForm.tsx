@@ -57,8 +57,8 @@ import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import { cancelPackages } from '../../../services/workflow';
-import { switchMap } from 'rxjs';
+import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
+import { of, switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
 import { nanoid } from 'nanoid';
@@ -427,10 +427,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 					const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 						const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
 						const saveOrCancel$ = affectedPackages?.length
-							? cancelPackages(siteId, {
-									packageIds: affectedPackages.map((pkg) => pkg.id),
-									comment: cancelPackagesComment
-								}).pipe(switchMap(() => writeService$))
+							? fetchAffectedPackages(siteId, path).pipe(
+									switchMap((pkgs) =>
+										pkgs?.length
+											? cancelPackages(siteId, {
+													packageIds: pkgs.map((pkg) => pkg.id),
+													comment: cancelPackagesComment
+												}).pipe(switchMap(() => writeService$))
+											: writeService$
+									)
+								)
 							: writeService$;
 
 						saveOrCancel$.subscribe({
@@ -561,13 +567,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 						? moveAndUpdateContent(siteId, itemPath, path, xml)
 						: writeContent(siteId, path, xml, { comment: versionComment });
 					const saveOrCancel$ = affectedPackages?.length
-						? cancelPackages(siteId, {
-								packageIds: affectedPackages.map((pkg) => pkg.id),
-								comment: cancelPackagesComment
-							}).pipe(
-								switchMap(() => {
-									return saveOrMoveService$;
-								})
+						? fetchAffectedPackages(siteId, itemPath).pipe(
+								switchMap((pkgs) =>
+									pkgs?.length
+										? cancelPackages(siteId, {
+												packageIds: pkgs.map((pkg) => pkg.id),
+												comment: cancelPackagesComment
+											}).pipe(switchMap(() => saveOrMoveService$))
+										: saveOrMoveService$
+								)
 							)
 						: saveOrMoveService$;
 
