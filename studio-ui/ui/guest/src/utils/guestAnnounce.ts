@@ -27,3 +27,36 @@ export function subscribeGuestStatus(listener: Listener): () => void {
 	listeners.add(listener);
 	return () => listeners.delete(listener);
 }
+
+/** Delay before a repeated message is set again. Matches the other polite live regions. */
+export const STATUS_REPEAT_DELAY_MS = 40;
+
+/**
+ * Drives a live region's text. A different message is set right away. An identical repeat of the current
+ * message is cleared first and set after a short delay so the region's text still changes and is announced
+ * again. A timeout (not a microtask) survives React batching when an epic announces.
+ */
+export function createStatusAnnouncer(setText: (text: string) => void, delay = STATUS_REPEAT_DELAY_MS) {
+	let current = '';
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	return {
+		announce(next: string) {
+			clearTimeout(timer);
+			timer = undefined;
+			if (next === current) {
+				setText('');
+				timer = setTimeout(() => {
+					timer = undefined;
+					setText(next);
+				}, delay);
+			} else {
+				current = next;
+				setText(next);
+			}
+		},
+		dispose() {
+			clearTimeout(timer);
+			timer = undefined;
+		}
+	};
+}

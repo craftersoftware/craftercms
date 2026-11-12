@@ -36,7 +36,7 @@ import { checkIfLockedOrModified } from '../store/util';
 import { getParentModelId } from '../utils/ice';
 import { isEditActionAvailable } from '../utils/util';
 import { getCachedContentItems, getCachedModels, modelHierarchyMap } from '../contentController';
-import { subscribeGuestStatus } from '../utils/guestAnnounce';
+import { createStatusAnnouncer, subscribeGuestStatus } from '../utils/guestAnnounce';
 import {
 	clearZoneOpenedFromKeyboard,
 	markZoneOpenedFromKeyboard,
@@ -251,16 +251,10 @@ function repositionFocusedZoneButton() {
 export function GuestStatusAnnouncer() {
 	const [message, setMessage] = useState('');
 	useEffect(() => {
-		let timer: number | undefined;
-		const unsubscribe = subscribeGuestStatus((next) => {
-			window.clearTimeout(timer);
-			// Clear first so a repeated message still changes the live-region text.
-			// A timeout (not a microtask) survives React batching when an epic announces.
-			setMessage('');
-			timer = window.setTimeout(() => setMessage(next), 50);
-		});
+		const announcer = createStatusAnnouncer(setMessage);
+		const unsubscribe = subscribeGuestStatus(announcer.announce);
 		return () => {
-			window.clearTimeout(timer);
+			announcer.dispose();
 			unsubscribe();
 		};
 	}, []);
