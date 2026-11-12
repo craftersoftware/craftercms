@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,7 +16,11 @@
 
 package org.craftercms.studio.impl.v2.service.audit.internal;
 
+import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v2.dal.*;
+import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
+import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActionResolver;
 import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.model.rest.dashboard.Activity;
 
@@ -31,6 +35,7 @@ public class ActivityStreamServiceInternalImpl implements ActivityStreamService 
 	private SiteDAO siteDao;
 	private RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
 	private ActivityStreamDAO activityStreamDAO;
+	private PublishPackageAvailableActionResolver publishPackageAvailableActionResolver;
 
 	@Override
 	public void insertActivity(long siteId, long userId, String action, ZonedDateTime actionTimestamp, Item item,
@@ -47,9 +52,23 @@ public class ActivityStreamServiceInternalImpl implements ActivityStreamService 
 
 	@Override
 	public List<Activity> getActivitiesForUsers(String siteId, List<String> usernames, List<String> actions,
-												ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit) {
-		return activityStreamDAO
+												ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit)
+			throws ServiceLayerException, UserNotFoundException {
+		List<Activity> activities = activityStreamDAO
 				.getActivitiesForUsers(getSiteId(siteId), usernames, actions, dateForm, dateTo, offset, limit);
+		for (Activity activity : activities) {
+			if (activity.getPublishPackage() != null) {
+				calculateAvailableActions(activity.getPublishPackage());
+			}
+		}
+		return activities;
+	}
+
+	/**
+	 * Calculate and set current user available actions for the publish package.
+	 */
+	private void calculateAvailableActions(final PublishPackage publishPackage) throws ServiceLayerException, UserNotFoundException {
+		publishPackage.setAvailableActions(publishPackageAvailableActionResolver.getPublishPackageAvailableActions(publishPackage));
 	}
 
 	private long getSiteId(String siteId) {
@@ -69,5 +88,10 @@ public class ActivityStreamServiceInternalImpl implements ActivityStreamService 
 	@SuppressWarnings("unused")
 	public void setActivityStreamDAO(ActivityStreamDAO activityStreamDAO) {
 		this.activityStreamDAO = activityStreamDAO;
+	}
+
+	@SuppressWarnings("unused")
+	public void setPublishPackageAvailableActionResolver(PublishPackageAvailableActionResolver publishPackageAvailableActionResolver) {
+		this.publishPackageAvailableActionResolver = publishPackageAvailableActionResolver;
 	}
 }
