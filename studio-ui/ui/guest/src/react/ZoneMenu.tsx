@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { Dispatch, useEffect, useMemo, useState } from 'react';
+import { Dispatch, useEffect, useId, useMemo, useState } from 'react';
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded';
 import PencilIcon from '@mui/icons-material/EditOutlined';
 import UnlockIcon from '@craftercms/studio-ui/icons/Unlock';
@@ -143,6 +143,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 	const menuRef = React.useRef<HTMLDivElement>(null);
 	const [trashAnchor, setTrashAnchor] = useState<HTMLElement | null>(null);
 	const [showTrashConfirmation, setShowTrashConfirmation] = useState<boolean>(false);
+	const trashQuestionId = useId();
 	const { formatMessage } = useIntl();
 
 	const iceRecord = getById(record.iceIds[0]);
@@ -846,7 +847,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 					setShowTrashConfirmation(false);
 				}}
 				slotProps={{
-					list: { 'data-craftercms-zone-submenu': '' },
+					list: { 'data-craftercms-zone-submenu': '', 'aria-labelledby': trashQuestionId },
 					backdrop: {
 						onClick: (event) => {
 							event.stopPropagation();
@@ -863,7 +864,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 				}}
 				sx={{ zIndex: 1501 }}
 			>
-				<UltraStyledTypography variant="body1" sx={{ padding: '10px 16px 10px 16px' }}>
+				<UltraStyledTypography id={trashQuestionId} variant="body1" sx={{ padding: '10px 16px 10px 16px' }}>
 					<FormattedMessage
 						id="zoneMenu.trashConfirmation"
 						defaultMessage="{isEmbedded, select, true {Delete} other {Disassociate}} this item?"
