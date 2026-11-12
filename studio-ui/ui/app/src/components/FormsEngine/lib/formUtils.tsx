@@ -133,7 +133,11 @@ export function fieldIdSelector(fieldId: string): string {
 }
 
 function focusField(field: HTMLElement): void {
-	const inner = field.querySelector<HTMLElement>(focusableControl);
+	// Header Help/Options are tabbable ([tabindex="0"]) but come before the control in DOM order.
+	// Skip them so reveal / invalid-save focus lands on the control, not the chrome.
+	const inner = Array.from(field.querySelectorAll<HTMLElement>(focusableControl)).find(
+		(element) => !element.closest('[data-field-header]')
+	);
 	const target = inner ?? field;
 	if (target === field && !field.hasAttribute('tabindex')) field.tabIndex = -1;
 	target.focus({ preventScroll: true });

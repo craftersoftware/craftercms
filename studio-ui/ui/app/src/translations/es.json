@@ -1727,5 +1727,12 @@
 	"CsDXpZ": "Halar {name}",
 	"l6B//v": "Empujar {name}",
 	"/xPSui": "No se encontraron zonas de colocación en la vista actual.",
-	"JpoWiv": "Elemento {position}"
+	"JpoWiv": "Elemento {position}",
+	"Q5mwvE": "No se encontró un descriptor de control para la fuente de datos \"{title}\" de tipo \"{type}\"",
+	"WEIIY1": "Propiedades básicas",
+	"YVoRja": "No se encontró un descriptor de control para el campo \"{name}\" de tipo \"{type}\"",
+	"fz7z2U": "Maximizar",
+	"k/3LuW": "No se encontró un descriptor de control para el tipo de campo \"{fieldType}\"",
+	"vYi9lB": "No se encontró un descriptor de fuente de datos para el tipo \"{dataSourceType}\"",
+	"B2Na3Q": "Seleccionar ruta"
 }

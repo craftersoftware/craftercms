@@ -1727,5 +1727,12 @@
 	"CsDXpZ": "Pull {name}",
 	"l6B//v": "Push {name}",
 	"/xPSui": "In der aktuellen Ansicht wurden keine Zielbereiche gefunden.",
-	"JpoWiv": "Element {position}"
+	"JpoWiv": "Element {position}",
+	"Q5mwvE": "Kein Steuerelement-Deskriptor für die Datenquelle \"{title}\" vom Typ \"{type}\" gefunden",
+	"WEIIY1": "Grundlegende Eigenschaften",
+	"YVoRja": "Kein Steuerelement-Deskriptor für das Feld \"{name}\" vom Typ \"{type}\" gefunden",
+	"fz7z2U": "Maximieren",
+	"k/3LuW": "Kein Steuerelement-Deskriptor für den Feldtyp \"{fieldType}\" gefunden",
+	"vYi9lB": "Kein Datenquellen-Deskriptor für den Typ \"{dataSourceType}\" gefunden",
+	"B2Na3Q": "Pfad auswählen"
 }

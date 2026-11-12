@@ -257,6 +257,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		>
 			<FieldDescribedByProvider value={{ labelId, describedByIds }}>
 				<Box
+					data-field-header
 					sx={{
 						display: 'flex',
 						justifyContent: 'space-between',
@@ -300,10 +301,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{action}
 						{menu && (
 							<>
-								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
 								<IconButton
 									size="small"
-									tabIndex={-1}
 									ref={menuButtonRef}
 									onClick={() => setOpenMenu(true)}
 									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}

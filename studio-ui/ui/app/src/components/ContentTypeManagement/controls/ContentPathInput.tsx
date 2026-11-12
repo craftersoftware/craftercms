@@ -21,6 +21,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import IconButton from '@mui/material/IconButton';
 import { useDispatch } from 'react-redux';
 import { nanoid } from 'nanoid';
+import { useIntl } from 'react-intl';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { TypeBuilderControl } from '../utils';
 
@@ -32,6 +33,7 @@ export type ContentPathInputProps = TypeBuilderControl<string>;
 export function ContentPathInput(props: ContentPathInputProps) {
 	const { field, value, setValue, readonly, autoFocus } = props;
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const htmlId = useId();
 	const maxLength = field.validations.maxLength?.value;
 	const rootPath = field.validations.root?.value;
@@ -69,7 +71,10 @@ export function ContentPathInput(props: ContentPathInputProps) {
 				onChange={handleChange}
 				disabled={readonly}
 				endAdornment={
-					<IconButton aria-label="Maximize" onClick={() => onOpenPathSelectionDialog()}>
+					<IconButton
+						aria-label={formatMessage({ defaultMessage: 'Select path' })}
+						onClick={() => onOpenPathSelectionDialog()}
+					>
 						<SearchRoundedIcon />
 					</IconButton>
 				}
