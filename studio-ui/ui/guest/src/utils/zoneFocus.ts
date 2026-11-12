@@ -90,7 +90,9 @@ function focusFallback() {
 		clearPending();
 		return;
 	}
-	const parent = addresses[0] ? buttonByAddress({ ...addresses[0], index: '' }) : null;
+	const first = addresses[0];
+	// The field zone's index is the container's: the item index without its last piece.
+	const parent = first ? buttonByAddress({ ...first, index: first.index.split('.').slice(0, -1).join('.') }) : null;
 	const button = parent ?? (iceId != null ? buttonByIceId(iceId) : null);
 	if (button) {
 		focusElement(button);

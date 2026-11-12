@@ -251,6 +251,26 @@ describe('requestZoneFocus', () => {
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '1');
 	});
 
+	it('falls back to the container field zone of a nested item when the registry never changes', () => {
+		renderZones([
+			{ iceId: 8, index: '' },
+			{ iceId: 9, index: '1' },
+			{ iceId: 1, index: '1.0' }
+		]);
+		requestZoneFocus({
+			iceId: 1,
+			addresses: [address('1.0')],
+			afterRegistryChange: true,
+			focusCurrent: false
+		});
+		renderZones([
+			{ iceId: 8, index: '' },
+			{ iceId: 9, index: '1' }
+		]);
+		mock.timers.tick(1500);
+		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '9');
+	});
+
 	it('leaves focus on the origin button when the move never repaints', () => {
 		renderZones([
 			{ iceId: 9, index: '' },
