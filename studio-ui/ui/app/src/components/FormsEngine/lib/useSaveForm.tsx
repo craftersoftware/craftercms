@@ -407,7 +407,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 					// top-level embed may seed a path-derived slug. Use the component's stored element.
 					const xml = buildSaveContentXml(values, contentTypesById, {
 						embeddedObjectId: id,
-						storedFileName: contentObject[XmlKeys.fileName] as string | null | undefined
+						storedFileName: contentObject?.[XmlKeys.fileName] as string
 					});
 					const dom = fromString(xml);
 
