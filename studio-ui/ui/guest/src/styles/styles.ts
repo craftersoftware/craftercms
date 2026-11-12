@@ -14,35 +14,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { createTheme, Theme, ThemeOptions } from '@mui/material';
+import { createTheme, type Theme, type ThemeOptions } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import palette, { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
 import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import { useMemo } from 'react';
-import { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
-import { SxProps } from '@mui/system';
+import type { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
+import type { SxProps } from '@mui/system';
+
+/** The Experience Builder theme. `useGuestTheme` picks the mode from the page colour scheme. */
+export function createGuestTheme(mode: 'light' | 'dark', styleConfig?: ThemeOptions): Theme {
+	return createTheme(
+		{
+			palette: {
+				// Same mode mapping as the Studio theme (CrafterThemeProvider).
+				mode,
+				...getStudioPaletteOptions(mode),
+				// Pick a label colour that reaches 4.5:1, like the Studio theme.
+				contrastThreshold: 4.5
+			},
+			typography: {
+				fontFamily: '"Source Sans Pro", "Open Sans", sans-serif',
+				fontSize: 16
+			}
+		},
+		styleConfig
+	);
+}
 
 export function useGuestTheme(styleConfig: ThemeOptions): Theme {
 	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-	return useMemo(() => {
-		const mode = prefersDarkMode ? 'dark' : 'light';
-		return createTheme(
-			{
-				palette: {
-					// Same mode mapping as the Studio theme (CrafterThemeProvider).
-					mode,
-					...getStudioPaletteOptions(mode),
-					// Pick a label colour that reaches 4.5:1, like the Studio theme.
-					contrastThreshold: 4.5
-				},
-				typography: {
-					fontFamily: '"Source Sans Pro", "Open Sans", sans-serif',
-					fontSize: 16
-				}
-			},
-			styleConfig
-		);
-	}, [prefersDarkMode, styleConfig]);
+	return useMemo(
+		() => createGuestTheme(prefersDarkMode ? 'dark' : 'light', styleConfig),
+		[prefersDarkMode, styleConfig]
+	);
 }
 
 type GuestStyleSxKeys = 'base' | 'selectModeHighlight' | 'moveModeHighlight';
@@ -56,47 +61,56 @@ export interface GuestStylesSx {
 export const styleSxDefaults: Partial<GuestStylesSx> = {
 	zoneMarker: {
 		base: {},
+		// Text is getContrastText of the fill it sits on. .contrastText is computed for .main.
 		selectModeHighlight: {
 			paper: {
 				bgcolor: 'success.light',
-				// contrastText is computed for .main, not .light; highlightText is the readable colour for the .light chips.
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.success.light)
 			},
 			box: getOverlayBoundarySx((theme) => theme.palette.success.main),
 			icon: {
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.success.light)
 			}
 		},
 		moveModeHighlight: {
 			paper: {
 				bgcolor: 'primary.light',
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.primary.light)
 			},
 			box: getOverlayBoundarySx((theme) => theme.palette.primary.main),
 			icon: {
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.primary.light)
 			}
 		},
 		errorHighlight: {
 			paper: {
 				bgcolor: 'error.light',
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.error.light)
 			},
-			box: getOverlayBoundarySx((theme) => theme.palette.error.main)
+			box: getOverlayBoundarySx((theme) => theme.palette.error.main),
+			icon: {
+				color: (theme) => theme.palette.getContrastText(theme.palette.error.light)
+			}
 		},
 		warnHighlight: {
 			paper: {
 				bgcolor: 'warning.light',
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.warning.light)
 			},
-			box: getOverlayBoundarySx((theme) => theme.palette.warning.main)
+			box: getOverlayBoundarySx((theme) => theme.palette.warning.main),
+			icon: {
+				color: (theme) => theme.palette.getContrastText(theme.palette.warning.light)
+			}
 		},
 		disabledHighlight: {
 			paper: {
 				bgcolor: (theme) => theme.palette.grey[400],
-				color: palette.highlightText
+				color: (theme) => theme.palette.getContrastText(theme.palette.grey[400])
 			},
-			box: getOverlayBoundarySx(() => palette.gray.medium3)
+			box: getOverlayBoundarySx(() => palette.gray.medium3),
+			icon: {
+				color: (theme) => theme.palette.getContrastText(theme.palette.grey[400])
+			}
 		}
 	},
 	dropMarker: {
