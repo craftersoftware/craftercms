@@ -33,6 +33,7 @@ import { zip } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 import * as ContentType from '@craftercms/studio-ui/utils/contentType';
 import { message$ } from '../utils/communicator';
+import { scheduleDeletedItemRemoval } from '../utils/deletedItem';
 import { Operation } from '../models/Operations';
 import {
 	deleteItemOperation,
@@ -388,22 +389,16 @@ export function GuestProxy() {
 					const iceId = iceRegistry.exists({ modelId, fieldId, index });
 					const phyRecord = ElementRegistry.fromICEId(iceId);
 
-					// Immediate removal of the element causes the dragend event not
-					// to fire leaving the state corrupt - in a state of "SORTING".
-					setTimeout(() => {
-						// Deregister and re-index in the same task so the zone keyboard controls (which group registry
-						// changes per animation frame) never see the item gone with its siblings not yet re-indexed.
-						ElementRegistry.deregister(phyRecord.id);
-						// de-register all registered children of the deleted item (if exist)
-						phyRecord.element.querySelectorAll('[data-craftercms-model-id]').forEach((el) => {
-							ElementRegistry.deregister(ElementRegistry.fromElement(el).id);
-						});
-						const daddy: Element = phyRecord.element.parentElement;
-						phyRecord.element.remove();
-						if (daddy.children.length === 0) {
-							daddy.classList.add(emptyCollectionClass);
+					scheduleDeletedItemRemoval({
+						record: phyRecord,
+						deregister: ElementRegistry.deregister,
+						idOf: (el) => ElementRegistry.fromElement(el).id,
+						reindex(daddy) {
+							if (daddy.children.length === 0) {
+								daddy.classList.add(emptyCollectionClass);
+							}
+							updateElementRegistrations([...daddy.children] as HTMLElement[], 'delete', index, null, fieldId);
 						}
-						updateElementRegistrations([...daddy.children] as HTMLElement[], 'delete', index, null, fieldId);
 					});
 
 					break;

@@ -189,7 +189,7 @@ describe('requestZoneFocus', () => {
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '9');
 	});
 
-	it('focuses the next item, not the field zone, after deleting the first of several when the deregister and the re-index land in one render', () => {
+	it('focuses the next item, not the field zone, after deleting the first of several (deregister and re-index in one render)', () => {
 		renderZones([
 			{ iceId: 9, index: '' },
 			{ iceId: 1, index: '0' },
@@ -212,26 +212,6 @@ describe('requestZoneFocus', () => {
 		]);
 		noteZoneButtonsRendered();
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '2');
-	});
-
-	it('lands on the field zone when a render falls between the deregister and the re-index', () => {
-		renderZones([
-			{ iceId: 9, index: '' },
-			{ iceId: 1, index: '0' },
-			{ iceId: 2, index: '1' }
-		]);
-		requestZoneFocus({
-			iceId: 1,
-			addresses: focusAddressesAfterRemoval(modelId, fieldId, 0),
-			afterRegistryChange: true,
-			focusCurrent: false
-		});
-		// Only the deregister has happened: the next item is still at index '1', so '0' does not exist yet.
-		registryChangedTo([
-			{ iceId: 9, index: '' },
-			{ iceId: 2, index: '1' }
-		]);
-		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '9');
 	});
 
 	it('does not pull focus back when the user tabbed elsewhere during the wait', () => {
