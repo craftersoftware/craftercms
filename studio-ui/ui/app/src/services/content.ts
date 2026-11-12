@@ -938,6 +938,7 @@ export function updateComponentId(component: Element, id: string): void {
 	// the existing document when duplicating and the UI has no visibility of whether
 	// there could be other duplicates already to create a meaningful name.
 	// Embeds saved by older FE2 builds may lack file-name. Current saves keep the stored name
+	// and write `{objectId}.xml` only when there is none.
 	if (fileName) fileName.innerHTML = `${id}.xml`;
 	objectId.innerHTML = id;
 	let groupId = component.querySelector(':scope > objectGroupId');
