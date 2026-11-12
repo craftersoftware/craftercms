@@ -216,7 +216,7 @@ export function SiteManagement() {
 					)
 				}
 				rightContent={
-					<Tooltip title={<FormattedMessage id="sites.ChangeView" defaultMessage="Change view" />}>
+					<Tooltip title={formatMessage({ id: 'sites.ChangeView', defaultMessage: 'Change view' })}>
 						<IconButton
 							onClick={handleChangeView}
 							size="large"

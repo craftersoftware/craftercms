@@ -131,7 +131,7 @@ export function SiteTools(props: SiteToolsProps) {
 						}}
 					>
 						{onBackClick && (
-							<Tooltip title={<FormattedMessage id="words.preview" defaultMessage="Preview" />}>
+							<Tooltip title={formatMessage({ id: 'words.preview', defaultMessage: 'Preview' })}>
 								<IconButton
 									onClick={onBackClick}
 									size="large"

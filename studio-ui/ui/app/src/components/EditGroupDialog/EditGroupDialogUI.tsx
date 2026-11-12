@@ -128,7 +128,7 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 							}}
 						/>
 					)}
-					<Tooltip title={<FormattedMessage id="editGroupDialog.close" defaultMessage="Close" />}>
+					<Tooltip title={formatMessage({ id: 'editGroupDialog.close', defaultMessage: 'Close' })}>
 						<IconButton
 							edge="end"
 							onClick={onCloseButtonClick}

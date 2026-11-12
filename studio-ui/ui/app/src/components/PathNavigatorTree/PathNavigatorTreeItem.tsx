@@ -332,7 +332,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 							showWorkflowState={showWorkflowState}
 						/>
 						{over && showItemMenu && onOpenItemMenu && (
-							<Tooltip title={<FormattedMessage id="words.options" defaultMessage="Options" />}>
+							<Tooltip title={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}>
 								<IconButton
 									size="small"
 									sx={{ padding: '2px 3px' }}
@@ -350,7 +350,7 @@ export function PathNavigatorTreeItem(props: PathNavigatorTreeItemProps) {
 						)}
 						{/* If filter is active, or if mouse is over content (and item has children), show Icon */}
 						{(showFilter || (over && Boolean(item.childrenCount))) && (
-							<Tooltip title={<FormattedMessage id="words.filter" defaultMessage="Filter" />}>
+							<Tooltip title={formatMessage({ id: 'words.filter', defaultMessage: 'Filter' })}>
 								<IconButton
 									size="small"
 									sx={{ padding: '2px 3px' }}

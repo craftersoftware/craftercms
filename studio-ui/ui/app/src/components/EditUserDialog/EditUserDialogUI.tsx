@@ -106,7 +106,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 				<Box component="section" sx={{ marginLeft: 'auto' }}>
 					{managedInStudio ? (
 						<>
-							<Tooltip title={<FormattedMessage id="userInfoDialog.resetPassword" defaultMessage="Reset password" />}>
+							<Tooltip title={formatMessage({ id: 'userInfoDialog.resetPassword', defaultMessage: 'Reset password' })}>
 								<IconButton
 									onClick={() => onResetPassword(true)}
 									size="large"
@@ -127,7 +127,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 							})}
 						/>
 					)}
-					<Tooltip title={<FormattedMessage id="userInfoDialog.close" defaultMessage="Close" />}>
+					<Tooltip title={formatMessage({ id: 'userInfoDialog.close', defaultMessage: 'Close' })}>
 						<IconButton
 							edge="end"
 							onClick={onCloseButtonClick}

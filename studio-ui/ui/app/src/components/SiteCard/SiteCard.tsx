@@ -25,7 +25,7 @@ import { Site } from '../../models/Site';
 import CardMedia from '@mui/material/CardMedia';
 import CardActions from '@mui/material/CardActions';
 import Tooltip from '@mui/material/Tooltip';
-import { defineMessage, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, useIntl } from 'react-intl';
 import CardActionArea from '@mui/material/CardActionArea';
 import { alpha, Typography } from '@mui/material';
 import { PublishingStatus } from '../../models/Publishing';
@@ -200,7 +200,7 @@ export function SiteCard(props: SiteCardProps) {
 					/>
 				)}
 				{isSiteReady && onEditSiteClick && (
-					<Tooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />}>
+					<Tooltip title={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}>
 						<IconButton
 							onClick={() => onEditSiteClick(site)}
 							size={compact ? 'small' : 'medium'}
@@ -212,7 +212,7 @@ export function SiteCard(props: SiteCardProps) {
 					</Tooltip>
 				)}
 				{isSiteReady && onDuplicateSiteClick && (
-					<Tooltip title={<FormattedMessage defaultMessage="Duplicate" />}>
+					<Tooltip title={formatMessage({ defaultMessage: 'Duplicate' })}>
 						<IconButton
 							onClick={() => onDuplicateSiteClick(site.id)}
 							size={compact ? 'small' : 'medium'}
@@ -224,7 +224,7 @@ export function SiteCard(props: SiteCardProps) {
 					</Tooltip>
 				)}
 				{isSiteReady && onDeleteSiteClick && (
-					<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+					<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
 						<IconButton
 							onClick={() => onDeleteSiteClick(site)}
 							size={compact ? 'small' : 'medium'}

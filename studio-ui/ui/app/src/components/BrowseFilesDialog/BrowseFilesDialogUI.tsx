@@ -162,7 +162,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 										<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 									</>
 								)}
-								<Tooltip title={<FormattedMessage id="word.refresh" defaultMessage="Refresh" />}>
+								<Tooltip title={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}>
 									<IconButton
 										onClick={onRefresh}
 										aria-label={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}
@@ -171,7 +171,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									</IconButton>
 								</Tooltip>
 								{allowUpload && (
-									<Tooltip title={<FormattedMessage id="word.upload" defaultMessage="Upload" />}>
+									<Tooltip title={formatMessage({ id: 'word.upload', defaultMessage: 'Upload' })}>
 										<IconButton
 											onClick={onUpload}
 											sx={{ mr: 1 }}
@@ -305,7 +305,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 							</Box>
 							<Box sx={{ display: 'flex', flexGrow: 0 }}>
-								<Tooltip title={<FormattedMessage defaultMessage="Switch view mode" />}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Switch view mode' })}>
 									<IconButton
 										onClick={onToggleViewMode}
 										sx={{ mr: 1 }}

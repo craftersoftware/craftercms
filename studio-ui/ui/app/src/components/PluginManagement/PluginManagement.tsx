@@ -303,7 +303,7 @@ export const PluginManagement = (props: PluginManagementProps) => {
 											<AsDayMonthDateTime date={plugin.installationDate} locale={locale} />
 										</StyledTableCell>
 										<TableCell align="right" sx={{ width: '150px', padding: '5px 20px' }}>
-											<Tooltip title={<FormattedMessage defaultMessage="Edit configuration" />}>
+											<Tooltip title={formatMessage({ defaultMessage: 'Edit configuration' })}>
 												<IconButton
 													onClick={() => {
 														onEditPluginConfig(plugin);
@@ -314,7 +314,7 @@ export const PluginManagement = (props: PluginManagementProps) => {
 													<PencilIcon />
 												</IconButton>
 											</Tooltip>
-											<Tooltip title={<FormattedMessage defaultMessage="Uninstall plugin" />}>
+											<Tooltip title={formatMessage({ defaultMessage: 'Uninstall plugin' })}>
 												<IconButton
 													onClick={() => {
 														setPluginToDelete(plugin.id);

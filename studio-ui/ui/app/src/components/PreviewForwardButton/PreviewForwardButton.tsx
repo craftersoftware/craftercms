@@ -19,7 +19,7 @@ import { IconButton, IconButtonProps } from '@mui/material';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useDispatch } from 'react-redux';
 import { useHistoryForwardStack } from '../../hooks/useHistoryForwardStack';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { useIntl } from 'react-intl';
 import Tooltip from '@mui/material/Tooltip';
 import { goToNextPage } from '../../state/actions/preview';
 
@@ -34,7 +34,7 @@ export function PreviewForwardButton(props: PreviewForwardButtonProps) {
 	};
 
 	return (
-		<Tooltip title={<FormattedMessage id="words.forward" defaultMessage="Forward" />}>
+		<Tooltip title={formatMessage({ id: 'words.forward', defaultMessage: 'Forward' })}>
 			<span>
 				<IconButton
 					disabled={stack.length === 0}
