@@ -151,7 +151,10 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			if (moreRef.current?.offsetWidth) {
 				setMoreWidth(moreRef.current.offsetWidth);
 			}
-			if (widths.length > 0 && widths.every((width) => width > 0)) {
+			if (widths.length === 0) {
+				// An empty bar must not keep the flex basis of the items it used to hold.
+				setNaturalWidth(0);
+			} else if (widths.every((width) => width > 0)) {
 				setNaturalWidth(widths.reduce((sum, width) => sum + width, 0));
 			}
 			// The end-aligned bar keeps its trailing items (e.g. the Navigation menu at the edge) and moves the

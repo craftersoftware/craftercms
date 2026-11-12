@@ -326,3 +326,17 @@ describe('ToolbarOverflow focus when the closed More button goes away', () => {
 		assertFocused(MORE);
 	});
 });
+
+describe('ToolbarOverflow with no items', () => {
+	const bar = () => document.querySelector<HTMLElement>('[data-toolbar-overflow]');
+
+	it('drops the flex basis of the items it used to hold', async () => {
+		const { show } = await renderBar();
+		await act(async () => {});
+		assert.equal(getComputedStyle(bar()).flexBasis, '308px');
+		await show([]);
+		await act(async () => {});
+		assert.notEqual(getComputedStyle(bar()).flexBasis, '308px');
+		assert.equal(getComputedStyle(bar()).flexBasis, 'auto');
+	});
+});
