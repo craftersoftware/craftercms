@@ -37,16 +37,17 @@ const { getItemDataSourceId, parseLegacyFormDefinition } = await import('../../.
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('../../../utils/xml.ts');
 const { createParsedValuesObject, deserializeContentDoc } = await import('./valueRetrievers.ts');
 const {
-	buildSaveContentXml,
 	complementValuesWithSystemProps,
 	composePathForType,
 	createObjectWithSystemProps,
+	embeddedFileName,
 	extractAtomValues,
-	fileNameElementForXml,
 	folderNameElementForXml,
 	getBasePath,
-	setFieldAtoms
+	setFieldAtoms,
+	xmlFileNamesForPath
 } = await import('./formUtils.tsx');
+const { buildContentXml } = await import('./valueSerializers.ts');
 const { XmlKeys, xmlDataSourceAttribute } = await import('./formConsts.ts');
 const { itemsFromTaxonomyDoc } = await import('../dataSources/modules/simpleTaxonomy.ts');
 const { parseConfiguredListItems } = await import('../dataSources/modules/configuredList.ts');
@@ -104,11 +105,14 @@ function saveWithoutChanges(xml: string, contentTypesById: Record<string, Conten
 	const objectId = values[XmlKeys.modelId] as string;
 	complementValuesWithSystemProps(objectId, saved, contentObject, contentType, false);
 	const savedXml = itemPath
-		? buildSaveContentXml(saved, contentTypesById, { path: itemPath })
-		: buildSaveContentXml(saved, contentTypesById, {
-				embeddedObjectId: objectId,
-				storedFileName: contentObject[XmlKeys.fileName] as string | null | undefined
-			});
+		? buildContentXml({ ...saved, ...xmlFileNamesForPath(itemPath) }, contentTypesById)
+		: (() => {
+				saved[XmlKeys.fileName] = embeddedFileName(
+					objectId,
+					contentObject[XmlKeys.fileName] as string | null | undefined
+				);
+				return buildContentXml(saved, contentTypesById);
+			})();
 	return fromString(savedXml);
 }
 
@@ -129,17 +133,25 @@ const blueprints = existsSync(blueprintsDir) ? readdirSync(blueprintsDir) : [];
 const field = (id: string, type: string, extra = '') =>
 	`<field><type>${type}</type><id>${id}</id><title>${id}</title><properties></properties><constraints></constraints>${extra}</field>`;
 
-describe('fileNameElementForXml', () => {
-	it('uses the path basename for pages and components', () => {
-		assert.equal(fileNameElementForXml('/site/website/about/index.xml'), 'index.xml');
-		assert.equal(fileNameElementForXml('/site/components/headers/header.xml'), 'header.xml');
+describe('xmlFileNamesForPath', () => {
+	it('uses the path basename and page folder slug for pages and components', () => {
+		assert.deepEqual(xmlFileNamesForPath('/site/website/about/index.xml'), {
+			[XmlKeys.fileName]: 'index.xml',
+			[XmlKeys.folderName]: 'about'
+		});
+		assert.deepEqual(xmlFileNamesForPath('/site/components/headers/header.xml'), {
+			[XmlKeys.fileName]: 'header.xml',
+			[XmlKeys.folderName]: ''
+		});
 	});
-	it('uses {objectId}.xml when there is no path (embedded)', () => {
-		assert.equal(
-			fileNameElementForXml(null, 'c646ba89-a4c3-308f-3492-93be61429fec'),
-			'c646ba89-a4c3-308f-3492-93be61429fec.xml'
-		);
-		assert.equal(fileNameElementForXml(undefined, 'abc'), 'abc.xml');
+});
+
+describe('embeddedFileName', () => {
+	it('keeps the stored name and falls back to {objectId}.xml', () => {
+		assert.equal(embeddedFileName('c646ba89-a4c3-308f-3492-93be61429fec'), 'c646ba89-a4c3-308f-3492-93be61429fec.xml');
+		assert.equal(embeddedFileName('abc'), 'abc.xml');
+		assert.equal(embeddedFileName('abc', 'manual-name.xml'), 'manual-name.xml');
+		assert.equal(embeddedFileName('abc', null), 'abc.xml');
 	});
 });
 
@@ -159,7 +171,7 @@ describe('folderNameElementForXml', () => {
 function saveFileNameOutcome(
 	slug: string,
 	contentType: ContentType,
-	target: Parameters<typeof buildSaveContentXml>[2]
+	target: { path: string } | { embeddedObjectId: string; storedFileName?: string | null }
 ) {
 	const values: Record<string, unknown> = {
 		[XmlKeys.contentTypeId]: contentType.id,
@@ -168,7 +180,14 @@ function saveFileNameOutcome(
 		[XmlKeys.folderName]: 'stale-folder',
 		[XmlKeys.internalName]: 'Label'
 	};
-	const xml = buildSaveContentXml(values, { [contentType.id]: contentType }, target);
+	const types = { [contentType.id]: contentType };
+	const xml =
+		'path' in target
+			? buildContentXml({ ...values, ...xmlFileNamesForPath(target.path) }, types)
+			: (() => {
+					values[XmlKeys.fileName] = embeddedFileName(target.embeddedObjectId, target.storedFileName);
+					return buildContentXml(values, types);
+				})();
 	const root = fromString(xml).documentElement;
 	return {
 		xml,
@@ -189,7 +208,7 @@ const componentType = parseType(
 	</fields></section></sections></form>`
 );
 
-describe('buildSaveContentXml (useSaveForm file-name)', () => {
+describe('useSaveForm file-name (xmlFileNamesForPath / embeddedFileName)', () => {
 	it('create writes the path basename in XML and keeps the UI slug on values for onSave', () => {
 		const path = composePathForType('/site/website/', 'about', pageType);
 		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('about', pageType, { path });

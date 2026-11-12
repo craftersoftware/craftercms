@@ -29,15 +29,17 @@ import {
 import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
-	buildSaveContentXml,
 	composePathForType,
+	embeddedFileName,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
-	showAlert
+	showAlert,
+	xmlFileNamesForPath
 } from './formUtils';
+import { buildContentXml } from './valueSerializers';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
@@ -405,10 +407,8 @@ export function useSaveForm(props: UseSaveFormProps) {
 					// Mutate in place so relevance WeakMap association is kept for stacked commits.
 					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
 					// top-level embed may seed a path-derived slug. Use the component's stored element.
-					const xml = buildSaveContentXml(values, contentTypesById, {
-						embeddedObjectId: id,
-						storedFileName: contentObject?.[XmlKeys.fileName] as string
-					});
+					values[XmlKeys.fileName] = embeddedFileName(id, contentObject?.[XmlKeys.fileName] as string);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -506,7 +506,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 				}
 
 				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
-				const xml = buildSaveContentXml(values, contentTypesById, { path });
+				const xml = buildContentXml({ ...values, ...xmlFileNamesForPath(path) }, contentTypesById);
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {

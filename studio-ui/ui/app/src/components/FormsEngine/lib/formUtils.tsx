@@ -117,16 +117,6 @@ import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
 
 /**
- * Value written to the `<file-name>` element on save. Matches FE1/XB/blueprints: the path basename
- * with extension (`index.xml`, `foo.xml`). Embedded components have no item path; they use
- * `{objectId}.xml`, as XB's `createComponentObject` does.
- **/
-export function fileNameElementForXml(path: string | null | undefined, embeddedObjectId?: string): string {
-	if (path) return getFileNameFromPath(path);
-	return `${embeddedObjectId}.xml`;
-}
-
-/**
  * Value written to the `<folder-name>` element on save. Matches FE1 and the backend copy-collision
  * path: the page folder slug for content-as-folder paths (`about`; home → `''`), empty otherwise.
  **/
@@ -135,31 +125,24 @@ export function folderNameElementForXml(path: string): string {
 }
 
 /**
- * Builds the content XML for a FormsEngine save the same way {@link useSaveForm} does.
- *
- * Repository saves keep the UI slug on `values` and only put the path basename / folder slug on the XML copy.
- * Embedded saves keep the component's stored `<file-name>` (as FE1's auto-filename does) and fall back to
- * `{objectId}.xml` only when it has none. They mutate `values` in place because parents (e.g. NodeSelector)
- * merge `values`, not the XML/`dom` copy. For an embed, `values['file-name']` is not the stored element (dropped
- * at stacked bootstrap, seeded from the parent's path on a root edit), so the caller passes it.
+ * Path-derived `<file-name>` / `<folder-name>` for a repository save XML copy. Matches FE1/XB/blueprints:
+ * basename with extension (`index.xml`, `foo.xml`) and the page folder slug (empty for home / non-pages).
+ * Spread onto a copy for `buildContentXml`; leave the form's UI slug on `values`.
  **/
-export function buildSaveContentXml(
-	values: LookupTable<unknown>,
-	contentTypesById: LookupTable<ContentType>,
-	target: { path: string } | { embeddedObjectId: string; storedFileName?: string | null }
-): string {
-	if ('embeddedObjectId' in target) {
-		values[XmlKeys.fileName] = target.storedFileName || fileNameElementForXml(null, target.embeddedObjectId);
-		return buildContentXml(values, contentTypesById);
-	}
-	return buildContentXml(
-		{
-			...values,
-			[XmlKeys.fileName]: fileNameElementForXml(target.path),
-			[XmlKeys.folderName]: folderNameElementForXml(target.path)
-		},
-		contentTypesById
-	);
+export function xmlFileNamesForPath(path: string) {
+	return {
+		[XmlKeys.fileName]: getFileNameFromPath(path),
+		[XmlKeys.folderName]: folderNameElementForXml(path)
+	};
+}
+
+/**
+ * `<file-name>` for an embedded component save. Keeps the stored element (as FE1's auto-filename does)
+ * and falls back to `{objectId}.xml` only when it has none. Callers that merge `values` (e.g. NodeSelector)
+ * assign this onto `values` in place before `buildContentXml`.
+ **/
+export function embeddedFileName(objectId: string, stored?: string | null): string {
+	return stored || `${objectId}.xml`;
 }
 
 /**
@@ -1086,9 +1069,9 @@ export function setFieldAtoms(
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
 	// never uses for the path.
 	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
-	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link fileNameElementForXml} /
-	// {@link folderNameElementForXml}), matching FE1, while the form atom keeps the slug. The backend
-	// still rewrites both names on a copy collision.
+	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
+	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
+	// copy collision.
 	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
 	const initialValue =
 		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
