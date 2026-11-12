@@ -254,7 +254,7 @@ public interface ItemDAO {
 						  Long parentId, String newPreviewUrl,
 						  String label, long userId) {
 		moveItemInternal(siteId, previousPath, newPath, parentId,
-				newPreviewUrl, label, SAVE_AND_CLOSE_ON_MASK, SAVE_AND_CLOSE_OFF_MASK, userId);
+				newPreviewUrl, label, SAVE_ON_MASK, SAVE_OFF_MASK, userId);
 		updatePreviousPath(siteId, previousPath, newPath);
 	}
 
