@@ -230,14 +230,16 @@ describe('buildSaveContentXml (useSaveForm file-name)', () => {
 			assert.equal(values[XmlKeys.fileName], 'manual-name.xml', slug);
 		}
 	});
-	it('root embedded edit never writes the parent page slug as the component file-name', () => {
+	it('root embedded edit with no stored file-name never writes the parent page slug', () => {
 		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
-		const { xmlFileName } = saveFileNameOutcome('about', componentType, {
+		const { xmlFileName, values } = saveFileNameOutcome('about', componentType, {
 			embeddedObjectId: objectId,
 			storedFileName: null
 		});
 		assert.equal(xmlFileName, `${objectId}.xml`);
+		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
 	});
+});
 });
 
 describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blueprints not found' }, () => {
