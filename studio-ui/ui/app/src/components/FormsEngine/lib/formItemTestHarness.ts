@@ -97,16 +97,9 @@ export function dispatchItems(store: ItemsStore, change: (items: ItemsByPath) =>
 	});
 }
 
-// The test build doesn't add message ids, so derive them from the default message.
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: ((descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)) as never
-};
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 const mounted: Array<() => void> = [];
 
@@ -136,6 +129,7 @@ export async function mountTree(store: ItemsStore, tree: React.ReactElement): Pr
 }
 
 export function unmountAll() {
+	pushFormCalls.length = 0;
 	mounted.splice(0).forEach((unmount) => unmount());
 }
 
@@ -191,7 +185,16 @@ export function createEntry(fieldIds: string[]) {
 
 export type Entry = ReturnType<typeof createEntry>;
 
-const stableGlobal = { formsStackData: [], api: { pushForm() {} } };
+/** What the controls passed to `api.pushForm`, cleared by `unmountAll`. */
+export const pushFormCalls: Array<{ readonly?: boolean }> = [];
+const stableGlobal = {
+	formsStackData: [],
+	api: {
+		pushForm(props: { readonly?: boolean }) {
+			pushFormCalls.push(props);
+		}
+	}
+};
 const formApi = { rollbackField() {} } as never;
 
 /**

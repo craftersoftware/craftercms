@@ -28,7 +28,6 @@ import { ControlProps } from '../types';
 import type { ContentItem, MediaItem, Primitive } from '../../../models';
 import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import ListItemButton from '@mui/material/ListItemButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
@@ -81,7 +80,21 @@ import { getFileExtension, processPathMacros } from '../../../utils/path';
 import { ensureSingleSlash, isEmpty } from '../../../utils/string';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import FieldBox from '../components/FieldBox';
-import { isTouchDevice, KeyDownEvent, sortableListKeyDownHandler } from '../lib/sortableListUtil';
+import {
+	destinationIndex,
+	isTouchDevice,
+	KeyDownEvent,
+	sortableListActionProcessor,
+	sortableListKeyDownHandler,
+	useOccurrenceKeys,
+	useReorderFocus,
+	useRestoreFocusWhenEmpty
+} from '../lib/sortableListUtil';
+import ArrowUpwardRounded from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
+import { ReorderMoveButton } from '../components/ReorderMoveButton';
+import { ReorderAnnouncement } from '../components/ReorderAnnouncement';
+import type { TItem } from '../components/SortableList';
 import SortableListSkeleton from '../components/SortableListSkeleton';
 import { EmptyState } from '../../EmptyState';
 import { xmlDataSourceAttribute, XmlKeys } from '../lib/formConsts';
@@ -189,6 +202,7 @@ function getInitialCreatePickerValue(
 
 function NodeSelector(props: NodeSelectorProps) {
 	const { field, value, setValue, readonly: formReadonly, autoFocus, dataSources, labelId } = props;
+	const { formatMessage } = useIntl();
 
 	// region field properties/validations
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
@@ -201,10 +215,21 @@ function NodeSelector(props: NodeSelectorProps) {
 	useFetchContentItems(value.flatMap((item) => item.include ?? []));
 	const [sortMode, setSortMode] = useState(false);
 	const useTouchSorting = useMemo(() => isTouchDevice(), []);
+	const { rootRef, remember, announcement } = useReorderFocus(value);
+	const { addButtonRef, fallbackRef, rememberEmpty } = useRestoreFocusWhenEmpty(value);
+	const rowKeys = useOccurrenceKeys(value);
+	const onSortChange = (next: TItem<NodeSelectorItem>[]) => setValue(next.map((item) => item.data));
 	const handleCancelReorder = () => setSortMode(false);
 	const onReorder = () => setSortMode(true);
 	// Only the items this field shows. `value[].key` is looked up on view, and `include` drives the row state and display.
 	const itemsByPath = useItemsByPaths(value.flatMap((item) => [item.key, item.include].filter(Boolean) as string[]));
+	const getItemLabel = (item: NodeSelectorItem) =>
+		(item.component ? item.value : itemsByPath[item.include]?.label || item.value) || item.include || String(item.key);
+	const sortItems = useMemo(
+		() => value.map((item, index) => ({ key: rowKeys[index], value: getItemLabel(item), data: item })),
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- getItemLabel only reads itemsByPath.
+		[value, rowKeys, itemsByPath]
+	);
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
 	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
@@ -235,6 +260,12 @@ function NodeSelector(props: NodeSelectorProps) {
 		event.stopPropagation();
 		const nextValue = value.concat();
 		nextValue.splice(index, 1);
+		if (nextValue.length > 0) {
+			// The following row slides into this index, unless the removed row was last.
+			remember(Math.min(index, value.length - 2), 'row');
+		} else {
+			rememberEmpty();
+		}
 		setValue(nextValue);
 	};
 	const handleViewItem = (event: { stopPropagation(): void }, index: number) => {
@@ -321,18 +352,28 @@ function NodeSelector(props: NodeSelectorProps) {
 			dispatch(
 				showCodeEditorDialog({
 					path: item.include,
-					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain')
+					mode: getEditorMode(itemsByPath[item.include]?.mimeType ?? 'text/plain'),
+					readonly: !edit
 				})
 			);
 		}
 	};
-	const handleItemKeyDown = (e: KeyDownEvent, index: number) => {
+	const handleItemKeyDown = (e: KeyDownEvent, index: number, itemLabel: string, canBeEdited: boolean) => {
+		if (readonly && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) {
+			return;
+		}
 		sortableListKeyDownHandler(
 			e,
 			value,
 			index,
-			(newList) => setValue(newList),
-			(index, edit) => handleEditItem(e, index, edit && !readonly)
+			(newList) => {
+				if (!readonly) setValue(newList);
+			},
+			(itemIndex, edit) =>
+				// An item that can't be edited opens read-only, as the row click does. V always opens read-only.
+				// E edits only when the item and the field allow it.
+				canBeEdited ? handleEditItem(e, itemIndex, edit && !readonly) : handleViewItem(e, itemIndex),
+			(nextIndex) => remember(nextIndex, 'row', itemLabel)
 		);
 	};
 	const applyDataSourceSelection = (
@@ -662,6 +703,10 @@ function NodeSelector(props: NodeSelectorProps) {
 	const maxCount = countLimitValue(field.validations?.maxCount?.value);
 	const maxLimitReached = maxCount != null && value.length >= maxCount;
 	const isAddDisabled = readonly || maxLimitReached || (!menuOptions.length && !customActions.length);
+	const addItemsLabel =
+		isAddDisabled && maxLimitReached
+			? formatMessage({ defaultMessage: 'Maximum amount of items reached for {fieldName}' }, { fieldName: field.name })
+			: formatMessage({ defaultMessage: 'Add items to {fieldName}' }, { fieldName: field.name });
 	return (
 		<>
 			<Menu
@@ -733,11 +778,11 @@ function NodeSelector(props: NodeSelectorProps) {
 					rightActions={[{ text: <FormattedMessage defaultMessage="Done" />, onClick: handleCancelReorder }]}
 				/>
 				{useTouchSorting ? (
-					<TouchSortableList items={value} onChange={setValue} />
+					<TouchSortableList items={sortItems} onChange={onSortChange} />
 				) : (
 					<Suspense
-						fallback={<SortableListSkeleton items={value} />}
-						children={<SortableList items={value} onChange={setValue} />}
+						fallback={<SortableListSkeleton items={sortItems} />}
+						children={<SortableList items={sortItems} onChange={onSortChange} />}
 					/>
 				)}
 			</Dialog>
@@ -763,10 +808,12 @@ function NodeSelector(props: NodeSelectorProps) {
 					>
 						<span>
 							<IconButton
+								ref={addButtonRef}
 								autoFocus={autoFocus}
 								disabled={isAddDisabled}
 								size="small"
 								color="primary"
+								aria-label={addItemsLabel}
 								onClick={(event) => {
 									setAddMenuAnchor(event.currentTarget);
 									if (availableOptions.length === 1 && customActions.length === 0) {
@@ -794,17 +841,12 @@ function NodeSelector(props: NodeSelectorProps) {
 						{error.message}
 					</Alert>
 				))}
-				<FieldBox dashed={!hasContent}>
+				<FieldBox ref={fallbackRef} tabIndex={-1} dashed={!hasContent}>
 					{hasContent ? (
-						<List dense>
+						<List dense ref={rootRef}>
 							{value.map((item, index) => {
 								const isEmbedded = Boolean(item.component);
 								const Icon = isEmbedded ? DeleteOutlined : LinkOffRoundedIcon;
-								const iconTooltip = isEmbedded ? (
-									<FormattedMessage defaultMessage="Delete" />
-								) : (
-									<FormattedMessage defaultMessage="Unlink" />
-								);
 								const isComponent = isItemComponent(item);
 								const canBeEdited =
 									// Is a component and is embedded or is shared, and user can edit it (has edit action and is not locked)
@@ -819,56 +861,127 @@ function NodeSelector(props: NodeSelectorProps) {
 										itemsByPath[item.include]?.availableActionsMap.edit &&
 										(itemsByPath[item.include]?.lockOwner == null ||
 											user.username === itemsByPath[item.include]?.lockOwner?.username));
+								const itemLabel = getItemLabel(item);
+								// A component row opens its form read-only and the pencil edits it, so those are different
+								// actions. An asset row follows the form's mode, like the pencil. The View button (read-only
+								// field, or an item that cannot be edited) is the same action as the row, so it stays out of
+								// the tab order.
+								const opensForEdit = canBeEdited && !readonly;
+								const openLabel = opensForEdit
+									? formatMessage({ defaultMessage: 'Edit {item}' }, { item: itemLabel })
+									: formatMessage({ defaultMessage: 'View {item}' }, { item: itemLabel });
+								const removeLabel = isEmbedded
+									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
+									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
 								return (
-									<ListItemButton
-										key={`${item.key}-${index}`} // Including index in the key because there can be duplicate items (same item included more than once)
-										divider={index !== value.length - 1}
-										onClick={(e) => (canBeEdited ? handleEditItem(e, index, false) : handleViewItem(e, index))}
-										onKeyDown={(e) => handleItemKeyDown(e, index)}
+									<Box
+										component="li"
+										key={rowKeys[index]}
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											borderBottom: index !== value.length - 1 ? 1 : 0,
+											borderColor: 'divider'
+										}}
 									>
-										<ListItemText
-											primary={
-												isEmbedded ? (
-													<EmbeddedItemDisplay label={item.value} showWorkflowState={!isEmbedded} />
-												) : itemsByPath[item.include] ? (
-													<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
-												) : (
-													item.value
-												)
+										<ListItemButton
+											component="div"
+											data-reorder-index={index}
+											data-reorder-control="row"
+											sx={{ flex: 1, minWidth: 0 }}
+											onClick={(e) =>
+												// A component row opens its form read-only. An asset row follows the form's mode.
+												canBeEdited ? handleEditItem(e, index, !isComponent && !readonly) : handleViewItem(e, index)
 											}
-											secondary={
-												isEmbedded ? (
-													<em>
-														<FormattedMessage defaultMessage="Embedded" />
-													</em>
-												) : (
-													(item.include ?? item.key)
-												)
-											}
-										/>
-										<ListItemSecondaryAction sx={{ position: 'static', display: 'flex', transform: 'none' }}>
-											{canBeEdited ? (
-												<Tooltip title="Edit">
-													<IconButton size="small" onClick={(e) => handleEditItem(e, index, !readonly)}>
-														<EditOutlined fontSize="small" />
-													</IconButton>
-												</Tooltip>
-											) : (
-												<Tooltip title="View">
-													<IconButton size="small" onClick={(e) => handleViewItem(e, index)}>
-														<VisibilityOutlinedIcon fontSize="small" />
-													</IconButton>
-												</Tooltip>
+											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
+										>
+											<ListItemText
+												primary={
+													isEmbedded ? (
+														<EmbeddedItemDisplay label={item.value} showWorkflowState={!isEmbedded} />
+													) : itemsByPath[item.include] ? (
+														<ItemDisplay item={itemsByPath[item.include]} showNavigableAsLinks={false} />
+													) : (
+														item.value
+													)
+												}
+												secondary={
+													isEmbedded ? (
+														<em>
+															<FormattedMessage defaultMessage="Embedded" />
+														</em>
+													) : (
+														(item.include ?? item.key)
+													)
+												}
+											/>
+										</ListItemButton>
+										<Box sx={{ display: 'flex', flexShrink: 0 }}>
+											{!readonly && value.length > 1 && (
+												<>
+													<ReorderMoveButton
+														name={itemLabel}
+														control="up"
+														index={index}
+														disabled={index === 0}
+														onClick={() => {
+															const next = destinationIndex('up', false, index, value.length);
+															if (next == null) {
+																return;
+															}
+															remember(next, 'up', itemLabel);
+															sortableListActionProcessor('up', false, value, index, setValue);
+														}}
+													>
+														<ArrowUpwardRounded fontSize="small" />
+													</ReorderMoveButton>
+													<ReorderMoveButton
+														name={itemLabel}
+														control="down"
+														index={index}
+														disabled={index === value.length - 1}
+														onClick={() => {
+															const next = destinationIndex('down', false, index, value.length);
+															if (next == null) {
+																return;
+															}
+															remember(next, 'down', itemLabel);
+															sortableListActionProcessor('down', false, value, index, setValue);
+														}}
+													>
+														<ArrowDownwardRounded fontSize="small" />
+													</ReorderMoveButton>
+												</>
 											)}
+											<Tooltip title={openLabel}>
+												<IconButton
+													size="small"
+													aria-label={openLabel}
+													tabIndex={opensForEdit ? undefined : -1}
+													onClick={(e) =>
+														opensForEdit
+															? handleEditItem(e, index, true)
+															: canBeEdited
+																? handleEditItem(e, index, false)
+																: handleViewItem(e, index)
+													}
+												>
+													{opensForEdit ? (
+														<EditOutlined fontSize="small" />
+													) : (
+														<VisibilityOutlinedIcon fontSize="small" />
+													)}
+												</IconButton>
+											</Tooltip>
 											{!readonly && (
-												<Tooltip title={iconTooltip}>
-													<IconButton size="small" onClick={(e) => handleRemoveItem(e, index)}>
+												<Tooltip title={removeLabel}>
+													<IconButton size="small" aria-label={removeLabel} onClick={(e) => handleRemoveItem(e, index)}>
 														<Icon fontSize="small" />
 													</IconButton>
 												</Tooltip>
 											)}
-										</ListItemSecondaryAction>
-									</ListItemButton>
+										</Box>
+									</Box>
 								);
 							})}
 						</List>
@@ -913,6 +1026,7 @@ function NodeSelector(props: NodeSelectorProps) {
 							}}
 						/>
 					)}
+					<ReorderAnnouncement message={announcement} />
 				</FieldBox>
 			</FormsEngineField>
 		</>

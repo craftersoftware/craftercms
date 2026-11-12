@@ -121,7 +121,7 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
 							confirmHelperText={formatMessage(translations.confirmHelperText, {
 								name: group.name
 							})}
-							iconTooltip={<FormattedMessage id="editGroupDialog.deleteGroup" defaultMessage="Delete group" />}
+							iconTooltip={formatMessage({ id: 'editGroupDialog.deleteGroup', defaultMessage: 'Delete group' })}
 							icon={DeleteRoundedIcon}
 							onConfirm={() => {
 								onDeleteGroup(group);

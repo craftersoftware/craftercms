@@ -27,15 +27,26 @@ import org.testng.annotations.Test;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static org.apache.commons.io.IOUtils.toInputStream;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * @author joseross
@@ -566,6 +577,103 @@ public class XsltTest {
 	@Test(dataProvider = "globalPermissions50025TestData")
 	public void globalPermissions50025Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
+	}
+
+	/**
+	 * Removes the legacy content-types tool (and the controls/datasources it contains) from existing
+	 * site-config-tools.xml files. The four blueprints were byte-identical before that tool was removed,
+	 * so the editorial fixture covers all of them. The sample fixture keeps the other sample tools.
+	 * Custom tool entries outside content-types are preserved, including when that tool is already absent.
+	 */
+	@DataProvider(name = "siteConfigTools407TestData")
+	public Object[][] siteConfigTools407TestData() {
+		return new Object[][]{
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/blueprint/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/blueprint/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/sample/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/sample/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/custom-tools/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/custom-tools/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/custom-only/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/site-config-tools/v4.0.7/custom-only/expected.xml"),
+				emptyMap()
+			}
+		};
+	}
+
+	@Test(dataProvider = "siteConfigTools407TestData")
+	public void siteConfigTools407Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
+		testXsltTemplate(template, content, expected, params);
+	}
+
+	/**
+	 * Shipped blueprints and the sample are already at the post-migration version, so new sites do not
+	 * run the 4.0.6 to 4.0.7 step. The XSLT version element is updated by the upgrade manager, not the template.
+	 */
+	@Test
+	public void shippedSiteConfigToolsRemoveLegacyContentTypesTool() throws Exception {
+		String[] blueprints = {
+			"repo-bootstrap/global/blueprints/1000_website_editorial/config/studio/administration/site-config-tools.xml",
+			"repo-bootstrap/global/blueprints/2000_headless_store/config/studio/administration/site-config-tools.xml",
+			"repo-bootstrap/global/blueprints/4000_empty/config/studio/administration/site-config-tools.xml",
+			"repo-bootstrap/global/blueprints/5000_headless_blog/config/studio/administration/site-config-tools.xml"
+		};
+		for (String path : blueprints) {
+			Set<String> toolNames = toolNames(path);
+			assertEquals(version(path), "4.0.7", path);
+			assertTrue(toolNames.isEmpty(), path + " still declares tools: " + toolNames);
+		}
+
+		String sample = "repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml";
+		Set<String> sampleTools = toolNames(sample);
+		assertEquals(version(sample), "4.0.7", sample);
+		assertFalse(sampleTools.contains("content-types"), sample);
+		assertTrue(sampleTools.contains("encrypt-tool"), sample);
+		assertTrue(sampleTools.contains("plugin-management"), sample);
+	}
+
+	private String version(String path) throws Exception {
+		Document document = parseXml(path);
+		return document.getElementsByTagName("version").item(0).getTextContent().trim();
+	}
+
+	private Set<String> toolNames(String path) throws Exception {
+		Document document = parseXml(path);
+		NodeList tools = document.getElementsByTagName("tool");
+		Set<String> names = new HashSet<>();
+		for (int i = 0; i < tools.getLength(); i++) {
+			NodeList children = tools.item(i).getChildNodes();
+			for (int j = 0; j < children.getLength(); j++) {
+				Node child = children.item(j);
+				if (child instanceof Element && "name".equals(child.getNodeName())) {
+					names.add(child.getTextContent().trim());
+				}
+			}
+		}
+		return names;
+	}
+
+	private Document parseXml(String path) throws Exception {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		try (InputStream input = new ClassPathResource(path).getInputStream()) {
+			return factory.newDocumentBuilder().parse(input);
+		}
 	}
 
 	private void testXsltTemplate(Resource template, Resource content, Resource expected, Map<String, Object> params)
