@@ -76,7 +76,12 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 						}}
 					>
 						<Tooltip title={<FormattedMessage defaultMessage="Done" />}>
-							<IconButton data-action-id={actionsMap.exit} onClick={handleMenuItemClick} sx={{ mr: 1 }}>
+							<IconButton
+								data-action-id={actionsMap.exit}
+								onClick={handleMenuItemClick}
+								sx={{ mr: 1 }}
+								aria-label={formatMessage({ defaultMessage: 'Done' })}
+							>
 								<ArrowBackRounded />
 							</IconButton>
 						</Tooltip>
