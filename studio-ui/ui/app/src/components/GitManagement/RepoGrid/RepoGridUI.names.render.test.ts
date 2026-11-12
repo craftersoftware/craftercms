@@ -23,7 +23,7 @@ import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 
-const { React, createItemsStore, baseItems, mountTree, unmountAll } =
+const { React, createItemsStore, baseItems, mountTree, unmountAll, act } =
 	await import('../../FormsEngine/lib/formItemTestHarness');
 const { RepoGridUI } = await import('./RepoGridUI.tsx');
 
@@ -56,5 +56,32 @@ describe('RepoGridUI row button names', () => {
 		}
 		assert.equal(labels.includes('Pull'), false);
 		assert.equal(labels.includes('Push'), false);
+	});
+
+	it('keeps the repository in the Delete name while the tooltip is open', async () => {
+		const host = await mountTree(
+			createItemsStore(baseItems()),
+			React.createElement(RepoGridUI, {
+				repositories,
+				disableActions: false,
+				onDeleteRemote() {},
+				onPullClick() {},
+				onPushClick() {}
+			} as never)
+		);
+		const deleteButton = Array.from(host.querySelectorAll<HTMLButtonElement>('button[aria-label]')).find(
+			(button) => button.getAttribute('aria-label') === 'Delete origin'
+		);
+		assert.ok(deleteButton, 'no Delete button named for the repository');
+		await act(async () => {
+			deleteButton.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(deleteButton.getAttribute('aria-label'), 'Delete origin');
+		// A React element title points aria-labelledby at the tooltip, which replaces the button's own name.
+		assert.equal(deleteButton.getAttribute('aria-labelledby'), null);
 	});
 });
