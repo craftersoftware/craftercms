@@ -38,14 +38,16 @@ export interface ViewPackagesDialogStateProps extends ViewPackagesDialogBaseProp
 }
 
 export function ViewPackagesDialog(props: ViewPackagesDialogProps) {
-	const { item, cancelPackagesInitialComment, onContinue, ...enhancedDialogProps } = props;
+	const { item, cancelPackagesInitialComment, onContinue, subtitle, ...enhancedDialogProps } = props;
 	return (
 		<EnhancedDialog
 			fullWidth
 			maxWidth="sm"
 			title={<FormattedMessage defaultMessage="View Packages" />}
 			subtitle={
-				<FormattedMessage defaultMessage="The item is part of one or more publishing packages. Editing it will cancel the packages." />
+				subtitle ?? (
+					<FormattedMessage defaultMessage="The item is part of one or more publishing packages. Editing it will cancel the packages." />
+				)
 			}
 			{...enhancedDialogProps}
 		>
