@@ -149,7 +149,7 @@ describe('fileNameElementForXml', () => {
 function saveFileNameOutcome(
 	slug: string,
 	contentType: ContentType,
-	target: { path: string } | { embeddedObjectId: string; storedFileName?: string | null }
+	target: Parameters<typeof buildSaveContentXml>[2]
 ) {
 	const values: Record<string, unknown> = {
 		[XmlKeys.contentTypeId]: contentType.id,
