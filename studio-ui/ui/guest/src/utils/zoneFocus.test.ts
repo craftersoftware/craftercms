@@ -87,13 +87,17 @@ describe('shiftedCollectionIndex', () => {
 
 describe('focusAddressesAfterRemoval', () => {
 	it('prefers the same index, then the previous one', () => {
-		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, 2), [address('2'), address('1')]);
+		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, 2), [address('2'), address('1'), address('')]);
 	});
 	it('has no previous address for the first item', () => {
-		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, 0), [address('0')]);
+		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, 0), [address('0'), address('')]);
 	});
 	it('keeps the parent part of a nested index', () => {
-		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, '1.2'), [address('1.2'), address('1.1')]);
+		assert.deepEqual(focusAddressesAfterRemoval(modelId, fieldId, '1.2'), [
+			address('1.2'),
+			address('1.1'),
+			address('1')
+		]);
 	});
 });
 
@@ -153,8 +157,9 @@ describe('requestZoneFocus', () => {
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '3');
 	});
 
-	it('focuses the previous item after deleting the last one', () => {
+	it('focuses the previous item, not the field zone, after deleting the last one', () => {
 		renderZones([
+			{ iceId: 9, index: '' },
 			{ iceId: 1, index: '0' },
 			{ iceId: 2, index: '1' }
 		]);
@@ -164,11 +169,14 @@ describe('requestZoneFocus', () => {
 			afterRegistryChange: true,
 			focusCurrent: false
 		});
-		registryChangedTo([{ iceId: 1, index: '0' }]);
+		registryChangedTo([
+			{ iceId: 9, index: '' },
+			{ iceId: 1, index: '0' }
+		]);
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '1');
 	});
 
-	it('falls back to the field zone after deleting the only item', () => {
+	it('focuses the field zone right away after deleting the only item', () => {
 		const fieldZone = { iceId: 9, index: '' };
 		renderZones([fieldZone, { iceId: 1, index: '0' }]);
 		requestZoneFocus({
@@ -178,8 +186,6 @@ describe('requestZoneFocus', () => {
 			focusCurrent: false
 		});
 		registryChangedTo([fieldZone]);
-		assert.equal(document.activeElement, document.body);
-		mock.timers.tick(1500);
 		assert.equal(document.activeElement?.getAttribute('data-craftercms-zone-button'), '9');
 	});
 

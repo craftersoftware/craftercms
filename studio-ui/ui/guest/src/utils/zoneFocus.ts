@@ -189,7 +189,10 @@ export function notifyZoneRegistryChange() {
 	}
 }
 
-/** Same index first, then the previous item. The next item shifts down into the removed index. */
+/**
+ * Same index first (the next item shifts down into the removed index), then the previous item, then the
+ * field zone itself so focus lands on it right away when the removed item was the only one.
+ */
 export function focusAddressesAfterRemoval(modelId: string, fieldId: string, index: number | string): ZoneAddress[] {
 	const parts = String(index).split('.');
 	const last = parseInt(parts[parts.length - 1], 10);
@@ -203,6 +206,8 @@ export function focusAddressesAfterRemoval(modelId: string, fieldId: string, ind
 	if (at > 0) {
 		addresses.push({ modelId, fieldId, index: atIndex(at - 1) });
 	}
+	// The field zone's index is the container's (the item index without its last piece, empty when not nested).
+	addresses.push({ modelId, fieldId, index: parts.slice(0, -1).join('.') });
 	return addresses;
 }
 
