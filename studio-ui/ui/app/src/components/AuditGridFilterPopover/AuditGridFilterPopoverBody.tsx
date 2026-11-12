@@ -162,7 +162,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 	return (
 		<>
 			<Box sx={{ display: 'flex', justifyContent: 'end', marginBottom: '10px' }}>
-				<IconButton onClick={onClose}>
+				<IconButton onClick={onClose} aria-label={formatMessage({ id: 'words.close', defaultMessage: 'Close' })}>
 					<ClearRoundedIcon fontSize="small" />
 				</IconButton>
 			</Box>

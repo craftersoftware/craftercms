@@ -157,7 +157,12 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								{multiSelect && (
 									<>
 										<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
-											<Checkbox checked={allSelected} indeterminate={someSelected} onChange={onSelectAll} />
+											<Checkbox
+												checked={allSelected}
+												indeterminate={someSelected}
+												onChange={onSelectAll}
+												slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
+											/>
 										</Tooltip>
 										<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 									</>
