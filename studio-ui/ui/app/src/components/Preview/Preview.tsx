@@ -34,7 +34,7 @@ import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
-import { PREVIEW_REFLOW_NARROW_QUERY } from '../ToolbarOverflow/previewReflow';
+import { PREVIEW_REFLOW_NARROW_QUERY } from './previewReflow';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);

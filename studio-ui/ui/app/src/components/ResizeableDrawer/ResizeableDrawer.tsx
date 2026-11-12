@@ -23,7 +23,7 @@ import { DrawerClasses } from '@mui/material/Drawer';
 import { SxProps } from '@mui/system';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Box from '@mui/material/Box';
-import { PREVIEW_TOOLBAR_HEIGHT_FALLBACK, PREVIEW_TOOLBAR_HEIGHT_PROPERTY } from '../ToolbarOverflow/previewReflow';
+import { PREVIEW_TOOLBAR_HEIGHT_FALLBACK, PREVIEW_TOOLBAR_HEIGHT_PROPERTY } from '../Preview/previewReflow';
 
 export type ResizeableDrawerClassKey =
 	| 'root'

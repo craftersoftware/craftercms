@@ -26,7 +26,7 @@ import { filter, map } from 'rxjs/operators';
 import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
-import { PREVIEW_REFLOW_NARROW_QUERY } from '../ToolbarOverflow/previewReflow';
+import { PREVIEW_REFLOW_NARROW_QUERY } from '../Preview/previewReflow';
 
 export function Host() {
 	const site = useActiveSiteId();
