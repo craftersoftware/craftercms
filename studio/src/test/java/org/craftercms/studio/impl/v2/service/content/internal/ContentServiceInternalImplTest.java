@@ -102,6 +102,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -115,6 +116,7 @@ import static org.mockito.ArgumentMatchers.nullable;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -242,6 +244,8 @@ public class ContentServiceInternalImplTest {
 		));
 		serviceInternal.setSemanticsAvailableActionsResolver(semanticsAvailableActionsResolver);
 		serviceInternal.setApplicationEventPublisher(applicationEventPublisher);
+		// Move now checks content_move before the repository work. Tests that are not about permissions allow it.
+		lenient().when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 	}
 
 	@Test
@@ -320,7 +324,7 @@ public class ContentServiceInternalImplTest {
 		when(lifecycleContent.getItems()).thenReturn(Map.of(PATH, item));
 		when(lifecycleContent.getRepoPath()).thenReturn(PATH);
 		when(lifecycleContent.getOperation()).thenReturn(UPDATE);
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 
 		// Mock repository behavior
 		when(contentRepository.writeContent(eq(SITE_ID), anyCollection(), anySet(), nullable(String.class))).thenReturn("commit-id");
@@ -355,7 +359,7 @@ public class ContentServiceInternalImplTest {
 		LifecycleContent lifecycleContent = mock(LifecycleContent.class);
 		ContentLifecycleItem item = mock(ContentLifecycleItem.class);
 		when(lifecycleContent.getItems()).thenReturn(Map.of(PATH, item));
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 
 		PublishPackage publishPackage = new PublishPackage();
 		publishPackage.setId(PUBLISH_PACKAGE_ID);
@@ -375,7 +379,7 @@ public class ContentServiceInternalImplTest {
 		LifecycleContent lifecycleContent = mock(LifecycleContent.class);
 		ContentLifecycleItem item = mock(ContentLifecycleItem.class);
 		when(lifecycleContent.getItems()).thenReturn(Map.of(PATH, item));
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(false);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(false);
 
 		// Mock lifecycle execution
 		doReturn(lifecycleContent).when(serviceInternal).runLifecycle(eq(SITE_ID), any(), eq(PATH), any(), any(), any());
@@ -431,7 +435,7 @@ public class ContentServiceInternalImplTest {
 
 		when(itemService.getItem(SITE_ID, "/site/website/test2", true)).thenReturn(mock(Item.class));
 
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 
 		when(contentRepository.moveContent(any(), any(), any(), any(), any())).thenReturn(commitId);
 
@@ -684,7 +688,7 @@ public class ContentServiceInternalImplTest {
 		when(contentRepository.isFolder(SITE_ID, "/site/website/articles/style")).thenReturn(true);
 		when(contentRepository.contentExists(SITE_ID, "/site/website/articles/style")).thenReturn(true);
 		when(contentRepository.contentExists(SITE_ID, "/site/website/articles/style/index.xml")).thenReturn(true);
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 		when(contentRepository.moveContent(any(), any(), any(), anyCollection(), anySet())).thenReturn("COMMIT 123");
 
 		Document document = convertStreamToXml(toInputStream(
@@ -755,7 +759,7 @@ public class ContentServiceInternalImplTest {
 	public void testDuplicate() throws Exception {
 		doReturn(true).when(contentRepository).contentExists(SITE_ID, "/site/website/articles/test1");
 		doReturn(true).when(contentRepository).contentExists(SITE_ID, "/site/website/articles");
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 		when(contentRepository.copy(eq(SITE_ID), anyString(), anyString(), any(), any())).thenReturn("commit-id");
 		doReturn(true).when(contentRepository).isFolder(SITE_ID, "/site/website/articles");
 		doReturn(true).when(contentRepository).isFolder(SITE_ID, "/site/website/articles/test1");
@@ -840,7 +844,7 @@ public class ContentServiceInternalImplTest {
 		Resource resource = mock(Resource.class);
 		when(resource.getInputStream()).thenReturn(new ByteArrayInputStream(content.getBytes()));
 		when(contentRepository.getContentByCommitId(SITE_ID, "/site/website/test1", "COMMIT123")).thenReturn(Optional.of(resource));
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 
 		when(contentRepository.writeContent(eq(SITE_ID), anyCollection(), anySet(), nullable(String.class))).thenReturn("new-commit-id");
 		when(itemService.getItem(SITE_ID, "/site/website", false)).thenReturn(mock(Item.class));
@@ -871,7 +875,7 @@ public class ContentServiceInternalImplTest {
 
 	@Test
 	public void testEntitlementsUpdate() throws Exception {
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 		when(contentRepository.writeContent(eq(SITE_ID), anyCollection(), anySet(), nullable(String.class))).thenReturn("commit-id");
 		runInMockStatics(() -> serviceInternal.write(
 				SITE_ID,
@@ -892,7 +896,7 @@ public class ContentServiceInternalImplTest {
 		when(parentItem.getId()).thenReturn(123L);
 		when(itemService.getItem(SITE_ID, "/sample", false)).thenReturn(parentItem);
 		when(contentRepository.contentExists(SITE_ID, "/sample")).thenReturn(true);
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 		when(contentRepository.writeContent(eq(SITE_ID), anyCollection(), anySet(), nullable(String.class))).thenReturn("commit-id");
 		runInMockStatics(() -> serviceInternal.write(
 				SITE_ID,
@@ -913,7 +917,7 @@ public class ContentServiceInternalImplTest {
 		when(parentItem.getId()).thenReturn(123L);
 		when(itemService.getItem(SITE_ID, "/sample", false)).thenReturn(parentItem);
 		when(contentRepository.contentExists(SITE_ID, "/sample")).thenReturn(true);
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 		when(contentRepository.writeContent(eq(SITE_ID), anyCollection(), anySet(), nullable(String.class))).thenReturn("commit-id");
 
 		doAnswer(a -> {
@@ -993,7 +997,7 @@ public class ContentServiceInternalImplTest {
 
 	@Test
 	public void testFailedEntitlementValidationCreate() throws Exception {
-		when(permissionEvaluator.isAllowed(any(), any(), any())).thenReturn(true);
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), any())).thenReturn(true);
 
 		doThrow(EntitlementException.class).when(entitlementValidator).validateEntitlement(EntitlementType.ITEM, 1);
 

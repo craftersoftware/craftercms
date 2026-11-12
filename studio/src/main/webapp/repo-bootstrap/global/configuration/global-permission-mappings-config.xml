@@ -45,6 +45,7 @@
 				<permission>content_read</permission>
 				<permission>content_copy</permission>
 				<permission>content_write</permission>
+				<permission>content_move</permission>
 				<permission>folder_create</permission>
 				<permission>create_site</permission>
 				<permission>duplicate_site</permission>

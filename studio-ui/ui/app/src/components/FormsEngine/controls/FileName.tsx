@@ -37,6 +37,7 @@ import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { isPagePath } from '../../../utils/path';
 import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
+import { useFormItemSelector } from '../lib/formItem';
 
 export function FileName(props: ControlProps<string>) {
 	const { field, readonly: formReadonly, autoFocus, inputId, labelId } = props;
@@ -59,6 +60,8 @@ export function FileName(props: ControlProps<string>) {
 	const { formatMessage } = useIntl();
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
+	// Page URL (and component file name) rename is content_move on this item, exposed as the rename bit.
+	const canRename = useFormItemSelector((item) => Boolean(item?.availableActionsMap?.rename));
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {
 		const newValue = applyContentNameRules(e.currentTarget.value);
@@ -109,8 +112,9 @@ export function FileName(props: ControlProps<string>) {
 					</InputAdornment>
 				}
 				endAdornment={
-					!isNewForm && (
-						<Tooltip title={formatMessage({ defaultMessage: 'Edit' })}>
+					!isNewForm &&
+					canRename && (
+						<Tooltip title={formatMessage({defaultMessage: 'Edit' })}>
 							<IconButton onClick={handleEdit} disabled={readonly}>
 								<EditOutlinedIcon />
 							</IconButton>

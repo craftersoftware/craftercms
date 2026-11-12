@@ -104,6 +104,7 @@ public class XsltTest {
 		addXsltCases(rows, "ui5003Test", ui5003TestData());
 		addXsltCases(rows, "globalPermissions50023Test", globalPermissions50023TestData());
 		addXsltCases(rows, "globalPermissions50025Test", globalPermissions50025TestData());
+		addXsltCases(rows, "contentMovePermissionTest", contentMovePermissionTestData());
 		addXsltCases(rows, "siteConfigTools407Test", siteConfigTools407TestData());
 		addScenario(rows, "shippedSiteConfigToolsRemoveLegacyContentTypesTool", Scenario.SHIPPED_SITE_CONFIG_TOOLS);
 		addScenario(rows, "uiPipelineContinuesFrom4500ThroughContentTypeManagement", Scenario.UI_PIPELINE);
@@ -658,6 +659,27 @@ public class XsltTest {
 
 	public void globalPermissions50025Test(Resource template, Resource content, Resource expected, Map<String, Object> params) throws IOException, TransformerException {
 		testXsltTemplate(template, content, expected, params);
+	}
+
+	/**
+	 * content_move is added beside content_write, including on a custom role. A rule that already has
+	 * content_move, and a rule with no content_write, are left alone. The harness runs the template twice.
+	 */
+	public static Object[][] contentMovePermissionTestData() {
+		return new Object[][]{
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.2.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/permission-mappings-config/5.0/5.0.0.2/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/permission-mappings-config/5.0/5.0.0.2/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.2.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.28/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.28/expected.xml"),
+				emptyMap()
+			}
+		};
 	}
 
 	/**
