@@ -17,19 +17,7 @@
 const fs = require('fs'),
 	sass = require('sass'),
 	OUT_DIR = '../../static-assets/styles',
-	FILES = [
-		'temp',
-		{ input: 'user-dashboard/user-dashboard', output: 'main' },
-		'search',
-		'uppy',
-		'tinymce-ace',
-		'browse',
-		{ input: 'guest/guest', output: 'guest' },
-		{ input: 'base', output: '../themes/cstudioTheme/base' },
-		{ input: 'global', output: '../themes/cstudioTheme/css/global' },
-		'typography',
-		'bootstrap-5.3'
-	];
+	FILES = ['tinymce-ace'];
 
 function processFile(data, devMode = false) {
 	let input, output;

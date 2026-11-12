@@ -162,12 +162,6 @@ pipelines:
                         commitDetails: Added view_log_levels and configure_log_levels permissions for system_admin
             -   currentVersion: 4.0.1.8
                 nextVersion: 4.0.1.9
-                operations:
-                    -   type: globalRepoUpgrader
-                        files:
-                            -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
-                                dest: /configuration/samples/sample-site-config-tools.xml
-                        commitDetails: Update sample datasources for site config tools
             -   currentVersion: 4.0.1.9
                 nextVersion: 4.0.1.10
                 operations:
@@ -205,11 +199,6 @@ pipelines:
                         files:
                             -   src: repo-bootstrap/global/configuration/samples/sample-config-list.xml
                                 dest: /configuration/samples/sample-config-list.xml
-                        commitDetails: Remove CMIS configs
-                    -   type: globalRepoUpgrader
-                        files:
-                            -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
-                                dest: /configuration/samples/sample-site-config-tools.xml
                         commitDetails: Remove CMIS configs
                     -   type: deleteUpgrader
                         paths:
@@ -373,12 +362,6 @@ pipelines:
                         commitDetails: Add sample file for ui.xml
             -   currentVersion: 4.2.0.4
                 nextVersion: 4.2.0.5
-                operations:
-                    -   type: globalRepoUpgrader
-                        files:
-                            -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
-                                dest: /configuration/samples/sample-site-config-tools.xml
-                        commitDetails: Update sample datasources for site config tools
             -   currentVersion: 4.2.0.5
                 nextVersion: 4.2.0.6
                 operations:
@@ -676,11 +659,10 @@ pipelines:
             -   currentVersion: 5.0.0.26
                 nextVersion: 5.0.0.27
                 operations:
-                    -   type: globalRepoUpgrader
-                        files:
-                            -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
-                                dest: /configuration/samples/sample-site-config-tools.xml
-                        commitDetails: Remove legacy content-types tool from the site config tools sample
+                    -   type: deleteUpgrader
+                        paths:
+                            - /configuration/samples/sample-site-config-tools.xml
+                        commitDetails: Remove sample site config tools (legacy admin console removed)
 
     # Pipeline to upgrade site repositories
     site:

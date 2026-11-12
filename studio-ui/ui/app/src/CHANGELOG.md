@@ -197,13 +197,25 @@
   * Updated `Clipboard` interface: removed `paths` property, added `includeChildren` property.
 * [common-api.js]
   * Removed `CStudioAuthoring.Operations.uploadCMISAsset` and `CStudioAuthoring.Operations.openCMISUploadDialog`.
+  * Removed legacy browse page entry points: `CStudioAuthoring.Operations.openBrowse`, `openS3Browse`, `openWebDAVBrowse`, `uploadS3Asset`, `openS3UploadDialog`, `uploadWebDAVAsset`, and `openWebDAVUploadDialog`. Use React `BrowseFilesDialog` / `BrowseExternalAssetDialog` / `ExternalAssetUploadDialog` instead.
   * Removed legacy Forms Engine entry points: `CStudioAuthoring.Operations.openContentWebForm`, `openContentWebFormWithPermission`, `openContentWebFormLegacyFormServer`, `performSimpleIceEdit`, `createNewContent`, `createNewContentForType`, `editContent`, `viewContent`, `addMetadata`; `CStudioAuthoring.Service.reorderServiceCreatePanel`; and `CStudioAuthoring.Utils.form` (`getPluginInfo`, `getPluginError`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * Removed `CStudioAuthoring.ChildFormManager` and `CStudioAuthoring.InContextEdit`.
   * Removed `CStudioAuthoring.Constants.CONTROL_URL` and `CStudioAuthoring.Constants.DATASOURCE_URL` (legacy FE1 control/datasource script roots).
 * Removed the legacy Forms Engine runtime (`forms-engine.js`, `cstudio-forms` controls/datasources) and Type Builder (`content-types.js`, content-type-propsheet). Custom FE1 controls/datasources and the legacy Type Builder no longer load.
 * Removed the `/studio/form` and `/studio/legacy/form` routes (and their FTLs).
+* Removed the legacy `/studio/browse`, `/studio/browseS3`, and `/studio/browseWebDAV` routes (FTLs, site pages, `cstudio-browse` scripts, S3/WebDAV upload dialogs, and `browse` styles/i18n).
+* Simplified `/studio/search` (`search.ftl`): removed the legacy `mode=select` / `ChildSearchManager` bridge and the YUI/`common-api` page head. Full-page Search now boots like site-dashboard (React `SearchPage` only). Selection flows use the React Search dialog.
+* Removed `static-assets/components` entirely (`common-api.js`, dialogs, loader/dialogue/view-controllers, amplify-core duplicate, and i18n resource bundles), plus unused `page-fragments/head.ftl` and `studio-context.ftl`.
+* Removed unused `static-assets/libs` leftovers: `datetimepicker`, `handlebars`, `js-cache`, `momentjs`, `routie`, `pako.js`, `upng.js`, and the Bootstrap/Popper bundles (JS and SCSS).
+* Removed unused `static-assets/modules` (legacy TinyMCE 3.x / `tinymce2` under `editors/tinymce/v2`). Current RTE uses `static-assets/libs/tinymce`.
+* Removed unused YUI 2 assets (`static-assets/yui`, `themes/cstudioTheme/yui`) and the unused `/overlay-css` route. Updated `scripts/link.sh` accordingly.
+* Removed unused `static-assets/scripts` leftovers: `animator.js`, `crafter.js`, and `resources/locale-*.json` (only consumers were legacy `common-api`). Kept `craftercms-xb.umd.js` and `preview-landing.umd.js`.
+* Removed unused `static-assets/css` (`style.css`, `diff.css`), `templates/web/test.ftl`, and the `/test` site page. Cleared obsolete css/header/footer entries from the studio site level descriptor.
+* Removed unused `static-assets/libs/fonts` (Raleway, Glyphicons) and the orphaned `_raleway-fonts.scss` partial.
+* Trimmed legacy `ui/scss` to only `tinymce-ace` (kept for RTE Ace). Removed unused SCSS sources/outputs (`main`, `temp`, `guest`, `search`, `typography`, `uppy`, `bootstrap-5.3`, `forms-engine`, theme `base`/`global`) plus `libs/bootstrap` / `bootstrap-sass-official` and their npm-content sync.
 * Removed the legacy site-config-tools `content-types` tool from blueprints and the sample config. Use `craftercms.components.ContentTypeManagement` (configured in `ui.xml`) instead.
 * Existing `form-control` and `form-datasource` plugin installations still target `site-config-tools.xml`. The new Type Builder does not read that file, so these entries may not appear until they are migrated. See https://github.com/craftersoftware/craftercms/issues/9277.
+* Removed `craftercms.components.LegacySiteToolsFrame`, the `/legacy-site-config` page (`cstudio-admin` console and its tool modules), and `site-config-tools.xml` tool loading. Use modern Site Tools widgets configured in `ui.xml` instead.
 * Removed LegacyVersionDialog and the entire associated `/studio/diff` route
 * [ItemDisplay/utils]
   * Updated `getItemPublishingTargetText` to return a string. It now receives `formatMessage` as a parameter.
