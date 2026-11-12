@@ -132,6 +132,7 @@ import type { DataSourceActionChoice, DataSourceSelection, ResolvedDataSourceAct
 import Alert from '@mui/material/Alert';
 import GroupedDataSourceActionMenuItems from '../components/GroupedDataSourceActionMenuItems';
 import { MenuList } from '@mui/material';
+import ListItemValidity from '../components/ListItemValidity';
 
 const SortableList = lazy(() => import('../components/SortableList'));
 const TouchSortableList = lazy(() => import('../components/TouchSortableList'));
@@ -873,6 +874,9 @@ function NodeSelector(props: NodeSelectorProps) {
 								const removeLabel = isEmbedded
 									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
 									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
+								const validityKey = isEmbedded
+									? ((item.component?.[XmlKeys.modelId] as string) ?? String(index))
+									: (item.key ?? String(index));
 								return (
 									<Box
 										component="li"
@@ -895,7 +899,9 @@ function NodeSelector(props: NodeSelectorProps) {
 											}
 											onKeyDown={(e) => handleItemKeyDown(e, index, itemLabel, canBeEdited)}
 										>
-											<ListItemText
+											<ListItemValidity
+												fieldId={field.id}
+												itemKey={validityKey}
 												primary={
 													isEmbedded ? (
 														<EmbeddedItemDisplay label={item.value} showWorkflowState={!isEmbedded} />

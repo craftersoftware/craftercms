@@ -131,6 +131,47 @@ describe('repeatGroupValidator', () => {
 			false
 		);
 	});
+
+	// An invalid sub-field turns the repeat invalid, adds an aggregate message, and lists the item by key.
+	it('reports invalid items with an aggregate message and per-item detail', async () => {
+		const field = {
+			...repeatField({}),
+			fields: {
+				title_s: {
+					id: 'title_s',
+					name: 'Title',
+					type: 'input',
+					validations: { required: validation('required', true) }
+				}
+			}
+		} as ContentTypeField;
+		const items = [{ title_s: 'ok' }, { title_s: '' }];
+		const result = await repeatGroupValidator(items, {
+			...ctxFor(field),
+			meta: {
+				...meta,
+				getListItemKey: (_item, index) => (index === 0 ? 'row-a' : 'row-b')
+			}
+		});
+		assert.equal(result.valid, false);
+		assert.deepEqual(result.messages.map(messageOf), [{ text: 'One or more items are invalid.' }]);
+		assert.deepEqual(
+			result.invalidItems?.map((item) => ({
+				key: item.key,
+				fields: item.fields.map((entry) => ({
+					fieldId: entry.fieldId,
+					fieldName: entry.fieldName,
+					messages: entry.messages.map(messageOf)
+				}))
+			})),
+			[
+				{
+					key: 'row-b',
+					fields: [{ fieldId: 'title_s', fieldName: 'Title', messages: [{ text: 'This field is required.' }] }]
+				}
+			]
+		);
+	});
 });
 
 // Node selector counts use the same minCount/maxCount messages. 0 is unlimited, the same as a repeat.
@@ -381,18 +422,18 @@ describe('fileNameValidator', () => {
 	// Max length is measured on the name after applyContentNameRules. Special characters that strip away do not count.
 	it('rejects a name longer than maxLength after content-name normalization', async () => {
 		const limited = fileNameField(false, 5);
-		const tooLong = await validateFieldValue(limited, '', nameMeta(aboutPath, 'abcdef'));
+		const tooLong = await validateFieldValue(limited, 'abcdef', nameMeta(aboutPath));
 		assert.equal(tooLong.isValid, false);
 		assert.deepEqual(tooLong.messages.map(messageOf), [
 			{ text: 'The value is greater than the allowed maximum ({maxLength}).', values: { maxLength: 5 } }
 		]);
 
 		// Same path as the atom, so uniqueness is skipped.
-		const withinLimit = await validateFieldValue(limited, '', nameMeta(aboutPath, 'about'));
+		const withinLimit = await validateFieldValue(limited, 'about', nameMeta(aboutPath));
 		assert.equal(withinLimit.isValid, true);
 
 		// "ab!!!c" normalizes to "abc" (length 3). Omit siteId so uniqueness is not attempted.
-		const afterRules = await validateFieldValue(limited, '', { ...nameMeta(aboutPath, 'ab!!!c'), siteId: undefined });
+		const afterRules = await validateFieldValue(limited, 'ab!!!c', { ...nameMeta(aboutPath), siteId: undefined });
 		assert.equal(afterRules.isValid, true);
 	});
 });

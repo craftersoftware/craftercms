@@ -107,6 +107,11 @@ export interface ValidatorMetaData {
 		ignoreFields: string[];
 		suffixes: string[];
 	};
+	/**
+	 * Stable key for a list item while validating a repeat. The host supplies the repeat field's row keys so the
+	 * indicator follows the item across reorders. Falls back to the item index when absent.
+	 */
+	getListItemKey?(item: unknown, index: number): string;
 }
 
 /**
@@ -120,10 +125,28 @@ export type FieldValidityMessage =
 	| MessageDescriptor
 	| [MessageDescriptor, values?: Record<string, PrimitiveType | FormatXMLElementFn<any, any>>];
 
+/** One invalid sub-field of a list item (node-selector embedded item or repeat row). */
+export interface InvalidListItemField {
+	fieldId: string;
+	fieldName: string;
+	messages: FieldValidityMessage[];
+}
+
+/**
+ * Per-item validity detail for list controls. `key` is the embedded `objectId`, the repeat row key, or the index
+ * string as a fallback. Ordered as the items were validated.
+ */
+export interface InvalidListItem {
+	key: string;
+	fields: InvalidListItemField[];
+}
+
 /** Internal validity state of a field, as kept in the validation atoms. */
 export interface FieldValidityState {
 	isValid: boolean;
 	messages: FieldValidityMessage[];
+	/** Present when a list control found invalid child items. Omitted when every item is valid. */
+	invalidItems?: InvalidListItem[];
 }
 
 /** What a validator returns. A validator is valid only when `valid` is `true`. */
@@ -131,6 +154,8 @@ export interface ValidatorResult {
 	valid: boolean;
 	/** Shown under the field when invalid. Messages are listed in the order given. */
 	messages?: readonly FieldValidityMessage[];
+	/** Per-item detail for list controls. See {@link FieldValidityState.invalidItems}. */
+	invalidItems?: InvalidListItem[];
 }
 
 /**
@@ -438,11 +463,13 @@ export async function validateFieldValue(
 	const validator = nestedFileName ? undefined : getFieldValidator(field.type);
 	const ctx = createBuiltInContext(field, meta);
 	let isValid = true;
+	let invalidItems: InvalidListItem[] | undefined;
 	// The type validator runs for the control. Validation-key validators run only for keys this field has.
 	if (nnou(validator)) {
 		const result = await validator(currentValue, ctx);
 		isValid = result.valid;
 		messages.push(...(result.messages ?? []));
+		if (result.invalidItems?.length) invalidItems = result.invalidItems;
 	}
 	for (const key of Object.keys(field.validations ?? {})) {
 		// Own keys only, same as hasValidationKeyValidator. A prototype name is not a validator.
@@ -451,7 +478,7 @@ export async function validateFieldValue(
 		if (!keyed.valid) isValid = false;
 		messages.push(...(keyed.messages ?? []));
 	}
-	return Promise.resolve({ isValid, messages });
+	return Promise.resolve({ isValid, messages, ...(invalidItems ? { invalidItems } : {}) });
 }
 
 const minItemsMessage = defineMessage({
@@ -676,6 +703,8 @@ export function dateTimeExpressionInputValidator(currentValue: string): Validato
 /**
  * Validates a repeat group's size against minCount/maxCount, then each item's fields.
  * The minimum comes only from minOccurs. A count equal to either bound is valid.
+ * Invalid items are listed in {@link ValidatorResult.invalidItems}, keyed by {@link ValidatorMetaData.getListItemKey}
+ * or the item index.
  */
 export async function repeatGroupValidator(
 	currentValue: Array<RepeatItem>,
@@ -693,28 +722,28 @@ export async function repeatGroupValidator(
 	const fields = field.fields;
 	if (!fields) return { valid, messages };
 
-	const validationPromises: Promise<FieldValidityState>[] = [];
+	const pending: Array<{ key: string; field: ContentTypeField; promise: Promise<FieldValidityState> }> = [];
 
 	// Validate fields of each repeat group item. Min/max occurrence checks above still apply.
-	items.forEach((item) => {
+	items.forEach((item, index) => {
+		const key = meta.getListItemKey?.(item, index) ?? String(index);
 		// Sub-fields see their own item, not the page. See ValidatorContext.getValue.
 		const childMeta: ValidatorMetaData = { ...meta, signal: ctx.signal, getValue: scopeGetValue(item), nested: true };
 		Object.values(fields).forEach((subField) => {
 			if (isFieldPathIrrelevant(meta.irrelevantFieldPaths, subField.id, field.id)) return;
 			const id = subField.id;
 			const value = item[id];
-			const validationPromise = validateFieldValue(subField, value, childMeta);
-			validationPromises.push(validationPromise);
+			pending.push({ key, field: subField, promise: validateFieldValue(subField, value, childMeta) });
 		});
 	});
 
-	const results = await Promise.all(validationPromises);
-	results.forEach((result) => {
-		if (!result.isValid) {
-			valid = false;
-		}
-	});
-	return { valid, messages };
+	const results = await Promise.all(pending.map((entry) => entry.promise));
+	const invalidItems = collectInvalidListItems(pending, results);
+	if (invalidItems.length) {
+		valid = false;
+		messages.push(defineMessage({ defaultMessage: 'One or more items are invalid.' }));
+	}
+	return { valid, messages, ...(invalidItems.length ? { invalidItems } : {}) };
 }
 
 /**
@@ -832,13 +861,15 @@ export async function nodeSelectorValidator(
 	if (embeddedContent.length === 0) return { valid, messages };
 	if (!meta.contentTypesById) return { valid, messages };
 
-	const validationPromises: Promise<FieldValidityState>[] = [];
+	const pending: Array<{ key: string; field: ContentTypeField; promise: Promise<FieldValidityState> }> = [];
 
 	// Validate fields of each embedded item. Min/max size checks above still apply.
-	// `for...of` so each child's deny-list is resolved before its field promises are collected.
-	for (const { component } of embeddedContent) {
+	// Walk the full list so a missing objectId falls back to the same index the row uses.
+	for (let index = 0; index < items.length; index++) {
+		const component = items[index].component;
+		if (!component) continue;
 		const contentTypeId = component['content-type'] as string;
-		const objectId = component['objectId'] as string;
+		const objectId = (component[XmlKeys.modelId] as string) ?? String(index);
 		if (visited.has(objectId)) continue; // prevent circular validation
 		visited.add(objectId);
 		const contentType = meta.contentTypesById[contentTypeId];
@@ -861,23 +892,42 @@ export async function nodeSelectorValidator(
 			// required would count it blank.
 			if (embeddedField.id === XmlKeys.fileName) return;
 			const value = component[embeddedField.id];
-			const validationPromise = validateFieldValue(embeddedField, value, childMeta);
-			validationPromises.push(validationPromise);
+			pending.push({
+				key: objectId,
+				field: embeddedField,
+				promise: validateFieldValue(embeddedField, value, childMeta)
+			});
 		});
 	}
 
-	const results = await Promise.all(validationPromises);
-	let invalidEmbedded = false;
-	results.forEach((result) => {
-		if (!result.isValid) {
-			invalidEmbedded = true;
-			valid = false;
-		}
-	});
-	if (invalidEmbedded) {
+	const results = await Promise.all(pending.map((entry) => entry.promise));
+	const invalidItems = collectInvalidListItems(pending, results);
+	if (invalidItems.length) {
+		valid = false;
 		messages.push(defineMessage({ defaultMessage: 'One or more embedded content items are invalid.' }));
 	}
-	return { valid, messages };
+	return { valid, messages, ...(invalidItems.length ? { invalidItems } : {}) };
+}
+
+/** Groups per-field results into ordered {@link InvalidListItem} entries. Only invalid fields are kept. */
+function collectInvalidListItems(
+	pending: Array<{ key: string; field: ContentTypeField }>,
+	results: FieldValidityState[]
+): InvalidListItem[] {
+	const byKey = new Map<string, InvalidListItemField[]>();
+	const order: string[] = [];
+	pending.forEach((entry, i) => {
+		const result = results[i];
+		if (result.isValid) return;
+		let fields = byKey.get(entry.key);
+		if (!fields) {
+			fields = [];
+			byKey.set(entry.key, fields);
+			order.push(entry.key);
+		}
+		fields.push({ fieldId: entry.field.id, fieldName: entry.field.name, messages: result.messages });
+	});
+	return order.map((key) => ({ key, fields: byKey.get(key)! }));
 }
 
 export function checkboxGroupValidator(
