@@ -36,7 +36,7 @@ export function PreviewBackButton(props: PreviewBackButtonProps) {
 	};
 
 	return (
-		<Tooltip title={formatMessage({ id: 'words.back', defaultMessage: 'Back' })}>
+		<Tooltip describeChild title={formatMessage({ id: 'words.back', defaultMessage: 'Back' })}>
 			<span>
 				<IconButton
 					disabled={stack.length === 0 || (stack.length === 1 && currentUrlPath === stack[0])}

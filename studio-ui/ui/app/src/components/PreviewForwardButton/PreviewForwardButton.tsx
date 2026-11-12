@@ -34,7 +34,7 @@ export function PreviewForwardButton(props: PreviewForwardButtonProps) {
 	};
 
 	return (
-		<Tooltip title={formatMessage({ id: 'words.forward', defaultMessage: 'Forward' })}>
+		<Tooltip describeChild title={formatMessage({ id: 'words.forward', defaultMessage: 'Forward' })}>
 			<span>
 				<IconButton
 					disabled={stack.length === 0}

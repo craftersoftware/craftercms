@@ -16,8 +16,8 @@
 
 /**
  * The row Delete dropdown repeats on every row, so its name carries the token label. A React element tooltip title
- * would copy the tooltip text onto the button as `aria-label` while open, replacing the name; a string title copies
- * the same string and the button keeps its own name.
+ * points the button's aria-labelledby at the tooltip while it is open, which replaces that name. With a string title
+ * MUI only adds an aria-label, and the button's own aria-label wins.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -129,11 +129,6 @@ async function openTooltip(button: HTMLButtonElement) {
 		await new Promise((resolve) => setTimeout(resolve, 200));
 	});
 }
-
-const tooltipOpenFor = (button: HTMLButtonElement) =>
-	Array.from(document.querySelectorAll('[role="tooltip"]')).find(
-		(tooltip) => tooltip.textContent === button.getAttribute('data-test-tooltip-text')
-	) ?? document.getElementById(button.getAttribute('aria-labelledby') ?? '');
 
 describe('TokenManagement Delete name with the tooltip open', () => {
 	it('keeps the token in the name while the tooltip is open', async () => {
