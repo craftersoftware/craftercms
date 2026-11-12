@@ -83,7 +83,12 @@ export function PublishDialogFooter({
 	return (
 		<DialogFooter sx={{ flexWrap: 'wrap' }}>
 			{reason && (
-				<Typography id={reasonId} variant="body2" color="text.secondary" sx={{ flexBasis: '100%', px: 1, pb: 0.5 }}>
+				<Typography
+					id={reasonId}
+					variant="body2"
+					color="text.secondary"
+					sx={{ flex: 1, minWidth: 0, alignSelf: 'center', textAlign: 'start', px: 1 }}
+				>
 					{reason}
 				</Typography>
 			)}
