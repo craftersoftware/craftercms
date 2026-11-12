@@ -23,7 +23,11 @@ import { DrawerClasses } from '@mui/material/Drawer';
 import { SxProps } from '@mui/system';
 import { SystemStyleObject } from '@mui/system/styleFunctionSx';
 import Box from '@mui/material/Box';
-import { PREVIEW_TOOLBAR_HEIGHT_FALLBACK, PREVIEW_TOOLBAR_HEIGHT_PROPERTY } from '../Preview/previewReflow';
+import {
+	PREVIEW_REFLOW_SHORT_QUERY,
+	PREVIEW_TOOLBAR_HEIGHT_FALLBACK,
+	PREVIEW_TOOLBAR_HEIGHT_PROPERTY
+} from '../Preview/previewReflow';
 
 export type ResizeableDrawerClassKey =
 	| 'root'
@@ -44,6 +48,11 @@ interface ResizeableDrawerProps extends DrawerProps {
 	maxWidth?: number;
 	minWidth?: number;
 	belowToolbar?: boolean;
+	/**
+	 * With `belowToolbar`, on a short narrow viewport (the preview toolbar scrolls away there) the open drawer scrolls
+	 * with its positioned ancestor, which must be the scrolling shell, instead of staying fixed below the toolbar.
+	 */
+	scrollsWithShell?: boolean;
 	classes?: DrawerProps['classes'] & Partial<Record<ResizeableDrawerClassKey, string>>;
 	sxs?: PartialSxRecord<ResizeableDrawerClassKey> & PartialSxRecord<keyof DrawerClasses>;
 	onWidthChange?(width: number): void;
@@ -70,6 +79,7 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		slotProps,
 		anchor = 'left',
 		belowToolbar = false,
+		scrollsWithShell = false,
 		sxs = {},
 		...rest
 	} = props;
@@ -122,6 +132,14 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 			top: `var(${PREVIEW_TOOLBAR_HEIGHT_PROPERTY}, ${PREVIEW_TOOLBAR_HEIGHT_FALLBACK})`,
 			height: 'auto',
 			zIndex: (theme) => theme.zIndex.appBar - 1,
+			...(scrollsWithShell &&
+				open && {
+					[PREVIEW_REFLOW_SHORT_QUERY]: {
+						position: 'absolute',
+						bottom: 'auto',
+						height: '100vh'
+					}
+				}),
 			...sxs?.drawerPaperBelowToolbar
 		},
 		onWidthChange &&

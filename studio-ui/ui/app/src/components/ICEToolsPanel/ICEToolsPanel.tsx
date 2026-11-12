@@ -64,6 +64,7 @@ export function ICEToolsPanel() {
 		<ResizeableDrawer
 			open={isOpen}
 			belowToolbar
+			scrollsWithShell
 			anchor="right"
 			width={width}
 			maxWidth={windowSize}

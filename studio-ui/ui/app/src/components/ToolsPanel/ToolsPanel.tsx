@@ -65,6 +65,7 @@ export function ToolsPanel() {
 	return (
 		<ResizeableDrawer
 			belowToolbar
+			scrollsWithShell
 			open={showToolsPanel}
 			width={toolsPanelWidth}
 			maxWidth={windowSize}

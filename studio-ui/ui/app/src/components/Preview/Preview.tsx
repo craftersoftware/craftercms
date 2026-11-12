@@ -34,7 +34,7 @@ import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
-import { PREVIEW_REFLOW_NARROW_QUERY } from './previewReflow';
+import { PREVIEW_REFLOW_NARROW_QUERY, PREVIEW_REFLOW_SHORT_QUERY } from './previewReflow';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -192,6 +192,10 @@ function Preview() {
 					[PREVIEW_REFLOW_NARROW_QUERY]: {
 						overflowX: 'clip',
 						overflowY: 'auto'
+					},
+					// The containing block of the open tools drawers while they scroll with the shell.
+					[PREVIEW_REFLOW_SHORT_QUERY]: {
+						position: 'relative'
 					}
 				})}
 			>

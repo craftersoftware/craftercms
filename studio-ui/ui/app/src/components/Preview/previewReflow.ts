@@ -42,6 +42,13 @@ export function previewToolbarHeightCss(height: number): string | null {
 export const PREVIEW_REFLOW_STICKY_QUERY = '@media (max-width: 320px) and (min-height: 600px)';
 
 /**
+ * The complement of PREVIEW_REFLOW_STICKY_QUERY: the toolbar scrolls away with the shell. A drawer pinned
+ * below it would keep the toolbar's old offset and be left a sliver of the viewport, so on these viewports
+ * an open drawer scrolls with the shell instead, at the full viewport height. WCAG 1.4.10 allows vertical scrolling.
+ */
+export const PREVIEW_REFLOW_SHORT_QUERY = '@media (max-width: 320px) and (max-height: 599px)';
+
+/**
  * The toolbar already runs out of room before 320px: logo, two overflow bars, three navigation buttons and
  * the address field no longer fit on one line below roughly 480px, so it wraps from there.
  */
