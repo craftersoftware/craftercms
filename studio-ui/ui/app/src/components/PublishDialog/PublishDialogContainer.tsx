@@ -87,7 +87,7 @@ export function PublishDialogFooter({
 					id={reasonId}
 					variant="body2"
 					color="text.secondary"
-					sx={{ flex: 1, minWidth: 0, alignSelf: 'center', textAlign: 'start', px: 1 }}
+					sx={{ flex: '1 1 16rem', minWidth: 0, overflowWrap: 'anywhere', textAlign: 'end', px: 1 }}
 				>
 					{reason}
 				</Typography>
