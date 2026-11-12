@@ -19,7 +19,7 @@ import LookupTable from '../../../models/LookupTable';
 import ContentType from '../../../models/ContentType';
 import validateFieldValue, { FieldValidityState } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
-import { repeatItemKeysFor } from './repeatItemKeys';
+import { repeatItemKeysFor, repeatOccurrenceKeys } from './repeatItemKeys';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
 	FieldUpdate,
@@ -609,6 +609,7 @@ export function createFieldAtoms(
 		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
 		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
+		const occurrenceKeys = Array.isArray(value) ? repeatOccurrenceKeys(value, repeatItemKeysFor(valueAtom)) : undefined;
 		return validateFieldValue(field, value, {
 			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
@@ -623,10 +624,7 @@ export function createFieldAtoms(
 			irrelevantFieldPaths: formContextRef.current.formControllerState?.irrelevantFieldPaths,
 			resolveEmbeddedRelevance: validatorsData?.resolveEmbeddedRelevance,
 			// Same WeakMap owner the Repeat control uses, so row indicators follow the item across reorders.
-			getListItemKey:
-				field.type === 'repeat'
-					? (item, index) => repeatItemKeysFor(valueAtom).keyOf(item) ?? String(index)
-					: undefined,
+			getListItemKey: field.type === 'repeat' ? (item, index) => occurrenceKeys?.[index] ?? String(index) : undefined,
 			// Item-count fields compare min and max. Reading the partner subscribes this atom to it.
 			getValue: (fieldId: string) => {
 				const valueByFieldId = formContextRef.current.atoms?.valueByFieldId;
