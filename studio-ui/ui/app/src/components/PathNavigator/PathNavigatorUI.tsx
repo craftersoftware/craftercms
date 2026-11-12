@@ -36,7 +36,7 @@ import { renderErrorState } from '../ErrorState/util';
 import { Pagination } from '../Pagination';
 import Box from '@mui/material/Box';
 import { PartialSxRecord } from '../../models';
-import { NavigatorTitleComponent, useNavigatorTitleComponent } from './navigatorHeading';
+import { getNestedHeadingComponent, NavigatorTitleComponent, useNavigatorTitleComponent } from './navigatorHeading';
 
 export type PathNavigatorUIClassKey =
 	'root' | 'body' | 'searchRoot' | 'breadcrumbsRoot' | 'breadcrumbsSearch' | 'paginationRoot';
@@ -210,6 +210,7 @@ export function PathNavigatorUI(props: PathNavigatorUIProps) {
 			>
 				{state.isRootPathMissing ? (
 					<ErrorState
+						titleComponent={getNestedHeadingComponent(titleComponent)}
 						sxs={{ image: { display: 'none' } }}
 						title={
 							<FormattedMessage

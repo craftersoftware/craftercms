@@ -28,7 +28,11 @@ import { FormattedMessage } from 'react-intl';
 import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
-import { NavigatorTitleComponent, useNavigatorTitleComponent } from '../PathNavigator/navigatorHeading';
+import {
+	getNestedHeadingComponent,
+	NavigatorTitleComponent,
+	useNavigatorTitleComponent
+} from '../PathNavigator/navigatorHeading';
 
 export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
 
@@ -142,6 +146,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			/>
 			{isRootPathMissing ? (
 				<ErrorState
+					titleComponent={getNestedHeadingComponent(titleComponent)}
 					sxs={{ root: { textAlign: 'center' }, image: { display: 'none' } }}
 					title={
 						<FormattedMessage

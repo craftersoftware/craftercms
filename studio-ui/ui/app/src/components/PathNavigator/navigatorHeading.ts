@@ -30,3 +30,13 @@ export function useNavigatorTitleComponent(titleComponent?: NavigatorTitleCompon
 	const fromContext = useContext(NavigatorTitleComponentContext);
 	return titleComponent ?? fromContext ?? 'h2';
 }
+
+const levels: NavigatorTitleComponent[] = ['h2', 'h3', 'h4', 'h5', 'h6'];
+
+/**
+ * The heading one level below a navigator title, for content that has its own title inside the navigator
+ * (an error state). It stops at h6, the last level HTML has.
+ */
+export function getNestedHeadingComponent(titleComponent: NavigatorTitleComponent): NavigatorTitleComponent {
+	return levels[Math.min(levels.indexOf(titleComponent) + 1, levels.length - 1)];
+}
