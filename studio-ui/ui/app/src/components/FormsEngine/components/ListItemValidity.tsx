@@ -15,8 +15,11 @@
  */
 
 import React, { type ReactNode } from 'react';
+import Box from '@mui/material/Box';
 import ListItemText, { type ListItemTextProps } from '@mui/material/ListItemText';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 import { useAtomValue } from 'jotai';
+import { useIntl } from 'react-intl';
 import { useStableFormContext } from '../lib/formsEngineContext';
 import { listItemValidityAtom } from '../lib/formUtils';
 
@@ -31,14 +34,29 @@ export type ListItemValidityProps = {
 /**
  * Per-row validity chrome for node-selector and repeat lists. Subscribes only to this item's derived validity atom,
  * so other rows and the control body do not re-render when another item's status flips. Invalid rows use the error
- * colour on the text. Shows the normal colour while loading or when the item is valid.
+ * colour on the text and a visually hidden, localized “Invalid item” cue for assistive tech. Shows the normal colour
+ * while loading or when the item is valid.
  */
 export function ListItemValidity({ fieldId, itemKey, primary, secondary, slotProps }: ListItemValidityProps) {
+	const { formatMessage } = useIntl();
 	const validationAtom = useStableFormContext().atoms.validationByFieldId[fieldId];
 	const invalid = useAtomValue(listItemValidityAtom(validationAtom, itemKey));
+	const invalidLabel = formatMessage({ defaultMessage: 'Invalid item' });
 	return (
 		<ListItemText
-			primary={primary}
+			primary={
+				<>
+					{primary}
+					{invalid && (
+						<>
+							{' '}
+							<Box component="span" sx={visuallyHidden}>
+								{invalidLabel}
+							</Box>
+						</>
+					)}
+				</>
+			}
 			secondary={secondary}
 			slotProps={slotProps}
 			sx={invalid ? { color: 'error.main', '& .MuiListItemText-secondary': { color: 'inherit' } } : undefined}
