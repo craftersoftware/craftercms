@@ -34,7 +34,7 @@
 	"zoneMenu.moveDownName": "Mover hacia abajo",
 	"zoneMenu.moveUp": "Mover hacia arriba/izquierda (← o ↑)",
 	"zoneMenu.moveUpName": "Mover hacia arriba",
-	"zoneMenu.trash": "Basura (⌫)",
+	"zoneMenu.trash": "Eliminar (⌫)",
 	"zoneMenu.trashConfirmation": "{isEmbedded, select, true {Borrar} other {Desasociar}} este artículo?",
-	"zoneMenu.trashName": "Basura"
+	"zoneMenu.trashName": "Eliminar"
 }

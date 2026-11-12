@@ -34,7 +34,7 @@
 	"zoneMenu.moveDownName": "아래로 이동",
 	"zoneMenu.moveUp": "위/왼쪽으로 이동(← 또는 ↑)",
 	"zoneMenu.moveUpName": "위로 이동",
-	"zoneMenu.trash": "쓰레기 (⌫)",
+	"zoneMenu.trash": "삭제 (⌫)",
 	"zoneMenu.trashConfirmation": "{isEmbedded, select, true {삭제} other {분리하다}} 이 항목을?",
-	"zoneMenu.trashName": "쓰레기"
+	"zoneMenu.trashName": "삭제"
 }
