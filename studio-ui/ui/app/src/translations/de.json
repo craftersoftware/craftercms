@@ -1733,5 +1733,6 @@
 	"YVoRja": "Kein Steuerelement-Deskriptor für das Feld \"{name}\" vom Typ \"{type}\" gefunden",
 	"fz7z2U": "Maximieren",
 	"k/3LuW": "Kein Steuerelement-Deskriptor für den Feldtyp \"{fieldType}\" gefunden",
-	"vYi9lB": "Kein Datenquellen-Deskriptor für den Typ \"{dataSourceType}\" gefunden"
+	"vYi9lB": "Kein Datenquellen-Deskriptor für den Typ \"{dataSourceType}\" gefunden",
+	"B2Na3Q": "Pfad auswählen"
 }
