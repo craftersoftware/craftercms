@@ -32,23 +32,13 @@ public final class ContentItemPossibleActionsConstants {
 		CONTENT_DUPLICATE + CONTENT_REVERT + CONTENT_DELETE + PUBLISH +
 		ITEM_UNLOCK;
 
-	/*
-		TODO:
-		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
-		types and system types.
-	 */
-	public static final long PAGE = COMMON + CONTENT_CREATE + CONTENT_PASTE + CONTENT_CHANGE_TYPE +
+	public static final long PAGE = COMMON + CONTENT_CREATE + CONTENT_PASTE + CONTENT_RENAME + CONTENT_CHANGE_TYPE +
 		CONTENT_EDIT_CONTROLLER + CONTENT_EDIT_TEMPLATE + FOLDER_CREATE +
 		CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE;
 
 	public static final long ASSET = COMMON + CONTENT_RENAME;
 
-	/*
-		TODO:
-		Temporarily disabled RENAME permission until proper rename API is provided for all renamable content
-		types and system types.
-	 */
-	public static final long COMPONENT = COMMON + CONTENT_CHANGE_TYPE + CONTENT_EDIT_CONTROLLER +
+	public static final long COMPONENT = COMMON + CONTENT_RENAME + CONTENT_CHANGE_TYPE + CONTENT_EDIT_CONTROLLER +
 		CONTENT_EDIT_TEMPLATE + CONTENT_DELETE_CONTROLLER + CONTENT_DELETE_TEMPLATE;
 
 	/*

@@ -15,6 +15,7 @@
  */
 package org.craftercms.studio.impl.v2.service.clipboard.internal;
 
+import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
@@ -39,12 +40,17 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.craftercms.studio.model.clipboard.Operation.COPY;
 import static org.craftercms.studio.model.clipboard.Operation.CUT;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_RESOURCE_ID;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.SITE_ID_RESOURCE_ID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -69,6 +75,9 @@ public class ClipboardServiceInternalImplTest {
 
 	@Mock
 	private SitesService sitesService;
+
+	@Mock
+	private PermissionEvaluator<String, Object> permissionEvaluator;
 
 	@InjectMocks
 	private ClipboardServiceInternalImpl service;
@@ -339,8 +348,30 @@ public class ClipboardServiceInternalImplTest {
 	@Test
 	public void copyPasteTest() throws UserNotFoundException, AuthenticationException, ServiceLayerException {
 		String path = "/site/website/style/index.xml";
+		when(permissionEvaluator.isAllowed(nullable(String.class), any(), eq(PERMISSION_CONTENT_WRITE))).thenReturn(true);
 		when(contentService.copy(any(), any(), any(), any())).thenReturn(mock(PasteContentResult.class));
 		assertDoesNotThrow(() -> service.pasteItems(SITE_ID, COPY, "/site/website/articles", path, true));
+		verify(permissionEvaluator).isAllowed(nullable(String.class), argThat(resource -> {
+			if (!(resource instanceof Map<?, ?> map)) {
+				return false;
+			}
+			return SITE_ID.equals(map.get(SITE_ID_RESOURCE_ID))
+					&& "/site/website/articles".equals(map.get(PATH_RESOURCE_ID));
+		}), eq(PERMISSION_CONTENT_WRITE));
+	}
+
+	@Test
+	public void cutPasteDoesNotCheckContentWriteOnTheDropFolder()
+			throws UserNotFoundException, AuthenticationException, ServiceLayerException {
+		String path = "/site/website/style/index.xml";
+		when(publishService.getActivePackagesForItems(SITE_ID, List.of(path), true)).thenReturn(List.of());
+		when(contentService.moveToParentPath(SITE_ID, path, "/site/website/articles"))
+				.thenReturn(mock(PasteContentResult.class));
+
+		service.pasteItems(SITE_ID, CUT, "/site/website/articles", path, false);
+
+		verify(contentService).moveToParentPath(SITE_ID, path, "/site/website/articles");
+		verify(permissionEvaluator, never()).isAllowed(nullable(String.class), any(), any());
 	}
 
 	@Test

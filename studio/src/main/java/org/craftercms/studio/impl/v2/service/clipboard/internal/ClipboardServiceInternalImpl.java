@@ -15,6 +15,7 @@
  */
 package org.craftercms.studio.impl.v2.service.clipboard.internal;
 
+import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.security.AuthenticationException;
@@ -34,6 +35,7 @@ import org.craftercms.studio.api.v2.service.content.ContentService;
 import org.craftercms.studio.api.v2.service.item.ItemService;
 import org.craftercms.studio.api.v2.service.publish.PublishService;
 import org.craftercms.studio.api.v2.service.site.SitesService;
+import org.craftercms.studio.api.v2.security.PermissionCheckingUtils;
 import org.craftercms.studio.api.v2.utils.StudioUtils;
 import org.craftercms.studio.model.clipboard.Operation;
 import org.craftercms.studio.model.rest.content.PasteContentResult;
@@ -51,7 +53,11 @@ import static org.craftercms.studio.api.v1.constant.DmConstants.SLASH_INDEX_FILE
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getSandboxRepoLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.isPageDescriptor;
 import static org.craftercms.studio.impl.v1.util.ContentUtils.getParentUrl;
+import static org.craftercms.studio.model.clipboard.Operation.COPY;
 import static org.craftercms.studio.model.clipboard.Operation.CUT;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_RESOURCE_ID;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.SITE_ID_RESOURCE_ID;
 
 /**
  * Default implementation of {@link ClipboardService}
@@ -71,21 +77,24 @@ public class ClipboardServiceInternalImpl implements ClipboardService {
 	protected final ContentService contentService;
 	protected final GitContentRepository contentRepository;
 	protected final SitesService sitesService;
+	protected final PermissionEvaluator<String, Object> permissionEvaluator;
 
 	@ConstructorProperties({"contentRepository",
 			"publishService", "itemService",
 			"generalLockService", "contentService",
-			"sitesService"})
+			"sitesService", "permissionEvaluator"})
 	public ClipboardServiceInternalImpl(GitContentRepository contentRepository,
 										PublishService publishService, ItemService itemService,
 										GeneralLockService generalLockService, ContentService contentService,
-										SitesService sitesService) {
+										SitesService sitesService,
+										PermissionEvaluator<String, Object> permissionEvaluator) {
 		this.contentRepository = contentRepository;
 		this.publishService = publishService;
 		this.itemService = itemService;
 		this.generalLockService = generalLockService;
 		this.contentService = contentService;
 		this.sitesService = sitesService;
+		this.permissionEvaluator = permissionEvaluator;
 	}
 
 	protected void validatePasteItemsAction(final String siteId, Operation operation, final String sourcePath, final String targetPath)
@@ -139,6 +148,12 @@ public class ClipboardServiceInternalImpl implements ClipboardService {
 	@Override
 	public List<String> pasteItems(String siteId, Operation operation, String targetPath, String sourcePath, boolean includeChildren)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
+		// COPY keeps content_write on the drop folder. CUT checks content_move inside moveToParentPath.
+		if (operation == COPY) {
+			PermissionCheckingUtils.checkPermissions(permissionEvaluator,
+					Map.of(SITE_ID_RESOURCE_ID, siteId, PATH_RESOURCE_ID, targetPath),
+					List.of(PERMISSION_CONTENT_WRITE));
+		}
 		// Lock the sandbox repository to prevent publish packages being submitted (cut-paste operations might conflict with submitted packages)
 		String sandboxRepoLockKey = getSandboxRepoLockKey(siteId);
 		generalLockService.lock(sandboxRepoLockKey);
