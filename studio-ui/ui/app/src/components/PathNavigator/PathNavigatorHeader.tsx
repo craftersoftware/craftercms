@@ -17,6 +17,7 @@
 import React, { ReactNode } from 'react';
 import LanguageRounded from '@mui/icons-material/LanguageRounded';
 import Typography from '@mui/material/Typography';
+import { useIntl } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVertRounded';
 import AccordionSummary, { accordionSummaryClasses } from '@mui/material/AccordionSummary';
@@ -57,6 +58,11 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 		sx,
 		sxs
 	} = props;
+	const { formatMessage } = useIntl();
+	const optionsLabel =
+		typeof title === 'string' && title
+			? formatMessage({ id: 'pathNavigator.headerOptions', defaultMessage: '{title} options' }, { title })
+			: formatMessage({ id: 'words.options', defaultMessage: 'Options' });
 	const currentFlag = (locale: string) => <LanguageRounded />;
 	const hasActions = Boolean(onLanguageMenu || onMenuButtonClick);
 	return (
@@ -83,7 +89,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 					}
 				}}
 			>
-				<Box sx={{ display: 'flex', alignItems: 'center' }}>
+				<Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
 					{icon && (
 						<SystemIcon
 							icon={icon}
@@ -91,14 +97,14 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 							style={icon[collapsed ? 'collapsedStyle' : 'expandedStyle']}
 						/>
 					)}
-					<Typography variant="body1" component="h6" sx={{ flexGrow: 1 }} children={title} />
+					<Typography variant="body1" component="span" sx={{ flexGrow: 1 }} children={title} />
 				</Box>
 			</AccordionSummary>
 			{hasActions && (
 				<Box component="span" sx={{ display: 'flex', flexShrink: 0, pr: 2 }}>
 					{onLanguageMenu && (
 						<IconButton
-							aria-label="language select"
+							aria-label={formatMessage({ id: 'words.language', defaultMessage: 'Language' })}
 							onClick={(e) => {
 								e.stopPropagation();
 								onLanguageMenu(e.currentTarget);
@@ -110,7 +116,7 @@ export function PathNavigatorHeader(props: PathNavigatorHeaderProps) {
 					)}
 					{onMenuButtonClick && (
 						<IconButton
-							aria-label="options"
+							aria-label={optionsLabel}
 							onClick={(e) => {
 								e.stopPropagation();
 								onMenuButtonClick(e.currentTarget);

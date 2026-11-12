@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import ToolPanel from '../ToolPanel/ToolPanel';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import Typography from '@mui/material/Typography';
@@ -42,6 +42,7 @@ interface EditFormPanelProps {
 }
 
 interface EditFormPanelBodyProps {
+	titleId: string;
 	onDismiss: () => void;
 	selected: GuestData['selected'];
 	models: GuestData['models'];
@@ -111,6 +112,7 @@ const translations = defineMessages({
 export function EditFormPanel(props: EditFormPanelProps) {
 	const { showToolsPanel, guest } = usePreviewState();
 	const { selected, models, hierarchyMap, modelIdByPath } = guest ?? {};
+	const titleId = useId();
 	const getAnchorPosition = () => {
 		let iframe = document.getElementById('crafterCMSPreviewIframe');
 		let bounding = iframe.getBoundingClientRect();
@@ -126,10 +128,12 @@ export function EditFormPanel(props: EditFormPanelProps) {
 			onClose={props.onDismiss}
 			anchorReference="anchorPosition"
 			anchorPosition={props.open ? getAnchorPosition() : null}
+			slotProps={{ list: { 'aria-labelledby': titleId } }}
 		>
 			<div>
 				{selected ? (
 					<EditFormPanelBody
+						titleId={titleId}
 						models={models}
 						selected={selected}
 						hierarchyMap={hierarchyMap}
@@ -145,7 +149,7 @@ export function EditFormPanel(props: EditFormPanelProps) {
 }
 
 function EditFormPanelBody(props: EditFormPanelBodyProps) {
-	const { onDismiss, selected, models, modelIdByPath, hierarchyMap } = props;
+	const { titleId, onDismiss, selected, models, modelIdByPath, hierarchyMap } = props;
 	const dispatch = useDispatch();
 	const contentTypesBranch = useSelection((state) => state.contentTypes);
 	const site = useActiveSiteId();
@@ -250,7 +254,7 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 
 	return (
 		<>
-			<Typography variant="caption" style={{ padding: '0 16px 5px' }} component="p">
+			<Typography id={titleId} variant="caption" style={{ padding: '0 16px 5px' }} component="p">
 				{title}
 			</Typography>
 			<MenuItem onClick={() => openDialog('form')}>{formatMessage(translations.openComponentForm)}</MenuItem>

@@ -48,6 +48,9 @@ interface ResizeableDrawerProps extends DrawerProps {
 	onWidthChange?(width: number): void;
 	onResizeStart?(): void;
 	onResizeStop?(): void;
+	/** Landmark exposed by the drawer body while the drawer is open. */
+	landmark?: 'nav' | 'complementary';
+	landmarkLabel?: string;
 }
 
 export function ResizeableDrawer(props: ResizeableDrawerProps) {
@@ -70,6 +73,8 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		anchor = 'left',
 		belowToolbar = false,
 		sxs = {},
+		landmark,
+		landmarkLabel,
 		...rest
 	} = props;
 
@@ -144,6 +149,12 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 		}
 	];
 
+	const dockedProps = slotProps?.docked;
+	const dockedSlotProps: DrawerProps['slotProps']['docked'] =
+		typeof dockedProps === 'function'
+			? (ownerState) => ({ ...dockedProps(ownerState), inert: !open })
+			: { ...dockedProps, inert: !open };
+
 	return (
 		<Drawer
 			open={open}
@@ -161,7 +172,11 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 					style: { width },
 					className: [classes?.drawerPaper, belowToolbar && classes?.drawerPaperBelowToolbar].filter(Boolean).join(' '),
 					sx: drawerPaperSxProp as SxProps<Theme>
-				}
+				},
+				// Slide sets visibility:hidden once the close transition has exited, which
+				// drops the controls from the tab order. `inert` covers the transition
+				// itself, while the paper is still translated and visible (WCAG 2.4.3 / 1.3.2).
+				docked: dockedSlotProps
 			}}
 			{...rest}
 		>
@@ -200,7 +215,8 @@ export function ResizeableDrawer(props: ResizeableDrawerProps) {
 				/>
 			)}
 			<Box
-				component="section"
+				component={landmark === 'nav' ? 'nav' : landmark === 'complementary' ? 'aside' : 'section'}
+				aria-label={landmarkLabel || undefined}
 				className={classes?.drawerBody}
 				sx={{
 					width: '100%',
