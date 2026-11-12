@@ -127,9 +127,17 @@ export function fileNameElementForXml(path: string | null | undefined, embeddedO
 }
 
 /**
+ * Value written to the `<folder-name>` element on save. Matches FE1 and the backend copy-collision
+ * path: the page folder slug for content-as-folder paths (`about`; home → `''`), empty otherwise.
+ **/
+export function folderNameElementForXml(path: string): string {
+	return isPagePath(path) ? getFileNameValueFromPath(path, true) : '';
+}
+
+/**
  * Builds the content XML for a FormsEngine save the same way {@link useSaveForm} does.
  *
- * Repository saves keep the UI slug on `values` and only put the path basename on the XML copy.
+ * Repository saves keep the UI slug on `values` and only put the path basename / folder slug on the XML copy.
  * Embedded saves keep the component's stored `<file-name>` (as FE1's auto-filename does) and fall back to
  * `{objectId}.xml` only when it has none. They mutate `values` in place because parents (e.g. NodeSelector)
  * merge `values`, not the XML/`dom` copy. For an embed, `values['file-name']` is not the stored element (dropped
@@ -144,7 +152,14 @@ export function buildSaveContentXml(
 		values[XmlKeys.fileName] = target.storedFileName || fileNameElementForXml(null, target.embeddedObjectId);
 		return buildContentXml(values, contentTypesById);
 	}
-	return buildContentXml({ ...values, [XmlKeys.fileName]: fileNameElementForXml(target.path) }, contentTypesById);
+	return buildContentXml(
+		{
+			...values,
+			[XmlKeys.fileName]: fileNameElementForXml(target.path),
+			[XmlKeys.folderName]: folderNameElementForXml(target.path)
+		},
+		contentTypesById
+	);
 }
 
 /**
@@ -1071,8 +1086,9 @@ export function setFieldAtoms(
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
 	// never uses for the path.
 	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
-	// Save writes `<file-name>` as the path basename (via {@link fileNameElementForXml}), matching FE1/XB,
-	// while the form atom keeps the slug. The backend still rewrites both names on a copy collision.
+	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link fileNameElementForXml} /
+	// {@link folderNameElementForXml}), matching FE1, while the form atom keeps the slug. The backend
+	// still rewrites both names on a copy collision.
 	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
 	const initialValue =
 		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;

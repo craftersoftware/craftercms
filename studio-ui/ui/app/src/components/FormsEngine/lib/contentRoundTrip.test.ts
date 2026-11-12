@@ -43,6 +43,7 @@ const {
 	createObjectWithSystemProps,
 	extractAtomValues,
 	fileNameElementForXml,
+	folderNameElementForXml,
 	getBasePath,
 	setFieldAtoms
 } = await import('./formUtils.tsx');
@@ -142,9 +143,18 @@ describe('fileNameElementForXml', () => {
 	});
 });
 
+describe('folderNameElementForXml', () => {
+	it('uses the page folder slug, blank for home, and blank for components', () => {
+		assert.equal(folderNameElementForXml('/site/website/about/index.xml'), 'about');
+		assert.equal(folderNameElementForXml('/site/website/health/index.xml'), 'health');
+		assert.equal(folderNameElementForXml('/site/website/index.xml'), '');
+		assert.equal(folderNameElementForXml('/site/components/headers/header.xml'), '');
+	});
+});
+
 /**
  * Same XML-building step useSaveForm runs before writeContent / onSave.
- * Returns repository XML, the values object handed to onSave/the parent, and the file-name in that XML.
+ * Returns repository XML, the values object handed to onSave/the parent, and name elements in that XML.
  */
 function saveFileNameOutcome(
 	slug: string,
@@ -155,13 +165,16 @@ function saveFileNameOutcome(
 		[XmlKeys.contentTypeId]: contentType.id,
 		[XmlKeys.modelId]: '0123abcd-0000-0000-0000-000000000000',
 		[XmlKeys.fileName]: slug,
+		[XmlKeys.folderName]: 'stale-folder',
 		[XmlKeys.internalName]: 'Label'
 	};
 	const xml = buildSaveContentXml(values, { [contentType.id]: contentType }, target);
+	const root = fromString(xml).documentElement;
 	return {
 		xml,
 		values,
-		xmlFileName: fromString(xml).documentElement.querySelector(':scope > file-name')?.textContent
+		xmlFileName: root.querySelector(':scope > file-name')?.textContent,
+		xmlFolderName: root.querySelector(':scope > folder-name')?.textContent
 	};
 }
 
@@ -179,37 +192,44 @@ const componentType = parseType(
 describe('buildSaveContentXml (useSaveForm file-name)', () => {
 	it('create writes the path basename in XML and keeps the UI slug on values for onSave', () => {
 		const path = composePathForType('/site/website/', 'about', pageType);
-		const { xmlFileName, values } = saveFileNameOutcome('about', pageType, { path });
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('about', pageType, { path });
 		assert.equal(path, '/site/website/about/index.xml');
 		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(xmlFolderName, 'about');
 		assert.equal(values[XmlKeys.fileName], 'about');
+		assert.equal(values[XmlKeys.folderName], 'stale-folder');
 	});
 
 	it('plain update writes the path basename in XML and keeps the UI slug on values for onSave', () => {
 		const path = '/site/website/about/index.xml';
-		const { xmlFileName, values } = saveFileNameOutcome('about', pageType, { path });
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('about', pageType, { path });
 		assert.equal(xmlFileName, 'index.xml');
+		assert.equal(xmlFolderName, 'about');
 		assert.equal(values[XmlKeys.fileName], 'about');
 
 		const componentPath = '/site/components/headers/header.xml';
 		const component = saveFileNameOutcome('header', componentType, { path: componentPath });
 		assert.equal(component.xmlFileName, 'header.xml');
+		assert.equal(component.xmlFolderName, '');
 		assert.equal(component.values[XmlKeys.fileName], 'header');
 	});
 
-	it('rename writes the new path basename in XML and keeps the new UI slug on values for onSave', () => {
-		const itemPath = '/site/website/about/index.xml';
-		const path = composePathForType(getBasePath(itemPath, true), 'contact', pageType);
-		const { xmlFileName, values } = saveFileNameOutcome('contact', pageType, { path });
-		assert.equal(path, '/site/website/contact/index.xml');
+	it('rename writes the new path basename and folder-name in XML and keeps the new UI slug on values for onSave', () => {
+		const itemPath = '/site/website/health/index.xml';
+		const path = composePathForType(getBasePath(itemPath, true), 'wellness', pageType);
+		const { xmlFileName, xmlFolderName, values } = saveFileNameOutcome('wellness', pageType, { path });
+		assert.equal(path, '/site/website/wellness/index.xml');
 		assert.equal(xmlFileName, 'index.xml');
-		assert.equal(values[XmlKeys.fileName], 'contact');
+		assert.equal(xmlFolderName, 'wellness');
+		assert.equal(values[XmlKeys.fileName], 'wellness');
+		assert.equal(values[XmlKeys.folderName], 'stale-folder');
 
 		const componentItemPath = '/site/components/headers/header.xml';
 		const componentPath = composePathForType(getBasePath(componentItemPath, false), 'footer', componentType);
 		const component = saveFileNameOutcome('footer', componentType, { path: componentPath });
 		assert.equal(componentPath, '/site/components/headers/footer.xml');
 		assert.equal(component.xmlFileName, 'footer.xml');
+		assert.equal(component.xmlFolderName, '');
 		assert.equal(component.values[XmlKeys.fileName], 'footer');
 	});
 
@@ -273,6 +293,11 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 					savedDoc.documentElement.querySelector(':scope > file-name')?.textContent,
 					path.basename(file),
 					'root file-name matches the path basename'
+				);
+				assert.equal(
+					savedDoc.documentElement.querySelector(':scope > folder-name')?.textContent,
+					folderNameElementForXml(itemPath),
+					'root folder-name matches the path-derived folder slug'
 				);
 				const firstObjectId = savedDoc.documentElement.getElementsByTagName(XmlKeys.modelId)[0];
 				assert.equal(
