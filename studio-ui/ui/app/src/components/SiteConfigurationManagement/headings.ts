@@ -26,3 +26,9 @@ export function getConfigFileHeadings(embedded?: boolean) {
 		? ({ titleComponent: 'h3', subtitleComponent: 'p' } as const)
 		: ({ titleComponent: 'h2', subtitleComponent: 'h3' } as const);
 }
+
+/**
+ * The "choose a config file" prompt is not a heading in either mode: the dialog h2 names the embedded view
+ * and the toolbar h1 names the page.
+ */
+export const selectConfigFilePromptComponent = 'p';

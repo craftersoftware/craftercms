@@ -16,7 +16,8 @@
 
 /**
  * The selected file's toolbar must not add a second page h1. Embedded in the Preview tools dialog it sits
- * under the dialog's h2, so its title is an h3 and its description is plain text.
+ * under the dialog's h2, so its title is an h3 and its description is plain text. The prompt shown before a
+ * file is chosen is never a heading.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -31,7 +32,8 @@ const { RawIntlProvider } = await import('react-intl');
 const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { default: GlobalAppToolbar } = await import('../GlobalAppToolbar/GlobalAppToolbar.tsx');
-const { getConfigFileHeadings } = await import('./headings.ts');
+const { default: EmptyState } = await import('../EmptyState/EmptyState.tsx');
+const { getConfigFileHeadings, selectConfigFilePromptComponent } = await import('./headings.ts');
 
 const intl = createTestIntl();
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
@@ -96,5 +98,33 @@ describe('configuration file toolbar headings', () => {
 		for (const embedded of [true, false, undefined]) {
 			assert.notEqual(getConfigFileHeadings(embedded).titleComponent, 'h1');
 		}
+	});
+});
+
+describe('configuration file prompt', () => {
+	it('is plain text, not a heading', async () => {
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(
+				React.createElement(
+					RawIntlProvider,
+					{ value: intl },
+					React.createElement(
+						ThemeProvider,
+						{ theme: createTheme() },
+						React.createElement(EmptyState, {
+							title: 'Please choose a config file from the left.',
+							titleComponent: selectConfigFilePromptComponent
+						})
+					)
+				)
+			);
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		assert.equal(host.querySelectorAll('h1, h2, h3, h4, h5, h6').length, 0);
+		const prompt = [...host.querySelectorAll('p')].find((node) => node.textContent?.includes('choose a config file'));
+		assert.ok(prompt);
 	});
 });

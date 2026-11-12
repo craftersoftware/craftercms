@@ -65,7 +65,7 @@ import { useMount } from '../../hooks/useMount';
 import { ConfirmDialogProps } from '../ConfirmDialog';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import { findPendingEncryption } from './utils';
-import { getConfigFileHeadings } from './headings';
+import { getConfigFileHeadings, selectConfigFilePromptComponent } from './headings';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { MAX_CONFIG_SIZE, UNDEFINED } from '../../utils/constants';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
@@ -950,7 +950,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="Please choose a config file from the left."
 							/>
 						}
-						titleComponent={embedded ? 'h1' : 'p'}
+						titleComponent={selectConfigFilePromptComponent}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				</Box>
