@@ -213,23 +213,30 @@ describe('buildSaveContentXml (useSaveForm file-name)', () => {
 		assert.equal(component.values[XmlKeys.fileName], 'footer');
 	});
 
-	it('embedded without a stored name writes {objectId}.xml into both the XML and values parents merge', () => {
+	it('embedded with no stored file-name writes {objectId}.xml into both the XML and the values object parents merge', () => {
 		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
 		const { xmlFileName, values } = saveFileNameOutcome('', componentType, { embeddedObjectId: objectId });
 		assert.equal(xmlFileName, `${objectId}.xml`);
 		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
 	});
-
-	it('embedded keeps the stored file-name from the content object, not a path-derived or empty form value', () => {
+	it('embedded keeps its stored file-name (stacked: no atom value; root: parent slug in the atom)', () => {
 		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
-		const stored = 'custom-component.xml';
-		// Form values may be empty (stacked) or a path slug (top-level embed); neither is the stored name.
-		const { xmlFileName, values } = saveFileNameOutcome('about', componentType, {
+		for (const slug of ['', 'about']) {
+			const { xmlFileName, values } = saveFileNameOutcome(slug, componentType, {
+				embeddedObjectId: objectId,
+				storedFileName: 'manual-name.xml'
+			});
+			assert.equal(xmlFileName, 'manual-name.xml', slug);
+			assert.equal(values[XmlKeys.fileName], 'manual-name.xml', slug);
+		}
+	});
+	it('root embedded edit never writes the parent page slug as the component file-name', () => {
+		const objectId = 'c646ba89-a4c3-308f-3492-93be61429fec';
+		const { xmlFileName } = saveFileNameOutcome('about', componentType, {
 			embeddedObjectId: objectId,
-			storedFileName: stored
+			storedFileName: null
 		});
-		assert.equal(xmlFileName, stored);
-		assert.equal(values[XmlKeys.fileName], stored);
+		assert.equal(xmlFileName, `${objectId}.xml`);
 	});
 });
 
