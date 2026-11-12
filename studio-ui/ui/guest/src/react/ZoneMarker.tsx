@@ -245,9 +245,8 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 								</Box>
 							)}
 						</div>
-						{/* Inherit the paper colour. Typography's text.primary is white in dark mode, under 2.2:1 on these fills. */}
 						{isLockedItem && (
-							<Typography noWrap variant="body2" component="div" color="inherit">
+							<Typography noWrap variant="body2" component="div">
 								<FormattedMessage
 									id="zoneMarker.lockedBy"
 									defaultMessage="Locked by {username}"
@@ -256,7 +255,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 							</Typography>
 						)}
 						{!isEditable && !isLockedItem && (
-							<Typography noWrap variant="body2" component="div" color="inherit">
+							<Typography noWrap variant="body2" component="div">
 								{isSystemProcessing ? (
 									<FormattedMessage id="zoneMarker.systemProcessing" defaultMessage="System processing" />
 								) : (
@@ -265,7 +264,7 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 							</Typography>
 						)}
 						{isStale && (
-							<Typography noWrap variant="body2" component="div" color="inherit">
+							<Typography noWrap variant="body2" component="div">
 								<FormattedMessage
 									id="zoneMarker.modifiedItem"
 									defaultMessage="Item was modified. Refresh to enable editing."
@@ -273,12 +272,12 @@ export function ZoneMarker(props: ZoneMarkerProps) {
 							</Typography>
 						)}
 						{hasFailedRequired && !isLockedItem && isEditable && !isStale && (
-							<Typography noWrap variant="body2" component="div" color="inherit">
+							<Typography noWrap variant="body2" component="div">
 								<FormattedMessage id="zoneMarker.required" defaultMessage="Required" />
 							</Typography>
 						)}
 						{hasReachedMaxCount && !hasFailedRequired && !isLockedItem && isEditable && !isStale && (
-							<Typography noWrap variant="body2" component="div" color="inherit">
+							<Typography noWrap variant="body2" component="div">
 								<FormattedMessage id="zoneMarker.maxCountReached" defaultMessage="Maximum reached" />
 							</Typography>
 						)}
