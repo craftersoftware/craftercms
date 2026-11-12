@@ -151,3 +151,46 @@ describe('SiteTools page headings', () => {
 		assert.equal(host.querySelector('svg'), null);
 	});
 });
+
+describe('SiteTools tab order', () => {
+	it('follows the visual layout: skip link, then the sidebar, then the tool content', async () => {
+		register('test.Audit', function AuditTool() {
+			return React.createElement('button', { type: 'button', id: 'tool-content-button' }, 'Run audit');
+		});
+		const host = await renderSiteTools({
+			openSidebar: true,
+			tools: [tool('test.Audit', 'Audit'), { ...tool('test.Audit', 'Logs'), url: 'logs' }]
+		});
+		// What Tab can reach, in document order: focusable, not tabindex -1, and not inside an inert subtree.
+		const tabbable = [
+			...host.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')
+		].filter((node) => {
+			const tabIndex = node.getAttribute('tabindex');
+			return (
+				(tabIndex === null ? node.matches('button, a[href], input, select, textarea') : Number(tabIndex) >= 0) &&
+				!node.closest('[inert]')
+			);
+		});
+		const names = tabbable.map((node) => node.textContent?.trim() || node.getAttribute('aria-label'));
+		const skip = names.indexOf('Skip to main content');
+		const sidebar = names.indexOf('Audit');
+		const content = names.indexOf('Run audit');
+		assert.equal(skip, 0, `skip link is first: ${names.join(' | ')}`);
+		assert.ok(sidebar > skip, `sidebar follows the skip link: ${names.join(' | ')}`);
+		assert.ok(content > sidebar, `content follows the sidebar: ${names.join(' | ')}`);
+
+		const drawer = host.querySelector('nav');
+		const main = host.querySelector('main');
+		assert.ok(drawer && main);
+		assert.ok(drawer.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING, 'nav precedes main in the DOM');
+	});
+
+	it('keeps a closed sidebar out of the tab order', async () => {
+		register('test.Audit', function AuditTool() {
+			return React.createElement('button', { type: 'button' }, 'Run audit');
+		});
+		const host = await renderSiteTools({ openSidebar: false });
+		const docked = host.querySelector('.MuiDrawer-docked');
+		assert.ok(docked?.hasAttribute('inert'));
+	});
+});
