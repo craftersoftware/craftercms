@@ -23,8 +23,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { carryReplacedItem, createRepeatItemKeys, findRepeatItemIndex, removeRepeatItem, repeatItemKeysFor } =
-	await import('./repeatItemKeys.ts');
+const {
+	carryReplacedItem,
+	createRepeatItemKeys,
+	findRepeatItemIndex,
+	removeRepeatItem,
+	repeatItemKeysFor,
+	repeatOccurrenceKeys
+} = await import('./repeatItemKeys.ts');
 const { reorderRepeatItems, repeatSortItems } = await import('../controls/repeatItemDisplay.ts');
 
 describe('createRepeatItemKeys', () => {
@@ -195,5 +201,54 @@ describe('repeatSortItems and reorderRepeatItems', () => {
 		const { keys, items } = setup();
 		const next = reorderRepeatItems(items, [{ key: 'nope' }], keys);
 		assert.deepEqual(next, items);
+	});
+});
+
+describe('an item object stored twice', () => {
+	// A form controller can write the same object into the array twice: [a, a, b].
+	const setup = () => {
+		const keys = createRepeatItemKeys<Record<string, unknown>>();
+		const [a, b] = [{ n: 'a' }, { n: 'b' }];
+		return { keys, a, b, items: [a, a, b] };
+	};
+
+	it('gets a distinct occurrence key per position', () => {
+		const { keys, a, items } = setup();
+		const rowKeys = repeatOccurrenceKeys(items, keys);
+		assert.equal(new Set(rowKeys).size, 3);
+		assert.equal(rowKeys[0], keys.keyOf(a));
+		assert.deepEqual(repeatOccurrenceKeys(items, keys), rowKeys);
+	});
+
+	it('finds the occurrence the caller saw, and the first one without a hint', () => {
+		const { keys, a, items } = setup();
+		assert.equal(findRepeatItemIndex(items, a, keys, 1), 1);
+		assert.equal(findRepeatItemIndex(items, a, keys, 0), 0);
+		assert.equal(findRepeatItemIndex(items, a, keys), 0);
+		// The hinted slot holds something else now. Fall back to the lookup.
+		assert.equal(findRepeatItemIndex(items, a, keys, 2), 0);
+	});
+
+	it('finds the second occurrence after an edit replaced it with a carried-key object', () => {
+		const { keys, a, b } = setup();
+		const edited = { n: 'a2' };
+		keys.carry(a, edited);
+		assert.equal(findRepeatItemIndex([a, edited, b], a, keys, 1), 1);
+	});
+
+	it('keeps both occurrences through a reorder', () => {
+		const { keys, a, b, items } = setup();
+		const sortList = repeatSortItems(items, ['n'], keys);
+		assert.equal(new Set(sortList.map((row) => row.key)).size, 3);
+		const next = reorderRepeatItems(items, [sortList[2], sortList[1], sortList[0]], keys);
+		assert.equal(next.length, 3);
+		assert.ok(next[0] === b && next[1] === a && next[2] === a);
+	});
+
+	it('keeps both occurrences when the sorted list names only one of them', () => {
+		const { keys, a, b, items } = setup();
+		const sortList = repeatSortItems(items, ['n'], keys);
+		const next = reorderRepeatItems(items, [sortList[2], sortList[0]], keys);
+		assert.ok(next.length === 3 && next[0] === b && next[1] === a && next[2] === a);
 	});
 });
