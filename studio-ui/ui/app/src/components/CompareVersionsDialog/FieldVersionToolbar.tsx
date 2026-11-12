@@ -27,7 +27,7 @@ import NavigateNextRoundedIcon from '@mui/icons-material/NavigateNextRounded';
 import React, { ReactNode } from 'react';
 import { ContentTypeField } from '../../models';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import NotesRoundedIcon from '@mui/icons-material/NotesRounded';
 import { useHotkeys } from 'react-hotkeys-hook';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrowsRounded';
@@ -59,6 +59,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 		isDiff = true,
 		justContent
 	} = props;
+	const { formatMessage } = useIntl();
 	const fieldType = field.type;
 	const [{ fieldsViewState }, contextApiRef] = useVersionsDialogContext();
 	const currentFieldIndex = contentTypeFields.findIndex((f) => f.id === field.id);
@@ -204,7 +205,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 						<Divider orientation="vertical" sx={{ display: 'inline-flex', height: '25px', ml: 2, mr: 2 }} />
 					)}
 					{fieldType === 'html' && (
-						<Tooltip title={<FormattedMessage defaultMessage="Show clean text" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Show clean text' })}>
 							<IconButton
 								size="small"
 								onClick={() =>
@@ -218,7 +219,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 					)}
 					{isMappedFieldType && (
 						<>
-							<Tooltip title={<FormattedMessage defaultMessage="Compare" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Compare' })}>
 								<IconButton
 									size="small"
 									onClick={() =>
@@ -229,7 +230,7 @@ export function FieldVersionToolbar(props: FieldVersionToolbarProps) {
 									<TextSnippetOutlinedIcon />
 								</IconButton>
 							</Tooltip>
-							<Tooltip title={<FormattedMessage defaultMessage="Compare XML" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Compare XML' })}>
 								<IconButton
 									size="small"
 									onClick={() => contextApiRef.current.setFieldViewState?.(field.id, { compareXml: true })}
