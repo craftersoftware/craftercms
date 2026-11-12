@@ -508,8 +508,8 @@ export function ZoneMenu(props: ZoneMenuProps) {
 		}
 		const source = moveSource();
 		const originIceId = record.iceIds[0];
-		// If the lock fails, the item is still here. After a successful delete, focus the same index,
-		// otherwise the previous item, otherwise the next.
+		// If the lock fails, the item is still here. After a successful delete, focus the same index (the
+		// next item shifts into it), otherwise the previous item, otherwise the field zone.
 		requestZoneFocus({ iceId: originIceId });
 		execOperation(
 			() => {
