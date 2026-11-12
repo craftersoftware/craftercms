@@ -65,6 +65,7 @@ import { useMount } from '../../hooks/useMount';
 import { ConfirmDialogProps } from '../ConfirmDialog';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import { findPendingEncryption } from './utils';
+import { getConfigFileHeadings } from './headings';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { MAX_CONFIG_SIZE, UNDEFINED } from '../../utils/constants';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
@@ -796,8 +797,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
-								titleComponent={embedded ? 'h1' : 'h2'}
-								subtitleComponent="h3"
+								{...getConfigFileHeadings(embedded)}
 								startContent={
 									<IconButton
 										onClick={onToggleDrawer}

@@ -39,8 +39,8 @@ export interface GlobalAppToolbarProps {
 	startContent?: React.ReactNode;
 	showHamburgerMenuButton?: boolean;
 	showAppsButton?: boolean;
-	/** Page title heading. Nested toolbars pass `h2` so the view keeps a single h1. */
-	titleComponent?: 'h1' | 'h2';
+	/** Page title heading. Nested toolbars pass `h2`, or `h3` under a dialog title, so the view keeps a single h1. */
+	titleComponent?: 'h1' | 'h2' | 'h3';
 	subtitleComponent?: 'h2' | 'h3' | 'p';
 }
 
