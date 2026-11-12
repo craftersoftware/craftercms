@@ -15,6 +15,9 @@ updates:
         ignore:
             -   dependency-name: "commons-codec:commons-codec"
                 versions: [ ">=1.22.1" ]
+            # Connector/J 4.x only. MariaDB4j secure-install init (craftercms-e#1435). 5.x stays eligible.
+            -   dependency-name: "org.mariadb.jdbc:mariadb-java-client"
+                versions: [ ">=4.0.0,<5.0.0" ]
 
     -   package-ecosystem: "gradle"
         directories:
@@ -39,6 +42,9 @@ updates:
                 versions: [ ">=6.0.0" ]
             -   dependency-name: "commons-codec:commons-codec"
                 versions: [ ">=1.22.1" ]
+            # Connector/J 4.x only. MariaDB4j secure-install init (craftercms-e#1435). 5.x stays eligible.
+            -   dependency-name: "org.mariadb.jdbc:mariadb-java-client"
+                versions: [ ">=4.0.0,<5.0.0" ]
 
     - package-ecosystem: "npm" # See documentation for possible values
       directories: # Location of package manifests

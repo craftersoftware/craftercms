@@ -15,11 +15,12 @@
  */
 
 import type { TItem } from './SortableList';
-import { sortableListActionProcessor, SortAction } from '../lib/sortableListUtil';
+import { destinationIndex, sortableListActionProcessor, SortAction, useReorderFocus } from '../lib/sortableListUtil';
+import { ReorderMoveButton } from './ReorderMoveButton';
+import { ReorderAnnouncement } from './ReorderAnnouncement';
 import List from '@mui/material/List';
 import { ListItem } from '@mui/material';
 import ListItemText from '@mui/material/ListItemText';
-import IconButton from '@mui/material/IconButton';
 import KeyboardArrowUpRounded from '@mui/icons-material/KeyboardArrowUpRounded';
 import KeyboardDoubleArrowUpRounded from '@mui/icons-material/KeyboardDoubleArrowUpRounded';
 import Divider from '@mui/material/Divider';
@@ -39,52 +40,86 @@ export interface TouchSortableListProps<T = unknown> {
  * its DOM node when its item moves.
  */
 export function TouchSortableList({ items, onChange, selectedItemId }: TouchSortableListProps) {
-	const handleMove = (action: SortAction, moveToEdge: boolean, index: number) =>
+	const { rootRef, remember, announcement } = useReorderFocus(items);
+	const handleMove = (action: SortAction, moveToEdge: boolean, index: number, control: string) => {
+		const next = destinationIndex(action, moveToEdge, index, items.length);
+		if (next == null) {
+			return;
+		}
+		remember(next, control, items[index].value);
 		sortableListActionProcessor(action, moveToEdge, items, index, onChange);
+	};
 	return (
-		<List>
-			{items.map((item, index) => (
-				<ListItem key={item.key} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
-					<ListItemText
-						disableTypography
-						primary={
-							<Box
-								sx={{
-									display: 'flex',
-									alignItems: 'center',
-									placeContent: 'space-between'
-								}}
-							>
-								<Typography>{item.value}</Typography>
-								<Box sx={{ display: 'flex' }}>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', false, index)}>
-										<KeyboardArrowUpRounded />
-									</IconButton>
-									<IconButton color="primary" disabled={index === 0} onClick={() => handleMove('up', true, index)}>
-										<KeyboardDoubleArrowUpRounded />
-									</IconButton>
-									<Divider orientation="vertical" flexItem sx={{ height: 15, alignSelf: 'center' }} />
-									<IconButton
-										color="primary"
-										disabled={index === items.length - 1}
-										onClick={() => handleMove('down', false, index)}
-									>
-										<KeyboardArrowDownRounded />
-									</IconButton>
-									<IconButton
-										color="primary"
-										disabled={index === items.length - 1}
-										onClick={() => handleMove('down', true, index)}
-									>
-										<KeyboardDoubleArrowDownRounded />
-									</IconButton>
+		<>
+			<List ref={rootRef}>
+				{items.map((item, index) => (
+					<ListItem key={item.key} sx={{ display: 'flex', bgcolor: item.key === selectedItemId && 'action.selected' }}>
+						<ListItemText
+							disableTypography
+							primary={
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										placeContent: 'space-between'
+									}}
+								>
+									<Typography>{item.value}</Typography>
+									<Box sx={{ display: 'flex', flexShrink: 0 }}>
+										<ReorderMoveButton
+											color="primary"
+											size="medium"
+											name={item.value}
+											control="up"
+											index={index}
+											disabled={index === 0}
+											onClick={() => handleMove('up', false, index, 'up')}
+										>
+											<KeyboardArrowUpRounded />
+										</ReorderMoveButton>
+										<ReorderMoveButton
+											color="primary"
+											size="medium"
+											name={item.value}
+											control="top"
+											index={index}
+											disabled={index === 0}
+											onClick={() => handleMove('up', true, index, 'top')}
+										>
+											<KeyboardDoubleArrowUpRounded />
+										</ReorderMoveButton>
+										<Divider orientation="vertical" flexItem sx={{ height: 15, alignSelf: 'center' }} />
+										<ReorderMoveButton
+											color="primary"
+											size="medium"
+											name={item.value}
+											control="down"
+											index={index}
+											disabled={index === items.length - 1}
+											onClick={() => handleMove('down', false, index, 'down')}
+										>
+											<KeyboardArrowDownRounded />
+										</ReorderMoveButton>
+										<ReorderMoveButton
+											color="primary"
+											size="medium"
+											name={item.value}
+											control="bottom"
+											index={index}
+											disabled={index === items.length - 1}
+											onClick={() => handleMove('down', true, index, 'bottom')}
+										>
+											<KeyboardDoubleArrowDownRounded />
+										</ReorderMoveButton>
+									</Box>
 								</Box>
-							</Box>
-						}
-					/>
-				</ListItem>
-			))}
-		</List>
+							}
+						/>
+					</ListItem>
+				))}
+			</List>
+			<ReorderAnnouncement message={announcement} />
+		</>
 	);
 }
 

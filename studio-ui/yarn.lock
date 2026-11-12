@@ -2305,6 +2305,7 @@ __metadata:
     "@types/node": "npm:^26.6.5"
     "@types/rimraf": "npm:^4.0.5"
     build-if-changed: "npm:^1.5.5"
+    esbuild: "npm:^0.28.2"
     eslint: "npm:^10.13.0"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-prettier: "npm:^5.5.7"
@@ -2315,6 +2316,7 @@ __metadata:
     rimraf: "npm:^6.1.3"
     rollup: "npm:^4.65.1"
     rollup-plugin-copy: "npm:^3.5.0"
+    sass: "npm:1.78.0"
     yargs: "npm:^18.2.0"
   languageName: unknown
   linkType: soft

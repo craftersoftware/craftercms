@@ -37,11 +37,20 @@ tasks.register('yarnBuild', YarnTask) {
 	group = 'build'
 	description = 'Builds all studio UI workspaces'
 	dependsOn tasks.named('yarn')
+	// Runs first so a stale generated editor asset fails the build rather than shipping.
+	dependsOn tasks.named('checkEditorKeyboard')
 	if (getPropertySafelyWithDefaults('travis', 'false').toBoolean()) {
 		args.set(['build:all:ci'])
 	} else {
 		args.set(['build:all'])
 	}
+}
+
+tasks.register('checkEditorKeyboard', YarnTask) {
+	group = 'verification'
+	description = 'Fails when the generated editor keyboard assets are stale against their sources'
+	dependsOn tasks.named('yarn')
+	args.set(['check:editor-keyboard'])
 }
 
 tasks.register('bomGenerate', YarnTask) {

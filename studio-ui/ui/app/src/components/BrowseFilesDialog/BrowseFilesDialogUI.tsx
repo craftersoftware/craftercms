@@ -363,11 +363,14 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 										<MediaCard
 											viewMode={viewMode}
 											sxs={{
-												root: {
-													cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer',
-													boxShadow: (theme) =>
-														item.path === selectedCard?.path ? `0px 0px 4px 4px ${theme.palette.primary.main}` : 'none'
-												}
+												root: [
+													{
+														cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer'
+													},
+													item.path === selectedCard?.path && {
+														boxShadow: (theme) => `0px 0px 4px 4px ${theme.palette.primary.main}`
+													}
+												]
 											}}
 											key={item.path}
 											item={item}

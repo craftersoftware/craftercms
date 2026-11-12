@@ -13,10 +13,7 @@
 		"composite": true,
 		"jsx": "react-jsx"
 	},
-	"include": [
-		"src",
-		"src/**/*.json"
-	],
+	"include": ["src", "src/**/*.json"],
 	"exclude": [
 		"src/tests",
 		"node_modules",
@@ -25,6 +22,7 @@
 		"src/translations/src",
 		"src/translations/whitelists",
 		"src/**/*.ignore.*",
+		"src/**/*.source.*",
 		"src/**/*.test.ts",
 		"src/main.*.tsx",
 		"src/main.tsx"

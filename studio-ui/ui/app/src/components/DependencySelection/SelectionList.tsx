@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useId, useMemo } from 'react';
 import { ContentItem } from '../../models/Item';
 import { useLocale } from '../../hooks/useLocale';
 import ListItem from '@mui/material/ListItem';
@@ -24,6 +24,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
 import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import ItemStateIcon from '../ItemStateIcon';
 import { getDateScheduled, isEditableAsset } from '../../utils/content';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -35,7 +36,10 @@ import Button from '@mui/material/Button';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 
 import LookupTable from '../../models/LookupTable';
-import ListItemButton from '@mui/material/ListItemButton';
+
+/** Makes the item text a native label for its checkbox, so clicking the text toggles it. */
+const getItemLabelRootProps = (checkboxId: string, disabled: boolean) =>
+	({ htmlFor: checkboxId, sx: disabled ? undefined : { cursor: 'pointer' } }) as never;
 
 export interface SelectionListProps {
 	title: ReactNode;
@@ -49,7 +53,7 @@ export interface SelectionListProps {
 	selectedItems?: LookupTable<boolean>;
 	disabled?: boolean; // Entire Selection List disabled
 	disabledPaths?: LookupTable<true>; // Presence table of disabled paths
-	onItemClicked?(event: React.MouseEvent, path: string): void;
+	onItemClicked?(event: React.MouseEvent | null, path: string): void;
 	onSelectAllClicked?(event: React.ChangeEvent, checked: boolean): void;
 	onEditClick?(event: React.MouseEvent, path: string): void;
 }
@@ -74,6 +78,9 @@ export function SelectionList(props: SelectionListProps) {
 
 	const locale = useLocale();
 	const { formatMessage } = useIntl();
+	const titleId = useId();
+	const selectAllLabelId = useId();
+	const listId = useId();
 	const isAllChecked = useMemo(
 		() => (selectedItems ? !paths?.some((path) => !selectedItems[path]) : null),
 		[paths, selectedItems]
@@ -94,12 +101,20 @@ export function SelectionList(props: SelectionListProps) {
 						indeterminate={isIndeterminate}
 						checked={isAllChecked || isIndeterminate || !onSelectAllClicked}
 						onChange={onSelectAllClicked}
+						slotProps={{
+							input: {
+								'aria-labelledby': `${selectAllLabelId} ${titleId}`
+							}
+						}}
 					/>
 				</ListItemIcon>
 				<ListItemText
 					primary={
 						<>
-							<Typography variant="subtitle1" component="h2">
+							<Box component="span" id={selectAllLabelId} sx={visuallyHidden}>
+								{formatMessage({ defaultMessage: 'Select all' })}
+							</Box>
+							<Typography id={titleId} variant="subtitle1" component="h2">
 								{title}
 							</Typography>
 							{subtitle ? (
@@ -124,8 +139,9 @@ export function SelectionList(props: SelectionListProps) {
 			{banner}
 			{items ? (
 				<List sx={{ paddingTop: 0 }}>
-					{items.map((item) => {
-						const labelId = `checkbox-list-label-${item.path}`;
+					{items.map((item, index) => {
+						const checkboxId = `${listId}-item-${index}`;
+						const itemDisabled = disabled || disabledPaths[item.path];
 						const listItemComponentChildren = (
 							<>
 								{onItemClicked && (
@@ -133,19 +149,17 @@ export function SelectionList(props: SelectionListProps) {
 										<Checkbox
 											color="primary"
 											edge="start"
+											id={checkboxId}
 											checked={!!selectedItems[item.path]}
-											tabIndex={-1}
-											disableRipple
-											slotProps={{
-												input: {
-													'aria-labelledby': item.path
-												}
-											}}
-											disabled={disabled || disabledPaths[item.path]}
+											onChange={() => onItemClicked(null, item.path)}
+											disabled={itemDisabled}
 										/>
 									</ListItemIcon>
 								)}
-								<ListItemText id={labelId}>
+								<ListItemText
+									slots={onItemClicked ? { root: 'label' } : undefined}
+									slotProps={{ root: onItemClicked ? getItemLabelRootProps(checkboxId, itemDisabled) : undefined }}
+								>
 									<Typography
 										variant="subtitle1"
 										sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }}
@@ -243,26 +257,22 @@ export function SelectionList(props: SelectionListProps) {
 							</>
 						);
 
-						if (onItemClicked) {
-							return (
-								<ListItemButton
-									dense
-									key={item.path}
-									disabled={disabled || disabledPaths[item.path]}
-									onClick={(e) => onItemClicked(e, item.path)}
-									children={listItemComponentChildren}
-								/>
-							);
-						} else {
-							return <ListItem dense key={item.path} children={listItemComponentChildren} />;
-						}
+						return (
+							<ListItem
+								dense
+								key={item.path}
+								sx={itemDisabled ? { opacity: 0.38 } : undefined}
+								children={listItemComponentChildren}
+							/>
+						);
 					})}
 				</List>
 			) : (
 				<List>
 					{paths.length ? (
-						paths.map((path: string) => {
-							const labelId = `checkbox-list-label-${path}`;
+						paths.map((path: string, index) => {
+							const checkboxId = `${listId}-path-${index}`;
+							const pathDisabled = disabled || disabledPaths[path];
 							const listItemComponentChildren = (
 								<>
 									{onItemClicked && (
@@ -270,22 +280,18 @@ export function SelectionList(props: SelectionListProps) {
 											<Checkbox
 												color="primary"
 												edge="start"
+												id={checkboxId}
 												checked={Boolean(selectedItems[path])}
-												tabIndex={-1}
-												disableRipple
-												slotProps={{
-													input: {
-														'aria-labelledby': path
-													}
-												}}
-												disabled={disabled || disabledPaths[path]}
+												onChange={() => onItemClicked(null, path)}
+												disabled={pathDisabled}
 											/>
 										</ListItemIcon>
 									)}
 									<ListItemText
-										id={labelId}
+										slots={onItemClicked ? { root: 'label' } : undefined}
 										primary={path}
 										slotProps={{
+											root: onItemClicked ? getItemLabelRootProps(checkboxId, pathDisabled) : undefined,
 											primary: {
 												title: path,
 												sx: { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }
@@ -297,6 +303,7 @@ export function SelectionList(props: SelectionListProps) {
 											<Button
 												color="primary"
 												onClick={(e) => onEditClick(e, path)}
+												aria-label={formatMessage({ defaultMessage: 'Edit {item}' }, { item: path })}
 												size="small"
 												sx={{
 													marginLeft: 'auto',
@@ -311,19 +318,14 @@ export function SelectionList(props: SelectionListProps) {
 								</>
 							);
 
-							if (onItemClicked) {
-								return (
-									<ListItemButton
-										dense
-										key={path}
-										disabled={disabled || disabledPaths[path]}
-										onClick={(e) => onItemClicked(e, path)}
-										children={listItemComponentChildren}
-									/>
-								);
-							} else {
-								return <ListItem key={path} dense children={listItemComponentChildren} />;
-							}
+							return (
+								<ListItem
+									dense
+									key={path}
+									sx={pathDisabled ? { opacity: 0.38 } : undefined}
+									children={listItemComponentChildren}
+								/>
+							);
 						})
 					) : (
 						<Box

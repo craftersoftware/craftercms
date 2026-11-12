@@ -16,7 +16,7 @@
 
 import { createTheme, type Theme, type ThemeOptions } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import palette, { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
+import { getStudioPaletteOptions } from '@craftercms/studio-ui/styles/palette';
 import { getOverlayBoundarySx } from '@craftercms/studio-ui/styles/overlayStroke';
 import { useMemo } from 'react';
 import type { DropMarkerPartialSx, ZoneMarkerPartialSx } from '../react';
@@ -107,7 +107,7 @@ export const styleSxDefaults: Partial<GuestStylesSx> = {
 				bgcolor: (theme) => theme.palette.grey[400],
 				color: (theme) => theme.palette.getContrastText(theme.palette.grey[400])
 			},
-			box: getOverlayBoundarySx(() => palette.gray.medium3),
+			box: getOverlayBoundarySx((theme) => theme.palette.border.control),
 			icon: {
 				color: (theme) => theme.palette.getContrastText(theme.palette.grey[400])
 			}

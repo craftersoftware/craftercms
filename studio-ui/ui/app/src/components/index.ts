@@ -255,6 +255,7 @@ export * from './SiteSearchSortBy';
 export * from './SiteSearchSortOrder';
 export * from './SiteSearchToolbar';
 export * from './SiteStatusIndicator';
+export * from './SkipToMainContent';
 export * from './SiteSwitcherSelect';
 export * from './SiteTools';
 export * from './SiteTools/EmbeddedSiteTools';

@@ -168,6 +168,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const sourceLabel = useSelection<string | undefined>((state) =>
 		sourcePath ? state.content.itemsByPath[sourcePath]?.label : undefined
 	);
+	const editSourceLabel = formatMessage({ defaultMessage: 'Edit {item}' }, { item: sourceLabel ?? sourcePath });
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
@@ -279,7 +280,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						</FormLabel>
 						<FieldStateIndicator {...indicatorProps} announce={false} />
 						{hasHelpText && (
-							<IconButton size="small" onClick={() => setShowHelp(!showHelp)}>
+							<IconButton
+								size="small"
+								onClick={() => setShowHelp(!showHelp)}
+								aria-expanded={showHelp}
+								aria-label={formatMessage({ defaultMessage: 'Help for {fieldName}' }, { fieldName: field.name })}
+							>
 								<HelpOutlineRounded fontSize="small" />
 							</IconButton>
 						)}
@@ -295,7 +301,13 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{menu && (
 							<>
 								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
-								<IconButton size="small" tabIndex={-1} ref={menuButtonRef} onClick={() => setOpenMenu(true)}>
+								<IconButton
+									size="small"
+									tabIndex={-1}
+									ref={menuButtonRef}
+									onClick={() => setOpenMenu(true)}
+									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+								>
 									<MoreVertRounded fontSize="small" />
 								</IconButton>
 								<Menu
@@ -399,8 +411,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 											update: { path: sourcePath }
 										});
 									}}
-									aria-label={formatMessage({ defaultMessage: 'Edit' })}
-									title={formatMessage({ defaultMessage: 'Edit' })}
+									aria-label={editSourceLabel}
+									title={editSourceLabel}
 								>
 									<EditOutlined fontSize="small" />
 								</IconButton>
