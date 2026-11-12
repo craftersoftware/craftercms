@@ -937,7 +937,7 @@ export function updateComponentId(component: Element, id: string): void {
 	// Update the file name even if not a UUID (manually assigned name). Otherwise, it could override
 	// the existing document when duplicating and the UI has no visibility of whether
 	// there could be other duplicates already to create a meaningful name.
-	// Older FE2 in-session embeds may lack file-name; current saves write `{objectId}.xml`.
+	// Embeds saved by older FE2 builds may lack file-name. Current saves keep the stored name
 	if (fileName) fileName.innerHTML = `${id}.xml`;
 	objectId.innerHTML = id;
 	let groupId = component.querySelector(':scope > objectGroupId');
