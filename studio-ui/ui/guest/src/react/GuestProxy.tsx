@@ -388,15 +388,16 @@ export function GuestProxy() {
 					const iceId = iceRegistry.exists({ modelId, fieldId, index });
 					const phyRecord = ElementRegistry.fromICEId(iceId);
 
-					ElementRegistry.deregister(phyRecord.id);
-					// de-register all registered children of the deleted item (if exist)
-					phyRecord.element.querySelectorAll('[data-craftercms-model-id]').forEach((el) => {
-						ElementRegistry.deregister(ElementRegistry.fromElement(el).id);
-					});
-
 					// Immediate removal of the element causes the dragend event not
 					// to fire leaving the state corrupt - in a state of "SORTING".
 					setTimeout(() => {
+						// Deregister and re-index in the same task so the zone keyboard controls (which group registry
+						// changes per animation frame) never see the item gone with its siblings not yet re-indexed.
+						ElementRegistry.deregister(phyRecord.id);
+						// de-register all registered children of the deleted item (if exist)
+						phyRecord.element.querySelectorAll('[data-craftercms-model-id]').forEach((el) => {
+							ElementRegistry.deregister(ElementRegistry.fromElement(el).id);
+						});
 						const daddy: Element = phyRecord.element.parentElement;
 						phyRecord.element.remove();
 						if (daddy.children.length === 0) {
