@@ -25,7 +25,9 @@ import org.craftercms.studio.api.v2.service.audit.ActivityStreamService;
 import org.craftercms.studio.model.rest.dashboard.Activity;
 
 import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Internal implementation of {@link ActivityStreamService}
@@ -52,23 +54,32 @@ public class ActivityStreamServiceInternalImpl implements ActivityStreamService 
 
 	@Override
 	public List<Activity> getActivitiesForUsers(String siteId, List<String> usernames, List<String> actions,
-												ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit)
+			ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit)
 			throws ServiceLayerException, UserNotFoundException {
 		List<Activity> activities = activityStreamDAO
 				.getActivitiesForUsers(getSiteId(siteId), usernames, actions, dateForm, dateTo, offset, limit);
+		Map<Long, Long> actionsPerPackage = new HashMap<>();
 		for (Activity activity : activities) {
-			if (activity.getPublishPackage() != null) {
-				calculateAvailableActions(activity.getPublishPackage());
+			PublishPackage publishPackage = activity.getPublishPackage();
+			if (publishPackage != null) {
+				publishPackage.setAvailableActions(getAvailableActions(actionsPerPackage, publishPackage));
 			}
 		}
 		return activities;
 	}
 
 	/**
-	 * Calculate and set current user available actions for the publish package.
+	 * Get the available actions for the given publish package, caching the result per package id
 	 */
-	private void calculateAvailableActions(final PublishPackage publishPackage) throws ServiceLayerException, UserNotFoundException {
-		publishPackage.setAvailableActions(publishPackageAvailableActionResolver.getPublishPackageAvailableActions(publishPackage));
+	private long getAvailableActions(Map<Long, Long> actionsPerPackage, PublishPackage publishPackage)
+			throws ServiceLayerException, UserNotFoundException {
+		long packageId = publishPackage.getId();
+		if (!actionsPerPackage.containsKey(packageId)) {
+			long availableActions = publishPackageAvailableActionResolver.getPublishPackageAvailableActions(publishPackage);
+			actionsPerPackage.put(packageId, availableActions);
+			return availableActions;
+		}
+		return actionsPerPackage.get(packageId);
 	}
 
 	private long getSiteId(String siteId) {
