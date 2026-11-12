@@ -130,10 +130,10 @@ export function fileNameElementForXml(path: string | null | undefined, embeddedO
  * Builds the content XML for a FormsEngine save the same way {@link useSaveForm} does.
  *
  * Repository saves keep the UI slug on `values` and only put the path basename on the XML copy.
- * Embedded saves mutate `values` in place because parents (e.g. NodeSelector) merge `values`, not
- * the XML/`dom` copy. Pass `storedFileName` from the component's content object; form values are
- * not reliable (stacked embeds drop `file-name`; top-level embeds may seed a path-derived slug).
- * When no stored name exists, falls back to `{objectId}.xml`.
+ * Embedded saves keep the component's stored `<file-name>` (as FE1's auto-filename does) and fall back to
+ * `{objectId}.xml` only when it has none. They mutate `values` in place because parents (e.g. NodeSelector)
+ * merge `values`, not the XML/`dom` copy. For an embed, `values['file-name']` is not the stored element (dropped
+ * at stacked bootstrap, seeded from the parent's path on a root edit), so the caller passes it.
  **/
 export function buildSaveContentXml(
 	values: LookupTable<unknown>,
