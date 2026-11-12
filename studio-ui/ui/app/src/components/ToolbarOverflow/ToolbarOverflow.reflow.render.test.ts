@@ -100,32 +100,36 @@ afterEach(async () => {
 	barWidth = ALL_FIT;
 });
 
-async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT) {
+async function renderBar(align: 'start' | 'end' = 'start', width = ALL_FIT, labels = ['A', 'B', 'C']) {
 	barWidth = width;
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	const theme = createTheme({ ...getFocusRingThemeOptions('light'), palette: { mode: 'light' } });
-	await act(async () => {
-		root.render(
-			React.createElement(
-				ThemeProvider,
-				{ theme },
+	const show = async (nextLabels: string[]) => {
+		await act(async () => {
+			root.render(
 				React.createElement(
-					RawIntlProvider,
-					{ value: intl as never },
+					ThemeProvider,
+					{ theme },
 					React.createElement(
-						ToolbarOverflow,
-						{ align },
-						['A', 'B', 'C'].map((label) =>
-							React.createElement('button', { key: label, type: 'button', 'aria-label': label })
+						RawIntlProvider,
+						{ value: intl as never },
+						React.createElement(
+							ToolbarOverflow,
+							{ align },
+							nextLabels.map((label) =>
+								React.createElement('button', { key: label, type: 'button', 'aria-label': label })
+							)
 						)
 					)
 				)
-			)
-		);
-	});
+			);
+		});
+	};
+	await show(labels);
 	mounted.push({ unmount: () => root.unmount(), host });
+	return { show };
 }
 
 async function resize(width: number) {
@@ -284,5 +288,41 @@ describe('ToolbarOverflow focus when the open menu gives controls back to the ba
 		await resize(TWO_FIT);
 		assert.ok(dialog()?.contains(button('C')));
 		assertFocused('C');
+	});
+});
+
+describe('ToolbarOverflow focus when the closed More button goes away', () => {
+	it('moves focus to the last control before it when everything fits again', async () => {
+		await renderBar('start', TWO_FIT);
+		await act(async () => {});
+		await act(async () => button(MORE).focus());
+		assertFocused(MORE);
+		await resize(ALL_FIT);
+		assert.equal(document.querySelector(`button[aria-label="${MORE}"]`), null);
+		assertFocused('B');
+	});
+
+	it('moves focus to the control next to it in an end-aligned bar', async () => {
+		await renderBar('end', TWO_FIT);
+		await act(async () => {});
+		await act(async () => button(MORE).focus());
+		await resize(ALL_FIT);
+		assertFocused('B');
+	});
+
+	it('moves focus to the first control when nothing was left in the bar', async () => {
+		await renderBar('start', NONE_FIT);
+		await act(async () => {});
+		await act(async () => button(MORE).focus());
+		await resize(ALL_FIT);
+		assertFocused('A');
+	});
+
+	it('keeps focus on the More button while it stays', async () => {
+		await renderBar('start', NONE_FIT);
+		await act(async () => {});
+		await act(async () => button(MORE).focus());
+		await resize(TWO_FIT);
+		assertFocused(MORE);
 	});
 });

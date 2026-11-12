@@ -187,6 +187,16 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 				}
 			}
 			if (resolved >= itemCount) {
+				if (resolved !== current && document.activeElement === moreRef.current) {
+					// The More button is about to unmount with focus on it. Hand focus to the bar control that sat
+					// next to it: the last control before it, or the first one after it when the bar was empty.
+					pendingFocusRef.current =
+						current === 0
+							? { item: 0, control: 0 }
+							: align === 'end'
+								? { item: itemCount - current, control: 0 }
+								: { item: current - 1, control: Infinity };
+				}
 				setMenuAnchor(null);
 			}
 		};
@@ -216,7 +226,7 @@ export function ToolbarOverflow(props: ToolbarOverflowProps) {
 			pendingFocusRef.current = null;
 			const wrapper = itemRefs.current[pendingFocus.item];
 			const controls = wrapper?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-			(controls?.[pendingFocus.control] ?? controls?.[0])?.focus();
+			(controls?.[Math.min(pendingFocus.control, (controls?.length ?? 1) - 1)] ?? controls?.[0])?.focus();
 		}
 	}, [itemCount, visibleCount]);
 
