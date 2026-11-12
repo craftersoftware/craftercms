@@ -240,7 +240,6 @@ describe('buildSaveContentXml (useSaveForm file-name)', () => {
 		assert.equal(values[XmlKeys.fileName], `${objectId}.xml`);
 	});
 });
-});
 
 describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blueprints not found' }, () => {
 	for (const blueprint of blueprints) {
@@ -257,8 +256,9 @@ describe('no-edit save of blueprint content', { skip: !blueprints.length && 'blu
 			const xml = readFileSync(file, 'utf8');
 			const doc = fromString(xml);
 			if (!contentTypesById[doc.querySelector(':scope > content-type')?.textContent.trim()]) continue;
-			const itemPath = `/site${file.split('/site')[1]}`;
-			it(`${blueprint}${file.split('/site')[1]} keeps preserved elements, item attributes and text`, () => {
+			const repoPath = file.replaceAll('\\', '/').split('/site')[1];
+			const itemPath = `/site${repoPath}`;
+			it(`${blueprint}${repoPath} keeps preserved elements, item attributes and text`, () => {
 				const before = flatten(doc.documentElement);
 				const savedDoc = saveWithoutChanges(xml, contentTypesById, itemPath);
 				const after = flatten(savedDoc.documentElement);
