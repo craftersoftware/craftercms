@@ -329,6 +329,7 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 												onClick={!multiSelect ? () => onCardSelected(item) : null}
 												selected={multiSelect ? [...selectedArray] : []}
 												onSelect={multiSelect ? () => onCardSelected(item) : null}
+												isSelected={multiSelect ? undefined : item.path === selectedCard?.path}
 												onPreview={null}
 												sxs={{
 													root: {

@@ -30,6 +30,8 @@ export interface WidgetProps extends WidgetDescriptor {
 	overrideProps?: object;
 	/** Props applied to all widgets. Widget props supersede defaultProps. */
 	defaultProps?: object;
+	/** Heading element for the not-found and plugin-failed fallbacks. Defaults to the EmptyState/ErrorState h3. */
+	fallbackTitleComponent?: ElementType;
 }
 
 const messages = defineMessages({
@@ -54,7 +56,7 @@ const messages = defineMessages({
 const cache: Record<string, ComponentType<WidgetProps>> = {};
 
 const Widget = memo<WidgetProps>(function (props) {
-	const { id, plugin, configuration } = props;
+	const { id, plugin, configuration, fallbackTitleComponent } = props;
 	const record = components.get(id);
 	const { formatMessage } = useIntl();
 	if (record) {
@@ -74,6 +76,7 @@ const Widget = memo<WidgetProps>(function (props) {
 			<EmptyState
 				title={formatMessage(messages.componentNotFoundTitle, { id })}
 				subtitle={formatMessage(messages.componentNotFoundSubtitle)}
+				titleComponent={fallbackTitleComponent}
 				sxs={{ image: { width: 100 } }}
 			/>
 		);
@@ -94,6 +97,7 @@ const Widget = memo<WidgetProps>(function (props) {
 									<EmptyState
 										title={formatMessage(messages.componentNotFoundTitle, { id })}
 										subtitle={formatMessage(messages.componentNotFoundSubtitle)}
+										titleComponent={props.fallbackTitleComponent}
 										sxs={{ image: { width: 100 } }}
 									/>
 								);
@@ -103,11 +107,12 @@ const Widget = memo<WidgetProps>(function (props) {
 					(error) => {
 						console.error(error);
 						return {
-							default: function ({ id, plugin }) {
+							default: function ({ id, plugin, fallbackTitleComponent }: WidgetProps) {
 								return (
 									<ErrorState
 										sxs={{ image: { width: 100 } }}
 										title={formatMessage(messages.pluginLoadFailedMessageTitle)}
+										titleComponent={fallbackTitleComponent}
 										message={formatMessage(messages.pluginLoadFailedMessageBody, {
 											id,
 											info: Object.entries(plugin)

@@ -54,9 +54,8 @@ export const overlayStateOffset = overlayStrokeWidth * 2;
 export const overlayOutlineOffset = overlayStateOffset + overlayStateWidth;
 
 /**
- * The least the two helpers need from the theme. Structural on purpose: the guest build and the app build
- * resolve two copies of `@mui/material` types, and `Pick<Theme, 'palette'>` from one is not assignable to
- * the other.
+ * The least the two helpers need from the theme. Structural on purpose, so they accept any theme with
+ * `palette.common` and do not depend on which `@mui/material` Theme type the caller was compiled against.
  */
 export interface OverlayTheme {
 	palette: { common: { white: string; black: string } };

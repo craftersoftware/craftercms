@@ -21,7 +21,7 @@
 	<link rel="shortcut icon" href="/studio/static-assets/img/favicon.ico">
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<meta name="theme-color" content="#000000"/>
-	<title>${contentModel['internal-name']} - ${contentModel['common-title']!''}</title>
+	<title>${contentModel['internal-name']} - ${contentModel['common-title']!'CrafterCMS'}</title>
 </head>
 <body>
 <div id="root"></div>
@@ -30,22 +30,29 @@
 	document.addEventListener("CrafterCMS.CodebaseBridgeReady", () => {
 		const { createElement, Fragment } = craftercms.libs.React;
 		const { Typography, Box } = craftercms.libs.MaterialUI;
-		const { ViewToolbar, LauncherOpenerButton, SiteDashboard } = CrafterCMSNext.components;
+		const { ViewToolbar, LauncherOpenerButton, SiteDashboard, SkipToMainContent, StudioMainContent } =
+			CrafterCMSNext.components;
 		const CrafterCMSIcon = craftercms.icons.CrafterCMSIcon;
 		function Root() {
 			return createElement(
 				Fragment,
 				{},
+				createElement(SkipToMainContent),
 				createElement(
-					ViewToolbar,
-					{},
-					createElement(Box, { sx: { display: 'flex', alignItems: 'center' } },
-						createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
-						createElement(Typography, { variant: 'h5' }, 'Site Dashboard')
+					StudioMainContent,
+					// The dashboard sizes itself from its parent, so the landmark owns the page height.
+					{ sx: { height: '100%' } },
+					createElement(
+						ViewToolbar,
+						{},
+						createElement(Box, { sx: { display: 'flex', alignItems: 'center' } },
+							createElement(CrafterCMSIcon, { style: { marginRight: '5px' } }, 'Site Dashboard'),
+							createElement(Typography, { variant: 'h5', component: 'span' }, 'Site Dashboard')
+						),
+						createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
 					),
-					createElement(LauncherOpenerButton, { siteRailPosition: 'left', icon: 'apps' })
-				),
-				createElement(SiteDashboard)
+					createElement(SiteDashboard)
+				)
 			);
 		}
 		CrafterCMSNext.render('#root', Root, {}, false);

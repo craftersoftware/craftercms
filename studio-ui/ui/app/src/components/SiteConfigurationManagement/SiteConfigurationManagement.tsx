@@ -65,6 +65,7 @@ import { useMount } from '../../hooks/useMount';
 import { ConfirmDialogProps } from '../ConfirmDialog';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import { findPendingEncryption } from './utils';
+import { getConfigFileHeadings, selectConfigFilePromptComponent } from './headings';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { MAX_CONFIG_SIZE, UNDEFINED } from '../../utils/constants';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
@@ -73,11 +74,14 @@ import { MaxLengthCircularProgress } from '../MaxLengthCircularProgress';
 import useUnmount from '../../hooks/useUnmount';
 import useActiveUser from '../../hooks/useActiveUser';
 import { ProjectToolsRoutes } from '../../env/routes';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import { SiteToolsContext } from '../SiteTools/siteToolsContext';
 import { nanoid } from 'nanoid';
 import { popDialog } from '../../state/actions/dialogStack';
 import { pushConfirmDialog, pushErrorDialog } from '../../utils/system';
+
+const SKELETON_ROW_COUNT = 15;
 
 interface SiteConfigurationManagementProps {
 	embedded?: boolean;
@@ -326,6 +330,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 			onClose: onConfirmDialogClose,
 			onClosed: onConfirmDialogClosed,
 			imageUrl: informationGraphicUrl,
+			title: formatMessage(translations.encryptMarked),
+			sxs: { title: { typography: 'subtitle1', textAlign: 'left', paddingBottom: '1em' } },
 			children: (
 				<Box
 					component="section"
@@ -336,9 +342,6 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						}
 					}}
 				>
-					<Typography className="text-margin" variant="subtitle1">
-						{formatMessage(translations.encryptMarked)} asd
-					</Typography>
 					<Typography className="text-margin" variant="body2">
 						{formatMessage(translations.encryptHintPt1)}
 					</Typography>
@@ -582,6 +585,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const tags = { lt: '<', gt: '>' };
 
 	const tagsAndCurls = Object.assign({ lc: '{', rc: '}' }, tags);
+	const hideConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.hideConfigurationFiles',
+		defaultMessage: 'Hide configuration files'
+	});
+	const showConfigurationFilesLabel = formatMessage({
+		id: 'siteConfigurationManagement.showConfigurationFiles',
+		defaultMessage: 'Show configuration files'
+	});
 
 	const onAceInit = (editor: AceAjax.Editor) => {
 		editor.commands.addCommand({
@@ -627,6 +638,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						height: '100%'
 					}}
 					component="nav"
+					aria-label={formatMessage({
+						id: 'siteConfigurationManagement.configurationFiles',
+						defaultMessage: 'Configuration files'
+					})}
 					dense
 					subheader={
 						<ListSubheader
@@ -743,10 +758,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 										/>
 									</ListItemButton>
 								))
-						: Array(15)
+						: Array(SKELETON_ROW_COUNT)
 								.fill(null)
 								.map((x, i) => (
-									<ListItemButton key={i} dense divider={i < Array.length - 1}>
+									<ListItem component="div" aria-hidden="true" key={i} dense divider={i < SKELETON_ROW_COUNT - 1}>
 										<ListItemText
 											primary={<Skeleton height={15} width="80%" />}
 											secondary={<Skeleton height={15} width="60%" />}
@@ -756,7 +771,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 												}
 											}}
 										/>
-									</ListItemButton>
+									</ListItem>
 								))}
 				</List>
 			</ResizeableDrawer>
@@ -782,8 +797,13 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								}}
 								showHamburgerMenuButton={false}
 								showAppsButton={false}
+								{...getConfigFileHeadings(embedded)}
 								startContent={
-									<IconButton onClick={onToggleDrawer} size="large">
+									<IconButton
+										onClick={onToggleDrawer}
+										size="large"
+										aria-label={openDrawer ? hideConfigurationFilesLabel : showConfigurationFilesLabel}
+									>
 										{openDrawer ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
 									</IconButton>
 								}
@@ -795,7 +815,14 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 											<SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
 												{formatMessage(translations.encryptMarked)}
 											</SecondaryButton>
-											<Button size="small" onClick={onEncryptHelpClick}>
+											<Button
+												size="small"
+												onClick={onEncryptHelpClick}
+												aria-label={formatMessage({
+													id: 'siteConfigurationManagement.encryptionHelp',
+													defaultMessage: 'Encryption help'
+												})}
+											>
 												<HelpOutlineRoundedIcon />
 											</Button>
 										</ButtonGroup>
@@ -923,6 +950,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="Please choose a config file from the left."
 							/>
 						}
+						titleComponent={selectConfigFilePromptComponent}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				</Box>
