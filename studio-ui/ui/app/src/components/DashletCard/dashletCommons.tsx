@@ -264,29 +264,18 @@ export function usePackageContextMenu() {
 	const [isFetchingPackage, setIsFetchingPackage] = useState<boolean>(false);
 
 	const handleContextMenuClick = useCallback(
-		(e: React.MouseEvent<HTMLButtonElement>, pkg: PublishPackage) => {
-			// https://github.com/craftersoftware/craftercms/issues/8552 - Because of a limitation in the back end, the packages at
-			// this point may not have the full AA. So we need to fetch the package to generate the proper set of options.
+		(e: React.MouseEvent<HTMLButtonElement>, publishPackage: PublishPackage) => {
 			const currentTarget = e.currentTarget;
 			subscriptionRef.current?.unsubscribe();
 			setContextMenu({ el: currentTarget });
-			setIsFetchingPackage(true);
-			subscriptionRef.current = fetchPackage(siteId, pkg.id).subscribe({
-				next(publishPackage) {
-					setIsFetchingPackage(false);
-					const contextMenuOptions = generatePackageOptions([publishPackage], {
-						includeOnly: ['view', 'resubmit']
-					}).map((option) => ({
-						id: option.id,
-						label: formatMessage(option.label as MessageDescriptor)
-					}));
-					setContextMenu({ package: publishPackage, options: contextMenuOptions });
-				},
-				error(error) {
-					setIsFetchingPackage(false);
-					dispatch(pushErrorDialog({ props: { error: extractErrorPayload(error) } }));
-				}
-			});
+			setIsFetchingPackage(false);
+			const contextMenuOptions = generatePackageOptions([publishPackage], {
+				includeOnly: ['view', 'resubmit']
+			}).map((option) => ({
+				id: option.id,
+				label: formatMessage(option.label as MessageDescriptor)
+			}));
+			setContextMenu({ package: publishPackage, options: contextMenuOptions });
 		},
 		[formatMessage, setContextMenu, siteId, dispatch]
 	);
