@@ -154,6 +154,18 @@ describe('EnhancedDialog accessible name', () => {
 		assert.equal(dialog().hasAttribute('aria-labelledby'), false);
 	});
 
+	it('has no dangling aria-labelledby when the paper slot is a function', async () => {
+		await render({ slotProps: { paper: () => ({ elevation: 2 }) } });
+		assert.equal(dialog().hasAttribute('aria-labelledby'), false);
+	});
+
+	it('names a titled dialog by the aria-label a function paper slot returns', async () => {
+		await render({ title: 'Publish', slotProps: { paper: () => ({ 'aria-label': 'L' }) } });
+		const element = dialog();
+		assert.equal(element.hasAttribute('aria-labelledby'), false);
+		assert.equal(nameOf(element), 'L');
+	});
+
 	it('names a dialog that omits its header by the visible heading the caller points at', async () => {
 		function OmitHeaderDialog() {
 			const titleId = React.useId();
