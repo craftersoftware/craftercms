@@ -47,13 +47,13 @@ The `installation` block performs declarative XML auto-wiring. Important fields:
 - `elementXpath`: identity/removal test for install/uninstall
 - `element`: XML subtree to add
 
-Historically:
+Wiring targets:
 
-- `form-control` adds a `<control>` to `administration/site-config-tools.xml`
-- `form-datasource` adds a `<datasource>` there
-- modern UI widgets add `<widget>` declarations to `ui.xml`
+- `form-control` appends its element under `//widget[@id='craftercms.components.ContentTypeManagement']/configuration/controls` in `ui.xml` (`control.xslt`)
+- `form-datasource` appends its element under `.../configuration/dataSources` in `ui.xml` (`datasource.xslt`)
+- `preview-app` adds `<widget>` declarations to `ui.xml` at the installation `parentXpath` (`ui.xslt`)
 
-This installer contract must evolve with TB's move from `site-config-tools.xml` to `ui.xml`; otherwise existing plugin packages will install successfully but remain invisible to new TB.
+`form-control` and `form-datasource` packages omit `parentXpath` (the model default is the string `"null"`). Their transforms therefore choose the catalog parent themselves. The inserted subtree is still the package `element`. Type Builder lists a control or data source from that entry when it has an `id` and a `<descriptor>`, and it reads data-source entries as `dataSource`.
 
 ### 2.2 General modern Studio UI plugin
 
@@ -422,7 +422,7 @@ TB2 reads control entries/descriptors from the `ContentTypeManagement` widget in
 
 Remaining gaps:
 
-- existing package installers may still wire `form-control` into legacy `site-config-tools.xml`;
+- package installers write `form-control` and `form-datasource` entries into the `ui.xml` catalog; an entry still needs an `id` and a `<descriptor>` before Type Builder offers it, and a legacy `<datasource>` element name is not `dataSource`;
 - descriptor merge/precedence remains inconsistent across some edit/serialize helpers;
 - a general `PluginDescriptor.widgets` control is not connected to FE's control resolver.
 
@@ -483,7 +483,7 @@ Remote S3/WebDAV modules that lack platform services throw visibly via `unsuppor
 
 ## 7. Design requirements derived from the plugin ecosystem
 
-1. **Installation and runtime must agree.** Update plugin auto-wiring targets when TB catalog configuration moves from `site-config-tools.xml` to `ui.xml`, with upgrade compatibility.
+1. **Installation and runtime must agree.** `form-control` and `form-datasource` auto-wiring writes into the `ui.xml` Type Builder catalog. Entries already stored in `site-config-tools.xml` are not moved by installation.
 2. **Keep package, asset, runtime, and type identities explicit.** Persist a normalized locator rather than relying on naming coincidence.
 3. **Use one modern plugin format.** Every authoring extension (widgets, libs, FE controls, FE data sources) is a `PluginDescriptor` bundle loaded through `importPlugin` / `registerPlugin`. Do not invent a parallel “DS module file” or “control component file” packaging model; contributions are fields on the descriptor (see §9).
 4. **Preserve Studio host externals.** Publish the supported host API surface and avoid bundling duplicate React/MUI/Redux.
@@ -493,7 +493,7 @@ Remote S3/WebDAV modules that lack platform services throw visibly via `unsuppor
 8. **Version contracts.** See [§10](#10-plugin-api-versioning). Each FE contract version is a single integer, separate from the package's `crafterCmsVersions` range.
 9. **Failure isolation and cache invalidation.** Plugins need load/runtime error boundaries and a development-time way to refresh cached modules.
 10. **Security.** Plugin code executes with Studio privileges; installation permissions, asset origin, CSP, auth, and trust boundaries are architectural concerns.
-11. **Migration.** Existing FE1 control/DS packages and `site-config-tools.xml` auto-wiring need an explicit compatibility or conversion story.
+11. **Migration.** FE1 control/DS packages whose installation element has no catalog `id` or `<descriptor>`, and sites that already have those entries only in `site-config-tools.xml`, still need a conversion story.
 12. **Support lib-style plugins.** Bundles that contribute `utils` / shared runtime APIs must load and publish without requiring a rendered widget (see §9).
 
 ## 8. Key source paths
