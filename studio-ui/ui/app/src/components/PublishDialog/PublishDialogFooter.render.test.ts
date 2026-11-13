@@ -91,4 +91,16 @@ describe('publish footer reason', () => {
 		assert.ok(group?.parentElement === footer, 'the wrapper is a single item of the footer');
 		assert.ok(!group?.contains(host.querySelector('#publish-reason')), 'the reason is its own item');
 	});
+
+	it('keeps Cancel and Publish in one group apart from the start-aligned reason', async () => {
+		const host = await render('Enter a package title to publish.');
+		const reason = host.querySelector('#publish-reason');
+		const buttons = [...host.querySelectorAll('button')];
+		const cancel = buttons.find((button) => button.textContent?.trim() === 'Cancel');
+		const submit = buttons.find((button) => button.textContent?.trim() === 'Publish');
+		assert.ok(reason && cancel && submit);
+		assert.equal(cancel.parentElement, submit.parentElement);
+		assert.notEqual(cancel.parentElement, reason.parentElement);
+		assert.equal(getComputedStyle(reason).textAlign, 'start');
+	});
 });
