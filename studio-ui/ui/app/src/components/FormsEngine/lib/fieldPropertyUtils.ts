@@ -15,6 +15,7 @@
  */
 
 import type { ContentTypeField, ContentTypeFieldValidation } from '../../../models/ContentType';
+import { readNumericLimit } from '../../../utils/countLimits';
 
 /**
  * Retrieves the value of a specific validation property from a field's validations.
@@ -30,6 +31,18 @@ export function getValidationValue(
 	defaultValue: ContentTypeFieldValidation['value'] | undefined = undefined
 ): ContentTypeFieldValidation['value'] {
 	return validations?.[property]?.value ?? defaultValue;
+}
+
+/**
+ * Positive integer limit from a field validation (e.g. `maxLength`), or `undefined` when
+ * missing, zero, blank, or non-numeric. Invalid values are treated as no limit so consumers
+ * never compare lengths against a string (e.g. hand-edited `maxlength: abc`).
+ */
+export function getNumericValidationValue(
+	validations: ContentTypeField['validations'],
+	property: string
+): number | undefined {
+	return readNumericLimit(validations?.[property]?.value);
 }
 
 /**

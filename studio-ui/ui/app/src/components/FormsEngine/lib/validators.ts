@@ -26,6 +26,7 @@ import { checkPathExistence } from '../../../services/content';
 import {
 	computePathFromFileName,
 	getBasePath,
+	getNumericValidationValue,
 	getPropertyValue,
 	getValidationValue,
 	processAdditionalFieldMacro,
@@ -607,7 +608,7 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 	}
 	if (blank) return { valid: true };
 
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const normalizedName = applyContentNameRules(currentValue);
 	if (nnou(maxLength) && normalizedName.length > maxLength) {
 		return {
@@ -738,7 +739,7 @@ export function inputValidator(
 		return { valid: true };
 	}
 	const pattern = field.validations.pattern?.value as string;
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	// If there's a pattern and it doesn't match, it's invalid.
 	if (pattern && !String(currentValue).match(pattern)) {
 		messages.push([
@@ -925,7 +926,7 @@ function rteValidator(currentValue: string, ctx: ValidatorContext): ValidatorRes
 	if (nou(field)) return { valid: true };
 	const messages: FieldValidityMessage[] = [];
 	const isRequired = isFieldRequired(field);
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const trimmedContent = measureRteValue(currentValue); // Get only the text and remove white space
 	const { isValid, requiredFailed, maxLengthExceeded } = evaluateRteConstraints(trimmedContent, isRequired, maxLength);
 

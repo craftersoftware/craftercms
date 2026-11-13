@@ -1615,7 +1615,7 @@ export function prepareEmbeddedItemForm(props: {
 	};
 }
 
-export { getPropertyValue, getValidationValue } from './fieldPropertyUtils';
+export { getPropertyValue, getValidationValue, getNumericValidationValue } from './fieldPropertyUtils';
 
 /**
  * Determines if a field is read-only based on the form's read-only state or the field's properties.

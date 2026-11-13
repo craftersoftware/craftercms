@@ -31,7 +31,7 @@ import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { nnou } from '../../../utils/object';
-import { getBasePath, getFileNameValueFromPath, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { getBasePath, getFileNameValueFromPath, getNumericValidationValue, isFieldReadOnly } from '../lib/formUtils';
 import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
@@ -56,7 +56,7 @@ export function FileName(props: ControlProps<string>) {
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId), isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {

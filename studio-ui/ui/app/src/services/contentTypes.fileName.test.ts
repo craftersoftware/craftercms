@@ -54,4 +54,48 @@ describe('file-name maxlength mapping', () => {
 		assert.equal(field.validations.maxLength?.value, 50);
 		assert.equal(field.validations.maxLength?.level, 'required');
 	});
+
+	// Hand-edited maxlength that cannot be used as a positive integer: warn once at parse, leave no usable limit.
+	it('warns once for an unusable maxlength', () => {
+		const warnings: string[] = [];
+		const original = console.warn;
+		console.warn = (message?: unknown) => {
+			warnings.push(String(message));
+		};
+		try {
+			const parsed = parseLegacyFormDefinition({
+				'content-type': '/page/article',
+				title: 'Article',
+				description: '',
+				objectType: 'page',
+				sections: {
+					section: {
+						title: 'Main',
+						description: '',
+						defaultOpen: 'true',
+						fields: {
+							field: {
+								id: 'title_s',
+								title: 'Title',
+								description: '',
+								type: 'input',
+								properties: {
+									property: { name: 'maxlength', value: 'abc', type: 'int' }
+								}
+							}
+						}
+					}
+				}
+			} as never);
+
+			assert.equal(parsed.fields['title_s'].validations.maxLength?.value, 'abc');
+			assert.equal(warnings.length, 1);
+			assert.equal(
+				warnings[0],
+				'[parseLegacyFormDef] Unusable maxlength "abc" on content type "/page/article" field "title_s". No length limit is applied.'
+			);
+		} finally {
+			console.warn = original;
+		}
+	});
 });

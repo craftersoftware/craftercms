@@ -18,7 +18,7 @@ import OutlinedInput, { type OutlinedInputProps } from '@mui/material/OutlinedIn
 import React, { useId } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
 import { ControlProps } from '../types';
-import { getPropertyValue, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
+import { getNumericValidationValue, getPropertyValue, isFieldReadOnly } from '../lib/formUtils';
 import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 export type TextareaProps = ControlProps<string>;
@@ -30,7 +30,7 @@ export function Textarea(props: TextareaProps) {
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId));
 
 	// region field properties/validations
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 	const rows: number = getPropertyValue(field.properties, 'rows', 1) as number;
 	const allowResize: boolean = getPropertyValue(field.properties, 'allowResize') as boolean;
