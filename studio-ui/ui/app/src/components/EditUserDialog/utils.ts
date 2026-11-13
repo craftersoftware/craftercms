@@ -30,9 +30,12 @@ export interface EditUserDialogProps extends EditUserBaseProps, EnhancedDialogPr
 }
 
 export interface EditUserDialogContainerProps
-	extends EditUserBaseProps, Pick<EditUserDialogProps, 'onClose' | 'isSubmitting' | 'onUserEdited' | 'open'> {}
+	extends EditUserBaseProps, Pick<EditUserDialogProps, 'onClose' | 'isSubmitting' | 'onUserEdited' | 'open'> {
+	titleId?: string;
+}
 
 export interface EditUserDialogUIProps {
+	titleId?: string;
 	user: User;
 	inProgress: boolean;
 	submitOk: boolean;

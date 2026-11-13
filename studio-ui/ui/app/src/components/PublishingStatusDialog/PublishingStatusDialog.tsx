@@ -15,15 +15,17 @@
  */
 
 import * as React from 'react';
+import { useId } from 'react';
 import PublishingStatusDialogContainer from './PublishingStatusDialogContainer';
 import { PublishingStatusDialogProps } from './utils';
 import EnhancedDialog from '../EnhancedDialog';
 
 function PublishingStatusDialog(props: PublishingStatusDialogProps) {
 	const { published, enabled, currentTask, onRefresh, onStartStop, isFetching, ...rest } = props;
+	const titleId = useId();
 	return (
-		<EnhancedDialog omitHeader={true} maxWidth="xs" {...rest}>
-			<PublishingStatusDialogContainer {...props} />
+		<EnhancedDialog omitHeader={true} aria-labelledby={titleId} maxWidth="xs" {...rest}>
+			<PublishingStatusDialogContainer {...props} titleId={titleId} />
 		</EnhancedDialog>
 	);
 }

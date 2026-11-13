@@ -47,7 +47,7 @@ const translations = defineMessages({
 });
 
 export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
-	const { open, onClose, onUserEdited, passwordRequirementsMinComplexity, isSubmitting } = props;
+	const { open, onClose, onUserEdited, passwordRequirementsMinComplexity, isSubmitting, titleId } = props;
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const [user, setUser] = useSpreadState<User>({
@@ -194,6 +194,7 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
 
 	return (
 		<EditUserDialogUI
+			titleId={titleId}
 			user={user}
 			openResetPassword={openResetPassword}
 			inProgress={isSubmitting}

@@ -68,7 +68,7 @@ const translations = defineMessages({
 });
 
 export function EditGroupDialogContainer(props: EditGroupDialogContainerProps) {
-	const { onClose, onGroupSaved, onGroupDeleted, isSubmitting } = props;
+	const { onClose, onGroupSaved, onGroupDeleted, isSubmitting, titleId } = props;
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const [group, setGroup] = useSpreadState(props.group ?? { id: null, name: '', desc: '', externallyManaged: false });
@@ -322,7 +322,7 @@ export function EditGroupDialogContainer(props: EditGroupDialogContainerProps) {
 	return (
 		<EditGroupDialogUI
 			title={
-				<Typography variant="h6" component="h2">
+				<Typography id={titleId} variant="h6" component="h2">
 					{isEdit ? (
 						group.externallyManaged ? (
 							<FormattedMessage

@@ -212,6 +212,8 @@ export interface BaseProps extends Partial<UpdateModeProps & RepeatModeProps & C
 	readonly?: boolean;
 	/** Whether the form is rendered in a dialog. Causes various layout adjustments. **/
 	isDialog?: boolean;
+	/** Id for the root form's visible title, so the dialog that hosts the form can be named by it. */
+	titleId?: string;
 	onClose?: EnhancedDialogProps['onClose'];
 	/** Closes a stacked form after its own save. Does not restore selected-fields edits. */
 	onCommittedClose?(): void;
@@ -990,6 +992,8 @@ function FormOrchestrator(props: FormsEngineProps) {
 		onClose: onCloseProp
 	} = props;
 	// endregion
+	// Stacked forms are drawn over the root form, so only the root form's title can name the dialog.
+	const titleId = stackIndex === 0 ? props.titleId : undefined;
 
 	const theme = useTheme();
 	const { formatMessage } = useIntl();
@@ -1793,11 +1797,11 @@ function FormOrchestrator(props: FormsEngineProps) {
 						</Box>
 					</Box>
 					{isRepeatMode ? (
-						<RepeatModeHeader repeat={repeat} />
+						<RepeatModeHeader repeat={repeat} titleId={titleId} />
 					) : isCreateMode ? (
-						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} />
+						<CreateModeHeader path={Boolean(create?.path) ? pathInSite : undefined} titleId={titleId} />
 					) : (
-						<EditModeHeader isEmbedded={isEmbedded} />
+						<EditModeHeader isEmbedded={isEmbedded} titleId={titleId} />
 					)}
 				</Box>
 			}

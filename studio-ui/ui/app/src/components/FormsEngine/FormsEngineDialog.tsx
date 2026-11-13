@@ -15,7 +15,7 @@
  */
 
 import EnhancedDialog, { EnhancedDialogProps } from '../EnhancedDialog';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import FormsEngine, { FormsEngineProps } from './FormsEngine';
 import { dialogClasses } from '@mui/material/Dialog';
 import { FormsEngineDialogContext } from './lib/formsEngineContext';
@@ -26,6 +26,7 @@ export interface FormsEngineDialogProps extends EnhancedDialogProps {
 
 export function FormsEngineDialog(props: FormsEngineDialogProps) {
 	const { formProps, ...rest } = props;
+	const titleId = useId();
 
 	const [disableEnforceFocus, setDisableEnforceFocus] = useState(false);
 	const stableFormsEngineDialogContextRef = useRef(undefined);
@@ -47,6 +48,7 @@ export function FormsEngineDialog(props: FormsEngineDialogProps) {
 					height: '100vh'
 				}
 			}}
+			aria-labelledby={titleId}
 			{...rest}
 			omitHeader
 			maxWidth="xl"
@@ -60,6 +62,7 @@ export function FormsEngineDialog(props: FormsEngineDialogProps) {
 					onFullScreen={props.onFullScreen}
 					onCancelFullScreen={props.onCancelFullScreen}
 					{...formProps}
+					titleId={titleId}
 					isDialog
 				/>
 			</FormsEngineDialogContext.Provider>

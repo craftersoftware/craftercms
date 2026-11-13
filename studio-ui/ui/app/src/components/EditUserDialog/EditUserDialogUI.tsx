@@ -71,6 +71,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 	const { formatMessage } = useIntl();
 	const managedInStudio = !props.user.externallyManaged;
 	const {
+		titleId,
 		user,
 		inProgress,
 		submitOk,
@@ -96,7 +97,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 					{user.lastName?.charAt(0) ?? ''}
 				</Avatar>
 				<Box component="section" sx={{ maxWidth: '70%' }}>
-					<Typography variant="h6" component="h2">
+					<Typography id={titleId} variant="h6" component="h2">
 						{user.firstName} {user.lastName}
 					</Typography>
 					<Typography variant="subtitle1" noWrap title={user.username}>

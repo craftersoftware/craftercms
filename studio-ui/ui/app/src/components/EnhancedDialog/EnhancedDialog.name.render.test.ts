@@ -153,4 +153,23 @@ describe('EnhancedDialog accessible name', () => {
 		await render({ title: 'Publish', omitHeader: true });
 		assert.equal(dialog().hasAttribute('aria-labelledby'), false);
 	});
+
+	it('names a dialog that omits its header by the visible heading the caller points at', async () => {
+		function OmitHeaderDialog() {
+			const titleId = React.useId();
+			return React.createElement(
+				EnhancedDialog,
+				{ open: true, omitHeader: true, 'aria-labelledby': titleId },
+				React.createElement('h2', { id: titleId }, 'Drawn by the dialog')
+			);
+		}
+		const host = document.createElement('div');
+		document.body.appendChild(host);
+		const root = createRoot(host);
+		await act(async () => {
+			root.render(React.createElement(RawIntlProvider, { value: intl }, React.createElement(OmitHeaderDialog)));
+		});
+		mounted.push({ unmount: () => root.unmount(), host });
+		assert.equal(nameOf(dialog()), 'Drawn by the dialog');
+	});
 });

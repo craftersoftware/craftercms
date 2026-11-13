@@ -63,6 +63,7 @@ import { fetchContentItem } from '../../state/actions/content';
 
 export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps) {
 	const {
+		titleId,
 		path,
 		onMinimize,
 		onClose,
@@ -306,6 +307,7 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 	return (
 		<>
 			<DialogHeader
+				titleId={titleId}
 				title={item ? item.label : isNew ? fileName : <Skeleton width="120px" />}
 				subtitle={
 					affectedPackages?.length ? (

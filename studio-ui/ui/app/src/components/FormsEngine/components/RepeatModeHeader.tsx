@@ -22,11 +22,11 @@ import { FormattedMessage } from 'react-intl';
 import { FormsEngineProps } from '../FormsEngine';
 import { formHeaderTitleMinHeight } from './formHeaderMetrics';
 
-export function RepeatModeHeader({ repeat }: { repeat: FormsEngineProps['repeat'] }) {
+export function RepeatModeHeader({ repeat, titleId }: { repeat: FormsEngineProps['repeat']; titleId?: string }) {
 	const { contentType } = useContext(ItemMetaContext);
 	return (
 		<Container sx={{ py: 1 }}>
-			<Typography variant="h6" component="h3" sx={{ minHeight: formHeaderTitleMinHeight }}>
+			<Typography id={titleId} variant="h6" component="h3" sx={{ minHeight: formHeaderTitleMinHeight }}>
 				{repeat.index === undefined ? (
 					<FormattedMessage defaultMessage="New Repeat Item" />
 				) : (
