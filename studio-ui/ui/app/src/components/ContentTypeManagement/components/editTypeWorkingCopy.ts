@@ -137,3 +137,19 @@ export function insertDataSourceIntoType(
 	nextDataSources.splice(position, 0, dataSource);
 	return { ...currentType, dataSources: nextDataSources };
 }
+
+/** Path written by CreateFileDialog for a new FreeMarker template. */
+export function typeTemplatePathFromCreatedItem(item: { path: string; fileName: string }): string {
+	return `${item.path}/${item.fileName}`;
+}
+
+/**
+ * After header-link template creation: assign the new path onto the working type.
+ * Creating the file / opening the editor alone must not leave displayTemplate unset.
+ */
+export function assignCreatedTypeTemplate(
+	currentType: ContentType,
+	item: { path: string; fileName: string }
+): ContentType {
+	return { ...currentType, displayTemplate: typeTemplatePathFromCreatedItem(item) };
+}

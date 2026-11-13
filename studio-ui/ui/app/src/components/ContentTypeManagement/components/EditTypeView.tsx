@@ -99,10 +99,12 @@ import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
 import {
+	assignCreatedTypeTemplate,
 	createTypeWorkingCopy,
 	deleteDataSourceFromType,
 	insertDataSourceIntoType,
-	reorderTypeSections
+	reorderTypeSections,
+	typeTemplatePathFromCreatedItem
 } from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
@@ -613,8 +615,8 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					editTypeTemplate(templatePath, dispatch);
 				} else {
 					createTypeTemplate(TYPE_TEMPLATE_BASE_PATH, dispatch, (item) => {
-						const path = `${item.path}/${item.fileName}`;
-						setType((current) => ({ ...current, displayTemplate: path }));
+						const path = typeTemplatePathFromCreatedItem(item);
+						setType((current) => assignCreatedTypeTemplate(current, item));
 
 						// Sync open type-properties form so TemplateSelector shows the path
 						// and commit doesn't overwrite with the old empty atom value.
@@ -628,7 +630,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						}
 						onUpdateHasPendingChanges(true);
 
-						editTypeTemplate(`${item.path}/${item.fileName}`, dispatch);
+						editTypeTemplate(path, dispatch);
 					});
 				}
 				break;

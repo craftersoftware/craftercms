@@ -25,11 +25,13 @@ import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
 const {
+	assignCreatedTypeTemplate,
 	createTypeWorkingCopy,
 	deleteDataSourceFromType,
 	findFieldsReferencingDataSource,
 	insertDataSourceIntoType,
-	reorderTypeSections
+	reorderTypeSections,
+	typeTemplatePathFromCreatedItem
 } = await import('./editTypeWorkingCopy.ts');
 const { createEmptyTypeStructure } = await import('../utils.ts');
 
@@ -156,5 +158,19 @@ describe('editTypeWorkingCopy', () => {
 		assert.equal(next.fields.group_o.fields.thumb_o.properties.imageManager.value, '');
 		// Untouched fields keep the same object identity.
 		assert.equal(next.fields.title_s, original.fields.title_s);
+	});
+
+	// Header-link "create template" must assign displayTemplate; opening the editor alone is not enough.
+	it('assigns displayTemplate on the working type after header-link template creation', () => {
+		const working = createTypeWorkingCopy(makeType());
+		assert.equal(working.displayTemplate, null);
+
+		const created = { path: '/templates/web', fileName: 'article.ftl' };
+		assert.equal(typeTemplatePathFromCreatedItem(created), '/templates/web/article.ftl');
+
+		const next = assignCreatedTypeTemplate(working, created);
+		assert.equal(next.displayTemplate, '/templates/web/article.ftl');
+		// Prior state stays unset (updater pattern; do not mutate in place).
+		assert.equal(working.displayTemplate, null);
 	});
 });
