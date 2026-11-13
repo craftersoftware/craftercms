@@ -17,9 +17,8 @@
 package org.craftercms.engine.controller.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
-import org.craftercms.commons.rest.ManagementTokenResolver;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.core.controller.rest.CrafterRestController;
 import org.craftercms.core.controller.rest.RestControllerBase;
 import org.craftercms.engine.event.SiteContextCreatedEvent;
@@ -138,9 +137,6 @@ public class SiteContextRestController extends RestControllerBase {
 	}
 
 	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
-		String requestToken = ManagementTokenResolver.resolve(request);
-		if (StringUtils.isEmpty(requestToken) || !StringUtils.equals(requestToken, configuredToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(request, configuredToken);
 	}
 }

@@ -16,11 +16,10 @@
 package org.craftercms.core.controller.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
-import org.craftercms.commons.rest.ManagementTokenResolver;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.core.exception.CacheException;
 import org.craftercms.core.exception.InvalidContextException;
 import org.craftercms.core.service.ContentStoreService;
@@ -96,10 +95,7 @@ public class CacheRestController extends RestControllerBase {
 	}
 
 	protected void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
-		String token = ManagementTokenResolver.resolve(request);
-		if (StringUtils.isEmpty(token) || !StringUtils.equals(token, authorizationToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(request, authorizationToken);
 	}
 
 

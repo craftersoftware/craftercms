@@ -18,6 +18,7 @@ package org.craftercms.studio.controller.rest.v2;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.commons.rest.ManagementTokenResolver;
 import org.craftercms.studio.api.v2.exception.InvalidParametersException;
@@ -26,7 +27,6 @@ import org.craftercms.studio.impl.v2.utils.security.SecurityUtils;
 
 import java.util.Objects;
 
-import static org.apache.commons.lang3.Strings.CS;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_AUTHORIZATION_TOKEN;
 
 /**
@@ -65,9 +65,7 @@ public abstract class ManagementTokenAware {
 			if (Objects.isNull(token)) {
 				throw new InvalidParametersException("Missing parameter: 'token'");
 			}
-			if (!CS.equals(token, getConfiguredToken())) {
-				throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-			}
+			ManagementTokenUtils.validateToken(token, getConfiguredToken());
 		}
 	}
 
@@ -78,9 +76,7 @@ public abstract class ManagementTokenAware {
 	 * @throws InvalidManagementTokenException if the header is missing or does not match the configured token
 	 */
 	protected void validateHeaderToken(String token) throws InvalidManagementTokenException {
-		if (StringUtils.isEmpty(token) || !CS.equals(token, getConfiguredToken())) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(token, getConfiguredToken());
 	}
 
 	protected String getConfiguredToken() {

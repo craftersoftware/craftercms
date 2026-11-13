@@ -17,21 +17,18 @@
 package org.craftercms.commons.monitoring.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.monitoring.MemoryInfo;
 import org.craftercms.commons.monitoring.StatusInfo;
 import org.craftercms.commons.monitoring.SysInfo;
 import org.craftercms.commons.monitoring.VersionInfo;
-import org.craftercms.commons.rest.ManagementTokenResolver;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-
-import static org.apache.commons.lang3.Strings.CS;
 
 /**
  * Base controller for all monitoring related APIs
@@ -86,10 +83,7 @@ public abstract class MonitoringRestControllerBase {
 	 * Accepts {@code X-Crafter-Management-Token} and, when that header is absent, the {@code token} query parameter.
 	 */
 	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
-		String requestToken = ManagementTokenResolver.resolve(request);
-		if (StringUtils.isEmpty(requestToken) || !CS.equals(requestToken, configuredToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(request, configuredToken);
 	}
 
 }

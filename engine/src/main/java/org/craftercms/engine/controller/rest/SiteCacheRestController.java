@@ -20,7 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
-import org.craftercms.commons.rest.ManagementTokenResolver;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.core.cache.CacheStatistics;
 import org.craftercms.core.controller.rest.CrafterRestController;
 import org.craftercms.core.controller.rest.RestControllerBase;
@@ -100,10 +100,7 @@ public class SiteCacheRestController extends RestControllerBase {
 	}
 
 	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
-		String requestToken = ManagementTokenResolver.resolve(request);
-		if (StringUtils.isEmpty(requestToken) || !StringUtils.equals(requestToken, configuredToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+		ManagementTokenUtils.validateToken(request, configuredToken);
 	}
 
 }
