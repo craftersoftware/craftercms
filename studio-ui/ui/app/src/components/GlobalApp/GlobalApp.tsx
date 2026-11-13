@@ -171,7 +171,7 @@ function GlobalSidebarNav() {
 	return (
 		<List
 			disablePadding
-			// Matches where the first Project Tools row starts (drawer padding + header margin, 26px by default).
+			// Matches where the first Project Tools row starts (header top inset + header margin, 26px by default).
 			// On the list, not the drawer, so rows still span the sidebar edges and the selected bar stays flush.
 			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: sidebarFirstRowInset }}
 		>

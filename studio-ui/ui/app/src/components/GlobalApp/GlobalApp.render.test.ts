@@ -144,7 +144,7 @@ describe('GlobalApp sidebar spacing', () => {
 		const nav = host.querySelector('nav');
 		const list = nav?.querySelector('ul');
 		assert.ok(nav && list);
-		// Project Tools: 16px drawer padding + 10px header margin = 26px.
+		// Project Tools: 16px header top inset + 10px header margin = 26px.
 		assert.equal(getComputedStyle(list).paddingTop, '26px');
 		assert.equal(parseFloat(getComputedStyle(nav).paddingTop), 0, 'the drawer body itself has no top padding');
 	});
