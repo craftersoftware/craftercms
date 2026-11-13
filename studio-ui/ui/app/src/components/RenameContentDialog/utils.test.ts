@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../test/registerTsLoader.mjs';
 
-const { exceedsRenameMaxLength, getItemName } = await import('./renameContentName.ts');
+const { exceedsRenameMaxLength, getItemName } = await import('./utils.ts');
 
 describe('exceedsRenameMaxLength', () => {
 	// Given an unchanged legacy name longer than the configured limit, flag as over-limit on open.

@@ -30,7 +30,7 @@ import useDebouncedInput from '../../hooks/useDebouncedInput';
 import { checkPathExistence } from '../../services/content';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { applyContentNameRules } from '../../utils/content';
-import { exceedsRenameMaxLength, getItemName } from './renameContentName';
+import { exceedsRenameMaxLength, getItemName } from './utils';
 
 export interface RenameContentDialogContainerProps extends Pick<
 	RenameContentDialogProps,
