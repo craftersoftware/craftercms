@@ -27,7 +27,7 @@ import useSelection from '../../hooks/useSelection';
 const permittedRoles = ['developer', 'admin'];
 
 export function PublishingStatusDialogContainer(props: PublishingStatusDialogContainerProps) {
-	const { onClose, onRefresh, onStartStop } = props;
+	const { onClose, onRefresh, onStartStop, titleId } = props;
 	const state = useSelection((state) => state.publishing);
 	const { enabled, published, currentTask, isFetching } = state;
 	const { formatMessage } = useIntl();
@@ -39,6 +39,7 @@ export function PublishingStatusDialogContainer(props: PublishingStatusDialogCon
 	return (
 		<>
 			<DialogHeader
+				titleId={titleId}
 				title={formatMessage(publishingStatusMessages.publishingStatus)}
 				onCloseButtonClick={onClose}
 				rightActions={[

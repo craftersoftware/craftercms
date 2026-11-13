@@ -27,6 +27,8 @@ type LoadingStateClassKey = 'root' | 'title' | 'subtitle' | 'graphic' | 'graphic
 
 export interface LoadingStateProps {
 	title?: ReactNode;
+	/** Id for the title element, so a dialog can be named by it while it loads. */
+	titleId?: string;
 	subtitle?: ReactNode;
 	graphic?: ElementType;
 	graphicProps?: any;
@@ -67,6 +69,7 @@ export function LoadingState(props: LoadingStateProps) {
 		>
 			{props.title && (
 				<Typography
+					id={props.titleId}
 					variant="h6"
 					component="h3"
 					className={classes?.title}

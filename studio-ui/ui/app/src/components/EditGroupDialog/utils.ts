@@ -33,7 +33,9 @@ export interface EditGroupDialogProps extends EditGroupBaseProps, EnhancedDialog
 export interface EditGroupDialogContainerProps
 	extends
 		EditGroupBaseProps,
-		Pick<EditGroupDialogProps, 'onClose' | 'onGroupSaved' | 'onGroupDeleted' | 'isSubmitting'> {}
+		Pick<EditGroupDialogProps, 'onClose' | 'onGroupSaved' | 'onGroupDeleted' | 'isSubmitting'> {
+	titleId?: string;
+}
 
 export interface GroupEditDialogUIProps {
 	group?: Group;
