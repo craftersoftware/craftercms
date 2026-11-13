@@ -773,18 +773,10 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 
 	/**
 	 * Require content_move on the source and target roots only.
-	 * Page descriptors are normalized to their folder the same way {@link #doMove} does, so a move of
-	 * {@code /index.xml} is checked on the page folder. Descendants are not included.
 	 */
 	protected void checkMove(String siteId, String sourcePath, String targetPath) {
-		String sourceRoot = sourcePath;
-		String targetRoot = targetPath;
-		if (isPageDescriptor(sourcePath) || isPageDescriptor(targetPath)) {
-			sourceRoot = CS.removeEnd(sourcePath, SLASH_INDEX_FILE);
-			targetRoot = CS.removeEnd(targetPath, SLASH_INDEX_FILE);
-		}
 		PermissionCheckingUtils.checkPermissions(permissionEvaluator,
-				PermissionCheckingUtils.getSecuredResource(siteId, List.of(sourceRoot, targetRoot)),
+				PermissionCheckingUtils.getSecuredResource(siteId, List.of(sourcePath, targetPath)),
 				List.of(PERMISSION_CONTENT_MOVE));
 	}
 
