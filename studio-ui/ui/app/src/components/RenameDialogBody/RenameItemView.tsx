@@ -117,6 +117,8 @@ export function RenameItemView(props: RenameItemViewProps) {
 					margin="normal"
 					slotProps={{
 						inputLabel: { shrink: true },
+						// Typing guard only: blocks further input past maxLength. Does not truncate a
+						// controlled value that already exceeds the limit (legacy over-limit names).
 						...(maxLength != null ? { htmlInput: { maxLength } } : {})
 					}}
 					onChange={onInputChanges}
