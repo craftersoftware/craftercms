@@ -79,7 +79,7 @@ spec:
       # # Uncomment if using the Git SSH server in Authoring
       # initContainers:
       #   - name: ssh-keys-copier
-      #     image: craftercms/delivery_tomcat:5.0.0
+      #     image: craftercms/delivery_tomcat:5.0.0-SNAPSHOT
       #     volumeMounts:
       #       - name: ssh-keys
       #         mountPath: /.ssh
@@ -96,7 +96,7 @@ spec:
       containers:
         # OpenSearch container
         - name: opensearch
-          image: opensearchproject/opensearch:2.15.0
+          image: opensearchproject/opensearch:3.9.0
           readinessProbe:
             httpGet:
               path: /_cluster/health?wait_for_status=yellow
@@ -129,7 +129,7 @@ spec:
               memory: 2.5Gi
         # Tomcat container
         - name: tomcat
-          image: craftercms/delivery_tomcat:5.0.0
+          image: craftercms/delivery_tomcat:5.0.0-SNAPSHOT
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status.json
@@ -179,7 +179,7 @@ spec:
               memory: 4Gi
         # Deployer container
         - name: deployer
-          image: craftercms/deployer:5.0.0
+          image: craftercms/deployer:5.0.0-SNAPSHOT
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status

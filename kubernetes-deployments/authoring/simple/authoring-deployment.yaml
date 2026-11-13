@@ -90,7 +90,7 @@ spec:
       containers:
         # OpenSearch container for internal authoring/preview search
         - name: opensearch
-          image: opensearchproject/opensearch:2.19.1
+          image: opensearchproject/opensearch:3.9.0
           readinessProbe:
             httpGet:
               path: /_cluster/health?wait_for_status=yellow
