@@ -17,7 +17,7 @@
 import React, { ChangeEvent, useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Box from '@mui/material/Box';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
@@ -37,6 +37,7 @@ export type KeyValueMapProps = TypeBuilderControl<KeyValueEntry[]>;
 export function KeyValueMap(props: KeyValueMapProps) {
 	const { value: options, field, setValue } = props;
 	const htmlId = useId();
+	const { formatMessage } = useIntl();
 	const maxLength = field.validations.maxLength?.value;
 
 	const handleChange = (
@@ -93,12 +94,12 @@ export function KeyValueMap(props: KeyValueMapProps) {
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Add Option' })}>
 							<IconButton onClick={() => addOption(index)}>
 								<AddCircleOutlineRoundedIcon />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={<FormattedMessage defaultMessage="Remove Option" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Remove Option' })}>
 							<IconButton onClick={() => removeOption(index)}>
 								<RemoveCircleOutlineRoundedIcon />
 							</IconButton>
@@ -113,7 +114,7 @@ export function KeyValueMap(props: KeyValueMapProps) {
 						justifyContent: 'center'
 					}}
 				>
-					<Tooltip title={<FormattedMessage defaultMessage="Add Option" />}>
+					<Tooltip title={formatMessage({ defaultMessage: 'Add Option' })}>
 						<IconButton onClick={() => addOption(0)}>
 							<AddCircleOutlineRoundedIcon />
 						</IconButton>

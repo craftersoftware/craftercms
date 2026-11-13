@@ -23,7 +23,7 @@ import List from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItem from '@mui/material/ListItem';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import IconButton from '@mui/material/IconButton';
 import { useDispatch } from 'react-redux';
@@ -49,6 +49,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 	const { field, value, setValue, readonly: formReadOnly, autoFocus, dataSources, labelId } = props;
 	const htmlId = useId();
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const hasValue = Array.isArray(value) ? value.length > 0 : nnou(value);
 
 	const readonly = isFieldReadOnly(field, formReadOnly);
@@ -111,7 +112,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 						{value?.map((item, index) => (
 							<ListItem key={index}>
 								<ListItemText>{item.url}</ListItemText>
-								<Tooltip title={<FormattedMessage defaultMessage="View" />}>
+								<Tooltip title={formatMessage({ defaultMessage: 'View' })}>
 									<IconButton size="small" onClick={() => handleViewVideo(item.url)}>
 										<VisibilityOutlinedIcon fontSize="small" />
 									</IconButton>
@@ -120,7 +121,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 						))}
 					</List>
 					<Box sx={{ width: '100%', display: 'flex', justifyContent: 'end', padding: '0 16px 10px 0' }}>
-						<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Replace' })}>
 							<IconButton
 								size="small"
 								disabled={readonly || !actionsReady}
@@ -133,7 +134,7 @@ export function TranscodedVideoPicker(props: TranscodedVideoPickerProps) {
 								<EditOutlined />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
 							<IconButton size="small" disabled={readonly} autoFocus={autoFocus} onClick={handleRemoveVideos}>
 								<DeleteOutlined />
 							</IconButton>

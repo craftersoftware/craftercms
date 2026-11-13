@@ -228,7 +228,7 @@ export function DashletItemOptions(props: { path: string; iconButtonProps?: Icon
 	};
 
 	return (
-		<Tooltip title={<FormattedMessage defaultMessage="Options" />}>
+		<Tooltip title={formatMessage({ defaultMessage: 'Options' })}>
 			<IconButton
 				size="small"
 				onClick={(e) => {
