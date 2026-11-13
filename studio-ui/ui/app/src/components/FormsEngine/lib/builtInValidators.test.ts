@@ -59,11 +59,30 @@ describe('built-in validators on the new signature', () => {
 		assert.equal((await validateFieldValue(field('input', 'a_s', { pattern: '^x' }), '', meta)).isValid, true);
 	});
 
-	// Hand-edited maxlength that is not a number must not fail open as a string comparison; treat as no limit.
-	it('input: non-numeric maxLength is ignored (no limit)', async () => {
-		const result = await validateFieldValue(field('input', 'a_s', { maxLength: 'abc' }), 'abcdefghij', meta);
-		assert.equal(result.isValid, true);
-		assert.deepEqual(texts(result.messages), []);
+	// maxLength 0 is unlimited. On base, truthy checks treated 0 as a limit and compared lengths incorrectly.
+	it('input: maxLength 0 is no limit', async () => {
+		assert.equal((await validateFieldValue(field('input', 'a_s', { maxLength: 0 }), 'abcdefghij', meta)).isValid, true);
+	});
+
+	// file-name and rte also read maxLength via getNumericValidationValue; non-numeric must not fail open as a string compare.
+	it('file-name: non-numeric maxLength is ignored (no limit)', async () => {
+		// Omit siteId so uniqueness is not attempted after the length check.
+		assert.equal(
+			(
+				await validateFieldValue(field('file-name', 'file-name', { maxLength: 'abc' }), 'abcdefghij', {
+					...meta,
+					siteId: undefined
+				})
+			).isValid,
+			true
+		);
+	});
+
+	it('rte: non-numeric maxLength is ignored (no limit)', async () => {
+		assert.equal(
+			(await validateFieldValue(field('rte', 'body_html', { maxLength: 'abc' }), '<p>abcdefghij</p>', meta)).isValid,
+			true
+		);
 	});
 
 	it('email, link and phone use their own pattern message', async () => {
