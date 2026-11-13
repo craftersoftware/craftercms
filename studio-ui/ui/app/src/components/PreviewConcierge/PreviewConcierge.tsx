@@ -1056,7 +1056,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								contentTypes,
 								requestedSourceMapPaths,
 								dispatch,
-								completeActionCreator: fetchPrimaryGuestModelComplete,
+								completeActionCreator: fetchGuestModelsComplete,
 								permissions
 							});
 							hostToGuest$.next(duplicateItemOperationComplete());
@@ -1577,29 +1577,38 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 				}
 				case contentEvent.type: {
 					const { user: person, targetPath } = payload as SocketEventBase;
-					const { theme } = upToDateRefs.current;
+					const { theme, store, contentTypes } = upToDateRefs.current;
+					// Notify for the active page itself, or any item it loaded as a model (shared components, level descriptors, pages it renders, e.g. in navigation).
 					if (
 						person.username !== user.username &&
 						guest &&
 						(guest.path === targetPath || guest.modelIdByPath[targetPath])
 					) {
-						enqueueSnackbar(
-							formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+						let message: string;
+						if (guest.path === targetPath) {
+							message = formatMessage(guestMessages.currentContentChangedByAnotherUser, {
 								name: getPersonFullName(person)
-							}),
-							{
-								action: (
-									<IconButton
-										size="small"
-										onClick={() => hostToGuest$.next(reloadRequest())}
-										sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
-									>
-										<RefreshRounded />
-									</IconButton>
-								),
-								autoHideDuration: 10000
-							}
-						);
+							});
+						} else {
+							const item = store.getState().content.itemsByPath[targetPath];
+							const contentTypeName = item ? (contentTypes[item.contentTypeId]?.name ?? item.contentTypeId) : null;
+							message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+								name: getPersonFullName(person),
+								content: item ? `${item.label} (${contentTypeName})` : targetPath
+							});
+						}
+						enqueueSnackbar(message, {
+							action: (
+								<IconButton
+									size="small"
+									onClick={() => hostToGuest$.next(reloadRequest())}
+									sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
+								>
+									<RefreshRounded />
+								</IconButton>
+							),
+							autoHideDuration: 10000
+						});
 					}
 					break;
 				}
