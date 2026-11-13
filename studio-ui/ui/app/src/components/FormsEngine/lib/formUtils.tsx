@@ -81,6 +81,7 @@ import { buildContentXml } from './valueSerializers';
 import {
 	createFormVisibilityAtoms,
 	fieldVisibility,
+	isFieldPathIrrelevant,
 	aggregateStackFlags,
 	hasFormAtoms,
 	stackEntryFlagsAtom,
@@ -337,6 +338,9 @@ type FieldTrackingContext = Pick<
  */
 export const EMPTY_CHANGED_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
 
+/** Shared empty invalid-ids set. Same rules as {@link EMPTY_CHANGED_FIELD_IDS}. */
+export const EMPTY_INVALID_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
+
 /**
  * The atom behind {@link StableFormContextProps.changedFieldIds}: the source of truth for which fields differ from
  * the last checkpoint. It holds an immutable set whose reference changes only when membership changes, so a write
@@ -451,6 +455,18 @@ export function withChangedField(ids: ReadonlySet<string>, fieldId: string, chan
 	if (changed) next.add(fieldId);
 	else next.delete(fieldId);
 	return next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next;
+}
+
+/**
+ * The next invalid-ids set after `fieldId` was found invalid or not. Same rules as {@link withChangedField}; returns
+ * {@link EMPTY_INVALID_FIELD_IDS} when the copy would be empty.
+ */
+export function withInvalidField(ids: ReadonlySet<string>, fieldId: string, invalid: boolean): ReadonlySet<string> {
+	if (ids.has(fieldId) === invalid) return ids;
+	const next = new Set(ids);
+	if (invalid) next.add(fieldId);
+	else next.delete(fieldId);
+	return next.size === 0 ? EMPTY_INVALID_FIELD_IDS : next;
 }
 
 /**
@@ -806,6 +822,119 @@ export async function readInvalidFieldIds(
 	return fields.flatMap(({ fieldId }, index) => (states[index]?.isValid ? [] : [fieldId]));
 }
 
+/** Shared empty list for readers. Returned whenever the filtered ids are empty so subscribers see one reference. */
+const EMPTY_INVALID_FIELD_IDS_LIST: string[] = Object.freeze([]) as string[];
+
+const emptyInvalidFieldIdsList: Atom<string[]> = atom(EMPTY_INVALID_FIELD_IDS_LIST);
+const invalidFieldIdsAtomsByAtoms = new WeakMap<FormsEngineAtoms, Map<string, Atom<string[]>>>();
+type InvalidFieldIdsStore = {
+	get<Value>(atom: Atom<Value>): Value;
+	set: JotaiStore['set'];
+	sub: JotaiStore['sub'];
+};
+
+/** Whether both lists hold the same ids in the same order. */
+function sameInvalidFieldIds(left: readonly string[], right: readonly string[]): boolean {
+	return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
+/**
+ * Writes one field's membership once its validation has settled on the current run.
+ * The read-modify-write after the await is synchronous, so two fields cannot interleave there.
+ * A result is written only when its promise is still the atom's current one, in that same turn:
+ * a slower, superseded run cannot put the field back after a newer run.
+ */
+async function recordInvalidField(
+	store: InvalidFieldIdsStore,
+	atoms: FormsEngineAtoms,
+	fieldId: string,
+	validityAtom: Atom<Promise<FieldValidityState>>
+): Promise<void> {
+	let pending = store.get(validityAtom);
+	for (;;) {
+		let state: FieldValidityState;
+		try {
+			state = await pending;
+		} catch (error) {
+			// A superseded run can reject. Only the current promise is a real failure.
+			if (store.get(validityAtom) !== pending) return;
+			// A plugin validator can reject. Keep this field's last membership.
+			console.error(error);
+			return;
+		}
+		const latest = store.get(validityAtom);
+		if (latest !== pending) {
+			pending = latest;
+			continue;
+		}
+		const current = store.get(atoms.invalidFieldIds);
+		const next = withInvalidField(current, fieldId, !state.isValid);
+		if (next !== current) store.set(atoms.invalidFieldIds, next);
+		return;
+	}
+}
+
+/**
+ * Subscribes each validation atom and updates only that field's membership in {@link FormsEngineAtoms.invalidFieldIds}.
+ * `ready` settles after the first pass. The caller unsubscribes. Each field awaits its own validation;
+ * a slow or hanging validator does not hold the others back. `ready` therefore waits for the slowest
+ * field, not the sum.
+ */
+export function watchInvalidFieldIds(
+	store: InvalidFieldIdsStore,
+	atoms: FormsEngineAtoms
+): { unsubscribe: () => void; ready: Promise<void> } {
+	const unsubs: Array<() => void> = [];
+	const seeds: Array<Promise<void>> = [];
+	for (const [fieldId, validityAtom] of Object.entries(atoms.validationByFieldId)) {
+		const apply = () => recordInvalidField(store, atoms, fieldId, validityAtom);
+		seeds.push(apply());
+		unsubs.push(store.sub(validityAtom, () => void apply()));
+	}
+	return {
+		ready: Promise.all(seeds).then(() => undefined),
+		unsubscribe: () => unsubs.forEach((unsub) => unsub())
+	};
+}
+
+/**
+ * Invalid field ids for a form entry, read from {@link FormsEngineAtoms.invalidFieldIds} and filtered by relevance.
+ * Cached per atoms object and `parentPath` (like {@link changedFieldAtom}). Does not await validation atoms; the set
+ * is maintained per field by {@link watchInvalidFieldIds}. Pass the same `parentPath` the imperative read would use
+ * (`repeat?.fieldId` for a repeat item; `undefined` for a parent form read).
+ *
+ * Returns the previous array when membership is unchanged (and a shared empty array when empty), so a settled edit
+ * that does not flip validity notifies nothing — same idea as {@link withChangedField}.
+ */
+export function invalidFieldIdsAtom(
+	entry: StableFormContextProps | null | undefined,
+	parentPath?: string
+): Atom<string[]> {
+	if (!entry?.atoms) return emptyInvalidFieldIdsList;
+	const pathKey = parentPath ?? '';
+	const atoms = entry.atoms;
+	let byPath = invalidFieldIdsAtomsByAtoms.get(atoms);
+	if (!byPath) {
+		byPath = new Map();
+		invalidFieldIdsAtomsByAtoms.set(atoms, byPath);
+	}
+	let idsAtom = byPath.get(pathKey);
+	if (!idsAtom) {
+		let previous = EMPTY_INVALID_FIELD_IDS_LIST;
+		idsAtom = atom((get) => {
+			get(atoms.relevanceVersion);
+			const invalid = get(atoms.invalidFieldIds);
+			const irrelevant = entry.formControllerState?.irrelevantFieldPaths;
+			const next = [...invalid].filter((fieldId) => !isFieldPathIrrelevant(irrelevant, fieldId, parentPath));
+			if (sameInvalidFieldIds(previous, next)) return previous;
+			previous = next.length === 0 ? EMPTY_INVALID_FIELD_IDS_LIST : next;
+			return previous;
+		});
+		byPath.set(pathKey, idsAtom);
+	}
+	return idsAtom;
+}
+
 export function getValidationAtomsExcludingIrrelevant(
 	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>,
 	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
@@ -917,6 +1046,7 @@ export function createFormsEngineAtoms(
 		hasPendingChanges: atom(false),
 		valueByFieldId: {},
 		validationByFieldId: {},
+		invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 		versionComment: atom(''),
 		expandedStateBySectionId: {},
 		tableOfContentsDrawerOpen: atom(false),

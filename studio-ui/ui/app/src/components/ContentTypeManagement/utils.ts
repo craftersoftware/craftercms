@@ -39,6 +39,7 @@ import {
 import {
 	buildSectionExpandedStateAtoms,
 	createChangedFieldIdsAtom,
+	EMPTY_INVALID_FIELD_IDS,
 	getAdditionalFieldsIdsFromDescriptor,
 	resolveControlDescriptors,
 	setFieldAtoms,
@@ -648,6 +649,7 @@ export const createStableFormContextProps = (
 			minimizeAfterSave: undefined,
 			releaseLockOnClose: undefined,
 			saveAsDraft: undefined,
+			invalidFieldIds: atom(EMPTY_INVALID_FIELD_IDS),
 			// Field validation atoms always read this, even where no form controller attaches.
 			relevanceVersion: atom(0),
 			...createFormVisibilityAtoms()

@@ -14,9 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import type { Atom } from 'jotai';
 import type LookupTable from '../../../models/LookupTable';
-import type { FieldValidityState } from './validators';
 import { XmlKeys } from './formConsts';
 
 /** A field the save refuses to write without, even as a draft. */
@@ -45,32 +43,6 @@ export function missingMinimumSaveRequirements(args: {
 /** Not empty and not only whitespace. */
 export function isInternalNameFilled(value: unknown): boolean {
 	return (value?.toString() ?? '').trim() !== '';
-}
-
-/**
- * Current requirements from the form's atoms. A missing file-name validity is not judged here:
- * the save guard still reads it. A missing internal-name value counts as empty, as it does in the save.
- */
-export async function readMissingMinimumSaveRequirements(
-	store: { get<Value>(atom: Atom<Value>): Value },
-	atoms:
-		| {
-				validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>>;
-				valueByFieldId: LookupTable<Atom<unknown>>;
-		  }
-		| null
-		| undefined,
-	flags: { isRepeatMode: boolean; isEmbedded: boolean }
-): Promise<MinimumSaveRequirement[]> {
-	if (!atoms || flags.isRepeatMode) return [];
-	const fileNameAtom = atoms.validationByFieldId?.[XmlKeys.fileName];
-	const fileNameValid = flags.isEmbedded || !fileNameAtom ? true : (await store.get(fileNameAtom)).isValid;
-	const internalNameAtom = atoms.valueByFieldId?.[XmlKeys.internalName];
-	return missingMinimumSaveRequirements({
-		...flags,
-		fileNameValid,
-		internalName: internalNameAtom ? store.get(internalNameAtom) : undefined
-	});
 }
 
 export function sameMinimumSaveRequirements(

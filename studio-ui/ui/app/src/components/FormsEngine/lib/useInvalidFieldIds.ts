@@ -14,62 +14,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useEffect, useState } from 'react';
-import type { Observable, SchedulerLike, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
-import { useStore as useJotaiStore, type Atom } from 'jotai';
-import type LookupTable from '../../../models/LookupTable';
-import type { FieldValidityState } from './validators';
-import type { FieldUpdate } from './formsEngineContext';
-import { settleInvalidFieldRead } from './formVisibility';
-import { readInvalidFieldIds } from './formUtils';
+import { useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { StableFormContextProps } from './formsEngineContext';
+import { invalidFieldIdsAtom, watchInvalidFieldIds } from './formUtils';
 
-/** Same pause as the version comment. A keystroke must not re-run every validator. */
+/** Pause before the alert's count updates. A keystroke must not rewrite the banner on every settled validation. */
 export const invalidFieldReadDebounceMs = 300;
-
-/** Subscribes to field edits and calls `read` once the author pauses. */
-export function watchInvalidFieldUpdates(
-	fieldUpdates$: Observable<FieldUpdate> | null | undefined,
-	read: () => void,
-	dueTime = invalidFieldReadDebounceMs,
-	scheduler?: SchedulerLike
-): Subscription | undefined {
-	return fieldUpdates$?.pipe(debounceTime(dueTime, scheduler)).subscribe(() => read());
-}
 
 const noInvalidFieldIds: string[] = [];
 
-/** Live ids of fields that fail validation, excluding controller-irrelevant fields. */
-export function useInvalidFieldIds(
-	validationByFieldId: LookupTable<Atom<Promise<FieldValidityState>>> | undefined,
-	irrelevantFieldPaths: ReadonlySet<string> | null | undefined,
-	parentPath: string | undefined,
-	fieldUpdates$: Observable<FieldUpdate> | null | undefined
-): string[] {
+/**
+ * Live ids of fields that fail validation, excluding controller-irrelevant fields.
+ * The first seeded read applies immediately; later membership changes wait out {@link invalidFieldReadDebounceMs}.
+ * A rejected plugin validator leaves the last ids in place.
+ */
+export function useInvalidFieldIds(entry: StableFormContextProps | null | undefined, parentPath?: string): string[] {
 	const jotai = useJotaiStore();
+	const idsAtom = useMemo(() => invalidFieldIdsAtom(entry, parentPath), [entry, entry?.atoms, parentPath]);
+	const liveIds = useAtomValue(idsAtom);
 	const [ids, setIds] = useState<string[]>([]);
+	const initial = useRef(true);
+
 	useEffect(() => {
-		if (!validationByFieldId) return;
-		let disposed = false;
-		let latest = 0;
-		const read = async () => {
-			const seq = ++latest;
-			try {
-				const next = await readInvalidFieldIds(jotai, validationByFieldId, irrelevantFieldPaths, parentPath);
-				if (settleInvalidFieldRead({ disposed, seq, latest, rejected: false }) !== 'apply') return;
-				setIds(next);
-			} catch (error) {
-				// A plugin validator can reject. Keep the last ids. A stale rejection must not replace a newer read.
-				if (settleInvalidFieldRead({ disposed, seq, latest, rejected: true }) !== 'report') return;
-				console.error(error);
-			}
-		};
-		void read();
-		const subscription = watchInvalidFieldUpdates(fieldUpdates$, () => void read());
+		if (!entry?.atoms) return;
+		let cancelled = false;
+		initial.current = true;
+		const { unsubscribe, ready } = watchInvalidFieldIds(jotai, entry.atoms);
+		void ready.then(() => {
+			if (cancelled) return;
+			setIds(jotai.get(idsAtom));
+			initial.current = false;
+		});
 		return () => {
-			disposed = true;
-			subscription?.unsubscribe();
+			cancelled = true;
+			unsubscribe();
 		};
-	}, [fieldUpdates$, irrelevantFieldPaths, jotai, parentPath, validationByFieldId]);
-	return validationByFieldId ? ids : noInvalidFieldIds;
+	}, [entry, entry?.atoms, idsAtom, jotai]);
+
+	useEffect(() => {
+		if (initial.current) return;
+		const timer = window.setTimeout(() => setIds(liveIds), invalidFieldReadDebounceMs);
+		return () => window.clearTimeout(timer);
+	}, [liveIds]);
+
+	return entry?.atoms ? ids : noInvalidFieldIds;
 }
