@@ -64,6 +64,7 @@ export default [
 			'jsx-a11y/mouse-events-have-key-events': 'warn',
 			'jsx-a11y/no-autofocus': 'warn',
 			'jsx-a11y/no-static-element-interactions': 'warn',
+			'jsx-a11y/role-supports-aria-props': 'warn',
 			'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 			'prettier/prettier': ['error'],
 			'spaced-comment': [
