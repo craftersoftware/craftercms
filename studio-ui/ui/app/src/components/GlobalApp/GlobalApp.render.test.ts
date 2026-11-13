@@ -146,6 +146,6 @@ describe('GlobalApp sidebar spacing', () => {
 		assert.ok(nav && list);
 		// Project Tools: 16px drawer padding + 10px header margin = 26px.
 		assert.equal(getComputedStyle(list).paddingTop, '26px');
-		assert.notEqual(getComputedStyle(nav).paddingTop, '26px', 'the drawer body itself stays unpadded');
+		assert.equal(parseFloat(getComputedStyle(nav).paddingTop), 0, 'the drawer body itself has no top padding');
 	});
 });
