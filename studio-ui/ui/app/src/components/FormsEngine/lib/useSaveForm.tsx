@@ -74,7 +74,6 @@ import {
 import { runFormControllerBeforeSave } from '../formControllers/runtime';
 import { rememberCommittedRelevance } from '../formControllers/relevance';
 import { applySavedRenameToLock } from './unlockOnClose';
-import { isMoveAndUpdateForbidden, moveAndUpdateForbiddenDescriptor } from './moveAndUpdateError';
 export interface UseSaveFormProps {
 	createPath?: string;
 	isRepeatMode: boolean;
@@ -90,6 +89,15 @@ export interface UseSaveFormProps {
 
 const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEngineProps['onSave'] = (onSaveProp) => (args) =>
 	onSaveProp?.(args) ?? Promise.resolve({ close: false });
+
+/** move_and_update answers HTTP 403 with the generic "Unauthorized" body. */
+function isMoveAndUpdateForbidden(error: unknown): boolean {
+	if (typeof error !== 'object' || error === null) {
+		return false;
+	}
+	const ajaxError = error as { name?: string; status?: number };
+	return ajaxError.name === 'AjaxError' && ajaxError.status === 403;
+}
 
 /** What `save` tells the Save card. A plugin or policy block returns void instead. */
 export type SaveFormResult = 'revealed' | 'invalid' | 'saved';
@@ -542,8 +550,10 @@ export function useSaveForm(props: UseSaveFormProps) {
 					error: (error) => {
 						// move_and_update 403 is Unauthorized with no path. Name the target the user tried to move to.
 						if (isRename && isMoveAndUpdateForbidden(error)) {
-							const denied = moveAndUpdateForbiddenDescriptor(path);
-							showSaveError(error, formatMessage(denied.descriptor, denied.values));
+							showSaveError(
+								error,
+								formatMessage({ defaultMessage: 'You don\'t have permission to move this item to "{path}".' }, { path })
+							);
 							return;
 						}
 						showSaveError(error);

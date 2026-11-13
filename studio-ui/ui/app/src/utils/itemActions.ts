@@ -325,7 +325,9 @@ export function generateSingleItemOptions(
 	if (hasGetDependenciesAction(item.availableActions) && actionsToInclude.dependencies) {
 		sectionA.push(menuOptions.dependencies);
 	}
-	if (hasRenameAction(item.availableActions) && actionsToInclude.rename) {
+	// RenameAssetDialog renames item.path. A page or component path is the descriptor (…/index.xml).
+	// Those types rename through the form, which still reads the CONTENT_RENAME bit.
+	if (hasRenameAction(item.availableActions) && actionsToInclude.rename && !['page', 'component'].includes(type)) {
 		sectionA.push(menuOptions.rename);
 	}
 	if (hasReadHistoryAction(item.availableActions) && actionsToInclude.history) {
