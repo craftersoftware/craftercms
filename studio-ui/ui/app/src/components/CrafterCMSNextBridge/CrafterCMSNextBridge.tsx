@@ -37,7 +37,7 @@ import { registerComponents } from '../../env/registerComponents';
 import LoadingState from '../LoadingState';
 import GlobalStyles from '../GlobalStyles';
 import ErrorState from '../ErrorState/ErrorState';
-import NotistackVariant, { DefaultStatusSnackbar, SnackbarStatusRegion } from '../NotistackVariant';
+import NotistackVariant, { NotistackDefaultVariant } from '../NotistackVariant';
 import useSnackbarDuration from '../../hooks/useSnackbarDuration';
 const LegacyConcierge = lazy(() => import('../LegacyConcierge/LegacyConcierge'));
 const GlobalDialogManager = lazy(() => import('../GlobalDialogManager/GlobalDialogManager'));
@@ -65,21 +65,14 @@ export function CrafterCMSNextBridge(
 		mountLegacyConcierge = false
 	} = props;
 	const SnackbarOrFragment: ElementType = mountSnackbarProvider ? SnackbarProvider : Fragment;
-	const StatusRegionOrFragment: ElementType = mountSnackbarProvider ? SnackbarStatusRegion : Fragment;
 	const snackbarOrFragmentProps = mountSnackbarProvider
 		? ({
 				maxSnack: 5,
 				autoHideDuration: autoHideDuration,
 				anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
 				action: (id) => <SnackbarCloseButton id={id} />,
-				classes: {
-					// Marked so the connection banner can lift bottom-anchored snackbars above itself.
-					containerAnchorOriginBottomLeft: 'studio-snackbar-bottom',
-					containerAnchorOriginBottomCenter: 'studio-snackbar-bottom',
-					containerAnchorOriginBottomRight: 'studio-snackbar-bottom'
-				},
 				Components: {
-					default: DefaultStatusSnackbar,
+					default: NotistackDefaultVariant,
 					error: NotistackVariant,
 					success: NotistackVariant,
 					warning: NotistackVariant,
@@ -100,33 +93,31 @@ export function CrafterCMSNextBridge(
 	return (
 		<CrafterThemeProvider themeOptions={themeOptions}>
 			<I18nProvider>
-				<StatusRegionOrFragment>
-					<SnackbarOrFragment {...snackbarOrFragmentProps}>
-						{storeError ? (
-							<ErrorState
-								title={storeError}
-								imageUrl="/studio/static-assets/images/warning_state.svg"
-								sxs={{ title: { textAlign: 'center' }, image: { width: 250, marginBottom: '10px', marginTop: '10px' } }}
-							/>
-						) : store ? (
-							<StoreProvider store={store}>
-								<Suspense fallback={suspenseFallback} children={children} />
-								{mountGlobalDialogManager && (
-									<Suspense fallback="">
-										<GlobalDialogManager />
-									</Suspense>
-								)}
-								{mountLegacyConcierge && (
-									<Suspense fallback="">
-										<LegacyConcierge />
-									</Suspense>
-								)}
-							</StoreProvider>
-						) : (
-							<LoadingState />
-						)}
-					</SnackbarOrFragment>
-				</StatusRegionOrFragment>
+				<SnackbarOrFragment {...snackbarOrFragmentProps}>
+					{storeError ? (
+						<ErrorState
+							title={storeError}
+							imageUrl="/studio/static-assets/images/warning_state.svg"
+							sxs={{ title: { textAlign: 'center' }, image: { width: 250, marginBottom: '10px', marginTop: '10px' } }}
+						/>
+					) : store ? (
+						<StoreProvider store={store}>
+							<Suspense fallback={suspenseFallback} children={children} />
+							{mountGlobalDialogManager && (
+								<Suspense fallback="">
+									<GlobalDialogManager />
+								</Suspense>
+							)}
+							{mountLegacyConcierge && (
+								<Suspense fallback="">
+									<LegacyConcierge />
+								</Suspense>
+							)}
+						</StoreProvider>
+					) : (
+						<LoadingState />
+					)}
+				</SnackbarOrFragment>
 			</I18nProvider>
 			<GlobalStyles cssBaseline={mountCssBaseline} />
 		</CrafterThemeProvider>

@@ -15,10 +15,9 @@
  */
 
 /**
- * Class on every toast surface, whichever content component drew it: notistack's default
- * (`MaterialDesignContent`, which also adds `notistack-MuiContent`) and the Alert-based variants used for
- * error, warning, success and info (which add no such class). Styling that must reach all toasts, such as
- * the focus ring for native links in a message, keys on this instead of a notistack class.
+ * Class on every toast surface, whichever content component drew it: the Alert-based `NotistackVariant` (error,
+ * warning, success, info) and `NotistackDefaultVariant`. Styling that must reach all toasts, such as the focus
+ * ring for native links in a message, keys on this instead of a notistack class.
  *
  * It lives on its own so a stylesheet can read it without importing the toast components and, with them,
  * notistack.
