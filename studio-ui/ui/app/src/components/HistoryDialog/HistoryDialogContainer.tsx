@@ -23,11 +23,9 @@ import { HistoryDialogContainerProps, Menu, menuInitialState, menuOptions } from
 import { ItemHistoryEntry } from '../../models/Version';
 import ContextMenu, { ContextMenuOption } from '../ContextMenu';
 import {
-	closeConfirmDialog,
 	fetchContentVersion,
 	historyDialogUpdate,
 	showCompareVersionsDialog,
-	showConfirmDialog,
 	showErrorDialog,
 	showPreviewDialog,
 	showViewVersionDialog
@@ -55,7 +53,6 @@ import DialogFooter from '../DialogFooter/DialogFooter';
 import { HistoryDialogPagination } from './HistoryDialogPagination';
 import useSelection from '../../hooks/useSelection';
 import useFetchContentItems from '../../hooks/useFetchContentItems';
-import { UNDEFINED } from '../../utils/constants';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LoadingState } from '../LoadingState';
 import Box from '@mui/material/Box';
@@ -66,6 +63,10 @@ import { getHostToHostBus } from '../../utils/subjects';
 import { filter } from 'rxjs/operators';
 import { getRootPath } from '../../utils/path';
 import { isComparableAsset, isPdfDocument, isVideo } from '../../utils/content';
+import { nanoid } from 'nanoid';
+import { pushConfirmDialog } from '../../utils/system';
+import { popDialog } from '../../state/actions/dialogStack';
+import { checkAndCancelAffectedPackages } from '../ViewPackagesDialog/utils';
 
 export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	const { versionsBranch, error } = props;
@@ -210,18 +211,45 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 		);
 	};
 
+	const confirmAndRevert = (versionTitle: string, onRevert: () => void) => {
+		const dialogId = nanoid();
+		dispatch(
+			pushConfirmDialog({
+				id: dialogId,
+				props: {
+					title: formatMessage(translations.confirmRevertTitle),
+					body: formatMessage(translations.confirmRevertBody, { versionTitle }),
+					onCancel: () => dispatch(popDialog({ id: dialogId })),
+					onOk: () => {
+						dispatch(popDialog({ id: dialogId }));
+						if (!item) {
+							onRevert();
+							return;
+						}
+						checkAndCancelAffectedPackages({
+							siteId: site,
+							item,
+							dispatch,
+							formatMessage,
+							cancelPackagesComment: formatMessage(
+								{ defaultMessage: 'Cancel packages to revert "{path}"' },
+								{ path: item.path }
+							),
+							subtitle: (
+								<FormattedMessage defaultMessage="The item is part of one or more publishing packages. Reverting it will cancel the packages." />
+							),
+							onContinue: onRevert
+						});
+					}
+				}
+			})
+		);
+	};
+
 	const revertToPrevious = (activeItem: ItemHistoryEntry) => {
 		const previousBranch = getPreviousBranch(activeItem);
-
-		dispatch(
-			showConfirmDialog({
-				title: formatMessage(translations.confirmRevertTitle),
-				body: formatMessage(translations.confirmRevertBody, {
-					versionTitle: asDayMonthDateTime(previousBranch.modifiedDate)
-				}),
-				onCancel: closeConfirmDialog(),
-				onOk: batchActions([closeConfirmDialog(), revertToPreviousVersion({ path, id: activeItem.versionNumber })])
-			})
+		confirmAndRevert(asDayMonthDateTime(previousBranch.modifiedDate), () =>
+			dispatch(revertToPreviousVersion({ path, id: activeItem.versionNumber, siteId: site }))
 		);
 	};
 
@@ -232,15 +260,8 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
 	};
 
 	const revertTo = (activeItem: ItemHistoryEntry) => {
-		dispatch(
-			showConfirmDialog({
-				title: formatMessage(translations.confirmRevertTitle),
-				body: formatMessage(translations.confirmRevertBody, {
-					versionTitle: asDayMonthDateTime(activeItem.modifiedDate)
-				}),
-				onCancel: closeConfirmDialog(),
-				onOk: batchActions([closeConfirmDialog(), revertContent({ path, versionNumber: activeItem.versionNumber })])
-			})
+		confirmAndRevert(asDayMonthDateTime(activeItem.modifiedDate), () =>
+			dispatch(revertContent({ path, versionNumber: activeItem.versionNumber, siteId: site }))
 		);
 	};
 

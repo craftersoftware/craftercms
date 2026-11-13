@@ -35,6 +35,8 @@ import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
 import { PREVIEW_REFLOW_NARROW_QUERY, PREVIEW_REFLOW_SHORT_QUERY } from './previewReflow';
+import { visuallyHidden } from '@mui/utils';
+import SkipToMainContent, { mainLandmarkOutsetSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -201,6 +203,7 @@ function Preview() {
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
 				 meantime, we'll show a loading state. */}
+				<SkipToMainContent />
 				{site ? (
 					<>
 						<ToolBar />
@@ -209,7 +212,12 @@ function Preview() {
 						<ICEToolsPanel />
 					</>
 				) : (
-					<LoadingState />
+					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkOutsetSx}>
+						<Box component="h1" sx={visuallyHidden}>
+							{formatMessage({ id: 'words.preview', defaultMessage: 'Preview' })}
+						</Box>
+						<LoadingState />
+					</Box>
 				)}
 			</Box>
 		</PreviewConcierge>

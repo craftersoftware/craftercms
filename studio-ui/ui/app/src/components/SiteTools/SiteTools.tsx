@@ -15,7 +15,7 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
-import React from 'react';
+import React, { useEffect } from 'react';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
@@ -39,6 +39,10 @@ import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDial
 import useSelection from '../../hooks/useSelection';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
+import SkipToMainContent, { mainLandmarkSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
+import LoadingState from '../LoadingState/LoadingState';
 
 export interface Tool {
 	title: TranslationOrText;
@@ -94,7 +98,30 @@ export function SiteTools(props: SiteToolsProps) {
 	} = props;
 	const { formatMessage } = useIntl();
 	const baseUrl = useSelection<string>((state) => state.env.authoringBase);
-	const tool = tools?.find((tool) => tool.url === activeToolId)?.widget;
+	const projectToolsLabel = formatMessage({ id: 'siteTools.title', defaultMessage: 'Project Tools' });
+	const toolNotFoundLabel = formatMessage({ id: 'siteTools.toolNotFound', defaultMessage: 'Tool not found' });
+	const isPage = mountMode === 'page';
+	const normalizedActiveToolId = activeToolId?.replace(/^\//, '');
+	const matchedTool = normalizedActiveToolId
+		? tools?.find((item) => item.url.replace(/^\//, '') === normalizedActiveToolId)
+		: undefined;
+	const tool = matchedTool?.widget;
+	const translatedToolTitle = matchedTool ? getPossibleTranslation(matchedTool.title, formatMessage) : '';
+	const activeToolHeading =
+		typeof translatedToolTitle === 'string' && translatedToolTitle ? translatedToolTitle : toolNotFoundLabel;
+	// Page mode is the document. Dialog mode sits under the host page's h1, so its fallback stays an h2.
+	const fallbackTitleComponent = isPage ? 'h1' : 'h2';
+	useEffect(() => {
+		if (!isPage) {
+			return;
+		}
+		// The tools reference arrives after the first paint. Don't flash "Tool not found" in the meantime.
+		if (activeToolId && !tools) {
+			return;
+		}
+		const pageTitle = !activeToolId ? projectToolsLabel : activeToolHeading;
+		document.title = studioDocumentTitle(pageTitle);
+	}, [activeToolHeading, activeToolId, isPage, projectToolsLabel, tools]);
 	return (
 		<Paper
 			className={props.classes?.root}
@@ -105,7 +132,11 @@ export function SiteTools(props: SiteToolsProps) {
 			}}
 			elevation={0}
 		>
+			{isPage && <SkipToMainContent />}
+			{/* The sidebar comes before main in the DOM so Tab follows the visual order: skip link, sidebar, content. */}
 			<ResizeableDrawer
+				landmark="nav"
+				landmarkLabel={projectToolsLabel}
 				sxs={{
 					drawerPaper: {
 						position: 'absolute'
@@ -149,7 +180,7 @@ export function SiteTools(props: SiteToolsProps) {
 								<MenuItem
 									onClick={() => onNavItemClick(tool.url)}
 									key={tool.url}
-									selected={`/${tool.url}` === activeToolId}
+									selected={tool.url.replace(/^\//, '') === normalizedActiveToolId}
 								>
 									<SystemIcon
 										sx={{ marginRight: '10px' }}
@@ -161,6 +192,7 @@ export function SiteTools(props: SiteToolsProps) {
 							))
 						) : (
 							<EmptyState
+								titleComponent="p"
 								title={
 									<FormattedMessage
 										id="siteTools.toolListingNotConfigured"
@@ -196,14 +228,16 @@ export function SiteTools(props: SiteToolsProps) {
 				</Box>
 			</ResizeableDrawer>
 			<Box
+				{...(isPage ? { component: 'main', id: STUDIO_MAIN_CONTENT_ID, tabIndex: -1 } : undefined)}
 				sx={[
+					isPage && mainLandmarkSx,
 					{
 						height: '100%',
-						width: '100%',
-						paddingLeft: openSidebar ? `${sidebarWidth}px` : 0
+						width: 'auto',
+						marginLeft: openSidebar ? `${sidebarWidth}px` : 0
 					},
 					(theme) => ({
-						transition: theme.transitions.create('padding-left', {
+						transition: theme.transitions.create('margin-left', {
 							easing: theme.transitions.easing.easeOut,
 							duration: theme.transitions.duration.enteringScreen
 						})
@@ -212,9 +246,21 @@ export function SiteTools(props: SiteToolsProps) {
 			>
 				{activeToolId ? (
 					tool ? (
-						<Suspencified>
+						<Suspencified
+							fallback={
+								isPage ? (
+									<>
+										<Typography component="h1" sx={visuallyHidden}>
+											{activeToolHeading}
+										</Typography>
+										<LoadingState />
+									</>
+								) : undefined
+							}
+						>
 							<Widget
 								{...tool}
+								fallbackTitleComponent={fallbackTitleComponent}
 								overrideProps={{
 									embedded: false,
 									mountMode,
@@ -238,8 +284,8 @@ export function SiteTools(props: SiteToolsProps) {
 							</Box>
 							<EmptyState
 								sxs={{ root: { height: '100%', margin: 0 } }}
-								title="404"
-								subtitle={<FormattedMessage id="siteTools.toolNotFound" defaultMessage="Tool not found" />}
+								title={toolNotFoundLabel}
+								titleComponent={fallbackTitleComponent}
 							/>
 						</Box>
 					)
@@ -247,6 +293,7 @@ export function SiteTools(props: SiteToolsProps) {
 					<EmptyState
 						sxs={{ root: { height: '100%', margin: 0 } }}
 						title={<FormattedMessage id="siteTools.selectTool" defaultMessage="Please choose a tool from the left." />}
+						titleComponent={fallbackTitleComponent}
 						image={`${baseUrl}/static-assets/images/choose_option.svg`}
 					/>
 				)}

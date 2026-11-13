@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { ReactNode } from 'react';
+import React, { ElementType, ReactNode } from 'react';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Fab from '@mui/material/Fab';
@@ -34,6 +34,8 @@ export type ErrorStateProps = React.PropsWithChildren<{
 	onButtonClick?(event: React.MouseEvent): any;
 	classes?: Partial<Record<ErrorStateClassKey, string>>;
 	sxs?: PartialSxRecord<ErrorStateClassKey>;
+	/** Heading element for `title`. Defaults to h3 so a nested error does not become the page h1. */
+	titleComponent?: ElementType;
 }>;
 
 export function ErrorState(props: ErrorStateProps) {
@@ -45,7 +47,8 @@ export function ErrorState(props: ErrorStateProps) {
 		onButtonClick,
 		imageUrl,
 		children,
-		sxs
+		sxs,
+		titleComponent = 'h3'
 	} = props;
 	return (
 		<Box
@@ -79,7 +82,7 @@ export function ErrorState(props: ErrorStateProps) {
 			{nnou(title) && (
 				<Typography
 					variant="body1"
-					component="h3"
+					component={titleComponent}
 					className={props.classes?.title}
 					sx={{ marginBottom: (theme) => theme.spacing(1), ...sxs?.title }}
 					children={title}

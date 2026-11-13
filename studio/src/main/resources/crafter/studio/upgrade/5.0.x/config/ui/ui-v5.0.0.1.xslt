@@ -23,14 +23,27 @@
             <xsl:apply-templates select="@*|node()"/>
         </xsl:copy>
     </xsl:template>
-    <!-- Add <widget> to <siteUi> if it does not exist -->
+    <!-- Add the catalog after the last top-level widget when that widget is missing. -->
     <xsl:template match="siteUi/widget[last()]">
         <xsl:copy>
             <xsl:apply-templates select="@*"/>
             <xsl:apply-templates select="node()"/>
         </xsl:copy>
-        <!-- If there is no craftercms.components.ContentTypeManagement widget under siteUi, add it here -->
         <xsl:if test="not(../widget[@id='craftercms.components.ContentTypeManagement'])">
+            <xsl:call-template name="contentTypeManagementWidget"/>
+        </xsl:if>
+    </xsl:template>
+
+    <!-- widget[last()] does not match when siteUi has no top-level widget. Append the catalog
+         without reordering the existing children. Nested tool references do not count. -->
+    <xsl:template match="siteUi[not(widget)]">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|node()"/>
+            <xsl:call-template name="contentTypeManagementWidget"/>
+        </xsl:copy>
+    </xsl:template>
+
+    <xsl:template name="contentTypeManagementWidget">
             <widget id="craftercms.components.ContentTypeManagement">
                 <configuration>
                     <objectTypes>
@@ -285,6 +298,5 @@
                     </dataSources>
                 </configuration>
             </widget>
-        </xsl:if>
     </xsl:template>
 </xsl:stylesheet>

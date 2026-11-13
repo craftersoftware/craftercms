@@ -28,6 +28,8 @@ export type EmptyStateProps = React.PropsWithChildren<{
 	image?: string;
 	title: ReactNode | MessageDescriptor;
 	subtitle?: ReactNode | MessageDescriptor;
+	/** Heading level for `title`. Defaults to h3 so nested empty states do not become the page h1. */
+	titleComponent?: React.ElementType;
 	classes?: Partial<Record<EmptyStateClassKey, string>>;
 	sxs?: PartialSxRecord<EmptyStateClassKey>;
 }>;
@@ -68,7 +70,7 @@ export function EmptyState(props: EmptyStateProps) {
 			{title && (
 				<Typography
 					variant="body1"
-					component="h3"
+					component={props.titleComponent ?? 'h3'}
 					className={propClasses?.title}
 					sx={{ margin: (theme) => `${theme.spacing(1)} 0`, ...sxs?.title }}
 					color="textSecondary"

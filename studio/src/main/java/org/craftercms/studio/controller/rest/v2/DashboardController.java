@@ -75,7 +75,8 @@ public class DashboardController {
 		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime dateTo,
 		@RequestParam(required = false) List<@NotBlank @ValidateNoTagsParam String> actions,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
-		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit) throws SiteNotFoundException {
+		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit)
+			throws ServiceLayerException, UserNotFoundException {
 		var total = dashboardService.getActivitiesForUsersTotal(siteId, usernames, actions, dateFrom, dateTo);
 		var activities =
 			dashboardService.getActivitiesForUsers(siteId, usernames, actions, dateFrom, dateTo, offset, limit);
@@ -99,7 +100,8 @@ public class DashboardController {
 		@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime dateTo,
 		@RequestParam(required = false) List<@NotBlank @ValidateNoTagsParam String> actions,
 		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_OFFSET, required = false, defaultValue = "0") int offset,
-		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit) throws SiteNotFoundException {
+		@PositiveOrZero @RequestParam(value = REQUEST_PARAM_LIMIT, required = false, defaultValue = "10") int limit)
+			throws ServiceLayerException, UserNotFoundException {
 
 		var total = dashboardService.getMyActivitiesTotal(siteId, actions, dateFrom, dateTo);
 		var activities =

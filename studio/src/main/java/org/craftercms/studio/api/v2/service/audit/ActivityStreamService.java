@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,6 +16,8 @@
 
 package org.craftercms.studio.api.v2.service.audit;
 
+import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v2.dal.Item;
 import org.craftercms.studio.model.rest.dashboard.Activity;
 
@@ -66,5 +68,6 @@ public interface ActivityStreamService {
 	 * @return list of activities for given users
 	 */
 	List<Activity> getActivitiesForUsers(String siteId, List<String> usernames, List<String> actions,
-					     ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit);
+					     ZonedDateTime dateForm, ZonedDateTime dateTo, int offset, int limit)
+			throws ServiceLayerException, UserNotFoundException;
 }
