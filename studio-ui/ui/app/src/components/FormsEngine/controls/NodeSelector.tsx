@@ -875,7 +875,7 @@ function NodeSelector(props: NodeSelectorProps) {
 									? formatMessage({ defaultMessage: 'Delete {item}' }, { item: itemLabel })
 									: formatMessage({ defaultMessage: 'Unlink {item}' }, { item: itemLabel });
 								const validityKey = isEmbedded
-									? ((item.component?.[XmlKeys.modelId] as string) ?? String(index))
+									? (item.component?.[XmlKeys.modelId] as string)
 									: (item.key ?? String(index));
 								return (
 									<Box
