@@ -22,7 +22,7 @@ import MuiCheckbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
-import React, { PropsWithChildren, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { PropsWithChildren, ReactNode, useCallback, useEffect } from 'react';
 import MuiListItem from '@mui/material/ListItem';
 import MuiListItemIcon from '@mui/material/ListItemIcon';
 import MuiListSubheader from '@mui/material/ListSubheader';
@@ -36,14 +36,14 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { defineMessages, FormattedMessage, MessageDescriptor, useIntl } from 'react-intl';
 import { Pagination } from '../Pagination';
-import { Activity, AllItemActions, PackageActions, PublishPackage } from '../../models';
+import { AllItemActions, PackageActions, PublishPackage } from '../../models';
 import { SxProps } from '@mui/system';
 import { useDispatch } from 'react-redux';
 import { getOffsetLeft, getOffsetTop } from '@mui/material/Popover';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import Tooltip from '@mui/material/Tooltip';
-import { getPersonFullName, reversePluckProps } from '../../utils/object';
+import { getPersonFullName } from '../../utils/object';
 import { showItemMegaMenu } from '../../state/actions/dialogs';
 import useSpreadState from '../../hooks/useSpreadState';
 import { ContextMenu, ContextMenuOption } from '../ContextMenu';
@@ -52,11 +52,6 @@ import { LIVE_COLOUR, STAGING_COLOUR } from '../ItemPublishingTargetIcon/styles'
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
 import { useTheme } from '@mui/material/styles';
-import { fetchPackage } from '../../services/publishing';
-import useActiveSiteId from '../../hooks/useActiveSiteId';
-import { pushErrorDialog } from '../../utils/system';
-import { extractErrorPayload } from '../../utils/ajax';
-import { Subscription } from 'rxjs';
 
 export const actionsToBeShown: AllItemActions[] = [
 	'edit',
@@ -259,44 +254,18 @@ export function usePackageContextMenu() {
 	const position = contextMenu.el?.getBoundingClientRect();
 	const theme = useTheme();
 	const transitionDuration = theme.transitions.duration.standard;
-	const siteId = useActiveSiteId();
-	const subscriptionRef = useRef<Subscription | null>(null);
-	const [isFetchingPackage, setIsFetchingPackage] = useState<boolean>(false);
-
 	const handleContextMenuClick = useCallback(
-		(e: React.MouseEvent<HTMLButtonElement>, pkg: PublishPackage) => {
-			// https://github.com/craftersoftware/craftercms/issues/8552 - Because of a limitation in the back end, the packages at
-			// this point may not have the full AA. So we need to fetch the package to generate the proper set of options.
-			const currentTarget = e.currentTarget;
-			subscriptionRef.current?.unsubscribe();
-			setContextMenu({ el: currentTarget });
-			setIsFetchingPackage(true);
-			subscriptionRef.current = fetchPackage(siteId, pkg.id).subscribe({
-				next(publishPackage) {
-					setIsFetchingPackage(false);
-					const contextMenuOptions = generatePackageOptions([publishPackage], {
-						includeOnly: ['view', 'resubmit']
-					}).map((option) => ({
-						id: option.id,
-						label: formatMessage(option.label as MessageDescriptor)
-					}));
-					setContextMenu({ package: publishPackage, options: contextMenuOptions });
-				},
-				error(error) {
-					setIsFetchingPackage(false);
-					dispatch(pushErrorDialog({ props: { error: extractErrorPayload(error) } }));
-				}
-			});
+		(e: React.MouseEvent<HTMLButtonElement>, publishPackage: PublishPackage) => {
+			const options = generatePackageOptions([publishPackage], {
+				includeOnly: ['view', 'resubmit']
+			}).map((option) => ({
+				id: option.id,
+				label: formatMessage(option.label as MessageDescriptor)
+			}));
+			setContextMenu({ el: e.currentTarget, package: publishPackage, options });
 		},
-		[formatMessage, setContextMenu, siteId, dispatch]
+		[formatMessage, setContextMenu]
 	);
-
-	useEffect(() => {
-		return () => {
-			// Cleanup on unmount
-			subscriptionRef.current?.unsubscribe();
-		};
-	}, []);
 
 	const handleContextMenuClose = useCallback(() => {
 		setContextMenu({
@@ -339,7 +308,6 @@ export function usePackageContextMenu() {
 			options={[contextMenu.options]}
 			onMenuItemClicked={(option) => handleOptionClicked(option as PackageActions, contextMenu.package!)}
 			transitionDuration={transitionDuration}
-			isLoading={isFetchingPackage}
 		/>
 	);
 	return {
