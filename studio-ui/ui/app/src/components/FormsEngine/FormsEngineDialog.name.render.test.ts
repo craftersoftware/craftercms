@@ -40,16 +40,69 @@ Object.defineProperty(document, 'fonts', {
 	configurable: true
 });
 
-// Nothing in these tests needs a response from the server.
-class PendingXhr extends EventTarget {
+// Answers the requests an edit-mode form makes: the item, its content, its descriptor, and the lock.
+const itemPath = '/site/components/test/item.xml';
+const person = { username: 'ada', firstName: 'Ada', lastName: 'Lovelace' };
+const rawItem = {
+	path: itemPath,
+	label: 'Seeded item',
+	contentTypeId: '/component/test',
+	systemType: 'component',
+	mimeType: 'application/xml',
+	state: 'NEW',
+	creator: person,
+	modifier: person,
+	dateCreated: '2026-01-01T00:00:00Z',
+	dateModified: '2026-01-02T00:00:00Z'
+};
+class FakeXhr extends EventTarget {
+	status = 200;
+	statusText = 'OK';
+	readyState = 4;
+	responseType = '';
+	response: unknown = null;
+	responseText = '';
+	url = '';
 	upload = new EventTarget();
-	open() {}
+	open(_method: string, url: string) {
+		this.url = url;
+	}
 	setRequestHeader() {}
-	send() {}
+	getAllResponseHeaders() {
+		return 'content-type: application/json';
+	}
+	getResponseHeader() {
+		return this.responseType === 'blob' ? 'text/xml' : 'application/json';
+	}
 	abort() {}
+	send() {
+		let body: unknown;
+		if (this.url.includes('/get_content_by_commit_id')) {
+			body = `<component><content-type>/component/test</content-type><objectId>1234</objectId><file-name>item.xml</file-name><internal-name>Seeded item</internal-name></component>`;
+		} else if (this.url.includes('/descriptor')) {
+			body = { response: { code: 0 }, xml: '<component></component>' };
+		} else if (this.url.includes('/item_by_path')) {
+			body = {
+				response: { code: 0 },
+				item: rawItem
+			};
+		} else {
+			body = { response: { code: 0 }, packages: [] };
+		}
+		if (this.responseType === 'blob') {
+			this.response = new Blob([body as string], { type: 'text/xml' });
+		} else {
+			this.response = this.responseType === 'json' ? body : JSON.stringify(body);
+			this.responseText = JSON.stringify(body);
+		}
+		setTimeout(() => this.dispatchEvent(new Event('load')), 0);
+	}
 }
-Object.assign(window, { XMLHttpRequest: PendingXhr });
-Object.assign(globalThis, { XMLHttpRequest: PendingXhr });
+for (const name of ['DOMParser', 'XMLSerializer']) {
+	globalThis[name] ??= window[name];
+}
+Object.assign(window, { XMLHttpRequest: FakeXhr });
+Object.assign(globalThis, { XMLHttpRequest: FakeXhr });
 
 const React = await import('react');
 const { act } = await import('react');
@@ -59,6 +112,7 @@ const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { default: FormsEngineDialog } = await import('./FormsEngineDialog.tsx');
+const { prepareVirtualItemProps } = await import('../../utils/content.ts');
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -92,15 +146,21 @@ const typeWithRepeat = {
 	sections: [{ title: 'Main', description: '', fields: ['rows_o'], expandByDefault: true }]
 };
 
-async function render(contentTypesById: Record<string, unknown> | null) {
+const createProps = { create: { path: '/site/components', contentTypeId: contentType.id } };
+
+async function render(
+	contentTypesById: Record<string, unknown> | null,
+	formProps: Record<string, unknown> = createProps,
+	itemsByPath: Record<string, unknown> = {}
+) {
 	const store = configureStore({
 		reducer: {
 			env: (state = {}) => state,
 			sites: (state = { active: 'editorial', byId: { editorial: { id: 'editorial', name: 'Editorial' } } }) => state,
 			user: (state = { username: 'ada', rolesBySite: {}, permissionsBySite: {} }) => state,
 			contentTypes: (state = { byId: contentTypesById, isFetching: false, error: null }) => state,
-			content: (state = { itemsByPath: {}, itemsBeingFetchedByPath: {} }) => state,
-			uiConfig: (state = { controls: {}, references: {} }) => state
+			content: (state = { itemsByPath, itemsBeingFetchedByPath: {} }) => state,
+			uiConfig: (state = { controls: {}, references: {}, locale: { localeCode: 'en-US' } }) => state
 		}
 	});
 	const host = document.createElement('div');
@@ -117,7 +177,7 @@ async function render(contentTypesById: Record<string, unknown> | null) {
 					React.createElement(FormsEngineDialog, {
 						open: true,
 						onClose() {},
-						formProps: { create: { path: '/site/components', contentTypeId: contentType.id } }
+						formProps
 					} as never)
 				)
 			)
@@ -146,6 +206,11 @@ describe('FormsEngineDialog accessible name', () => {
 
 	it('is named by the error title when the form fails to prepare', async () => {
 		await render({});
+		assert.equal(labelElement().textContent?.trim(), 'Error');
+	});
+
+	it('is named by the error title when the form is opened with invalid arguments', async () => {
+		await render({ [contentType.id]: contentType }, {});
 		assert.equal(labelElement().textContent?.trim(), 'Error');
 	});
 

@@ -296,7 +296,7 @@ function FormGuard(props: FormsEngineProps) {
 		if (typeof e !== 'symbol') {
 			console.error(e);
 		}
-		return <FormPrepError error={e} />;
+		return <FormPrepError error={e} titleId={props.titleId} />;
 	}
 	return createElement(GlobalFormsState, props);
 }
