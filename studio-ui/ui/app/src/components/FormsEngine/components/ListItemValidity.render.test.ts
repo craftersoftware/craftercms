@@ -15,7 +15,8 @@
  */
 
 /**
- * An invalid list row keeps its colour change and also exposes a visually hidden, localized “Invalid item” cue.
+ * An invalid list row keeps its colour change, shows an error icon, and exposes a visually hidden cue that names the
+ * failing fields and messages.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
@@ -44,12 +45,21 @@ afterEach(async () => {
 });
 
 function hiddenInvalidCue(host: HTMLElement) {
-	return [...host.querySelectorAll('span')].find((span) => span.textContent === 'Invalid item') ?? null;
+	return [...host.querySelectorAll('span')].find((span) => (span.textContent ?? '').startsWith('Invalid item')) ?? null;
 }
 
 async function render(invalid: boolean) {
 	const validity: FieldValidityState = invalid
-		? { isValid: false, messages: [], invalidItems: [{ key: 'row-1', fields: [] }] }
+		? {
+				isValid: false,
+				messages: [],
+				invalidItems: [
+					{
+						key: 'row-1',
+						fields: [{ fieldId: 'internal-name', fieldName: 'Internal Name', messages: ['exceeds max length'] }]
+					}
+				]
+			}
 		: { isValid: true, messages: [] };
 	const validationAtom = atom(async () => validity);
 	const store = createStore();
@@ -100,18 +110,23 @@ async function render(invalid: boolean) {
 }
 
 describe('ListItemValidity accessible cue', () => {
-	it('omits the hidden invalid cue when the row is valid', async () => {
+	it('omits the icon and hidden invalid cue when the row is valid', async () => {
 		const host = await render(false);
 		assert.equal(host.textContent?.includes('Invalid item'), false);
 		assert.equal(hiddenInvalidCue(host), null);
+		assert.equal(host.querySelector('svg'), null);
 		assert.match(host.textContent ?? '', /Row label/);
 	});
 
-	it('keeps a visually hidden Invalid item cue in the accessibility tree when invalid', async () => {
+	it('renders an error icon and a hidden cue that names the failing field and message', async () => {
 		const host = await render(true);
 		const cue = hiddenInvalidCue(host);
 		assert.ok(cue);
 		assert.equal(cue.getAttribute('aria-hidden'), null);
-		assert.match(host.textContent ?? '', /Row label\s+Invalid item/);
+		assert.equal(cue.textContent, 'Invalid item\nInternal Name: exceeds max length');
+		const icon = host.querySelector('svg');
+		assert.ok(icon);
+		assert.equal(icon.getAttribute('aria-hidden'), 'true');
+		assert.match(host.textContent ?? '', /Row label/);
 	});
 });
