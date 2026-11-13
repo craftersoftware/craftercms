@@ -15,7 +15,9 @@ deployer:
         logging:
             folderPath: ${logs.dir}
         management:
-            # Deployer management authorization token
+            # Deployer management authorization token.
+            # Monitoring accepts X-Crafter-Management-Token (preferred) and ?token=.
+            # Target APIs accept the header only.
             authorizationToken: ${DEPLOYER_MANAGEMENT_TOKEN}
         security:
             encryption:

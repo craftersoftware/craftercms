@@ -20,5 +20,8 @@ target:
       - processorName: httpMethodCallProcessor
         includeFiles: [ "^/?config/studio/scripts/classes/.*$" ]
         method: GET
-        url: ${target.studioUrl}/api/2/plugin/${target.siteName}/script/reload.json?token=${target.studioManagementToken}
+        url: ${target.studioUrl}/api/2/plugin/${target.siteName}/script/reload.json
+        headers:
+          - name: X-Crafter-Management-Token
+            value: ${target.studioManagementToken}
       - processorName: fileOutputProcessor

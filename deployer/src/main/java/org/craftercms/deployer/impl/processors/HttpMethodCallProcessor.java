@@ -16,6 +16,8 @@
 package org.craftercms.deployer.impl.processors;
 
 import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.HierarchicalConfiguration;
+import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.*;
@@ -33,6 +35,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.craftercms.commons.config.ConfigUtils.getRequiredStringProperty;
 
@@ -42,6 +47,8 @@ import static org.craftercms.commons.config.ConfigUtils.getRequiredStringPropert
  * <ul>
  *     <li><strong>url:</strong> The URL to call</li>
  *     <li><strong>method:</strong> The HTTP method</li>
+ *     <li><strong>headers:</strong> Optional list of request headers, each with {@code name} and {@code value}.
+ *     Header names are logged; values are not.</li>
  * </ul>
  *
  * @author avasquez
@@ -52,18 +59,50 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 
 	protected static final String URL_CONFIG_KEY = "url";
 	protected static final String METHOD_CONFIG_KEY = "method";
+	protected static final String HEADERS_CONFIG_KEY = "headers";
+	protected static final String HEADER_NAME_CONFIG_KEY = "name";
+	protected static final String HEADER_VALUE_CONFIG_KEY = "value";
 
 	// Config properties (populated on init)
 
 	protected String url;
 	protected String method;
+	protected List<RequestHeader> headers = List.of();
 	protected CloseableHttpClient httpClient;
 
 	@Override
 	protected void doInit(Configuration config) throws ConfigurationException {
 		url = getRequiredStringProperty(config, URL_CONFIG_KEY);
 		method = getRequiredStringProperty(config, METHOD_CONFIG_KEY);
+		headers = readHeaders(config);
 		httpClient = HttpClients.createDefault();
+	}
+
+	@SuppressWarnings("unchecked")
+	protected List<RequestHeader> readHeaders(Configuration config) throws ConfigurationException {
+		if (!(config instanceof HierarchicalConfiguration)) {
+			return List.of();
+		}
+		HierarchicalConfiguration<ImmutableNode> hierarchical = (HierarchicalConfiguration<ImmutableNode>) config;
+		List<HierarchicalConfiguration<ImmutableNode>> headerConfigs;
+		try {
+			headerConfigs = hierarchical.configurationsAt(HEADERS_CONFIG_KEY);
+		} catch (Exception e) {
+			throw new ConfigurationException("Failed to read HTTP headers", e);
+		}
+		if (headerConfigs == null || headerConfigs.isEmpty()) {
+			return List.of();
+		}
+		List<RequestHeader> result = new ArrayList<>();
+		for (HierarchicalConfiguration<ImmutableNode> headerConfig : headerConfigs) {
+			String headerName = headerConfig.getString(HEADER_NAME_CONFIG_KEY);
+			if (StringUtils.isEmpty(headerName)) {
+				continue;
+			}
+			String headerValue = headerConfig.getString(HEADER_VALUE_CONFIG_KEY, "");
+			result.add(new RequestHeader(headerName, headerValue));
+		}
+		return List.copyOf(result);
 	}
 
 	@Override
@@ -85,8 +124,13 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 			logger.error("Error parsing URI", e);
 		}
 		String safeRequest = String.join(StringUtils.SPACE, request.getMethod(), safeURI);
+		String headerNames = headers.stream().map(header -> header.name).collect(Collectors.joining(", "));
 
-		logger.info("Executing request {}...", safeRequest);
+		if (StringUtils.isEmpty(headerNames)) {
+			logger.info("Executing request {}...", safeRequest);
+		} else {
+			logger.info("Executing request {} with headers [{}]...", safeRequest, headerNames);
+		}
 
 		try (CloseableHttpResponse response = httpClient.execute(request)) {
 			int status = response.getStatusLine().getStatusCode();
@@ -115,22 +159,37 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 	}
 
 	protected HttpUriRequest createRequest() throws DeployerException {
+		HttpUriRequest request;
 		if (method.equalsIgnoreCase("get")) {
-			return new HttpGet(url);
+			request = new HttpGet(url);
 		} else if (method.equalsIgnoreCase("post")) {
-			return new HttpPost(url);
+			request = new HttpPost(url);
 		} else if (method.equalsIgnoreCase("put")) {
-			return new HttpPut(url);
+			request = new HttpPut(url);
 		} else if (method.equalsIgnoreCase("delete")) {
-			return new HttpDelete(url);
+			request = new HttpDelete(url);
 		} else if (method.equalsIgnoreCase("head")) {
-			return new HttpHead(url);
+			request = new HttpHead(url);
 		} else if (method.equalsIgnoreCase("options")) {
-			return new HttpOptions(url);
+			request = new HttpOptions(url);
 		} else if (method.equalsIgnoreCase("trace")) {
-			return new HttpTrace(url);
+			request = new HttpTrace(url);
 		} else {
 			throw new DeployerException("HTTP method '" + method + " not recognized");
+		}
+		for (RequestHeader header : headers) {
+			request.setHeader(header.name, header.value);
+		}
+		return request;
+	}
+
+	protected static final class RequestHeader {
+		private final String name;
+		private final String value;
+
+		private RequestHeader(String name, String value) {
+			this.name = name;
+			this.value = value;
 		}
 	}
 

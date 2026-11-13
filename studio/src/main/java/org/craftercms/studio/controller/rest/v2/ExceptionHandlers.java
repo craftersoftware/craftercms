@@ -27,6 +27,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.craftercms.commons.config.profiles.ConfigurationProfileNotFoundException;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.http.HttpUtils;
+import org.craftercms.commons.rest.RequestLogSanitizer;
 import org.craftercms.commons.security.exception.ActionDeniedException;
 import org.craftercms.commons.validation.ValidationException;
 import org.craftercms.commons.validation.ValidationResultAware;
@@ -795,19 +796,19 @@ public class ExceptionHandlers {
 		switch (logLevel) {
 			case DEBUG:
 				logger.debug("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case WARN:
 				logger.warn("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case INFO:
 				logger.info("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			case ERROR:
 				logger.error("API endpoint '{}' failed with response '{}'",
-					HttpUtils.getFullRequestUri(request, true), response, e);
+					RequestLogSanitizer.sanitizeUri(HttpUtils.getFullRequestUri(request, true)), response, e);
 				break;
 			default:
 				break;

@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.rest.ManagementTokenResolver;
 import org.craftercms.core.cache.CacheStatistics;
 import org.craftercms.core.controller.rest.CrafterRestController;
 import org.craftercms.core.controller.rest.RestControllerBase;
@@ -65,17 +66,17 @@ public class SiteCacheRestController extends RestControllerBase {
 	}
 
 	@RequestMapping(value = URL_CLEAR, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> clear(HttpServletRequest request, @RequestParam String token,
+	public Map<String, Object> clear(HttpServletRequest request,
 									 @RequestParam(required = false) String cacheType) throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 
 		return createResponseMessage(getCacheRestOperations(cacheType).clear(request));
 	}
 
 	@RequestMapping(value = URL_STATS, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
-	public CacheStatistics getStatistics(@RequestParam String token,
+	public CacheStatistics getStatistics(HttpServletRequest request,
 										 @RequestParam(required = false) String cacheType) throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 
 		return getCacheRestOperations(cacheType).getStatistics();
 	}
@@ -98,8 +99,9 @@ public class SiteCacheRestController extends RestControllerBase {
 		}
 	}
 
-	protected final void validateToken(String requestToken) throws InvalidManagementTokenException {
-		if (!StringUtils.equals(requestToken, configuredToken)) {
+	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
+		String requestToken = ManagementTokenResolver.resolve(request);
+		if (StringUtils.isEmpty(requestToken) || !StringUtils.equals(requestToken, configuredToken)) {
 			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
 		}
 	}

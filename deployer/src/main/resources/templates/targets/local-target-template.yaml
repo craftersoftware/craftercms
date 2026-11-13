@@ -19,11 +19,17 @@ target:
         excludeFiles: ['^/sources/.*$']
       - processorName: httpMethodCallProcessor
         method: GET
-        url: ${target.engineUrl}/api/1/site/cache/clear.json?crafterSite=${target.siteName}&token=${target.engineManagementToken}
+        url: ${target.engineUrl}/api/1/site/cache/clear.json?crafterSite=${target.siteName}
+        headers:
+          - name: X-Crafter-Management-Token
+            value: ${target.engineManagementToken}
       - processorName: httpMethodCallProcessor
         includeFiles: ["^/?config/studio/content-types.*$"]
         method: GET
-        url: ${target.engineUrl}/api/1/site/context/graphql/rebuild.json?crafterSite=${target.siteName}&token=${target.engineManagementToken}
+        url: ${target.engineUrl}/api/1/site/context/graphql/rebuild.json?crafterSite=${target.siteName}
+        headers:
+          - name: X-Crafter-Management-Token
+            value: ${target.engineManagementToken}
       - processorName: fileOutputProcessor
         processorLabel: fileOutputProcessor
       {{#if notification_addresses}}

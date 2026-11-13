@@ -151,3 +151,7 @@ pipelines:
                                 property: includeFiles
                             -   fromProcessor: s3SyncProcessor
                                 property: excludeFiles
+            -   currentVersion: 5.0.0.1
+                nextVersion: 5.0.0.2
+                operations:
+                    -   type: moveManagementTokenToHeaderUpgrader

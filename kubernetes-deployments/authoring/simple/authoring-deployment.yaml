@@ -127,20 +127,29 @@ spec:
           imagePullPolicy: "Always"
           startupProbe:
             httpGet:
-              path: /studio/api/2/monitoring/status.json?token=defaultManagementToken
+              path: /studio/api/2/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 60
             periodSeconds: 60
           readinessProbe:
             httpGet:
-              path: /studio/api/2/monitoring/status.json?token=defaultManagementToken
+              path: /studio/api/2/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /studio/api/2/monitoring/status.json?token=defaultManagementToken
+              path: /studio/api/2/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 10
             timeoutSeconds: 60
             periodSeconds: 60
@@ -168,20 +177,29 @@ spec:
           image: craftercms/deployer:5.0.0-SNAPSHOT
           startupProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 60
             periodSeconds: 60
           readinessProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 10
             timeoutSeconds: 60
             periodSeconds: 60
