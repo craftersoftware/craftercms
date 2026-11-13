@@ -99,10 +99,12 @@ import { getRootPath } from '../../../utils/path';
 import { showHistoryDialog } from '../../../state/actions/dialogs';
 import { XmlViewerDialog } from './XmlViewerDialog';
 import {
+	assignCreatedTypeTemplate,
 	createTypeWorkingCopy,
 	deleteDataSourceFromType,
 	insertDataSourceIntoType,
-	reorderTypeSections
+	reorderTypeSections,
+	typeTemplatePathFromCreatedItem
 } from './editTypeWorkingCopy';
 import useEnhancedDialogState from '../../../hooks/useEnhancedDialogState';
 import { XmlDiffDialog } from './XmlDiffDialog';
@@ -613,7 +615,22 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 					editTypeTemplate(templatePath, dispatch);
 				} else {
 					createTypeTemplate(TYPE_TEMPLATE_BASE_PATH, dispatch, (item) => {
-						editTypeTemplate(`${item.path}/${item.fileName}`, dispatch);
+						const path = typeTemplatePathFromCreatedItem(item);
+						setType((current) => assignCreatedTypeTemplate(current, item));
+
+						// Sync open type-properties form so TemplateSelector shows the path
+						// and commit doesn't overwrite with the old empty atom value.
+						const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
+						if (openRef.current && !selectedField && !selectedSection && !selectedDataSource) {
+							const templateAtom = activeFormContext?.atoms?.valueByFieldId?.displayTemplate as
+								PrimitiveAtom<unknown> | undefined;
+							if (templateAtom && jotai.get(templateAtom) !== path) {
+								jotai.set(templateAtom, path);
+							}
+						}
+						onUpdateHasPendingChanges(true);
+
+						editTypeTemplate(path, dispatch);
 					});
 				}
 				break;
