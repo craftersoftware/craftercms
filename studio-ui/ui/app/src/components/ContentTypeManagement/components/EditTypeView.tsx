@@ -619,7 +619,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						// Sync open type-properties form so TemplateSelector shows the path
 						// and commit doesn't overwrite with the old empty atom value.
 						const { activeFormContext, selectedField, selectedSection, selectedDataSource } = stateRef.current;
-						if (!selectedField && !selectedSection && !selectedDataSource) {
+						if (openRef.current && !selectedField && !selectedSection && !selectedDataSource) {
 							const templateAtom = activeFormContext?.atoms?.valueByFieldId?.displayTemplate as
 								PrimitiveAtom<unknown> | undefined;
 							if (templateAtom && jotai.get(templateAtom) !== path) {
