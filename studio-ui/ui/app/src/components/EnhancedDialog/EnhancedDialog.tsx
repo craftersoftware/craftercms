@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import { ReactNode, useMemo, useRef } from 'react';
+import { ReactNode, useId, useMemo, useRef } from 'react';
 import { useOnClose } from '../../hooks/useOnClose';
 import MuiDialog, { DialogProps as MuiDialogProps } from '@mui/material/Dialog';
 import { useUnmount } from '../../hooks/useUnmount';
@@ -40,6 +40,20 @@ export interface EnhancedDialogProps extends Omit<MuiDialogProps, 'title'>, Enha
 	dialogHeaderProps?: Partial<DialogHeaderProps>;
 }
 
+type PaperSlotProps = NonNullable<NonNullable<MuiDialogProps['slotProps']>['paper']>;
+type DialogLabellingProps = Pick<MuiDialogProps, 'aria-label' | 'aria-labelledby'>;
+
+/**
+ * Adds the dialog's labelling props to the caller's paper slot. The caller's own props win, so a slot that
+ * already names the dialog keeps its name.
+ */
+function withPaperProps(paper: PaperSlotProps, props: DialogLabellingProps): PaperSlotProps {
+	if (typeof paper === 'function') {
+		return (ownerState) => ({ ...props, ...paper(ownerState) });
+	}
+	return { ...props, ...paper };
+}
+
 export function EnhancedDialog(props: EnhancedDialogProps) {
 	// region const { ... } = props
 	const {
@@ -58,11 +72,34 @@ export function EnhancedDialog(props: EnhancedDialogProps) {
 		children,
 		dialogHeaderProps,
 		omitHeader = false,
+		'aria-label': ariaLabel,
+		'aria-labelledby': ariaLabelledBy,
+		slotProps,
 		onFullScreen,
 		onCancelFullScreen,
 		...dialogProps
 	} = props;
 	// endregion
+	const id = useId();
+	const titleId = dialogHeaderProps?.titleId ?? dialogHeaderProps?.titleTypographyProps?.id ?? `${id}-title`;
+	const headerTitle = title ?? dialogHeaderProps?.title;
+	// Naming the dialog by its title only works while the title element holds text, so a dialog whose header
+	// is omitted or has no title is left unnamed instead of pointing at an element that is not rendered.
+	const hasTitle = headerTitle != null && typeof headerTitle !== 'boolean' && headerTitle !== '';
+	const canUseTitle = !omitHeader && hasTitle;
+	const paper = typeof slotProps?.paper === 'function' ? undefined : slotProps?.paper;
+	// MUI puts a top-level aria-label on the root instead of the element with the role, so a caller's name is
+	// read from either place and lands on the paper, next to aria-labelledby.
+	const callerLabel = ariaLabel || paper?.['aria-label'];
+	const callerLabelledBy = ariaLabelledBy || paper?.['aria-labelledby'];
+	const labelledBy = callerLabelledBy ?? (callerLabel || !canUseTitle ? undefined : titleId);
+	const paperOverrides: DialogLabellingProps = {};
+	// MUI also points the paper at an id it generates for its own DialogTitle, which this dialog never renders.
+	if (!labelledBy) paperOverrides['aria-labelledby'] = undefined;
+	if (callerLabel) paperOverrides['aria-label'] = callerLabel;
+	const resolvedSlotProps: MuiDialogProps['slotProps'] = Object.keys(paperOverrides).length
+		? { ...slotProps, paper: withPaperProps(slotProps?.paper, paperOverrides) }
+		: slotProps;
 	const onClose = useOnClose({
 		onClose(e, reason) {
 			if (hasPendingChanges) {
@@ -106,12 +143,15 @@ export function EnhancedDialog(props: EnhancedDialogProps) {
 				maxWidth="md"
 				fullScreen={isFullScreen}
 				{...dialogProps}
+				aria-labelledby={labelledBy}
+				slotProps={resolvedSlotProps}
 				onClose={onClose}
 			>
 				{!omitHeader && (
 					<DialogHeader
 						{...dialogHeaderProps}
-						title={title ?? dialogHeaderProps?.title}
+						titleId={titleId}
+						title={headerTitle}
 						subtitle={subtitle ?? dialogHeaderProps?.subtitle}
 						disabled={isSubmitting}
 						onMinimizeButtonClick={onMinimize}
