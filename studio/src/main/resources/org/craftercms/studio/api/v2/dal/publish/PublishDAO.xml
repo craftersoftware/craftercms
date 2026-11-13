@@ -422,6 +422,12 @@
 		SELECT pp.*
 		FROM publish_package pp
 		INNER JOIN site s ON pp.site_id = s.id
+		<if test="submitter != null">
+			INNER JOIN user u_submitter ON pp.submitter_id = u_submitter.id
+		</if>
+		<if test="reviewer != null">
+			INNER JOIN user u_reviewer ON pp.reviewer_id = u_reviewer.id
+		</if>
 		WHERE s.site_id = #{siteId}
 		<if test="packageState != null">
 			AND (pp.package_state &amp; #{packageState}) > 0
@@ -434,6 +440,12 @@
 			<foreach collection="approvalStates" item="approvalState" open="(" separator="," close=")">
 				#{approvalState}
 			</foreach>
+		</if>
+		<if test="submitter != null">
+			AND u_submitter.username = #{submitter}
+		</if>
+		<if test="reviewer != null">
+			AND u_reviewer.username = #{reviewer}
 		</if>
 	</sql>
 
