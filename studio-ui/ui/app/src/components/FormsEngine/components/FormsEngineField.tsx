@@ -248,10 +248,12 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const handleFieldFocus = () => setHasFocusWithin(true);
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;
-		// The menu is in a portal, so a target inside it is not a DOM descendant. The focus event the menu raises
-		// right after sets this back.
-		setHasFocusWithin(next instanceof Node && event.currentTarget.contains(next));
-		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		// The menu renders in a portal, so a target inside it is not a DOM descendant but still counts as inside.
+		const inside =
+			next instanceof Node &&
+			(event.currentTarget.contains(next) || Boolean(document.getElementById(menuId)?.contains(next)));
+		setHasFocusWithin(inside);
+		if (inside) return;
 		if (isValid || validityData.state !== 'hasData') return;
 		const errorText = (validityData.data?.messages ?? [])
 			.map((messageData) => translateValidityMessage(messageData, formatMessage))
