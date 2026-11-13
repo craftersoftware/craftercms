@@ -139,3 +139,41 @@ describe('toast actions', () => {
 		});
 	}
 });
+
+describe('toast content refs', () => {
+	it('forwards its ref to the toast element, which notistack transitions need (NotistackDefaultVariant)', async () => {
+		const ref = React.createRef<HTMLDivElement>();
+		const container = await mountToast(NotistackDefaultVariant, { variant: 'default', ref });
+		assert.ok(ref.current);
+		assert.equal(ref.current, container.querySelector(`.${TOAST_HOST_CLASS}`));
+	});
+
+	it('forwards its ref to the toast element (NotistackVariant)', async () => {
+		const ref = React.createRef<HTMLDivElement>();
+		const container = await mountToast(NotistackVariant, { variant: 'success', ref });
+		assert.ok(ref.current);
+		assert.equal(ref.current, container.querySelector(`.${TOAST_HOST_CLASS}`));
+	});
+});
+
+describe('toast focus halo', () => {
+	// Emotion inserts rules with insertRule, so they are in the CSSOM and not in the style elements' text.
+	const cssRules = () =>
+		[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules].map((rule) => (rule as CSSStyleRule).cssText));
+
+	for (const [name, Content, variant] of [
+		['NotistackVariant', NotistackVariant, 'info'],
+		['NotistackDefaultVariant', NotistackDefaultVariant, 'default']
+	] as const) {
+		it(`paints a box-shadow on .Mui-focusVisible inside the toast (${name})`, async () => {
+			const container = await mountToast(Content, { variant, action: closeAction });
+			const host = container.querySelector<HTMLElement>(`.${TOAST_HOST_CLASS}`);
+			const owned = [host, ...(host?.querySelectorAll('*') ?? [])].flatMap((node) => [...(node?.classList ?? [])]);
+			const rule = cssRules().find(
+				(text) => text.includes('.Mui-focusVisible') && owned.some((className) => text.includes(`.${className}`))
+			);
+			assert.ok(rule, 'a rule scoped to this toast targets .Mui-focusVisible');
+			assert.match(rule, /box-shadow:\s*0 0 0 4px /);
+		});
+	}
+});

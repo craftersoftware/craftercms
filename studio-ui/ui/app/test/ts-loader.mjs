@@ -100,7 +100,9 @@ export function load(url, context, nextLoad) {
 		target: 'es2022',
 		sourcefile: filename,
 		sourcemap: assignsMessageIds ? 'inline' : false,
-		jsx: 'automatic'
+		jsx: 'automatic',
+		// Vite provides import.meta.env at build time. Under node:test it does not, so behave like the dev server.
+		define: { 'import.meta.env': '{"DEV":true}' }
 	});
 	return { format: 'module', source: result.code, shortCircuit: true };
 }
