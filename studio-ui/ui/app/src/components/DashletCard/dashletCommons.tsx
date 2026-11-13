@@ -261,23 +261,17 @@ export function usePackageContextMenu() {
 	const transitionDuration = theme.transitions.duration.standard;
 	const siteId = useActiveSiteId();
 	const subscriptionRef = useRef<Subscription | null>(null);
-	const [isFetchingPackage, setIsFetchingPackage] = useState<boolean>(false);
-
 	const handleContextMenuClick = useCallback(
 		(e: React.MouseEvent<HTMLButtonElement>, publishPackage: PublishPackage) => {
-			const currentTarget = e.currentTarget;
-			subscriptionRef.current?.unsubscribe();
-			setContextMenu({ el: currentTarget });
-			setIsFetchingPackage(false);
-			const contextMenuOptions = generatePackageOptions([publishPackage], {
+			const options = generatePackageOptions([publishPackage], {
 				includeOnly: ['view', 'resubmit']
 			}).map((option) => ({
 				id: option.id,
 				label: formatMessage(option.label as MessageDescriptor)
 			}));
-			setContextMenu({ package: publishPackage, options: contextMenuOptions });
+			setContextMenu({ el: e.currentTarget, package: publishPackage, options });
 		},
-		[formatMessage, setContextMenu, siteId, dispatch]
+		[formatMessage, setContextMenu]
 	);
 
 	useEffect(() => {
@@ -328,7 +322,6 @@ export function usePackageContextMenu() {
 			options={[contextMenu.options]}
 			onMenuItemClicked={(option) => handleOptionClicked(option as PackageActions, contextMenu.package!)}
 			transitionDuration={transitionDuration}
-			isLoading={isFetchingPackage}
 		/>
 	);
 	return {
