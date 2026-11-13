@@ -61,6 +61,7 @@ import IconButton from '@mui/material/IconButton';
 import { generatePackageOptions, packageActionDispatcher } from '../../utils/packageActions';
 import { PublishPackage } from '../../models';
 import { showPackageDetails } from '../ViewPackagesDialog/utils';
+import { formatPendingApprovalTotal } from './formatPendingApprovalTotal';
 
 interface PendingApprovalDashletProps extends CommonDashletProps {}
 
@@ -224,8 +225,8 @@ export function PendingApprovalDashlet(props: PendingApprovalDashletProps) {
 					defaultMessage="Pending Approval <render_total>{total}</render_total>"
 					values={{
 						total,
-						render_total(total) {
-							return total ? `(${total})` : '';
+						render_total() {
+							return formatPendingApprovalTotal(total);
 						}
 					}}
 				/>

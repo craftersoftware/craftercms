@@ -1,5 +1,5 @@
 /*!
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,6 +15,8 @@
  *
  *
  */
+
+@import 'focus-ring';
 
 .tox-dialog {
 	&.acecode {
@@ -180,6 +182,10 @@
 		vertical-align: top;
 		min-height: 1.8em;
 		box-sizing: content-box;
+
+		&:focus-visible {
+			@include focus-ring;
+		}
 	}
 	.ace_searchbtn {
 		border: 1px solid #cbcbcb;
@@ -313,3 +319,7 @@
 		}
 	}
 }
+
+// Keyboard hint and focus ring. The partial is the only
+// copy; the JS fallback is generated from it.
+@import 'editor-keyboard';

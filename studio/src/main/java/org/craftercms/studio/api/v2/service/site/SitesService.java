@@ -227,6 +227,14 @@ public interface SitesService {
 	List<Site> getAllSites();
 
 	/**
+	 * Site ids that serverless delivery should serve. A site with staging enabled is followed by
+	 * {@code siteId-staging}.
+	 *
+	 * @return the deliverable site ids
+	 */
+	List<String> getDeliverableSiteIds();
+
+	/**
 	 * Update publishing status for the given site
 	 *
 	 * @param siteId the site id

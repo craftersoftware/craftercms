@@ -28,6 +28,11 @@ import { FormattedMessage } from 'react-intl';
 import { ErrorState } from '../ErrorState';
 import { SimpleTreeView } from '@mui/x-tree-view';
 import { PartialSxRecord } from '../../models';
+import {
+	getNestedHeadingComponent,
+	NavigatorTitleComponent,
+	useNavigatorTitleComponent
+} from '../PathNavigator/navigatorHeading';
 
 export type PathNavigatorTreeUIClassKey = 'root' | 'body' | 'header';
 
@@ -43,6 +48,8 @@ export interface PathNavigatorTreeUIProps extends Pick<
 	| 'errorByPath'
 > {
 	title: ReactNode;
+	/** Heading element for `title`. Defaults to h2, or to the parent navigator-heading context. */
+	titleComponent?: NavigatorTitleComponent;
 	icon?: SystemIconDescriptor;
 	container?: Partial<StateStylingProps>;
 	rootPath: string;
@@ -68,6 +75,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 		icon,
 		container,
 		title,
+		titleComponent: titleComponentProp,
 		rootPath,
 		isRootPathMissing,
 		itemsByPath,
@@ -92,12 +100,17 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 		sxs
 	} = props;
 	// endregion
+	const titleComponent = useNavigatorTitleComponent(titleComponentProp);
 	return (
 		<Accordion
 			square
 			disableGutters
 			elevation={0}
 			slotProps={{
+				// Keep MUI's styled heading (it resets the user-agent heading font and margin) and only
+				// change the element, so the title is a heading without the taller raw-heading layout.
+				// h2 under the page h1; a parent that is already an h2 supplies h3.
+				heading: { component: titleComponent },
 				transition: {
 					unmountOnExit: true
 				}
@@ -133,6 +146,7 @@ export function PathNavigatorTreeUI(props: PathNavigatorTreeUIProps) {
 			/>
 			{isRootPathMissing ? (
 				<ErrorState
+					titleComponent={getNestedHeadingComponent(titleComponent)}
 					sxs={{ root: { textAlign: 'center' }, image: { display: 'none' } }}
 					title={
 						<FormattedMessage

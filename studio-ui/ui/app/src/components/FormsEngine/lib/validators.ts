@@ -31,8 +31,10 @@ import {
 	processAdditionalFieldMacro,
 	rootPagePath
 } from './formUtils';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, fromEvent, timer } from 'rxjs';
+import { switchMap, takeUntil } from 'rxjs/operators';
 import { isPagePath, withIndex } from '../../../utils/path';
+import { applyContentNameRules } from '../../../utils/content';
 import { FormsEngineItemMetaContextProps } from './formsEngineContext';
 import { validateDatePopulateExpression } from './dateExpressions';
 import type { DescriptorControlType } from '../../ContentTypeManagement/controlMap';
@@ -54,6 +56,7 @@ import {
 import { evaluateRteConstraints, measureRteValue } from './rtePlainText';
 import { asArray } from '../../../utils/array';
 import { freezeForPlugin } from './pluginHooks';
+import { checkFieldNamePostfix, formatPostfixList } from '../../ContentTypeManagement/fieldNamePostfix';
 
 /**
  * Everything the host knows when it validates a field. Internal: built-in validators read it through
@@ -95,6 +98,15 @@ export interface ValidatorMetaData {
 	 * is an ordinary field and only the constraints its content type declares apply. See {@link validateFieldValue}.
 	 */
 	nested?: boolean;
+	/**
+	 * Type Builder variable-name postfix rules from site-config. Present only for top-level field forms when
+	 * `<field-name-postfix>` is `true`. See {@link variableValidator}.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 }
 
 /**
@@ -196,7 +208,11 @@ const validatorsMap: Partial<Record<BuiltInControlType | DescriptorControlType, 
  * Control types whose validator applies the required constraint itself.
  * {@link validateFieldValue} does not add a required message for these. The validator emits that message.
  */
-const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>(['file-name']);
+const validatorsOwningRequired = new Set<BuiltInControlType | DescriptorControlType>([
+	'file-name',
+	// Unchecked is empty, but the message is "must be checked", not the host's "required".
+	'checkbox'
+]);
 
 /**
  * Validators selected by a validation key on the field, not by its control type.
@@ -233,15 +249,15 @@ function hashText(text: string): string {
 function withMessageId(value: unknown): MessageDescriptor | undefined {
 	if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
 	const { id, defaultMessage } = value as Record<string, unknown>;
-	if (
-		(id !== undefined && typeof id !== 'string') ||
-		(defaultMessage !== undefined && typeof defaultMessage !== 'string')
-	) {
+	// The app build precompiles defaultMessage into an AST. A string is the uncompiled form.
+	const text = typeof defaultMessage === 'string';
+	const precompiled = Array.isArray(defaultMessage);
+	if ((id !== undefined && typeof id !== 'string') || (defaultMessage !== undefined && !text && !precompiled)) {
 		return undefined;
 	}
 	if (id) return { ...(value as MessageDescriptor) };
-	if (!defaultMessage) return undefined;
-	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage as string)}` };
+	if (!text || !defaultMessage) return undefined;
+	return { ...(value as MessageDescriptor), id: `plugin-validator-message.${hashText(defaultMessage)}` };
 }
 
 /**
@@ -404,7 +420,7 @@ export async function validateFieldValue(
 	meta: ValidatorMetaData
 ): Promise<FieldValidityState> {
 	const messages: FieldValidityState['messages'] = [];
-	const isEmpty = isEmptyValue(field, currentValue);
+	const isEmpty = isFieldValueEmpty(field, currentValue);
 	const requiredByConstraint = Boolean(field.validations?.required?.value);
 	// A positive minCount is reported by the occurrence check. Don't add a second "required" message.
 	const minimum = countLimitValue(field.validations?.minCount?.value);
@@ -507,6 +523,18 @@ export function isEmptyValue(field: ContentTypeField, currentValue: unknown): bo
 }
 
 /**
+ * Whether `value` is empty for this control, for the required marker and the host required check.
+ * A checkbox is empty until it is checked (`false` is unchecked, not a filled value).
+ * An RTE is empty when {@link measureRteValue} finds no text, so markup such as `<p></p>` counts as empty.
+ * Every other control uses {@link isEmptyValue}.
+ */
+export function isFieldValueEmpty(field: ContentTypeField, value: unknown): boolean {
+	if (field.type === 'checkbox') return value !== true;
+	if (field.type === 'rte') return measureRteValue(value) === '';
+	return isEmptyValue(field, value);
+}
+
+/**
  * Determines if a field is required based on its validation metadata.
  *
  * @param {ContentTypeField} field - The metadata of the field, including validation rules.
@@ -552,11 +580,16 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
 	return isInternalNameFilled(values[XmlKeys.internalName]);
 }
 
+/** How long the file-name uniqueness check waits after the latest value before calling the server. */
+const fileNameExistenceDebounceMs = 300;
+
 /**
- * File-name rules: required, then uniqueness.
+ * File-name rules: required, max length after {@link applyContentNameRules}, then uniqueness.
  * The name is the value passed in: the file-name field's value, which the file-name atom keeps in sync. On edit it
  * starts from the item path, not the XML `file-name`. See the note in `setFieldAtoms` (formUtils.tsx).
  * A blank name is invalid except on the home page, where it is allowed unless the stored required constraint says so.
+ * Required and unchanged-path checks stay synchronous. The path-existence request is debounced and tied to
+ * `ctx.signal` so a newer value cancels the wait and any in-flight check.
  *
  * @param {string} currentValue - The file name being validated.
  * @param {BuiltInValidatorContext} ctx - The field, and metadata containing site ID and item context.
@@ -564,7 +597,7 @@ export function isInternalNameValid(values: LookupTable<unknown>): boolean {
  *
  */
 export async function fileNameValidator(currentValue: string, ctx: BuiltInValidatorContext): Promise<ValidatorResult> {
-	const { field, meta } = ctx;
+	const { field, meta, signal } = ctx;
 	const siteId: string = meta.siteId;
 	const blank = isEmptyValue(field, currentValue);
 	const storedRequired = Boolean(field.validations?.required?.value);
@@ -574,6 +607,20 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 	}
 	if (blank) return { valid: true };
 
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
+	const normalizedName = applyContentNameRules(currentValue);
+	if (nnou(maxLength) && normalizedName.length > maxLength) {
+		return {
+			valid: false,
+			messages: [
+				[
+					defineMessage({ defaultMessage: `The value is greater than the allowed maximum ({maxLength}).` }),
+					{ maxLength }
+				]
+			]
+		};
+	}
+
 	const initialPath = meta.itemMeta.path ?? meta.itemMeta.pathInSite;
 	const isPage = isPagePath(withIndex(initialPath));
 	const basePath = nnou(meta.itemMeta.path) ? getBasePath(initialPath, isPage) : meta.itemMeta.pathInSite;
@@ -581,8 +628,27 @@ export async function fileNameValidator(currentValue: string, ctx: BuiltInValida
 
 	if (initialPath === newPath || nou(siteId)) return { valid: true };
 
+	// Already superseded: fromEvent('abort') will not re-emit a past abort.
+	if (signal.aborted) {
+		return { valid: false, messages: [] };
+	}
+
 	try {
-		const exists = await firstValueFrom(checkPathExistence(siteId, newPath));
+		// Debounce, then check existence. Abort completes the stream (takeUntil) so the wait and request cancel.
+		const exists = await firstValueFrom(
+			timer(fileNameExistenceDebounceMs).pipe(
+				switchMap(() => checkPathExistence(siteId, newPath)),
+				takeUntil(fromEvent(signal, 'abort'))
+			),
+			{ defaultValue: undefined }
+		);
+		// Superseded run: the host discards this result. Match plugin AbortError handling (no user message).
+		if (signal.aborted) {
+			return { valid: false, messages: [] };
+		}
+		if (exists === undefined) {
+			return { valid: false };
+		}
 		return exists
 			? { valid: false, messages: [[defineMessage({ defaultMessage: 'An item with that name already exists.' })]] }
 			: { valid: true };
@@ -672,7 +738,7 @@ export function inputValidator(
 		return { valid: true };
 	}
 	const pattern = field.validations.pattern?.value as string;
-	const maxLength: number | undefined = getValidationValue(field.validations, 'maxlength');
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	// If there's a pattern and it doesn't match, it's invalid.
 	if (pattern && !String(currentValue).match(pattern)) {
 		messages.push([
@@ -907,19 +973,34 @@ function pathWithMacroValidator(currentValue: string): ValidatorResult {
 
 function variableValidator(currentValue: string, ctx: BuiltInValidatorContext): ValidatorResult {
 	const { meta } = ctx;
-	if (!currentValue?.trim() || !meta.siblingIds?.length) {
+	if (!currentValue?.trim()) {
 		return { valid: true };
 	}
-	const ownIds = new Set(meta.currentIds ?? []);
-	const candidateIds = [
-		currentValue,
-		...asArray(meta.additionalFields).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
-	];
-	const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
-	if (isDuplicate) {
-		return { valid: false, messages: [defineMessage({ defaultMessage: 'That variable name is already in use.' })] };
+	const messages: FieldValidityMessage[] = [];
+	const postfix = meta.fieldNamePostfix;
+	if (postfix?.enabled) {
+		const result = checkFieldNamePostfix(currentValue, postfix.ignoreFields, postfix.suffixes);
+		if (result === 'missing') {
+			messages.push([
+				defineMessage({
+					defaultMessage: 'The variable name must end with {postfixes}.'
+				}),
+				{ postfixes: formatPostfixList(postfix.suffixes) }
+			]);
+		}
 	}
-	return { valid: true };
+	if (meta.siblingIds?.length) {
+		const ownIds = new Set(meta.currentIds ?? []);
+		const candidateIds = [
+			currentValue,
+			...asArray(meta.additionalFields).map((pattern) => processAdditionalFieldMacro(currentValue, pattern))
+		];
+		const isDuplicate = candidateIds.some((id) => meta.siblingIds!.includes(id) && !ownIds.has(id));
+		if (isDuplicate) {
+			messages.push(defineMessage({ defaultMessage: 'That variable name is already in use.' }));
+		}
+	}
+	return { valid: messages.length === 0, messages };
 }
 
 export default validateFieldValue;

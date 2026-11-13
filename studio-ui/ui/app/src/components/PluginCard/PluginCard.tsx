@@ -30,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import { visuallyHidden } from '@mui/utils';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
 
 interface PluginCardProps {
@@ -79,6 +80,13 @@ const messages = defineMessages({
 	}
 });
 
+/** An icon passed as `useLabel` does not contribute text, so the button name has to carry the verb. */
+function isAriaHiddenIcon(label: PluginCardProps['useLabel']): boolean {
+	if (!label || typeof label === 'string' || !React.isValidElement(label)) return false;
+	const hidden = (label.props as { 'aria-hidden'?: unknown })['aria-hidden'];
+	return hidden === true || hidden === 'true';
+}
+
 function PluginCard(props: PluginCardProps) {
 	const [index, setIndex] = useState(0);
 	const [play, setPlay] = useState(false);
@@ -95,6 +103,8 @@ function PluginCard(props: PluginCardProps) {
 	} = props;
 	const { media, name, license, id, developer } = plugin;
 	const { formatMessage } = useIntl();
+	const pluginLabel =
+		typeof name === 'string' ? name : id === 'DUPLICATE' ? formatMessage({ defaultMessage: 'Duplicate Project' }) : id;
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
@@ -344,6 +354,11 @@ function PluginCard(props: PluginCardProps) {
 							sx={{ width: '50%' }}
 						>
 							{useLabel ? useLabel : formatMessage(messages.use)}
+							<Box component="span" sx={visuallyHidden}>
+								{isAriaHiddenIcon(useLabel)
+									? formatMessage({ defaultMessage: 'Use {name}' }, { name: pluginLabel })
+									: ` ${pluginLabel}`}
+							</Box>
 						</SecondaryButton>
 					)}
 					<Button
@@ -353,6 +368,7 @@ function PluginCard(props: PluginCardProps) {
 							color: (theme) => theme.palette.text.secondary,
 							flex: 1
 						}}
+						aria-label={formatMessage({ defaultMessage: 'More about {name}' }, { name: pluginLabel })}
 						onClick={() => onDetails(plugin)}
 					>
 						{formatMessage(messages.more)}

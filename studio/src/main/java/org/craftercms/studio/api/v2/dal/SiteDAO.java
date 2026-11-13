@@ -116,6 +116,14 @@ public interface SiteDAO {
 	List<Site> getAllSites();
 
 	/**
+	 * Site ids that delivery can serve: not deleted, not system, published repository created,
+	 * and state {@code READY} or {@code LOCKED}.
+	 *
+	 * @return the site ids, ordered by site id
+	 */
+	List<String> getDeliverableSiteIds();
+
+	/**
 	 * Set published repo created flag
 	 *
 	 * @param siteId the site id

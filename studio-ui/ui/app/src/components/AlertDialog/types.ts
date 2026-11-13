@@ -38,4 +38,11 @@ export interface AlertDialogProps extends AlertDialogBaseProps, Omit<DialogProps
 }
 
 export interface AlertDialogContainerProps
-	extends AlertDialogBaseProps, Pick<AlertDialogProps, 'onClosed' | 'children'> {}
+	extends AlertDialogBaseProps, Pick<AlertDialogProps, 'onClosed' | 'children'> {
+	/** Id of the title element, which the dialog's aria-labelledby points at. Generated when omitted. */
+	titleId?: string;
+	/** Id of the content element, which the dialog's aria-describedby points at. Generated when omitted. */
+	bodyId?: string;
+	/** Id of the body text element, which names the dialog when there is no title. Generated when omitted. */
+	bodyTextId?: string;
+}

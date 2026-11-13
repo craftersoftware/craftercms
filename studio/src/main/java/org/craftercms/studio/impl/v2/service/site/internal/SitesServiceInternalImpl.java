@@ -57,6 +57,7 @@ import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepository
 import org.craftercms.studio.api.v1.exception.repository.InvalidRemoteRepositoryException;
 import org.craftercms.studio.api.v1.exception.repository.RemoteRepositoryNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
+import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.content.ContentMonitor;
 import org.craftercms.studio.api.v2.dal.AuditLog;
 import static org.craftercms.studio.api.v2.dal.AuditLog.createAuditLogEntry;
@@ -103,6 +104,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.BLUE_PRINTS
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_ENVIRONMENT_ACTIVE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_STAGING_ID_SUFFIX;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.GLOBAL_REPO_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BASE_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.REPO_BLUEPRINTS_DESCRIPTOR_FILENAME;
@@ -147,6 +149,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	private final RetryingDatabaseOperationFacade retryingDatabaseOperationFacade;
 	private final Deployer deployer;
 	private ConfigurationService configurationService;
+	private ServicesConfig servicesConfig;
 	private final AuditService auditService;
 	private final TaskManager taskManager;
 	private final EntitlementValidator entitlementValidator;
@@ -652,6 +655,26 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 		return allSites;
 	}
 
+	@Override
+	public List<String> getDeliverableSiteIds() {
+		List<String> deliverableSiteIds = new ArrayList<>();
+		String stagingSiteIdSuffix = studioConfiguration.getProperty(CONFIGURATION_SITE_STAGING_ID_SUFFIX);
+		for (String siteId : siteDao.getDeliverableSiteIds()) {
+			deliverableSiteIds.add(siteId);
+			try {
+				if (servicesConfig.isStagingEnvironmentEnabled(siteId)) {
+					deliverableSiteIds.add(siteId + stagingSiteIdSuffix);
+				}
+			} catch (SiteNotFoundException e) {
+				// Here we know the site exists, so this should not really happen
+				logger.trace("Unable to read the staging flag for site '{}'", siteId, e);
+			} catch (Exception e) {
+				logger.warn("Failed to check if site '{}' is a staging site", siteId, e);
+			}
+		}
+		return deliverableSiteIds;
+	}
+
 	/**
 	 * Check if the site is in READY state but the bootstrap state provider doesn't consider it ready, and if so, set the site state to BOOTSTRAPPING.
 	 * @param site the site to check
@@ -1045,5 +1068,11 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	@Lazy
 	public void setContentMonitor(ContentMonitor contentMonitor) {
 		this.contentMonitor = contentMonitor;
+	}
+
+	@Autowired
+	@Lazy
+	public void setServicesConfig(ServicesConfig servicesConfig) {
+		this.servicesConfig = servicesConfig;
 	}
 }

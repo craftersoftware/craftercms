@@ -119,6 +119,8 @@ export function FolderBrowserTreeView(props: FolderBrowserTreeViewProps) {
 		<PathNavigatorTree
 			id={id}
 			label={formatMessage({ id: 'words.path', defaultMessage: 'Path' })}
+			// DialogHeader / EnhancedDialog titles are h2. This tree is a section of that dialog.
+			titleComponent="h3"
 			rootPath={rootPath}
 			collapsible={false}
 			initialCollapsed={false}

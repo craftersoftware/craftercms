@@ -17,6 +17,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../test/registerTsLoader.mjs';
+import { messageSource } from '../../../test/messageSource.mjs';
 
 const { parseLegacyFormDefinition } = await import('../../services/contentTypes.ts');
 const {
@@ -321,9 +322,10 @@ describe('item count editor rules', () => {
 	it('explains an unlimited repeat maximum and requires an integer of at least 1', () => {
 		const field = repeatDescriptor.fields.maxOccurs;
 		const description = field.description as { defaultMessage?: string };
-		assert.match(description.defaultMessage ?? '', /\*/);
-		assert.match(description.defaultMessage ?? '', /blank/i);
-		assert.match(description.defaultMessage ?? '', /1 or more/);
+		const text = messageSource(description.defaultMessage);
+		assert.match(text, /\*/);
+		assert.match(text, /blank/i);
+		assert.match(text, /1 or more/);
 		assert.deepEqual(field.validations.itemCount?.value, { role: 'max', partner: 'minOccurs' });
 		assert.deepEqual(repeatDescriptor.fields.minOccurs.validations.itemCount?.value, {
 			role: 'min',
