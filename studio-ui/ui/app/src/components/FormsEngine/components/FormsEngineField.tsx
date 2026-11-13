@@ -68,6 +68,11 @@ import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 
+/** Whether `node` is the button or comes after it in document order. The portal menu renders at the end of the body. */
+function isButtonOrFollows(button: Node | null | undefined, node: Node) {
+	return !button || node === button || Boolean(button.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 /** The `length/max` counter shown next to a field label, or null when there is neither. */
 function createLengthBlock({ length, max }: { length: number; max: number }) {
 	const pieces = [];
@@ -172,7 +177,9 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
-	// Whether focus is inside the field, including the options menu, which renders in a portal but is a React child.
+	// Whether focus is on the Options button or on something after it (the control, the options menu, which renders
+	// in a portal but is a React child). Help and the field action come before the button, and focus on them must
+	// not make the button a tab stop, or Tab from Help would land on it ahead of the control.
 	const [hasFocusWithin, setHasFocusWithin] = useState(false);
 	// A field whose control can't take focus (read-only, disabled, Uuid, Label) has no other way in, so its button stays tabbable.
 	const [hasOtherTabStop, setHasOtherTabStop] = useState(true);
@@ -185,7 +192,13 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					root.querySelectorAll<HTMLElement>(
 						'a[href], button, input:not([type="hidden"]), select, textarea, iframe, [tabindex], [contenteditable="true"]'
 					)
-				).some((el) => el !== menuButtonRef.current && el.tabIndex >= 0 && !el.matches(':disabled'))
+				).some(
+					(el) =>
+						el !== menuButtonRef.current &&
+						isButtonOrFollows(menuButtonRef.current, el) &&
+						el.tabIndex >= 0 &&
+						!el.matches(':disabled')
+				)
 			);
 		check();
 		const observer = new MutationObserver(check);
@@ -245,14 +258,17 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuId = `${generatedId}-options-menu`;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
-	const handleFieldFocus = () => setHasFocusWithin(true);
+	const isInMenu = (node: Node) => Boolean(document.getElementById(menuId)?.contains(node));
+	const handleFieldFocus = (event: React.FocusEvent<HTMLDivElement>) =>
+		setHasFocusWithin(isButtonOrFollows(menuButtonRef.current, event.target) || isInMenu(event.target));
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;
 		// The menu renders in a portal, so a target inside it is not a DOM descendant but still counts as inside.
-		const inside =
-			next instanceof Node &&
-			(event.currentTarget.contains(next) || Boolean(document.getElementById(menuId)?.contains(next)));
-		setHasFocusWithin(inside);
+		const nextNode = next instanceof Node ? next : null;
+		const inside = nextNode != null && (event.currentTarget.contains(nextNode) || isInMenu(nextNode));
+		setHasFocusWithin(
+			nextNode != null && inside && (isButtonOrFollows(menuButtonRef.current, nextNode) || isInMenu(nextNode))
+		);
 		if (inside) return;
 		if (isValid || validityData.state !== 'hasData') return;
 		const errorText = (validityData.data?.messages ?? [])

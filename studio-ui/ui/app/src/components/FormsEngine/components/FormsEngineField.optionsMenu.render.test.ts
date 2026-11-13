@@ -53,7 +53,10 @@ async function render() {
 }
 
 /** Renders one field per entry, each with the given control, or no control at all. */
-async function renderControls(controls: Record<string, ReturnType<typeof React.createElement> | null>) {
+async function renderControls(
+	controls: Record<string, ReturnType<typeof React.createElement> | null>,
+	fieldOverrides: Record<string, unknown> = {}
+) {
 	const ids = Object.keys(controls);
 	const host = await mountTree(
 		createItemsStore(baseItems()),
@@ -66,7 +69,7 @@ async function renderControls(controls: Record<string, ReturnType<typeof React.c
 				ids.map((id) =>
 					React.createElement(
 						FormsEngineField,
-						{ key: id, field: fieldFor(id), htmlFor: `${id}-input`, isValid: true },
+						{ key: id, field: { ...fieldFor(id), ...fieldOverrides }, htmlFor: `${id}-input`, isValid: true },
 						controls[id]
 					)
 				)
@@ -92,9 +95,18 @@ const tabOrder = (host: HTMLElement) =>
 	Array.from(host.querySelectorAll<HTMLElement>('button, input')).filter(
 		(el) => el.tabIndex >= 0 && !el.matches(':disabled')
 	);
+const helpButton = (host: HTMLElement, id: string) =>
+	host.querySelector<HTMLButtonElement>(`[data-field-id="${id}"] button[aria-label^="Help for"]`)!;
 const focusIn = (element: HTMLElement) =>
 	act(async () => {
 		element.focus();
+	});
+// jsdom has no sequential focus navigation, so Tab and Shift+Tab move through the elements the tab order holds now.
+const tab = (host: HTMLElement, { backwards = false } = {}) =>
+	act(async () => {
+		const order = tabOrder(host);
+		const index = order.indexOf(document.activeElement as HTMLElement);
+		order[backwards ? index - 1 : index + 1].focus();
 	});
 const menuOf = () => document.querySelector<HTMLElement>('[role="menu"]');
 // jsdom runs no default actions, so a key that activates a native button is followed by the click a browser fires.
@@ -194,6 +206,68 @@ describe('FormsEngineField Options button keyboard access', () => {
 		await waitForMenuToClose();
 		await focusIn(input(host, 'b_s'));
 		assert.equal(button.tabIndex, -1);
+	});
+
+	describe('in a field with help text', () => {
+		const helpText = { helpText: 'Some help' };
+
+		it('tabs from Help straight to the control, with no stop on Options between them', async () => {
+			const host = await renderControls({ a_s: enabledInput('a_s'), b_s: enabledInput('b_s') }, helpText);
+			assert.deepEqual(tabOrder(host), [
+				helpButton(host, 'a_s'),
+				input(host, 'a_s'),
+				helpButton(host, 'b_s'),
+				input(host, 'b_s')
+			]);
+			await focusIn(helpButton(host, 'a_s'));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+			await tab(host);
+			assert.equal(document.activeElement, input(host, 'a_s'));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			await tab(host);
+			assert.equal(document.activeElement, helpButton(host, 'b_s'));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+			assert.equal(optionsButton(host, 'b_s').tabIndex, -1);
+			await tab(host);
+			assert.equal(document.activeElement, input(host, 'b_s'));
+		});
+
+		it('reaches Options with Shift+Tab from the control, and Help beyond it', async () => {
+			const host = await renderControls({ a_s: enabledInput('a_s') }, helpText);
+			await focusIn(helpButton(host, 'a_s'));
+			await tab(host);
+			assert.equal(document.activeElement, input(host, 'a_s'));
+			await tab(host, { backwards: true });
+			assert.equal(document.activeElement, optionsButton(host, 'a_s'));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			await tab(host, { backwards: true });
+			assert.equal(document.activeElement, helpButton(host, 'a_s'));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+		});
+
+		it('keeps Options reachable after Help when the control cannot take focus', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s'), b_s: enabledInput('b_s') }, helpText);
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			assert.deepEqual(tabOrder(host).slice(0, 3), [
+				helpButton(host, 'a_s'),
+				optionsButton(host, 'a_s'),
+				helpButton(host, 'b_s')
+			]);
+			await focusIn(helpButton(host, 'a_s'));
+			await tab(host);
+			assert.equal(document.activeElement, optionsButton(host, 'a_s'));
+			await activate(optionsButton(host, 'a_s'), 'Enter');
+			assert.ok(menuOf());
+		});
+
+		it('keeps the menu items counted as inside while the menu is open', async () => {
+			const host = await renderControls({ a_s: enabledInput('a_s') }, helpText);
+			await focusIn(input(host, 'a_s'));
+			await focusIn(optionsButton(host, 'a_s'));
+			await activate(optionsButton(host, 'a_s'), 'Enter');
+			assert.ok(menuOf()!.contains(document.activeElement));
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+		});
 	});
 
 	describe('when its field has no other tab stop', () => {
