@@ -93,21 +93,27 @@ export function EnhancedDialog(props: EnhancedDialogProps) {
 	// is omitted or has no title is left unnamed instead of pointing at an element that is not rendered.
 	const hasTitle = headerTitle != null && typeof headerTitle !== 'boolean' && headerTitle !== '';
 	const canUseTitle = !omitHeader && hasTitle;
+	// MUI hands its aria-labelledby to its DialogContext, where a MUI DialogTitle (e.g. the one plugins get as
+	// `craftercms.components.DialogTitle`) takes its id from. That id must not be the DialogHeader's title id,
+	// or a DialogTitle in a dialog with a header would duplicate it.
+	const muiTitleId = `${id}-dialog-title`;
 	// MUI puts a top-level aria-label on the root instead of the element with the role, so a caller's name is
 	// read from either place and lands on the paper, next to aria-labelledby.
 	const getLabelling = (paper?: DialogLabellingProps) => {
 		const callerLabel = ariaLabel || paper?.['aria-label'];
 		const callerLabelledBy = ariaLabelledBy || paper?.['aria-labelledby'];
-		const labelledBy = callerLabelledBy ?? (callerLabel || !canUseTitle ? undefined : titleId);
+		// An omitted header with no caller label keeps MUI's own reference, so a DialogTitle rendered by the
+		// caller still names the dialog.
+		const labelledBy =
+			callerLabelledBy ?? (callerLabel ? undefined : canUseTitle ? titleId : omitHeader ? muiTitleId : undefined);
 		return { callerLabel, labelledBy };
 	};
 	const staticPaper = typeof slotProps?.paper === 'function' ? undefined : slotProps?.paper;
-	const dialogLabelledBy = getLabelling(staticPaper).labelledBy;
+	const dialogLabelledBy = ariaLabelledBy || staticPaper?.['aria-labelledby'] || muiTitleId;
 	const getPaperOverrides = (paper?: DialogLabellingProps) => {
 		const { callerLabel, labelledBy } = getLabelling(paper);
 		const overrides: DialogLabellingProps = {};
-		// MUI also points the paper at an id it generates for its own DialogTitle, which this dialog never renders.
-		if (!labelledBy) overrides['aria-labelledby'] = undefined;
+		if (labelledBy !== dialogLabelledBy) overrides['aria-labelledby'] = labelledBy;
 		if (callerLabel) overrides['aria-label'] = callerLabel;
 		return overrides;
 	};

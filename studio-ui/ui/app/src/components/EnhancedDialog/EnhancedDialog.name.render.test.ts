@@ -34,6 +34,7 @@ const { createRoot } = await import('react-dom/client');
 const { RawIntlProvider } = await import('react-intl');
 const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
 const { default: EnhancedDialog } = await import('./EnhancedDialog.tsx');
+const { default: DialogTitle } = await import('@mui/material/DialogTitle');
 
 const intl = createTestIntl();
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
@@ -149,11 +150,6 @@ describe('EnhancedDialog accessible name', () => {
 		assert.equal(nameOf(element), null);
 	});
 
-	it('has no dangling aria-labelledby when the header is omitted', async () => {
-		await render({ title: 'Publish', omitHeader: true });
-		assert.equal(dialog().hasAttribute('aria-labelledby'), false);
-	});
-
 	it('has no dangling aria-labelledby when the paper slot is a function', async () => {
 		await render({ slotProps: { paper: () => ({ elevation: 2 }) } });
 		assert.equal(dialog().hasAttribute('aria-labelledby'), false);
@@ -164,6 +160,24 @@ describe('EnhancedDialog accessible name', () => {
 		const element = dialog();
 		assert.equal(element.hasAttribute('aria-labelledby'), false);
 		assert.equal(nameOf(element), 'L');
+	});
+
+	it('names an omitted-header dialog by a MUI DialogTitle that the caller renders', async () => {
+		await render({
+			omitHeader: true,
+			children: React.createElement(DialogTitle, null, 'Plugin title')
+		});
+		assert.equal(nameOf(dialog()), 'Plugin title');
+	});
+
+	it('does not duplicate the header title id when a MUI DialogTitle is rendered inside a titled dialog', async () => {
+		await render({
+			title: 'Publish',
+			children: React.createElement(DialogTitle, null, 'Plugin title')
+		});
+		assert.equal(nameOf(dialog()), 'Publish');
+		const ids = [...document.querySelectorAll('[id]')].map((node) => node.id);
+		assert.equal(new Set(ids).size, ids.length, 'duplicate ids');
 	});
 
 	it('names a dialog that omits its header by the visible heading the caller points at', async () => {
