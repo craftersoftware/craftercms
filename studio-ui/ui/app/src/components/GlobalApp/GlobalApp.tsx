@@ -23,6 +23,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { sidebarFirstRowInset } from '../ResizeableDrawer/sidebarSpacing';
 import {
 	createHashRouter,
 	createRoutesFromElements,
@@ -170,9 +171,9 @@ function GlobalSidebarNav() {
 	return (
 		<List
 			disablePadding
-			// Matches where the first Project Tools row starts: 16px drawer padding + 10px header margin = 26px (3.25 x 8px).
+			// Matches where the first Project Tools row starts (drawer padding + header margin, 26px by default).
 			// On the list, not the drawer, so rows still span the sidebar edges and the selected bar stays flush.
-			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: 3.25 }}
+			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: sidebarFirstRowInset }}
 		>
 			{/* Placeholder rows while the menu loads. Hidden from assistive tech so they aren't read as empty items. */}
 			{!items &&

@@ -15,6 +15,7 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { sidebarDrawerPadding, sidebarHeaderMarginBottom } from '../ResizeableDrawer/sidebarSpacing';
 import React, { useEffect } from 'react';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
@@ -145,7 +146,7 @@ export function SiteTools(props: SiteToolsProps) {
 						display: 'flex',
 						flexDirection: 'column',
 						justifyContent: 'space-between',
-						padding: (theme) => theme.spacing(2)
+						padding: (theme) => theme.spacing(sidebarDrawerPadding)
 					}
 				}}
 				open={openSidebar}
@@ -158,7 +159,7 @@ export function SiteTools(props: SiteToolsProps) {
 						sx={{
 							display: 'flex',
 							justifyContent: 'space-between',
-							marginBottom: '10px'
+							marginBottom: `${sidebarHeaderMarginBottom}px`
 						}}
 					>
 						{onBackClick && (
