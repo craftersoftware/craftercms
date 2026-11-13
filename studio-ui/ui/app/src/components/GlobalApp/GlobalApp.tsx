@@ -168,7 +168,12 @@ function GlobalSidebarNav() {
 		return <ApiResponseErrorState error={error.response ?? error} />;
 	}
 	return (
-		<List disablePadding sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+		<List
+			disablePadding
+			// Matches where the first Project Tools row starts: 16px drawer padding + 10px header margin = 26px (3.25 x 8px).
+			// On the list, not the drawer, so rows still span the sidebar edges and the selected bar stays flush.
+			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: 3.25 }}
+		>
 			{/* Placeholder rows while the menu loads. Hidden from assistive tech so they aren't read as empty items. */}
 			{!items &&
 				[0, 1, 2, 3].map((i) => (
