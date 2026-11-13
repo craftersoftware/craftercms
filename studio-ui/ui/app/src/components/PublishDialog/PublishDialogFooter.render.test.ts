@@ -81,4 +81,14 @@ describe('publish footer reason', () => {
 		assert.equal(submit.getAttribute('aria-describedby'), null);
 		assert.equal(submit.disabled, false);
 	});
+
+	it('keeps Cancel and Publish in one wrap item, apart from the reason', async () => {
+		const host = await render('Enter a package title to publish.');
+		const footer = host.querySelector('.MuiDialogActions-root');
+		const [cancel, submit] = host.querySelectorAll('button');
+		const group = cancel.parentElement;
+		assert.ok(submit.parentElement === group, 'Cancel and Publish share one wrapper');
+		assert.ok(group?.parentElement === footer, 'the wrapper is a single item of the footer');
+		assert.ok(!group?.contains(host.querySelector('#publish-reason')), 'the reason is its own item');
+	});
 });
