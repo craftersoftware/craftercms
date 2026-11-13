@@ -124,7 +124,7 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 			logger.error("Error parsing URI", e);
 		}
 		String safeRequest = String.join(StringUtils.SPACE, request.getMethod(), safeURI);
-		String headerNames = headers.stream().map(header -> header.name).collect(Collectors.joining(", "));
+		String headerNames = headers.stream().map(RequestHeader::name).collect(Collectors.joining(", "));
 
 		if (StringUtils.isEmpty(headerNames)) {
 			logger.info("Executing request {}...", safeRequest);
@@ -178,19 +178,12 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 			throw new DeployerException("HTTP method '" + method + " not recognized");
 		}
 		for (RequestHeader header : headers) {
-			request.setHeader(header.name, header.value);
+			request.setHeader(header.name(), header.value());
 		}
 		return request;
 	}
 
-	protected static final class RequestHeader {
-		private final String name;
-		private final String value;
-
-		private RequestHeader(String name, String value) {
-			this.name = name;
-			this.value = value;
-		}
+	protected record RequestHeader(String name, String value) {
 	}
 
 }
