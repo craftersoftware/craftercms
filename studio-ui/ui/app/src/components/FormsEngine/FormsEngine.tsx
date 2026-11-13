@@ -393,6 +393,8 @@ function FormBootstrap(props: FormsEngineProps) {
 		return { ...rest, update: { path: savedCreatePath } };
 	}, [props, savedCreatePath]);
 	const { create, update, repeat, readonly: readonlyProp, stackIndex = 0, isDialog } = effectiveProps;
+	// Only the root form's title can name the dialog, so a stacked form's loading and error states do not get the id.
+	const titleId = stackIndex === 0 ? effectiveProps.titleId : undefined;
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
 	const contentTypesById = useContentTypes();
@@ -943,7 +945,7 @@ function FormBootstrap(props: FormsEngineProps) {
 	]);
 
 	if (prepError) {
-		return <FormPrepError error={prepError} />;
+		return <FormPrepError error={prepError} titleId={titleId} />;
 	} else if (
 		ready &&
 		hasFormAtoms(stableFormContextRef.current) &&
@@ -970,6 +972,7 @@ function FormBootstrap(props: FormsEngineProps) {
 		return (
 			<LoadingState
 				sx={{ height: getTargetHeight(isDialog, isFullScreen, theme) }}
+				titleId={titleId}
 				title={<FormattedMessage defaultMessage="Please wait" />}
 				subtitle={<FormattedMessage defaultMessage="Gathering content information" />}
 			/>
