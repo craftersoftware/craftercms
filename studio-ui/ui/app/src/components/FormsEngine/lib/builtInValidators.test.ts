@@ -187,5 +187,12 @@ describe('built-in validators on the new signature', () => {
 			'At least {minCount, plural, one {# item is} other {# items are}} required.',
 			'One or more embedded content items are invalid.'
 		]);
+		assert.deepEqual(
+			result.invalidItems?.map((item) => ({
+				key: item.key,
+				fields: item.fields.map((entry) => ({ fieldId: entry.fieldId, messages: texts(entry.messages) }))
+			})),
+			[{ key: 'o1', fields: [{ fieldId: 'title_s', messages: ['This field is required.'] }] }]
+		);
 	});
 });
