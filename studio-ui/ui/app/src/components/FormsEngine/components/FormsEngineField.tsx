@@ -172,6 +172,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
+	// Whether focus is inside the field, including the options menu, which renders in a portal but is a React child.
+	const [hasFocusWithin, setHasFocusWithin] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
@@ -216,10 +218,16 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
 	const generatedId = useId();
 	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
+	const menuButtonId = `${generatedId}-options-button`;
+	const menuId = `${generatedId}-options-menu`;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
+	const handleFieldFocus = () => setHasFocusWithin(true);
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;
+		// The menu is in a portal, so a target inside it is not a DOM descendant. The focus event the menu raises
+		// right after sets this back.
+		setHasFocusWithin(next instanceof Node && event.currentTarget.contains(next));
 		if (next instanceof Node && event.currentTarget.contains(next)) return;
 		if (isValid || validityData.state !== 'hasData') return;
 		const errorText = (validityData.data?.messages ?? [])
@@ -252,6 +260,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			data-field-id={fieldId}
 			required={isRequired}
 			className={className}
+			onFocus={handleFieldFocus}
 			onBlur={handleFieldBlur}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
@@ -300,13 +309,22 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{action}
 						{menu && (
 							<>
-								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
+								{/*
+								 * The button is tabbable only while focus is inside the field, so it adds no tab stop per field.
+								 * It precedes the control in the DOM, so Shift+Tab from the control reaches it. A keyboard
+								 * shortcut is not offered: every candidate clashes with a browser, screen reader, native text
+								 * input, select or TinyMCE binding.
+								 */}
 								<IconButton
 									size="small"
-									tabIndex={-1}
+									id={menuButtonId}
+									tabIndex={hasFocusWithin || openMenu ? 0 : -1}
 									ref={menuButtonRef}
 									onClick={() => setOpenMenu(true)}
 									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+									aria-haspopup="menu"
+									aria-expanded={openMenu}
+									aria-controls={openMenu ? menuId : undefined}
 								>
 									<MoreVertRounded fontSize="small" />
 								</IconButton>
@@ -315,6 +333,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 									anchorEl={menuButtonRef.current}
 									onClose={handleCloseMenu}
 									onClick={handleCloseMenu}
+									slotProps={{ list: { id: menuId, 'aria-labelledby': menuButtonId } }}
 								>
 									<MenuItem
 										onClick={() => {
