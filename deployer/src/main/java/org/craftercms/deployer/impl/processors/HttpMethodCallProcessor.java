@@ -75,7 +75,8 @@ public class HttpMethodCallProcessor extends AbstractMainDeploymentProcessor {
 		url = getRequiredStringProperty(config, URL_CONFIG_KEY);
 		method = getRequiredStringProperty(config, METHOD_CONFIG_KEY);
 		headers = readHeaders(config);
-		httpClient = HttpClients.createDefault();
+		httpClient = headers.isEmpty() ? HttpClients.createDefault()
+				: HttpClients.custom().disableRedirectHandling().build();
 	}
 
 	@SuppressWarnings("unchecked")
