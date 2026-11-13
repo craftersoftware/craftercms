@@ -193,14 +193,19 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 					root.querySelectorAll<HTMLElement>(
 						'a[href], button, input:not([type="hidden"]), select, textarea, iframe, [tabindex], [contenteditable="true"]'
 					)
-				).some(
-					(el) =>
+				).some((el) => {
+					// MUI Collapse hides its closed content with `visibility: hidden`, which checkVisibility() only
+					// reports with `visibilityProperty`. Where the method is missing, read the computed style.
+					const visible =
+						el.checkVisibility?.({ visibilityProperty: true }) ?? window.getComputedStyle(el).visibility !== 'hidden';
+					return (
 						el !== menuButtonRef.current &&
 						isButtonOrFollows(menuButtonRef.current, el) &&
 						el.tabIndex >= 0 &&
 						!el.matches(':disabled') &&
-						el.checkVisibility?.() !== false
-				)
+						visible
+					);
+				})
 			);
 		const check = () => {
 			recheckTabStops();
