@@ -737,10 +737,10 @@ export async function repeatGroupValidator(
 		});
 	});
 
-	const settled = await Promise.all(
+	const itemFieldResults = await Promise.all(
 		pending.map(async ({ key, field, promise }) => ({ key, field, result: await promise }))
 	);
-	const invalidItems = collectInvalidListItems(settled);
+	const invalidItems = collectInvalidListItems(itemFieldResults);
 	if (invalidItems.length) {
 		valid = false;
 		messages.push(defineMessage({ defaultMessage: 'One or more items are invalid.' }));
