@@ -178,6 +178,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
+	const generatedId = useId();
+	const menuId = `${generatedId}-options-menu`;
 	// Whether focus is on the Options button or on something after it (the control, the options menu, which renders
 	// in a portal but is a React child). Help and the field action come before the button, and focus on them must
 	// not make the button a tab stop, or Tab from Help would land on it ahead of the control.
@@ -224,7 +226,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			attributeFilter: ['disabled', 'tabindex']
 		});
 		return () => observer.disconnect();
-	}, [menu, showHelp]);
+	}, [menu, showHelp, menuId]);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
@@ -266,10 +268,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		editedRef.current = true;
 	}, [value]);
 	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
-	const generatedId = useId();
 	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
 	const menuButtonId = `${generatedId}-options-button`;
-	const menuId = `${generatedId}-options-menu`;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
 	const isInMenu = (node: Node) => Boolean(document.getElementById(menuId)?.contains(node));
