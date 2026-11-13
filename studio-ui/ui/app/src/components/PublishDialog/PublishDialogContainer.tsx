@@ -33,7 +33,7 @@ import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { LoadingState } from '../LoadingState';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
-import { Fade, Typography } from '@mui/material';
+import { Box, Fade, Typography } from '@mui/material';
 import { DateTimeTimezonePickerProps } from '../DateTimeTimezonePicker';
 import { EmptyState } from '../EmptyState';
 import DialogFooter from '../DialogFooter';
@@ -81,7 +81,7 @@ export function PublishDialogFooter({
 	onSubmit: (event?: SyntheticEvent) => void;
 }) {
 	return (
-		<DialogFooter sx={{ flexWrap: 'wrap' }}>
+		<DialogFooter disableSpacing sx={{ flexWrap: 'wrap', gap: 1 }}>
 			{reason && (
 				<Typography
 					id={reasonId}
@@ -91,24 +91,26 @@ export function PublishDialogFooter({
 						flex: '1 1 16rem',
 						minWidth: 0,
 						overflowWrap: 'anywhere',
-						textAlign: { xs: 'start', sm: 'end' },
+						textAlign: 'start',
 						px: 1
 					}}
 				>
 					{reason}
 				</Typography>
 			)}
-			<SecondaryButton onClick={onCancel} disabled={isSubmitting}>
-				<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
-			</SecondaryButton>
-			<PrimaryButton
-				onClick={onSubmit}
-				disabled={submitDisabled}
-				loading={isSubmitting}
-				aria-describedby={reason ? reasonId : undefined}
-			>
-				{submitLabel}
-			</PrimaryButton>
+			<Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
+				<SecondaryButton onClick={onCancel} disabled={isSubmitting}>
+					<FormattedMessage id="requestPublishDialog.cancel" defaultMessage="Cancel" />
+				</SecondaryButton>
+				<PrimaryButton
+					onClick={onSubmit}
+					disabled={submitDisabled}
+					loading={isSubmitting}
+					aria-describedby={reason ? reasonId : undefined}
+				>
+					{submitLabel}
+				</PrimaryButton>
+			</Box>
 		</DialogFooter>
 	);
 }
