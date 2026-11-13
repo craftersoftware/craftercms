@@ -19,20 +19,27 @@ import ContentType from '../models/ContentType';
 import { useDispatch } from 'react-redux';
 import { useActiveSiteId } from './useActiveSiteId';
 import { useSelection } from './useSelection';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { fetchContentTypes } from '../state/actions/preview';
+import { useSiteUIConfig } from './useSiteUIConfig';
+import { addConfiguredAdditionalFields } from '../utils/contentType';
 
 export function useContentTypes(): LookupTable<ContentType> {
 	const dispatch = useDispatch();
 	const site = useActiveSiteId();
 	const { byId, isFetching } = useSelection((state) => state.contentTypes);
+	const uiConfig = useSiteUIConfig();
 	useEffect(() => {
 		if (!byId && site && isFetching === null) {
 			dispatch(fetchContentTypes());
 		}
 	}, [dispatch, site, byId, isFetching]);
 
-	return byId;
+	// Return `byId` immediately so Preview is not held on UI config; merge once controls load.
+	return useMemo(
+		() => (uiConfig.isFetching === false ? addConfiguredAdditionalFields(byId, uiConfig.controls) : byId),
+		[byId, uiConfig.isFetching, uiConfig.controls]
+	);
 }
 
 export default useContentTypes;

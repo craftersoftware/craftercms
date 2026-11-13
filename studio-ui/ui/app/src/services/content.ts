@@ -42,6 +42,7 @@ import { generateComponentPath, isPdfDocument, parseContentXML, prepareVirtualIt
 import QuickCreateItem from '../models/content/QuickCreateItem';
 import ApiResponse, { Api2ResponseFormat } from '../models/ApiResponse';
 import { fetchContentTypes, getItemDataSourceId } from './contentTypes';
+import { addConfiguredAdditionalFields } from '../utils/contentType';
 import { Clipboard } from '../models/GlobalState';
 import { createObjectGroupId, getFileNameFromPath } from '../utils/path';
 import { GetChildrenResponse } from '../models/GetChildrenResponse';
@@ -168,7 +169,12 @@ export function fetchContentInstanceDescriptor(
 	site: string,
 	path: string,
 	options?: Partial<GetDescriptorOptions>,
-	contentTypeLookup?: LookupTable<ContentType>
+	contentTypeLookup?: LookupTable<ContentType>,
+	/**
+	 * Control descriptors (e.g. from site UI config). Applied on both the supplied lookup and the
+	 * internally fetched lookup so old form defs without persisted `<additionalFields>` still parse quietly.
+	 */
+	controls?: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>
 ): Observable<{
 	model: ContentInstance;
 	modelLookup: LookupTable<ContentInstance>;
@@ -179,16 +185,18 @@ export function fetchContentInstanceDescriptor(
 	unflattenedPaths: LookupTable<ContentInstance>;
 }> {
 	const unflattenedPaths = {};
+	const withAdditionalFields = (lookup: LookupTable<ContentType>) =>
+		controls ? addConfiguredAdditionalFields(lookup, controls) : lookup;
 	return (
 		contentTypeLookup
-			? of(contentTypeLookup)
-			: fetchContentTypes(site).pipe(map((contentTypes) => createLookupTable(contentTypes)))
+			? of(withAdditionalFields(contentTypeLookup))
+			: fetchContentTypes(site).pipe(map((contentTypes) => withAdditionalFields(createLookupTable(contentTypes))))
 	).pipe(
-		switchMap((contentTypeLookup) =>
+		switchMap((resolvedContentTypeLookup) =>
 			fetchDescriptorDOM(site, path, options).pipe(
 				map((doc) => {
 					const modelLookup = {};
-					const model = parseContentXML(doc, path, contentTypeLookup, modelLookup, unflattenedPaths);
+					const model = parseContentXML(doc, path, resolvedContentTypeLookup, modelLookup, unflattenedPaths);
 					return { model, modelLookup, unflattenedPaths };
 				})
 			)

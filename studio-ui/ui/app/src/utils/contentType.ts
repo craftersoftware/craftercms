@@ -27,6 +27,7 @@ import { ContentItem } from '../models/Item';
 import type { BuiltInControlType } from '../components/FormsEngine/lib/controlMap';
 import { defineMessages, IntlShape } from 'react-intl';
 import { XmlKeys } from '../components/FormsEngine/lib/formConsts';
+import { mergeAdditionalFieldIds } from './additionalFields';
 
 const messages = defineMessages({
 	[XmlKeys.displayTemplate]: {
@@ -325,3 +326,47 @@ export const componentsDataSourceContentTypesPropertyNames = [
 	'allowedSharedContentTypes',
 	'allowedSharedExistingContentTypes'
 ];
+
+/**
+ * Form-definition XML is the authoritative source for a field's `additionalFields`.
+ * Control descriptors in the site UI config backfill ids that were never persisted
+ * (form defs saved before that tag existed, or a descriptor template whose expanded
+ * id is not already stored). A persisted id that differs from the descriptor is kept.
+ *
+ * Old form defs must keep working before re-save: callers that parse content (Preview,
+ * `fetchContentInstanceDescriptor`, dialogs via `useContentTypes`) should run this merge.
+ * Preview must not stall guest load waiting on UI config solely to silence companion-field
+ * logs — emit content types as soon as `byId` is ready and re-issue the descriptor request
+ * when a later merged lookup arrives.
+ */
+export function addConfiguredAdditionalFields(
+	contentTypes: LookupTable<ContentType>,
+	controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>
+): LookupTable<ContentType> {
+	if (!contentTypes || !controls) return contentTypes;
+
+	let contentTypesChanged = false;
+	const result = Object.fromEntries(
+		Object.entries(contentTypes).map(([contentTypeId, contentType]) => {
+			let fieldsChanged = false;
+			const fields = Object.fromEntries(
+				Object.entries(contentType.fields).map(([fieldId, field]) => {
+					const persistedAdditionalFields = field.additionalFields ?? [];
+					const additionalFields = mergeAdditionalFieldIds(
+						field.id,
+						persistedAdditionalFields,
+						controls[field.type]?.metadata?.additionalFields
+					);
+					if (additionalFields.length === persistedAdditionalFields.length) return [fieldId, field];
+					fieldsChanged = true;
+					return [fieldId, { ...field, additionalFields }];
+				})
+			);
+			if (!fieldsChanged) return [contentTypeId, contentType];
+			contentTypesChanged = true;
+			return [contentTypeId, { ...contentType, fields }];
+		})
+	);
+
+	return contentTypesChanged ? result : contentTypes;
+}

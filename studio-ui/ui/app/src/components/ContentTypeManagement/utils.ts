@@ -44,6 +44,7 @@ import {
 	setFieldAtoms,
 	type ValidatorsData
 } from '../FormsEngine/lib/formUtils';
+import { mergeAdditionalFieldIds } from '../../utils/additionalFields';
 import { RefObject } from 'react';
 import { Subject } from 'rxjs';
 import { atom } from 'jotai';
@@ -806,7 +807,9 @@ export function prepareSerializeToXmlTypeObject(
 				description: section.description,
 				defaultOpen: toBooleanString(section.expandByDefault),
 				fields: {
-					field: section.fields.map((fieldId) => convertFieldStructToXmlStruct(type.fields[fieldId]))
+					field: section.fields.map((fieldId) =>
+						convertFieldStructToXmlStruct(type.fields[fieldId], configDescriptors?.controlDescriptors)
+					)
 				},
 				color: section.color
 			}))
@@ -827,7 +830,10 @@ export function buildContentTypeXml(serializeTypeStructureObject: SerializeToXml
 	return builder.build({ form: serializeTypeStructureObject });
 }
 
-function convertFieldStructToXmlStruct(field: ContentTypeField): Required<LegacyFormDefinitionField> {
+function convertFieldStructToXmlStruct(
+	field: ContentTypeField,
+	controlDescriptors?: LookupTable<DescriptorContentType>
+): Required<LegacyFormDefinitionField> {
 	// Count-limit XML comes from the storage table: elements, property types, and positive constraints.
 	const countXml = (() => {
 		const storage = getCountLimitStorage(field.type);
@@ -921,6 +927,14 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 	}
 	const constraints = constraintList.length > 0 ? { constraint: constraintList } : undefined;
 
+	// Form-def ids are authoritative; descriptor templates only backfill. An empty descriptor must
+	// not clear persisted companions (e.g. built-in `input` has a descriptor with no additionalFields).
+	const descriptor = field.id ? resolveControlDescriptors(controlDescriptors)[field.type] : undefined;
+	const additionalFieldIds = field.id
+		? mergeAdditionalFieldIds(field.id, field.additionalFields, descriptor?.metadata?.additionalFields)
+		: (field.additionalFields ?? []);
+	const additionalFields = additionalFieldIds.length > 0 ? { id: additionalFieldIds } : undefined;
+
 	// Note: `undefined` suppresses nodes in the XML, empty strings doesn't.
 	return {
 		id: field.id,
@@ -934,13 +948,14 @@ function convertFieldStructToXmlStruct(field: ContentTypeField): Required<Legacy
 		minOccurs,
 		fields: field.fields
 			? {
-					field: Object.values(field.fields).map((value) => convertFieldStructToXmlStruct(value))
+					field: Object.values(field.fields).map((value) => convertFieldStructToXmlStruct(value, controlDescriptors))
 				}
 			: undefined,
 		// endregion
 		plugin,
 		properties,
-		constraints
+		constraints,
+		additionalFields
 	};
 }
 

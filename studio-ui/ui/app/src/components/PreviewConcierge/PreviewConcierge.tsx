@@ -228,6 +228,7 @@ const issueDescriptorRequest = (props: {
 	dispatch: Dispatch;
 	completeActionCreator: ActionCreatorWithOptionalPayload<any>;
 	permissions: string[];
+	controls?: Record<string, { metadata?: { additionalFields?: string[] | null } }>;
 }) => {
 	const {
 		site,
@@ -237,12 +238,16 @@ const issueDescriptorRequest = (props: {
 		flatten = true,
 		dispatch,
 		completeActionCreator,
-		permissions
+		permissions,
+		controls
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
+	// Track paths queued by this request only; mark the shared ref after delivery so
+	// cancellation (e.g. a new check-in) leaves them eligible for the next request.
+	const pendingSourceMapPaths = new Set<string>();
 
-	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
+	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
@@ -260,8 +265,8 @@ const issueDescriptorRequest = (props: {
 								contentItemPathLookup[path] = true;
 								contentItemPaths.push(path);
 							}
-							if (!requestedSourceMapPaths.current[path]) {
-								requestedSourceMapPaths.current[path] = true;
+							if (!requestedSourceMapPaths.current[path] && !pendingSourceMapPaths.has(path)) {
+								pendingSourceMapPaths.add(path);
 								requests.push(fetchContentInstance(site, path, contentTypes));
 							}
 						});
@@ -297,6 +302,9 @@ const issueDescriptorRequest = (props: {
 			})
 		)
 		.subscribe(({ contentItems, modelResponse }) => {
+			pendingSourceMapPaths.forEach((path) => {
+				requestedSourceMapPaths.current[path] = true;
+			});
 			const { model, modelLookup } = modelResponse;
 			const normalizedModels = normalizeModelsLookup(modelLookup);
 			const hierarchyMap = createModelHierarchyDescriptorMap(normalizedModels, contentTypes);
@@ -357,7 +365,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		usePreviewState();
 	const item = useCurrentPreviewItem();
 	const { currentUrlPath } = usePreviewNavigation();
-	const contentTypes = useContentTypes();
 	const contentTypes$Ref = useRef<BehaviorSubject<Record<string, ContentType>>>(undefined);
 	const { authoringBase, guestBase, xsrfArgument } = useSelection((state) => state.env);
 	const priorState = useRef({ site: siteId });
@@ -374,6 +381,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
+	const contentTypes = useContentTypes();
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();
@@ -427,6 +435,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		enqueueSnackbar,
 		editModePadding,
 		cdataEscapedFieldPatterns,
+		uiConfig,
 		toggleEditMode,
 		keyboardShortcutsDialogState,
 		setDataSourceActionsListState,
@@ -738,10 +747,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// endregion
 			const { type, payload } = action;
 			const permissions = user?.permissionsBySite[siteId];
+			// Take the first ready lookup. useContentTypes applies configured additionalFields once uiConfig loads.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
 				take(1)
 			);
+			const controlsForParse = () =>
+				upToDateRefs.current.uiConfig?.isFetching === false ? upToDateRefs.current.uiConfig.controls : undefined;
 			switch (type) {
 				case guestSiteLoad.type:
 				case guestCheckIn.type:
@@ -788,7 +800,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							requestedSourceMapPaths,
 							dispatch,
 							completeActionCreator: fetchPrimaryGuestModelComplete,
-							permissions
+							permissions,
+							controls: controlsForParse()
 						});
 					});
 					break;
@@ -840,7 +853,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						nnou(siteId) && dispatch(changeCurrentUrl('/'));
 					} else {
 						const path = payload.path;
-
 						contentTypes$.subscribe((contentTypes) => {
 							hostToGuest$.next(contentTypesResponse({ contentTypes: Object.values(contentTypes) }));
 							issueDescriptorRequest({
@@ -850,7 +862,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchPrimaryGuestModelComplete,
-								permissions
+								permissions,
+								controls: controlsForParse()
 							});
 						});
 					}
@@ -866,7 +879,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
-								permissions
+								permissions,
+								controls: controlsForParse()
 							});
 						});
 					} else {
