@@ -115,6 +115,7 @@ describe('ListItemValidity accessible cue', () => {
 		assert.equal(host.textContent?.includes('Invalid item'), false);
 		assert.equal(hiddenInvalidCue(host), null);
 		assert.equal(host.querySelector('svg'), null);
+		assert.equal(host.querySelector('[aria-label*="Invalid item"]'), null);
 		assert.match(host.textContent ?? '', /Row label/);
 	});
 
@@ -127,6 +128,8 @@ describe('ListItemValidity accessible cue', () => {
 		const icon = host.querySelector('svg');
 		assert.ok(icon);
 		assert.equal(icon.getAttribute('aria-hidden'), 'true');
+		// Cue is visually hidden text in the name, not an aria-label (Tooltip must not reintroduce that).
+		assert.equal(host.querySelector('[aria-label*="Invalid item"]'), null);
 		assert.match(host.textContent ?? '', /Row label/);
 	});
 });
