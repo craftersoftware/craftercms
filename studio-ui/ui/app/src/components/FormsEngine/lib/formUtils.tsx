@@ -622,7 +622,11 @@ export function createFieldAtoms(
 		const relevanceVersion = formContextRef.current.atoms?.relevanceVersion;
 		if (relevanceVersion) get(relevanceVersion);
 		const value = get(valueAtom);
-		const occurrenceKeys = Array.isArray(value) ? repeatOccurrenceKeys(value, repeatItemKeysFor(valueAtom)) : undefined;
+		// Only getListItemKey for repeat fields reads occurenceKeys, so calculate only when needed.
+		const occurrenceKeys =
+			field.type === 'repeat' && Array.isArray(value)
+				? repeatOccurrenceKeys(value, repeatItemKeysFor(valueAtom))
+				: undefined;
 		return validateFieldValue(field, value, {
 			nested: validatorsData?.nested,
 			siteId: validatorsData?.siteId,
