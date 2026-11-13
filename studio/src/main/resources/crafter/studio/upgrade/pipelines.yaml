@@ -681,6 +681,13 @@ pipelines:
                             -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
                                 dest: /configuration/samples/sample-site-config-tools.xml
                         commitDetails: Remove legacy content-types tool from the site config tools sample
+            -   currentVersion: 5.0.0.27
+                nextVersion: 5.0.0.28
+                operations:
+                    -   type: xsltFileUpgrader
+                        path: /configuration/global-permission-mappings-config.xml
+                        template: crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.2.xslt
+                        commitDetails: Add content_move wherever content_write is granted
 
     # Pipeline to upgrade site repositories
     site:
@@ -1065,6 +1072,12 @@ configurations:
                 # Update version to align with blueprints optimized version
                 -   currentVersion: 5.0.0.0
                     nextVersion: 5.0.0.1
+                -   currentVersion: 5.0.0.1
+                    nextVersion: 5.0.0.2
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.2.xslt
+                            commitDetails: Add content_move wherever content_write is granted
 
     role-mappings-config:
         module: studio

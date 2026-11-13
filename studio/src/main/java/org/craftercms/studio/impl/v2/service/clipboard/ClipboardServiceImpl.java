@@ -47,11 +47,14 @@ public class ClipboardServiceImpl implements ClipboardService {
 		this.clipboardServiceInternal = clipboardServiceInternal;
 	}
 
+	/**
+	 * COPY requires content_write on the drop folder. CUT requires content_move on the source and that same
+	 * drop folder, checked inside moveToParentPath rather than on the computed child path.
+	 */
 	@Override
 	@RequireSiteReady
-	@HasPermission(type = DefaultPermission.class, action = PERMISSION_CONTENT_WRITE)
 	public List<String> pasteItems(@SiteId String siteId, Operation operation,
-								   @ContentPath String targetPath, String sourcePath, boolean includeChildren)
+								   String targetPath, String sourcePath, boolean includeChildren)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
 		return clipboardServiceInternal.pasteItems(siteId, operation, targetPath, sourcePath, includeChildren);
 	}

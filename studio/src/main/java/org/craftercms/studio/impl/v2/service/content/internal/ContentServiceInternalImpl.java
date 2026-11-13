@@ -233,11 +233,8 @@ import org.craftercms.studio.model.rest.content.WriteContentResult;
 import org.craftercms.studio.model.rest.content.WriteContentResult.WriteContentResultItem;
 import org.craftercms.studio.model.rest.content.order.ItemOrder;
 import org.craftercms.studio.model.rest.content.order.ReorderItemRequest;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_LIST_RESOURCE_ID;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PATH_RESOURCE_ID;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_DELETE;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_MOVE;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.SITE_ID_RESOURCE_ID;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -714,35 +711,41 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	}
 
 	/**
-	 * Validate the lifecycle affected paths
+	 * Validate the lifecycle affected paths.
 	 * Results are valid if:
 	 * - The list is not empty
-	 * - The user has write permission for the paths
-	 * - The items are not in workflow. Notice that for move operations (sourcePath != null) the source path children
-	 * will be checked for workflow as well
+	 * - Write is allowed where this operation still requires it
+	 * - The items are not in workflow. For moves (sourcePath != null) the source path children are checked for
+	 * workflow as well
+	 * <p>
+	 * A move does not require content_delete on the source, and it does not require content_write on the moved
+	 * roots or their original descendants. content_move on those two roots is checked by {@link #checkMove}.
+	 * A lifecycle item outside that moved set still requires content_write. Copy and write (sourcePath == null)
+	 * still require content_write on every affected path.
 	 *
 	 * @param siteId        the site id
-	 * @param sourcePath    the source content path for move or delete operations
+	 * @param sourcePath    the source content path for move operations, or null for write and copy
 	 * @param targetPath    the path to write the content to
 	 * @param affectedPaths the root paths affected by this operation
 	 * @throws ServiceLayerException          if the list is empty
 	 * @throws ContentInPublishQueueException if any of the items is in the publish queue
-	 * @throws ActionDeniedException          if the user does not have write permission
+	 * @throws ActionDeniedException          if the user does not have the required permission
 	 */
-	private void validateLifecycleResults(String siteId, String sourcePath, String targetPath, List<String> affectedPaths)
+	protected void validateLifecycleResults(String siteId, String sourcePath, String targetPath, List<String> affectedPaths)
 			throws ServiceLayerException, ActionDeniedException {
 		// Check list is not empty or throw exception  (can't write empty set)
 		if (affectedPaths.isEmpty()) {
 			throw new ServiceLayerException(format("Item list after lifecycle processing is empty, nothing to write for site '%s' path '%s'", siteId, targetPath));
 		}
 
-		PermissionCheckingUtils.checkPermissions(permissionEvaluator, PermissionCheckingUtils.getSecuredResource(siteId, affectedPaths), List.of(PERMISSION_CONTENT_WRITE));
-
-		// Check permissions for the oldPath for move operations
 		if (sourcePath != null) {
-			Map<String, Object> deleteResource = Map.of(SITE_ID_RESOURCE_ID, siteId, PATH_RESOURCE_ID, sourcePath);
-			if (!permissionEvaluator.isAllowed(getCurrentUsername(), deleteResource, PERMISSION_CONTENT_DELETE)) {
-				throw new ActionDeniedException(PERMISSION_CONTENT_DELETE, sourcePath);
+			List<String> outsideMovedSet = affectedPaths.stream()
+					.filter(path -> !isInsideMovedSet(path, sourcePath, targetPath))
+					.toList();
+			if (!outsideMovedSet.isEmpty()) {
+				PermissionCheckingUtils.checkPermissions(permissionEvaluator,
+						PermissionCheckingUtils.getSecuredResource(siteId, outsideMovedSet),
+						List.of(PERMISSION_CONTENT_WRITE));
 			}
 			assertNotInWorkflow(siteId, List.of(sourcePath), true);
 			// Validate "not in workflow" for all affected paths outside of target
@@ -752,9 +755,29 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 					.toList();
 			assertNotInWorkflow(siteId, externalAffectedPaths, false);
 		} else {
+			PermissionCheckingUtils.checkPermissions(permissionEvaluator,
+					PermissionCheckingUtils.getSecuredResource(siteId, affectedPaths),
+					List.of(PERMISSION_CONTENT_WRITE));
 			// Fail to continue the write operation if the item is in workflow
 			assertNotInWorkflow(siteId, affectedPaths, false);
 		}
+	}
+
+	/**
+	 * A path is part of the moved set when it is the source root, the target root, or a descendant of either.
+	 */
+	private boolean isInsideMovedSet(String path, String sourcePath, String targetPath) {
+		return equalsNormalized(sourcePath, path) || directoryContains(sourcePath, path)
+				|| equalsNormalized(targetPath, path) || directoryContains(targetPath, path);
+	}
+
+	/**
+	 * Require content_move on the source and target roots only.
+	 */
+	protected void checkMove(String siteId, String sourcePath, String targetPath) {
+		PermissionCheckingUtils.checkPermissions(permissionEvaluator,
+				PermissionCheckingUtils.getSecuredResource(siteId, List.of(sourcePath, targetPath)),
+				List.of(PERMISSION_CONTENT_MOVE));
 	}
 
 	/**
@@ -2203,6 +2226,7 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 		logger.debug("Rename path '{}' to new name '{}' for site '{}'", path, name, siteId);
 		String parentPath = getParentUrl(path);
 		String targetPath = parentPath + FILE_SEPARATOR + name;
+		checkMove(siteId, path, targetPath);
 		doMove(siteId, path, targetPath, null, null);
 	}
 
@@ -2235,17 +2259,21 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	@Override
 	public PasteContentResult move(final String siteId, final String sourcePath, final String targetPath)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
+		checkMove(siteId, sourcePath, targetPath);
 		return doMove(siteId, sourcePath, targetPath, null, null);
 	}
 
 	@Override
 	public PasteContentResult moveToParentPath(String siteId, String sourcePath, String targetParent) throws ServiceLayerException, UserNotFoundException, AuthenticationException {
+		// Paste CUT checks the source and the drop folder, not the computed child path.
+		checkMove(siteId, sourcePath, targetParent);
 		PastedPath pastedPath = constructNewPathForCutCopy(siteId, sourcePath, targetParent);
 		return doMove(siteId, sourcePath, pastedPath.path, pastedPath.newLabel, null);
 	}
 
 	@Override
 	public WriteContentResult moveAndUpdate(String siteId, String sourcePath, String targetPath, String content) throws ServiceLayerException, UserNotFoundException, AuthenticationException {
+		checkMove(siteId, sourcePath, targetPath);
 		return doMove(siteId, sourcePath, targetPath, null, () -> IOUtils.toInputStream(content, UTF_8));
 	}
 
