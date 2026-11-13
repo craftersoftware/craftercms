@@ -56,6 +56,7 @@ export function DateTimeExpressionInput(props: TextProps) {
 				disabled={readonly}
 				endAdornment={
 					<Tooltip
+						describeChild
 						title={
 							<Box
 								sx={{

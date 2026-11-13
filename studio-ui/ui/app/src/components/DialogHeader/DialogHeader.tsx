@@ -63,6 +63,8 @@ export type DialogHeaderProps<
 	SecondaryTypographyComponent extends ElementType = 'p'
 > = PropsWithChildren<{
 	id?: string;
+	/** Id of the title element. A dialog's `aria-labelledby` points at it. */
+	titleId?: string;
 	title: ReactNode;
 	titleTypographyProps?: TypographyProps<PrimaryTypographyComponent, { component?: PrimaryTypographyComponent }>;
 	subtitleTypographyProps?: TypographyProps<SecondaryTypographyComponent, { component?: SecondaryTypographyComponent }>;
@@ -88,6 +90,7 @@ export function DialogHeader(props: DialogHeaderProps) {
 	const { formatMessage } = useIntl();
 	const {
 		id,
+		titleId,
 		onCloseButtonClick,
 		onMinimizeButtonClick,
 		onFullScreenButtonClick,
@@ -158,6 +161,7 @@ export function DialogHeader(props: DialogHeaderProps) {
 				)}
 				<Typography
 					{...titleTypographyProps}
+					id={titleId ?? titleTypographyProps?.id}
 					className={props.classes?.title}
 					sx={{
 						padding: (theme) => `0 ${theme.spacing(1)}`,

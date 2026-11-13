@@ -1,4 +1,6 @@
 {
+	"9+Ddtu": "Siguiente",
+	"JJNc3c": "Anterior",
 	"contentType.contentNotFound": "Contenido no encontrado.",
 	"globalStyles.clickToAddContent": "Haz clic para añadir contenido.",
 	"globalStyles.contentHidden": "Contenido oculto para permitir el arrastre.",
@@ -27,14 +29,14 @@
 	"zoneMenu.addItem": "Agregar ítem nuevo",
 	"zoneMenu.cancel": "Cancelar (esc)",
 	"zoneMenu.cancelName": "Cancelar",
-	"zoneMenu.duplicateItem": "Artículo duplicado",
+	"zoneMenu.duplicateItem": "Duplicar elemento",
 	"zoneMenu.editController": "Editar controlador",
 	"zoneMenu.editTemplate": "Editar plantilla",
 	"zoneMenu.moveDown": "Mover hacia abajo/derecha (→ o ↓)",
 	"zoneMenu.moveDownName": "Mover hacia abajo",
 	"zoneMenu.moveUp": "Mover hacia arriba/izquierda (← o ↑)",
 	"zoneMenu.moveUpName": "Mover hacia arriba",
-	"zoneMenu.trash": "Basura (⌫)",
-	"zoneMenu.trashConfirmation": "{isEmbedded, select, true {Borrar} other {Desasociar}} este artículo?",
-	"zoneMenu.trashName": "Basura"
+	"zoneMenu.trash": "Eliminar (⌫)",
+	"zoneMenu.trashConfirmation": "¿{isEmbedded, select, true {Eliminar} other {Desasociar}} este elemento?",
+	"zoneMenu.trashName": "Eliminar"
 }

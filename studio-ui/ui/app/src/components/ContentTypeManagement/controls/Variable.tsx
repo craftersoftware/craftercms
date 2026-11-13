@@ -20,7 +20,7 @@ import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import { ControlProps } from '../../FormsEngine/types';
 import controlDescriptors from '../descriptors/controls';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { useIntl } from 'react-intl';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import { DropDownMenu } from '../../DropDownMenuButton';
 import { suffixesMap, SuffixesType } from '../suffixesMap';
@@ -100,7 +100,7 @@ export function Variable(props: VariableProps) {
 				inputRef={inputRef}
 				endAdornment={
 					showSuffixes && (
-						<Tooltip title={<FormattedMessage defaultMessage="Add/update suffix" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Add/update suffix' })}>
 							<DropDownMenu
 								onMenuItemClick={(event, optionId) => onAddSuffix(optionId)}
 								options={supportedSuffixes.map((suffix) => {

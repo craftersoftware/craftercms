@@ -28,7 +28,8 @@ import type { ContentTypeField } from '../../../models/ContentType';
 const React = await import('react');
 const { act, createElement } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { RawIntlProvider, createIntl } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider: ReduxProvider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom, createStore, Provider: JotaiProvider } = await import('jotai');
@@ -40,15 +41,7 @@ const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlo
 	await import('../lib/formsEngineContext.ts');
 const { createFormVisibilityAtoms } = await import('../lib/formVisibility.ts');
 
-const baseIntl = createIntl({ locale: 'en', messages: {}, onError() {} });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: string }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(
-			{ ...descriptor, id: descriptor.id ?? String(descriptor.defaultMessage) } as never,
-			values as never
-		)
-};
+const intl = createTestIntl();
 
 const reduxStore = configureStore({
 	reducer: {

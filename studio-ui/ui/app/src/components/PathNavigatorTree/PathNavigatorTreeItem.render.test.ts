@@ -1,0 +1,193 @@
+/*
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import '../../../test/stringListDomSetup.mjs';
+import '../../../test/registerTsLoader.mjs';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { afterEach, describe, it } from 'node:test';
+
+const React = await import('react');
+const { createRoot } = await import('react-dom/client');
+const { act } = await import('react');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../test/createTestIntl.mjs');
+const { SimpleTreeView } = await import('@mui/x-tree-view');
+const { default: PathNavigatorTreeItem } = await import('./PathNavigatorTreeItem.tsx');
+
+const intl = createTestIntl();
+
+const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
+afterEach(async () => {
+	for (const { unmount, host } of mounted.splice(0)) {
+		await act(async () => unmount());
+		host.remove();
+	}
+});
+
+async function render(renderIntl: typeof intl = intl) {
+	const labelClicks: string[] = [];
+	const path = '/site/website';
+	const props = {
+		path,
+		itemsByPath: {
+			[path]: { id: path, path, label: 'Home', systemType: 'folder', childrenCount: 1, stateMap: {} }
+		},
+		keywordByPath: {},
+		totalByPath: {},
+		childrenByParentPath: {},
+		errorByPath: {},
+		showPublishingTarget: false,
+		showWorkflowState: false,
+		onLabelClick: (_event: unknown, clickedPath: string) => labelClicks.push(clickedPath),
+		onIconClick: () => {},
+		onOpenItemMenu: () => {},
+		onFilterChange: () => {},
+		onMoreClick: () => {}
+	};
+	const host = document.createElement('div');
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	await act(async () => {
+		root.render(
+			React.createElement(
+				RawIntlProvider,
+				{ value: renderIntl as never },
+				React.createElement(SimpleTreeView, null, React.createElement(PathNavigatorTreeItem, props as never))
+			)
+		);
+	});
+	mounted.push({ unmount: () => root.unmount(), host });
+	const treeItem = host.querySelector<HTMLElement>('[role="treeitem"]');
+	assert.ok(treeItem, 'treeitem renders');
+	return { host, treeItem, labelClicks };
+}
+
+async function press(element: Element, key: string) {
+	const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+	await act(async () => {
+		element.dispatchEvent(event);
+	});
+	return event;
+}
+
+// The row buttons carry the item's label, which is 'Home' in render().
+const FILTER_LABEL = 'Filter Home';
+const OPTIONS_LABEL = 'Options for Home';
+
+const byLabel = (host: HTMLElement, label: string) => host.querySelector<HTMLElement>(`button[aria-label="${label}"]`);
+
+describe('PathNavigatorTreeItem keyboard', () => {
+	it('activates the item on Enter from the treeitem itself', async () => {
+		const { treeItem, labelClicks } = await render();
+		const event = await press(treeItem, 'Enter');
+		assert.deepEqual(labelClicks, ['/site/website']);
+		assert.equal(event.defaultPrevented, true);
+	});
+
+	it('does not activate the item on Enter from the filter Close button', async () => {
+		const { host, treeItem, labelClicks } = await render();
+		await act(async () => treeItem.focus());
+		await act(async () => {
+			byLabel(host, FILTER_LABEL)?.click();
+		});
+		const close = byLabel(host, 'Close');
+		assert.ok(close, 'Close button of the open filter');
+		const event = await press(close, 'Enter');
+		assert.deepEqual(labelClicks, []);
+		assert.equal(event.defaultPrevented, false, 'the button keeps its native Enter activation');
+	});
+
+	it('shows the Options and Filter buttons while the treeitem has focus', async () => {
+		const { host, treeItem } = await render();
+		assert.equal(byLabel(host, FILTER_LABEL), null);
+		assert.equal(byLabel(host, OPTIONS_LABEL), null);
+		await act(async () => treeItem.focus());
+		assert.ok(byLabel(host, FILTER_LABEL), 'Filter is reachable from the focused item');
+		assert.ok(byLabel(host, OPTIONS_LABEL), 'Options is reachable from the focused item');
+		assert.equal(byLabel(host, FILTER_LABEL)?.tabIndex, 0);
+	});
+});
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The accessible name of a button is its aria-label only if nothing points aria-labelledby at another element.
+// MUI Tooltip sets aria-labelledby on its child while open when the title is not a string.
+async function hoverAndWait(button: HTMLElement) {
+	await act(async () => {
+		button.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		// Past the Tooltip enter delay (100ms by default).
+		await wait(300);
+	});
+}
+
+function assertNamedWhileTooltipOpen(
+	host: HTMLElement,
+	button: HTMLElement,
+	expectedName: string,
+	tooltipText: string
+) {
+	const tooltip = document.body.querySelector('[role="tooltip"]');
+	assert.ok(tooltip, 'the tooltip is open');
+	assert.equal(tooltip.textContent, tooltipText);
+	assert.equal(button.hasAttribute('aria-labelledby'), false, 'the open tooltip leaves aria-labelledby unset');
+	assert.equal(button.getAttribute('aria-label'), expectedName);
+	assert.ok(byLabel(host, expectedName), 'the button is still found by its full name');
+}
+
+describe('PathNavigatorTreeItem row button names while the tooltip is open', () => {
+	it('keeps the Options button name when its tooltip opens', async () => {
+		const { host, treeItem } = await render();
+		await act(async () => treeItem.focus());
+		const options = byLabel(host, OPTIONS_LABEL);
+		assert.ok(options, 'Options button');
+		await hoverAndWait(options);
+		assertNamedWhileTooltipOpen(host, options, OPTIONS_LABEL, 'Options');
+	});
+
+	it('keeps the Filter button name when its tooltip opens', async () => {
+		const { host, treeItem } = await render();
+		await act(async () => treeItem.focus());
+		const filter = byLabel(host, FILTER_LABEL);
+		assert.ok(filter, 'Filter button');
+		await hoverAndWait(filter);
+		assertNamedWhileTooltipOpen(host, filter, FILTER_LABEL, 'Filter');
+	});
+});
+
+describe('PathNavigatorTreeItem row button names with the Spanish catalog', () => {
+	const messages = JSON.parse(readFileSync(new URL('../../translations/es.json', import.meta.url), 'utf8'));
+	const esIntl = createTestIntl({ locale: 'es', messages });
+
+	it('names the Options and Filter buttons from the es messages, and translates their tooltips', async () => {
+		const { host, treeItem } = await render(esIntl);
+		await act(async () => treeItem.focus());
+		const options = byLabel(host, 'Opciones para Home');
+		const filter = byLabel(host, 'Filtrar Home');
+		assert.ok(options, 'Opciones para Home');
+		assert.ok(filter, 'Filtrar Home');
+		assert.equal(byLabel(host, OPTIONS_LABEL), null);
+		assert.equal(byLabel(host, FILTER_LABEL), null);
+		await hoverAndWait(options);
+		assertNamedWhileTooltipOpen(host, options, 'Opciones para Home', 'Opciones');
+		await act(async () => {
+			options.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }));
+			await wait(300);
+		});
+		await hoverAndWait(filter);
+		assertNamedWhileTooltipOpen(host, filter, 'Filtrar Home', 'Filtrar');
+	});
+});

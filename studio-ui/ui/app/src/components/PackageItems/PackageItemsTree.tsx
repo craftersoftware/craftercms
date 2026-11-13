@@ -18,6 +18,7 @@ import LookupTable from '../../models/LookupTable';
 import { ContentItem, LightItem } from '../../models';
 import { buildPathTrees, PathTreeNode } from '../PublishDialog/buildPathTrees';
 import React, { useMemo } from 'react';
+import { useIntl } from 'react-intl';
 import { treeItemClasses } from '@mui/x-tree-view/TreeItem';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
 import { renderTreeNode } from './utils';
@@ -32,6 +33,7 @@ export interface PackageItemsTreeProps {
 
 export function PackageItemsTree(props: PackageItemsTreeProps) {
 	const { items, expandedPaths, setExpandedPaths, onOpenMenu } = props;
+	const { formatMessage } = useIntl();
 	const { itemMap, itemPaths } = useMemo(() => {
 		const itemPaths = [];
 		const itemMap: Record<string, LightItem> = {};
@@ -73,6 +75,7 @@ export function PackageItemsTree(props: PackageItemsTreeProps) {
 						itemMap: itemMap,
 						node,
 						dependencyTypeMap: {},
+						formatMessage,
 						onMenuClick: (e, path) => onOpenMenu(e, itemMap[path]),
 						showItemTarget: false
 					})

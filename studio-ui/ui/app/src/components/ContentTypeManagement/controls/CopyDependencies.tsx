@@ -17,7 +17,7 @@
 import React, { ChangeEvent, useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import { ControlProps } from '../../FormsEngine/types';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import TextField from '@mui/material/TextField';
 import Card from '@mui/material/Card';
 import Tooltip from '@mui/material/Tooltip';
@@ -41,6 +41,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 	const { field, value, setValue } = props;
 	const copyDependencies = value?.['copy-dependency'] ?? [];
 	const htmlId = useId();
+	const { formatMessage } = useIntl();
 
 	const handleChange = (
 		e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
@@ -90,7 +91,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Remove Reference" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Remove Reference' })}>
 							<IconButton onClick={() => removeDependency(index)}>
 								<RemoveCircleOutlineRoundedIcon />
 							</IconButton>
@@ -104,7 +105,7 @@ export function CopyDependencies(props: CopyDependenciesProps) {
 					justifyContent: 'center'
 				}}
 			>
-				<Tooltip title={<FormattedMessage defaultMessage="Add Reference" />}>
+				<Tooltip title={formatMessage({ defaultMessage: 'Add Reference' })}>
 					<IconButton onClick={() => addDependency()}>
 						<AddCircleOutlineRoundedIcon />
 					</IconButton>

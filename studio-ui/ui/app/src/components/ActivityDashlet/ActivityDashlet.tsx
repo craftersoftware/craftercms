@@ -580,13 +580,10 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 							{hasMoreItemsToLoad ? (
 								<TimelineDotWithAvatar sx={{ bgcolor: 'unset' }}>
 									<Tooltip
-										title={
-											<FormattedMessage
-												id="activityDashlet.loadMore"
-												defaultMessage="Load {limit} more"
-												values={{ limit }}
-											/>
-										}
+										title={formatMessage(
+											{ id: 'activityDashlet.loadMore', defaultMessage: 'Load {limit} more' },
+											{ limit }
+										)}
 									>
 										<IconButton
 											color="primary"

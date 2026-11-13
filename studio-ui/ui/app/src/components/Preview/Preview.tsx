@@ -34,6 +34,9 @@ import LookupTable from '../../models/LookupTable';
 import { changeSite } from '../../state/actions/sites';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import LoadingState from '../LoadingState';
+import { PREVIEW_REFLOW_NARROW_QUERY, PREVIEW_REFLOW_SHORT_QUERY } from './previewReflow';
+import { visuallyHidden } from '@mui/utils';
+import SkipToMainContent, { mainLandmarkOutsetSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
 
 const notValidSiteRedirect = (message: string, url: string) => {
 	alert(message);
@@ -183,11 +186,24 @@ function Preview() {
 					height: '100%',
 					display: 'flex',
 					flexDirection: 'column',
-					background: theme.palette.background.default
+					minWidth: 0,
+					maxWidth: '100%',
+					background: theme.palette.background.default,
+					// At the 320px reflow width, scroll the shell vertically instead of locking a 100vh pane
+					// that overflows on both axes. Side panels overlay (see Host) rather than sitting beside it.
+					[PREVIEW_REFLOW_NARROW_QUERY]: {
+						overflowX: 'clip',
+						overflowY: 'auto'
+					},
+					// The containing block of the open tools drawers while they scroll with the shell.
+					[PREVIEW_REFLOW_SHORT_QUERY]: {
+						position: 'relative'
+					}
 				})}
 			>
 				{/* If there is no site set (no crafterSite cookie), there'll be a changeSite event that will set the site based on the query string parameter. In the
 				 meantime, we'll show a loading state. */}
+				<SkipToMainContent />
 				{site ? (
 					<>
 						<ToolBar />
@@ -196,7 +212,12 @@ function Preview() {
 						<ICEToolsPanel />
 					</>
 				) : (
-					<LoadingState />
+					<Box component="main" id={STUDIO_MAIN_CONTENT_ID} tabIndex={-1} sx={mainLandmarkOutsetSx}>
+						<Box component="h1" sx={visuallyHidden}>
+							{formatMessage({ id: 'words.preview', defaultMessage: 'Preview' })}
+						</Box>
+						<LoadingState />
+					</Box>
 				)}
 			</Box>
 		</PreviewConcierge>

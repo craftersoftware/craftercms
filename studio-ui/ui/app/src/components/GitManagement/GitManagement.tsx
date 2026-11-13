@@ -220,7 +220,7 @@ export function GitManagement(props: GitManagementProps) {
 					</Button>
 				}
 				rightContent={
-					<Tooltip title={<FormattedMessage id="words.refresh" defaultMessage="Refresh" />}>
+					<Tooltip title={formatMessage({ id: 'words.refresh', defaultMessage: 'Refresh' })}>
 						<IconButton
 							onClick={() => {
 								fetchRepositories();

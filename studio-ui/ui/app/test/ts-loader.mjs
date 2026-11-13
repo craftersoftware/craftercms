@@ -61,6 +61,15 @@ function resolveSpecifier(specifier, context, nextResolve) {
 	try {
 		return nextResolve(specifier, context);
 	} catch (error) {
+		// Vite resolves extensionless package subpaths. Node ESM does not, so retry with .js.
+		// registerHooks calls resolve synchronously, so this retry cannot await.
+		if (error?.code === 'ERR_MODULE_NOT_FOUND' && !specifier.endsWith('.js')) {
+			try {
+				return nextResolve(`${specifier}.js`, context);
+			} catch {
+				// Keep the original error below.
+			}
+		}
 		// Some packages ship directory entry points that only CommonJS resolution understands.
 		if (error?.code !== 'ERR_UNSUPPORTED_DIR_IMPORT' || !context.parentURL?.startsWith('file:')) throw error;
 		const resolved = createRequire(context.parentURL).resolve(specifier);
@@ -101,8 +110,10 @@ export function load(url, context, nextLoad) {
 		sourcefile: filename,
 		sourcemap: assignsMessageIds ? 'inline' : false,
 		jsx: 'automatic',
-		// Vite provides import.meta.env at build time. Under node:test it does not, so behave like the dev server.
-		define: { 'import.meta.env': '{"DEV":true}' }
+		// Vite injects this. Node has no import.meta.env, and a few modules read it while loading.
+		define: {
+			'import.meta.env': JSON.stringify({ DEV: true, PROD: false, MODE: 'test', BASE_URL: '/' })
+		}
 	});
 	return { format: 'module', source: result.code, shortCircuit: true };
 }

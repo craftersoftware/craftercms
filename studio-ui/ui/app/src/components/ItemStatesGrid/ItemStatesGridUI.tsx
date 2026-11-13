@@ -16,7 +16,7 @@
 
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
-import GlobalAppGridRow from '../GlobalAppGridRow';
+import GlobalAppGridRow, { GlobalAppGridRowAction } from '../GlobalAppGridRow';
 import GlobalAppGridCell from '../GlobalAppGridCell';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage } from 'react-intl';
@@ -118,19 +118,22 @@ export function ItemStatesGridUI(props: WorkflowStatesGridUIProps) {
 								</GlobalAppGridCell>
 								<GlobalAppGridCell className="ellipsis maxWidth300 pl0">
 									<ItemDisplay item={item} />
-									<Typography
-										title={item.path}
-										variant="caption"
-										component="p"
-										sx={{
-											color: (theme) => theme.palette.text.secondary,
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap'
-										}}
-									>
-										{item.path}
-									</Typography>
+									<GlobalAppGridRowAction>
+										<Typography
+											title={item.path}
+											variant="caption"
+											component="span"
+											sx={{
+												display: 'block',
+												color: (theme) => theme.palette.text.secondary,
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap'
+											}}
+										>
+											{item.path}
+										</Typography>
+									</GlobalAppGridRowAction>
 								</GlobalAppGridCell>
 								<GlobalAppGridCell>
 									<Typography variant="body2">

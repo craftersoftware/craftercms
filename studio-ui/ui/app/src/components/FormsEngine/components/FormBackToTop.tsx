@@ -15,7 +15,7 @@
  */
 
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import Fab from '@mui/material/Fab';
 import { ArrowUpward } from '@mui/icons-material';
 import Box from '@mui/material/Box';
@@ -27,6 +27,7 @@ interface FormBackToTopProps {
 }
 
 export function FormBackToTop({ containerRef, getScrollContainer = (e) => e }: FormBackToTopProps) {
+	const { formatMessage } = useIntl();
 	return (
 		<Box
 			sx={{
@@ -36,7 +37,7 @@ export function FormBackToTop({ containerRef, getScrollContainer = (e) => e }: F
 				display: 'flex'
 			}}
 		>
-			<Tooltip title={<FormattedMessage defaultMessage="Back to top" />}>
+			<Tooltip title={formatMessage({ defaultMessage: 'Back to top' })}>
 				<Fab onClick={() => getScrollContainer(containerRef.current).scroll({ top: 0, behavior: 'smooth' })}>
 					<ArrowUpward />
 				</Fab>

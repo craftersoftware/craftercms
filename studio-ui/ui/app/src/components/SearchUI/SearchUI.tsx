@@ -249,7 +249,15 @@ export function SearchUI(props: SearchUIProps) {
 					})}
 				>
 					<Tooltip title={<FormattedMessage id="search.selectAll" defaultMessage="Select all on this page" />}>
-						<Checkbox checked={areAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
+						<Checkbox
+							checked={areAllSelected}
+							onChange={(e) => handleSelectAll(e.target.checked)}
+							slotProps={{
+								input: {
+									'aria-label': formatMessage({ id: 'search.selectAll', defaultMessage: 'Select all on this page' })
+								}
+							}}
+						/>
 					</Tooltip>
 					<TablePagination
 						rowsPerPageOptions={[9, 15, 21]}
