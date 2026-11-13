@@ -79,7 +79,7 @@ spec:
       # # Uncomment if using the Git SSH server in Authoring
       # initContainers:
       #   - name: ssh-keys-copier
-      #     image: craftercms/delivery_tomcat:4.2.2
+      #     image: craftercms/delivery_tomcat:5.0.0
       #     volumeMounts:
       #       - name: ssh-keys
       #         mountPath: /.ssh
@@ -129,7 +129,7 @@ spec:
               memory: 2.5Gi
         # Tomcat container
         - name: tomcat
-          image: craftercms/delivery_tomcat:4.2.2
+          image: craftercms/delivery_tomcat:5.0.0
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status.json
@@ -179,7 +179,7 @@ spec:
               memory: 4Gi
         # Deployer container
         - name: deployer
-          image: craftercms/deployer:4.2.2
+          image: craftercms/deployer:5.0.0
           startupProbe:
             httpGet:
               path: /api/1/monitoring/status
