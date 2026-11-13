@@ -390,6 +390,8 @@
 	<select id="getPackageForItems" resultMap="PublishPackageMap">
 		<bind name="includeChildren" value="false"/>
 		<bind name="target" value="null"/>
+		<bind name="submitter" value="null"/>
+		<bind name="reviewer" value="null"/>
 		<include refid="getAllPackagesForFilters"/>
 		<include refid="packagePathsFilter"/>
 		ORDER BY pp.schedule ASC LIMIT 1
@@ -450,6 +452,8 @@
 	</sql>
 
 	<select id="getItemPackagesInternal" resultMap="PublishPackageMap">
+		<bind name="submitter" value="null"/>
+		<bind name="reviewer" value="null"/>
 		<include refid="getAllPackagesForFilters"/>
 		<include refid="packagePathsFilter"/>
 	</select>
