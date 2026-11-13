@@ -22,6 +22,8 @@ import { ConditionalLoadingState } from '../LoadingState/LoadingState';
 import AceEditor from '../AceEditor/AceEditor';
 import { useDispatch } from 'react-redux';
 import Skeleton from '@mui/material/Skeleton';
+import Box from '@mui/material/Box';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 import ListSubheader from '@mui/material/ListSubheader';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -63,6 +65,7 @@ import { fetchContentItem } from '../../state/actions/content';
 
 export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps) {
 	const {
+		title,
 		titleId,
 		path,
 		onMinimize,
@@ -308,7 +311,21 @@ export function CodeEditorDialogContainer(props: CodeEditorDialogContainerProps)
 		<>
 			<DialogHeader
 				titleId={titleId}
-				title={item ? item.label : isNew ? fileName : <Skeleton width="120px" />}
+				title={
+					item ? (
+						item.label
+					) : isNew ? (
+						fileName
+					) : (
+						<>
+							<Skeleton width="120px" />
+							{/* Names the dialog while the item loads, or when it never does. */}
+							<Box component="span" sx={visuallyHidden}>
+								{title}
+							</Box>
+						</>
+					)
+				}
 				subtitle={
 					affectedPackages?.length ? (
 						<Alert
