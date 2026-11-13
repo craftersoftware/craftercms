@@ -283,7 +283,7 @@ public class MoveManagementTokenToHeaderUpgradeOperation extends AbstractTargetU
 			appendEncodedRun(decoded, literal, runStart, index, bytes);
 			runStart = -1;
 			bytes.reset();
-			decoded.append(literal.charAt(index));
+			decoded.append(literal.charAt(index) == '+' ? ' ' : literal.charAt(index));
 			index++;
 		}
 		appendEncodedRun(decoded, literal, runStart, index, bytes);
