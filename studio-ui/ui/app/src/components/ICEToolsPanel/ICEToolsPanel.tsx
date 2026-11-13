@@ -65,6 +65,7 @@ export function ICEToolsPanel() {
 		<ResizeableDrawer
 			open={isOpen}
 			belowToolbar
+			scrollsWithShell
 			anchor="right"
 			landmark="complementary"
 			landmarkLabel={formatMessage({ id: 'iceToolsPanel.landmark', defaultMessage: 'Editing tools' })}
@@ -74,8 +75,7 @@ export function ICEToolsPanel() {
 			onResizeStart={() => blockPreviewIframePointerEvents(true)}
 			onResizeStop={() => blockPreviewIframePointerEvents(false)}
 			sxs={{
-				resizeHandle: { backgroundColor: 'transparent' },
-				drawerPaperBelowToolbar: { top: '64px' }
+				resizeHandle: { backgroundColor: 'transparent' }
 			}}
 		>
 			<Suspense fallback={<LoadingState />}>
