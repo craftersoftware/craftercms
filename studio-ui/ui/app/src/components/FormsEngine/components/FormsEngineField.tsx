@@ -177,6 +177,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const labelRef = useRef<HTMLLabelElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
+	const [showHelp, setShowHelp] = useState(false);
 	// Whether focus is on the Options button or on something after it (the control, the options menu, which renders
 	// in a portal but is a React child). Help and the field action come before the button, and focus on them must
 	// not make the button a tab stop, or Tab from Help would land on it ahead of the control.
@@ -197,7 +198,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						el !== menuButtonRef.current &&
 						isButtonOrFollows(menuButtonRef.current, el) &&
 						el.tabIndex >= 0 &&
-						!el.matches(':disabled')
+						!el.matches(':disabled') &&
+						el.checkVisibility?.() !== false
 				)
 			);
 		check();
@@ -209,8 +211,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			attributeFilter: ['disabled', 'tabindex']
 		});
 		return () => observer.disconnect();
-	}, [menu]);
-	const [showHelp, setShowHelp] = useState(false);
+	}, [menu, showHelp]);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));

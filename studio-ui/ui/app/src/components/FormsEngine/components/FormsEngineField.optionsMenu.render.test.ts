@@ -260,6 +260,28 @@ describe('FormsEngineField Options button keyboard access', () => {
 			assert.ok(menuOf());
 		});
 
+		it('does not count a link inside the collapsed help as a tab stop', async () => {
+			// jsdom has no checkVisibility, so it answers from the computed style, as a browser does.
+			const proto = window.HTMLElement.prototype as { checkVisibility?: (this: HTMLElement) => boolean };
+			proto.checkVisibility = function (this: HTMLElement) {
+				return window.getComputedStyle(this).visibility !== 'hidden';
+			};
+			try {
+				const host = await renderControls(
+					{ a_s: disabledInput('a_s') },
+					{ helpText: '<a href="https://example.com">More</a>' }
+				);
+				const link = host.querySelector<HTMLElement>('[data-field-id="a_s"] section a')!;
+				assert.equal(window.getComputedStyle(link).visibility, 'hidden');
+				assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+				await activate(helpButton(host, 'a_s'), 'Enter');
+				assert.equal(window.getComputedStyle(link).visibility, 'visible');
+				assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+			} finally {
+				delete proto.checkVisibility;
+			}
+		});
+
 		it('keeps the menu items counted as inside while the menu is open', async () => {
 			const host = await renderControls({ a_s: enabledInput('a_s') }, helpText);
 			await focusIn(input(host, 'a_s'));
