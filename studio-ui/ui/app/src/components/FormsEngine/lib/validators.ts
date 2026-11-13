@@ -866,12 +866,10 @@ export async function nodeSelectorValidator(
 	const pending: Array<{ key: string; field: ContentTypeField; promise: Promise<FieldValidityState> }> = [];
 
 	// Validate fields of each embedded item. Min/max size checks above still apply.
-	// Walk the full list so a missing objectId falls back to the same index the row uses.
-	for (let index = 0; index < items.length; index++) {
-		const component = items[index].component;
-		if (!component) continue;
+	// `for...of` so each child's deny-list is resolved before its field promises are collected.
+	for (const { component } of embeddedContent) {
 		const contentTypeId = component['content-type'] as string;
-		const objectId = (component[XmlKeys.modelId] as string) ?? String(index);
+		const objectId = component[XmlKeys.modelId] as string;
 		if (visited.has(objectId)) continue; // prevent circular validation
 		visited.add(objectId);
 		const contentType = meta.contentTypesById[contentTypeId];
