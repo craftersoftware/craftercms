@@ -15,6 +15,11 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import {
+	sidebarDrawerPadding,
+	sidebarFooterPadding,
+	sidebarHeaderMarginBottom
+} from '../ResizeableDrawer/sidebarSpacing';
 import React, { useEffect } from 'react';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -163,9 +168,9 @@ export function SiteTools(props: SiteToolsProps) {
 						sx={(theme) => ({
 							display: 'flex',
 							justifyContent: 'space-between',
-							padding: theme.spacing(2),
+							padding: theme.spacing(sidebarDrawerPadding),
 							paddingBottom: 0,
-							marginBottom: '10px'
+							marginBottom: `${sidebarHeaderMarginBottom}px`
 						})}
 					>
 						{onBackClick && (
@@ -202,7 +207,7 @@ export function SiteTools(props: SiteToolsProps) {
 						<EmptyState
 							titleComponent="p"
 							// Gives back the side inset the drawer padding used to add on top of EmptyState's own margin.
-							sxs={{ root: { padding: (theme) => theme.spacing(0, 2) } }}
+							sxs={{ root: { padding: (theme) => theme.spacing(0, sidebarDrawerPadding) } }}
 							title={
 								<FormattedMessage
 									id="siteTools.toolListingNotConfigured"
@@ -220,11 +225,10 @@ export function SiteTools(props: SiteToolsProps) {
 				</section>
 				<Box
 					component="footer"
-					sx={(theme) => ({
-						// Same box as before the drawer lost its padding: 20px of its own on top; sides and bottom add the 16px it used to sit inside.
-						padding: theme.spacing(2.5, 2, 4.5),
+					sx={{
+						padding: sidebarFooterPadding,
 						textAlign: 'center'
-					})}
+					}}
 				>
 					{!hideSidebarLogo && <CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />}
 					{footerHtml && (

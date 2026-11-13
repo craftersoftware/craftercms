@@ -23,6 +23,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { sidebarFirstRowInset, sidebarFooterPadding } from '../ResizeableDrawer/sidebarSpacing';
 import {
 	createHashRouter,
 	createRoutesFromElements,
@@ -168,7 +169,12 @@ function GlobalSidebarNav() {
 		return <ApiResponseErrorState error={error.response ?? error} />;
 	}
 	return (
-		<List disablePadding sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+		<List
+			disablePadding
+			// Matches where the first Project Tools row starts (header top inset + header margin, 26px by default).
+			// On the list, not the drawer, so rows still span the sidebar edges and the selected bar stays flush.
+			sx={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0, pt: sidebarFirstRowInset }}
+		>
 			{/* Placeholder rows while the menu loads. Hidden from assistive tech so they aren't read as empty items. */}
 			{!items &&
 				[0, 1, 2, 3].map((i) => (
@@ -261,9 +267,7 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				<Box
 					component="footer"
 					sx={{
-						// The drawer no longer pads both pieces. The list sits on the sidebar edges; the footer keeps
-						// the inset it used to get from the drawer (16px) plus its own 20px block padding.
-						padding: (theme) => theme.spacing(2.5, 2, 4.5),
+						padding: sidebarFooterPadding,
 						textAlign: 'center',
 						flexShrink: 0
 					}}
