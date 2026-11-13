@@ -329,7 +329,7 @@ describe('FormsEngineField Options button keyboard access', () => {
 			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
 		});
 
-		it('counts another button in the field as the way in, such as the help button', async () => {
+		it('counts a button after the Options button as the way in', async () => {
 			const host = await renderControls({ a_s: disabledInput('a_s') });
 			const field = host.querySelector('[data-field-id="a_s"]')!;
 			await mutate(() => {
