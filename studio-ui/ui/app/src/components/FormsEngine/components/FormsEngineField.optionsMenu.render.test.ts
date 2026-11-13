@@ -155,6 +155,24 @@ describe('FormsEngineField Options button keyboard access', () => {
 		assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
 	});
 
+	it('drops out of the tab order when the focused control is removed', async () => {
+		const host = await renderControls({
+			a_s: React.createElement(
+				React.Fragment,
+				null,
+				enabledInput('a_s'),
+				React.createElement('input', { id: 'a_s-other' })
+			)
+		});
+		await focusIn(input(host, 'a_s'));
+		assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+		await mutate(() => {
+			input(host, 'a_s').remove();
+		});
+		assert.notEqual(document.activeElement, optionsButton(host, 'a_s'));
+		assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+	});
+
 	it('has a name and describes its menu', async () => {
 		const host = await render();
 		const button = optionsButton(host, 'a_s');

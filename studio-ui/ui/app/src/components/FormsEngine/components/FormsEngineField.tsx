@@ -187,7 +187,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	useLayoutEffect(() => {
 		const root = menuButtonRef.current?.closest('[data-field-id]');
 		if (!root) return undefined;
-		const check = () =>
+		const recheckTabStops = () =>
 			setHasOtherTabStop(
 				Array.from(
 					root.querySelectorAll<HTMLElement>(
@@ -202,6 +202,14 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						el.checkVisibility?.() !== false
 				)
 			);
+		const check = () => {
+			recheckTabStops();
+			// Removing the focused control fires no blur, so the flag would stay set with focus elsewhere.
+			const active = document.activeElement;
+			if (!active || !(root.contains(active) || document.getElementById(menuId)?.contains(active))) {
+				setHasFocusWithin(false);
+			}
+		};
 		check();
 		const observer = new MutationObserver(check);
 		observer.observe(root, {
