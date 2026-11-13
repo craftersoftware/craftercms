@@ -52,12 +52,46 @@ async function render() {
 	return host;
 }
 
+/** Renders one field per entry, each with the given control, or no control at all. */
+async function renderControls(controls: Record<string, ReturnType<typeof React.createElement> | null>) {
+	const ids = Object.keys(controls);
+	const host = await mountTree(
+		createItemsStore(baseItems()),
+		React.createElement(
+			JotaiProvider,
+			{ store: createStore() },
+			React.createElement(
+				FormHost,
+				{ entry: createEntry(ids) },
+				ids.map((id) =>
+					React.createElement(
+						FormsEngineField,
+						{ key: id, field: fieldFor(id), htmlFor: `${id}-input`, isValid: true },
+						controls[id]
+					)
+				)
+			)
+		)
+	);
+	await settle();
+	return host;
+}
+const disabledInput = (id: string) => React.createElement('input', { id: `${id}-input`, disabled: true });
+const enabledInput = (id: string) => React.createElement('input', { id: `${id}-input` });
+const mutate = (change: () => void) =>
+	act(async () => {
+		change();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	});
+
 const optionsButton = (host: HTMLElement, id: string) =>
 	host.querySelector<HTMLButtonElement>(`[data-field-id="${id}"] button[aria-haspopup]`)!;
 const input = (host: HTMLElement, id: string) => host.querySelector<HTMLInputElement>(`#${id}-input`)!;
 /** Elements the Tab key can reach, in DOM order. */
 const tabOrder = (host: HTMLElement) =>
-	Array.from(host.querySelectorAll<HTMLElement>('button, input')).filter((el) => el.tabIndex >= 0);
+	Array.from(host.querySelectorAll<HTMLElement>('button, input')).filter(
+		(el) => el.tabIndex >= 0 && !el.matches(':disabled')
+	);
 const focusIn = (element: HTMLElement) =>
 	act(async () => {
 		element.focus();
@@ -160,5 +194,77 @@ describe('FormsEngineField Options button keyboard access', () => {
 		await waitForMenuToClose();
 		await focusIn(input(host, 'b_s'));
 		assert.equal(button.tabIndex, -1);
+	});
+
+	describe('when its field has no other tab stop', () => {
+		it('stays in the tab order', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s'), b_s: enabledInput('b_s') });
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			assert.equal(optionsButton(host, 'b_s').tabIndex, -1);
+			assert.deepEqual(tabOrder(host), [optionsButton(host, 'a_s'), input(host, 'b_s')]);
+		});
+
+		it('stays in the tab order for a field with no control', async () => {
+			const host = await renderControls({ a_s: null, b_s: enabledInput('b_s') });
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			assert.equal(optionsButton(host, 'b_s').tabIndex, -1);
+		});
+
+		it('stays in the tab order for a control that is only removed from the tab order', async () => {
+			const host = await renderControls({
+				a_s: React.createElement('input', { id: 'a_s-input', tabIndex: -1 })
+			});
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+		});
+
+		it('opens its menu from the keyboard', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s') });
+			const button = optionsButton(host, 'a_s');
+			await focusIn(button);
+			await activate(button, 'Enter');
+			assert.ok(menuOf());
+			assert.equal(button.getAttribute('aria-expanded'), 'true');
+		});
+
+		it('leaves the tab order once the control becomes focusable', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s') });
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			await mutate(() => {
+				input(host, 'a_s').disabled = false;
+			});
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+		});
+
+		it('joins the tab order once the control is disabled', async () => {
+			const host = await renderControls({ a_s: enabledInput('a_s') });
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+			await mutate(() => {
+				input(host, 'a_s').disabled = true;
+			});
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+		});
+
+		it('leaves the tab order once a focusable control is added to the field', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s') });
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+			await mutate(() => {
+				const extra = document.createElement('input');
+				extra.id = 'a_s-extra';
+				host.querySelector('[data-field-id="a_s"]')!.appendChild(extra);
+			});
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+		});
+
+		it('counts another button in the field as the way in, such as the help button', async () => {
+			const host = await renderControls({ a_s: disabledInput('a_s') });
+			const field = host.querySelector('[data-field-id="a_s"]')!;
+			await mutate(() => {
+				const help = document.createElement('button');
+				field.appendChild(help);
+			});
+			assert.equal(optionsButton(host, 'a_s').tabIndex, -1);
+			await focusIn(field.querySelector<HTMLElement>('button:not([aria-haspopup])')!);
+			assert.equal(optionsButton(host, 'a_s').tabIndex, 0);
+		});
 	});
 });

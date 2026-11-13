@@ -174,6 +174,29 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const [openMenu, setOpenMenu] = useState(false);
 	// Whether focus is inside the field, including the options menu, which renders in a portal but is a React child.
 	const [hasFocusWithin, setHasFocusWithin] = useState(false);
+	// A field whose control can't take focus (read-only, disabled, Uuid, Label) has no other way in, so its button stays tabbable.
+	const [hasOtherTabStop, setHasOtherTabStop] = useState(true);
+	useLayoutEffect(() => {
+		const root = menuButtonRef.current?.closest('[data-field-id]');
+		if (!root) return undefined;
+		const check = () =>
+			setHasOtherTabStop(
+				Array.from(
+					root.querySelectorAll<HTMLElement>(
+						'a[href], button, input:not([type="hidden"]), select, textarea, iframe, [tabindex], [contenteditable="true"]'
+					)
+				).some((el) => el !== menuButtonRef.current && el.tabIndex >= 0 && !el.matches(':disabled'))
+			);
+		check();
+		const observer = new MutationObserver(check);
+		observer.observe(root, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: ['disabled', 'tabindex']
+		});
+		return () => observer.disconnect();
+	}, [menu]);
 	const [showHelp, setShowHelp] = useState(false);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
@@ -310,7 +333,8 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{menu && (
 							<>
 								{/*
-								 * The button is tabbable only while focus is inside the field, so it adds no tab stop per field.
+								 * The button is tabbable only while focus is inside the field, so it adds no tab stop per field,
+								 * unless the field has no other tab stop and this is the only way in.
 								 * It precedes the control in the DOM, so Shift+Tab from the control reaches it. A keyboard
 								 * shortcut is not offered: every candidate clashes with a browser, screen reader, native text
 								 * input, select or TinyMCE binding.
@@ -318,7 +342,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 								<IconButton
 									size="small"
 									id={menuButtonId}
-									tabIndex={hasFocusWithin || openMenu ? 0 : -1}
+									tabIndex={hasFocusWithin || openMenu || !hasOtherTabStop ? 0 : -1}
 									ref={menuButtonRef}
 									onClick={() => setOpenMenu(true)}
 									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
