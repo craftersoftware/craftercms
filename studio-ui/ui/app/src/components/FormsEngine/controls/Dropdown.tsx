@@ -23,12 +23,13 @@ import MenuItem from '@mui/material/MenuItem';
 import ListSubheader from '@mui/material/ListSubheader';
 import Skeleton from '@mui/material/Skeleton';
 import { useDataSourceListOptions, type DataSourceListOptionGroup } from '../dataSourceHooks/useDataSourceListOptions';
+import { getNumericValidationValue } from '../lib/formUtils';
 
 export type DropdownProps = ControlProps<string>;
 
 export function Dropdown(props: DropdownProps) {
 	const { field, value, setValue, readonly, autoFocus, dataSources, inputId, labelId } = props;
-	const maxLength = field.validations.maxLength?.value;
+	const maxLength = getNumericValidationValue(field.validations, 'maxLength');
 	const handleChange = (event: SelectChangeEvent) => setValue(event.target.value);
 	const optionGroups = useDataSourceListOptions(dataSources);
 	const generatedId = useId();

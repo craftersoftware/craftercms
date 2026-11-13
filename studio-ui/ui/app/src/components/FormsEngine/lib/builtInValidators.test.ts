@@ -59,6 +59,13 @@ describe('built-in validators on the new signature', () => {
 		assert.equal((await validateFieldValue(field('input', 'a_s', { pattern: '^x' }), '', meta)).isValid, true);
 	});
 
+	// Hand-edited maxlength that is not a number must not fail open as a string comparison; treat as no limit.
+	it('input: non-numeric maxLength is ignored (no limit)', async () => {
+		const result = await validateFieldValue(field('input', 'a_s', { maxLength: 'abc' }), 'abcdefghij', meta);
+		assert.equal(result.isValid, true);
+		assert.deepEqual(texts(result.messages), []);
+	});
+
 	it('email, link and phone use their own pattern message', async () => {
 		const pattern = { pattern: '^never$' };
 		assert.deepEqual(texts((await validateFieldValue(field('input-email', 'a_s', pattern), 'a', meta)).messages), [
