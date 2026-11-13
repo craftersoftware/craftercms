@@ -194,3 +194,20 @@ describe('SiteTools tab order', () => {
 		assert.ok(docked?.hasAttribute('inert'));
 	});
 });
+
+describe('SiteTools sidebar spacing', () => {
+	it('runs the list to the drawer edges and keeps the inset on the header and footer', async () => {
+		const host = await renderSiteTools({ openSidebar: true, hideSidebarLogo: false, footerHtml: 'Footer' });
+		const nav = host.querySelector('nav');
+		const section = nav?.querySelector('section');
+		const header = section?.firstElementChild;
+		const list = nav?.querySelector('ul');
+		const footer = nav?.querySelector('footer');
+		assert.ok(nav && header && list && footer);
+		assert.equal(parseFloat(getComputedStyle(nav).paddingTop), 0, 'the drawer body has no padding');
+		assert.equal(getComputedStyle(header).paddingTop, '16px');
+		assert.equal(getComputedStyle(header).marginBottom, '10px');
+		assert.equal(parseFloat(getComputedStyle(list).paddingLeft), 0);
+		assert.equal(getComputedStyle(footer).padding, '20px 16px 36px');
+	});
+});

@@ -16,12 +16,19 @@
 
 import type { Theme } from '@mui/material/styles';
 
-/** Drawer padding of the Project Tools sidebar, in theme spacing units (16px by default). */
+/**
+ * Inset, in theme spacing units (16px by default), that Project Tools keeps around its header, empty state and footer.
+ * The drawer itself has no padding; the tool list runs to the drawer edges.
+ */
 export const sidebarDrawerPadding = 2;
 
 /** Space below the Project Tools sidebar header, in px. */
 export const sidebarHeaderMarginBottom = 10;
 
-/** Where the first row of the Project Tools sidebar starts: drawer padding plus header margin. */
+/** Footer padding: 20px of its own on top, plus the sidebar inset on the sides and bottom. */
+export const sidebarFooterPadding = (theme: Theme) =>
+	theme.spacing(2.5, sidebarDrawerPadding, 2.5 + sidebarDrawerPadding);
+
+/** Where the first row of the Project Tools sidebar starts: header top inset plus header margin. */
 export const sidebarFirstRowInset = (theme: Theme) =>
 	`calc(${theme.spacing(sidebarDrawerPadding)} + ${sidebarHeaderMarginBottom}px)`;

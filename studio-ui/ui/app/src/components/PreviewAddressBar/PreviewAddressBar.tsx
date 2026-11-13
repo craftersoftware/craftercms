@@ -38,6 +38,7 @@ import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import CircularProgress from '@mui/material/CircularProgress';
 import usePreviewState from '../../hooks/usePreviewState';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Alert, { alertClasses } from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
@@ -178,6 +179,9 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				elevation={focus ? 2 : 0}
 				sx={(theme) => ({
 					width: '300px',
+					maxWidth: '100%',
+					minWidth: 0,
+					flex: '0 1 auto',
 					borderRadius: 8,
 					padding: '2px 2px 2px 10px',
 					display: 'flex',
@@ -190,17 +194,19 @@ export function PreviewAddressBar(props: AddressBarProps) {
 				})}
 			>
 				{!focus && item && (
-					<Box
+					<ButtonBase
 						sx={{
 							width: '100%',
 							minWidth: 0,
 							overflow: 'hidden',
-							cursor: 'pointer',
 							display: 'flex',
 							alignItems: 'center',
+							justifyContent: 'flex-start',
+							textAlign: 'left',
 							gap: 0.75
 						}}
 						onClick={() => setFocus(true)}
+						aria-label={formatMessage({ defaultMessage: 'Edit address for {label}' }, { label: item.label })}
 					>
 						<ItemDisplay
 							item={item}
@@ -211,7 +217,7 @@ export function PreviewAddressBar(props: AddressBarProps) {
 							}}
 						/>
 						{item.savedAsDraft && <DraftChip size="small" sx={{ flexShrink: 0 }} />}
-					</Box>
+					</ButtonBase>
 				)}
 				{(focus || !item) && (
 					<PagesSearchAhead

@@ -23,7 +23,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
-import { sidebarFirstRowInset } from '../ResizeableDrawer/sidebarSpacing';
+import { sidebarFirstRowInset, sidebarFooterPadding } from '../ResizeableDrawer/sidebarSpacing';
 import {
 	createHashRouter,
 	createRoutesFromElements,
@@ -267,9 +267,7 @@ export function GlobalAppInternal(props: GlobalAppProps) {
 				<Box
 					component="footer"
 					sx={{
-						// The drawer no longer pads both pieces. The list sits on the sidebar edges; the footer keeps
-						// the inset it used to get from the drawer (16px) plus its own 20px block padding.
-						padding: (theme) => theme.spacing(2.5, 2, 4.5),
+						padding: sidebarFooterPadding,
 						textAlign: 'center',
 						flexShrink: 0
 					}}

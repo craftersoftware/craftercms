@@ -130,20 +130,16 @@ export function EditFormPanel(props: EditFormPanelProps) {
 			anchorPosition={props.open ? getAnchorPosition() : null}
 			slotProps={{ list: { 'aria-labelledby': titleId } }}
 		>
-			<div>
-				{selected ? (
-					<EditFormPanelBody
-						titleId={titleId}
-						models={models}
-						selected={selected}
-						hierarchyMap={hierarchyMap}
-						modelIdByPath={modelIdByPath}
-						onDismiss={props.onDismiss}
-					/>
-				) : (
-					''
-				)}
-			</div>
+			{selected ? (
+				<EditFormPanelBody
+					titleId={titleId}
+					models={models}
+					selected={selected}
+					hierarchyMap={hierarchyMap}
+					modelIdByPath={modelIdByPath}
+					onDismiss={props.onDismiss}
+				/>
+			) : null}
 		</Menu>
 	);
 }
@@ -245,8 +241,8 @@ function EditFormPanelBody(props: EditFormPanelBodyProps) {
 		// TODO: Implement Multi-mode...
 		return (
 			<>
-				<ToolPanel BackIcon={CloseRounded} title="Not Implemented.">
-					<Typography>This condition is not implemented yet.</Typography>
+				<ToolPanel BackIcon={CloseRounded} title={formatMessage({ defaultMessage: 'Not Implemented.' })}>
+					<Typography>{formatMessage({ defaultMessage: 'This condition is not implemented yet.' })}</Typography>
 				</ToolPanel>
 			</>
 		);
