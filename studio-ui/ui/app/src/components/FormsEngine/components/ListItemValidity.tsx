@@ -65,7 +65,14 @@ export function ListItemValidity({ fieldId, itemKey, primary, secondary, slotPro
 	return (
 		<>
 			{invalid && (
-				<Tooltip title={invalidLabel} slotProps={{ tooltip: { sx: { whiteSpace: 'pre-line' } } }}>
+				<Tooltip
+					describeChild
+					title={
+						<Box component="span" sx={{ whiteSpace: 'pre-line' }}>
+							{invalidLabel}
+						</Box>
+					}
+				>
 					<Box
 						component="span"
 						sx={{ display: 'inline-flex', alignItems: 'center', mr: 0.5, flexShrink: 0, color: 'error.main' }}
