@@ -214,6 +214,19 @@ describe('FormsEngineDialog accessible name', () => {
 		assert.equal(labelElement().textContent?.trim(), 'Error');
 	});
 
+	it('is named by the item label when an existing item is edited', async () => {
+		await render(
+			{ [contentType.id]: contentType },
+			{ update: { path: itemPath } },
+			{ [itemPath]: prepareVirtualItemProps(rawItem as never) }
+		);
+		// The requests answer on timers.
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 300)));
+		const title = labelElement();
+		assert.equal(title.textContent?.trim(), 'Seeded item');
+		assert.ok(title.closest('[data-area-id="formHeader"]'), 'the name is not the form header title');
+	});
+
 	it('is named by the form title once the form is ready', async () => {
 		await render({ [contentType.id]: contentType });
 		const title = labelElement();
