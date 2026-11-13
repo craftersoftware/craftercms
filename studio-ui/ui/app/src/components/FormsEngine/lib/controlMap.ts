@@ -16,7 +16,7 @@
 
 import { ElementType, lazy } from 'react';
 
-// FE2 TODO: See `typeMap` at services/contentTypes.ts
+// FE2 TODO: See `legacyTypeRemap` at services/contentTypes.ts
 // | 'image'
 // | 'text'
 export type BuiltInControlType =
