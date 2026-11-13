@@ -737,8 +737,10 @@ export async function repeatGroupValidator(
 		});
 	});
 
-	const results = await Promise.all(pending.map((entry) => entry.promise));
-	const invalidItems = collectInvalidListItems(pending, results);
+	const settled = await Promise.all(
+		pending.map(async ({ key, field, promise }) => ({ key, field, result: await promise }))
+	);
+	const invalidItems = collectInvalidListItems(settled);
 	if (invalidItems.length) {
 		valid = false;
 		messages.push(defineMessage({ defaultMessage: 'One or more items are invalid.' }));
@@ -900,8 +902,10 @@ export async function nodeSelectorValidator(
 		});
 	}
 
-	const results = await Promise.all(pending.map((entry) => entry.promise));
-	const invalidItems = collectInvalidListItems(pending, results);
+	const itemFieldResults = await Promise.all(
+		pending.map(async ({ key, field, promise }) => ({ key, field, result: await promise }))
+	);
+	const invalidItems = collectInvalidListItems(itemFieldResults);
 	if (invalidItems.length) {
 		valid = false;
 		messages.push(defineMessage({ defaultMessage: 'One or more embedded content items are invalid.' }));
@@ -911,22 +915,20 @@ export async function nodeSelectorValidator(
 
 /** Groups per-field results into ordered {@link InvalidListItem} entries. Only invalid fields are kept. */
 function collectInvalidListItems(
-	pending: Array<{ key: string; field: ContentTypeField }>,
-	results: FieldValidityState[]
+	itemFieldResults: Array<{ key: string; field: ContentTypeField; result: FieldValidityState }>
 ): InvalidListItem[] {
 	const byKey = new Map<string, InvalidListItemField[]>();
 	const order: string[] = [];
-	pending.forEach((entry, i) => {
-		const result = results[i];
-		if (result.isValid) return;
-		let fields = byKey.get(entry.key);
+	for (const { key, field, result } of itemFieldResults) {
+		if (result.isValid) continue;
+		let fields = byKey.get(key);
 		if (!fields) {
 			fields = [];
-			byKey.set(entry.key, fields);
-			order.push(entry.key);
+			byKey.set(key, fields);
+			order.push(key);
 		}
-		fields.push({ fieldId: entry.field.id, fieldName: entry.field.name, messages: result.messages });
-	});
+		fields.push({ fieldId: field.id, fieldName: field.name, messages: result.messages });
+	}
 	return order.map((key) => ({ key, fields: byKey.get(key)! }));
 }
 
