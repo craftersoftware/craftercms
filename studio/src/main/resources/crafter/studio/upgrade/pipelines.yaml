@@ -681,6 +681,11 @@ pipelines:
                             -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
                                 dest: /configuration/samples/sample-site-config-tools.xml
                         commitDetails: Remove legacy content-types tool from the site config tools sample
+            -   currentVersion: 5.0.0.27
+                nextVersion: 5.0.0.28
+                operations:
+                    -   type: dbScriptUpgrader
+                        filename: upgrade/5.0.x/5.0.0.27-to-5.0.0.28.sql
 
     # Pipeline to upgrade site repositories
     site:
