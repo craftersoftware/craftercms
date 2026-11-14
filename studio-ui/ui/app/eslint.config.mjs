@@ -14,8 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import '../../scripts/eslintTypescriptRedirect.cjs';
 import { fixupConfigRules } from '@eslint/compat';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
 import path from 'node:path';
@@ -47,12 +49,22 @@ export default [
 	})),
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'react-refresh': reactRefresh },
+		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y },
 		languageOptions: {
 			globals: { ...globals.browser },
-			parser: tsParser
+			parser: tsParser,
+			parserOptions: { ecmaFeatures: { jsx: true } }
 		},
 		rules: {
+			...jsxA11y.flatConfigs.recommended.rules,
+			// Rules with existing findings are warnings until those are cleared; the rest of the recommended set errors.
+			'jsx-a11y/alt-text': 'warn',
+			'jsx-a11y/click-events-have-key-events': 'warn',
+			'jsx-a11y/media-has-caption': 'warn',
+			'jsx-a11y/mouse-events-have-key-events': 'warn',
+			'jsx-a11y/no-autofocus': 'warn',
+			'jsx-a11y/no-static-element-interactions': 'warn',
+			'jsx-a11y/role-supports-aria-props': 'warn',
 			'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 			'prettier/prettier': ['error'],
 			'spaced-comment': [
