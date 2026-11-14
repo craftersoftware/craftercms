@@ -509,7 +509,7 @@
 		<if test="statesBitMap != null">
 			AND (i.state &amp; #{statesBitMap}) &gt; 0
 		</if>
-		AND i.system_type = '${systemTypeFolder}'
+		AND i.system_type &lt;&gt; '${systemTypeFolder}'
 	</update>
 
 	<update id="updateNewPageChildren">
