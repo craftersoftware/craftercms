@@ -16,6 +16,7 @@
 
 package org.craftercms.studio.controller.rest.v2;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.monitoring.MemoryInfo;
@@ -42,7 +43,6 @@ import java.util.Map;
 
 import static org.craftercms.commons.monitoring.rest.MonitoringRestControllerBase.*;
 import static org.craftercms.engine.controller.rest.MonitoringController.LOG_URL;
-import static org.craftercms.studio.controller.rest.v2.RequestConstants.REQUEST_PARAM_TOKEN;
 import static org.craftercms.studio.controller.rest.v2.ResultConstants.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -65,9 +65,9 @@ public class MonitoringController extends ManagementTokenAware {
 	}
 
 	@GetMapping(value = ROOT_URL + MEMORY_URL, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<MemoryInfo> getCurrentMemory(@RequestParam(name = "token") String token)
+	public ResultOne<MemoryInfo> getCurrentMemory(HttpServletRequest request)
 			throws InvalidManagementTokenException, InvalidParametersException {
-		validateToken(token, true);
+		validateToken(request, true);
 		ResultOne<MemoryInfo> result = new ResultOne<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntity(RESULT_KEY_MEMORY, MemoryInfo.getCurrentMemory());
@@ -75,9 +75,9 @@ public class MonitoringController extends ManagementTokenAware {
 	}
 
 	@GetMapping(value = ROOT_URL + STATUS_URL, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<StatusInfo> getCurrentStatus(@RequestParam(name = "token") String token)
+	public ResultOne<StatusInfo> getCurrentStatus(HttpServletRequest request)
 			throws InvalidManagementTokenException, InvalidParametersException {
-		validateToken(token, true);
+		validateToken(request, true);
 		ResultOne<StatusInfo> result = new ResultOne<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntity(RESULT_KEY_STATUS, StatusInfo.getCurrentStatus());
@@ -85,9 +85,9 @@ public class MonitoringController extends ManagementTokenAware {
 	}
 
 	@GetMapping(value = ROOT_URL + VERSION_URL, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<VersionInfo> getCurrentVersion(@RequestParam(name = "token", required = false) String token)
+	public ResultOne<VersionInfo> getCurrentVersion(HttpServletRequest request)
 			throws InvalidManagementTokenException, IOException, InvalidParametersException {
-		validateToken(token);
+		validateToken(request);
 		ResultOne<VersionInfo> result = new ResultOne<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntity(RESULT_KEY_VERSION, VersionInfo.getVersion(getClass()));
@@ -95,9 +95,9 @@ public class MonitoringController extends ManagementTokenAware {
 	}
 
 	@GetMapping(value = ROOT_URL + SYSINFO_URL, produces = APPLICATION_JSON_VALUE)
-	public ResultOne<SysInfo> getCurrentSysInfo(@RequestParam(name = REQUEST_PARAM_TOKEN) String token)
+	public ResultOne<SysInfo> getCurrentSysInfo(HttpServletRequest request)
 			throws InvalidManagementTokenException, IOException, InvalidParametersException {
-		validateToken(token, true);
+		validateToken(request, true);
 		ResultOne<SysInfo> result = new ResultOne<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntity(RESULT_KEY_SYSINFO, SysInfo.getInfo(getClass()));
@@ -106,9 +106,9 @@ public class MonitoringController extends ManagementTokenAware {
 
 	@GetMapping(value = ROOT_URL + LOG_URL, produces = APPLICATION_JSON_VALUE)
 	public ResultList<Map<String, Object>> getLogEvents(@Positive @RequestParam long since,
-														@RequestParam(name = "token", required = false) String token)
+														HttpServletRequest request)
 			throws InvalidManagementTokenException, InvalidParametersException {
-		validateToken(token);
+		validateToken(request);
 		ResultList<Map<String, Object>> result = new ResultList<>();
 		result.setResponse(ApiResponse.OK);
 		result.setEntities(RESULT_KEY_EVENTS, monitorService.getLogEvents("craftercms", since));
@@ -116,9 +116,9 @@ public class MonitoringController extends ManagementTokenAware {
 	}
 
 	@GetMapping(value = ROOT_URL + DISK_URL, produces = APPLICATION_JSON_VALUE)
-	public Result getDiskInfo(@RequestParam(name = REQUEST_PARAM_TOKEN) String token)
+	public Result getDiskInfo(HttpServletRequest request)
 			throws InvalidParametersException, InvalidManagementTokenException {
-		validateToken(token, true);
+		validateToken(request, true);
 		ResultOne<DiskStatus> result = new ResultOne<>();
 		result.setEntity(RESULT_KEY_DISK, monitorService.getDiskUsage());
 		result.setResponse(ApiResponse.OK);

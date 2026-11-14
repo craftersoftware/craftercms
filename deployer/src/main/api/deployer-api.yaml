@@ -4,7 +4,7 @@ servers:
 info:
   description: |-
     Crafter Deployer API.<br>
-    Target management operations require the X-Crafter-Management-Token header. The token query parameter is not accepted for those operations. Monitoring operations still authenticate with the token query parameter.
+    Target management operations require the X-Crafter-Management-Token header. The token query parameter is not accepted for those operations. Monitoring operations prefer that header and still accept the token query parameter. When both are sent, the header is used.
   version: '5.0.0'
   title: Crafter Deployer
   termsOfService: ''
@@ -770,10 +770,17 @@ paths:
             description: "Module: Deployer"
             operationId: version
             parameters:
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
+                  schema:
+                      type: string
+                  example: aValidTokenValue
                 - name: token
                   in: query
-                  description: The authorization token
-                  required: true
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
                   schema:
                       type: string
                   example: aValidTokenValue
@@ -814,10 +821,17 @@ paths:
             description: "Module: Deployer"
             operationId: sysinfo
             parameters:
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
+                  schema:
+                      type: string
+                  example: aValidTokenValue
                 - name: token
                   in: query
-                  description: The authorization token
-                  required: true
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
                   schema:
                       type: string
                   example: aValidTokenValue
@@ -876,10 +890,17 @@ paths:
             description: "Module: Deployer"
             operationId: status
             parameters:
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
+                  schema:
+                      type: string
+                  example: aValidTokenValue
                 - name: token
                   in: query
-                  description: The authorization token
-                  required: true
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
                   schema:
                       type: string
                   example: aValidTokenValue
@@ -917,10 +938,17 @@ paths:
             description: "Module: Deployer"
             operationId: memory
             parameters:
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
+                  schema:
+                      type: string
+                  example: aValidTokenValue
                 - name: token
                   in: query
-                  description: The authorization token
-                  required: true
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
                   schema:
                       type: string
                   example: aValidTokenValue

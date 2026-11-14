@@ -20,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
 import org.craftercms.commons.proxy.ProxyUtils;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.service.proxy.ProxyService;
@@ -72,7 +73,11 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	public ResponseEntity<Object> proxyEngine(final String body, final String siteId,
 						  final HttpServletRequest request) throws URISyntaxException, SiteNotFoundException {
 		URI uri = getProxyRequestUri(siteId, request);
-		HttpEntity<Object> httpEntity = new HttpEntity<>(body, getProxyRequestHeaders(request));
+		HttpHeaders headers = getProxyRequestHeaders(request);
+		if (requiresManagementToken(request)) {
+			headers.set(ManagementToken.HEADER_NAME, getEngineManagementTokenValue());
+		}
+		HttpEntity<Object> httpEntity = new HttpEntity<>(body, headers);
 		try {
 			ResponseEntity response = restTemplate.exchange(uri, HttpMethod.valueOf(request.getMethod()), httpEntity, Object.class);
 			return new ResponseEntity<>(response.getBody(), getProxyResponseHeaders(response), response.getStatusCode());
@@ -107,16 +112,12 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 */
 	private URI getProxyRequestUri(String siteId, HttpServletRequest request) throws URISyntaxException, SiteNotFoundException {
 		String proxyPath = getProxyPath(request);
-		List<String> engineProtectedUrls = getEngineProtectedUrls();
-		boolean managementTokenRequired = engineProtectedUrls.contains(proxyPath);
 		URI uri = new URI(getAuthoringUrl(siteId));
 		UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUri(uri)
 			.path(proxyPath)
 			.query(request.getQueryString())
+			.replaceQueryParam(ManagementToken.QUERY_PARAMETER)
 			.replaceQueryParam("site", siteId);
-		if (managementTokenRequired) {
-			uriComponentsBuilder = uriComponentsBuilder.queryParam("token", getEngineManagementTokenValue());
-		}
 		uri = uriComponentsBuilder.build(true).toUri();
 
 		return uri;
@@ -134,7 +135,9 @@ public class ProxyServiceInternalImpl implements ProxyService {
 		// Add all headers except an ignored list and the cookie header
 		while (headerNames.hasMoreElements()) {
 			String headerName = headerNames.nextElement();
-			if (!ProxyUtils.IGNORE_REQUEST_HEADERS.contains(headerName.toLowerCase()) && !headerName.equalsIgnoreCase(HttpHeaders.COOKIE)) {
+			if (!ProxyUtils.IGNORE_REQUEST_HEADERS.contains(headerName.toLowerCase())
+				&& !headerName.equalsIgnoreCase(HttpHeaders.COOKIE)
+				&& !headerName.equalsIgnoreCase(ManagementToken.HEADER_NAME)) {
 				headers.set(headerName, request.getHeader(headerName));
 			}
 		}
@@ -176,6 +179,13 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	 */
 	protected String getEngineManagementTokenValue() {
 		return studioConfiguration.getProperty(CONFIGURATION_MANAGEMENT_PREVIEW_AUTHORIZATION_TOKEN);
+	}
+
+	/**
+	 * Preview URLs that receive the engine management token in {@link ManagementToken#HEADER_NAME}.
+	 */
+	protected boolean requiresManagementToken(HttpServletRequest request) {
+		return getEngineProtectedUrls().contains(getProxyPath(request));
 	}
 
 	/**

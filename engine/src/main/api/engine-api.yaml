@@ -44,10 +44,17 @@ paths:
                 Module: Engine <br>
                 Get the ID for the site context resolved for the current request, the value returned will depend on the SiteResolver implementation used.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -88,10 +95,17 @@ paths:
                 Module: Engine <br>
                 Get the status for the site context resolved for the current request, the value returned will depend on the SiteResolver implementation used.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -132,10 +146,17 @@ paths:
                 Module: Engine <br>
                 Destroy the site context resolved for the current request. Destroying the context involves clearing the cache, destroying any loaded configuration and Spring beans for the site, and destroying the Groovy classloader for the site.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -176,10 +197,17 @@ paths:
                 Module: Engine <br>
                 Rebuild the site context resolved for the current request, which means destroying and then creating the context again.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -220,10 +248,17 @@ paths:
                 Module: Engine <br>
                 Rebuild all site contexts currently found in the registry
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -257,10 +292,17 @@ paths:
                 Module: Engine <br>
                 Rebuild the GraphQL schema for the site context resolved for the current request.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -392,10 +434,17 @@ paths:
                 Module: Engine <br>
                 Clear the content cache scope and the Freemarker cache for the current site context.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -448,10 +497,17 @@ paths:
                 Module: Engine <br>
                 Get the statistics for all cache scopes for the current site context. <br><br> <i>Note:</i> <br> <i>The result of this call can change based on the configuration of the system, for example when Crafter Engine is configured in preview mode the cache will be disabled and the result will always be an empty object. There could be also different statistics returned depending on the cache implementation that is being used.</i>
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -1503,10 +1559,17 @@ paths:
                 Module: Engine <br>
                 Returns the Crafter Engine JVM memory details.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -1564,10 +1627,17 @@ paths:
                 Module: Engine <br>
                 Returns the Crafter Engine JVM status details.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -1610,10 +1680,17 @@ paths:
                 Module: Engine <br>
                 Returns the Crafter Engine JVM version and build details.
             parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken
@@ -1655,10 +1732,17 @@ paths:
                 Module: Engine <br>
                 Returns the Crafter Engine JVM version details.
             parameters:
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
+                  schema:
+                      type: string
+                  example: defaultManagementToken
                 - name: token
                   in: query
-                  description: The authorization token
-                  required: true
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
                   schema:
                       type: string
                   example: defaultManagementToken
@@ -1732,10 +1816,17 @@ paths:
                     schema:
                         type: integer
                     example: 1396772083660
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
                 -   name: token
                     in: query
-                    description: The authorization token
-                    required: true
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
                     schema:
                         type: string
                     example: defaultManagementToken

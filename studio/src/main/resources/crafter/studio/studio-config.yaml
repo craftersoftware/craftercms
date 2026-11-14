@@ -225,7 +225,7 @@ studio.configuration.site.contentTypes.configFileName: config.xml
 # File name where definition of content type is stored.
 studio.configuration.site.contentTypes.definitionFileName: form-definition.xml
 # Destroy site context url for preview engine
-studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}&token=${studio.configuration.management.previewAuthorizationToken}
+studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}
 # Site id suffix appended when listing a site's staging publishing target.
 # Must match the suffix recognized by crafter.engine.site.staging.pattern.
 studio.configuration.site.staging.idSuffix: -staging
@@ -260,6 +260,7 @@ studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
 # Path for the translation configuration file
 studio.configuration.site.translation: ${studio.configuration.site.configBasePath}/translation-config.xml
 # Studio management authorization token.
+# Send it in the X-Crafter-Management-Token header. The token query parameter is still accepted.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.authorizationToken: defaultManagementToken
 # Studio management token for the site management API.

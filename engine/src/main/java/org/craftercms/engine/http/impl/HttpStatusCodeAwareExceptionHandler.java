@@ -28,6 +28,7 @@ import java.io.IOException;
 
 import static org.craftercms.commons.http.HttpUtils.getFullRequestUri;
 import static org.craftercms.commons.lang.UrlUtils.cleanUrlForLog;
+import static org.craftercms.commons.rest.RequestLogSanitizer.sanitizeUri;
 
 /**
  * Handler for {@code HttpStatusCodeException}s.
@@ -47,7 +48,7 @@ public class HttpStatusCodeAwareExceptionHandler implements ExceptionHandler {
 			return false;
 		}
 
-		String message = String.format("%s %s failed", request.getMethod(), cleanUrlForLog(getFullRequestUri(request, true)));
+		String message = String.format("%s %s failed", request.getMethod(), cleanUrlForLog(sanitizeUri(getFullRequestUri(request, true))));
 		if (httpStatusCodeAwareEx instanceof PreviewAccessException previewException) {
 			logger.debug(message, previewException);
 		} else {

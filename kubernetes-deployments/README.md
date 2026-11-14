@@ -11,7 +11,7 @@
 - `minikube image pull craftercms/delivery_tomcat:5.0.0E-SNAPSHOT`
 - `minikube image pull craftercms/deployer:5.0.0-SNAPSHOT`
 - `minikube image pull craftercms/deployer:5.0.0E-SNAPSHOT`
-- `minikube image pull opensearchproject/opensearch:2.19.1`
+- `minikube image pull opensearchproject/opensearch:3.9.0`
 
 For the Authoring cluster example, you will need and AWS EKS cluster with the AWS Load Balancer Controller installed: https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html.
 

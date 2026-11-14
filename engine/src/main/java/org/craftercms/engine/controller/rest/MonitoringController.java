@@ -16,6 +16,7 @@
 
 package org.craftercms.engine.controller.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.monitoring.StatusInfo;
@@ -66,17 +67,17 @@ public class MonitoringController extends MonitoringRestControllerBase {
 	@GetMapping(value = MonitoringRestControllerBase.ROOT_URL + LOG_URL, produces = APPLICATION_JSON_VALUE)
 	public List<Map<String, Object>> getLoggedEvents(@RequestParam @ValidSiteId String site,
 							 @Positive @RequestParam long since,
-							 @RequestParam String token) throws InvalidManagementTokenException {
-		validateToken(token);
+							 HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 		return CircularQueueLogAppender.getLoggedEvents(site, since);
 	}
 
 	@Override
 	@GetMapping(value = ROOT_URL + STATUS_URL, produces = APPLICATION_JSON_VALUE)
-	public ResponseEntity getCurrentStatus(@RequestParam(name = "crafterSite", required = false) String site,
-					       @RequestParam(name = "token") String token)
+	public ResponseEntity getCurrentStatus(HttpServletRequest request,
+					       @RequestParam(name = "crafterSite", required = false) String site)
 		throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 
 		Map<String, String> responseBody = new HashMap<>();
 

@@ -119,4 +119,10 @@ public class UpgradeManagerConfig {
 		return new RemoveProcessorUpgradeOperation();
 	}
 
+	@Bean
+	@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+	public MoveManagementTokenToHeaderUpgradeOperation moveManagementTokenToHeaderUpgrader() {
+		return new MoveManagementTokenToHeaderUpgradeOperation();
+	}
+
 }

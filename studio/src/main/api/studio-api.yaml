@@ -1906,12 +1906,20 @@ paths:
                     Required Permission: "read_cluster"
             operationId: getClusterMode
             parameters:
-                -   name: token
-                    in: query
-                    description: Management token - not required for authenticated users
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2668,12 +2676,20 @@ paths:
             description: "Module: Studio"
             operationId: getVersion
             parameters:
-                -   name: token
-                    in: query
-                    description: Management token - not required for authenticated users
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2699,12 +2715,20 @@ paths:
             description: "Module: Studio"
             operationId: getSysInfo
             parameters:
-                - name: token
-                  in: query
-                  description: Management token
-                  required: true
+                - name: X-Crafter-Management-Token
+                  in: header
+                  description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                  required: false
                   schema:
                       type: string
+                  example: defaultManagementToken
+                - name: token
+                  in: query
+                  description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                  required: false
+                  schema:
+                      type: string
+                  example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2730,12 +2754,20 @@ paths:
             description: "Module: Studio"
             operationId: getStatus
             parameters:
-                -   name: token
-                    in: query
-                    description: Management token
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2772,12 +2804,20 @@ paths:
             description: "Module: Studio"
             operationId: getMemory
             parameters:
-                -   name: token
-                    in: query
-                    description: Management token
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2810,12 +2850,20 @@ paths:
                     schema:
                         type: integer
                         format: int64
-                -   name: token
-                    in: query
-                    description: Management token - not required for authenticated users
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -2840,18 +2888,27 @@ paths:
             security:
                 -   jwtAuth: [ ]
                 -   managementToken: [ ]
+                -   managementTokenHeader: [ ]
             tags:
                 - monitoring
             summary: Get disk usage statistics
             description: "Module: Studio"
             operationId: getDiskUsage
             parameters:
-                -   name: token
-                    in: query
-                    description: Management token
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
-                    required: true
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK
@@ -4248,12 +4305,20 @@ paths:
                     required: true
                     schema:
                         type: string
-                -   name: token
-                    in: query
-                    description: Management token
-                    required: true
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Preferred management token. If this header and the token query parameter are both sent, the header is used. A wrong header is not replaced by the query value.
+                    required: false
                     schema:
                         type: string
+                    example: defaultManagementToken
+                -   name: token
+                    in: query
+                    description: Alternative management token, used when the X-Crafter-Management-Token header is absent.
+                    required: false
+                    schema:
+                        type: string
+                    example: defaultManagementToken
             responses:
                 '200':
                     description: OK

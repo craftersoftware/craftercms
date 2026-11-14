@@ -16,7 +16,9 @@
 
 package org.craftercms.commons.monitoring.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.monitoring.MemoryInfo;
 import org.craftercms.commons.monitoring.StatusInfo;
 import org.craftercms.commons.monitoring.SysInfo;
@@ -27,8 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-
-import static org.apache.commons.lang3.Strings.CS;
 
 /**
  * Base controller for all monitoring related APIs
@@ -52,38 +52,38 @@ public abstract class MonitoringRestControllerBase {
 	}
 
 	@GetMapping(ROOT_URL + MEMORY_URL)
-	public MemoryInfo getCurrentMemory(@RequestParam(name = "token") String token)
-			throws InvalidManagementTokenException {
-		validateToken(token);
+	public MemoryInfo getCurrentMemory(HttpServletRequest request) throws InvalidManagementTokenException {
+		validateToken(request);
 		return MemoryInfo.getCurrentMemory();
 	}
 
 	@GetMapping(ROOT_URL + STATUS_URL)
-	public ResponseEntity getCurrentStatus(@RequestParam(name = "site", required = false) String site,
-										   @RequestParam(name = "token") String token)
+	public ResponseEntity getCurrentStatus(HttpServletRequest request,
+					       @RequestParam(name = "site", required = false) String site)
 			throws InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 		return ResponseEntity.ok().body(StatusInfo.getCurrentStatus());
 	}
 
 	@GetMapping(ROOT_URL + VERSION_URL)
-	public ResponseEntity getCurrentVersion(@RequestParam(name = "token") String token)
+	public ResponseEntity getCurrentVersion(HttpServletRequest request)
 			throws InvalidManagementTokenException, IOException {
-		validateToken(token);
+		validateToken(request);
 		return ResponseEntity.ok().body(VersionInfo.getVersion(this.getClass()));
 	}
 
 	@GetMapping(ROOT_URL + SYSINFO_URL)
-	public ResponseEntity getCurrentSysInfo(@RequestParam(name = "token") String token)
+	public ResponseEntity getCurrentSysInfo(HttpServletRequest request)
 			throws InvalidManagementTokenException, IOException {
-		validateToken(token);
+		validateToken(request);
 		return ResponseEntity.ok().body(SysInfo.getInfo(this.getClass()));
 	}
 
-	protected final void validateToken(final String requestToken) throws InvalidManagementTokenException {
-		if (!CS.equals(requestToken, configuredToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+	/**
+	 * Accepts {@code X-Crafter-Management-Token} and, when that header is absent, the {@code token} query parameter.
+	 */
+	protected final void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
+		ManagementTokenUtils.validateToken(request, configuredToken);
 	}
 
 }

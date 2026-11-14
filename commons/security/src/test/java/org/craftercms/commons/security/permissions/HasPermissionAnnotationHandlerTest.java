@@ -16,12 +16,14 @@
 package org.craftercms.commons.security.permissions;
 
 import org.craftercms.commons.http.RequestContext;
+import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.commons.security.exception.ActionDeniedException;
 import org.craftercms.commons.security.exception.PermissionException;
 import org.craftercms.commons.security.permissions.annotations.HasPermission;
 import org.craftercms.commons.security.permissions.annotations.HasPermissionAnnotationHandler;
 import org.craftercms.commons.security.permissions.annotations.ProtectedResource;
 import org.craftercms.commons.security.permissions.impl.PermissionEvaluatorImpl;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
@@ -40,13 +42,17 @@ import static org.mockito.Mockito.*;
 @SuppressWarnings("unchecked")
 public class HasPermissionAnnotationHandlerTest {
 
-	private static final String TOKEN_PARAMETER = "token";
 	private static final String VALID_TOKEN = "THE_CONFIGURED_TOKEN";
 	private static final String WRONG_TOKEN = "THE_WRONG_TOKEN";
 
 	private MockSubjectResolver subjectResolver;
 	private HasPermissionAnnotationHandler annotationHandler;
 	private MockSecuredService service;
+
+	@After
+	public void clearRequest() {
+		RequestContext.clear();
+	}
 
 	@Before
 	public void setUp() throws Exception {
@@ -126,7 +132,7 @@ public class HasPermissionAnnotationHandlerTest {
 	public void testManagementTokenWrongToken() {
 		RequestContext current = mock(RequestContext.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
-		when(request.getParameter(TOKEN_PARAMETER)).thenReturn(WRONG_TOKEN);
+		when(request.getParameter(ManagementToken.QUERY_PARAMETER)).thenReturn(WRONG_TOKEN);
 		when(current.getRequest()).thenReturn(request);
 		RequestContext.setCurrent(current);
 
@@ -137,18 +143,48 @@ public class HasPermissionAnnotationHandlerTest {
 	public void testManagementTokenValidToken() throws Throwable {
 		RequestContext current = mock(RequestContext.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
-		when(request.getParameter(TOKEN_PARAMETER)).thenReturn(VALID_TOKEN);
+		when(request.getParameter(ManagementToken.QUERY_PARAMETER)).thenReturn(VALID_TOKEN);
 		when(current.getRequest()).thenReturn(request);
 		RequestContext.setCurrent(current);
 
 		assertNotNull(service.doSomethingWithManagementToken());
 	}
 
+	@Test
+	public void testManagementTokenHeader() {
+		RequestContext.setCurrent(requestWith(VALID_TOKEN, WRONG_TOKEN));
+
+		assertNotNull(service.doSomethingWithManagementToken());
+	}
+
+	@Test(expected = PermissionException.class)
+	public void testWrongHeaderDoesNotFallBackToQuery() {
+		RequestContext.setCurrent(requestWith(WRONG_TOKEN, VALID_TOKEN));
+
+		service.doSomethingWithManagementToken();
+	}
+
+	@Test(expected = PermissionException.class)
+	public void testBlankHeaderDoesNotFallBackToQuery() {
+		RequestContext.setCurrent(requestWith("", VALID_TOKEN));
+
+		service.doSomethingWithManagementToken();
+	}
+
+	private RequestContext requestWith(String header, String query) {
+		RequestContext current = mock(RequestContext.class);
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		when(request.getHeader(ManagementToken.HEADER_NAME)).thenReturn(header);
+		when(request.getParameter(ManagementToken.QUERY_PARAMETER)).thenReturn(query);
+		when(current.getRequest()).thenReturn(request);
+		return current;
+	}
+
 	@Test(expected = PermissionException.class)
 	public void testNoTokenAllowed() {
 		RequestContext current = mock(RequestContext.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
-		when(request.getParameter(TOKEN_PARAMETER)).thenReturn(VALID_TOKEN);
+		when(request.getParameter(ManagementToken.QUERY_PARAMETER)).thenReturn(VALID_TOKEN);
 		when(current.getRequest()).thenReturn(request);
 		RequestContext.setCurrent(current);
 
