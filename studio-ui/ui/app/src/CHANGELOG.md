@@ -77,6 +77,8 @@
   * Removed `LegacyFormDialog` component (`craftercms.components.LegacyFormDialog`). Use `showContentFormAction` / `craftercms.components.FormsEngineDialog` instead.
   * [TypeList] Added `disableSelected` prop.
   * [UserManagement] Removed delete user functionality. Only `enable`/`disable` users is allowed.
+  * [theme] `MuiTooltip` defaults: removed `disableInteractive: true` (tooltips are now hoverable, WCAG 1.4.13) and added `leaveDelay: 200` so the pointer can move onto them. Applies to every Tooltip that does not override them.
+  * [NotistackVariant] Error and warning snackbars use `role="alert"`; success, info and default snackbars use `role="status"`. The `default` variant now renders `NotistackDefaultVariant` (registered via the provider's `Components` prop) instead of notistack's `MaterialDesignContent`.
 * [hooks]
   * Removed `useLogicResource` hook.
   * Removed `useSelectorResource` hook.

@@ -40,6 +40,7 @@ import { LoadingState } from '../LoadingState';
 import Box from '@mui/material/Box';
 import { drawerClasses } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
+import PoliteStatus from '../PoliteStatus/PoliteStatus';
 
 export interface SearchUIProps
 	extends
@@ -128,6 +129,20 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
+	// Stay silent while a search is in flight: `searchResults` still holds the previous response until it lands.
+	let resultsStatus = '';
+	if (searchResults != null && !isFetching) {
+		if (searchResults.total === 0) {
+			resultsStatus = formatMessage(translations.noResults);
+		} else if (searchResults.items.length > 0) {
+			// Count the rows that are rendered, not the requested page window.
+			resultsStatus = formatMessage(translations.resultsStatus, {
+				from: searchParameters.offset + 1,
+				to: Math.min(searchParameters.offset + searchResults.items.length, searchResults.total),
+				count: searchResults.total
+			});
+		}
+	}
 
 	const container = useRef(undefined);
 
@@ -137,6 +152,7 @@ export function SearchUI(props: SearchUIProps) {
 			ref={container}
 			sx={{ height: '100%', position: 'relative', background: (theme) => theme.palette.background.default }}
 		>
+			<PoliteStatus message={resultsStatus} />
 			<SiteSearchToolBar
 				onChange={handleSearchKeyword}
 				onMenuIconClick={toggleDrawer}

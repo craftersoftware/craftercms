@@ -103,7 +103,8 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 			},
 			MuiTooltip: {
 				defaultProps: {
-					disableInteractive: true
+					// WCAG 1.4.13: tooltips are hoverable (MUI's default) and the delay lets the pointer cross the gap to them.
+					leaveDelay: 200
 				}
 			}
 		}

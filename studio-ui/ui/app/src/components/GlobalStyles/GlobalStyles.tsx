@@ -22,6 +22,8 @@ import { useTheme } from '@mui/material/styles';
 import { useMemo } from 'react';
 import { Interpolation } from '@emotion/styled';
 import { typographyStyles } from './typography';
+import { focusRingOffset, focusRingStyles, focusRingWidth } from '../../styles/focusRing';
+import { TOAST_HOST_CLASS } from '../../utils/a11y/toastHostClass';
 
 export interface GlobalStylesProps {
 	cssBaseline?: boolean;
@@ -50,6 +52,16 @@ export function GlobalStyles(props: GlobalStylesProps) {
 						pointerEvents: 'all'
 					}
 				},
+
+				// A native anchor or link in a toast message is not a ButtonBase, so the theme's focusVisible
+				// never reaches it and the browser's default ring would sit on the toast's dark surface.
+				// `.TOAST_HOST_CLASS` is set by both toast content components. ButtonBase is excluded from both
+				// arms: those belong to the theme ring. Kept separate so the toast owns its halo, not the ring.
+				[`.${TOAST_HOST_CLASS} :is(a, [role="link"]):not(.MuiButtonBase-root):focus-visible`]: focusRingStyles(theme, {
+					// The halo reaches past the ring, as MUI's 0 0 0 4px halo does for ButtonBase children;
+					// a gap-only halo would leave the ring's outer edge against the toast.
+					shadow: `0 0 0 ${focusRingOffset + focusRingWidth}px ${theme.palette.background.paper}`
+				}),
 
 				// TinyMCE dialogs render into a body-level `.tox-tinymce-aux` sink, but the fullscreen
 				// editor lives inside the MUI modal's stacking context (z-index: modal). Tiny's skin drops
