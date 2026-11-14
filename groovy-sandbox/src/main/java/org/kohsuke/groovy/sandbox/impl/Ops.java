@@ -52,6 +52,8 @@ public class Ops {
 		c.put(DIVIDE_EQUAL, DIVIDE);
 		c.put(INTDIV_EQUAL, INTDIV);
 		c.put(MOD_EQUAL, MOD);
+		// since Groovy 5, % and %= are parsed as REMAINDER and REMAINDER_EQUAL instead of MOD and MOD_EQUAL
+		c.put(REMAINDER_EQUAL, REMAINDER);
 		c.put(POWER_EQUAL, POWER);
 
 		c.put(LEFT_SHIFT_EQUAL, LEFT_SHIFT);
@@ -70,6 +72,8 @@ public class Ops {
 		b.put(POWER, "power");
 		b.put(DIVIDE, "div");
 		b.put(MOD, "mod");
+		// Groovy 5+ dispatches % to remainder(), which differs from mod() for negative operands
+		b.put(REMAINDER, "remainder");
 		b.put(BITWISE_OR, "or");
 		b.put(BITWISE_AND, "and");
 		b.put(BITWISE_XOR, "xor");
