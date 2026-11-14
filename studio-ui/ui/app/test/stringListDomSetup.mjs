@@ -21,6 +21,7 @@ install('Node', window.Node);
 install('Element', window.Element);
 install('DocumentFragment', window.DocumentFragment);
 install('SVGElement', window.SVGElement);
+install('MutationObserver', window.MutationObserver);
 install('getComputedStyle', window.getComputedStyle.bind(window));
 install('requestAnimationFrame', (callback) => setTimeout(() => callback(Date.now()), 0));
 install('cancelAnimationFrame', (id) => clearTimeout(id));

@@ -68,6 +68,11 @@ import useSelection from '../../../hooks/useSelection';
 import { pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 
+/** Whether `node` is the button or comes after it in document order. The portal menu renders at the end of the body. */
+function isButtonOrFollows(button: Node | null | undefined, node: Node) {
+	return !button || node === button || Boolean(button.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 /** The `length/max` counter shown next to a field label, or null when there is neither. */
 function createLengthBlock({ length, max }: { length: number; max: number }) {
 	const pieces = [];
@@ -173,6 +178,55 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 	const menuButtonRef = useRef<HTMLButtonElement>(undefined);
 	const [openMenu, setOpenMenu] = useState(false);
 	const [showHelp, setShowHelp] = useState(false);
+	const generatedId = useId();
+	const menuId = `${generatedId}-options-menu`;
+	// Whether focus is on the Options button or on something after it (the control, the options menu, which renders
+	// in a portal but is a React child). Help and the field action come before the button, and focus on them must
+	// not make the button a tab stop, or Tab from Help would land on it ahead of the control.
+	const [hasFocusWithin, setHasFocusWithin] = useState(false);
+	// A field whose control can't take focus (read-only, disabled, Uuid, Label) has no other way in, so its button stays tabbable.
+	const [hasOtherTabStop, setHasOtherTabStop] = useState(true);
+	useLayoutEffect(() => {
+		const root = menuButtonRef.current?.closest('[data-field-id]');
+		if (!root) return undefined;
+		const recheckTabStops = () =>
+			setHasOtherTabStop(
+				Array.from(
+					root.querySelectorAll<HTMLElement>(
+						'a[href], button, input:not([type="hidden"]), select, textarea, iframe, [tabindex], [contenteditable="true"]'
+					)
+				).some((el) => {
+					// MUI Collapse hides its closed content with `visibility: hidden`, which checkVisibility() only
+					// reports with `visibilityProperty`. Where the method is missing, read the computed style.
+					const visible =
+						el.checkVisibility?.({ visibilityProperty: true }) ?? window.getComputedStyle(el).visibility !== 'hidden';
+					return (
+						el !== menuButtonRef.current &&
+						isButtonOrFollows(menuButtonRef.current, el) &&
+						el.tabIndex >= 0 &&
+						!el.matches(':disabled') &&
+						visible
+					);
+				})
+			);
+		const check = () => {
+			recheckTabStops();
+			// Removing the focused control fires no blur, so the flag would stay set with focus elsewhere.
+			const active = document.activeElement;
+			if (!active || !(root.contains(active) || document.getElementById(menuId)?.contains(active))) {
+				setHasFocusWithin(false);
+			}
+		};
+		check();
+		const observer = new MutationObserver(check);
+		observer.observe(root, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: ['disabled', 'tabindex']
+		});
+		return () => observer.disconnect();
+	}, [menu, showHelp, menuId]);
 	const customControls = useSelection((state) => state.uiConfig?.controls);
 	const additionalFieldIds = useMemo(() => getAdditionalFieldIds(field, customControls), [field, customControls]);
 	const hasChanges = useAtomValue(changedFieldAtom(changedFieldIds, field.id, additionalFieldIds));
@@ -214,13 +268,22 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 		editedRef.current = true;
 	}, [value]);
 	// The label id is the group name. A control with no label id passes the id `useFieldControlA11y` uses.
-	const generatedId = useId();
 	const describedByBase = fieldDescribedById(labelId, htmlFor || controlIdProp || generatedId);
+	const menuButtonId = `${generatedId}-options-button`;
 	const handleCloseMenu = () => setOpenMenu(false);
 	const handleRollback = () => formApi.rollbackField(field.id);
+	const isInMenu = (node: Node) => Boolean(document.getElementById(menuId)?.contains(node));
+	const handleFieldFocus = (event: React.FocusEvent<HTMLDivElement>) =>
+		setHasFocusWithin(isButtonOrFollows(menuButtonRef.current, event.target) || isInMenu(event.target));
 	const handleFieldBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		const next = event.relatedTarget;
-		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		// The menu renders in a portal, so a target inside it is not a DOM descendant but still counts as inside.
+		const nextNode = next instanceof Node ? next : null;
+		const inside = nextNode != null && (event.currentTarget.contains(nextNode) || isInMenu(nextNode));
+		setHasFocusWithin(
+			nextNode != null && inside && (isButtonOrFollows(menuButtonRef.current, nextNode) || isInMenu(nextNode))
+		);
+		if (inside) return;
 		if (isValid || validityData.state !== 'hasData') return;
 		const errorText = (validityData.data?.messages ?? [])
 			.map((messageData) => translateValidityMessage(messageData, formatMessage))
@@ -252,6 +315,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 			data-field-id={fieldId}
 			required={isRequired}
 			className={className}
+			onFocus={handleFieldFocus}
 			onBlur={handleFieldBlur}
 			sx={mergeSx({ '.MuiFormLabel-asterisk': { display: 'none' } }, sx)}
 		>
@@ -300,13 +364,23 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 						{action}
 						{menu && (
 							<>
-								{/* TODO: Should the menu button be tabbable? Perhaps it could be a preference whether it should be tabbable or not. */}
+								{/*
+								 * The button is tabbable only while focus is inside the field, so it adds no tab stop per field,
+								 * unless the field has no other tab stop and this is the only way in.
+								 * It precedes the control in the DOM, so Shift+Tab from the control reaches it. A keyboard
+								 * shortcut is not offered: every candidate clashes with a browser, screen reader, native text
+								 * input, select or TinyMCE binding.
+								 */}
 								<IconButton
 									size="small"
-									tabIndex={-1}
+									id={menuButtonId}
+									tabIndex={hasFocusWithin || openMenu || !hasOtherTabStop ? 0 : -1}
 									ref={menuButtonRef}
 									onClick={() => setOpenMenu(true)}
 									aria-label={formatMessage({ defaultMessage: 'Options for {fieldName}' }, { fieldName: field.name })}
+									aria-haspopup="menu"
+									aria-expanded={openMenu}
+									aria-controls={openMenu ? menuId : undefined}
 								>
 									<MoreVertRounded fontSize="small" />
 								</IconButton>
@@ -315,6 +389,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 									anchorEl={menuButtonRef.current}
 									onClose={handleCloseMenu}
 									onClick={handleCloseMenu}
+									slotProps={{ list: { id: menuId, 'aria-labelledby': menuButtonId } }}
 								>
 									<MenuItem
 										onClick={() => {
