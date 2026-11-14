@@ -211,30 +211,30 @@ export function parseFieldValue(propName: string, propValue: any): number | stri
 	}
 }
 
-export function fetchModelByPath(path: string): Observable<ContentInstance>;
+export function fetchModelByPath(path: string): Observable<ContentInstance | null>;
 export function fetchModelByPath(
 	path: string,
 	options: Partial<CrafterConfig & ParseDescriptorOptions>
-): Observable<ContentInstance>;
+): Observable<ContentInstance | null>;
 export function fetchModelByPath(
 	path: string,
 	options?: Partial<CrafterConfig & ParseDescriptorOptions>
-): Observable<ContentInstance> {
+): Observable<ContentInstance | null> {
 	let pdo = mixParseDescriptorOptions({ parseFieldValueTypes: true, ...options });
 	return getItem(path, { flatten: true, ...options }).pipe(
 		map(({ descriptorDom }) => parseDescriptor(descriptorDom, pdo))
 	);
 }
 
-export function fetchModelByUrl(webUrl: string): Observable<ContentInstance>;
+export function fetchModelByUrl(webUrl: string): Observable<ContentInstance | null>;
 export function fetchModelByUrl(
 	webUrl: string,
 	options: Partial<CrafterConfig & ParseDescriptorOptions>
-): Observable<ContentInstance>;
+): Observable<ContentInstance | null>;
 export function fetchModelByUrl(
 	webUrl: string,
 	options?: Partial<CrafterConfig & ParseDescriptorOptions>
-): Observable<ContentInstance> {
+): Observable<ContentInstance | null> {
 	let pdo = mixParseDescriptorOptions({ parseFieldValueTypes: true, ...options });
 	return urlTransform('renderUrlToStoreUrl', webUrl).pipe(
 		switchMap((path) => getItem(path as string, { flatten: true, ...options })),
