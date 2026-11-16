@@ -27,7 +27,7 @@ import {
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage } from 'react-intl';
+import { FormattedList, FormattedMessage, useIntl } from 'react-intl';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import NavigateNextIcon from '@mui/icons-material/NavigateNextRounded';
 import Tooltip from '@mui/material/Tooltip';
@@ -68,6 +68,7 @@ import { useEnhancedDialogState } from '../../../hooks/useEnhancedDialogState';
 import { SwapFieldDialog } from './SwapFieldDialog';
 import { nanoid } from 'nanoid';
 import MoveDownIcon from '@mui/icons-material/MoveDown';
+import { findFieldsReferencingDataSource } from './editTypeWorkingCopy';
 import { ReorderFieldsDialog, type ReorderFieldsDialogProps } from './ReorderFieldsDialog';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 
@@ -274,6 +275,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		onReorderRepGroupFields,
 		performCurrentFormErrorCheckAndWarning
 	} = props;
+	const { formatMessage } = useIntl();
 	const [openMoveFieldDialog, setOpenMoveFieldDialog] = useState(false);
 	const [openReorderFieldsDialog, setOpenReorderFieldsDialog] = useState(false);
 	if (!field) return;
@@ -299,17 +301,26 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderRepGroupFields?.(newFields, fieldIdPath, sectionId);
 	};
+	const reorderFieldsLabel = formatMessage(
+		{ defaultMessage: 'Reorder fields in {fieldName}' },
+		{ fieldName: field.name }
+	);
+	const moveFieldLabel = formatMessage(
+		{ defaultMessage: 'Move {fieldName} to another section' },
+		{ fieldName: field.name }
+	);
+	const deleteFieldLabel = formatMessage({ defaultMessage: 'Delete {fieldName}' }, { fieldName: field.name });
 
 	return (
 		<>
 			{field.type === 'repeat' && Object.keys(field.fields ?? {}).length > 0 && (
-				<Tooltip title={<FormattedMessage defaultMessage="Reorder fields" />}>
+				<Tooltip title={reorderFieldsLabel}>
 					<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			)}
-			<Tooltip title={<FormattedMessage defaultMessage="Move to another section" />}>
+			<Tooltip title={moveFieldLabel}>
 				<IconButton onClick={() => onOpenMoveFieldDialog()}>
 					<DriveFileMoveOutlined />
 				</IconButton>
@@ -317,7 +328,7 @@ function FieldActions(props: FieldFormViewProps): React.JSX.Element {
 			{field.id !== XmlKeys.internalName && field.id !== XmlKeys.fileName && (
 				<ConfirmDropdown
 					icon={DeleteRounded}
-					iconTooltip={<FormattedMessage defaultMessage="Delete field" />}
+					iconTooltip={deleteFieldLabel}
 					confirmHelperText={
 						!(field as NewContentTypeField).NEW ? (
 							<FormattedMessage
@@ -360,6 +371,7 @@ const fileNameTypeIds = ['file-name', 'auto-filename'];
 
 function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 	const { field, fieldIdPath, sectionId, controlDescriptor, onSwapField } = props;
+	const { formatMessage } = useIntl();
 	const swapFieldDialogState = useEnhancedDialogState();
 	if (!props.field) return;
 
@@ -367,6 +379,10 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 		onSwapField?.(field.id, sectionId, newField);
 		swapFieldDialogState.onClose();
 	};
+	const swapFieldLabel =
+		field.id === 'file-name'
+			? formatMessage({ defaultMessage: 'Swap {fieldName}' }, { fieldName: controlDescriptor.name })
+			: '';
 
 	return (
 		<>
@@ -375,7 +391,7 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 				secondaryAction={
 					field.id === 'file-name' &&
 					!fieldIdPath?.includes('.') && (
-						<Tooltip title={<FormattedMessage defaultMessage="Swap Field" />}>
+						<Tooltip title={swapFieldLabel}>
 							<IconButton onClick={() => swapFieldDialogState.onOpen()}>
 								<SwapCallsOutlined />
 							</IconButton>
@@ -404,6 +420,7 @@ function FieldSwapper(props: FieldFormViewProps): React.JSX.Element {
 
 function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 	const { section, isMainSection, onDeleteSection, onReorderSectionFields, onOpenInsertFieldDialog } = props;
+	const { formatMessage } = useIntl();
 	const [openReorderFieldsDialog, setOpenReorderFieldsDialog] = useState(false);
 	if (!section) return;
 	const fields = section.fields.map((field) => ({ key: field, value: field })) || [];
@@ -412,17 +429,23 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderSectionFields?.(newFields, section.id);
 	};
+	const reorderSectionFieldsLabel = formatMessage(
+		{ defaultMessage: 'Reorder fields in {section}' },
+		{ section: section.title }
+	);
+	const addFieldLabel = formatMessage({ defaultMessage: 'Add field to {section}' }, { section: section.title });
+	const deleteSectionLabel = formatMessage({ defaultMessage: 'Delete {section}' }, { section: section.title });
 
 	return (
 		<>
 			{section.fields?.length > 0 ? (
-				<Tooltip title={<FormattedMessage defaultMessage="Reorder fields" />}>
+				<Tooltip title={reorderSectionFieldsLabel}>
 					<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
 						<MoveDownIcon />
 					</IconButton>
 				</Tooltip>
 			) : (
-				<Tooltip title={<FormattedMessage defaultMessage="Add field" />}>
+				<Tooltip title={addFieldLabel}>
 					<IconButton onClick={() => onOpenInsertFieldDialog?.(section.id)}>
 						<AddCircleOutlineOutlinedIcon />
 					</IconButton>
@@ -431,7 +454,7 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 			{!isMainSection && (
 				<ConfirmDropdown
 					icon={DeleteRounded}
-					iconTooltip={<FormattedMessage defaultMessage="Delete Section" />}
+					iconTooltip={deleteSectionLabel}
 					confirmHelperText={
 						<FormattedMessage defaultMessage={'Delete "{title}"?'} values={{ title: section.title }} />
 					}
@@ -451,14 +474,29 @@ function SectionActions(props: FieldFormViewProps): React.JSX.Element {
 }
 
 function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
-	const { dataSource, onDeleteDataSource } = props;
+	const { dataSource, onDeleteDataSource, type } = props;
+	const { formatMessage } = useIntl();
 	if (!dataSource) return;
+	const referencingFields = type ? findFieldsReferencingDataSource(type, dataSource.id) : [];
+	const referencingFieldNames = (
+		<FormattedList type="conjunction" value={referencingFields.map((field) => field.name)} />
+	);
 	return (
 		<>
 			<ConfirmDropdown
 				icon={DeleteRounded}
-				iconTooltip={<FormattedMessage defaultMessage="Delete Data Source" />}
-				confirmHelperText={<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />}
+				iconTooltip={formatMessage({ defaultMessage: 'Delete {name}' }, { name: dataSource.title })}
+				confirmHelperText={
+					referencingFields.length > 0 ? (
+						<FormattedMessage
+							defaultMessage={'Delete "{name}"? It is used by: {fields}'}
+							values={{ name: dataSource.title, fields: referencingFieldNames }}
+						/>
+					) : (
+						<FormattedMessage defaultMessage={'Delete "{name}"?'} values={{ name: dataSource.title }} />
+					)
+				}
+				sx={{ menuPaper: { maxWidth: 360 } }}
 				cancelText={<FormattedMessage defaultMessage="No" />}
 				confirmText={<FormattedMessage defaultMessage="Yes" />}
 				onConfirm={() => {
@@ -471,6 +509,7 @@ function DataSourceActions(props: FieldFormViewProps): React.JSX.Element {
 
 function ContentTypeActions(props: FieldFormViewProps): React.JSX.Element {
 	const { section, field, dataSource, type, onReorderTypeSections } = props;
+	const { formatMessage } = useIntl();
 	const [openReorderFieldsDialog, setOpenReorderFieldsDialog] = useState(false);
 	if (section || field || dataSource) return;
 
@@ -480,10 +519,11 @@ function ContentTypeActions(props: FieldFormViewProps): React.JSX.Element {
 		setOpenReorderFieldsDialog(false);
 		onReorderTypeSections?.(newSections);
 	};
+	const reorderSectionsLabel = formatMessage({ defaultMessage: 'Reorder sections' });
 
 	return (
 		<>
-			<Tooltip title={<FormattedMessage defaultMessage="Reorder sections" />}>
+			<Tooltip title={reorderSectionsLabel}>
 				<IconButton onClick={() => setOpenReorderFieldsDialog(true)}>
 					<MoveDownIcon />
 				</IconButton>

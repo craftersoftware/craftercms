@@ -21,7 +21,12 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { JSDOM } from 'jsdom';
 import '../../../../test/registerTsLoader.mjs';
+
+// An RTE's emptiness is its text. node --test has no DOMParser; jsdom supplies one.
+globalThis.DOMParser = new JSDOM('').window.DOMParser;
+import { messageSource } from '../../../../test/messageSource.mjs';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
 import type { FieldValidityMessage } from './validators.ts';
@@ -38,7 +43,7 @@ function field(type: string, id: string, validations: Record<string, unknown> = 
 function texts(messages: FieldValidityMessage[]): Array<string | undefined> {
 	return messages.map((message) => {
 		const descriptor = Array.isArray(message) ? message[0] : message;
-		return typeof descriptor === 'string' ? descriptor : descriptor.defaultMessage;
+		return typeof descriptor === 'string' ? descriptor : messageSource(descriptor.defaultMessage);
 	});
 }
 
@@ -89,8 +94,17 @@ describe('built-in validators on the new signature', () => {
 	it('checkbox: required means checked, and the host required message does not apply', async () => {
 		const required = field('checkbox', 'c_b', { required: true });
 		const result = await validateFieldValue(required, false, meta);
+		assert.equal(result.isValid, false);
+		assert.equal(result.messages.length, 1);
 		assert.deepEqual(texts(result.messages), ['This checkbox must be checked.']);
 		assert.equal((await validateFieldValue(required, true, meta)).isValid, true);
+	});
+
+	it('required RTE with empty markup fails once, as required', async () => {
+		const result = await validateFieldValue(field('rte', 'body_html', { required: true }), '<p></p>', meta);
+		assert.equal(result.isValid, false);
+		assert.equal(result.messages.length, 1);
+		assert.deepEqual(texts(result.messages), ['This field is required.']);
 	});
 
 	it('required with an empty value short-circuits before the type validator', async () => {
@@ -123,6 +137,31 @@ describe('built-in validators on the new signature', () => {
 		assert.deepEqual(texts(taken.messages), ['That variable name is already in use.']);
 		const own = await validateFieldValue(variable, 'name', { ...meta, siblingIds: ['name'], currentIds: ['name'] });
 		assert.equal(own.isValid, true);
+	});
+
+	it('variable: requires an ending postfix when site-config rules are enabled', async () => {
+		const variable = field('variable', 'v_s');
+		const postfix = { enabled: true, ignoreFields: ['internal-name'], suffixes: ['_s', '_t'] };
+		const missing = await validateFieldValue(variable, 'is_syz', { ...meta, fieldNamePostfix: postfix });
+		assert.deepEqual(texts(missing.messages), ['The variable name must end with {postfixes}.']);
+		assert.equal((await validateFieldValue(variable, 'title_s', { ...meta, fieldNamePostfix: postfix })).isValid, true);
+		assert.equal(
+			(await validateFieldValue(variable, 'internal-name', { ...meta, fieldNamePostfix: postfix })).isValid,
+			true
+		);
+		// Nested / data-source forms omit the rules; no postfix error without them.
+		assert.equal((await validateFieldValue(variable, 'is_syz', meta)).isValid, true);
+		// Duplicate check still runs alongside postfix rules.
+		const both = await validateFieldValue(variable, 'name', {
+			...meta,
+			siblingIds: ['name'],
+			currentIds: [],
+			fieldNamePostfix: postfix
+		});
+		assert.deepEqual(texts(both.messages), [
+			'The variable name must end with {postfixes}.',
+			'That variable name is already in use.'
+		]);
 	});
 
 	it('file-name owns its required message and does not get the host one', async () => {

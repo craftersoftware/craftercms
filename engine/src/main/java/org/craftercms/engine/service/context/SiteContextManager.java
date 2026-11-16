@@ -16,6 +16,7 @@
 package org.craftercms.engine.service.context;
 
 import static java.lang.String.format;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -378,6 +379,10 @@ public class SiteContextManager implements ApplicationContextAware, DisposableBe
 		logger.debug("Syncing the site contexts ...");
 
 		Collection<String> siteNames = siteListResolver.getSiteList();
+		if (siteNames == null) {
+			logger.warn("No site list available; skipping context sync");
+			return;
+		}
 
 		// destroy the contexts for sites in the registry that are not present anymore (except fallback sites)
 		contextRegistry.forEach((siteName, siteContext) -> {

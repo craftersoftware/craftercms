@@ -24,8 +24,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
 
-const { createTypeWorkingCopy, deleteDataSourceFromType, insertDataSourceIntoType, reorderTypeSections } =
-	await import('./editTypeWorkingCopy.ts');
+const {
+	createTypeWorkingCopy,
+	deleteDataSourceFromType,
+	findFieldsReferencingDataSource,
+	insertDataSourceIntoType,
+	reorderTypeSections
+} = await import('./editTypeWorkingCopy.ts');
 const { createEmptyTypeStructure } = await import('../utils.ts');
 
 function section(id: string, title = id) {
@@ -36,6 +41,10 @@ function dataSource(id: string) {
 	return { id, title: id, type: 'components', interface: '', properties: {} };
 }
 
+function datasourceProp(name: string, type: string, value: string) {
+	return { name, type, value };
+}
+
 function makeType() {
 	return createEmptyTypeStructure({
 		id: '/page/article',
@@ -44,7 +53,36 @@ function makeType() {
 		sections: [section('a', 'A'), section('b', 'B'), section('c', 'C')],
 		dataSources: [dataSource('ds-a'), dataSource('ds-b')],
 		fields: {
-			title_s: { id: 'title_s', name: 'Title', type: 'input', fields: {}, properties: {}, validations: {} }
+			title_s: { id: 'title_s', name: 'Title', type: 'input', fields: {}, properties: {}, validations: {} },
+			hero_o: {
+				id: 'hero_o',
+				name: 'Hero',
+				type: 'image-picker',
+				fields: {},
+				properties: {
+					imageManager: datasourceProp('imageManager', 'datasource:image', 'ds-a,ds-b')
+				},
+				validations: {}
+			},
+			group_o: {
+				id: 'group_o',
+				name: 'Group',
+				type: 'repeat',
+				fields: {
+					thumb_o: {
+						id: 'thumb_o',
+						name: 'Thumb',
+						type: 'image-picker',
+						fields: {},
+						properties: {
+							imageManager: datasourceProp('imageManager', 'datasource:image', 'ds-a')
+						},
+						validations: {}
+					}
+				},
+				properties: {},
+				validations: {}
+			}
 		}
 	});
 }
@@ -101,5 +139,22 @@ describe('editTypeWorkingCopy', () => {
 			current.dataSources.map((ds) => ds.id),
 			['ds-pending', 'ds-b']
 		);
+	});
+
+	it('finds root and nested fields that reference a data source', () => {
+		const refs = findFieldsReferencingDataSource(makeType(), 'ds-a');
+		assert.deepEqual(
+			refs.map((f) => f.id),
+			['hero_o', 'thumb_o']
+		);
+	});
+
+	it('strips the deleted data source id from field properties in the same update', () => {
+		const original = makeType();
+		const next = deleteDataSourceFromType(original, 'ds-a');
+		assert.equal(next.fields.hero_o.properties.imageManager.value, 'ds-b');
+		assert.equal(next.fields.group_o.fields.thumb_o.properties.imageManager.value, '');
+		// Untouched fields keep the same object identity.
+		assert.equal(next.fields.title_s, original.fields.title_s);
 	});
 });

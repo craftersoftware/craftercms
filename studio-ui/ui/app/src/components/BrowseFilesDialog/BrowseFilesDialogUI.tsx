@@ -157,12 +157,17 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								{multiSelect && (
 									<>
 										<Tooltip title={<FormattedMessage defaultMessage="Select All on this page" />}>
-											<Checkbox checked={allSelected} indeterminate={someSelected} onChange={onSelectAll} />
+											<Checkbox
+												checked={allSelected}
+												indeterminate={someSelected}
+												onChange={onSelectAll}
+												slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
+											/>
 										</Tooltip>
 										<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 									</>
 								)}
-								<Tooltip title={<FormattedMessage id="word.refresh" defaultMessage="Refresh" />}>
+								<Tooltip title={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}>
 									<IconButton
 										onClick={onRefresh}
 										aria-label={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}
@@ -171,7 +176,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									</IconButton>
 								</Tooltip>
 								{allowUpload && (
-									<Tooltip title={<FormattedMessage id="word.upload" defaultMessage="Upload" />}>
+									<Tooltip title={formatMessage({ id: 'word.upload', defaultMessage: 'Upload' })}>
 										<IconButton
 											onClick={onUpload}
 											sx={{ mr: 1 }}
@@ -305,7 +310,7 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 							</Box>
 							<Box sx={{ display: 'flex', flexGrow: 0 }}>
-								<Tooltip title={<FormattedMessage defaultMessage="Switch view mode" />}>
+								<Tooltip title={formatMessage({ defaultMessage: 'Switch view mode' })}>
 									<IconButton
 										onClick={onToggleViewMode}
 										sx={{ mr: 1 }}
@@ -363,17 +368,21 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 										<MediaCard
 											viewMode={viewMode}
 											sxs={{
-												root: {
-													cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer',
-													boxShadow: (theme) =>
-														item.path === selectedCard?.path ? `0px 0px 4px 4px ${theme.palette.primary.main}` : 'none'
-												}
+												root: [
+													{
+														cursor: disableChangePreselected && isPreselected ? 'not-allowed' : 'pointer'
+													},
+													item.path === selectedCard?.path && {
+														boxShadow: (theme) => `0px 0px 4px 4px ${theme.palette.primary.main}`
+													}
+												]
 											}}
 											key={item.path}
 											item={item}
 											disableSelection={disableChangePreselected && isPreselected}
 											selected={multiSelect ? [...selectedArray] : []}
 											onSelect={multiSelect ? onSelect : null}
+											isSelected={multiSelect ? undefined : item.path === selectedCard?.path}
 											onPreview={onPreviewImage ? () => onPreviewImage(item) : null}
 											previewAppBaseUri={guestBase}
 											onClick={() => !(disableChangePreselected && isPreselected) && onCardSelected(item)}

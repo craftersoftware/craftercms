@@ -21,7 +21,6 @@ import DeleteRounded from '@mui/icons-material/DeleteRounded';
 import DeleteRoundedTilted from '../../icons/OpenRubbishBinTiltedLeftFilled';
 import { Typography } from '@mui/material';
 import { FormattedMessage } from 'react-intl';
-import palette from '../../styles/palette';
 import { useSelection } from '../../hooks/useSelection';
 
 export function RubbishBin(props: any) {
@@ -39,20 +38,23 @@ export function RubbishBin(props: any) {
 			<Paper
 				elevation={2}
 				style={{ width: toolsPanelWidth - 30 }}
-				sx={(theme) => ({
-					height: 250,
-					display: 'flex',
-					flexDirection: 'column',
-					alignItems: 'center',
-					justifyContent: 'center',
-					background: over ? palette.red.main : palette.orange.main,
-					margin: theme.spacing(1),
-					position: 'absolute',
-					right: theme.spacing(1),
-					bottom: theme.spacing(1),
-					color: palette.white,
-					zIndex: theme.zIndex.drawer
-				})}
+				sx={(theme) => {
+					const background = over ? theme.palette.error.main : theme.palette.warning.main;
+					return {
+						height: 250,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background,
+						margin: theme.spacing(1),
+						position: 'absolute',
+						right: theme.spacing(1),
+						bottom: theme.spacing(1),
+						color: theme.palette.getContrastText(background),
+						zIndex: theme.zIndex.drawer
+					};
+				}}
 				onDragOver={(e) => {
 					e.preventDefault();
 				}}
@@ -76,9 +78,9 @@ export function RubbishBin(props: any) {
             : <LinkRounded className={classes.rubbishIcon} />
           */}
 				{over ? (
-					<DeleteRoundedTilted sx={{ width: '100%', height: '50%', color: palette.white, pointerEvents: 'none' }} />
+					<DeleteRoundedTilted sx={{ width: '100%', height: '50%', color: 'inherit', pointerEvents: 'none' }} />
 				) : (
-					<DeleteRounded sx={{ width: '100%', height: '50%', color: palette.white, pointerEvents: 'none' }} />
+					<DeleteRounded sx={{ width: '100%', height: '50%', color: 'inherit', pointerEvents: 'none' }} />
 				)}
 				<Typography variant="caption" sx={{ pointerEvents: 'none' }}>
 					{trashed ? (

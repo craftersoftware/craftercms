@@ -18,7 +18,7 @@ import OutlinedInput, { OutlinedInputProps } from '@mui/material/OutlinedInput';
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
@@ -150,13 +150,13 @@ export function TypeImageSelector(props: TypeImageSelectorProps) {
 				endAdornment={
 					<>
 						{value && (
-							<Tooltip title={<FormattedMessage defaultMessage="Remove image" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Remove image' })}>
 								<IconButton onClick={() => onDeleteImage()}>
 									<DeleteOutlineRoundedIcon />
 								</IconButton>
 							</Tooltip>
 						)}
-						<Tooltip title={<FormattedMessage defaultMessage="Upload Image" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Upload Image' })}>
 							<IconButton onClick={() => onUploadImage()}>
 								<UploadRoundedIcon />
 							</IconButton>

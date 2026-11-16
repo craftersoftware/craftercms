@@ -275,6 +275,11 @@ export interface GlobalState {
 			submissionCommentMaxLength: number;
 		};
 		cdataEscapedFieldPatterns: string[];
+		/** Variable-name postfix rules from site-config `<form-engine>`. Off until that config is loaded. */
+		formEngine: {
+			fieldNamePostfix: boolean;
+			ignorePostfixFields: string[];
+		};
 		references: LookupTable;
 		xml: string;
 		remoteGitBranch: string;

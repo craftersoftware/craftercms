@@ -15,7 +15,6 @@
  */
 
 import React from 'react';
-import palette from '../../styles/palette';
 import Box from '@mui/material/Box';
 
 export interface ProgressBarProps {
@@ -38,8 +37,12 @@ export function ProgressBar(props: ProgressBarProps) {
 		>
 			<Box
 				sx={{
-					backgroundColor:
-						status === 'failed' ? palette.red.main : progress === 100 ? palette.green.main : palette.blue.tint,
+					backgroundColor: (theme) =>
+						status === 'failed'
+							? theme.palette.error.main
+							: progress === 100
+								? theme.palette.success.main
+								: theme.palette.primary.main,
 					height: '100%',
 					width: 0,
 					transition: status === 'failed' ? 'width 0.4s ease' : 'background-color 0.5s ease'

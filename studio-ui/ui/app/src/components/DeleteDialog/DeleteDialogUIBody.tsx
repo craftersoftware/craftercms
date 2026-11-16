@@ -17,7 +17,7 @@
 import React from 'react';
 import Grid from '@mui/material/Grid';
 import TextFieldWithMax from '../TextFieldWithMax/TextFieldWithMax';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { SelectionList } from '../DependencySelection/SelectionList';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -35,6 +35,7 @@ import TextField from '@mui/material/TextField';
 const sectionWarningAlertSx = { borderRadius: 0 };
 
 export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
+	const { formatMessage } = useIntl();
 	const {
 		items,
 		childItems,
@@ -97,6 +98,7 @@ export function DeleteDialogUIBody(props: DeleteDialogContentUIProps) {
 												<Button
 													color="primary"
 													onClick={(e) => onEditDependantClick(e, path)}
+													aria-label={formatMessage({ defaultMessage: 'Edit {path}' }, { path })}
 													size="small"
 													sx={{
 														marginLeft: 'auto',

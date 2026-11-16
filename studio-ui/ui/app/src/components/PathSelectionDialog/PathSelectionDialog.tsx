@@ -21,7 +21,7 @@ import StandardAction from '../../models/StandardAction';
 import TranslationOrText from '../../models/TranslationOrText';
 import { useUnmount } from '../../hooks/useUnmount';
 import { usePossibleTranslation } from '../../hooks/usePossibleTranslation';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -92,6 +92,7 @@ export function PathSelectionDialogContainer(props: PathSelectionDialogProps) {
 	const [root, setRoot] = useState(rootPath);
 	const [currentPath, setCurrentPath] = useState(initialPath ?? root);
 	const title = usePossibleTranslation(props.title);
+	const { formatMessage } = useIntl();
 	const dispatch = useDispatch();
 
 	useUnmount(onClosed);
@@ -135,9 +136,10 @@ export function PathSelectionDialogContainer(props: PathSelectionDialogProps) {
 							startAdornment={
 								allowSwitchingRootPath ? (
 									<Tooltip
-										title={
-											<FormattedMessage id="pathSelectionDialog.changeRootButtonLabel" defaultMessage="Change root" />
-										}
+										title={formatMessage({
+											id: 'pathSelectionDialog.changeRootButtonLabel',
+											defaultMessage: 'Change root'
+										})}
 									>
 										<IconButton
 											sx={{ mr: 0.5 }}

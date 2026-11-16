@@ -30,6 +30,9 @@ studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
 studio.authoring.serverUrl: ${env:STUDIO_URL}
 # Studio management authorization token.
 studio.configuration.management.authorizationToken: ${env:STUDIO_MANAGEMENT_TOKEN}
+# Studio management token for the site management API.
+# Delivery sends this value in the X-Crafter-Management-Token header when listing sites.
+studio.configuration.management.siteManagementToken: ${env:STUDIO_SITE_MANAGEMENT_TOKEN}
 # Preview engine management authorization token.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}
 # Protected URLs with preview engine management authorization token.

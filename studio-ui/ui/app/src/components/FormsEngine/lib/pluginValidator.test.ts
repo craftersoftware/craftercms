@@ -24,6 +24,7 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 import '../../../../test/registerTsLoader.mjs';
+import { messageSource } from '../../../../test/messageSource.mjs';
 import type { ComponentType } from 'react';
 import type { AnyValue } from '../types';
 import type { ContentTypeField } from '../../../models/ContentType';
@@ -56,7 +57,7 @@ function assertFallback(result: { isValid: boolean; messages: unknown[] }, label
 	assert.equal(result.isValid, false, label);
 	assert.equal(result.messages.length, 1, label);
 	const [message] = result.messages as Array<{ id: string; defaultMessage: string }>;
-	assert.equal(message.defaultMessage, fallbackText, label);
+	assert.equal(messageSource(message.defaultMessage), fallbackText, label);
 	assert.equal(typeof message.id, 'string', label);
 	assert.ok(message.id.length > 0, label);
 }
@@ -209,7 +210,10 @@ describe('plugin validator', () => {
 		const result = await validateFieldValue(field, '', meta);
 		assert.equal(result.isValid, false);
 		assert.equal(called, false);
-		assert.equal((result.messages[0] as { defaultMessage: string }).defaultMessage, 'This field is required.');
+		assert.equal(
+			messageSource((result.messages[0] as { defaultMessage: string }).defaultMessage),
+			'This field is required.'
+		);
 	});
 
 	it('receives the caller signal', async () => {

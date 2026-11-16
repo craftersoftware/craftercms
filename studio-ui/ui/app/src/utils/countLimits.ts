@@ -487,6 +487,19 @@ export function getRepeatOccurrenceViolations(
 	return violations;
 }
 
+/**
+ * What an occurrence violation means for a field's marker, when both limits report at level `required`
+ * (see assignCountLimits): a missing minimum is the required prompt, a reached maximum is not. `min` wins
+ * when both are present, so a range that is somehow short and full still reads as required. The Experience
+ * Builder zone marker uses this because the level alone cannot tell the two apart.
+ */
+export function occurrenceViolationKind(violations: { id?: string }[]): 'required' | 'maxCount' | null {
+	const ids = violations.map(({ id }) => id);
+	if (ids.includes('minCount')) return 'required';
+	if (ids.includes('maxCount')) return 'maxCount';
+	return null;
+}
+
 type StoredBound = { limit?: number; unusable: boolean };
 
 /** Element wins when usable. Blank and invalid fall back to the property. 0 and `*` (max) are unlimited. */

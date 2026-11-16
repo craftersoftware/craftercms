@@ -24,7 +24,6 @@ import { MarketplacePlugin, MarketplacePluginParameter } from '../../models/Mark
 import { defineMessages, useIntl } from 'react-intl';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import palette from '../../styles/palette';
 import Box from '@mui/material/Box';
 
 interface BlueprintReviewProps {
@@ -232,10 +231,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 		<Box sx={{ maxWidth: '600px', margin: 'auto' }}>
 			<Grid container spacing={3}>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.creationStrategy)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.creationStrategy)}
+						</Typography>
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.creationStrategy) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -247,7 +251,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					{blueprint.id !== 'GIT' ? (
 						<div>
 							<Typography variant="body2" gutterBottom>
@@ -269,10 +273,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 					)}
 				</Grid>
 				<Grid size={12}>
-					<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-						{formatMessage(messages.siteInfo)}
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+							{formatMessage(messages.siteInfo)}
+						</Typography>
 						<IconButton
-							aria-label="goto"
+							aria-label={formatMessage(
+								{ defaultMessage: 'Edit {section}' },
+								{ section: formatMessage(messages.siteInfo) }
+							)}
 							sx={{
 								color: (theme) => theme.palette.primary.main,
 								'& svg': {
@@ -284,7 +293,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						>
 							<EditIcon />
 						</IconButton>
-					</Typography>
+					</Box>
 					<Typography variant="body2" gutterBottom noWrap>
 						<Box component="span" sx={{ fontWeight: 'bold' }}>
 							{formatMessage(messages.siteName)}:{' '}
@@ -305,7 +314,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 						{inputs.description ? (
 							inputs.description
 						) : (
-							<Box component="span" sx={{ color: palette.gray.medium2 }}>
+							<Box component="span" sx={{ color: 'text.secondary' }}>
 								({formatMessage(messages.noDescription)})
 							</Box>
 						)}
@@ -320,10 +329,15 @@ function BlueprintReview(props: BlueprintReviewProps) {
 				</Grid>
 				{blueprint.parameters && !!blueprint.parameters.length && (
 					<Grid size={12}>
-						<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-							{formatMessage(messages.blueprintParameters)}
+						<Box sx={{ display: 'flex', alignItems: 'center' }}>
+							<Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+								{formatMessage(messages.blueprintParameters)}
+							</Typography>
 							<IconButton
-								aria-label="goto"
+								aria-label={formatMessage(
+									{ defaultMessage: 'Edit {section}' },
+									{ section: formatMessage(messages.blueprintParameters) }
+								)}
 								sx={{
 									color: (theme) => theme.palette.primary.main,
 									'& svg': {
@@ -335,7 +349,7 @@ function BlueprintReview(props: BlueprintReviewProps) {
 							>
 								<EditIcon />
 							</IconButton>
-						</Typography>
+						</Box>
 						{renderBlueprintParameters()}
 					</Grid>
 				)}

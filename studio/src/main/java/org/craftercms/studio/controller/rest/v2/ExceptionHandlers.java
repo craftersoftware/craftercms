@@ -44,6 +44,7 @@ import org.craftercms.studio.api.v2.exception.content.ContentExistException;
 import org.craftercms.studio.api.v2.exception.content.ContentInPublishQueueException;
 import org.craftercms.studio.api.v2.exception.content.ContentLockedByAnotherUserException;
 import org.craftercms.studio.api.v2.exception.content.ContentMoveInvalidLocation;
+import org.craftercms.studio.api.v2.exception.content.NavOrderException;
 import org.craftercms.studio.api.v2.exception.contentType.ContentTypeUsageException;
 import org.craftercms.studio.api.v2.exception.git.MergeInProgressException;
 import org.craftercms.studio.api.v2.exception.git.NoMergeStateException;
@@ -274,6 +275,14 @@ public class ExceptionHandlers {
 	@ResponseStatus(BAD_REQUEST)
 	public Result handleContentTypeInvalidLocationException(HttpServletRequest request, ContentTypeInvalidLocationException e) {
 		ApiResponse response = new ApiResponse(CONTENT_TYPE_INVALID_LOCATION);
+		response.setMessage(response.getMessage() + " : " + e.getMessage());
+		return handleExceptionInternal(request, e, response);
+	}
+
+	@ExceptionHandler(NavOrderException.class)
+	@ResponseStatus(BAD_REQUEST)
+	public Result handleNavOrderException(HttpServletRequest request, NavOrderException e) {
+		ApiResponse response = new ApiResponse(e.getResponse());
 		response.setMessage(response.getMessage() + " : " + e.getMessage());
 		return handleExceptionInternal(request, e, response);
 	}

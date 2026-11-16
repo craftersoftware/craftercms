@@ -87,6 +87,11 @@ export interface CreateFormControllerContextArgs {
 	 */
 	fieldChangeTeardowns: Set<() => void>;
 	/**
+	 * Runs a `setValue` while the stack entry marks the write as a controller write.
+	 * Blur then does not treat that change as the author's edit.
+	 */
+	systemWrite?: <T>(run: () => T) => T;
+	/**
 	 * True once this context's form state was torn down or superseded. A pending `initialize` can
 	 * still hold the context, so writes and new listeners must be refused rather than reach the
 	 * stack entry's shared atoms and `fieldUpdates$`.
@@ -110,7 +115,8 @@ export function createFormControllerContext({
 	fieldUpdates$,
 	dispatch,
 	fieldChangeTeardowns,
-	isDisposed
+	isDisposed,
+	systemWrite
 }: CreateFormControllerContextArgs): FormControllerContext {
 	const readValue = (fieldId: string): unknown => {
 		if (fieldId === XmlKeys.fileName && atoms.fileName) {
@@ -183,50 +189,54 @@ export function createFormControllerContext({
 				console.warn(disposedContextWarning);
 				return;
 			}
-			if (fieldId === XmlKeys.fileName && atoms.fileName) {
-				// `file-name` is stored twice: the dedicated atom the save path reads, and the
-				// field value atom `getValues` / `onSave` see. The dedicated atom's writer mirrors
-				// the value atom and is the only one that emits, so writing both is still one event.
-				store.set(atoms.fileName as PrimitiveAtom<string>, value as string);
-				const fileNameValueAtom = atoms.valueByFieldId[XmlKeys.fileName];
-				if (fileNameValueAtom && store.get(fileNameValueAtom) !== value) {
-					store.set(fileNameValueAtom, value);
+			const write = () => {
+				if (fieldId === XmlKeys.fileName && atoms.fileName) {
+					// `file-name` is stored twice: the dedicated atom the save path reads, and the
+					// field value atom `getValues` / `onSave` see. The dedicated atom's writer mirrors
+					// the value atom and is the only one that emits, so writing both is still one event.
+					store.set(atoms.fileName as PrimitiveAtom<string>, value as string);
+					const fileNameValueAtom = atoms.valueByFieldId[XmlKeys.fileName];
+					if (fileNameValueAtom && store.get(fileNameValueAtom) !== value) {
+						store.set(fileNameValueAtom, value);
+					}
+					return;
 				}
-				return;
-			}
-			const valueAtom = atoms.valueByFieldId[fieldId];
-			if (valueAtom) {
-				store.set(valueAtom, value);
-				return;
-			}
-			const parsed = parseFieldValuePath(fieldId);
-			if (!parsed) {
-				console.warn(`Form controller setValue: field "${fieldId}" has no value atom.`);
-				return;
-			}
-			const rootAtom = atoms.valueByFieldId[parsed.rootId];
-			if (!rootAtom) {
-				console.warn(`Form controller setValue: field "${parsed.rootId}" has no value atom.`);
-				return;
-			}
-			const root = store.get(rootAtom);
-			if (root == null || typeof root !== 'object') {
-				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
-				return;
-			}
-			if (!canSetNestedProperty(root as object, parsed.nestedPath)) {
-				console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
-				return;
-			}
-			// Copy only containers along the path so sibling embeds keep object identity (and
-			// WeakMap committed relevance). Transfer the deny-list when a component is replaced.
-			const nextRoot = setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value);
-			// A repeat row that was copied for this write stays the same row: it keeps its key (no remount).
-			const rowIndex = Number(parsed.nestedPath.split('.')[0]);
-			if (Array.isArray(root) && Array.isArray(nextRoot) && Number.isInteger(rowIndex)) {
-				carryReplacedItem(repeatItemKeysFor(rootAtom), root, nextRoot, rowIndex);
-			}
-			store.set(rootAtom, nextRoot);
+				const valueAtom = atoms.valueByFieldId[fieldId];
+				if (valueAtom) {
+					store.set(valueAtom, value);
+					return;
+				}
+				const parsed = parseFieldValuePath(fieldId);
+				if (!parsed) {
+					console.warn(`Form controller setValue: field "${fieldId}" has no value atom.`);
+					return;
+				}
+				const rootAtom = atoms.valueByFieldId[parsed.rootId];
+				if (!rootAtom) {
+					console.warn(`Form controller setValue: field "${parsed.rootId}" has no value atom.`);
+					return;
+				}
+				const root = store.get(rootAtom);
+				if (root == null || typeof root !== 'object') {
+					console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+					return;
+				}
+				if (!canSetNestedProperty(root as object, parsed.nestedPath)) {
+					console.warn(`Form controller setValue: path "${fieldId}" could not be resolved.`);
+					return;
+				}
+				// Copy only containers along the path so sibling embeds keep object identity (and
+				// WeakMap committed relevance). Transfer the deny-list when a component is replaced.
+				const nextRoot = setNestedPropertyCopyingPath(root as object, parsed.nestedPath, value);
+				// A repeat row that was copied for this write stays the same row: it keeps its key (no remount).
+				const rowIndex = Number(parsed.nestedPath.split('.')[0]);
+				if (Array.isArray(root) && Array.isArray(nextRoot) && Number.isInteger(rowIndex)) {
+					carryReplacedItem(repeatItemKeysFor(rootAtom), root, nextRoot, rowIndex);
+				}
+				store.set(rootAtom, nextRoot);
+			};
+			if (systemWrite) systemWrite(write);
+			else write();
 		},
 		getField(fieldId) {
 			return getFieldFromContentType(contentType, fieldId);
@@ -552,6 +562,15 @@ export async function attachFormController(args: {
 		fieldUpdates$: stackEntry.fieldUpdates$,
 		dispatch,
 		fieldChangeTeardowns: state.fieldChangeTeardowns,
+		systemWrite: (run) => {
+			const previous = stackEntry.valueWriteOrigin;
+			stackEntry.valueWriteOrigin = 'controller';
+			try {
+				return run();
+			} finally {
+				stackEntry.valueWriteOrigin = previous;
+			}
+		},
 		// Not `stale()`: a remounted drawer slot restores this stack entry without re-attaching, so its
 		// context stays live. A superseded prep re-attaches, and that attach disposes this state.
 		isDisposed: () => state.disposed

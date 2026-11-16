@@ -50,9 +50,13 @@ const reduxStore = configureStore({
 	}
 });
 
-// The test build adds no message ids, and react-intl throws on a descriptor without one. Use the default message.
+// The test loader precompiles messages, so format them instead of returning the AST.
 const baseIntl = createIntl({ locale: 'en', onError: () => undefined });
-const intl = { ...baseIntl, formatMessage: (descriptor: { defaultMessage?: string }) => descriptor.defaultMessage };
+const intl = {
+	...baseIntl,
+	formatMessage: (descriptor: { id?: string; defaultMessage?: unknown }, values?: Record<string, unknown>) =>
+		baseIntl.formatMessage(descriptor as never, values as never)
+};
 
 const field = { id: 'title_s', name: 'Title', type: 'input', validations: {}, helpText: '' } as ContentTypeField;
 

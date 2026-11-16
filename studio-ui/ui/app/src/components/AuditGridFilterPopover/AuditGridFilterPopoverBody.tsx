@@ -162,7 +162,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 	return (
 		<>
 			<Box sx={{ display: 'flex', justifyContent: 'end', marginBottom: '10px' }}>
-				<IconButton onClick={onClose}>
+				<IconButton onClick={onClose} aria-label={formatMessage({ id: 'words.close', defaultMessage: 'Close' })}>
 					<ClearRoundedIcon fontSize="small" />
 				</IconButton>
 			</Box>
@@ -283,7 +283,7 @@ export function AuditGridFilterPopoverBody(props: AuditGridFilterPopoverProps) {
 					slotProps={{
 						input: {
 							endAdornment: keyword && (
-								<Tooltip title={<FormattedMessage id="words.clear" defaultMessage="Clear" />}>
+								<Tooltip title={formatMessage({ id: 'words.clear', defaultMessage: 'Clear' })}>
 									<IconButton size="small" sx={{ ml: '20px' }} onClick={() => onClearTextField()}>
 										<ClearRoundedIcon />
 									</IconButton>

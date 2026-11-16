@@ -252,24 +252,49 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 					}
 				/>
 			) : (
-				<Box className={['actions-container', classes?.itemsList].join(' ')}>
-					<MenuList className={['actions-column', classes?.itemsList].join(' ')} sx={{ padding: 0, ...sxs?.itemsList }}>
-						{editorialOptions.map((option: MenuOption, y: number) => (
-							<MenuItem
-								dense
-								autoFocus={y === 0}
-								key={option.id}
-								onClick={(e) => onMenuItemClicked(option.id, e)}
-								className={classes?.menuItem}
-								sx={{ minWidth: '100px', ...sxs?.menuItem }}
-								children={option.label}
-							/>
-						))}
-					</MenuList>
-					<div className={['actions-column', classes?.actionsColumn].join(' ')}>
-						{nonEditorialOptions.map((section: any, i: number) => (
-							<MenuList key={i} className={classes?.itemsList} sx={{ padding: 0, ...sxs?.itemsList }}>
-								{section.map((option: MenuOption, y: number) => (
+				<MenuList
+					className={['actions-container', classes?.actionsContainer].filter(Boolean).join(' ')}
+					sx={{ padding: '10px', ...sxs?.actionsContainer }}
+				>
+					<Box
+						component="li"
+						role="presentation"
+						className={['actions-column', classes?.itemsList].filter(Boolean).join(' ')}
+						sx={{ padding: 0, ...sxs?.itemsList }}
+					>
+						<Box
+							component="ul"
+							role="group"
+							aria-label={formatMessage({ defaultMessage: 'Editing' })}
+							sx={{ padding: 0, margin: 0, listStyle: 'none' }}
+						>
+							{editorialOptions.map((option: MenuOption, y: number) => (
+								<MenuItem
+									dense
+									autoFocus={y === 0}
+									key={option.id}
+									onClick={(e) => onMenuItemClicked(option.id, e)}
+									className={classes?.menuItem}
+									sx={{ minWidth: '100px', ...sxs?.menuItem }}
+									children={option.label}
+								/>
+							))}
+						</Box>
+					</Box>
+					<Box
+						component="li"
+						role="presentation"
+						className={['actions-column', classes?.actionsColumn].filter(Boolean).join(' ')}
+					>
+						<Box
+							component="ul"
+							role="group"
+							aria-label={formatMessage({ defaultMessage: 'More actions' })}
+							className={classes?.itemsList}
+							sx={{ padding: 0, margin: 0, listStyle: 'none', ...sxs?.itemsList }}
+						>
+							{nonEditorialOptions.map((section, i: number) =>
+								section.map((option: MenuOption, y: number) => (
 									<MenuItem
 										dense
 										key={option.id}
@@ -282,11 +307,11 @@ export function ItemMegaMenuUI(props: ItemMegaMenuUIProps) {
 										}}
 										children={option.label}
 									/>
-								))}
-							</MenuList>
-						))}
-					</div>
-				</Box>
+								))
+							)}
+						</Box>
+					</Box>
+				</MenuList>
 			)}
 			<Box
 				component="section"

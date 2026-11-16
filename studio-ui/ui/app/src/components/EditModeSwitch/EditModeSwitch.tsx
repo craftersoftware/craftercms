@@ -70,7 +70,7 @@ const EditSwitch = styled(Switch)(({ theme }) => {
 		},
 		[`& .${switchClasses.track}`]: {
 			borderRadius: 26 / 2,
-			border: `1px solid ${theme.palette.grey[400]}`,
+			border: `1px solid ${theme.palette.border.control}`,
 			backgroundColor: theme.palette.grey[50],
 			opacity: 1,
 			transition: theme.transitions.create(['background-color', 'border'])

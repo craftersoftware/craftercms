@@ -62,6 +62,16 @@
 		AND system = 0
 	</select>
 
+	<select id="getDeliverableSiteIds" resultType="java.lang.String">
+		SELECT site_id
+		FROM site
+		WHERE deleted = 0
+		  AND system = 0
+		  AND published_repo_created = 1
+		  AND state IN ('READY', 'LOCKED')
+		ORDER BY site_id
+	</select>
+
 	<select id="getLastCommitId" resultType="java.lang.String">
 		SELECT s.last_commit_id
 		FROM site s

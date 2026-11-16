@@ -308,6 +308,12 @@ describe('currentRepeatItemIndex', () => {
 		assert.equal(currentRepeatItemIndex([{ id: 'new' }, a, replaced], 1, b, keys), 2);
 	});
 
+	it('keeps the launch slot of an item stored twice, so the second occurrence saves into its own slot', () => {
+		const [a, b] = [{ id: 'a' }, { id: 'b' }];
+		assert.equal(currentRepeatItemIndex([a, a, b], 1, a, testKeys()), 1);
+		assert.equal(currentRepeatItemIndex([a, a, b], 0, a, testKeys()), 0);
+	});
+
 	it('is -1 when the item is gone', () => {
 		const [a, b] = [{ id: 'a' }, { id: 'b' }];
 		assert.equal(currentRepeatItemIndex([a], 1, b, testKeys()), -1);

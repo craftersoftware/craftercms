@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import EditGroupDialogContainer from './EditGroupDialogContainer';
 import { EditGroupDialogProps } from './utils';
 import EnhancedDialog from '../EnhancedDialog';
@@ -22,13 +22,16 @@ import EnhancedDialog from '../EnhancedDialog';
 export function EditGroupDialog(props: EditGroupDialogProps) {
 	const { group, onGroupDeleted, onGroupSaved, isSubmitting, ...rest } = props;
 
+	const titleId = useId();
+
 	return (
-		<EnhancedDialog omitHeader {...rest}>
+		<EnhancedDialog omitHeader aria-labelledby={titleId} {...rest}>
 			<EditGroupDialogContainer
 				group={group}
 				onGroupSaved={onGroupSaved}
 				onGroupDeleted={onGroupDeleted}
 				isSubmitting={isSubmitting}
+				titleId={titleId}
 			/>
 		</EnhancedDialog>
 	);

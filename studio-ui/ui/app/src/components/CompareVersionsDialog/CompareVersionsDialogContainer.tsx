@@ -36,7 +36,6 @@ import useSelection from '../../hooks/useSelection';
 import ListItemText, { listItemTextClasses } from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import { ItemTypeIcon } from '../ItemTypeIcon';
-import palette from '../../styles/palette';
 import { ErrorBoundary } from '../ErrorBoundary';
 import Badge, { badgeClasses } from '@mui/material/Badge';
 import Button from '@mui/material/Button';
@@ -284,7 +283,12 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 									>
 										<ItemTypeIcon
 											item={item}
-											sx={{ fontSize: '1.4rem', marginRight: '5px', color: palette.teal.main }}
+											sx={{
+												fontSize: '1.4rem',
+												marginRight: '5px',
+												// info is teal, tinted in dark mode, so it clears 3:1 on this dialog's #393939 paper.
+												color: 'info.main'
+											}}
 										/>
 										<Typography>{contentType.name}</Typography>
 									</Box>

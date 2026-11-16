@@ -98,16 +98,31 @@ export function getFocusVisible(mode: FocusRingMode): NonNullable<ThemeOptions['
 	};
 }
 
-/** Spread into the options passed to createTheme(), in CrafterThemeProvider and useGuestTheme. */
+/**
+ * Spread into the options passed to createTheme(). CrafterThemeProvider is the only caller: the guest theme
+ * does not use it, because a ring on every guest MUI control would sit on an unknown authored page. Guest
+ * controls that need a ring call `focusRingStyles` directly with `halo`.
+ */
 export function getFocusRingThemeOptions(mode: FocusRingMode): Pick<ThemeOptions, 'focusVisible'> {
 	return { focusVisible: getFocusVisible(mode) };
+}
+
+/**
+ * The fields the ring reads. A guest `styled()` callback carries its own theme copy, and these are the
+ * fields that copy has to provide.
+ */
+export interface FocusRingTheme {
+	palette: {
+		mode: FocusRingMode;
+		background: { paper: string };
+	};
 }
 
 /**
  * The ring as plain CSS, for elements that are not ButtonBase: the skip link, main, tree items, grid rows
  * and cells, native video, buttons and iframes. Put it under the element's own focus selector.
  */
-export function focusRingStyles(theme: Pick<Theme, 'palette'>, options: FocusRingOptions = {}): CSSObject {
+export function focusRingStyles(theme: FocusRingTheme, options: FocusRingOptions = {}): CSSObject {
 	const { inset = false, halo = false, important = false, shadow } = options;
 	const flag = important ? ' !important' : '';
 	const shadows = [halo && !inset ? `0 0 0 ${focusRingOffset}px ${theme.palette.background.paper}` : null, shadow]
