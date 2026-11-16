@@ -445,6 +445,7 @@
 		<property name="siteDao" ref="siteDao"/>
 		<property name="retryingDatabaseOperationFacade" ref="studio.retryingDatabaseOperationFacade"/>
 		<property name="activityStreamDAO" ref="activityStreamDao"/>
+		<property name="publishPackageAvailableActionResolver" ref="studio.publishPackageAvailableActionResolver"/>
 	</bean>
 
 	<!-- ////////////////////// -->

@@ -75,7 +75,7 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Done" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Done' })}>
 							<IconButton
 								data-action-id={actionsMap.exit}
 								onClick={handleMenuItemClick}

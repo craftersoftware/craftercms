@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2025 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -61,7 +61,8 @@ public interface DashboardService {
 	 * @return the list of activities
 	 */
 	List<Activity> getActivitiesForUsers(String siteId, List<String> usernames, List<String> actions,
-					     ZonedDateTime dateFrom, ZonedDateTime dateTo, int offset, int limit) throws SiteNotFoundException;
+					     ZonedDateTime dateFrom, ZonedDateTime dateTo, int offset, int limit)
+			throws ServiceLayerException, UserNotFoundException;
 
 	/**
 	 * Get total number of result for my activities
@@ -86,7 +87,7 @@ public interface DashboardService {
 	 * @return the list of activities
 	 */
 	List<Activity> getMyActivities(String siteId, List<String> actions, ZonedDateTime dateFrom, ZonedDateTime dateTo,
-				       int offset, int limit) throws SiteNotFoundException;
+				       int offset, int limit) throws ServiceLayerException, UserNotFoundException;
 
 	/**
 	 * Get total number of unpublished content

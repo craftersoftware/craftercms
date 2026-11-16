@@ -249,7 +249,9 @@ export function PreviewComponentsPanel() {
 									</Typography>
 									<Tooltip
 										arrow
-										title={<FormattedMessage defaultMessage="Compatible types are configured in the content model." />}
+										title={formatMessage({
+											defaultMessage: 'Compatible types are configured in the content model.'
+										})}
 									>
 										<IconButton
 											size="small"
@@ -403,7 +405,8 @@ export function PreviewComponentsPanel() {
 				}}
 			>
 				<Box
-					component="header"
+					component="li"
+					role="presentation"
 					sx={{
 						px: 2,
 						py: 1,

@@ -231,6 +231,57 @@ describe('field blur announcement', () => {
 		assert.deepEqual(announcements, ['Section: Section is required']);
 	});
 
+	describe('Options menu', () => {
+		const optionsButton = (host: HTMLElement) =>
+			host.querySelector<HTMLButtonElement>('[data-field-id] button[aria-haspopup="menu"]')!;
+		const press = (element: Element, key: string) =>
+			act(async () => {
+				element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+			});
+
+		async function openMenuOnEditedField(announcements: string[]) {
+			const field = fieldFor('title_s', 'Title', 'input');
+			const rendered = await renderInvalidField(Text, field, announcements, '');
+			await act(async () => {
+				rendered.store.set(rendered.valueAtom, 'Hello');
+			});
+			const button = optionsButton(rendered.host);
+			await act(async () => {
+				button.focus();
+			});
+			await act(async () => {
+				button.click();
+			});
+			const menu = document.querySelector<HTMLElement>('[role="menu"]');
+			assert.ok(menu);
+			assert.ok(menu.contains(document.activeElement), 'focus moves into the menu');
+			return { ...rendered, button, menu };
+		}
+
+		it('does not announce when focus moves into the menu or between its items', async () => {
+			const announcements: string[] = [];
+			await openMenuOnEditedField(announcements);
+			assert.deepEqual(announcements, []);
+			await press(document.activeElement!, 'ArrowDown');
+			await press(document.activeElement!, 'ArrowDown');
+			await press(document.activeElement!, 'ArrowUp');
+			assert.deepEqual(announcements, []);
+		});
+
+		it('still announces once when focus leaves the field after the menu closed', async () => {
+			const announcements: string[] = [];
+			const { host, button } = await openMenuOnEditedField(announcements);
+			await press(document.activeElement!, 'Escape');
+			await act(async () => {
+				await new Promise((resolve) => setTimeout(resolve, 400));
+			});
+			assert.equal(document.activeElement, button);
+			assert.deepEqual(announcements, []);
+			await leaveField(host);
+			assert.deepEqual(announcements, ['Title: Title is required']);
+		});
+	});
+
 	async function renderTrackedTitle(announcements: string[]) {
 		const field = fieldFor('title_s', 'Title', 'input');
 		const fieldUpdates$ = new Subject<{ fieldId: string; origin?: 'controller' | 'rollback' }>();

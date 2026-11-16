@@ -90,7 +90,12 @@ export const PluginMediaCarousel = forwardRef((props: PluginMediaCarouselProps, 
 						}}
 					>
 						{items.map((item, i) => (
-							<Box key={i} sx={{ width: `${100 / items.length}%`, flexShrink: 0 }}>
+							<Box
+								key={i}
+								inert={i === index ? undefined : true}
+								aria-hidden={i === index ? undefined : true}
+								sx={{ width: `${100 / items.length}%`, flexShrink: 0 }}
+							>
 								{item}
 							</Box>
 						))}
