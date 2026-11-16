@@ -120,6 +120,7 @@ function GlobalDialogManager() {
 		const isIframe = window.location !== window.parent.location;
 		if (!isIframe && authActive && !socketConnected && activeSiteId !== null) {
 			let key: SnackbarKey;
+			let cancelled = false;
 			const timeout = setTimeout(() => {
 				fetch(`${authoringBase}/help/socket-connection-error`)
 					.then((r) => {
@@ -130,6 +131,7 @@ function GlobalDialogManager() {
 						}
 					})
 					.then(() => {
+						if (cancelled) return;
 						key = enqueueSnackbar(<FormattedMessage defaultMessage="Studio will continue to retry the connection." />, {
 							variant: 'warning',
 							persist: true,
@@ -140,12 +142,18 @@ function GlobalDialogManager() {
 									<Button
 										href={`${authoringBase}/help/socket-connection-error`}
 										target="_blank"
+										rel="noopener noreferrer"
 										size="small"
 										color="inherit"
 									>
 										<FormattedMessage defaultMessage="Learn more" />
 									</Button>
-									<IconButton size="small" color="inherit" onClick={() => closeSnackbar(key)}>
+									<IconButton
+										size="small"
+										color="inherit"
+										aria-label={formatMessage({ id: 'words.close', defaultMessage: 'Close' })}
+										onClick={() => closeSnackbar(key)}
+									>
 										<CloseRounded />
 									</IconButton>
 								</>
@@ -153,6 +161,7 @@ function GlobalDialogManager() {
 						});
 					})
 					.catch(() => {
+						if (cancelled) return;
 						dispatch(
 							blockUI({
 								title: formatMessage({ defaultMessage: 'Connection with the server interrupted' }),
@@ -165,6 +174,7 @@ function GlobalDialogManager() {
 					});
 			}, 5000);
 			return () => {
+				cancelled = true;
 				clearTimeout(timeout);
 				if (key) {
 					closeSnackbar(key);

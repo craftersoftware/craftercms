@@ -62,6 +62,10 @@ export const translations = {
 			id: 'search.acceptSelection',
 			defaultMessage: 'Accept Selection'
 		},
+		clearSelected: {
+			id: 'search.clearSelected',
+			defaultMessage: 'Clear {count} selected'
+		},
 		nextPage: {
 			id: 'pagination.nextPage',
 			defaultMessage: 'Next page'
@@ -78,6 +82,10 @@ export const translations = {
 	resultsSelected: defineMessage<{ readonly count: number | bigint }>({
 		id: 'search.resultsSelected',
 		defaultMessage: '{count, plural, one {{count} item selected} other {{count} items selected}}'
+	}),
+	resultsStatus: defineMessage<{ readonly from: MessageValue; readonly to: MessageValue; readonly count: number | bigint }>({
+		id: 'search.resultsStatus',
+		defaultMessage: '{from}-{to} of {count} results'
 	}),
 	clearSelected: defineMessage<{ readonly count: MessageValue }>({
 		id: 'search.clearSelected',
