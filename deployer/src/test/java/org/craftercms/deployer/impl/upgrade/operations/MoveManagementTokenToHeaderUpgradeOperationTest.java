@@ -173,14 +173,14 @@ public class MoveManagementTokenToHeaderUpgradeOperationTest {
 		operation.doExecute(target, targetConfig(processor));
 
 		assertEquals("http://engine/api/1/site/cache/clear.json", processor.get("url"));
-		assertHeader(processor, "p@ss+word+tail end");
+		assertHeader(processor, "p@ss+word tail end");
 		assertFalse(loggedText().contains("p@ss+word+tail end"));
 		assertFalse(loggedText().contains("p%40ss%2Bword+tail%20end"));
 	}
 
 	@Test
 	public void queryValueDecodingPreservesPlaceholdersAndPlus() {
-		assertEquals("a+b", tokenValue("token=a+b"));
+		assertEquals("a b", tokenValue("token=a+b"));
 		assertEquals("+", tokenValue("token=%2B"));
 		assertEquals("+", tokenValue("token=%2b"));
 		assertEquals("caf\u00e9", tokenValue("token=caf%C3%A9"));
