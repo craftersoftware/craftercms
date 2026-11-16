@@ -63,7 +63,7 @@ public abstract class ManagementTokenAware {
 		if (requireToken || StringUtils.isEmpty(SecurityUtils.getCurrentUsername())) {
 			String token = ManagementTokenResolver.resolve(request);
 			if (Objects.isNull(token)) {
-				throw new InvalidParametersException("Missing parameter: 'token'");
+				throw new InvalidParametersException("Missing parameter: 'token' or header: 'X-Crafter-Management-Token'");
 			}
 			ManagementTokenUtils.validateToken(token, getConfiguredToken());
 		}
