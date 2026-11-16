@@ -16,9 +16,9 @@
 
 /**
  * The request queue of the shared worker (utils/authTokenQueue.ts) and the scheduling of the session warning.
- * The race this guards: the warning dialog opens at `sessionExpiresAt - warningLeadTime`, the worker checks the session
- * about a second later, and a "Stay signed in" click that lands during that check used to be dropped, so the session
- * was never extended. An extend now waits for the in-flight request and runs right after it.
+ * The race this guards: the worker checks the session shortly before the warning dialog opens (at
+ * `sessionExpiresAt - warningLeadTime`), and a "Stay signed in" click that lands during a check used to be dropped, so
+ * the session was never extended. An extend now waits for the in-flight request and runs right after it.
  */
 
 import assert from 'node:assert/strict';
@@ -27,8 +27,9 @@ import {
 	createAuthTokenQueue,
 	getNextRefreshDelay,
 	sessionCleanupGraceMs,
-	sessionWarningCheckpointOffsetMs
+	sessionWarningCheckpointLeadMs
 } from './authTokenQueue.ts';
+import type { ObtainAuthTokenResponse } from '../services/auth';
 
 const warningLeadTimeMs = 60 * 1000;
 const token = (name: string) => ({ token: name, expiresAt: 0, sessionExpiresAt: null });
@@ -37,9 +38,9 @@ const token = (name: string) => ({ token: name, expiresAt: 0, sessionExpiresAt: 
  * A deferred request, so a test decides when it settles.
  */
 function deferred() {
-	let resolve;
-	let reject;
-	const promise = new Promise((res, rej) => {
+	let resolve: (value: ObtainAuthTokenResponse) => void;
+	let reject: (reason?: unknown) => void;
+	const promise = new Promise<ObtainAuthTokenResponse>((res, rej) => {
 		resolve = res;
 		reject = rej;
 	});
@@ -48,7 +49,10 @@ function deferred() {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function createQueue(requests: { obtain: any[]; extend: any[] }, onToken?: (token: any) => void) {
+function createQueue(
+	requests: { obtain: Promise<ObtainAuthTokenResponse>[]; extend: Promise<ObtainAuthTokenResponse>[] },
+	onToken?: (token: ObtainAuthTokenResponse) => void
+) {
 	const events: string[] = [];
 	const logs: string[] = [];
 	const callbacks = {
@@ -69,19 +73,19 @@ function createQueue(requests: { obtain: any[]; extend: any[] }, onToken?: (toke
 			onToken?.(newToken);
 		},
 		onUnauthenticated: () => events.push('unauthenticated'),
-		onError: (error) => events.push(`error:${error.status}`),
+		onError: (error: { status?: number }) => events.push(`error:${error.status}`),
 		log: (message) => logs.push(message)
 	};
 	return { queue: createAuthTokenQueue(callbacks), events, logs };
 }
 
 describe('getNextRefreshDelay', () => {
-	it('checks the session one second into the warning window when nothing else is due sooner', () => {
+	it('checks the session before the warning is due when nothing else is due sooner', () => {
 		const now = 1_000_000;
 		const sessionExpiresAt = now + 10 * 60 * 1000;
 		const delay = getNextRefreshDelay({ sessionExpiresAt }, 60 * 60 * 1000, warningLeadTimeMs, now);
-		assert.equal(delay, 10 * 60 * 1000 - warningLeadTimeMs + sessionWarningCheckpointOffsetMs);
-		assert.equal(now + delay, sessionExpiresAt - warningLeadTimeMs + 1000);
+		assert.equal(delay, 10 * 60 * 1000 - warningLeadTimeMs - sessionWarningCheckpointLeadMs);
+		assert.equal(now + delay, sessionExpiresAt - warningLeadTimeMs - 5000);
 	});
 
 	it('keeps the regular refresh when it comes before the warning checkpoint', () => {

@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import type { Observable } from 'rxjs';
 import type { ObtainAuthTokenResponse } from '../services/auth';
 
 /**
@@ -25,13 +26,13 @@ export const refreshAtFactor = 0.5;
  */
 export const sessionCleanupGraceMs = 61 * 1000;
 /**
- * The extra time added to the warning checkpoint so tabs see the session as inside the warning window even if the
- * timer fires early.
+ * How long before the warning is due the session is checked, so the check has landed (and any activity extended the
+ * session) before tabs decide whether to open the warning, which would otherwise open and close right away.
  */
-export const sessionWarningCheckpointOffsetMs = 1000;
+export const sessionWarningCheckpointLeadMs = 5000;
 
 /**
- * Delay before the next token refresh: the regular one, or sooner to check the session right after the warning is due
+ * Delay before the next token refresh: the regular one, or sooner to check the session right before the warning is due
  * (so tabs warn based on up to date information, as the session may have been extended by activity) and right after it
  * should have expired.
  */
@@ -43,7 +44,7 @@ export function getNextRefreshDelay(
 ): number {
 	if (current.sessionExpiresAt) {
 		const checkpoints = [
-			current.sessionExpiresAt - warningLeadTimeMs + sessionWarningCheckpointOffsetMs,
+			current.sessionExpiresAt - warningLeadTimeMs - sessionWarningCheckpointLeadMs,
 			current.sessionExpiresAt + sessionCleanupGraceMs
 		].filter((checkpoint) => checkpoint > now);
 		if (checkpoints.length) {
@@ -53,11 +54,16 @@ export function getNextRefreshDelay(
 	return refreshInterval;
 }
 
+/**
+ * A request for tokens, either a promise or an observable.
+ */
+export type TokenRequest = Promise<ObtainAuthTokenResponse> | Pick<Observable<ObtainAuthTokenResponse>, 'subscribe'>;
+
 export interface AuthTokenQueueCallbacks {
 	/** Gets new tokens. */
-	obtain: () => Promise<ObtainAuthTokenResponse> | { subscribe: Function };
+	obtain: () => TokenRequest;
 	/** Gets new tokens and restarts the session time limits. */
-	extend: (xsrfToken: string) => Promise<ObtainAuthTokenResponse> | { subscribe: Function };
+	extend: (xsrfToken: string) => TokenRequest;
 	/** Called with each new set of tokens. */
 	onToken: (token: ObtainAuthTokenResponse) => void;
 	/** Called when the session is gone (a 401 or an empty response). */
@@ -100,7 +106,7 @@ export function createAuthTokenQueue(callbacks: AuthTokenQueueCallbacks): AuthTo
 	// Consecutive failures, reset whenever a request succeeds or the session is gone
 	let retries = 0;
 
-	const toPromise = (request: Promise<ObtainAuthTokenResponse> | { subscribe: Function }) =>
+	const toPromise = (request: TokenRequest) =>
 		request instanceof Promise
 			? request
 			: new Promise<ObtainAuthTokenResponse>((resolve, reject) => request.subscribe({ next: resolve, error: reject }));
