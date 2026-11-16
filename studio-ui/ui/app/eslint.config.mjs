@@ -14,9 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import '../../scripts/eslintTypescriptRedirect.cjs';
 import { fixupConfigRules } from '@eslint/compat';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import formatjs from 'eslint-plugin-formatjs';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
@@ -32,6 +32,13 @@ const compat = new FlatCompat({
 	recommendedConfig: js.configs.recommended,
 	allConfig: js.configs.all
 });
+
+const jsxA11yRecommended = jsxA11y.flatConfigs.recommended.rules;
+// Downgrades a recommended jsx-a11y rule to a warning while keeping any options from the recommended entry.
+const warnRecommended = (ruleName) => {
+	const entry = jsxA11yRecommended[ruleName];
+	return Array.isArray(entry) ? ['warn', ...entry.slice(1)] : 'warn';
+};
 
 export default [
 	{ ignores: ['**/dist', '**/build', '**/build_tsc', '**/target', '**/*.js', '**/*.mjs'] },
@@ -49,12 +56,22 @@ export default [
 	})),
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'react-refresh': reactRefresh },
+		plugins: { 'react-refresh': reactRefresh, 'jsx-a11y': jsxA11y },
 		languageOptions: {
 			globals: { ...globals.browser },
-			parser: tsParser
+			parser: tsParser,
+			parserOptions: { ecmaFeatures: { jsx: true } }
 		},
 		rules: {
+			...jsxA11yRecommended,
+			// Rules with existing findings are warnings until those are cleared; the rest of the recommended set errors.
+			'jsx-a11y/alt-text': warnRecommended('jsx-a11y/alt-text'),
+			'jsx-a11y/click-events-have-key-events': warnRecommended('jsx-a11y/click-events-have-key-events'),
+			'jsx-a11y/media-has-caption': warnRecommended('jsx-a11y/media-has-caption'),
+			'jsx-a11y/mouse-events-have-key-events': warnRecommended('jsx-a11y/mouse-events-have-key-events'),
+			'jsx-a11y/no-autofocus': warnRecommended('jsx-a11y/no-autofocus'),
+			'jsx-a11y/no-static-element-interactions': warnRecommended('jsx-a11y/no-static-element-interactions'),
+			'jsx-a11y/role-supports-aria-props': warnRecommended('jsx-a11y/role-supports-aria-props'),
 			'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 			'prettier/prettier': ['error'],
 			'spaced-comment': [
@@ -71,31 +88,6 @@ export default [
 			],
 			// Enable the TypeScript-specific rule with allowShortCircuit option
 			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }]
-		}
-	},
-	{
-		// FE2 renders Type Builder property forms, so both modules share this guard.
-		files: ['src/components/FormsEngine/**/*.{ts,tsx}', 'src/components/ContentTypeManagement/**/*.{ts,tsx}'],
-		plugins: {
-			formatjs,
-			'jsx-a11y': jsxA11y
-		},
-		rules: {
-			// Pre-existing literal JSX in these modules; warn until those strings are translated.
-			'formatjs/no-literal-string-in-jsx': 'warn',
-			// Icon buttons and other controls need an accessible name (text, aria-label, or aria-labelledby).
-			'jsx-a11y/alt-text': 'error',
-			'jsx-a11y/anchor-has-content': 'error',
-			'jsx-a11y/aria-props': 'error',
-			// 36 pre-existing icon-only buttons (including Repeat, owned by #9412). Warn until those names land.
-			'jsx-a11y/control-has-associated-label': [
-				'warn',
-				{
-					// Icon components are not accessible names. Listing them keeps an icon-only IconButton unlabeled.
-					controlComponents: ['IconButton', '*Icon', '*Rounded', '*Outlined', '*TwoTone', '*Sharp']
-				}
-			],
-			'jsx-a11y/label-has-associated-control': 'error'
 		}
 	}
 ];

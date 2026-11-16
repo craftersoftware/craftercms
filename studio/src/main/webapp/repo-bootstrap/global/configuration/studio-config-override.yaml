@@ -41,6 +41,8 @@
 ##################################################
 # HTTP Session timeout for studio (value is in minutes).
 # studio.security.sessionTimeout: 60
+# Number of times a user can extend the session timeout before having to log in again.
+# studio.security.sessionMaxExtensions: 10
 #
 # Password requirements minimum complexity
 # This is based on https://github.com/dropbox/zxcvbn
