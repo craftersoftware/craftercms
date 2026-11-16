@@ -16,19 +16,12 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AllowListEntry, allowList, ruleTickets, Theme } from './allow-list';
+import { AllowListEntry, allowList, ruleTickets } from './allow-list';
 import { CAPTURE_FILE_PREFIX } from './axe';
-import type { Finding } from './filter';
+import { CapturedScan, latestScans } from './capture';
 
 const artifacts = join(__dirname, '..', 'report', 'artifacts');
 const target = join(__dirname, 'allow-list.json');
-
-interface CapturedScan {
-	screen: string;
-	theme: Theme;
-	nodes: Finding[];
-	unticketed: Finding[];
-}
 
 /**
  * With `A11Y_CAPTURE=1`, rewrites `allow-list.json` from the scans of this run: every serious or critical node whose rule
@@ -38,15 +31,13 @@ interface CapturedScan {
  */
 export default async function captureTeardown() {
 	if (!process.env.A11Y_CAPTURE || !existsSync(artifacts)) return;
-	const scans = new Map<string, CapturedScan>();
-	(readdirSync(artifacts, { recursive: true }) as string[])
-		.filter((file) => file.split(/[\\/]/).pop()!.startsWith(CAPTURE_FILE_PREFIX))
-		// Sorted, so a retry's output (`...-retry1/`) replaces the first attempt's.
-		.sort()
-		.forEach((file) => {
-			const scan: CapturedScan = JSON.parse(readFileSync(join(artifacts, file), 'utf8'));
-			scans.set(`${scan.theme} ${scan.screen}`, scan);
-		});
+	// A retry's output lives in a `...-retry1/` directory next to the first attempt's; `latestScans` keeps the highest.
+	const scans = latestScans(
+		(readdirSync(artifacts, { recursive: true }) as string[])
+			.filter((file) => file.split(/[\\/]/).pop()!.startsWith(CAPTURE_FILE_PREFIX))
+			.sort()
+			.map((file) => JSON.parse(readFileSync(join(artifacts, file), 'utf8')) as CapturedScan)
+	);
 	const entries: AllowListEntry[] = allowList.filter((entry) => !scans.has(`${entry.theme} ${entry.screen}`));
 	const summary: string[] = ['| Rule | Ticket | Screen | Theme | Nodes |', '| --- | --- | --- | --- | --- |'];
 	const unticketed: string[] = [];
