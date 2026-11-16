@@ -458,14 +458,6 @@
 		<include refid="packagePathsFilter"/>
 	</select>
 
-	<select id="getItemPackagesCount">
-		SELECT COUNT(1)
-		FROM (
-		<include refid="getAllPackagesForFilters"/>
-		<include refid="packagePathsFilter"/>
-		) AS tbl
-	</select>
-
 	<select id="getNumberOfPublishes">
 		SELECT COUNT(DISTINCT path)
 		FROM publish_item pi
