@@ -33,6 +33,13 @@ const compat = new FlatCompat({
 	allConfig: js.configs.all
 });
 
+const jsxA11yRecommended = jsxA11y.flatConfigs.recommended.rules;
+// Downgrades a recommended jsx-a11y rule to a warning while keeping any options from the recommended entry.
+const warnRecommended = (ruleName) => {
+	const entry = jsxA11yRecommended[ruleName];
+	return Array.isArray(entry) ? ['warn', ...entry.slice(1)] : 'warn';
+};
+
 export default [
 	{ ignores: ['**/dist', '**/build', '**/build_tsc', '**/target', '**/*.js', '**/*.mjs'] },
 	...fixupConfigRules(
@@ -56,15 +63,15 @@ export default [
 			parserOptions: { ecmaFeatures: { jsx: true } }
 		},
 		rules: {
-			...jsxA11y.flatConfigs.recommended.rules,
+			...jsxA11yRecommended,
 			// Rules with existing findings are warnings until those are cleared; the rest of the recommended set errors.
-			'jsx-a11y/alt-text': 'warn',
-			'jsx-a11y/click-events-have-key-events': 'warn',
-			'jsx-a11y/media-has-caption': 'warn',
-			'jsx-a11y/mouse-events-have-key-events': 'warn',
-			'jsx-a11y/no-autofocus': 'warn',
-			'jsx-a11y/no-static-element-interactions': 'warn',
-			'jsx-a11y/role-supports-aria-props': 'warn',
+			'jsx-a11y/alt-text': warnRecommended('jsx-a11y/alt-text'),
+			'jsx-a11y/click-events-have-key-events': warnRecommended('jsx-a11y/click-events-have-key-events'),
+			'jsx-a11y/media-has-caption': warnRecommended('jsx-a11y/media-has-caption'),
+			'jsx-a11y/mouse-events-have-key-events': warnRecommended('jsx-a11y/mouse-events-have-key-events'),
+			'jsx-a11y/no-autofocus': warnRecommended('jsx-a11y/no-autofocus'),
+			'jsx-a11y/no-static-element-interactions': warnRecommended('jsx-a11y/no-static-element-interactions'),
+			'jsx-a11y/role-supports-aria-props': warnRecommended('jsx-a11y/role-supports-aria-props'),
 			'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 			'prettier/prettier': ['error'],
 			'spaced-comment': [
