@@ -28,13 +28,14 @@ const itemTypeTranslations = defineMessages({
 	taxonomy: { defaultMessage: 'Taxonomy' }
 });
 
-export function CreateModeHeader({ path }: { path: string }) {
+export function CreateModeHeader({ path, titleId }: { path: string; titleId?: string }) {
 	const { formatMessage } = useIntl();
 	const { contentType } = useContext(ItemMetaContext);
 	const itemType = contentType.type;
 	return (
 		<Container sx={{ py: 1 }}>
 			<Typography
+				id={titleId}
 				variant="h6"
 				component="h2"
 				sx={{

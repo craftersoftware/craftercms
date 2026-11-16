@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import { EditUserDialogProps } from './utils';
 import EnhancedDialog from '../EnhancedDialog';
 import EditUserDialogContainer from './EditUserDialogContainer';
@@ -22,14 +22,17 @@ import EditUserDialogContainer from './EditUserDialogContainer';
 export function EditUserDialog(props: EditUserDialogProps) {
 	const { open, user, onUserEdited, passwordRequirementsMinComplexity, isSubmitting, ...rest } = props;
 
+	const titleId = useId();
+
 	return (
-		<EnhancedDialog open={open} omitHeader isSubmitting={isSubmitting} {...rest}>
+		<EnhancedDialog open={open} omitHeader aria-labelledby={titleId} isSubmitting={isSubmitting} {...rest}>
 			<EditUserDialogContainer
 				open={open}
 				user={user}
 				onUserEdited={onUserEdited}
 				passwordRequirementsMinComplexity={passwordRequirementsMinComplexity}
 				isSubmitting={isSubmitting}
+				titleId={titleId}
 			/>
 		</EnhancedDialog>
 	);

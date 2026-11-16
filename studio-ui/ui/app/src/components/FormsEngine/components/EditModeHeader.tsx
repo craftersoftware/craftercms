@@ -180,7 +180,7 @@ function CopyableValue({ value, children }: { value: string; children: ReactNode
 	);
 }
 
-export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
+export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; titleId?: string }) {
 	const { atoms } = useContext(StableFormContext);
 	const item = useFormItem();
 	const store = useJotaiStore();
@@ -211,6 +211,7 @@ export function EditModeHeader({ isEmbedded }: { isEmbedded: boolean }) {
 				{isLargeContainer && <CollapseToCButton />}
 				<ItemTypeIcon item={typeIconItem} sx={{ color: 'info.main', flexShrink: 0 }} />
 				<Typography
+					id={titleId}
 					title={itemLabel}
 					sx={{
 						flex: '0 1 auto',

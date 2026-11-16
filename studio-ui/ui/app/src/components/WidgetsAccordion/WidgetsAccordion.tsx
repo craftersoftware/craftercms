@@ -28,6 +28,7 @@ import WidgetsGrid from '../WidgetsGrid';
 import { getStoredWidgetsAccordion, setStoredWidgetsAccordion } from '../../utils/state';
 import useActiveSite from '../../hooks/useActiveSite';
 import useActiveUser from '../../hooks/useActiveUser';
+import { NavigatorTitleComponentContext } from '../PathNavigator/navigatorHeading';
 
 export interface WidgetsAccordionProps {
 	id?: string;
@@ -67,6 +68,11 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 			square
 			disableGutters
 			elevation={0}
+			slotProps={{
+				// Keep MUI's styled heading (it resets the user-agent heading font and margin) and only
+				// change the element, so the title is an h2 without the taller raw-heading layout.
+				heading: { component: 'h2' }
+			}}
 			expanded={open}
 			onChange={(e, isExpanded) => setOpen(isExpanded)}
 			sx={{
@@ -88,15 +94,20 @@ export function WidgetsAccordion(props: WidgetsAccordionProps) {
 				{icon && (
 					<SystemIcon icon={icon} sx={{ marginRight: '10px', color: theme.palette.action.active, ...sxs?.icon }} />
 				)}
-				<Typography sx={sxs?.typography}>{title}</Typography>
+				<Typography component="span" sx={sxs?.typography}>
+					{title}
+				</Typography>
 			</AccordionSummary>
 			<AccordionDetails sx={{ padding: 0, ...sxs?.accordionDetails }}>
-				<WidgetsGrid
-					container
-					spacing={0}
-					widgets={props.widgets}
-					sx={{ flexDirection: 'column', ...sxs?.widgetsGrid }}
-				/>
+				{/* This accordion title is an h2. Navigators inside it are sections of that group. */}
+				<NavigatorTitleComponentContext.Provider value="h3">
+					<WidgetsGrid
+						container
+						spacing={0}
+						widgets={props.widgets}
+						sx={{ flexDirection: 'column', ...sxs?.widgetsGrid }}
+					/>
+				</NavigatorTitleComponentContext.Provider>
 			</AccordionDetails>
 		</Accordion>
 	);

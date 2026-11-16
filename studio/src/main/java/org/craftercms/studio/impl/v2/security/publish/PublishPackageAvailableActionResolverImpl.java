@@ -25,8 +25,8 @@ import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.dal.Group;
+import org.craftercms.studio.api.v2.dal.publish.PathActionPair;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
-import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActionResolver;
 import static org.craftercms.studio.api.v2.security.publish.PublishPackageAvailableActions.APPROVE;
@@ -71,11 +71,11 @@ public class PublishPackageAvailableActionResolverImpl implements PublishPackage
 			return 0;
 		}
 		String siteId = publishPackage.getSite().getSiteId();
-		Collection<PublishItem> publishItems = publishDao.getPublishItems(siteId, publishPackage.getId());
+		Collection<PathActionPair> publishPackagePaths = publishDao.getPublishPackagePaths(siteId, publishPackage.getId(), null);
 		SitePermissionMappings permissionMappings = permissionMappingProvider.getPermissionMappings(siteId);
 		List<Group> groups = userService.getUserGroups(-1, user);
-		boolean isSubmitter = user.equals(publishPackage.getSubmitter().getUsername());
-		long userAllowedActions = permissionMappings.getPublishPackageAvailableActions(user, groups, publishItems, userService.isSystemAdmin(user));
+		boolean isSubmitter = publishPackage.getSubmitter() != null && user.equals(publishPackage.getSubmitter().getUsername());
+		long userAllowedActions = permissionMappings.getPublishPackageAvailableActions(user, groups, publishPackagePaths, userService.isSystemAdmin(user));
 		long packageStateActions = getPossibleActionsForPackageStates(publishPackage.getPackageState(),
 			publishPackage.getApprovalState());
 

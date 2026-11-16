@@ -84,7 +84,7 @@ export function RepoGridUI(props: RepoGridUIProps) {
 									confirmHelperText={
 										<FormattedMessage id="repositories.deleteConfirmation" defaultMessage="Delete remote repository?" />
 									}
-									iconTooltip={<FormattedMessage id="words.delete" defaultMessage="Delete" />}
+									iconTooltip={formatMessage({ id: 'words.delete', defaultMessage: 'Delete' })}
 									iconLabel={formatMessage({ defaultMessage: 'Delete {name}' }, { name: repository.name })}
 									icon={DeleteRoundedIcon}
 									onConfirm={() => {

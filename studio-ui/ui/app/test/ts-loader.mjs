@@ -109,7 +109,11 @@ export function load(url, context, nextLoad) {
 		target: 'es2022',
 		sourcefile: filename,
 		sourcemap: assignsMessageIds ? 'inline' : false,
-		jsx: 'automatic'
+		jsx: 'automatic',
+		// Vite injects this. Node has no import.meta.env, and a few modules read it while loading.
+		define: {
+			'import.meta.env': JSON.stringify({ DEV: true, PROD: false, MODE: 'test', BASE_URL: '/' })
+		}
 	});
 	return { format: 'module', source: result.code, shortCircuit: true };
 }

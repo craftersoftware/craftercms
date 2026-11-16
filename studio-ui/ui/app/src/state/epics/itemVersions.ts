@@ -80,7 +80,7 @@ export default [
 			withLatestFrom(state$),
 			switchMap(([{ payload }, state]) =>
 				revertTo(
-					state.sites.active,
+					payload.siteId ?? state.sites.active,
 					payload.path ?? state.versions.item.path,
 					payload.versionNumber ?? state.versions.previous
 				).pipe(

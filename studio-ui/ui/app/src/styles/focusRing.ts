@@ -108,10 +108,21 @@ export function getFocusRingThemeOptions(mode: FocusRingMode): Pick<ThemeOptions
 }
 
 /**
+ * The fields the ring reads. A guest `styled()` callback carries its own theme copy, and these are the
+ * fields that copy has to provide.
+ */
+export interface FocusRingTheme {
+	palette: {
+		mode: FocusRingMode;
+		background: { paper: string };
+	};
+}
+
+/**
  * The ring as plain CSS, for elements that are not ButtonBase: the skip link, main, tree items, grid rows
  * and cells, native video, buttons and iframes. Put it under the element's own focus selector.
  */
-export function focusRingStyles(theme: Pick<Theme, 'palette'>, options: FocusRingOptions = {}): CSSObject {
+export function focusRingStyles(theme: FocusRingTheme, options: FocusRingOptions = {}): CSSObject {
 	const { inset = false, halo = false, important = false, shadow } = options;
 	const flag = important ? ' !important' : '';
 	const shadows = [halo && !inset ? `0 0 0 ${focusRingOffset}px ${theme.palette.background.paper}` : null, shadow]

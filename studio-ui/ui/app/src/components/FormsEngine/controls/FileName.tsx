@@ -25,7 +25,7 @@ import { PrimitiveAtom, useAtom } from 'jotai';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
@@ -56,6 +56,7 @@ export function FileName(props: ControlProps<string>) {
 	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId), isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 
@@ -109,7 +110,7 @@ export function FileName(props: ControlProps<string>) {
 				}
 				endAdornment={
 					!isNewForm && (
-						<Tooltip title={<FormattedMessage defaultMessage="Edit" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Edit' })}>
 							<IconButton onClick={handleEdit} disabled={readonly}>
 								<EditOutlinedIcon />
 							</IconButton>

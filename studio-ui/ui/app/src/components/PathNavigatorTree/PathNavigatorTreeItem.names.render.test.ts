@@ -67,7 +67,8 @@ async function render() {
 		)
 	);
 	await act(async () => {
-		host.querySelector('section[role="button"]')?.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		// The label row is a plain section now; it still owns the hover handlers that reveal the buttons.
+		host.querySelector('section')?.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
 	});
 	await settle();
 	return host;

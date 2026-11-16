@@ -22,7 +22,7 @@
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import type { ContentTypeField } from '../../../models/ContentType';
 import type ContentType from '../../../models/ContentType';
 import type { PrimitiveAtom } from 'jotai';
@@ -57,13 +57,9 @@ const reduxStore = configureStore({
 	}
 });
 
-// The test loader precompiles messages, so format them instead of returning the AST.
-const baseIntl = createIntl({ locale: 'en', onError: () => undefined });
-const intl = {
-	...baseIntl,
-	formatMessage: (descriptor: { id?: string; defaultMessage?: unknown }, values?: Record<string, unknown>) =>
-		baseIntl.formatMessage(descriptor as never, values as never)
-};
+// The real createIntl, not createTestIntl: the shared helper makes up an id for a descriptor that has none, which
+// hides a message the app would throw on. Here a missing id fails the test.
+const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
 const field = {
 	id: 'rows_o',
@@ -80,8 +76,9 @@ const rowFor = (host: HTMLElement, title: string) =>
 	Array.from(host.querySelectorAll('.MuiListItemButton-root')).find(
 		(row) => row.querySelector('.MuiListItemText-primary')?.textContent === title
 	) as HTMLElement;
+// The row's actions sit beside the row button, in the same list item.
 const deleteButton = (row: HTMLElement) =>
-	row.querySelector('[data-testid="DeleteOutlinedIcon"]').closest('button') as HTMLButtonElement;
+	row.closest('li').querySelector('[data-testid="DeleteOutlinedIcon"]').closest('button') as HTMLButtonElement;
 
 interface Mounted {
 	host: HTMLElement;
@@ -101,7 +98,10 @@ afterEach(async () => {
 });
 
 /** Mounts Repeat the way the form does: `value` comes from the field atom, and `setValue` writes to it. */
-async function mount(initial: Item[], options: { live?: boolean; field?: ContentTypeField } = {}): Promise<Mounted> {
+async function mount(
+	initial: Item[],
+	options: { live?: boolean; field?: ContentTypeField; repeatItemIndex?: number } = {}
+): Promise<Mounted> {
 	const jotai = createStore();
 	const valueAtom = atom<unknown>(initial);
 	const pushed: Mounted['pushed'] = [];
@@ -111,7 +111,17 @@ async function mount(initial: Item[], options: { live?: boolean; field?: Content
 		atoms: {
 			valueByFieldId: { rows_o: valueAtom },
 			validationByFieldId: { rows_o: atom({ isValid: true }) },
-			...createFormVisibilityAtoms()
+			...createFormVisibilityAtoms(
+				options.repeatItemIndex === undefined
+					? undefined
+					: {
+							active: {
+								fieldIds: null,
+								repeatItem: { fieldId: (options.field ?? field).id, index: options.repeatItemIndex }
+							},
+							launch: null
+						}
+			)
 		},
 		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
@@ -256,6 +266,73 @@ describe('Repeat row keys', () => {
 		const xml = valueSerializersLookup.repeat(saved, { field, contentTypesById: {} }) as Record<string, unknown>;
 		assert.deepEqual(xml.item, [{ name_s: 'a' }, { name_s: 'b2' }, { name_s: 'c' }]);
 		await mounted.unmount();
+	});
+});
+
+describe('Repeat with one item object stored twice', () => {
+	// A form controller can write the same object into the array twice: [a, a, b].
+	const rowsOf = (host: HTMLElement) => Array.from(host.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+	const moveButton = (row: HTMLElement, control: 'up' | 'down') =>
+		row.closest('li').querySelector<HTMLButtonElement>(`button[data-reorder-control="${control}"]`);
+	async function mountTwice() {
+		const ia = a();
+		const ib = { name_s: 'b' };
+		const mounted = await mount([ia, ia, ib]);
+		return { mounted, ia, ib };
+	}
+
+	it('renders a row per occurrence, with no duplicate React key', async () => {
+		const errors: unknown[] = [];
+		const original = console.error;
+		console.error = (...args: unknown[]) => errors.push(args);
+		try {
+			const { mounted } = await mountTwice();
+			assert.deepEqual(titles(mounted.host), ['a', 'a', 'b']);
+		} finally {
+			console.error = original;
+		}
+		assert.ok(!errors.some((args) => String((args as unknown[])[0]).includes('same key')), 'duplicate key warning');
+	});
+
+	it('deletes the second occurrence when its row is used', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		await act(async () => deleteButton(rowsOf(mounted.host)[1]).click());
+		const next = mounted.setValueCalls.at(-1);
+		assert.equal(next.length, 2);
+		assert.ok(next[0] === ia && next[1] === ib);
+	});
+
+	it('edits the second occurrence, and saves into its slot', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		await act(async () => rowsOf(mounted.host)[1].click());
+		const props = mounted.pushed[0] as unknown as { repeat: { index: number } };
+		assert.equal(props.repeat.index, 1);
+		await act(async () => {
+			await mounted.pushed[0].onSave({ values: { name_s: 'a2' } });
+		});
+		const next = mounted.setValueCalls.at(-1);
+		assert.deepEqual(names(next), ['a', 'a2', 'b']);
+		assert.ok(next[0] === ia && next[2] === ib);
+	});
+
+	it('moves each occurrence with the Move buttons and keeps both in the array', async () => {
+		const { mounted, ia, ib } = await mountTwice();
+		// Second "a" down: [a, b, a].
+		await act(async () => moveButton(rowsOf(mounted.host)[1], 'down').click());
+		let next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ib && next[2] === ia);
+		// That "a" (now last) up again: [a, a, b].
+		await act(async () => moveButton(rowsOf(mounted.host)[2], 'up').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ia && next[2] === ib);
+		// First "a" down swaps it with its twin. The array is unchanged in content and still has both.
+		await act(async () => moveButton(rowsOf(mounted.host)[0], 'down').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next.length === 3 && next[0] === ia && next[1] === ia && next[2] === ib);
+		// Second "a" up does the same.
+		await act(async () => moveButton(rowsOf(mounted.host)[1], 'up').click());
+		next = mounted.setValueCalls.at(-1);
+		assert.ok(next.length === 3 && next[0] === ia && next[1] === ia && next[2] === ib);
 	});
 });
 
@@ -430,10 +507,22 @@ describe('Repeat reorder', () => {
 		const next = mounted.setValueCalls.at(-1);
 		assert.deepEqual(names(next), ['b', 'a', 'c', 'added']);
 	});
+
+	it('labels rows with no text by position in the reorder list, its Move buttons and its announcement', async () => {
+		const mounted = await mount([{ name_s: 'a' }, {}, {}]);
+		await openReorder(mounted);
+		const dialog = document.body.querySelector('.MuiDialog-root');
+		const order = () => Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent);
+		assert.deepEqual(order(), ['a', 'Item 2', 'Item 3']);
+		const moveUp = dialog.querySelector<HTMLButtonElement>('button[aria-label="Move up: Item 2"]');
+		assert.ok(moveUp, 'the Move up button names the row by position');
+		await act(async () => moveUp.click());
+		assert.equal(dialog.querySelector('[aria-live="polite"]')?.textContent, 'Moved Item 2 to position 1 of 3');
+	});
 });
 
 const addButton = (host: HTMLElement) =>
-	host.querySelector('[data-testid="AddRoundedIcon"]').closest('button') as HTMLButtonElement;
+	host.querySelector('button[aria-label="Add items to Rows"]') as HTMLButtonElement;
 const withLimits = (limits: { minCount?: number; maxCount?: number }) =>
 	({
 		...field,
@@ -537,5 +626,245 @@ describe('Repeat limits against the stored array', () => {
 		assert.equal(mounted.pushed.length, 1);
 		await act(async () => deleteButton(rowFor(mounted.host, 'a')).click());
 		assert.deepEqual(names(mounted.setValueCalls.at(-1)), ['b', 'c']);
+	});
+});
+
+const press = (element: HTMLElement, key: string, init: KeyboardEventInit = {}) => {
+	element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
+};
+const liveMessage = (host: HTMLElement) => host.querySelector('[aria-live="polite"]')?.textContent ?? '';
+const moveControl = (row: HTMLElement, control: 'up' | 'down') =>
+	row.closest('li')!.querySelector<HTMLButtonElement>(`button[data-reorder-control="${control}"]`);
+
+describe('Repeat keyboard reorder', () => {
+	const three = () => [a(), { name_s: 'b' }, { name_s: 'c' }] as Item[];
+
+	it('moves a row down and up with the arrow keys, and focuses the moved row', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown'));
+		assert.deepEqual(titles(host), ['b', 'a', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(document.activeElement?.getAttribute('data-reorder-control'), 'row');
+		assert.equal(liveMessage(host), 'Moved a to position 2 of 3');
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp'));
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 1 of 3');
+	});
+
+	it('moves a row to the edge with Shift+Arrow', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { shiftKey: true }));
+		assert.deepEqual(titles(host), ['b', 'c', 'a']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 3 of 3');
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { shiftKey: true }));
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+		assert.equal(document.activeElement, rowFor(host, 'a'));
+		assert.equal(liveMessage(host), 'Moved a to position 1 of 3');
+	});
+
+	it('does nothing on an arrow that would pass an edge', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp'));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { shiftKey: true }));
+		await act(async () => press(rowFor(host, 'c'), 'ArrowDown'));
+		await act(async () => press(rowFor(host, 'c'), 'ArrowDown', { shiftKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+	});
+
+	it('ignores Ctrl, Cmd and Alt, including Ctrl+E', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { ctrlKey: true }));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowDown', { metaKey: true }));
+		await act(async () => press(rowFor(host, 'a'), 'ArrowUp', { altKey: true }));
+		await act(async () => press(rowFor(host, 'b'), 'e', { ctrlKey: true }));
+		await act(async () => press(rowFor(host, 'b'), 'v', { metaKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(mounted.pushed.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(titles(host), ['a', 'b', 'c']);
+	});
+
+	it('moves the second copy of an item stored twice', async () => {
+		const ia = a();
+		const ib = { name_s: 'b' };
+		const mounted = await mount([ia, ia, ib]);
+		const second = mounted.host.querySelectorAll<HTMLElement>('.MuiListItemButton-root')[1];
+		await act(async () => press(second, 'ArrowDown'));
+		const next = mounted.setValueCalls.at(-1);
+		assert.ok(next[0] === ia && next[1] === ib && next[2] === ia);
+		assert.equal(liveMessage(mounted.host), 'Moved a to position 3 of 3');
+		assert.equal(document.activeElement?.getAttribute('data-reorder-index'), '2');
+	});
+
+	it('focuses the Move button of the row a button move lands on', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		await act(async () => moveControl(rowFor(host, 'a'), 'down').click());
+		assert.deepEqual(titles(host), ['b', 'a', 'c']);
+		assert.equal(document.activeElement, moveControl(rowFor(host, 'a'), 'down'));
+		assert.equal(liveMessage(host), 'Moved a to position 2 of 3');
+	});
+
+	it('focuses the next row after a remove, and the previous row when the last one goes', async () => {
+		const mounted = await mount(three());
+		const { host } = mounted;
+		const rowB = rowFor(host, 'b');
+		await act(async () => deleteButton(rowFor(host, 'a')).click());
+		assert.deepEqual(titles(host), ['b', 'c']);
+		assert.equal(document.activeElement, rowB);
+		assert.equal(liveMessage(host), '');
+		const rowC = rowFor(host, 'c');
+		await act(async () => deleteButton(rowC).click());
+		assert.deepEqual(titles(host), ['b']);
+		assert.equal(document.activeElement, rowB);
+	});
+
+	it('focuses the Add button after the last row is removed', async () => {
+		const mounted = await mount([a()]);
+		const { host } = mounted;
+		const add = addButton(host);
+		assert.ok(add, 'the header Add button is found by its accessible name');
+		await act(async () => deleteButton(rowFor(host, 'a')).click());
+		assert.deepEqual(titles(host), []);
+		assert.equal(document.activeElement, add);
+		assert.equal(add.getAttribute('aria-label'), 'Add items to Rows');
+		assert.equal(add.disabled, false);
+	});
+
+	it('hides Move in the scoped item view, and arrow keys do not reorder', async () => {
+		const mounted = await mount(three(), { repeatItemIndex: 1 });
+		const { host } = mounted;
+		assert.deepEqual(titles(host), ['b']);
+		assert.equal(host.querySelector('button[data-reorder-control="up"]'), null);
+		assert.equal(host.querySelector('button[data-reorder-control="down"]'), null);
+		await act(async () => press(rowFor(host, 'b'), 'ArrowDown'));
+		await act(async () => press(rowFor(host, 'b'), 'ArrowUp', { shiftKey: true }));
+		assert.equal(mounted.setValueCalls.length, 0);
+		assert.equal(liveMessage(host), '');
+		assert.deepEqual(names(mounted.jotai.get(mounted.valueAtom) as Item[]), ['a', 'b', 'c']);
+	});
+});
+
+describe('Repeat rows with no text', () => {
+	// Children that are node selectors, or a new item with nothing typed yet, give a row no title.
+	const untitled = () => [{}, {}, {}] as Item[];
+	const byLabel = (host: HTMLElement, label: string) =>
+		host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+
+	it('names each row, its Edit, Delete and Move buttons by position', async () => {
+		const { host } = await mount(untitled());
+		assert.deepEqual(titles(host), ['Item 1', 'Item 2', 'Item 3']);
+		assert.ok(byLabel(host, 'Edit Item 2'));
+		assert.ok(byLabel(host, 'Delete Item 2'));
+		assert.ok(byLabel(host, 'Move up: Item 2'));
+		assert.ok(byLabel(host, 'Move down: Item 2'));
+		assert.equal(host.querySelector('button[aria-label="Edit "]'), null);
+		assert.equal(host.querySelector('button[aria-label="Move up: "]'), null);
+	});
+
+	it('keeps the title of a row that has text and numbers only the rest', async () => {
+		const { host } = await mount([a(), {}, { name_s: 'c' }]);
+		assert.deepEqual(titles(host), ['a', 'Item 2', 'c']);
+		assert.ok(byLabel(host, 'Move down: Item 2'));
+	});
+
+	it('announces a keyboard move and a button move with the position name', async () => {
+		const { host } = await mount(untitled());
+		await act(async () => press(rowFor(host, 'Item 2'), 'ArrowDown'));
+		assert.equal(liveMessage(host), 'Moved Item 2 to position 3 of 3');
+		await act(async () => byLabel(host, 'Move up: Item 3').click());
+		assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+	});
+});
+
+describe('Repeat repeated announcements', () => {
+	const untitled = () => [{}, {}, {}] as Item[];
+
+	it('clears and sets again an identical announcement, so a screen reader speaks it twice', async () => {
+		const { host } = await mount(untitled());
+		const first = 'Moved Item 1 to position 2 of 3';
+		await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+		assert.equal(liveMessage(host), first);
+
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			// The moved row is now Item 2, and the row that took its place is Item 1: the same sentence again.
+			await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+			assert.equal(liveMessage(host), '', 'the text is cleared so the next set is a change');
+			await act(async () => mock.timers.tick(39));
+			assert.equal(liveMessage(host), '');
+			await act(async () => mock.timers.tick(1));
+			assert.equal(liveMessage(host), first);
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('sets a different announcement right away and drops the pending repeat', async () => {
+		const { host } = await mount(untitled());
+		await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			await act(async () => press(rowFor(host, 'Item 1'), 'ArrowDown'));
+			assert.equal(liveMessage(host), '');
+			await act(async () => press(rowFor(host, 'Item 3'), 'ArrowUp'));
+			assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+			await act(async () => mock.timers.tick(100));
+			assert.equal(liveMessage(host), 'Moved Item 3 to position 2 of 3');
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('announces both moves of an item listed twice', async () => {
+		const ia = a();
+		const mounted = await mount([ia, ia, { name_s: 'b' }]);
+		const rows = () => Array.from(mounted.host.querySelectorAll<HTMLElement>('.MuiListItemButton-root'));
+		await act(async () => press(rows()[0], 'ArrowDown'));
+		assert.equal(liveMessage(mounted.host), 'Moved a to position 2 of 3');
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			await act(async () => press(rows()[0], 'ArrowDown'));
+			assert.equal(liveMessage(mounted.host), '');
+			await act(async () => mock.timers.tick(40));
+			assert.equal(liveMessage(mounted.host), 'Moved a to position 2 of 3');
+		} finally {
+			mock.timers.reset();
+		}
+	});
+
+	it('clears the pending announcement timer when the control unmounts', async () => {
+		const mounted = await mount(untitled());
+		await act(async () => press(rowFor(mounted.host, 'Item 1'), 'ArrowDown'));
+		mock.timers.enable({ apis: ['setTimeout'] });
+		const announceTimers: unknown[] = [];
+		const fakeSetTimeout = globalThis.setTimeout;
+		const setTimeoutSpy = mock.method(globalThis, 'setTimeout', ((...args: Parameters<typeof setTimeout>) => {
+			const handle = fakeSetTimeout(...args);
+			if (args[1] === 40) announceTimers.push(handle);
+			return handle;
+		}) as typeof setTimeout);
+		const clearTimeoutSpy = mock.method(globalThis, 'clearTimeout');
+		try {
+			await act(async () => press(rowFor(mounted.host, 'Item 1'), 'ArrowDown'));
+			assert.equal(announceTimers.length, 1, 'an identical message waits to be set again');
+			await mounted.unmount();
+			assert.ok(
+				clearTimeoutSpy.mock.calls.some((call) => call.arguments[0] === announceTimers[0]),
+				'unmount clears the timer'
+			);
+		} finally {
+			setTimeoutSpy.mock.restore();
+			clearTimeoutSpy.mock.restore();
+			mock.timers.reset();
+		}
 	});
 });

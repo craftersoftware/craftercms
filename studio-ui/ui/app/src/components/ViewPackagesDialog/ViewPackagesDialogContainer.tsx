@@ -23,7 +23,7 @@ import { useDispatch } from 'react-redux';
 import { ApiResponseErrorState } from '../ApiResponseErrorState';
 import { LoadingState } from '../LoadingState';
 import { EmptyState } from '../EmptyState';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
@@ -53,17 +53,22 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 	const { item, cancelPackagesInitialComment, onContinue, onClose } = props;
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 	const [state, setState] = useSpreadState({
 		packages: null,
 		fetching: false,
 		error: null
 	});
+	const [refreshCount, setRefreshCount] = useState(0);
 	const [cancelPackagesComment, setCancelPackagesComment] = useState(cancelPackagesInitialComment ?? '');
 	const disableContinue = onContinue ? cancelPackagesComment.trim() === '' : false;
 
 	const onShowPackageDetails = (pkg: PublishPackage) => {
-		onClose?.(null, null);
-		showPackageDetails({ pkg, dispatch });
+		showPackageDetails({
+			pkg,
+			dispatch,
+			onSuccess: () => setRefreshCount((count) => count + 1)
+		});
 	};
 
 	const onContinueClick = (e: React.MouseEvent) => {
@@ -81,7 +86,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 				setState({ fetching: false, error: response.response });
 			}
 		});
-	}, [siteId, item, setState]);
+	}, [siteId, item, setState, refreshCount]);
 
 	return (
 		<>
@@ -138,7 +143,7 @@ export function ViewPackagesDialogContainer(props: ViewPackagesDialogContainerPr
 										}
 										slotProps={{ secondary: { title: pkg.title, component: 'div' } }}
 									/>
-									<Tooltip title={<FormattedMessage defaultMessage="View Package Details" />}>
+									<Tooltip title={formatMessage({ defaultMessage: 'View Package Details' })}>
 										<IconButton>
 											<ChevronRightRoundedIcon />
 										</IconButton>

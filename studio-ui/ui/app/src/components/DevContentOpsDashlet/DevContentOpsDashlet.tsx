@@ -153,7 +153,7 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 						alignItems: 'center'
 					}}
 				>
-					<Typography variant="h6">
+					<Typography variant="h6" component="h2">
 						<FormattedMessage id="devContentOpsDashlet.widgetTitle" defaultMessage="DevContentOps" />
 					</Typography>
 					<DevContentOpsStats stats={stats} sx={{ root: { ml: 2, display: { xs: 'none', lg: 'flex' } } }} />

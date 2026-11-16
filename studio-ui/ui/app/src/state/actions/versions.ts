@@ -37,9 +37,9 @@ export const resetVersionsState = /*#__PURE__*/ createAction('RESET_VERSIONS_STA
 export const compareBothVersions = /*#__PURE__*/ createAction<{ versions: string[] }>('COMPARE_BOTH_VERSIONS');
 export const compareBothVersionsComplete = /*#__PURE__*/ createAction<any>('COMPARE_BOTH_VERSIONS_COMPLETE');
 export const compareBothVersionsFailed = /*#__PURE__*/ createAction<any>('COMPARE_BOTH_VERSIONS_FAILED');
-export const revertContent = /*#__PURE__*/ createAction<FetchContentVersion>('REVERT_CONTENT');
+export const revertContent = /*#__PURE__*/ createAction<FetchContentVersion & { siteId?: string }>('REVERT_CONTENT');
 export const revertContentComplete = /*#__PURE__*/ createAction<{ path: string }>('REVERT_CONTENT_COMPLETE');
 export const revertContentFailed = /*#__PURE__*/ createAction<AjaxResponse<unknown>>('REVERT_CONTENT_FAILED');
-export const revertToPreviousVersion = /*#__PURE__*/ createAction<{ id: string; path: string }>(
+export const revertToPreviousVersion = /*#__PURE__*/ createAction<{ id: string; path: string; siteId?: string }>(
 	'REVERT_TO_PREVIOUS_VERSION'
 );

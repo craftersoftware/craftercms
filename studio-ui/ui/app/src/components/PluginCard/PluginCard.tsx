@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
@@ -30,8 +30,10 @@ import Tooltip from '@mui/material/Tooltip';
 import cardTitleStyles, { cardSubtitleStyles } from '../../styles/card';
 import SecondaryButton from '../SecondaryButton';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import { visuallyHidden } from '@mui/utils';
 import PluginMediaCarousel from '../PluginDetailsView/PluginMediaCarousel';
+import { getFocusRingSx } from '../../styles/focusRing';
 
 interface PluginCardProps {
 	plugin: MarketplacePlugin;
@@ -108,6 +110,7 @@ function PluginCard(props: PluginCardProps) {
 	const isGitCard = id === 'GIT';
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
+	const titleId = useId();
 	const sliderRef = useRef<{ moveToItem: (itemIndex: number) => void } | null>(null);
 
 	function handleChangeIndex(value: number) {
@@ -196,31 +199,52 @@ function PluginCard(props: PluginCardProps) {
 		const merged = [...videos, ...screenshots];
 		return merged.map((item, index) => {
 			if (item.type !== 'video') {
-				return (
+				const image = item.icon ? (
+					<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
+				) : (
 					<Box
-						key={index}
+						component="img"
 						sx={{
-							background: isGitOrDuplicateCard ? 'none' : backgroundColor,
+							width: isGitOrDuplicateCard ? '120px' : '100%',
 							height: isGitOrDuplicateCard ? 'unset' : '180px',
-							overflow: 'hidden'
+							objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
+						}}
+						src={item.url}
+						alt={item.description ?? ''}
+					/>
+				);
+				const frameSx = {
+					display: 'block',
+					width: '100%',
+					background: isGitOrDuplicateCard ? 'none' : backgroundColor,
+					height: isGitOrDuplicateCard ? 'unset' : '180px',
+					overflow: 'hidden'
+				};
+				// Git and duplicate images are not buttons. The card action area is the only control.
+				if (isGitOrDuplicateCard) {
+					return (
+						<Box key={index} sx={frameSx}>
+							{image}
+						</Box>
+					);
+				}
+				return (
+					<ButtonBase
+						key={index}
+						aria-label={
+							item.description
+								? formatMessage({ defaultMessage: 'View {description}' }, { description: item.description })
+								: formatMessage({ defaultMessage: 'View image {number}' }, { number: index + 1 })
+						}
+						sx={{
+							...frameSx,
+							// Inset: the carousel clips overflow, so an outer outline would be cut off.
+							'&:focus-visible': getFocusRingSx({ inset: true })
 						}}
 						onClick={(event) => onImageClick(event, index)}
 					>
-						{item.icon ? (
-							<Box sx={{ pl: '20px', pr: '5px', color: (theme) => theme.palette.text.secondary }}>{item.icon}</Box>
-						) : (
-							<Box
-								component="img"
-								sx={{
-									width: isGitOrDuplicateCard ? '120px' : '100%',
-									height: isGitOrDuplicateCard ? 'unset' : '180px',
-									objectFit: isGitOrDuplicateCard ? 'fill' : 'cover'
-								}}
-								src={item.url}
-								alt={item.description}
-							/>
-						)}
-					</Box>
+						{image}
+					</ButtonBase>
 				);
 			} else {
 				return (
@@ -234,7 +258,8 @@ function PluginCard(props: PluginCardProps) {
 						sx={{
 							width: '100%',
 							height: '180px',
-							outline: 'none',
+							// The carousel clips overflow, so the video's ring is inset too.
+							'&:focus-visible': getFocusRingSx({ inset: true }),
 							background: backgroundColor
 						}}
 						onPlaying={handlePlay}
@@ -303,30 +328,38 @@ function PluginCard(props: PluginCardProps) {
 					/>
 				</CardActionArea>
 			)}
-			<CardActionArea
-				disabled={disableCardActionClick}
-				onClick={() => {
-					onPluginSelected(plugin, 1);
-				}}
-				sx={isGitOrDuplicateCard ? { display: 'flex', justifyContent: 'start' } : null}
-			>
-				<PluginMediaCarousel
-					ref={sliderRef}
-					items={renderMedias(id)}
-					onChangeItem={handleChangeIndex}
-					sx={{ width: isGitOrDuplicateCard ? 'unset' : '100%' }}
-				/>
-				{isGitOrDuplicateCard && (
-					<CardContent sx={isGitOrDuplicateCard ? { height: 'unset !important' } : null} className="cardContent">
-						<Typography gutterBottom variant="subtitle2" component="h2" className="cardTitle">
+			{isGitOrDuplicateCard ? (
+				<CardActionArea
+					disabled={disableCardActionClick}
+					onClick={() => onPluginSelected(plugin, 1)}
+					aria-labelledby={titleId}
+					sx={{ display: 'flex', justifyContent: 'start' }}
+				>
+					<PluginMediaCarousel
+						ref={sliderRef}
+						items={renderMedias(id)}
+						onChangeItem={handleChangeIndex}
+						sx={{ width: 'unset' }}
+					/>
+					<CardContent sx={{ height: 'unset !important' }} className="cardContent">
+						<Typography id={titleId} gutterBottom variant="subtitle2" component="h2" className="cardTitle">
 							{name}
 						</Typography>
 						<Typography gutterBottom variant="subtitle2" component="h2" color="textSecondary">
 							{plugin.description}
 						</Typography>
 					</CardContent>
-				)}
-			</CardActionArea>
+				</CardActionArea>
+			) : (
+				<Box>
+					<PluginMediaCarousel
+						ref={sliderRef}
+						items={renderMedias(id)}
+						onChangeItem={handleChangeIndex}
+						sx={{ width: '100%' }}
+					/>
+				</Box>
+			)}
 			{steps > 0 && !isGitOrDuplicateCard && (
 				<MobileStepper
 					variant="dots"
