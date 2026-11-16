@@ -29,6 +29,7 @@ import org.springframework.core.annotation.Order;
 
 import java.beans.ConstructorProperties;
 import java.lang.reflect.Method;
+import java.security.MessageDigest;
 import java.util.Map;
 
 /**
@@ -107,7 +108,7 @@ public class HasPermissionAnnotationHandler extends AbstractPermissionAnnotation
 		}
 		String token = ManagementTokenResolver.resolve(requestContext.getRequest());
 
-		return StringUtils.equals(token, managementToken);
+		return token != null && MessageDigest.isEqual(token.getBytes(), managementToken.getBytes());
 	}
 
 }

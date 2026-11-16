@@ -19,7 +19,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.rest.ManagementTokenResolver;
 
-import static org.apache.commons.lang3.Strings.CS;
+
+import java.security.MessageDigest;
 
 /**
  * Shared checks for the Crafter management token.
@@ -53,7 +54,8 @@ public final class ManagementTokenUtils {
 	 * @throws InvalidManagementTokenException if the token is missing, blank, or does not match
 	 */
 	public static void validateToken(String token, String configuredToken) throws InvalidManagementTokenException {
-		if (token == null || token.isEmpty() || !CS.equals(token, configuredToken)) {
+
+		if (token == null || token.isEmpty() || !MessageDigest.isEqual(token.getBytes(), configuredToken.getBytes())) {
 			throw new InvalidManagementTokenException(INVALID_MANAGEMENT_TOKEN_MESSAGE);
 		}
 	}
