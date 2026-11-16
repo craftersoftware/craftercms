@@ -85,8 +85,10 @@ public class MoveManagementTokenToHeaderUpgradeOperation extends AbstractTargetU
 				continue;
 			}
 			if (!optedIn && !isCrafterManagementEndpoint(url)) {
-				logger.debug("Left token query parameter unchanged for processor '{}' in target '{}' because the " +
-					"URL is not a verified Crafter management endpoint", processorName, target.getId());
+				// Path only: the query string holds the token value and must not be logged.
+				logger.info("Left token query parameter unchanged for processor '{}' in target '{}' file '{}' " +
+						"path '{}' because the URL is not a verified Crafter management endpoint",
+					processorName, target.getId(), target.getConfigurationFile(), requestPath(url));
 				continue;
 			}
 			processor.put(URL_KEY, move.urlWithoutToken);

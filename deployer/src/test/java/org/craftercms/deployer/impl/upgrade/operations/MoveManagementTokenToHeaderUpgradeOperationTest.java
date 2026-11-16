@@ -23,6 +23,7 @@ import org.mockito.invocation.Invocation;
 import org.slf4j.Logger;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
@@ -148,7 +150,32 @@ public class MoveManagementTokenToHeaderUpgradeOperationTest {
 			assertEquals(url, processor.get("url"));
 			assertNull(processor.get("headers"));
 		}
-		assertFalse(loggedText().contains(SECRET));
+		String logged = loggedText();
+		assertFalse(logged.contains(SECRET));
+		assertFalse(logged.contains("token="));
+		assertTrue(logged.contains("/callback"));
+		assertTrue(loggedLevels().contains("info"));
+		assertFalse(loggedLevels().contains("debug"));
+	}
+
+	@Test
+	public void contextPathOutsideManagementApiIsLoggedAtInfoWithoutToken() {
+		String url = "http://localhost:8080/studio/api/1/site/cache/clear.json?token=" + SECRET
+			+ "&crafterSite=editorial";
+		Map<String, Object> processor = processor(url);
+		when(target.getConfigurationFile()).thenReturn(new File("editorial-preview.yaml"));
+
+		operation.doExecute(target, targetConfig(processor));
+
+		assertEquals(url, processor.get("url"));
+		assertNull(processor.get("headers"));
+		String logged = loggedText();
+		assertFalse(logged.contains(SECRET));
+		assertFalse(logged.contains("token="));
+		assertTrue(logged.contains("editorial-preview.yaml"));
+		assertTrue(logged.contains("/studio/api/1/site/cache/clear.json"));
+		assertTrue(loggedLevels().contains("info"));
+		assertFalse(loggedLevels().contains("debug"));
 	}
 
 	@Test
@@ -266,6 +293,14 @@ public class MoveManagementTokenToHeaderUpgradeOperationTest {
 			}
 		}
 		return logged.toString();
+	}
+
+	private String loggedLevels() {
+		StringBuilder levels = new StringBuilder();
+		for (Invocation invocation : mockingDetails(logger).getInvocations()) {
+			levels.append(invocation.getMethod().getName()).append('\n');
+		}
+		return levels.toString();
 	}
 
 }

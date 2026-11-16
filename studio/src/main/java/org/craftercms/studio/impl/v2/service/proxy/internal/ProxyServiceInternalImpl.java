@@ -101,11 +101,13 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	}
 
 	/**
-	 * Client that returns redirect responses instead of following them.
+	 * Stateless client that returns redirect responses instead of following them.
+	 * Cookie management is disabled so this shared client does not retain Engine cookies.
 	 */
 	private static RestTemplate createManagementTokenRestTemplate() {
 		CloseableHttpClient httpClient = HttpClientBuilder.create()
 			.disableRedirectHandling()
+			.disableCookieManagement()
 			.setDefaultRequestConfig(RequestConfig.custom().setRedirectsEnabled(false).build())
 			.build();
 		return new RestTemplate(new HttpComponentsClientHttpRequestFactory(httpClient));
