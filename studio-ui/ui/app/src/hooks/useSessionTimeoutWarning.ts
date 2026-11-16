@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface SessionTimeoutWarningState {
 	/** Whether the warning should be shown. */
@@ -40,36 +40,27 @@ export function useSessionTimeoutWarning(
 	sessionExpiresAt: number,
 	warningLeadTimeMs: number
 ): SessionTimeoutWarningState {
-	const [visible, setVisible] = useState(false);
-	const [secondsLeft, setSecondsLeft] = useState(0);
-	const [dismissed, setDismissed] = useState(false);
-	// Whether the last tick was already inside the warning window, so a dismissal only lasts for the current warning
-	const wasWarned = useRef(false);
+	// The time is state, refreshed by the interval, so the warning is derived while rendering
+	const [now, setNow] = useState(Date.now);
+	// The session expiry of the warning that was dismissed. A dismissal only lasts for that warning, so an extended
+	// session (a new expiry) brings a new one. Ticking of the countdown does not clear it, which would reopen the final
+	// warning right after it was closed.
+	const [dismissedFor, setDismissedFor] = useState<number>(null);
+	const hasExpiry = active && sessionExpiresAt != null;
 
 	useEffect(() => {
-		if (!active || sessionExpiresAt == null) {
-			setVisible(false);
-			return;
+		if (hasExpiry) {
+			const interval = setInterval(() => setNow(Date.now()), 1000);
+			return () => clearInterval(interval);
 		}
-		wasWarned.current = false;
-		const update = () => {
-			const remaining = sessionExpiresAt - Date.now();
-			const shouldWarn = remaining <= warningLeadTimeMs;
-			setSecondsLeft(Math.max(0, Math.ceil(remaining / 1000)));
-			// A new warning (this one starting, or a new session expiry) is not dismissed. Clearing the dismissal on
-			// every tick would reopen the final warning right after it was closed.
-			if (shouldWarn && !wasWarned.current) {
-				setDismissed(false);
-			}
-			wasWarned.current = shouldWarn;
-			setVisible(shouldWarn);
-		};
-		update();
-		const interval = setInterval(update, 1000);
-		return () => clearInterval(interval);
-	}, [active, sessionExpiresAt, warningLeadTimeMs]);
+	}, [hasExpiry]);
 
-	const dismiss = useCallback(() => setDismissed(true), []);
+	const remaining = hasExpiry ? sessionExpiresAt - now : Infinity;
+	const dismiss = useCallback(() => setDismissedFor(sessionExpiresAt), [sessionExpiresAt]);
 
-	return { visible: visible && !dismissed, secondsLeft, dismiss };
+	return {
+		visible: remaining <= warningLeadTimeMs && dismissedFor !== sessionExpiresAt,
+		secondsLeft: hasExpiry ? Math.max(0, Math.ceil(remaining / 1000)) : 0,
+		dismiss
+	};
 }

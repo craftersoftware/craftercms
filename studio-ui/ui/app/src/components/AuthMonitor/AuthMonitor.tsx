@@ -118,27 +118,31 @@ function SessionTimeoutWarning() {
 		sessionExpiresAt,
 		SESSION_TIMEOUT_WARNING_MS
 	);
-	const [extending, setExtending] = useState(false);
-	const [extendFailed, setExtendFailed] = useState(false);
+	// The extension requested by the user, for the session expiry and extension cap in effect at that moment. Only a new
+	// session expiry (or the cap being reached) means the extend landed, so a routine token refresh that lands first
+	// must not re-enable the button. The timeout below covers a failed request.
+	const [extendRequest, setExtendRequest] = useState<{
+		sessionExpiresAt: number;
+		canExtendSession: boolean;
+		failed: boolean;
+	}>(null);
+	const currentRequest =
+		extendRequest?.sessionExpiresAt === sessionExpiresAt && extendRequest?.canExtendSession === canExtendSession
+			? extendRequest
+			: null;
+	const extending = currentRequest != null && !currentRequest.failed;
+	const extendFailed = currentRequest?.failed === true;
 	useEffect(() => {
 		if (extending) {
 			const timeout = setTimeout(() => {
-				setExtending(false);
-				setExtendFailed(true);
+				setExtendRequest((request) => request && { ...request, failed: true });
 			}, 10000);
 			return () => clearTimeout(timeout);
 		}
 	}, [extending]);
-	useEffect(() => {
-		// Only a new session expiry (or the cap being reached) means the extend landed. A routine token refresh that
-		// lands first must not re-enable the button. The timeout above covers a failed request.
-		setExtending(false);
-		setExtendFailed(false);
-	}, [sessionExpiresAt, canExtendSession]);
 	const onStaySignedIn = () => {
 		if (!extending) {
-			setExtending(true);
-			setExtendFailed(false);
+			setExtendRequest({ sessionExpiresAt, canExtendSession, failed: false });
 			dispatch(messageSharedWorker(sharedWorkerExtendSession({ xsrfToken: getXSRFToken() })));
 		}
 	};

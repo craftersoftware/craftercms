@@ -28,10 +28,14 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http:
 const globals = ['window', 'document', 'navigator', 'HTMLElement', 'Node', 'getComputedStyle', 'MutationObserver'];
 const previous = new Map(globals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 globals.forEach((name) =>
-	Object.defineProperty(globalThis, name, { value: (dom.window as any)[name], configurable: true, writable: true })
+	Object.defineProperty(globalThis, name, {
+		value: (dom.window as unknown as Record<string, unknown>)[name],
+		configurable: true,
+		writable: true
+	})
 );
 // React needs to know it can use act() outside of a browser
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const { createElement } = await import('react');
 const { createRoot } = await import('react-dom/client');
@@ -52,12 +56,13 @@ async function mountWarning(): Promise<{ host: HTMLElement; harness: Harness; un
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	const harness = { state: null } as Harness;
+	// One component for the whole test, so a re-render keeps the state like in the app
+	function Probe(props: { active: boolean; sessionExpiresAt: number }) {
+		harness.state = useSessionTimeoutWarning(props.active, props.sessionExpiresAt, leadTime);
+		return null;
+	}
 	harness.render = async (active, sessionExpiresAt) => {
-		function Probe() {
-			harness.state = useSessionTimeoutWarning(active, sessionExpiresAt, leadTime);
-			return null;
-		}
-		await act(async () => root.render(createElement(Probe)));
+		await act(async () => root.render(createElement(Probe, { active, sessionExpiresAt })));
 	};
 	return {
 		host,
@@ -78,7 +83,7 @@ describe('useSessionTimeoutWarning', () => {
 			if (descriptor) {
 				Object.defineProperty(globalThis, name, descriptor);
 			} else {
-				delete (globalThis as any)[name];
+				delete (globalThis as Record<string, unknown>)[name];
 			}
 		});
 	});
@@ -130,6 +135,21 @@ describe('useSessionTimeoutWarning', () => {
 		assert.equal(harness.state.visible, false);
 
 		await act(async () => mock.timers.tick(10 * 1000));
+		assert.equal(harness.state.visible, false);
+
+		await unmount();
+	});
+
+	it('stays closed when a refresh reports the same session expiry', async () => {
+		const { harness, unmount } = await mountWarning();
+		const sessionExpiresAt = now + 30 * 1000;
+		await harness.render(true, sessionExpiresAt);
+		await act(async () => harness.state.dismiss());
+		assert.equal(harness.state.visible, false);
+
+		// A routine refresh lands with the same expiry
+		await act(async () => mock.timers.tick(5 * 1000));
+		await harness.render(true, sessionExpiresAt);
 		assert.equal(harness.state.visible, false);
 
 		await unmount();
