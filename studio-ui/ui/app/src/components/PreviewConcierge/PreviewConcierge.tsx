@@ -1602,6 +1602,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								<IconButton
 									size="small"
 									onClick={() => hostToGuest$.next(reloadRequest())}
+									aria-label={formatMessage({ id: 'shortcuts.reloadPreview', defaultMessage: 'Reload preview' })}
 									sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
 								>
 									<RefreshRounded />
