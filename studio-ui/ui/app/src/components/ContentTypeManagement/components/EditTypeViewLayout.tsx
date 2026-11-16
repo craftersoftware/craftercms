@@ -126,6 +126,8 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							ref={anchorElRef}
 							onClick={handleOpenMenuButton}
 							aria-label={formatMessage({ id: 'words.options', defaultMessage: 'Options' })}
+							aria-haspopup="menu"
+							aria-expanded={open ? 'true' : undefined}
 						>
 							<MoreVertRounded />
 						</IconButton>
