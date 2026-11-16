@@ -15,6 +15,7 @@
  */
 package org.craftercms.studio.impl.v2.service.proxy.internal;
 
+import org.apache.hc.client5.http.config.Configurable;
 import org.craftercms.commons.rest.ManagementToken;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
@@ -24,6 +25,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -34,10 +37,14 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATI
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_MANAGEMENT_PREVIEW_PROTECTED_URLS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ProxyServiceInternalImplTest {
@@ -48,6 +55,7 @@ public class ProxyServiceInternalImplTest {
 	private StudioConfiguration studioConfiguration;
 	private ServicesConfig servicesConfig;
 	private RestTemplate restTemplate;
+	private RestTemplate managementTokenRestTemplate;
 	private ProxyServiceInternalImpl proxy;
 
 	@Before
@@ -60,8 +68,12 @@ public class ProxyServiceInternalImplTest {
 			.thenReturn("/api/1/site/cache/clear, /api/1/monitoring/status.json");
 		proxy = new ProxyServiceInternalImpl(studioConfiguration, servicesConfig);
 		restTemplate = mock(RestTemplate.class);
+		managementTokenRestTemplate = mock(RestTemplate.class);
 		ReflectionTestUtils.setField(proxy, "restTemplate", restTemplate);
+		ReflectionTestUtils.setField(proxy, "managementTokenRestTemplate", managementTokenRestTemplate);
 		when(restTemplate.exchange(any(URI.class), any(HttpMethod.class), any(HttpEntity.class), eq(Object.class)))
+			.thenReturn(new ResponseEntity<>(HttpStatus.OK));
+		when(managementTokenRestTemplate.exchange(any(URI.class), any(HttpMethod.class), any(HttpEntity.class), eq(Object.class)))
 			.thenReturn(new ResponseEntity<>(HttpStatus.OK));
 	}
 
@@ -70,12 +82,13 @@ public class ProxyServiceInternalImplTest {
 		proxy.proxyEngine(null, "editorial", request(
 			"/studio/engine/api/1/site/cache/clear", "token=" + CLIENT_TOKEN + "&foo=1"));
 
-		URI uri = capturedUri();
-		HttpEntity<?> entity = capturedEntity();
+		URI uri = capturedUri(managementTokenRestTemplate);
+		HttpEntity<?> entity = capturedEntity(managementTokenRestTemplate);
 		assertFalse(uri.getRawQuery().contains("token="));
 		assertFalse(uri.toString().contains(CLIENT_TOKEN));
 		assertFalse(uri.toString().contains(ENGINE_TOKEN));
 		assertEquals(ENGINE_TOKEN, entity.getHeaders().getFirst(ManagementToken.HEADER_NAME));
+		verify(restTemplate, never()).exchange(any(URI.class), any(HttpMethod.class), any(HttpEntity.class), eq(Object.class));
 	}
 
 	@Test
@@ -83,10 +96,22 @@ public class ProxyServiceInternalImplTest {
 		proxy.proxyEngine(null, "editorial", request(
 			"/studio/engine/api/1/content/exists", "token=" + CLIENT_TOKEN));
 
-		URI uri = capturedUri();
-		HttpEntity<?> entity = capturedEntity();
+		URI uri = capturedUri(restTemplate);
+		HttpEntity<?> entity = capturedEntity(restTemplate);
 		assertFalse(uri.toString().contains("token="));
 		assertNull(entity.getHeaders().getFirst(ManagementToken.HEADER_NAME));
+		verify(managementTokenRestTemplate, never()).exchange(any(URI.class), any(HttpMethod.class), any(HttpEntity.class), eq(Object.class));
+	}
+
+	@Test
+	public void managementTokenClientDoesNotFollowRedirects() {
+		ProxyServiceInternalImpl service = new ProxyServiceInternalImpl(studioConfiguration, servicesConfig);
+		RestTemplate template = (RestTemplate) ReflectionTestUtils.getField(service, "managementTokenRestTemplate");
+		assertNotNull(template);
+		ClientHttpRequestFactory requestFactory = template.getRequestFactory();
+		assertTrue(requestFactory instanceof HttpComponentsClientHttpRequestFactory);
+		Configurable client = (Configurable) ((HttpComponentsClientHttpRequestFactory) requestFactory).getHttpClient();
+		assertFalse(client.getConfig().isRedirectsEnabled());
 	}
 
 	private MockHttpServletRequest request(String uri, String query) {
@@ -97,13 +122,13 @@ public class ProxyServiceInternalImplTest {
 		return request;
 	}
 
-	private URI capturedUri() {
-		return (URI) org.mockito.Mockito.mockingDetails(restTemplate).getInvocations().iterator().next().getArgument(0);
+	private URI capturedUri(RestTemplate template) {
+		return (URI) org.mockito.Mockito.mockingDetails(template).getInvocations().iterator().next().getArgument(0);
 	}
 
 	@SuppressWarnings("rawtypes")
-	private HttpEntity capturedEntity() {
-		return (HttpEntity) org.mockito.Mockito.mockingDetails(restTemplate).getInvocations().iterator().next().getArgument(2);
+	private HttpEntity capturedEntity(RestTemplate template) {
+		return (HttpEntity) org.mockito.Mockito.mockingDetails(template).getInvocations().iterator().next().getArgument(2);
 	}
 
 }
