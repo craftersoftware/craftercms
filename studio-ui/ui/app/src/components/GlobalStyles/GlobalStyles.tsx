@@ -72,7 +72,7 @@ export function GlobalStyles(props: GlobalStylesProps) {
 					zIndex: `${theme.zIndex.modal} !important`
 				}
 			}) as Interpolation<Theme>,
-		[theme.palette.background.paper, theme.zIndex.modal]
+		[theme]
 	);
 	return (
 		<>
