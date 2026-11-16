@@ -46,6 +46,9 @@ export const fileNameDescriptor: DescriptorContentType = {
 			defaultValue: undefined,
 			validations: immutableEmptyObject
 		}
+	},
+	metadata: {
+		rootOnly: true
 	}
 };
 

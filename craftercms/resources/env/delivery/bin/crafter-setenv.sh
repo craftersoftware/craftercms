@@ -52,6 +52,7 @@ export TOMCAT_DEBUG_PORT=${TOMCAT_DEBUG_PORT:="@TOMCAT_DEBUG_PORT@"}
 export SEARCH_URL=${SEARCH_URL:="http://$SEARCH_HOST:$SEARCH_PORT"}
 export DEPLOYER_URL=${DEPLOYER_URL:="http://$DEPLOYER_HOST:$DEPLOYER_PORT"}
 export ENGINE_URL=${ENGINE_URL:="http://$TOMCAT_HOST:$TOMCAT_HTTP_PORT"}
+export STUDIO_URL=${STUDIO_URL:="http://localhost:8080/studio"}
 
 # -------------------- Java opts --------------------
 export OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:="-server -Xss1024K -Xms1G -Xmx1G -Dlog4j2.formatMsgNoLookups=true"}
@@ -90,6 +91,8 @@ export GIT_CONFIG_NOSYSTEM=${GIT_CONFIG_NOSYSTEM:="true"}
 # Please update this per installation and provide these tokens to the status monitors.
 export ENGINE_MANAGEMENT_TOKEN=${ENGINE_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export DEPLOYER_MANAGEMENT_TOKEN=${DEPLOYER_MANAGEMENT_TOKEN:="defaultManagementToken"}
+# Token sent to Studio when listing sites. Must match STUDIO_SITE_MANAGEMENT_TOKEN on authoring.
+export STUDIO_SITE_MANAGEMENT_TOKEN=${STUDIO_SITE_MANAGEMENT_TOKEN:="defaultSiteManagementToken"}
 
 # -------------------- Encryption variables --------------------
 export CRAFTER_ENCRYPTION_KEY=${CRAFTER_ENCRYPTION_KEY:="zEtRii1jWUuUUB0W"}

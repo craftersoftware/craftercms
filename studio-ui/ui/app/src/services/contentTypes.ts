@@ -469,6 +469,7 @@ function parseLegacyFormDefinitionFields(
 			case 'textarea':
 			case 'numeric-input':
 			case 'image-picker':
+			case 'file-name':
 				field.validations = {
 					...field.validations,
 					...getFieldValidations(propertyProp),
@@ -488,6 +489,27 @@ function parseLegacyFormDefinitionFields(
 		applyCountLimits(field, legacyField, contentTypeId);
 
 		currentFieldLookup[fieldId] = field;
+	});
+}
+
+/**
+ * Resolves the id of each section. Saved ids are kept so they stay stable across save and reload. A section with no
+ * saved id, or one that repeats an earlier section's id, gets a positional id that doesn't collide with any other.
+ */
+function resolveLegacySectionIds(legacySections: Array<{ id?: string }>): string[] {
+	const used = new Set<string>();
+	const ids = legacySections.map((legacySection) => {
+		const savedId = legacySection.id == null ? '' : String(legacySection.id).trim();
+		if (!savedId || used.has(savedId)) return null;
+		used.add(savedId);
+		return savedId;
+	});
+	return ids.map((id, index) => {
+		if (id) return id;
+		let candidate = `section-${index}`;
+		for (let suffix = 1; used.has(candidate); suffix++) candidate = `section-${index}-${suffix}`;
+		used.add(candidate);
+		return candidate;
 	});
 }
 
@@ -536,7 +558,9 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 	});
 
 	// Parse Sections & Fields
-	asArray<LegacyFormDefinitionSection>(definition.sections?.section).forEach((legacySection, index) => {
+	const legacySections = asArray<LegacyFormDefinitionSection & { id?: string }>(definition.sections?.section);
+	const sectionIds = resolveLegacySectionIds(legacySections);
+	legacySections.forEach((legacySection, index) => {
 		const fieldIds = [];
 		parseLegacyFormDefinitionFields(
 			legacySection.fields?.field,
@@ -548,7 +572,7 @@ export function parseLegacyFormDefinition(definition: LegacyFormDefinition): Con
 		);
 
 		sections.push({
-			id: `section-${index}`,
+			id: sectionIds[index],
 			title: legacySection.title,
 			color: legacySection.color ?? toColor(legacySection.title, 0.7),
 			description: legacySection.description,
@@ -742,33 +766,57 @@ export function associateTemplate(site: string, contentTypeId: string, displayTe
 	);
 }
 
+function findDisplayTemplateProperty(doc: ParentNode): Element | undefined {
+	return Array.from(doc.querySelectorAll('properties > property')).find(
+		(node) => node.querySelector('name').textContent.trim() === 'display-template'
+	);
+}
+
+/**
+ * Sets the form-definition's `display-template` property via `textContent` (creates the property if missing).
+ * Paths are stored as literal text; XML escaping is left to `XMLSerializer`.
+ */
+export function setDisplayTemplateOnFormDefinition(doc: XMLDocument, displayTemplate: string): void {
+	const property = findDisplayTemplateProperty(doc);
+	if (property) {
+		property.querySelector('value').textContent = displayTemplate;
+		return;
+	}
+	const created = doc.createElement('property');
+	const name = doc.createElement('name');
+	const label = doc.createElement('label');
+	const value = doc.createElement('value');
+	const type = doc.createElement('type');
+	name.textContent = 'display-template';
+	label.textContent = 'Display Template';
+	value.textContent = displayTemplate;
+	type.textContent = 'template';
+	created.appendChild(name);
+	created.appendChild(label);
+	created.appendChild(value);
+	created.appendChild(type);
+	doc.querySelector('properties').appendChild(created);
+}
+
+/**
+ * Clears the form-definition's `display-template` value via `textContent`.
+ * Returns `false` when the property is absent.
+ */
+export function clearDisplayTemplateOnFormDefinition(doc: XMLDocument): boolean {
+	const property = findDisplayTemplateProperty(doc);
+	if (!property) {
+		return false;
+	}
+	property.querySelector('value').textContent = '';
+	return true;
+}
+
 function associateTemplateNow(site: string, contentTypeId: string, displayTemplate: string): Observable<boolean> {
 	const path = createFormDefinitionPathFromTypeId(contentTypeId);
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
 		switchMap((doc) => {
-			const properties = doc.querySelectorAll('properties > property');
-			const property = Array.from(properties).find(
-				(node) => node.querySelector('name').innerHTML.trim() === 'display-template'
-			);
-			if (property) {
-				property.querySelector('value').innerHTML = displayTemplate;
-			} else {
-				const property = document.createElement('property');
-				const name = document.createElement('name');
-				const label = document.createElement('label');
-				const value = document.createElement('value');
-				const type = document.createElement('type');
-				name.innerHTML = 'display-template';
-				label.innerHTML = 'Display Template';
-				value.innerHTML = displayTemplate;
-				type.innerHTML = 'template';
-				property.appendChild(name);
-				property.appendChild(label);
-				property.appendChild(value);
-				property.appendChild(type);
-				doc.querySelector('properties').appendChild(property);
-			}
+			setDisplayTemplateOnFormDefinition(doc, displayTemplate);
 			return fromPromise(beautify(serialize(doc))).pipe(
 				switchMap((xml) => writeConfiguration(site, path, module, xml))
 			);
@@ -843,18 +891,12 @@ function dissociateTemplateNow(site: string, contentTypeId: string): Observable<
 	const module = 'studio';
 	return fetchConfigurationDOM(site, path, 'studio').pipe(
 		switchMap((doc) => {
-			const properties = doc.querySelectorAll('properties > property');
-			const property = Array.from(properties).find(
-				(node) => node.querySelector('name').innerHTML.trim() === 'display-template'
-			);
-			if (property) {
-				property.querySelector('value').innerHTML = '';
-				return fromPromise(beautify(serialize(doc))).pipe(
-					switchMap((xml) => writeConfiguration(site, path, module, xml))
-				);
-			} else {
+			if (!clearDisplayTemplateOnFormDefinition(doc)) {
 				return of(false);
 			}
+			return fromPromise(beautify(serialize(doc))).pipe(
+				switchMap((xml) => writeConfiguration(site, path, module, xml))
+			);
 		})
 	);
 }

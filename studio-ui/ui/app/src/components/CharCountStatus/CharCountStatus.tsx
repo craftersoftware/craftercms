@@ -15,7 +15,6 @@
  */
 
 import React from 'react';
-import palette from '../../styles/palette';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import { FormattedMessage } from 'react-intl';
@@ -44,7 +43,7 @@ function CharCountStatus(props: CharCountStatusProps) {
 			}}
 		>
 			<Grid>
-				<Typography sx={{ fontSize: '14px', color: palette.gray.medium4 }}>
+				<Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
 					<FormattedMessage
 						id="deleteDialog.maxCharacters"
 						defaultMessage="Max {maxLength} characters"
@@ -54,7 +53,7 @@ function CharCountStatus(props: CharCountStatusProps) {
 			</Grid>
 
 			<Grid>
-				<Typography sx={{ fontSize: '14px', color: palette.gray.medium4 }}>
+				<Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
 					{commentLength}/{commentMaxLength}
 				</Typography>
 			</Grid>

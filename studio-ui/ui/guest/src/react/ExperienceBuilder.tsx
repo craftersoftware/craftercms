@@ -81,6 +81,7 @@ import { Provider } from 'react-redux';
 import { clearAndListen$, guestCheckIn$ } from '../store/subjects';
 import { GuestState } from '../store/models/GuestStore';
 import { nnou, nullOrUndefined } from '@craftercms/studio-ui/utils/object';
+import { occurrenceViolationKind } from '@craftercms/studio-ui/utils/countLimits';
 import { scrollToDropTargets } from '../utils/dom';
 import { checkIfLockedOrModified, dragOk } from '../store/util';
 import { createLocationArgument, getContentItemFromRecord, isEditActionAvailable } from '../utils/util';
@@ -89,6 +90,7 @@ import LookupTable from '@craftercms/studio-ui/models/LookupTable';
 import { Snackbar, SnackbarProps, Theme, ThemeOptions, ThemeProvider } from '@mui/material';
 import { deepmerge } from '@mui/utils';
 import ZoneMenu from './ZoneMenu';
+import { GuestStatusAnnouncer, IceKeyboardControls } from './IceKeyboardControls';
 import {
 	contentReady,
 	desktopAssetDragStarted,
@@ -595,6 +597,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 
 	const isMoveMode = HighlightMode.MOVE_TARGETS === highlightMode;
 	const isFieldSelectedMode = status === EditingStatus.FIELD_SELECTED;
+	const showKeyboardZones = status === EditingStatus.LISTENING || isFieldSelectedMode;
 
 	return (
 		<GuestContextProvider value={context}>
@@ -602,6 +605,8 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 			<ThemeProvider theme={theme}>
 				{editMode && (
 					<CrafterCMSPortal>
+						<GuestStatusAnnouncer />
+						<IceKeyboardControls active={showKeyboardZones} highlightMode={highlightMode} />
 						{/* region DraggedElementGhost */}
 						{draggableItemElemRecId && (
 							<DragGhostElement
@@ -629,7 +634,12 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 						{Object.values(state.highlighted).map((highlight: HighlightData) => {
 							const validations = Object.values(highlight.validations);
 							const hasValidations = Boolean(validations.length);
-							const hasFailedRequired = validations.some(({ level }) => level === 'required');
+							// minCount and maxCount are both stored at level 'required' (see
+							// utils/countLimits.ts and assignCountLimits), so the level alone cannot tell a
+							// missing minimum from a reached maximum. occurrenceViolationKind reads the ids.
+							const occurrenceKind = occurrenceViolationKind(validations);
+							const hasFailedRequired = occurrenceKind === 'required';
+							const hasReachedMaxCount = occurrenceKind === 'maxCount';
 							const elementRecord = elementRegistry.get(highlight.id);
 							// If no elementRecord is found, the item was removed while the hover was on top. Skip.
 							if (!elementRecord) return null;
@@ -678,6 +688,8 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
 									lockInfo={lockInfo}
 									isStale={isExternallyModified}
 									isEditable={isEditable}
+									hasFailedRequired={hasFailedRequired}
+									hasReachedMaxCount={hasReachedMaxCount}
 									stateMap={itemStateMap}
 									field={field}
 									onPopperClick={

@@ -33,10 +33,12 @@ import type PluginDescriptor from '../../../models/PluginDescriptor';
 const React = await import('react');
 const { act } = await import('react');
 const { createRoot } = await import('react-dom/client');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
+const { createChangedFieldIdsAtom } = await import('./formUtils.tsx');
 const { registerPlugin } = await import('../../../services/plugin.ts');
 const { getRegisteredControlContribution } = await import('../controls/registry.ts');
 const { toLoadedControlPlugin } = await import('./controlPluginLoader.ts');
@@ -100,6 +102,8 @@ function fieldFor(id: string, type: string): ContentTypeField {
 	return { id, name: `Label of ${id}`, type, validations: {}, helpText: '' } as ContentTypeField;
 }
 
+const intl = createTestIntl();
+
 function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 	const valueAtom = atom('x');
 	const validationAtom = atom({ isValid: true });
@@ -109,7 +113,7 @@ function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 			validationByFieldId: Object.fromEntries(props.fieldIds.map((id) => [id, validationAtom])),
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},
@@ -122,8 +126,8 @@ function Harness(props: { fieldIds: string[]; children: React.ReactNode }) {
 		Provider,
 		{ store },
 		React.createElement(
-			IntlProvider,
-			{ locale: 'en', messages: {}, onError: () => undefined },
+			RawIntlProvider,
+			{ value: intl },
 			React.createElement(
 				StableGlobalContext.Provider,
 				{ value: { formsStackData: [], api: {} } },

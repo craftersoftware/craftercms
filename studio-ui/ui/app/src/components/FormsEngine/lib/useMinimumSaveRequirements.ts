@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react';
 import type { Observable } from 'rxjs';
 import { useStore as useJotaiStore } from 'jotai';
-import type { FormsEngineAtoms } from './formsEngineContext';
+import type { FieldUpdate, FormsEngineAtoms } from './formsEngineContext';
 import { settleInvalidFieldRead } from './formVisibility';
 import {
 	readMissingMinimumSaveRequirements,
@@ -34,7 +34,7 @@ import { watchInvalidFieldUpdates } from './useInvalidFieldIds';
 export function useMinimumSaveRequirements(
 	atoms: FormsEngineAtoms | null | undefined,
 	flags: { isRepeatMode: boolean; isEmbedded: boolean },
-	fieldUpdates$: Observable<string> | null | undefined
+	fieldUpdates$: Observable<FieldUpdate> | null | undefined
 ): MinimumSaveRequirement[] {
 	const jotai = useJotaiStore();
 	const [missing, setMissing] = useState<MinimumSaveRequirement[]>([]);

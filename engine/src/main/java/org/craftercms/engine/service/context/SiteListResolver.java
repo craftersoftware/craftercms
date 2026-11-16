@@ -26,6 +26,11 @@ public interface SiteListResolver {
 
 	/**
 	 * Returns the entire list of sites.
+	 * <p>
+	 * An empty collection means there are no sites. {@code null} means this resolver is not configured.
+	 * An actual failure is thrown.
+	 *
+	 * @return the site names, or {@code null} when this resolver is not configured
 	 */
 	Collection<String> getSiteList();
 

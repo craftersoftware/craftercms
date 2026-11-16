@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import TextFieldWithMax from '../TextFieldWithMax';
@@ -92,6 +92,7 @@ export interface PublishDialogFormProps {
 	disablePublishingTarget?: boolean;
 	isPromote?: boolean;
 	onFetchedPublishedTargets?: ({ published, targets }: { published: boolean; targets: PublishingTarget[] }) => void;
+	onPublishingTargetsError?: () => void;
 	sxs?: PartialSxRecord<PublishDialogFormSxKeys>;
 }
 
@@ -107,16 +108,27 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 		disablePublishingTarget = false,
 		isPromote = false,
 		onFetchedPublishedTargets,
+		onPublishingTargetsError,
 		sxs
 	} = props;
 
 	const siteId = useActiveSiteId();
 	const { formatMessage } = useIntl();
+	const schedulingLegendId = useId();
+	const publishingTargetLegendId = useId();
+	const requestApprovalHelpLabel = formatMessage({ defaultMessage: 'More information about request approval' });
 	const [publishingTargets, setPublishingTargets] = useState<PublishingTarget[]>(null);
 	const [publishingTargetsStatus, setPublishingTargetsStatus] = useState('Loading');
 	const [published, setPublished] = useState<boolean>(null);
-	const onFetchedPublishedTargetsRef = useRef(null);
-	onFetchedPublishedTargetsRef.current = onFetchedPublishedTargets;
+	const publishTargetCallbacksRef = useRef({
+		onFetched: onFetchedPublishedTargets,
+		onError: onPublishingTargetsError
+	});
+	// After commit, so a render React discards cannot publish callbacks that never committed.
+	// The fetch effect below is declared later, so it sees this update before it subscribes.
+	useEffect(() => {
+		publishTargetCallbacksRef.current = { onFetched: onFetchedPublishedTargets, onError: onPublishingTargetsError };
+	}, [onFetchedPublishedTargets, onPublishingTargetsError]);
 
 	const fetchPublishingTargetsFn = useCallback(
 		(
@@ -126,7 +138,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 			setPublishingTargetsStatus('Loading');
 			return fetchPublishingTargets(siteId).subscribe({
 				next({ publishingTargets: targets, published }) {
-					onFetchedPublishedTargetsRef.current?.({ targets, published });
+					publishTargetCallbacksRef.current.onFetched?.({ targets, published });
 					setPublished(published);
 					setPublishingTargets(targets);
 					setPublishingTargetsStatus('Success');
@@ -134,6 +146,7 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				},
 				error(e) {
 					setPublishingTargetsStatus('Error');
+					publishTargetCallbacksRef.current.onError?.();
 					error?.(e);
 				}
 			});
@@ -157,7 +170,14 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 				onChange={onInputChange}
 				label={<FormattedMessage defaultMessage="Package Title" />}
 				helperText={
-					<FormattedMessage defaultMessage="Dashboard and other places will use this title to display this package." />
+					formState.packageTitle.trim()
+						? formatMessage({
+								defaultMessage: 'Dashboard and other places will use this title to display this package.'
+							})
+						: formatMessage({
+								defaultMessage:
+									'Enter a package title to publish. Dashboard and other places will use this title to display this package.'
+							})
 				}
 				required
 			/>
@@ -174,56 +194,51 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 			/>
 			<Box sx={{ mb: 1.25 }}>
 				{showRequestApproval && (
-					<FormControlLabel
-						sx={{ display: 'block' }}
-						control={
-							<Checkbox
+					<Box sx={{ display: 'flex', alignItems: 'center' }}>
+						<FormControlLabel
+							sx={{ mr: 0 }}
+							control={
+								<Checkbox
+									size="small"
+									checked={formState.requestApproval}
+									onChange={onInputChange}
+									disabled={disabled}
+									name="requestApproval"
+								/>
+							}
+							label={<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request Approval" />}
+						/>
+						<Tooltip
+							describeChild
+							title={
+								<FormattedMessage
+									id="publishDialog.requestPublishHint"
+									defaultMessage="Items will be submitted for review and published upon approval"
+								/>
+							}
+						>
+							<IconButton
+								aria-label={requestApprovalHelpLabel}
 								size="small"
-								checked={formState.requestApproval}
-								onChange={onInputChange}
-								disabled={disabled}
-								name="requestApproval"
-							/>
-						}
-						label={
-							<Box
-								sx={{
-									display: 'inline-flex',
-									alignItems: 'center'
-								}}
+								sx={{ ml: 1 }}
+								color={isRequestPublish ? 'warning' : undefined}
 							>
-								<FormattedMessage id="publishForm.requestApproval" defaultMessage="Request Approval" />
-								<Tooltip
-									title={
-										<FormattedMessage
-											id="publishDialog.requestPublishHint"
-											defaultMessage="Items will be submitted for review and published upon approval"
-										/>
-									}
-								>
-									<IconButton
-										aria-label="help"
-										size="small"
-										sx={{ ml: 1 }}
-										color={isRequestPublish ? 'warning' : undefined}
-									>
-										{isRequestPublish ? (
-											<ErrorOutlineRounded fontSize="small" />
-										) : (
-											<HelpOutlineOutlined fontSize="small" />
-										)}
-									</IconButton>
-								</Tooltip>
-							</Box>
-						}
-					/>
+								{isRequestPublish ? <ErrorOutlineRounded fontSize="small" /> : <HelpOutlineOutlined fontSize="small" />}
+							</IconButton>
+						</Tooltip>
+					</Box>
 				)}
 			</Box>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
-				<FormLabel component="legend">
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
+				<FormLabel component="legend" id={schedulingLegendId}>
 					<FormattedMessage defaultMessage="Scheduling" />
 				</FormLabel>
 				<RadioGroup
+					aria-labelledby={schedulingLegendId}
 					value={formState.scheduling}
 					onChange={onInputChange}
 					name="scheduling"
@@ -299,13 +314,18 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 					/>
 				</Collapse>
 			</FormControl>
-			<FormControl fullWidth sx={{ width: '100%', marginBottom: '20px', ...sxs?.formSection }}>
-				<FormLabel component="legend">
+			<FormControl
+				component="fieldset"
+				fullWidth
+				sx={{ width: '100%', border: 0, padding: 0, margin: 0, marginBottom: '20px', ...sxs?.formSection }}
+			>
+				<FormLabel component="legend" id={publishingTargetLegendId}>
 					<FormattedMessage defaultMessage="Publishing Target" />
 				</FormLabel>
 				{publishingTargets ? (
 					publishingTargets.length ? (
 						<RadioGroup
+							aria-labelledby={publishingTargetLegendId}
 							value={formState.publishingTarget}
 							onChange={onInputChange}
 							name="publishingTarget"
@@ -373,7 +393,8 @@ export function PublishDialogForm(props: PublishDialogFormProps) {
 							variant="body1"
 							component="span"
 							sx={{
-								border: '1px solid #ced4da',
+								border: '1px solid',
+								borderColor: 'border.control',
 								padding: '10px 12px',
 								borderRadius: '4px',
 								width: '100%',

@@ -32,6 +32,9 @@ export const disabledDescriptor: DescriptorContentType = {
 	],
 	fields: {
 		readonly: commonFieldPropertiesDescriptors['readonly']
+	},
+	metadata: {
+		rootOnly: true
 	}
 };
 

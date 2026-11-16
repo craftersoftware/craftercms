@@ -673,6 +673,14 @@ pipelines:
                 operations:
                     -   type: dbScriptUpgrader
                         filename: upgrade/5.0.x/5.0.0.25-to-5.0.0.26.sql
+            -   currentVersion: 5.0.0.26
+                nextVersion: 5.0.0.27
+                operations:
+                    -   type: globalRepoUpgrader
+                        files:
+                            -   src: repo-bootstrap/global/configuration/samples/sample-site-config-tools.xml
+                                dest: /configuration/samples/sample-site-config-tools.xml
+                        commitDetails: Remove legacy content-types tool from the site config tools sample
 
     # Pipeline to upgrade site repositories
     site:
@@ -1174,6 +1182,12 @@ configurations:
                         -   type: xsltFileUpgrader
                             template: crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.6.xslt
                             commitDetails: Add audio datasources
+                -   currentVersion: 4.0.6
+                    nextVersion: 4.0.7
+                    operations:
+                        -   type: xsltFileUpgrader
+                            template: crafter/studio/upgrade/4.0.x/config/site-config-tools/site-config-tools-v4.0.7.xslt
+                            commitDetails: Remove legacy content-types tool
 
     contextual-nav:
         module: studio
@@ -1444,6 +1458,12 @@ configurations:
                         replacement: "blocks"
                         commitDetails: Update the RTE configuration to work with TinyMCE 7
             -   currentVersion: 4.2.0.3
+                nextVersion: 5.0-t
+            -   currentVersion: 4.5.0.0
+                nextVersion: 5.0-t
+            # Entry point for 5.0 upgrade. The i18n transform runs once. An element that already
+            # has an id is left unchanged, even when its text is the stock English string.
+            -   currentVersion: 5.0-t
                 nextVersion: 5.0.0.0
                 operations:
                     -   type: xsltFileUpgrader

@@ -21,7 +21,7 @@ import { ContentItem } from '../../models/Item';
 import { usePreviewState } from '../../hooks/usePreviewState';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { useIntl } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import { UNDEFINED } from '../../utils/constants';
 import PowerSettingsNewRoundedIcon from '@mui/icons-material/PowerSettingsNewRounded';
@@ -59,15 +59,10 @@ export function EditModesSwitcher(props: EditModesSwitcherProps) {
 			}}
 		>
 			<Tooltip
-				title={
-					<FormattedMessage
-						id="editModesSwitcher.offButtonTooltip"
-						defaultMessage="Switch off editing ({shortcutKey})"
-						values={{
-							shortcutKey: editMode ? (isAllHighlightMode ? 'e' : 'm') : 'e | m'
-						}}
-					/>
-				}
+				title={formatMessage(
+					{ id: 'editModesSwitcher.offButtonTooltip', defaultMessage: 'Switch off editing ({shortcutKey})' },
+					{ shortcutKey: editMode ? (isAllHighlightMode ? 'e' : 'm') : 'e | m' }
+				)}
 			>
 				<IconButton
 					size="small"
@@ -89,7 +84,7 @@ export function EditModesSwitcher(props: EditModesSwitcherProps) {
 			</Tooltip>
 			<Tooltip
 				title={
-					disabled ? '' : <FormattedMessage id="editModesSwitcher.editModeTooltip" defaultMessage="Edit mode (e)" />
+					disabled ? '' : formatMessage({ id: 'editModesSwitcher.editModeTooltip', defaultMessage: 'Edit mode (e)' })
 				}
 			>
 				<IconButton
@@ -108,7 +103,7 @@ export function EditModesSwitcher(props: EditModesSwitcherProps) {
 			</Tooltip>
 			<Tooltip
 				title={
-					disabled ? '' : <FormattedMessage id="editModesSwitcher.moveModeTooltip" defaultMessage="Move mode (m)" />
+					disabled ? '' : formatMessage({ id: 'editModesSwitcher.moveModeTooltip', defaultMessage: 'Move mode (m)' })
 				}
 			>
 				<IconButton

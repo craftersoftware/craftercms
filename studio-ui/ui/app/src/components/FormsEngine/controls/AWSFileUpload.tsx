@@ -38,7 +38,7 @@ export interface AwsFile {
 export type AwsFileUploadProps = ControlProps<AwsFile>;
 
 export function AwsFileUpload(props: AwsFileUploadProps) {
-	const { field, value, setValue, readonly: formReadonly } = props;
+	const { field, value, setValue, readonly: formReadonly, labelId } = props;
 	const siteId = useActiveSiteId();
 	const { authoringBase } = useEnv();
 	const url = `${authoringBase}/api/2/aws/${siteId}/s3/upload.json`;
@@ -72,7 +72,7 @@ export function AwsFileUpload(props: AwsFileUploadProps) {
 	};
 
 	return (
-		<FormsEngineField field={field}>
+		<FormsEngineField field={field} labelId={labelId}>
 			{value && (
 				<Box
 					sx={{

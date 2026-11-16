@@ -25,25 +25,27 @@ import { PrimitiveAtom, useAtom } from 'jotai';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { createComponentId } from '../../../utils/system';
 import { nanoid } from 'nanoid';
 import { nnou } from '../../../utils/object';
-import { getBasePath, getFileNameValueFromPath, isFieldReadOnly } from '../lib/formUtils';
+import { getBasePath, getFileNameValueFromPath, getValidationValue, isFieldReadOnly } from '../lib/formUtils';
 import { ensureSingleSlash } from '../../../utils/string';
 import type { Dispatch } from 'redux';
 import useLoadableAtom from '../lib/useLoadableAtom';
 import { isPagePath } from '../../../utils/path';
+import { fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 
 export function FileName(props: ControlProps<string>) {
-	const { field, readonly: formReadonly, autoFocus } = props;
+	const { field, readonly: formReadonly, autoFocus, inputId, labelId } = props;
 	const { path: initialPath, pathInSite } = useItemMetaContext();
 	const formContext = useStableFormContext();
 	const atoms = formContext.atoms;
 	const isNewForm = nnou(formContext.props?.create);
-	const htmlId = useId();
+	const generatedId = useId();
+	const htmlId = inputId || generatedId;
 	if (field.id === 'fileName') {
 		throw new Error('Detected field ID "fileName" instead "file-name" at the "FileName" Control.');
 	}
@@ -51,8 +53,11 @@ export function FileName(props: ControlProps<string>) {
 	const [value, setValue] = useAtom(atoms.fileName as PrimitiveAtom<string>);
 	const validityData = useLoadableAtom(atoms.validationByFieldId['file-name']);
 	const isValid = validityData.state === 'hasData' ? validityData.data.isValid : true;
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, htmlId), isValid);
 	const webUrlRoot = ensureSingleSlash(`${pathInSite.replace('/site/website', '/')}/`);
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
+	const maxLength: number | undefined = getValidationValue(field.validations, 'maxLength');
 	const readonly: boolean = isFieldReadOnly(field, formReadonly);
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => {
@@ -76,7 +81,8 @@ export function FileName(props: ControlProps<string>) {
 				setValue(updatedName);
 				dispatch(popDialog({ id }));
 			},
-			dispatch
+			dispatch,
+			maxLength
 		);
 	};
 
@@ -84,14 +90,16 @@ export function FileName(props: ControlProps<string>) {
 		<FormsEngineField
 			isValid={isValid}
 			htmlFor={htmlId}
+			labelId={labelId}
 			field={field}
-			max={field.validations?.maxLength?.value}
+			max={maxLength}
 			length={value.length}
 		>
 			<OutlinedInput
 				autoFocus={autoFocus}
 				fullWidth
 				id={htmlId}
+				aria-describedby={a11y['aria-describedby']}
 				value={value}
 				onChange={handleChange}
 				disabled={!isNewForm || readonly}
@@ -102,13 +110,14 @@ export function FileName(props: ControlProps<string>) {
 				}
 				endAdornment={
 					!isNewForm && (
-						<Tooltip title={<FormattedMessage defaultMessage="Edit" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Edit' })}>
 							<IconButton onClick={handleEdit} disabled={readonly}>
 								<EditOutlinedIcon />
 							</IconButton>
 						</Tooltip>
 					)
 				}
+				inputProps={{ maxLength }}
 			/>
 		</FormsEngineField>
 	);
@@ -120,13 +129,14 @@ function showRenameDialog(
 	value: string,
 	validRenameValue: string,
 	onRenamed: (newName: string) => void,
-	dispatch: Dispatch
+	dispatch: Dispatch,
+	maxLength?: number
 ) {
 	dispatch(
 		pushDialog({
 			id,
 			component: createComponentId('RenameContentDialog'),
-			props: { path, value, validRenameValue, onRenamed }
+			props: { path, value, validRenameValue, onRenamed, maxLength }
 		})
 	);
 

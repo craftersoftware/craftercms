@@ -457,7 +457,7 @@ The runtime retains the source datasource on the resolved action/choice. Node-se
 - File on disk: `/config/studio/content-types/{contentTypeId}/form-controller.js`.
 - Load: authenticated `form_controller` API → ESM via Blob URL; FE2 owns this in a dedicated loader called from form bootstrap (not `importPlugin` / plugin file URLs).
 - Export: `{ apiVersion, initialize?, isFieldRelevant?, onBeforeSave? }` — all hooks may be async; host awaits. Missing `apiVersion` counts as `1`. Versioning: [§10](#10-plugin-api-versioning). FE1 `moduleLoaded('{typeId}-controller', Class)` scripts are not compatible.
-- Host context: narrow read/write API over form values and type metadata (not the YUI form object). See main doc §5.9 for `onFieldChange` / `notify` / save-result shape.
+- Host context: narrow read/write API over form values and type metadata (not the YUI form object). See main doc §5.9 for `onFieldChange` / `fieldChanges`, `notify`, and the save-result shape. `fieldChanges` is a read-only observable of `{ fieldId, value }` that completes on teardown; use `onFieldChange` for a simple callback and `fieldChanges` to compose with `craftercms.libs.rxjs` operators. The TSDoc in `formControllers/types.ts` is the authoritative contract and is copied into the emitted `.d.ts` files.
 - Project plugins may ship the type folder including the file; runtime still loads by content-type id.
 
 **Implementation:** landed in `FormsEngine/formControllers/`. TB Form Controller property edits `form-controller.js` (separate from Groovy). Worked example: main doc §5.9.

@@ -35,9 +35,10 @@ import ErrorState from '../ErrorState/ErrorState';
 import { useSelection } from '../../hooks/useSelection';
 import { PartialSxRecord } from '../../models';
 import Box from '@mui/material/Box';
-import palette from '../../styles/palette';
-import { WarningRounded } from '@mui/icons-material';
 import { INCORRECT_CREDENTIALS_ERROR_CODE } from '../../state/reducers/auth';
+import CredentialsErrorBanner from '../CredentialsErrorBanner/CredentialsErrorBanner';
+
+const authMonitorCredentialsErrorId = 'authMonitorCredentialsError';
 
 const translations = defineMessages({
 	sessionExpired: {
@@ -111,6 +112,7 @@ interface AuthMonitorBodyProps {
 function AuthMonitorBody(props: AuthMonitorBodyProps) {
 	const { authoringUrl, username, isSSO, dispatch, formatMessage } = props;
 	const { error, isFetching } = useSelection((state) => state.auth);
+	const credentialsError = error?.code === INCORRECT_CREDENTIALS_ERROR_CODE;
 	const [password, setPassword] = useState<string>('');
 	const [ssoButtonClicked, setSSOButtonClicked] = useState(false);
 	const styles: CSSProperties = isFetching ? { visibility: 'hidden' } : {};
@@ -133,28 +135,13 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 			<DialogContent sx={{ width: '400px' }}>
 				<>
 					{error ? (
-						error.code === INCORRECT_CREDENTIALS_ERROR_CODE ? (
-							<Typography
-								variant="body2"
-								role="alert"
-								sx={(theme) => ({
-									backgroundColor: palette.red.tint,
-									color: palette.white,
-									marginBottom: theme.spacing(2),
-									padding: theme.spacing(1),
-									borderRadius: theme.spacing(1),
-									border: `1px solid ${palette.red.main}`,
-									display: 'flex',
-									placeContent: 'center',
-									lineHeight: 1.7,
-									'& .MuiSvgIcon-root': {
-										marginRight: theme.spacing(0.5),
-										color: palette.white
-									}
-								})}
+						credentialsError ? (
+							<CredentialsErrorBanner
+								id={authMonitorCredentialsErrorId}
+								sx={{ marginBottom: (theme) => theme.spacing(2) }}
 							>
-								<WarningRounded /> {formatMessage(translations.incorrectPasswordMessage)}
-							</Typography>
+								{formatMessage(translations.incorrectPasswordMessage)}
+							</CredentialsErrorBanner>
 						) : (
 							<ApiResponseErrorState error={error} sxs={{ image: { width: 150 } }} />
 						)
@@ -180,6 +167,8 @@ function AuthMonitorBody(props: AuthMonitorBodyProps) {
 							onSubmit={onSubmit}
 							password={password}
 							onSetPassword={setPassword}
+							invalidCredentials={credentialsError}
+							credentialsErrorId={authMonitorCredentialsErrorId}
 						/>
 					)}
 				</>

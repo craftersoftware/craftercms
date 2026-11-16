@@ -21,7 +21,7 @@ import IconButton from '@mui/material/IconButton';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { popDialog, pushDialog } from '../../../state/actions/dialogStack';
 import { nanoid } from 'nanoid';
@@ -36,6 +36,7 @@ export function TemplateSelector(props: TemplateSelectorProps) {
 	const { field, value, setValue, autoFocus } = props;
 	const basePath = '/templates/web';
 	const dispatch = useDispatch();
+	const { formatMessage } = useIntl();
 
 	const handleChange: OutlinedInputProps['onChange'] = (e) => setValue(e.currentTarget.value);
 
@@ -80,12 +81,12 @@ export function TemplateSelector(props: TemplateSelectorProps) {
 				disabled
 				endAdornment={
 					<>
-						<Tooltip title={<FormattedMessage defaultMessage="Select template" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Select template' })}>
 							<IconButton onClick={() => onOpenBrowseTemplate()}>
 								<SearchRoundedIcon />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title={<FormattedMessage defaultMessage="Edit template" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Edit template' })}>
 							<IconButton onClick={() => onEditTemplate()}>
 								<EditRoundedIcon />
 							</IconButton>

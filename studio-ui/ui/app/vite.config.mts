@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { formatjsPluginOptions } from './formatjs.config.mjs';
 // import reactSwc from '@vitejs/plugin-react-swc';
 import react from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
@@ -17,17 +18,8 @@ export default defineConfig(({ mode }) => ({
     // mode === 'development' ? react({ ... }) : reactSwc()
     react(),
     babel({
-      plugins: [
-        [
-          'formatjs',
-          {
-            removeDefaultMessage: false,
-            idInterpolationPattern: '[sha512:contenthash:base64:6]',
-            ast: true
-          }
-        ]
-      ]
-    })
+      plugins: [['formatjs', formatjsPluginOptions]]
+   })
   ],
   server: {
     port: 3000,

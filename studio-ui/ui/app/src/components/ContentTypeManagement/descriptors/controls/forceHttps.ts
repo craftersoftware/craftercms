@@ -43,6 +43,9 @@ export const forceHttpsDescriptor: DescriptorContentType = {
 			}
 		},
 		readonly: commonFieldPropertiesDescriptors['readonly']
+	},
+	metadata: {
+		rootOnly: true
 	}
 };
 

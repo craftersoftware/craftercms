@@ -23,8 +23,22 @@ import SecondaryButton from '../SecondaryButton';
 import translations from './translations';
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
-	const { onOk, onCancel, disableOkButton, disableCancelButton, okButtonText, cancelButtonText, ...rest } = props;
+	const {
+		onOk,
+		onCancel,
+		disableOkButton,
+		disableCancelButton,
+		okButtonText,
+		cancelButtonText,
+		defaultFocus = 'cancel',
+		...rest
+	} = props;
 	const { formatMessage } = useIntl();
+	const cancelEnabled = Boolean(onCancel) && !disableCancelButton;
+	const okEnabled = Boolean(onOk) && !disableOkButton;
+	// Cancel is the default, so Enter does not accept a destructive confirm. If Cancel is missing or
+	// disabled, focus the enabled OK. A disabled button is never focused.
+	const focusCancel = defaultFocus === 'cancel' ? cancelEnabled : !okEnabled && cancelEnabled;
 	return (
 		<AlertDialog
 			// The backdrop or escape should trigger the onCancel (this action is likely the one that won't cause data
@@ -35,12 +49,24 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
 			buttons={
 				<>
 					{onOk && (
-						<PrimaryButton onClick={onOk} autoFocus fullWidth size="large" disabled={disableOkButton}>
+						<PrimaryButton
+							onClick={onOk}
+							autoFocus={okEnabled && !focusCancel}
+							fullWidth
+							size="large"
+							disabled={disableOkButton}
+						>
 							{okButtonText ?? formatMessage(translations.accept)}
 						</PrimaryButton>
 					)}
 					{onCancel && (
-						<SecondaryButton onClick={onCancel} fullWidth size="large" disabled={disableCancelButton}>
+						<SecondaryButton
+							onClick={onCancel}
+							autoFocus={focusCancel}
+							fullWidth
+							size="large"
+							disabled={disableCancelButton}
+						>
 							{cancelButtonText ?? formatMessage(translations.cancel)}
 						</SecondaryButton>
 					)}

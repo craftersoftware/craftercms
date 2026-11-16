@@ -2622,6 +2622,44 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
+    /api/2/management/sites:
+        get:
+            security:
+                -   managementTokenHeader: [ ]
+            tags:
+                - sites
+            summary: List sites for serverless delivery
+            description: "Module: Studio. Returns site ids that delivery should serve. A site with staging enabled is followed by {siteId}-staging."
+            operationId: getDeliverableSites
+            parameters:
+                -   name: X-Crafter-Management-Token
+                    in: header
+                    description: Management token. Must match studio.configuration.management.siteManagementToken. A token query parameter is ignored.
+                    required: true
+                    schema:
+                        type: string
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    response:
+                                        $ref: '#/components/schemas/ApiResponse'
+                                    sites:
+                                        type: array
+                                        items:
+                                            type: string
+                                        example:
+                                            - editorial
+                                            - editorial-staging
+                '401':
+                    $ref: '#/components/responses/Unauthorized'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+
     /api/2/monitoring/version:
         get:
             tags:
@@ -8646,6 +8684,11 @@ components:
                   * `CODE:` 54000, `MESSAGE:` The profile was not found, `REMEDIAL ACTION:` Check if you sent in the right profileId name
                   * `CODE:` 55000, `MESSAGE:` System is in maintenance mode, `REMEDIAL ACTION:` Please wait for the maintenance window to complete or contact your system administrator for more information
                   * `CODE:` 56000, `MESSAGE:` The content type cannot be deleted because it is still in use by content items, `REMEDIAL ACTION:` Check if you sent in the right content type id or add 'deleteDependencies' to force delete
+                  * `CODE:` 57000, `MESSAGE:` Previous and next items do not have the same parent, `REMEDIAL ACTION:` Reorder using items that belong to the same folder
+                  * `CODE:` 57001, `MESSAGE:` Reference item does not have an order value, `REMEDIAL ACTION:` Set an order value on the reference item before reordering
+                  * `CODE:` 57002, `MESSAGE:` Previous item order is greater than the next item order, `REMEDIAL ACTION:` Provide a previous item whose order is lower than the next item
+                  * `CODE:` 57003, `MESSAGE:` Previous and next items have the same order value, `REMEDIAL ACTION:` Assign distinct order values to the reference items before reordering
+                  * `CODE:` 57004, `MESSAGE:` Cannot calculate an order without a reference item, `REMEDIAL ACTION:` Provide a previous path, a next path, or both
             properties:
                 code:
                     type: integer
@@ -11372,6 +11415,10 @@ components:
             type: apiKey
             in: query
             name: token
+        managementTokenHeader:
+            type: apiKey
+            in: header
+            name: X-Crafter-Management-Token
     links: { }
     callbacks: { }
 security:

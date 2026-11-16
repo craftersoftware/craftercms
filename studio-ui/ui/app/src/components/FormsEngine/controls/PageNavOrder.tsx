@@ -35,7 +35,8 @@ import Typography from '@mui/material/Typography';
 import useSpreadState from '../../../hooks/useSpreadState';
 import { ApiResponse } from '../../../models';
 import { SortableList, type TItem } from '../components/SortableList';
-import { useItemContext, useItemMetaContext, useStableFormContext } from '../lib/formsEngineContext';
+import { useItemMetaContext, useStableFormContext } from '../lib/formsEngineContext';
+import { useFormItemLabel, useFormItemPath } from '../lib/formItem';
 import { DialogFooter } from '../../DialogFooter';
 import SecondaryButton from '../../SecondaryButton';
 import PrimaryButton from '../../PrimaryButton';
@@ -53,14 +54,63 @@ import { getParentPath } from '../../../utils/path';
 import { nou } from '../../../utils/object';
 import { PrimitiveAtom, useAtomValue, useStore } from 'jotai';
 import { XmlKeys } from '../lib/formConsts';
+import { useControlAria } from '../components/useControlAria';
+import visuallyHidden from '@mui/utils/visuallyHidden';
 
 export type PageNavOrderProps = ControlProps<boolean>;
 
 const ORDER_DEFAULT_FIELD_ID = 'orderDefault_f';
 
+function PageNavChoices({
+	value,
+	onChange,
+	readonly,
+	autoFocus
+}: {
+	value: boolean;
+	onChange(event: ChangeEvent<HTMLInputElement>, selected: string): void;
+	readonly: boolean;
+	autoFocus?: boolean;
+}) {
+	// The radios are a group, so required is a description, not aria-required.
+	const aria = useControlAria();
+	return (
+		<RadioGroup
+			row
+			aria-invalid={aria['aria-invalid']}
+			aria-labelledby={aria['aria-labelledby']}
+			aria-describedby={aria['aria-describedby']}
+			value={String(value)}
+			onChange={onChange}
+			sx={{ display: 'inline-flex' }}
+			autoFocus={autoFocus}
+		>
+			{aria.requiredId && (
+				<Box component="span" id={aria.requiredId} sx={visuallyHidden}>
+					<FormattedMessage defaultMessage="Required" />
+				</Box>
+			)}
+			<FormControlLabel
+				value="false"
+				control={<Radio />}
+				label={<FormattedMessage defaultMessage="No" />}
+				disabled={readonly}
+			/>
+			<FormControlLabel
+				value="true"
+				control={<Radio />}
+				label={<FormattedMessage defaultMessage="Yes" />}
+				disabled={readonly}
+			/>
+		</RadioGroup>
+	);
+}
+
 export function PageNavOrder(props: PageNavOrderProps) {
-	const { value, setValue, field, autoFocus, readonly: formReadonly } = props;
-	const htmlId = useId();
+	const { value, setValue, field, autoFocus, readonly: formReadonly, labelId: labelIdProp } = props;
+	// The group is a div, so the label's htmlFor cannot name it. The label id does.
+	const generatedLabelId = useId();
+	const labelId = labelIdProp || generatedLabelId;
 	const orderDialogState = useEnhancedDialogState();
 	const { formatMessage } = useIntl();
 	const [pagesOrderState, setPagesOrderState] = useSpreadState<{
@@ -74,7 +124,8 @@ export function PageNavOrder(props: PageNavOrderProps) {
 		order: null,
 		changedOrder: false
 	});
-	const contextItem = useItemContext();
+	const itemPath = useFormItemPath();
+	const itemLabel = useFormItemLabel();
 	const { pathInSite, contentType } = useItemMetaContext();
 	const siteId = useActiveSiteId();
 	const dispatch = useDispatch();
@@ -83,14 +134,13 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	const fileName = useAtomValue(formContext.atoms.fileName as PrimitiveAtom<string>);
 	const internalName = useAtomValue(formContext.atoms.valueByFieldId[XmlKeys.internalName] as PrimitiveAtom<string>);
 	// Create mode has no ContentItem yet — compose the eventual path from the create folder + file name.
-	const currentPath =
-		contextItem?.path ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
-	const pageLabel = contextItem?.label || internalName || fileName || currentPath || '';
+	const currentPath = itemPath ?? (fileName ? composePathForType(pathInSite, fileName, contentType) : undefined);
+	const pageLabel = itemLabel || internalName || fileName || currentPath || '';
 	const orderDefaultAtom = formContext.atoms.valueByFieldId[ORDER_DEFAULT_FIELD_ID] as
 		PrimitiveAtom<number | string | null | undefined> | undefined;
 	if (!orderDefaultAtom) {
 		throw new Error(
-			`The Place in Nav field "${field.id}" cannot be displayed because its companion field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
+			`The Place in Nav field "${field.id}" cannot be displayed because its additional field "${ORDER_DEFAULT_FIELD_ID}" was not initialized. This usually means the content type definition for this field is incomplete or misconfigured.  Try reloading the form; if the problem persists, please contact your administrator.`
 		);
 	}
 	const effectRefs = useUpdateRefs({
@@ -174,7 +224,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 	};
 
 	return (
-		<FormsEngineField htmlFor={htmlId} field={field}>
+		<FormsEngineField field={field} labelId={labelId}>
 			{nou(currentPath) && (
 				<Alert severity="warning" variant="outlined" sx={{ my: 1 }}>
 					<FormattedMessage defaultMessage="This element doesn't have an identifier yet. You can't edit the navigation order until it has an identifier." />
@@ -187,26 +237,7 @@ export function PageNavOrder(props: PageNavOrderProps) {
 					gap: 2
 				}}
 			>
-				<RadioGroup
-					row
-					value={String(value)}
-					onChange={handleChange}
-					sx={{ display: 'inline-flex' }}
-					autoFocus={autoFocus}
-				>
-					<FormControlLabel
-						value="false"
-						control={<Radio />}
-						label={<FormattedMessage defaultMessage="No" />}
-						disabled={readonly}
-					/>
-					<FormControlLabel
-						value="true"
-						control={<Radio />}
-						label={<FormattedMessage defaultMessage="Yes" />}
-						disabled={readonly}
-					/>
-				</RadioGroup>
+				<PageNavChoices value={value} onChange={handleChange} readonly={readonly} autoFocus={autoFocus} />
 
 				{value && (
 					<Button

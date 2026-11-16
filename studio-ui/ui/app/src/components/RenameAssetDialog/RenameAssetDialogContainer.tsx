@@ -140,7 +140,6 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 				<RenameItemView
 					name={name}
 					disabled={renameDisabled}
-					newNameExists={assetExists}
 					fetchDependant={fetchDependant}
 					dependantItems={dependantItems}
 					isSubmitting={isSubmitting}
@@ -150,6 +149,7 @@ export function RenameAssetDialogContainer(props: RenameAssetContainerProps) {
 					setConfirmBrokenReferences={setConfirmBrokenReferences}
 					onRename={onRenameSubmit}
 					onInputChanges={(event) => onInputChanges(applyAssetNameRules(event.target.value, { allowBraces }))}
+					nameInvalid={assetExists}
 					helperText={
 						assetExists ? (
 							<FormattedMessage

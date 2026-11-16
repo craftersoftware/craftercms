@@ -22,7 +22,7 @@ import { nou } from '../../../utils/object';
 import { ContentType, ContentTypeField } from '../../../models';
 import LookupTable from '../../../models/LookupTable';
 import PickFieldDialog from './PickFieldDialog';
-import { DescriptorContentType } from '../utils';
+import { DescriptorContentType, isRootOnlyControl } from '../utils';
 import { ContentTypeManagementConfig } from './EditTypeView';
 import { systemFieldsIds } from '../../../utils/constants';
 
@@ -83,7 +83,10 @@ export function PickControlDialog(props: PickControlDialogProps) {
 			return configControls?.[type.id] && !(controlExclusions ?? []).includes(type.id);
 		}),
 		...(configDescriptors ?? [])
-	].filter((controlType) => !(fieldIdPath && controlType.metadata?.rootOnly));
+	].filter((controlType) => {
+		if (!fieldIdPath) return true;
+		return !isRootOnlyControl(controlType);
+	});
 
 	return (
 		<PickFieldDialog

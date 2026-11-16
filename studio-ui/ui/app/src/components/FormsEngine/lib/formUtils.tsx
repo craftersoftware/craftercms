@@ -21,6 +21,7 @@ import validateFieldValue, { FieldValidityState } from './validators';
 import { getPropertyValue } from './fieldPropertyUtils';
 import { catchError, forkJoin, map, Observable, of, Subject, switchMap } from 'rxjs';
 import {
+	FieldUpdate,
 	FormRequirementsResponse,
 	FormsEngineAtoms,
 	FormsEngineEditContextProps,
@@ -37,7 +38,7 @@ import { fetchAffectedPackages } from '../../../services/workflow';
 import { Dispatch as ReduxDispatch } from 'redux';
 import { IntlShape } from 'react-intl';
 import { showSystemNotification, showUnlockItemSuccessNotification } from '../../../state/actions/system';
-import { atom, Atom, PrimitiveAtom, useAtomValue, useStore as useJotaiStore } from 'jotai';
+import { atom, Atom, Getter, PrimitiveAtom, Setter, useAtomValue, useStore as useJotaiStore } from 'jotai';
 import React, {
 	ReactNode,
 	RefObject,
@@ -101,7 +102,7 @@ import {
 import { createComponentId } from '../../../utils/system';
 import { showErrorDialog } from '../../../state/actions/dialogs';
 import { ensureSingleSlash } from '../../../utils/string';
-import { createObjectGroupId, isPagePath } from '../../../utils/path';
+import { createObjectGroupId, getFileNameFromPath, isPagePath } from '../../../utils/path';
 import { nnou, nou } from '../../../utils/object';
 import {
 	postUnlockKeepalive,
@@ -114,6 +115,35 @@ import {
 } from './unlockOnClose';
 import type { DescriptorContentType } from '../../ContentTypeManagement/utils';
 import controlDescriptors from '../../ContentTypeManagement/descriptors/controls';
+
+/**
+ * Value written to the `<folder-name>` element on save. Matches FE1 and the backend copy-collision
+ * path: the page folder slug for content-as-folder paths (`about`; home → `''`), empty otherwise.
+ **/
+export function folderNameElementForXml(path: string): string {
+	return isPagePath(path) ? getFileNameValueFromPath(path, true) : '';
+}
+
+/**
+ * Path-derived `<file-name>` / `<folder-name>` for a repository save XML copy. Matches FE1/XB/blueprints:
+ * basename with extension (`index.xml`, `foo.xml`) and the page folder slug (empty for home / non-pages).
+ * Spread onto a copy for `buildContentXml`; leave the form's UI slug on `values`.
+ **/
+export function xmlFileNamesForPath(path: string) {
+	return {
+		[XmlKeys.fileName]: getFileNameFromPath(path),
+		[XmlKeys.folderName]: folderNameElementForXml(path)
+	};
+}
+
+/**
+ * `<file-name>` for an embedded component save. Keeps the stored element (as FE1's auto-filename does)
+ * and falls back to `{objectId}.xml` only when it has none. Callers that merge `values` (e.g. NodeSelector)
+ * assign this onto `values` in place before `buildContentXml`.
+ **/
+export function embeddedFileName(objectId: string, stored?: string | null): string {
+	return stored || `${objectId}.xml`;
+}
 
 /**
  * Returns the scroll container for the form's container.
@@ -293,6 +323,15 @@ export type ValidatorsData = {
 	currentIds?: string[];
 	/** `additionalFields` templates from the field's descriptor; expands the candidate variable name. */
 	additionalFields?: string[];
+	/**
+	 * Site-config variable-name postfix rules for a top-level Type Builder field form.
+	 * Omitted for nested fields, data sources, and when `<field-name-postfix>` is not `true`.
+	 */
+	fieldNamePostfix?: {
+		enabled: boolean;
+		ignoreFields: string[];
+		suffixes: string[];
+	};
 	/** Resolves an embedded component's own form-controller deny-list. See `formControllers/relevance.ts`. */
 	resolveEmbeddedRelevance?: (
 		contentType: ContentType,
@@ -303,41 +342,188 @@ export type ValidatorsData = {
 
 type FieldTrackingContext = Pick<
 	StableFormContextProps,
-	'fieldUpdates$' | 'changedFieldIds' | 'originalValues' | 'atoms' | 'itemMeta' | 'formControllerState'
+	| 'fieldUpdates$'
+	| 'changedFieldIds'
+	| 'originalValues'
+	| 'atoms'
+	| 'itemMeta'
+	| 'formControllerState'
+	| 'valueWriteOrigin'
 >;
 
 /**
- * Records whether `field` differs from the value it was opened with.
- * `file-name` is compared to the original path; every other field is compared to `originalValues`.
- * Callers pass the value just written. Does not emit — the writer does that once.
+ * The shared "nothing changed" set. Set it on {@link ChangedFieldIdsAtom} to clear every changed marker (a save
+ * checkpoint, a Type Builder commit), and {@link withChangedField} returns it when the last id is removed, so
+ * "nothing changed" is always this one reference.
+ *
+ * Never add to it. `Object.freeze` does not stop a `Set` from being mutated; the `ReadonlySet` type is what keeps it
+ * empty, so treat every changed-ids set as immutable.
+ *
+ * @example
+ * ```ts
+ * store.set(stableFormContext.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
+ * ```
  */
-function trackFieldChange(field: ContentTypeField, value: unknown, formContext: FieldTrackingContext): void {
+export const EMPTY_CHANGED_FIELD_IDS: ReadonlySet<string> = Object.freeze(new Set<string>());
+
+/**
+ * The atom behind {@link StableFormContextProps.changedFieldIds}: the source of truth for which fields differ from
+ * the last checkpoint. It holds an immutable set whose reference changes only when membership changes, so a write
+ * that leaves the membership alone notifies nothing. Insertion order is the order fields were first changed
+ * (`generateDefaultChangesComment` treats the last one as "last added").
+ *
+ * - Components: subscribe through the cached per-field {@link changedFieldAtom}, not by reading this atom, so only the
+ *   affected field re-renders.
+ * - Imperative code (save, Type Builder commit): `store.get(atom)`.
+ * - Writes: build the next set with {@link withChangedField}. Never mutate the stored set. Clear with
+ *   {@link EMPTY_CHANGED_FIELD_IDS}.
+ *
+ * This is state. The internal `fieldUpdates$` stream is the event side: it announces each value write after this atom
+ * is updated, and does not announce clears.
+ *
+ * @see {@link StableFormContextProps.fieldUpdates$}
+ */
+export type ChangedFieldIdsAtom = PrimitiveAtom<ReadonlySet<string>>;
+
+/**
+ * Creates a changed-ids atom, starting at {@link EMPTY_CHANGED_FIELD_IDS}. One per form stack entry. Atoms are not
+ * tied to a store, so creating one has no side effects.
+ *
+ * @example
+ * ```ts
+ * const changedFieldIds = createChangedFieldIdsAtom();
+ * store.get(changedFieldIds) === EMPTY_CHANGED_FIELD_IDS; // true
+ * ```
+ *
+ * @see {@link ChangedFieldIdsAtom}
+ */
+export function createChangedFieldIdsAtom(): ChangedFieldIdsAtom {
+	return atom(EMPTY_CHANGED_FIELD_IDS);
+}
+
+const changedFieldAtomsByIds = new WeakMap<ChangedFieldIdsAtom, Map<string, Atom<boolean>>>();
+// A context created without the atom (Type Builder's read-only chips) has nothing to track.
+const neverChanged: Atom<boolean> = atom(false);
+
+/**
+ * Whether `fieldId` (or any of its additional field ids) differs from the last checkpoint: a derived
+ * boolean atom over the changed-ids atom. Cached per changed-ids atom, field id, and related-id set (like the value
+ * and validation atoms), so the same call returns the same atom, and a subscriber is notified only when its own
+ * flag flips, not when an unrelated field is added or removed.
+ *
+ * Pass additional field ids from {@link getAdditionalFieldIds} so a control that owns hidden additional fields (e.g.
+ * `orderDefault_f` for Place in Nav, `{id}_tz` for Date/Time) still shows the changed chrome when only the additional
+ * field was written.
+ *
+ * This is the way React components read the changed state. Imperative code reads the changed-ids atom with
+ * `store.get` instead. Pass `null` (Type Builder's read-only chips have no changed-ids atom) to get a constant
+ * `false` atom.
+ *
+ * @example
+ * ```tsx
+ * // In a component: re-renders only when this field's flag flips
+ * const hasChanges = useAtomValue(changedFieldAtom(stableForm.changedFieldIds, field.id, additionalFieldIds));
+ * ```
+ *
+ * @param changedFieldIds The form's changed-ids atom, or null/undefined when the form tracks nothing.
+ * @param fieldId The field to watch.
+ * @param relatedFieldIds Optional additional field ids that should also light up this field's chrome.
+ * @see {@link ChangedFieldIdsAtom}
+ */
+export function changedFieldAtom(
+	changedFieldIds: ChangedFieldIdsAtom | null | undefined,
+	fieldId: string,
+	relatedFieldIds?: readonly string[]
+): Atom<boolean> {
+	if (!changedFieldIds) return neverChanged;
+	let byField = changedFieldAtomsByIds.get(changedFieldIds);
+	if (!byField) {
+		byField = new Map();
+		changedFieldAtomsByIds.set(changedFieldIds, byField);
+	}
+	const related = relatedFieldIds?.length ? relatedFieldIds : undefined;
+	const cacheKey = related ? `${fieldId}\0${related.join('\0')}` : fieldId;
+	let fieldAtom = byField.get(cacheKey);
+	if (!fieldAtom) {
+		fieldAtom = atom((get) => {
+			const ids = get(changedFieldIds);
+			if (ids.has(fieldId)) return true;
+			return related ? related.some((id) => ids.has(id)) : false;
+		});
+		byField.set(cacheKey, fieldAtom);
+	}
+	return fieldAtom;
+}
+
+/**
+ * The next changed-ids set after `fieldId` was found changed or not. This is how a writer updates the set: it never
+ * mutates `ids`.
+ *
+ * Returns `ids` itself (same reference) when the membership already matches, so the caller can skip the write and
+ * nothing is notified. Otherwise returns a copy with `fieldId` added last (insertion order is preserved) or removed,
+ * and {@link EMPTY_CHANGED_FIELD_IDS} when the copy would be empty.
+ *
+ * @example
+ * ```ts
+ * const current = get(changedFieldIds);
+ * const next = withChangedField(current, field.id, value !== original);
+ * if (next !== current) set(changedFieldIds, next);
+ * ```
+ *
+ * @param ids The current set. Not modified.
+ * @param fieldId The field whose state was just evaluated.
+ * @param changed Whether the field now differs from the checkpoint.
+ */
+export function withChangedField(ids: ReadonlySet<string>, fieldId: string, changed: boolean): ReadonlySet<string> {
+	if (ids.has(fieldId) === changed) return ids;
+	const next = new Set(ids);
+	if (changed) next.add(fieldId);
+	else next.delete(fieldId);
+	return next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next;
+}
+
+/**
+ * Records whether `field` differs from the value it was opened with, by updating the changed-ids atom (only when the
+ * membership changes; see {@link withChangedField}).
+ * `file-name` is compared to the original path; every other field is compared to `originalValues`.
+ * Callers pass the value just written, and call this before emitting on `fieldUpdates$` so synchronous subscribers
+ * read the new set. It does not emit — the writer does that once.
+ */
+function trackFieldChange(
+	field: ContentTypeField,
+	value: unknown,
+	formContext: FieldTrackingContext,
+	get: Getter,
+	set: Setter
+): void {
+	let changed: boolean;
 	if (field.id === XmlKeys.fileName) {
 		const currentFileName = value as string;
 		const originalPath = formContext.itemMeta.path;
-
 		if (nou(originalPath)) {
 			// If no originalPath exists => creating content
-			if (currentFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			changed = Boolean(currentFileName);
 		} else {
 			// If originalPath exists, validate if differs from original value
-			const isPage = isPagePath(originalPath);
-			const originalFileName = getFileNameValueFromPath(originalPath, isPage);
-			if (currentFileName !== originalFileName) {
-				formContext.changedFieldIds.add(field.id);
-			} else {
-				formContext.changedFieldIds.delete(field.id);
-			}
+			const originalFileName = getFileNameValueFromPath(originalPath, isPagePath(originalPath));
+			changed = currentFileName !== originalFileName;
 		}
-	} else if (value !== formContext.originalValues[field.id]) {
-		formContext.changedFieldIds.add(field.id);
 	} else {
-		formContext.changedFieldIds.delete(field.id);
+		changed = value !== formContext.originalValues[field.id];
 	}
+	const current = get(formContext.changedFieldIds);
+	const next = withChangedField(current, field.id, changed);
+	if (next !== current) set(formContext.changedFieldIds, next);
+}
+
+/** Makes `values` the checkpoint that edits are compared with, and clears every changed marker. */
+export function applyValuesCheckpoint(
+	context: Pick<StableFormContextProps, 'originalValues' | 'changedFieldIds'>,
+	values: LookupTable<unknown>,
+	set: Setter
+): void {
+	context.originalValues = values;
+	set(context.changedFieldIds, EMPTY_CHANGED_FIELD_IDS);
 }
 
 function applyAtomUpdate<T>(
@@ -346,6 +532,12 @@ function applyAtomUpdate<T>(
 	update: SetStateAction<T>
 ): T {
 	return typeof update === 'function' ? (update as (prev: T) => T)(get(baseAtom)) : update;
+}
+
+/** A value write. `origin` is set only while rollback or a controller `setValue` is in progress. */
+function fieldUpdate(fieldId: string, formContext: FieldTrackingContext): FieldUpdate {
+	const origin = formContext.valueWriteOrigin;
+	return origin ? { fieldId, origin } : { fieldId };
 }
 
 /**
@@ -371,8 +563,8 @@ function createTrackedFileNameAtom(
 			}
 			const field =
 				formContext.itemMeta?.contentType?.fields?.[XmlKeys.fileName] ?? ({ id: XmlKeys.fileName } as ContentTypeField);
-			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(XmlKeys.fileName);
+			trackFieldChange(field, next, formContext, get, set);
+			formContext.fieldUpdates$.next(fieldUpdate(XmlKeys.fileName, formContext));
 		}
 	);
 }
@@ -402,8 +594,8 @@ export function createFieldAtoms(
 				}
 				return;
 			}
-			trackFieldChange(field, next, formContext);
-			formContext.fieldUpdates$.next(field.id);
+			trackFieldChange(field, next, formContext, get, set);
+			formContext.fieldUpdates$.next(fieldUpdate(field.id, formContext));
 		}
 	);
 	const validationAtom = atom(async (get, { signal }) => {
@@ -418,6 +610,7 @@ export function createFieldAtoms(
 			siblingIds: validatorsData?.siblingIds,
 			currentIds: validatorsData?.currentIds,
 			additionalFields: validatorsData?.additionalFields,
+			fieldNamePostfix: validatorsData?.fieldNamePostfix,
 			signal,
 			itemMeta: formContextRef.current.itemMeta as FormsEngineItemMetaContextProps,
 			// Read at validation time. `validatorsData` is captured at bootstrap, before relevance exists.
@@ -516,18 +709,23 @@ export const computePathFromFileName = (fileName: string, isPage: boolean, baseP
 	return ensureSingleSlash(`${basePath}/${fullFileName}`);
 };
 
+/**
+ * A new stack entry's data: no atoms yet, an empty changed-ids atom ({@link createChangedFieldIdsAtom}) and a new
+ * `fieldUpdates$` stream of {@link FieldUpdate}s. `mixin` overrides any of the defaults.
+ */
 export function createFormStackData(mixin?: Partial<StableFormContextProps>): StableFormContextProps {
 	const data: StableFormContextProps = {
 		atoms: null,
 		itemFormMode: null,
-		changedFieldIds: new Set<string>(),
-		fieldUpdates$: new Subject<string>(),
+		changedFieldIds: createChangedFieldIdsAtom(),
+		fieldUpdates$: new Subject<FieldUpdate>(),
 		itemMeta: null,
 		originalValues: null,
 		props: null,
 		state: null,
 		affectedPluginControlFields: [],
 		formControllerState: null,
+		getItem: () => null,
 		...mixin
 	};
 	return data;
@@ -881,10 +1079,11 @@ export function setFieldAtoms(
 	// after a rename done outside the form, or when the element is missing.
 	// `fileNameValidator` validates only the field's own value (#9327 removed `fileName` from the validator
 	// context), so the value must start from the path. Starting from the XML would validate a name that save
-	// never uses.
-	// Decision: the path wins. On edit the form shows and validates the path-derived name. Save leaves `file-name`
-	// out of the XML it builds, so a differing XML element is omitted on the next save. The backend writes it
-	// again only on a copy collision.
+	// never uses for the path.
+	// Decision: the path wins for the form. On edit the form shows and validates the path-derived slug.
+	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
+	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
+	// copy collision.
 	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
 	const initialValue =
 		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
@@ -1175,13 +1374,16 @@ export function useUnlockOnClose(props: {
 
 /**
  * Generates a simple "save comment" stating the fields that having been modified.
+ * Additional field ids (e.g. `orderDefault_f`) resolve to their parent control's name and are deduped
+ * against that parent when both appear in `changedFieldIds`.
  * TODO: plugin AI, or improve/revise comment generation.
  **/
 export function generateDefaultChangesComment(
 	contentTypeFields: LookupTable<ContentTypeField>,
 	fields: ContentTypeField[],
-	changedFieldIds: Set<string>,
-	currentMessage: string
+	changedFieldIds: ReadonlySet<string>,
+	currentMessage: string,
+	customControls?: LookupTable<DescriptorContentType>
 ): string | undefined {
 	let namedFields = contentTypeFields;
 	if (fields) {
@@ -1190,9 +1392,18 @@ export function generateDefaultChangesComment(
 			namedFields[field.id] = field;
 		});
 	}
-	const fieldsChangedNames: string[] = Array.from(changedFieldIds).flatMap(
-		(fieldId) => namedFields[fieldId]?.name ?? []
+	const additionalFieldParents = mapAdditionalFieldsToParents(
+		fields ?? Object.values(contentTypeFields),
+		customControls
 	);
+	const seenParentIds = new Set<string>();
+	const fieldsChangedNames: string[] = [];
+	for (const fieldId of changedFieldIds) {
+		const field = namedFields[fieldId] ?? additionalFieldParents[fieldId];
+		if (!field || seenParentIds.has(field.id)) continue;
+		seenParentIds.add(field.id);
+		fieldsChangedNames.push(field.name);
+	}
 	const newMessage = produceChangedFieldsMessage(fieldsChangedNames);
 	if (
 		// If message is blank, no point in checking if the user has altered the message.
@@ -1263,6 +1474,10 @@ export function stackEntryAtoms(entry: { atoms: FormsEngineAtoms | null } | null
 	return hasFormAtoms(entry) ? entry.atoms : null;
 }
 
+/**
+ * The top stacked form's submit, pending-changes and readonly state, read from the store. Pending includes any changed
+ * field id, not only the `hasPendingChanges` flag. Readonly when the entry has no atoms yet.
+ */
 export function getCurrentChildFormStateSummary(
 	store: JotaiStore,
 	formsStackData: StableGlobalContextProps['formsStackData']
@@ -1276,7 +1491,8 @@ export function getCurrentChildFormStateSummary(
 	return {
 		isSubmitting: store.get(atoms.isSubmitting),
 		hasPendingChanges:
-			store.get(atoms.hasPendingChanges) || formsStackData[formsStackData.length - 1].changedFieldIds.size > 0,
+			store.get(atoms.hasPendingChanges) ||
+			store.get(formsStackData[formsStackData.length - 1].changedFieldIds).size > 0,
 		readonly: store.get(atoms.readonly)
 	};
 }
@@ -1466,6 +1682,41 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
 	const additionalFields = descriptor.metadata?.additionalFields ?? [];
 	return additionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
+}
+
+/**
+ * Additional field ids declared by `field`'s control descriptor after `{id}` expansion.
+ * Empty when the control type has no descriptor or no `additionalFields` metadata.
+ */
+export function getAdditionalFieldIds(
+	field: ContentTypeField,
+	customControls?: LookupTable<DescriptorContentType>
+): string[] {
+	const descriptor = resolveControlDescriptors(customControls)[field.type];
+	return descriptor ? getAdditionalFieldsIdsFromDescriptor(field.id, descriptor) : [];
+}
+
+/**
+ * Maps each additional field id to its parent content-type field.
+ * Used so dirty chrome and the default version comment attribute additional field writes (e.g. `orderDefault_f`) to the
+ * visible parent control. An id that already belongs to a content-type field is not overwritten when building the
+ * name lookup; callers still prefer `namedFields[id]` first.
+ * Pass `customControls` so configured (ui.xml) controls with `additionalFields` are included alongside code defaults.
+ */
+export function mapAdditionalFieldsToParents(
+	fields: ContentTypeField[],
+	customControls?: LookupTable<DescriptorContentType>
+): LookupTable<ContentTypeField> {
+	const descriptors = resolveControlDescriptors(customControls);
+	const map: LookupTable<ContentTypeField> = {};
+	for (const field of fields) {
+		const descriptor = descriptors[field.type];
+		if (!descriptor) continue;
+		for (const additionalFieldId of getAdditionalFieldsIdsFromDescriptor(field.id, descriptor)) {
+			if (!(additionalFieldId in map)) map[additionalFieldId] = field;
+		}
+	}
+	return map;
 }
 
 /**

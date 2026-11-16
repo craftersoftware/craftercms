@@ -22,10 +22,12 @@ import { describe, it } from 'node:test';
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { act } = await import('react');
-const { IntlProvider } = await import('react-intl');
+const { RawIntlProvider } = await import('react-intl');
+const { createTestIntl } = await import('../../../../test/createTestIntl.mjs');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { atom } = await import('jotai');
+const { createChangedFieldIdsAtom } = await import('../../FormsEngine/lib/formUtils.tsx');
 const { TypeAllowedRolesSelector } = await import('./TypeAllowedRolesSelector.tsx');
 const { TypeDestinationPathsSelector } = await import('./TypeDestinationPathsSelector.tsx');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
@@ -44,6 +46,7 @@ const validationAtom = atom({ isValid: true });
 function field(id: string, name: string, type: string) {
 	return { id, name, type, defaultValue: [], validations: {}, helpText: '' };
 }
+const intl = createTestIntl();
 
 function Harness(props: { children: React.ReactNode }) {
 	const stable = {
@@ -52,7 +55,7 @@ function Harness(props: { children: React.ReactNode }) {
 			validationByFieldId: { allowedRoles: validationAtom, paths: validationAtom },
 			...createFormVisibilityAtoms()
 		},
-		changedFieldIds: new Set<string>(),
+		changedFieldIds: createChangedFieldIdsAtom(),
 		fieldUpdates$: null,
 		itemMeta: { sourceMap: null },
 		originalValues: {},
@@ -65,8 +68,8 @@ function Harness(props: { children: React.ReactNode }) {
 		Provider,
 		{ store },
 		React.createElement(
-			IntlProvider,
-			{ locale: 'en', messages: {} },
+			RawIntlProvider,
+			{ value: intl },
 			React.createElement(
 				StableGlobalContext.Provider,
 				{ value: { formsStackData: [], api: {} } },

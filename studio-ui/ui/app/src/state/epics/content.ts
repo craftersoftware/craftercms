@@ -253,13 +253,13 @@ const content: CrafterCMSEpic[] = [
 									if (followUps.length) store.dispatch(batchActions(followUps));
 								}
 							})
-						])
+						]),
+						catchAjaxError(
+							() => unblockUI(),
+							(error) => pushErrorDialog({ props: { error: error.response } })
+						)
 					)
 				)
-			),
-			catchAjaxError(
-				() => unblockUI(),
-				(error) => pushErrorDialog({ props: { error: error.response } })
 			)
 		),
 	// endregion
@@ -421,7 +421,8 @@ const content: CrafterCMSEpic[] = [
 								}
 							});
 						}
-					})
+					}),
+					catchAjaxError((error) => pushErrorDialog({ props: { error: error.response } }))
 				)
 			)
 		),

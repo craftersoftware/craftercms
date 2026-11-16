@@ -27,7 +27,7 @@ import { StableFormContext, StableFormContextProps } from '../../FormsEngine/lib
 import { createStableFormContextProps, createVirtualDataSourceFields, createVirtualSection } from '../utils';
 import ErrorBoundary from '../../ErrorBoundary';
 import Box from '@mui/material/Box';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
@@ -76,6 +76,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 		performCurrentFormErrorCheckAndWarning
 	} = props;
 
+	const { formatMessage } = useIntl();
 	const store = useMemo(() => createStore(), []); // TODO: Use stable memo?
 	const stableFormContextRef = useRef<StableFormContextProps>(null);
 	if (stableFormContextRef.current === null)
@@ -155,12 +156,12 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 						</Button>
 						<div>
 							<Divider orientation="vertical" flexItem />
-							<Tooltip title={<FormattedMessage defaultMessage="Expand All" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Expand All' })}>
 								<IconButton onClick={handleExpandAllSections}>
 									<UnfoldMore />
 								</IconButton>
 							</Tooltip>
-							<Tooltip title={<FormattedMessage defaultMessage="Collapse All" />}>
+							<Tooltip title={formatMessage({ defaultMessage: 'Collapse All' })}>
 								<IconButton onClick={handleCollapseAllSections}>
 									<UnfoldLess />
 								</IconButton>
@@ -197,7 +198,7 @@ export function TypeDetailsView(props: TypeDetailsViewProps) {
 						>
 							<Box sx={{ position: 'absolute', top: 15, right: 10 }}>
 								{section.fields?.length > 0 && (
-									<Tooltip title={<FormattedMessage defaultMessage="Reorder fields" />}>
+									<Tooltip title={formatMessage({ defaultMessage: 'Reorder fields' })}>
 										<IconButton onClick={() => setReorderSectionId(section.id)}>
 											<MoveDownIcon />
 										</IconButton>

@@ -18,7 +18,6 @@ import { createTheme, ThemeOptions } from '@mui/material/styles';
 import palette from './palette';
 
 export const backgroundColor = palette.gray.light1;
-export const RedColor = palette.red.main;
 
 export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palette']['mode'] }) {
 	const defaultTheme = createTheme({ palette: { mode } });
@@ -54,16 +53,12 @@ export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palett
 			},
 			MuiFormLabel: {
 				styleOverrides: {
-					asterisk: {
-						color: RedColor
-					}
+					asterisk: ({ theme }) => ({ color: theme.palette.error.main })
 				}
 			},
 			MuiTabs: {
 				styleOverrides: {
-					indicator: {
-						backgroundColor: palette.blue.main
-					}
+					indicator: ({ theme }) => ({ backgroundColor: theme.palette.primary.main })
 				}
 			},
 			MuiAccordion: {

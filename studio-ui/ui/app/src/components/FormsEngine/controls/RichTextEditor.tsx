@@ -14,8 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import { FormsEngineField } from '../components/FormsEngineField';
+import { FieldAriaGroup } from '../components/useControlAria';
 import { ControlProps } from '../types';
 import useRTEConfig from '../../../hooks/useRTEConfig';
 import { initRichTextEditorConfig } from '../../../state/actions/preview';
@@ -32,6 +33,7 @@ import { getPropertyValue } from '../lib/formUtils';
 import { loadAceEditorAssets } from '../../../utils/system';
 import { FormsEngineDialogContext } from '../lib/formsEngineContext';
 import { getTinyMceInitOptions, type OpenRteDataSourcePicker } from '../lib/rteUtils';
+import { type FieldControlA11y, fieldDescribedById, useFieldControlA11y } from '../lib/fieldA11y';
 import { getCurrentLocale } from '../../../utils/i18n';
 import Dialog from '@mui/material/Dialog';
 import MenuList from '@mui/material/MenuList';
@@ -47,6 +49,18 @@ export interface RichTextEditorProps extends ControlProps<string> {
 
 const tinymceScriptSrc = '/studio/static-assets/libs/tinymce/tinymce.min.js';
 
+/**
+ * TinyMCE hides the textarea and edits in an iframe, so the field's description and invalid state go on the iframe.
+ * `aria-required` is not allowed on an iframe, so it is not set.
+ */
+function linkEditorIframe(iframe: HTMLIFrameElement | null | undefined, a11y: FieldControlA11y) {
+	if (!iframe) return;
+	const set = (name: string, value: string | undefined) =>
+		value ? iframe.setAttribute(name, value) : iframe.removeAttribute(name);
+	set('aria-describedby', a11y['aria-describedby']);
+	set('aria-invalid', a11y['aria-invalid'] ? 'true' : undefined);
+}
+
 declare global {
 	interface Window {
 		tinymce: TinyMCE;
@@ -54,11 +68,23 @@ declare global {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-	const { field, value, setValue, readonly, defaultInitOptions, dataSources } = props;
+	const { field, value, setValue, readonly, defaultInitOptions, dataSources, inputId, labelId } = props;
 	const locale = getCurrentLocale();
 	const rteConfig = useRTEConfig();
 	const editorRef = useRef<Editor>(undefined);
 	const hasReceivedFocusRef = useRef(false);
+	const generatedId = useId();
+	const controlId = inputId || generatedId;
+	const a11y = useFieldControlA11y(field, fieldDescribedById(labelId, controlId));
+	const describedBy = a11y['aria-describedby'];
+	const invalid = a11y['aria-invalid'];
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+	// Latest committed values, for an editor that finishes initializing after this effect ran.
+	const iframeA11yRef = useRef<FieldControlA11y>({});
+	useEffect(() => {
+		iframeA11yRef.current = { 'aria-describedby': describedBy, 'aria-invalid': invalid };
+		linkEditorIframe(iframeRef.current, iframeA11yRef.current);
+	}, [describedBy, invalid]);
 	const [dataSourcePicker, setDataSourcePicker] = useState<{
 		actions: readonly ResolvedDataSourceAction[];
 		context: DataSourceFieldContext;
@@ -111,11 +137,22 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		setValue(newValue);
 	};
 	if (!rteConfig || !scriptLoaded) {
-		return <FormsEngineField field={field} max={maxLength} length={value.length} children={<ControlSkeleton />} />;
+		return (
+			<FormsEngineField
+				field={field}
+				controlId={controlId}
+				labelId={labelId}
+				max={maxLength}
+				length={value.length}
+				children={<ControlSkeleton />}
+			/>
+		);
 	}
 	return (
 		<FormsEngineField
 			field={field}
+			controlId={controlId}
+			labelId={labelId}
 			max={maxLength}
 			length={currentLength}
 			sx={{
@@ -140,36 +177,41 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				}
 			}}
 		>
-			<Editor
-				licenseKey="gpl"
-				init={getTinyMceInitOptions(
-					field,
-					rteConfig,
-					locale,
-					defaultInitOptions,
-					dataSources,
-					openDataSourcePicker,
-					(editor) => {
-						editor.on('OpenWindow', () => {
-							setDisableEnforceFocus?.(true);
+			<FieldAriaGroup>
+				<Editor
+					licenseKey="gpl"
+					init={getTinyMceInitOptions(
+						field,
+						rteConfig,
+						locale,
+						defaultInitOptions,
+						dataSources,
+						openDataSourcePicker,
+						(editor) => {
+							editor.on('OpenWindow', () => {
+								setDisableEnforceFocus?.(true);
+							});
+							editor.on('CloseWindow', () => {
+								setDisableEnforceFocus?.(false);
+							});
+						}
+					)}
+					tinymceScriptSrc={tinymceScriptSrc}
+					onEditorChange={handleChange}
+					value={value}
+					ref={editorRef}
+					onInit={(event, editor) => {
+						setCurrentLength(editor.getContent({ format: 'text' }).length);
+						editor.once('focus', () => {
+							hasReceivedFocusRef.current = true;
 						});
-						editor.on('CloseWindow', () => {
-							setDisableEnforceFocus?.(false);
-						});
-					}
-				)}
-				tinymceScriptSrc={tinymceScriptSrc}
-				onEditorChange={handleChange}
-				value={value}
-				ref={editorRef}
-				onInit={(event, editor) => {
-					setCurrentLength(editor.getContent({ format: 'text' }).length);
-					editor.once('focus', () => {
-						hasReceivedFocusRef.current = true;
-					});
-				}}
-				disabled={readonly}
-			/>
+						// The iframe exists from here on. Later changes are applied by the effect above.
+						iframeRef.current = editor.iframeElement;
+						linkEditorIframe(editor.iframeElement, iframeA11yRef.current);
+					}}
+					disabled={readonly}
+				/>
+			</FieldAriaGroup>
 			<Dialog open={Boolean(dataSourcePicker)} onClose={() => setDataSourcePicker(null)} fullWidth maxWidth="xs">
 				<DialogHeader
 					title={<FormattedMessage defaultMessage="Choose how to add media" />}

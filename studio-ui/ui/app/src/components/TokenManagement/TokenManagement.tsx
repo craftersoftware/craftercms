@@ -346,6 +346,10 @@ export function TokenManagement() {
 												disabled={checkedCount > 0}
 												checked={false}
 												color="primary"
+												// The actions bar covers the header while anything is checked and has its own select-all.
+												// Hidden, not removed, so the header keeps its height.
+												sx={checkedCount > 0 ? { visibility: 'hidden' } : undefined}
+												slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 												onClick={() => {
 													onToggleSelectAll(true);
 												}}
@@ -381,6 +385,11 @@ export function TokenManagement() {
 												<Checkbox
 													checked={!!checkedLookup[token.id]}
 													color="primary"
+													slotProps={{
+														input: {
+															'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: token.label })
+														}
+													}}
 													onChange={(event, checked) => {
 														onItemChecked(token.id, checked);
 													}}
@@ -447,6 +456,14 @@ export function TokenManagement() {
 													>
 														<Switch
 															checked={token.enabled}
+															slotProps={{
+																input: {
+																	'aria-label': formatMessage(
+																		{ defaultMessage: 'Enable {name}' },
+																		{ name: token.label }
+																	)
+																}
+															}}
 															onChange={(e, checked) => {
 																onSetEnabled(token.id, checked);
 															}}
@@ -461,7 +478,8 @@ export function TokenManagement() {
 														label: token.label
 													})}
 													icon={DeleteIcon}
-													iconTooltip={<FormattedMessage defaultMessage="Delete" />}
+													iconTooltip={formatMessage({ defaultMessage: 'Delete' })}
+													iconLabel={formatMessage({ defaultMessage: 'Delete {name}' }, { name: token.label })}
 													onConfirm={() => {
 														onDeleteToken(token.id);
 													}}

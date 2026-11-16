@@ -220,6 +220,23 @@ public class ApiResponse {
 	public static final ApiResponse CONTENT_TYPE_INVALID_LOCATION = new ApiResponse(56001, "The content type does not allow the specified location",
 			"Check the content type configuration", StringUtils.EMPTY);
 
+	// 57000 - 58000
+	public static final ApiResponse NAV_ORDER_DIFFERENT_PARENT = new ApiResponse(57000,
+		"Previous and next items do not have the same parent",
+		"Reorder using items that belong to the same folder", StringUtils.EMPTY);
+	public static final ApiResponse NAV_ORDER_REFERENCE_MISSING_ORDER = new ApiResponse(57001,
+		"Reference item does not have an order value",
+		"Set an order value on the reference item before reordering", StringUtils.EMPTY);
+	public static final ApiResponse NAV_ORDER_PREVIOUS_GREATER_THAN_NEXT = new ApiResponse(57002,
+		"Previous item order is greater than the next item order",
+		"Provide a previous item whose order is lower than the next item", StringUtils.EMPTY);
+	public static final ApiResponse NAV_ORDER_SAME_VALUE = new ApiResponse(57003,
+		"Previous and next items have the same order value",
+		"Assign distinct order values to the reference items before reordering", StringUtils.EMPTY);
+	public static final ApiResponse NAV_ORDER_NO_REFERENCE = new ApiResponse(57004,
+		"Cannot calculate an order without a reference item",
+		"Provide a previous path, a next path, or both", StringUtils.EMPTY);
+
 	private int code;
 	private String message;
 	private String remedialAction;

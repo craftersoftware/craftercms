@@ -24,67 +24,67 @@
         </xsl:copy>
     </xsl:template>
 
-    <!-- Replace <label>Pages</label> -->
-    <xsl:template match="label[normalize-space(text())='Pages']">
+    <!-- Replace an unidentified <label>Pages</label>. An existing id is a translation the site already chose. -->
+    <xsl:template match="label[not(@id) and normalize-space(text())='Pages']">
         <label id="pathNavigatorTree.pages" defaultMessage="Pages"/>
     </xsl:template>
 
     <!-- Replace <label>Components</label> -->
-    <xsl:template match="label[normalize-space(text())='Components']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Components']">
         <label id="pathNavigatorTree.components" defaultMessage="Components"/>
     </xsl:template>
 
     <!-- Replace <label>Items</label> -->
-    <xsl:template match="label[normalize-space(text())='Items']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Items']">
         <label id="pathNavigatorTree.items" defaultMessage="Items"/>
     </xsl:template>
 
     <!-- Replace <label>Taxonomy</label> -->
-    <xsl:template match="label[normalize-space(text())='Taxonomy']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Taxonomy']">
         <label id="pathNavigatorTree.taxonomy" defaultMessage="Taxonomy"/>
     </xsl:template>
 
     <!-- Replace <label>Static Assets</label> -->
-    <xsl:template match="label[normalize-space(text())='Static Assets']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Static Assets']">
         <label id="pathNavigatorTree.staticAssets" defaultMessage="Static Assets"/>
     </xsl:template>
 
     <!-- Replace <label>Templates</label> -->
-    <xsl:template match="label[normalize-space(text())='Templates']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Templates']">
         <label id="pathNavigatorTree.templates" defaultMessage="Templates"/>
     </xsl:template>
 
     <!-- Replace <label>Scripts</label> -->
-    <xsl:template match="label[normalize-space(text())='Scripts']">
+    <xsl:template match="label[not(@id) and normalize-space(text())='Scripts']">
         <label id="pathNavigatorTree.scripts" defaultMessage="Scripts"/>
     </xsl:template>
 
-    <!-- PreviewAudiencesPanel changes -->
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//name[normalize-space(text())='Segment']">
+    <!-- PreviewAudiencesPanel changes. The same id guard applies to name, label, and helpText. -->
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//name[not(@id) and normalize-space(text())='Segment']">
         <name id="previewAudiencesPanel.segmentLabel" defaultMessage="Segment"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[normalize-space(text())='Guy']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[not(@id) and normalize-space(text())='Guy']">
         <label id="previewAudiencesPanel.guyValueLabel" defaultMessage="Guy"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[normalize-space(text())='Gal']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[not(@id) and normalize-space(text())='Gal']">
         <label id="previewAudiencesPanel.galValueLabel" defaultMessage="Gal"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[normalize-space(text())='Anonymous']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//label[not(@id) and normalize-space(text())='Anonymous']">
         <label id="previewAudiencesPanel.anonymousValueLabel" defaultMessage="Anonymous"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//helpText[normalize-space(text())='Setting the segment will change content targeting to the audience selected.']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//helpText[not(@id) and normalize-space(text())='Setting the segment will change content targeting to the audience selected.']">
         <helpText id="previewAudiencesPanel.segmentHelpText" defaultMessage="Setting the segment will change content targeting to the audience selected"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//name[normalize-space(text())='Name']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//name[not(@id) and normalize-space(text())='Name']">
         <name id="previewAudiencesPanel.nameLabel" defaultMessage="Name"/>
     </xsl:template>
 
-    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//helpText[normalize-space(text())='Enter user''s first and last name.']">
+    <xsl:template match="widget[@id='craftercms.components.PreviewAudiencesPanel']//helpText[not(@id) and normalize-space(text())='Enter user''s first and last name.']">
         <helpText id="previewAudiencesPanel.nameHelpText" defaultMessage="Enter user's first and last name"/>
     </xsl:template>
 

@@ -26,9 +26,19 @@ import { filter, map } from 'rxjs/operators';
 import { fromEvent } from 'rxjs';
 import { reloadRequest } from '../../state/actions/preview';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { PREVIEW_REFLOW_NARROW_QUERY } from '../Preview/previewReflow';
+import { mainLandmarkOutsetSx, STUDIO_MAIN_CONTENT_ID } from '../SkipToMainContent';
+import Typography from '@mui/material/Typography';
+import { visuallyHidden } from '@mui/utils';
+import { useIntl } from 'react-intl';
+import useCurrentPreviewItem from '../../hooks/useCurrentPreviewItem';
+import { studioDocumentTitle } from '../../utils/studioDocumentTitle';
 
 export function Host() {
 	const site = useActiveSiteId();
+	const { formatMessage } = useIntl();
+	const previewItem = useCurrentPreviewItem();
+	const heading = previewItem?.label || formatMessage({ id: 'words.preview', defaultMessage: 'Preview' });
 	const { guestBase, previewLandingBase } = useEnv();
 	const {
 		hostSize,
@@ -44,6 +54,12 @@ export function Host() {
 	const url = currentUrlPath === '' ? previewLandingBase : `${guestBase}${currentUrlPath}`;
 	const eitherSideBarOpen = leftSideBarOpen || rightSideBarOpen;
 	const refs = useUpdateRefs({ guest, iframeKeyAppend, url });
+
+	useEffect(() => {
+		if (site) {
+			document.title = studioDocumentTitle(heading);
+		}
+	}, [heading, site]);
 
 	useEffect(() => {
 		const g2h = fromEvent<MessageEvent>(window, 'message')
@@ -99,7 +115,11 @@ export function Host() {
 
 	return (
 		<Box
+			component="main"
+			id={STUDIO_MAIN_CONTENT_ID}
+			tabIndex={-1}
 			sx={(theme) => ({
+				...mainLandmarkOutsetSx,
 				flexGrow: 1,
 				display: 'flex',
 				justifyContent: 'center',
@@ -111,6 +131,20 @@ export function Host() {
 				// Want to leave 5px margin on the sides where the sidebar is hidden for the shadows to show appreciably.
 				marginLeft: leftSideBarOpen ? `${leftSideBarWidth}px` : '5px',
 				marginRight: rightSideBarOpen ? `${rightSideBarWidth}px` : '5px',
+				minWidth: 0,
+				maxWidth: '100%',
+				[PREVIEW_REFLOW_NARROW_QUERY]: {
+					// Drawers already overlay the shell. Dropping the push-margins keeps the preview
+					// inside the viewport instead of forcing a horizontal scrollbar.
+					marginLeft: '5px',
+					marginRight: '5px',
+					// Do not set width: 100% here. With the 5px margins it makes the box 10px wider than the shell.
+					// The host box is raised above the drawers (zIndex.drawer + 1) so its shadow shows beside an open
+					// sidebar. Once the margins are gone it would sit on top of the drawer and hide the open tools panel.
+					zIndex: 'auto',
+					height: 'auto',
+					maxHeight: 'none'
+				},
 				transition: eitherSideBarOpen
 					? theme.transitions.create('margin', {
 							easing: theme.transitions.easing.easeOut,
@@ -122,12 +156,15 @@ export function Host() {
 						})
 			})}
 		>
+			<Typography component="h1" sx={visuallyHidden}>
+				{heading}
+			</Typography>
 			<Box
 				key={`${site}_${iframeKeyAppend}`}
 				ref={iframeRef}
 				component="iframe"
 				id="crafterCMSPreviewIframe"
-				title="Preview Frame"
+				title={heading}
 				sx={{
 					width: hostSize.width ?? '100%',
 					height: hostSize.height ?? '100%',
@@ -136,7 +173,12 @@ export function Host() {
 					border: 'none',
 					margin: 'auto',
 					boxShadow: 3,
-					borderRadius: 3
+					borderRadius: 3,
+					[PREVIEW_REFLOW_NARROW_QUERY]: {
+						width: '100%',
+						height: '50vh',
+						maxWidth: '100%'
+					}
 				}}
 			/>
 		</Box>

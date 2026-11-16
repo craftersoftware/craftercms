@@ -21,7 +21,6 @@ import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import React, { useContext } from 'react';
 import {
 	FormsEngineFormContextApi,
-	ItemContext,
 	ItemMetaContext,
 	RenamedPathContext,
 	StableFormContext,
@@ -31,16 +30,21 @@ import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
 	composePathForType,
+	embeddedFileName,
+	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
-	showAlert
+	showAlert,
+	xmlFileNamesForPath
 } from './formUtils';
+import { buildContentXml } from './valueSerializers';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
 import { clearStackPendingFlags, repeatItemInValues } from './repeatItemForm';
+import { repeatItemKeysFor } from './repeatItemKeys';
 import { XmlKeys } from './formConsts';
 import { fromString } from '../../../utils/xml';
 import {
@@ -52,11 +56,10 @@ import {
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
-import { cancelPackages } from '../../../services/workflow';
+import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
 import { createComponentId, pushConfirmDialog } from '../../../utils/system';
@@ -92,6 +95,10 @@ const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEnginePro
 /** What `save` tells the Save card. A plugin or policy block returns void instead. */
 export type SaveFormResult = 'revealed' | 'invalid' | 'saved';
 
+/**
+ * The form's save flow: validation, the save request, and what follows (checkpoint, clearing the changed ids, and the
+ * pending state of stacked selected-fields item forms). Returns `{ save }`.
+ */
 export function useSaveForm(props: UseSaveFormProps) {
 	const jotai = useJotaiStore();
 	const store = useReduxStore<GlobalState>();
@@ -118,7 +125,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 	const onSave = wrapOnSaveProp(props.onSave);
 	const { setRenamedPath, triggerReload, setSavedCreatePath } = useContext(RenamedPathContext);
 	const initialFileName = itemPath ? getFileNameValueFromPath(itemPath, isPage) : '';
-	const item = useContext(ItemContext);
 	const repeatFieldId = isRepeatMode ? stableFormContext.props?.repeat?.fieldId : undefined;
 	const readCurrentValidity = async () => {
 		// Out-of-scope fields stay in this list. Only controller-irrelevant fields are skipped.
@@ -234,11 +240,24 @@ export function useSaveForm(props: UseSaveFormProps) {
 					if (!isRepeatMode) {
 						const entries = formsStackData.map((entry) => {
 							const repeat = entry.props?.repeat;
+							const repeatAtom = repeat?.fieldId ? stableFormContext.atoms.valueByFieldId[repeat.fieldId] : undefined;
+							// The index at launch can be behind the saved array, so find the item by its row key.
+							const saved = repeatItemInValues(
+								values,
+								repeat?.fieldId,
+								repeat?.index,
+								repeat?.values,
+								repeatAtom ? repeatItemKeysFor<unknown>(repeatAtom) : undefined
+							);
 							return {
 								selected: entry.itemFormMode ? jotai.get(entry.itemFormMode) === 'selected' : false,
-								changedFieldIds: entry.changedFieldIds,
+								changedFieldIds: jotai.get(entry.changedFieldIds),
+								setChangedFieldIds(next: ReadonlySet<string>) {
+									jotai.set(entry.changedFieldIds, next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next);
+								},
 								fieldId: repeat?.fieldId,
-								savedItem: repeatItemInValues(values, repeat?.fieldId, repeat?.index),
+								savedItem: saved.item,
+								itemGone: saved.gone,
 								currentItem: entry.atoms ? extractAtomValues(jotai, entry.atoms.valueByFieldId) : undefined,
 								setCheckpoint(next: Record<string, unknown>) {
 									entry.originalValues = next;
@@ -248,8 +267,13 @@ export function useSaveForm(props: UseSaveFormProps) {
 								}
 							};
 						});
-						clearStackPendingFlags(entries, stableFormContext.changedFieldIds);
-						if (entries.some((entry) => entry.selected && entry.changedFieldIds.size > 0)) {
+						clearStackPendingFlags(entries, {
+							changedFieldIds: jotai.get(stableFormContext.changedFieldIds),
+							setChangedFieldIds: (next) =>
+								jotai.set(stableFormContext.changedFieldIds, next.size === 0 ? EMPTY_CHANGED_FIELD_IDS : next)
+						});
+						// The sets were replaced, so read them again.
+						if (formsStackData.some((entry, i) => entries[i].selected && jotai.get(entry.changedFieldIds).size > 0)) {
 							setHasPendingChanges(true);
 						}
 					}
@@ -364,8 +388,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
@@ -381,6 +403,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 						});
 					}
 
+					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
+					// Mutate in place so relevance WeakMap association is kept for stacked commits.
+					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
+					// top-level embed may seed a path-derived slug. Use the component's stored element.
+					values[XmlKeys.fileName] = embeddedFileName(id, contentObject?.[XmlKeys.fileName] as string);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -405,10 +433,16 @@ export function useSaveForm(props: UseSaveFormProps) {
 					const saveEmbeddedContent = (cancelPackagesComment: string = '') => {
 						const writeService$ = updateEmbeddedComponent(siteId, path, id, xml, { comment: versionComment });
 						const saveOrCancel$ = affectedPackages?.length
-							? cancelPackages(siteId, {
-									packageIds: affectedPackages.map((pkg) => pkg.id),
-									comment: cancelPackagesComment
-								}).pipe(switchMap(() => writeService$))
+							? fetchAffectedPackages(siteId, path).pipe(
+									switchMap((pkgs) =>
+										pkgs?.length
+											? cancelPackages(siteId, {
+													packageIds: pkgs.map((pkg) => pkg.id),
+													comment: cancelPackagesComment
+												}).pipe(switchMap(() => writeService$))
+											: writeService$
+									)
+								)
 							: writeService$;
 
 						saveOrCancel$.subscribe({
@@ -441,7 +475,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }
@@ -476,6 +510,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 						path = itemPath;
 					}
 				}
+
+				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
+				const xml = buildContentXml({ ...values, ...xmlFileNamesForPath(path) }, contentTypesById);
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {
@@ -539,13 +576,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 						? moveAndUpdateContent(siteId, itemPath, path, xml)
 						: writeContent(siteId, path, xml, { comment: versionComment });
 					const saveOrCancel$ = affectedPackages?.length
-						? cancelPackages(siteId, {
-								packageIds: affectedPackages.map((pkg) => pkg.id),
-								comment: cancelPackagesComment
-							}).pipe(
-								switchMap(() => {
-									return saveOrMoveService$;
-								})
+						? fetchAffectedPackages(siteId, itemPath).pipe(
+								switchMap((pkgs) =>
+									pkgs?.length
+										? cancelPackages(siteId, {
+												packageIds: pkgs.map((pkg) => pkg.id),
+												comment: cancelPackagesComment
+											}).pipe(switchMap(() => saveOrMoveService$))
+										: saveOrMoveService$
+								)
 							)
 						: saveOrMoveService$;
 
@@ -561,7 +600,7 @@ export function useSaveForm(props: UseSaveFormProps) {
 								id: dialogId,
 								component: createComponentId('ViewPackagesDialog'),
 								props: {
-									item,
+									item: stableFormContext.getItem(),
 									cancelPackagesInitialComment: formatMessage(
 										{ defaultMessage: 'Cancel packages to write on "{path}"' },
 										{ path }
