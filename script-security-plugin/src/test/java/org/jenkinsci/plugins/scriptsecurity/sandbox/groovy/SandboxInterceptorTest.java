@@ -24,6 +24,8 @@ import org.kohsuke.groovy.sandbox.SandboxTransformer;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -35,14 +37,31 @@ public class SandboxInterceptorTest {
 		assertEquals(1, evaluate("7 % 3"));
 		assertEquals(-1, evaluate("def x = -7; x % 3"));
 		assertEquals(2, evaluate("x = 5; x %= 3; x"));
+		assertEquals(2, evaluate("def a = [5,6] as int[]; a[1] %= 4; a[1]"));
+	}
+
+	@Test
+	public void testBigDecimalRemainder() throws IOException {
+		assertEquals(new BigDecimal("1.5"), evaluate("7.5 % 2.0",
+			"method java.math.BigDecimal remainder java.math.BigDecimal"));
+	}
+
+	@Test
+	public void testBigIntegerRemainder() throws IOException {
+		assertEquals(new BigInteger("1"), evaluate("7G % 3G",
+			"method java.math.BigInteger remainder java.math.BigInteger"));
 	}
 
 	private Object evaluate(String script) throws IOException {
+		return evaluate(script, "");
+	}
+
+	private Object evaluate(String script, String whitelist) throws IOException {
 		CompilerConfiguration config = new CompilerConfiguration();
 		config.addCompilationCustomizers(new SandboxTransformer());
 		GroovyShell shell = new GroovyShell(new Binding(), config);
 
-		SandboxInterceptor interceptor = new SandboxInterceptor(new StaticWhitelist(new StringReader("")));
+		SandboxInterceptor interceptor = new SandboxInterceptor(new StaticWhitelist(new StringReader(whitelist)));
 		interceptor.register();
 		try {
 			return shell.evaluate(script);
