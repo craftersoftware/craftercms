@@ -48,8 +48,8 @@ public class ClipboardServiceImpl implements ClipboardService {
 	}
 
 	/**
-	 * COPY requires content_write on the drop folder. CUT requires content_move on the source and that same
-	 * drop folder, checked inside moveToParentPath rather than on the computed child path.
+	 * COPY requires content_write on the drop folder. CUT requires content_move on the source and content_write
+	 * on that same drop folder, checked inside moveToParentPath rather than on the computed child path.
 	 */
 	@Override
 	@RequireSiteReady

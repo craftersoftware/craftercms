@@ -75,8 +75,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * content_move is required on the source and target roots only. These cases are the #9373 and #9372 regressions
- * plus the denial and lifecycle rules around that permission.
+ * A move or rename requires content_move on the source root and content_write on the target root.
+ * These cases are the #9373 and #9372 regressions plus the denial and lifecycle rules around those permissions.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class ContentMovePermissionTest {
@@ -89,7 +89,7 @@ public class ContentMovePermissionTest {
 	private static final String HELLO = "/site/website/hello/index.xml";
 
 	private enum Role {
-		AUTHOR, PUBLISHER, ADMIN, REVIEWER, MOVER
+		AUTHOR, PUBLISHER, ADMIN, REVIEWER, MOVER, WRITER
 	}
 
 	private record PermissionCall(String action, List<String> paths) {
@@ -153,8 +153,8 @@ public class ContentMovePermissionTest {
 		allowMoveToFinish();
 		service.moveAndUpdate(SITE, ABOUT, HELLO, "<page/>");
 
-		assertEquals(List.of("/site/website/about", "/site/website/hello"), only(PERMISSION_CONTENT_MOVE).paths());
-		assertTrue(calls.stream().noneMatch(call -> PERMISSION_CONTENT_WRITE.equals(call.action())));
+		assertEquals(List.of("/site/website/about"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/hello"), only(PERMISSION_CONTENT_WRITE).paths());
 		assertTrue(calls.stream().noneMatch(call -> PERMISSION_CONTENT_DELETE.equals(call.action())));
 		verify(service).doMove(eq(SITE), eq(ABOUT), eq(HELLO), nullable(String.class), any());
 	}
@@ -168,7 +168,8 @@ public class ContentMovePermissionTest {
 		calls.clear();
 		service.moveAndUpdate(SITE, ABOUT, HELLO, "<page/>");
 
-		assertEquals(List.of("/site/website/about", "/site/website/hello"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/about"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/hello"), only(PERMISSION_CONTENT_WRITE).paths());
 	}
 
 	@Test
@@ -197,8 +198,8 @@ public class ContentMovePermissionTest {
 		allowMoveToFinish();
 		service.move(SITE, "/site/website/section", "/site/website/archive/section");
 
-		assertEquals(List.of("/site/website/section", "/site/website/archive/section"),
-				only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/section"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/archive/section"), only(PERMISSION_CONTENT_WRITE).paths());
 	}
 
 	@Test
@@ -206,8 +207,8 @@ public class ContentMovePermissionTest {
 		allowMoveToFinish();
 		service.renameContent(SITE, "/static-assets/images/logo.png", "mark.png");
 
-		assertEquals(List.of("/static-assets/images/logo.png", "/static-assets/images/mark.png"),
-				only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/static-assets/images/logo.png"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/static-assets/images/mark.png"), only(PERMISSION_CONTENT_WRITE).paths());
 	}
 
 	@Test
@@ -215,24 +216,35 @@ public class ContentMovePermissionTest {
 		allowMoveToFinish();
 		service.moveToParentPath(SITE, ABOUT, "/site/website/news");
 
-		List<String> paths = only(PERMISSION_CONTENT_MOVE).paths();
-		assertEquals(List.of("/site/website/about", "/site/website/news"), paths);
-		assertTrue(paths.stream().noneMatch(path -> path.contains("/news/about")));
+		assertEquals(List.of("/site/website/about"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/news"), only(PERMISSION_CONTENT_WRITE).paths());
 	}
 
 	@Test
-	public void pasteCutIsDeniedWhenTheDropFolderLacksMove() {
+	public void pasteCutIsDeniedWhenTheDropFolderLacksWrite() throws Exception {
 		assertThrows(ActionDeniedException.class,
 				() -> service.moveToParentPath(SITE, ABOUT, "/templates/web"));
+		verify(service, never()).doMove(anyString(), anyString(), anyString(), nullable(String.class),
+				nullable(ThrowingSupplier.class));
 	}
 
 	@Test
-	public void moveWithoutContentWriteOnTheRootsStillMoves() throws Exception {
-		allowMoveToFinish();
+	public void moveIsDeniedWithoutContentWriteOnTheTarget() {
 		role = Role.MOVER;
-		service.move(SITE, "/site/website/section", "/site/website/archive/section");
 
-		assertEquals(PERMISSION_CONTENT_MOVE, only(PERMISSION_CONTENT_MOVE).action());
+		assertThrows(ActionDeniedException.class,
+				() -> service.move(SITE, "/site/website/section", "/site/website/archive/section"));
+		assertEquals(List.of("/site/website/section"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/archive/section"), only(PERMISSION_CONTENT_WRITE).paths());
+	}
+
+	@Test
+	public void moveIsDeniedWithoutContentMoveOnTheSource() {
+		role = Role.WRITER;
+
+		assertThrows(ActionDeniedException.class,
+				() -> service.move(SITE, "/site/website/section", "/site/website/archive/section"));
+		assertEquals(List.of("/site/website/section"), only(PERMISSION_CONTENT_MOVE).paths());
 		assertTrue(calls.stream().noneMatch(call -> PERMISSION_CONTENT_WRITE.equals(call.action())));
 	}
 
@@ -320,6 +332,7 @@ public class ContentMovePermissionTest {
 					"folder_create", "content_copy").contains(action);
 			case REVIEWER -> false;
 			case MOVER -> PERMISSION_CONTENT_MOVE.equals(action) && path.matches(AUTHOR_SCOPE);
+			case WRITER -> PERMISSION_CONTENT_WRITE.equals(action) && path.matches(AUTHOR_SCOPE);
 		};
 	}
 

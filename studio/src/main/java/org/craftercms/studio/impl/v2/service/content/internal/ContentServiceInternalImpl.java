@@ -718,10 +718,10 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	 * - The items are not in workflow. For moves (sourcePath != null) the source path children are checked for
 	 * workflow as well
 	 * <p>
-	 * A move does not require content_delete on the source, and it does not require content_write on the moved
-	 * roots or their original descendants. content_move on those two roots is checked by {@link #checkMove}.
-	 * A lifecycle item outside that moved set still requires content_write. Copy and write (sourcePath == null)
-	 * still require content_write on every affected path.
+	 * A move does not require content_delete on the source. {@link #checkMove} requires content_move on the
+	 * source root and content_write on the target root, so lifecycle processing does not repeat those checks
+	 * for the moved set or its original descendants. A lifecycle item outside that set still requires
+	 * content_write. Copy and write (sourcePath == null) still require content_write on every affected path.
 	 *
 	 * @param siteId        the site id
 	 * @param sourcePath    the source content path for move operations, or null for write and copy
@@ -772,12 +772,20 @@ public class ContentServiceInternalImpl implements ContentService, ApplicationEv
 	}
 
 	/**
-	 * Require content_move on the source and target roots only.
+	 * Require content_move on the source root and content_write on the target root.
+	 * A page descriptor is checked as its folder, which is the root the move updates.
 	 */
 	protected void checkMove(String siteId, String sourcePath, String targetPath) {
+		if (isPageDescriptor(sourcePath) || isPageDescriptor(targetPath)) {
+			sourcePath = CS.removeEnd(sourcePath, SLASH_INDEX_FILE);
+			targetPath = CS.removeEnd(targetPath, SLASH_INDEX_FILE);
+		}
 		PermissionCheckingUtils.checkPermissions(permissionEvaluator,
-				PermissionCheckingUtils.getSecuredResource(siteId, List.of(sourcePath, targetPath)),
+				PermissionCheckingUtils.getSecuredResource(siteId, List.of(sourcePath)),
 				List.of(PERMISSION_CONTENT_MOVE));
+		PermissionCheckingUtils.checkPermissions(permissionEvaluator,
+				PermissionCheckingUtils.getSecuredResource(siteId, List.of(targetPath)),
+				List.of(PERMISSION_CONTENT_WRITE));
 	}
 
 	/**

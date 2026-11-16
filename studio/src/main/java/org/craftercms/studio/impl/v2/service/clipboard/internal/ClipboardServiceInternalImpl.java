@@ -148,7 +148,8 @@ public class ClipboardServiceInternalImpl implements ClipboardService {
 	@Override
 	public List<String> pasteItems(String siteId, Operation operation, String targetPath, String sourcePath, boolean includeChildren)
 			throws ServiceLayerException, UserNotFoundException, AuthenticationException {
-		// COPY keeps content_write on the drop folder. CUT checks content_move inside moveToParentPath.
+		// COPY keeps content_write on the drop folder. CUT checks content_move on the source and
+		// content_write on the drop folder inside moveToParentPath.
 		if (operation == COPY) {
 			PermissionCheckingUtils.checkPermissions(permissionEvaluator,
 					Map.of(SITE_ID_RESOURCE_ID, siteId, PATH_RESOURCE_ID, targetPath),
