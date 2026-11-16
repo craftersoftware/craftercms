@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 
 export const translations = {
 	...defineMessages({
@@ -26,11 +26,7 @@ export const translations = {
 			defaultMessage: 'Fetching items that reference the selected item'
 		}
 	}),
-	...defineMessages<{
-		policyError: { readonly detail: MessageValue; readonly fileName: MessageValue };
-	}>({
-		policyError: {
-			defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-		}
+	policyError: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
+		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
 	})
 };

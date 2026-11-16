@@ -18,7 +18,7 @@ import React from 'react';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import DialogBody from '../DialogBody/DialogBody';
 import Typography from '@mui/material/Typography';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
@@ -51,13 +51,9 @@ const translations = {
 			defaultMessage: 'No'
 		}
 	}),
-	...defineMessages<{
-		confirmHelperText: { readonly name: MessageValue };
-	}>({
-		confirmHelperText: {
-			id: 'editGroupDialog.helperText',
-			defaultMessage: 'Delete group "{name}"?'
-		}
+	confirmHelperText: defineMessage<{ readonly name: MessageValue }>({
+		id: 'editGroupDialog.helperText',
+		defaultMessage: 'Delete group "{name}"?'
 	})
 };
 

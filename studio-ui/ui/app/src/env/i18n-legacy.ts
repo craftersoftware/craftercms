@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, MessageDescriptor, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, MessageDescriptor, type MessageValue } from 'react-intl';
 import { getCurrentIntl } from '../utils/i18n';
 
 export function translateElements(
@@ -86,28 +86,21 @@ export const passwordRequirementMessages = {
 			defaultMessage: "Passwords don't match"
 		}
 	}),
-	...defineMessages<{
-		hasSpecialChars: { readonly chars: MessageValue };
-		minLength: { readonly min: MessageValue };
-		maxLength: { readonly max: MessageValue };
-		minMaxLength: { readonly maxLength: MessageValue; readonly minLength: MessageValue };
-	}>({
-		hasSpecialChars: {
-			id: 'passwordRequirement.hasSpecialChars',
-			defaultMessage: 'Must contain at least one special character {chars}'
-		},
-		minLength: {
-			id: 'passwordRequirement.minLength',
-			defaultMessage: 'Length must be at least {min} characters'
-		},
-		maxLength: {
-			id: 'passwordRequirement.maxLength',
-			defaultMessage: 'Length must not exceed {max} characters'
-		},
-		minMaxLength: {
-			id: 'passwordRequirement.minMaxLength',
-			defaultMessage: 'Length must be between {minLength} and {maxLength} characters'
-		}
+	hasSpecialChars: defineMessage<{ readonly chars: MessageValue }>({
+		id: 'passwordRequirement.hasSpecialChars',
+		defaultMessage: 'Must contain at least one special character {chars}'
+	}),
+	minLength: defineMessage<{ readonly min: MessageValue }>({
+		id: 'passwordRequirement.minLength',
+		defaultMessage: 'Length must be at least {min} characters'
+	}),
+	maxLength: defineMessage<{ readonly max: MessageValue }>({
+		id: 'passwordRequirement.maxLength',
+		defaultMessage: 'Length must not exceed {max} characters'
+	}),
+	minMaxLength: defineMessage<{ readonly maxLength: MessageValue; readonly minLength: MessageValue }>({
+		id: 'passwordRequirement.minMaxLength',
+		defaultMessage: 'Length must be between {minLength} and {maxLength} characters'
 	})
 };
 
@@ -306,36 +299,27 @@ export const contentTypesMessages = {
 			defaultMessage: 'Audio Manager'
 		}
 	}),
-	...defineMessages<{
-		switchToMessage: { readonly type: MessageValue };
-		invalidNumber: { readonly value: MessageValue };
-		loadModuleError: { readonly tool: MessageValue };
-		toolNotFound: { readonly tool: MessageValue };
-		dependsOn: { readonly dependency: MessageValue };
-		invalidMacros: { readonly macros: MessageValue };
-	}>({
-		switchToMessage: {
-			id: 'siteConfig.switchToMessage',
-			defaultMessage: 'Switch to {type}'
-		},
-		invalidNumber: {
-			id: 'siteConfig.invalidNumber',
-			defaultMessage: '"{value}" is not a valid number.'
-		},
-		loadModuleError: {
-			id: 'siteConfig.loadModuleError',
-			defaultMessage: 'Unable to load "{tool}". Check project tools configuration.'
-		},
-		toolNotFound: {
-			id: 'siteConfig.toolNotFound',
-			defaultMessage: '"{tool}" tool not found.'
-		},
-		dependsOn: {
-			defaultMessage: 'This property references "{dependency}"'
-		},
-		invalidMacros: {
-			defaultMessage: 'The following invalid macros were removed: {macros}'
-		}
+	switchToMessage: defineMessage<{ readonly type: MessageValue }>({
+		id: 'siteConfig.switchToMessage',
+		defaultMessage: 'Switch to {type}'
+	}),
+	invalidNumber: defineMessage<{ readonly value: MessageValue }>({
+		id: 'siteConfig.invalidNumber',
+		defaultMessage: '"{value}" is not a valid number.'
+	}),
+	loadModuleError: defineMessage<{ readonly tool: MessageValue }>({
+		id: 'siteConfig.loadModuleError',
+		defaultMessage: 'Unable to load "{tool}". Check project tools configuration.'
+	}),
+	toolNotFound: defineMessage<{ readonly tool: MessageValue }>({
+		id: 'siteConfig.toolNotFound',
+		defaultMessage: '"{tool}" tool not found.'
+	}),
+	dependsOn: defineMessage<{ readonly dependency: MessageValue }>({
+		defaultMessage: 'This property references "{dependency}"'
+	}),
+	invalidMacros: defineMessage<{ readonly macros: MessageValue }>({
+		defaultMessage: 'The following invalid macros were removed: {macros}'
 	})
 };
 
@@ -445,29 +429,22 @@ export const simpleTaxonomyDSMessages = {
 			defaultMessage: 'Simple Taxonomy'
 		}
 	}),
-	...defineMessages<{
-		unableLoad: { readonly file: MessageValue };
-	}>({
-		unableLoad: {
-			id: 'simpleTaxonomyDS.unableLoad',
-			defaultMessage: 'The system was unable to load {file}.'
-		}
+	unableLoad: defineMessage<{ readonly file: MessageValue }>({
+		id: 'simpleTaxonomyDS.unableLoad',
+		defaultMessage: 'The system was unable to load {file}.'
 	})
 };
 
-export const browseSearchMessages = defineMessages<{
-	lookUpParentError: { readonly searchId: MessageValue };
-	lookUpChildError: { readonly searchId: MessageValue };
-}>({
-	lookUpParentError: {
-		id: 'browseSearchMessages.lookUpChildError',
-		defaultMessage: 'Unable to lookup child form callback for search: {searchId}'
-	},
-	lookUpChildError: {
+export const browseSearchMessages = {
+	lookUpParentError: defineMessage<{ readonly searchId: MessageValue }>({
 		id: 'browseSearchMessages.lookUpParentError',
 		defaultMessage: 'Unable to lookup parent context for search: {searchId}'
-	}
-});
+	}),
+	lookUpChildError: defineMessage<{ readonly searchId: MessageValue }>({
+		id: 'browseSearchMessages.lookUpChildError',
+		defaultMessage: 'Unable to lookup child form callback for search: {searchId}'
+	})
+};
 
 export const formEngineMessages = {
 	...defineMessages({
@@ -522,32 +499,24 @@ export const formEngineMessages = {
 			defaultMessage: 'The item is part of one or more publishing packages. Editing it will cancel the packages.'
 		}
 	}),
-	...defineMessages<{
-		createPolicy: { readonly originalPath: MessageValue; readonly path: MessageValue };
-		policyError: { readonly path: MessageValue };
-		nodeSelectorItemNotFound: { readonly internalName: MessageValue };
-		removeItemFromNodeSelector: { readonly controlLabel: MessageValue };
-		maxItemsReached: { readonly maxSize: number | bigint };
-	}>({
-		createPolicy: {
-			id: 'formEngine.createPolicy',
-			defaultMessage:
-				'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
-		},
-		policyError: {
-			id: 'formEngine.policyError',
-			defaultMessage: 'The {path} path goes against project policies.'
-		},
-		nodeSelectorItemNotFound: {
-			defaultMessage: 'Item "{internalName}" doesn\'t exist'
-		},
-		removeItemFromNodeSelector: {
-			defaultMessage: 'Remove from {controlLabel}'
-		},
-		maxItemsReached: {
-			defaultMessage:
-				'A max of {maxSize} {maxSize, plural, one {item is} other {items are}} allowed. Please remove items to fit the limit before trying to add more.'
-		}
+	createPolicy: defineMessage<{ readonly originalPath: MessageValue; readonly path: MessageValue }>({
+		id: 'formEngine.createPolicy',
+		defaultMessage:
+			'The {originalPath} path goes against project policies. Suggested modified path is: "{path}". Would you like to use the suggested path?'
+	}),
+	policyError: defineMessage<{ readonly path: MessageValue }>({
+		id: 'formEngine.policyError',
+		defaultMessage: 'The {path} path goes against project policies.'
+	}),
+	nodeSelectorItemNotFound: defineMessage<{ readonly internalName: MessageValue }>({
+		defaultMessage: 'Item "{internalName}" doesn\'t exist'
+	}),
+	removeItemFromNodeSelector: defineMessage<{ readonly controlLabel: MessageValue }>({
+		defaultMessage: 'Remove from {controlLabel}'
+	}),
+	maxItemsReached: defineMessage<{ readonly maxSize: number | bigint }>({
+		defaultMessage:
+			'A max of {maxSize} {maxSize, plural, one {item is} other {items are}} allowed. Please remove items to fit the limit before trying to add more.'
 	})
 };
 
@@ -730,13 +699,9 @@ export const rteControlMessages = {
 			defaultMessage: 'Choose a Source'
 		}
 	}),
-	...defineMessages<{
-		dropImageUploaded: { readonly title: MessageValue };
-	}>({
-		dropImageUploaded: {
-			id: 'rteControlMessages.dropImageUploaded',
-			defaultMessage: '{title} was successfully uploaded.'
-		}
+	dropImageUploaded: defineMessage<{ readonly title: MessageValue }>({
+		id: 'rteControlMessages.dropImageUploaded',
+		defaultMessage: '{title} was successfully uploaded.'
 	})
 };
 
@@ -848,48 +813,41 @@ export const itemSuccessMessages = {
 			defaultMessage: 'Folder created successfully'
 		}
 	}),
-	...defineMessages<{
-		itemDeleted: { readonly count: number | bigint };
-		itemPublishedNow: { readonly count: number | bigint; readonly environment: MessageValue };
-		itemRequestedToPublishNow: { readonly count: number | bigint; readonly environment: MessageValue };
-		itemRequestedToSchedulePublish: { readonly count: number | bigint; readonly environment: MessageValue };
-		itemSchedulePublished: { readonly count: number | bigint; readonly environment: MessageValue };
-		itemCopied: { readonly count: number | bigint };
-		itemRejected: { readonly count: number | bigint };
+	itemDeleted: defineMessage<{ readonly count: number | bigint }>({
+		id: 'item.delete',
+		defaultMessage:
+			'{count, plural, one {The selected item is being deleted and will be removed soon} other {The selected items are being deleted and will be removed soon}}'
+	}),
+	itemPublishedNow: defineMessage<{ readonly count: number | bigint; readonly environment: MessageValue }>({
+		id: 'item.publishedNow',
+		defaultMessage:
+			'{count, plural, one {The selected item has been published to {environment}. It will be visible soon} other {The selected items have been published to {environment}. They will be visible soon}}'
+	}),
+	itemRequestedToPublishNow: defineMessage<{ readonly count: number | bigint; readonly environment: MessageValue }>({
+		id: 'item.requestedToPublishNow',
+		defaultMessage:
+			'{count, plural, one {The selected item has been requested to be published to {environment}} other {The selected items have been requested to be published to {environment}}}'
+	}),
+	itemRequestedToSchedulePublish: defineMessage<{
+		readonly count: number | bigint;
+		readonly environment: MessageValue;
 	}>({
-		itemDeleted: {
-			id: 'item.delete',
-			defaultMessage:
-				'{count, plural, one {The selected item is being deleted and will be removed soon} other {The selected items are being deleted and will be removed soon}}'
-		},
-		itemPublishedNow: {
-			id: 'item.publishedNow',
-			defaultMessage:
-				'{count, plural, one {The selected item has been published to {environment}. It will be visible soon} other {The selected items have been published to {environment}. They will be visible soon}}'
-		},
-		itemRequestedToPublishNow: {
-			id: 'item.requestedToPublishNow',
-			defaultMessage:
-				'{count, plural, one {The selected item has been requested to be published to {environment}} other {The selected items have been requested to be published to {environment}}}'
-		},
-		itemRequestedToSchedulePublish: {
-			id: 'item.requestedToSchedulePublish',
-			defaultMessage:
-				'{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
-		},
-		itemSchedulePublished: {
-			id: 'item.schedulePublished',
-			defaultMessage:
-				'{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
-		},
-		itemCopied: {
-			id: 'item.copied',
-			defaultMessage: '{count, plural, one {Item copied to clipboard} other {Items copied to clipboard}}'
-		},
-		itemRejected: {
-			id: 'item.rejected',
-			defaultMessage: '{count, plural, one {Item rejected successfully} other {Items rejected successfully}}'
-		}
+		id: 'item.requestedToSchedulePublish',
+		defaultMessage:
+			'{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
+	}),
+	itemSchedulePublished: defineMessage<{ readonly count: number | bigint; readonly environment: MessageValue }>({
+		id: 'item.schedulePublished',
+		defaultMessage:
+			'{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
+	}),
+	itemCopied: defineMessage<{ readonly count: number | bigint }>({
+		id: 'item.copied',
+		defaultMessage: '{count, plural, one {Item copied to clipboard} other {Items copied to clipboard}}'
+	}),
+	itemRejected: defineMessage<{ readonly count: number | bigint }>({
+		id: 'item.rejected',
+		defaultMessage: '{count, plural, one {Item rejected successfully} other {Items rejected successfully}}'
 	})
 };
 

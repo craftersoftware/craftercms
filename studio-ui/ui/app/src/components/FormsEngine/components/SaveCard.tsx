@@ -15,7 +15,7 @@
  */
 
 import { useAtom, useAtomValue } from 'jotai';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { MouseEvent, useCallback, useContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import { StableFormContext } from '../lib/formsEngineContext';
 import Box from '@mui/material/Box';
@@ -63,14 +63,14 @@ const messages = {
 		},
 		noChanges: { defaultMessage: 'No changes detected' }
 	}),
-	...defineMessages<{
-		requiredFileNameAndInternalName: { readonly fileName: MessageValue; readonly internalName: MessageValue };
-		requiredFileName: { readonly fileName: MessageValue };
-		requiredInternalName: { readonly internalName: MessageValue };
-	}>({
-		requiredFileNameAndInternalName: { defaultMessage: '{fileName} and {internalName} are required to save' },
-		requiredFileName: { defaultMessage: '{fileName} is required to save' },
-		requiredInternalName: { defaultMessage: '{internalName} is required to save' }
+	requiredFileNameAndInternalName: defineMessage<{ readonly fileName: MessageValue; readonly internalName: MessageValue }>({
+		defaultMessage: '{fileName} and {internalName} are required to save'
+	}),
+	requiredFileName: defineMessage<{ readonly fileName: MessageValue }>({
+		defaultMessage: '{fileName} is required to save'
+	}),
+	requiredInternalName: defineMessage<{ readonly internalName: MessageValue }>({
+		defaultMessage: '{internalName} is required to save'
 	})
 };
 

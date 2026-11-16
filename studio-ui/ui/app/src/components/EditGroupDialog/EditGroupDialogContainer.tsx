@@ -27,7 +27,7 @@ import {
 	trash,
 	update
 } from '../../services/groups';
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { showSystemNotification } from '../../state/actions/system';
 import Typography from '@mui/material/Typography';
@@ -59,18 +59,13 @@ const translations = {
 			defaultMessage: 'Group deleted successfully'
 		}
 	}),
-	...defineMessages<{
-		membersAdded: { readonly count: number | bigint };
-		membersRemoved: { readonly count: number | bigint };
-	}>({
-		membersAdded: {
-			id: 'groupEditDialog.membersAdded',
-			defaultMessage: '{count, plural, one {User added successfully} other {Users added successfully}}'
-		},
-		membersRemoved: {
-			id: 'groupEditDialog.membersRemoved',
-			defaultMessage: '{count, plural, one {User removed successfully} other {Users removed successfully}}'
-		}
+	membersAdded: defineMessage<{ readonly count: number | bigint }>({
+		id: 'groupEditDialog.membersAdded',
+		defaultMessage: '{count, plural, one {User added successfully} other {Users added successfully}}'
+	}),
+	membersRemoved: defineMessage<{ readonly count: number | bigint }>({
+		id: 'groupEditDialog.membersRemoved',
+		defaultMessage: '{count, plural, one {User removed successfully} other {Users removed successfully}}'
 	})
 };
 

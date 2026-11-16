@@ -15,7 +15,7 @@
  */
 
 import { PublishingStatus, PublishingStatusCodes } from '../../models/Publishing';
-import { defineMessages, IntlShape, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, IntlShape, type MessageValue } from 'react-intl';
 import { nnou, nou } from '../../utils/object';
 
 export const publishingStatusMessages = {
@@ -98,23 +98,17 @@ export const publishingStatusMessages = {
 			defaultMessage: 'Confirm you wish to unlock the publisher?'
 		}
 	}),
-	...defineMessages<{
-		publishingMessage: { readonly submissionId: MessageValue };
-		lockOwner: { readonly lockOwner: MessageValue };
-		lockTTL: { readonly lockTTL: MessageValue };
-	}>({
-		publishingMessage: {
-			id: 'publishingStatusMessages.publishingMessage',
-			defaultMessage: 'Publishing items. Package id is {submissionId}.'
-		},
-		lockOwner: {
-			id: 'publishingStatusMessages.lockOwnerDisplayMessage',
-			defaultMessage: 'Locked by {lockOwner}'
-		},
-		lockTTL: {
-			id: 'publishingStatusMessages.lockTTLMessage',
-			defaultMessage: 'TTL {lockTTL}'
-		}
+	publishingMessage: defineMessage<{ readonly submissionId: MessageValue }>({
+		id: 'publishingStatusMessages.publishingMessage',
+		defaultMessage: 'Publishing items. Package id is {submissionId}.'
+	}),
+	lockOwner: defineMessage<{ readonly lockOwner: MessageValue }>({
+		id: 'publishingStatusMessages.lockOwnerDisplayMessage',
+		defaultMessage: 'Locked by {lockOwner}'
+	}),
+	lockTTL: defineMessage<{ readonly lockTTL: MessageValue }>({
+		id: 'publishingStatusMessages.lockTTLMessage',
+		defaultMessage: 'TTL {lockTTL}'
 	})
 };
 

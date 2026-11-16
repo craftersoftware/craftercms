@@ -18,7 +18,7 @@ import { MergeStrategy, Repository } from '../../../models/Repository';
 import RepoGridUI from './RepoGridUI';
 import React, { useState } from 'react';
 import PullDialog from '../PullDialog';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import PushDialog from '../PushDialog';
 import { deleteRemote as deleteRemoteService, PullResponse } from '../../../services/repositories';
 import { showSystemNotification } from '../../../state/actions/system';
@@ -71,13 +71,9 @@ const messages = {
 			defaultMessage: 'Successfully pushed.'
 		}
 	}),
-	...defineMessages<{
-		pullSuccessMessage: { readonly numberOfCommits: MessageValue };
-	}>({
-		pullSuccessMessage: {
-			id: 'repositories.pullSuccessMessage',
-			defaultMessage: 'Successfully pulled {numberOfCommits} commits. Would you like to publish this now?'
-		}
+	pullSuccessMessage: defineMessage<{ readonly numberOfCommits: MessageValue }>({
+		id: 'repositories.pullSuccessMessage',
+		defaultMessage: 'Successfully pulled {numberOfCommits} commits. Would you like to publish this now?'
 	})
 };
 

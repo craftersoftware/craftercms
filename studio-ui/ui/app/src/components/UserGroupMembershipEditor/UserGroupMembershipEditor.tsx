@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Group from '../../models/Group';
@@ -40,19 +40,14 @@ const messages = {
 			defaultMessage: 'Error modifying user group(s). Please try again momentarily.'
 		}
 	}),
-	...defineMessages<{
-		addToGroupsSuccess: { readonly numOfGroups: number | bigint; readonly user: MessageValue };
-		removeFromGroupsSuccess: { readonly numOfGroups: number | bigint; readonly user: MessageValue };
-	}>({
-		addToGroupsSuccess: {
-			id: 'userGroupMembershipEditor.addToGroupsSuccess',
-			defaultMessage: '"{user}" added to {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
-		},
-		removeFromGroupsSuccess: {
-			id: 'userGroupMembershipEditor.removeFromGroupsSuccess',
-			defaultMessage:
-				'"{user}" removed from {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
-		}
+	addToGroupsSuccess: defineMessage<{ readonly numOfGroups: number | bigint; readonly user: MessageValue }>({
+		id: 'userGroupMembershipEditor.addToGroupsSuccess',
+		defaultMessage: '"{user}" added to {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
+	}),
+	removeFromGroupsSuccess: defineMessage<{ readonly numOfGroups: number | bigint; readonly user: MessageValue }>({
+		id: 'userGroupMembershipEditor.removeFromGroupsSuccess',
+		defaultMessage:
+			'"{user}" removed from {numOfGroups, plural, one {the specified group} other {{numOfGroups} groups}}'
 	})
 };
 

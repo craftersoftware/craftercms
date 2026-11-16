@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
@@ -63,13 +63,9 @@ const translations = {
 			defaultMessage: 'Roles'
 		}
 	}),
-	...defineMessages<{
-		invalidMinLength: { readonly length: MessageValue };
-	}>({
-		invalidMinLength: {
-			id: 'userInfoDialog.invalidMinLength',
-			defaultMessage: 'Min {length} characters'
-		}
+	invalidMinLength: defineMessage<{ readonly length: MessageValue }>({
+		id: 'userInfoDialog.invalidMinLength',
+		defaultMessage: 'Min {length} characters'
 	})
 };
 

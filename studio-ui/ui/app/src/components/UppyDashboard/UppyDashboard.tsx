@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import palette from '../../styles/palette';
 import { validateActionPolicy } from '../../services/sites';
 import { checkPathExistence } from '../../services/content';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { showSystemNotification } from '../../state/actions/system';
 import { pushErrorDialog } from '../../utils/system';
 import { useDispatch } from 'react-redux';
@@ -115,36 +115,27 @@ const translations = {
 			defaultMessage: 'Unable to verify whether the file already exists'
 		}
 	}),
-	...defineMessages<{
-		maxFiles: { readonly maxFiles: MessageValue };
-		maxActiveUploadsReached: { readonly maxFiles: MessageValue };
-		projectPoliciesNoComply: { readonly detail: MessageValue; readonly fileName: MessageValue };
-		fileAlreadyExists: { readonly fileName: MessageValue };
-		fileOverwriteRequired: { readonly fileName: MessageValue };
-		dropPasteBoth: { readonly browseFiles: MessageValue; readonly browseFolders: MessageValue };
-	}>({
-		maxFiles: {
-			id: 'uppyDashboard.maxFiles',
-			defaultMessage: '{maxFiles} max.'
-		},
-		maxActiveUploadsReached: {
-			id: 'uppyDashboard.maxActiveUploadsReached',
-			defaultMessage: '{maxFiles} maximum active uploads reached. Excess has been discarded.'
-		},
-		projectPoliciesNoComply: {
-			defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-		},
-		fileAlreadyExists: {
-			id: 'uppyDashboard.fileAlreadyExists',
-			defaultMessage: 'A file with the name "{fileName}" already exists at this location.'
-		},
-		fileOverwriteRequired: {
-			id: 'uppyDashboard.fileOverwriteRequired',
-			defaultMessage: 'A file named "{fileName}" already exists. Do you want to overwrite it?'
-		},
-		dropPasteBoth: {
-			defaultMessage: 'Drop files here, {browseFiles} or {browseFolders}'
-		}
+	maxFiles: defineMessage<{ readonly maxFiles: MessageValue }>({
+		id: 'uppyDashboard.maxFiles',
+		defaultMessage: '{maxFiles} max.'
+	}),
+	maxActiveUploadsReached: defineMessage<{ readonly maxFiles: MessageValue }>({
+		id: 'uppyDashboard.maxActiveUploadsReached',
+		defaultMessage: '{maxFiles} maximum active uploads reached. Excess has been discarded.'
+	}),
+	projectPoliciesNoComply: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
+		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
+	}),
+	fileAlreadyExists: defineMessage<{ readonly fileName: MessageValue }>({
+		id: 'uppyDashboard.fileAlreadyExists',
+		defaultMessage: 'A file with the name "{fileName}" already exists at this location.'
+	}),
+	fileOverwriteRequired: defineMessage<{ readonly fileName: MessageValue }>({
+		id: 'uppyDashboard.fileOverwriteRequired',
+		defaultMessage: 'A file named "{fileName}" already exists. Do you want to overwrite it?'
+	}),
+	dropPasteBoth: defineMessage<{ readonly browseFiles: MessageValue; readonly browseFolders: MessageValue }>({
+		defaultMessage: 'Drop files here, {browseFiles} or {browseFolders}'
 	})
 };
 

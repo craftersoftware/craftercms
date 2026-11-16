@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageValue, type MessageTag } from 'react-intl';
+import { defineMessages, type MessageValue, type MessageTag, defineMessage } from 'react-intl';
 
 export const translations = {
 	...defineMessages({
@@ -51,23 +51,17 @@ export const translations = {
 			defaultMessage: 'Revert confirmation'
 		}
 	}),
-	...defineMessages<{
-		revertToPrevious: { readonly b: MessageTag };
-		revertToThisVersion: { readonly b: MessageTag };
-		confirmRevertBody: { readonly versionTitle: MessageValue };
-	}>({
-		revertToPrevious: {
-			id: 'historyDialog.options.revertToPrevious',
-			defaultMessage: 'Revert to <b>previous</b>'
-		},
-		revertToThisVersion: {
-			id: 'historyDialog.options.revertToThisVersion',
-			defaultMessage: 'Revert to <b>this version</b>'
-		},
-		confirmRevertBody: {
-			id: 'historyDialog.confirmRevertBody',
-			defaultMessage: 'Are you sure you want to revert to {versionTitle}?'
-		}
+	revertToPrevious: defineMessage<{ readonly b: MessageTag }>({
+		id: 'historyDialog.options.revertToPrevious',
+		defaultMessage: 'Revert to <b>previous</b>'
+	}),
+	revertToThisVersion: defineMessage<{ readonly b: MessageTag }>({
+		id: 'historyDialog.options.revertToThisVersion',
+		defaultMessage: 'Revert to <b>this version</b>'
+	}),
+	confirmRevertBody: defineMessage<{ readonly versionTitle: MessageValue }>({
+		id: 'historyDialog.confirmRevertBody',
+		defaultMessage: 'Are you sure you want to revert to {versionTitle}?'
 	})
 };
 

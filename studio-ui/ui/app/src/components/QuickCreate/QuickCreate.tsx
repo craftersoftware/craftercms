@@ -15,7 +15,7 @@
  */
 
 import React, { forwardRef, useEffect, useMemo, useState } from 'react';
-import { defineMessages, FormattedMessage, IntlShape, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, IntlShape, useIntl, type MessageValue } from 'react-intl';
 import IconButton from '@mui/material/IconButton';
 import AddCircleIcon from '@mui/icons-material/AddRounded';
 import Menu, { menuClasses } from '@mui/material/Menu';
@@ -66,13 +66,9 @@ const translations = {
 			defaultMessage: 'Quick create menu'
 		}
 	}),
-	...defineMessages<{
-		itemLookupFailedAfterSave: { readonly path: MessageValue };
-	}>({
-		itemLookupFailedAfterSave: {
-			id: 'quickCreate.itemLookupFailedAfterSave',
-			defaultMessage: 'Content was saved at {path}, but the item could not be loaded.'
-		}
+	itemLookupFailedAfterSave: defineMessage<{ readonly path: MessageValue }>({
+		id: 'quickCreate.itemLookupFailedAfterSave',
+		defaultMessage: 'Content was saved at {path}, but the item could not be loaded.'
 	})
 };
 

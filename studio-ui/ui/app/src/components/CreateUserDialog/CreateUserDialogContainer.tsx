@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { useDispatch } from 'react-redux';
 import { create } from '../../services/users';
 import DialogBody from '../DialogBody/DialogBody';
@@ -58,13 +58,9 @@ const translations = {
 			defaultMessage: 'User created successfully'
 		}
 	}),
-	...defineMessages<{
-		invalidMinLength: { readonly length: MessageValue };
-	}>({
-		invalidMinLength: {
-			id: 'createUserDialog.invalidMinLength',
-			defaultMessage: 'Min {length} characters'
-		}
+	invalidMinLength: defineMessage<{ readonly length: MessageValue }>({
+		id: 'createUserDialog.invalidMinLength',
+		defaultMessage: 'Min {length} characters'
 	})
 };
 

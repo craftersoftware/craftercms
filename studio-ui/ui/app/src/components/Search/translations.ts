@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 
 export const translations = {
 	...defineMessages({
@@ -75,17 +75,12 @@ export const translations = {
 			defaultMessage: 'An error occurred with the search service.'
 		}
 	}),
-	...defineMessages<{
-		resultsSelected: { readonly count: number | bigint };
-		clearSelected: { readonly count: MessageValue };
-	}>({
-		resultsSelected: {
-			id: 'search.resultsSelected',
-			defaultMessage: '{count, plural, one {{count} item selected} other {{count} items selected}}'
-		},
-		clearSelected: {
-			id: 'search.clearSelected',
-			defaultMessage: 'Clear {count} selected'
-		}
+	resultsSelected: defineMessage<{ readonly count: number | bigint }>({
+		id: 'search.resultsSelected',
+		defaultMessage: '{count, plural, one {{count} item selected} other {{count} items selected}}'
+	}),
+	clearSelected: defineMessage<{ readonly count: MessageValue }>({
+		id: 'search.clearSelected',
+		defaultMessage: 'Clear {count} selected'
 	})
 };

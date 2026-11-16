@@ -18,7 +18,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import React, { ChangeEvent, ReactNode, useRef } from 'react';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import '../../styles/animations.scss';
@@ -99,13 +99,9 @@ const translations = {
 			defaultMessage: 'Unknown'
 		}
 	}),
-	...defineMessages<{
-		status: { readonly environment: MessageValue; readonly state: MessageValue };
-	}>({
-		status: {
-			id: 'publishingDashboard.status',
-			defaultMessage: 'Status is {state} for {environment} target'
-		}
+	status: defineMessage<{ readonly environment: MessageValue; readonly state: MessageValue }>({
+		id: 'publishingDashboard.status',
+		defaultMessage: 'Status is {state} for {environment} target'
 	})
 };
 

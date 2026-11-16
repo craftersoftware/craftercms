@@ -19,7 +19,7 @@ import TextField from '@mui/material/TextField';
 import { siteIdMaxLength, siteInputMaxLength, siteNameMaxLength } from './utils';
 import React from 'react';
 import { renderSiteFormHelperText } from './BlueprintForm';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { DuplicateSiteState, LookupTable, SiteState } from '../../models';
 
 const messages = {
@@ -61,18 +61,13 @@ const messages = {
 			defaultMessage: 'Name of the branch this project will track. Pull operations will be done against this branch.'
 		}
 	}),
-	...defineMessages<{
-		fieldMaxLength: { readonly maxLength: MessageValue };
-		required: { readonly name: MessageValue };
-	}>({
-		fieldMaxLength: {
-			id: 'createSiteDialog.fieldMaxLength',
-			defaultMessage: 'Max length: {maxLength} characters.'
-		},
-		required: {
-			id: 'createSiteDialog.required',
-			defaultMessage: '{name} is required.'
-		}
+	fieldMaxLength: defineMessage<{ readonly maxLength: MessageValue }>({
+		id: 'createSiteDialog.fieldMaxLength',
+		defaultMessage: 'Max length: {maxLength} characters.'
+	}),
+	required: defineMessage<{ readonly name: MessageValue }>({
+		id: 'createSiteDialog.required',
+		defaultMessage: '{name} is required.'
 	})
 };
 

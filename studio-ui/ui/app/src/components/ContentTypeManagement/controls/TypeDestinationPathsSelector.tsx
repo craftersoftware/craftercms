@@ -17,7 +17,7 @@
 import React, { useId } from 'react';
 import FormsEngineField from '../../FormsEngine/components/FormsEngineField';
 import Box from '@mui/material/Box';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import { TypeBuilderControl } from '../utils';
 import Typography from '@mui/material/Typography';
 import { StringListEditor } from './StringListEditor';
@@ -31,16 +31,21 @@ const messages = {
 		addInclude: { id: 'typeDestinationPaths.addInclude', defaultMessage: 'Add include path' },
 		addExclude: { id: 'typeDestinationPaths.addExclude', defaultMessage: 'Add exclude path' }
 	}),
-	...defineMessages<{
-		includesPattern: { readonly index: MessageValue };
-		excludesPattern: { readonly index: MessageValue };
-		removeInclude: { readonly index: MessageValue };
-		removeExclude: { readonly index: MessageValue };
-	}>({
-		includesPattern: { id: 'typeDestinationPaths.includesPattern', defaultMessage: 'Includes pattern {index}' },
-		excludesPattern: { id: 'typeDestinationPaths.excludesPattern', defaultMessage: 'Excludes pattern {index}' },
-		removeInclude: { id: 'typeDestinationPaths.removeInclude', defaultMessage: 'Remove include pattern {index}' },
-		removeExclude: { id: 'typeDestinationPaths.removeExclude', defaultMessage: 'Remove exclude pattern {index}' }
+	includesPattern: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.includesPattern',
+		defaultMessage: 'Includes pattern {index}'
+	}),
+	excludesPattern: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.excludesPattern',
+		defaultMessage: 'Excludes pattern {index}'
+	}),
+	removeInclude: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.removeInclude',
+		defaultMessage: 'Remove include pattern {index}'
+	}),
+	removeExclude: defineMessage<{ readonly index: MessageValue }>({
+		id: 'typeDestinationPaths.removeExclude',
+		defaultMessage: 'Remove exclude pattern {index}'
 	})
 };
 

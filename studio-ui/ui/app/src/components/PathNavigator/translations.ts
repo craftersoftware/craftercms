@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages } from 'react-intl';
+import { defineMessage, defineMessages } from 'react-intl';
 
 export const translations = {
 	...defineMessages({
@@ -43,12 +43,8 @@ export const translations = {
 			defaultMessage: 'The project has no locales declared.'
 		}
 	}),
-	...defineMessages<{
-		itemsSelected: { readonly count: number | bigint };
-	}>({
-		itemsSelected: {
-			id: 'craftercms.pages.widget.itemsSelected',
-			defaultMessage: '{count, plural, one {{count} Item selected} other {{count} Items selected}}'
-		}
+	itemsSelected: defineMessage<{ readonly count: number | bigint }>({
+		id: 'craftercms.pages.widget.itemsSelected',
+		defaultMessage: '{count, plural, one {{count} Item selected} other {{count} Items selected}}'
 	})
 };

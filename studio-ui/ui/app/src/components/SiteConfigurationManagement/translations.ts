@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageTag, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageTag, type MessageValue } from 'react-intl';
 
 const configFileTranslations = defineMessages({
 	// region Config Files translations
@@ -338,56 +338,50 @@ const encryptTranslations = {
 			defaultMessage: 'The document contains errors. Check for error markers on side of the editor.'
 		}
 	}),
-	...defineMessages<{
-		xmlContainsErrors: { readonly errors: MessageValue };
-		encryptionSingleDetail: { readonly br: MessageValue; readonly name: MessageValue; readonly value: MessageValue };
-		pendingEncryption: {
-			readonly itemCount: number | bigint;
-			readonly tags: MessageValue;
-			readonly br: MessageValue;
-		};
-		encryptHintPt2: { readonly bold: MessageTag };
-		encryptHintPt3: { readonly lt: MessageValue; readonly gt: MessageValue };
-		encryptHintPt4: { readonly bold: MessageTag };
-		encryptHintPt5: {
-			readonly lt: MessageValue;
-			readonly gt: MessageValue;
-			readonly lc: MessageValue;
-			readonly rc: MessageValue;
-		};
+
+	xmlContainsErrors: defineMessage<{ readonly errors: MessageValue }>({
+		id: 'adminConfigurations.xmlContainsErrors',
+		defaultMessage: 'The XML document contains errors: {errors}'
+	}),
+	encryptionSingleDetail: defineMessage<{
+		readonly br: MessageValue;
+		readonly name: MessageValue;
+		readonly value: MessageValue;
 	}>({
-		xmlContainsErrors: {
-			id: 'adminConfigurations.xmlContainsErrors',
-			defaultMessage: 'The XML document contains errors: {errors}'
-		},
-		encryptionSingleDetail: {
-			id: 'adminConfigurations.encryptionSingleDetail',
-			defaultMessage: '{br}"{name}" with value "{value}"'
-		},
-		pendingEncryption: {
-			id: 'adminConfigurations.pendingEncryption',
-			defaultMessage:
-				"{itemCount, plural, one {Tag Name {tags} is marked for encryption but hasn't} other {Tag names: {tags} {br} are marked for encryption but haven't}} been encrypted, please trigger encryption or remove the tag flagging."
-		},
-		encryptHintPt2: {
-			id: 'adminConfigurations.encryptHinPt2',
-			defaultMessage: '(1) Mark your tags for encryption by adding the attribute <bold>`encrypted=""`</bold>. '
-		},
-		encryptHintPt3: {
-			id: 'adminConfigurations.encryptHinPt3',
-			defaultMessage: 'Example: {lt}accessKey encrypted=""{gt}AKIAIOSFODNN7EXAMPLE{lt}/accessKey{gt}'
-		},
-		encryptHintPt4: {
-			id: 'adminConfigurations.encryptHinPt4',
-			defaultMessage:
-				'(2) Click on the <bold>`Encrypt Marked`</bold> button. Once the process completes, your tag should now look like:'
-		},
-		encryptHintPt5: {
-			id: 'adminConfigurations.encryptHinPt5',
-			defaultMessage:
-				// eslint-disable-next-line no-template-curly-in-string
-				'{lt}accessKey encrypted="true"{gt}${lc}enc:xeJW23SomeEncryptedValuesListedHere{rc}{lt}/accessKey{gt}'
-		}
+		id: 'adminConfigurations.encryptionSingleDetail',
+		defaultMessage: '{br}"{name}" with value "{value}"'
+	}),
+	pendingEncryption: defineMessage<{
+		readonly itemCount: number | bigint;
+		readonly tags: MessageValue;
+		readonly br: MessageValue;
+	}>({
+		id: 'adminConfigurations.pendingEncryption',
+		defaultMessage:
+			"{itemCount, plural, one {Tag Name {tags} is marked for encryption but hasn't} other {Tag names: {tags} {br} are marked for encryption but haven't}} been encrypted, please trigger encryption or remove the tag flagging."
+	}),
+	encryptHintPt2: defineMessage<{ readonly bold: MessageTag }>({
+		id: 'adminConfigurations.encryptHintPt2',
+		defaultMessage: '(1) Mark your tags for encryption by adding the attribute <bold>`encrypted=""`</bold>. '
+	}),
+	encryptHintPt3: defineMessage<{ readonly lt: MessageValue; readonly gt: MessageValue }>({
+		id: 'adminConfigurations.encryptHintPt3',
+		defaultMessage: 'Example: {lt}accessKey encrypted=""{gt}AKIAIOSFODNN7EXAMPLE{lt}/accessKey{gt}'
+	}),
+	encryptHintPt4: defineMessage<{ readonly bold: MessageTag }>({
+		id: 'adminConfigurations.encryptHintPt4',
+		defaultMessage:
+			'(2) Click on the <bold>`Encrypt Marked`</bold> button. Once the process completes, your tag should now look like:'
+	}),
+	encryptHintPt5: defineMessage<{
+		readonly lt: MessageValue;
+		readonly gt: MessageValue;
+		readonly lc: MessageValue;
+		readonly rc: MessageValue;
+	}>({
+		id: 'adminConfigurations.encryptHintPt5',
+		defaultMessage:
+			'{lt}accessKey encrypted="true"{gt}${lc}enc:xeJW23SomeEncryptedValuesListedHere{rc}{lt}/accessKey{gt}'
 	})
 };
 

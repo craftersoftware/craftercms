@@ -14,13 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, type MessageValue } from 'react-intl';
 
-export const translations = defineMessages<{
-	installing: { readonly name: MessageValue };
-}>({
-	installing: {
+export const translations = {
+	installing: defineMessage<{ readonly name: MessageValue }>({
 		id: 'installPluginDialog.installing',
 		defaultMessage: 'Installing "{name}"'
-	}
-});
+	})
+};

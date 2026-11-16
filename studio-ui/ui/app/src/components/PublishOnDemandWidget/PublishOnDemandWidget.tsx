@@ -16,7 +16,7 @@
 
 import React, { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Paper from '@mui/material/Paper';
-import { defineMessages, FormattedMessage, useIntl, type MessageTag } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageTag } from 'react-intl';
 import DialogHeader from '../DialogHeader/DialogHeader';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import palette from '../../styles/palette';
@@ -75,14 +75,10 @@ const messages = {
 			defaultMessage: 'You cannot publish until form requirements are satisfied.'
 		}
 	}),
-	...defineMessages<{
-		publishStudioNote: { readonly a: MessageTag };
-	}>({
-		publishStudioNote: {
-			id: 'publishingDashboard.studioNote',
-			defaultMessage:
-				'Publishing by path should be used to publish changes made in Studio via the UI. For changes made via direct git actions, please <a>publish by commit or tag</a>.'
-		}
+	publishStudioNote: defineMessage<{ readonly a: MessageTag }>({
+		id: 'publishingDashboard.studioNote',
+		defaultMessage:
+			'Publishing by path should be used to publish changes made in Studio via the UI. For changes made via direct git actions, please <a>publish by commit or tag</a>.'
 	})
 };
 

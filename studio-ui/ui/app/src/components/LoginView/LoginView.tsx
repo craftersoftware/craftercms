@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
@@ -137,12 +137,8 @@ const translations = {
 			defaultMessage: 'Token validation failed.'
 		}
 	}),
-	...defineMessages<{
-		lockedAccountTryAgain: { readonly fullTime: string; readonly time: MessageValue };
-	}>({
-		lockedAccountTryAgain: {
-			defaultMessage: 'Try again {fullTime, select, true {{time}} other {in {time} seconds}}'
-		}
+	lockedAccountTryAgain: defineMessage<{ readonly fullTime: string; readonly time: MessageValue }>({
+		defaultMessage: 'Try again {fullTime, select, true {{time}} other {in {time} seconds}}'
 	})
 };
 

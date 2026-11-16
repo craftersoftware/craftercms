@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import { darken, lighten, styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -86,23 +86,17 @@ const translations = {
 			defaultMessage: 'Delete Selected'
 		}
 	}),
-	...defineMessages<{
-		tokenDeleted: { readonly count: number | bigint };
-		confirmHelperText: { readonly label: MessageValue };
-		clearSelected: { readonly count: MessageValue };
-	}>({
-		tokenDeleted: {
-			id: 'tokenManagement.deleted',
-			defaultMessage: '{count, plural, one {Token deleted} other {The selected tokens were deleted}}'
-		},
-		confirmHelperText: {
-			id: 'tokenManagement.helperText',
-			defaultMessage: 'Delete "{label}" token?'
-		},
-		clearSelected: {
-			id: 'tokenManagement.clearSelected',
-			defaultMessage: 'Clear Selected ({count})'
-		}
+	tokenDeleted: defineMessage<{ readonly count: number | bigint }>({
+		id: 'tokenManagement.deleted',
+		defaultMessage: '{count, plural, one {Token deleted} other {The selected tokens were deleted}}'
+	}),
+	confirmHelperText: defineMessage<{ readonly label: MessageValue }>({
+		id: 'tokenManagement.helperText',
+		defaultMessage: 'Delete "{label}" token?'
+	}),
+	clearSelected: defineMessage<{ readonly count: MessageValue }>({
+		id: 'tokenManagement.clearSelected',
+		defaultMessage: 'Clear Selected ({count})'
 	})
 };
 

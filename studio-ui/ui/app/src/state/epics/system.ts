@@ -76,7 +76,7 @@ import { getStoredShowToolsPanel } from '../../utils/state';
 import { closeToolsPanel, openToolsPanel } from '../actions/preview';
 import { getXSRFToken, removeSiteCookie, setSiteCookie } from '../../utils/auth';
 import { changeSiteComplete, fetchSites, popSite } from '../actions/sites';
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 import { batchActions } from '../actions/misc';
 import StandardAction from '../../models/StandardAction';
 import { ProjectLifecycleEvent } from '../../models/ProjectLifecycleEvent';
@@ -87,21 +87,19 @@ import { getPublishingStatusState } from '../../components/PublishingStatusDispl
 import { nanoid } from 'nanoid';
 import { popDialog } from '../actions/dialogStack';
 
-const msgs = defineMessages<{
-	siteSwitchedOnAnotherTab: { readonly currentProject: MessageValue; readonly newProject: MessageValue };
-	siteSwitchedOnAnotherTabPrimaryAction: { readonly currentProject: MessageValue };
-	siteSwitchedOnAnotherTabSecondaryAction: { readonly newProject: MessageValue };
-}>({
-	siteSwitchedOnAnotherTab: {
-		defaultMessage: 'The active project was changed from "{currentProject}" to "{newProject}" on another tab.'
-	},
-	siteSwitchedOnAnotherTabPrimaryAction: {
+const msgs = {
+	siteSwitchedOnAnotherTab: defineMessage<{ readonly currentProject: MessageValue; readonly newProject: MessageValue }>(
+		{
+			defaultMessage: 'The active project was changed from "{currentProject}" to "{newProject}" on another tab.'
+		}
+	),
+	siteSwitchedOnAnotherTabPrimaryAction: defineMessage<{ readonly currentProject: MessageValue }>({
 		defaultMessage: 'Continue on {currentProject}'
-	},
-	siteSwitchedOnAnotherTabSecondaryAction: {
+	}),
+	siteSwitchedOnAnotherTabSecondaryAction: defineMessage<{ readonly newProject: MessageValue }>({
 		defaultMessage: 'Switch to {newProject}'
-	}
-});
+	})
+};
 
 const systemEpics: CrafterCMSEpic[] = [
 	// region storeInitialized

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 
 export const guestMessages = {
 	...defineMessages({
@@ -137,57 +137,44 @@ export const guestMessages = {
 				'Unable to initialize Rich Text Editor (No document type was found for the current content). Please contact your administrator for assistance.'
 		}
 	}),
-	...defineMessages<{
-		maxCount: { readonly maxCount: MessageValue };
-		minCount: { readonly minCount: MessageValue };
-		required: { readonly field: MessageValue };
-		maxLength: { readonly maxLength: MessageValue };
-		registerNotFound: { readonly name: MessageValue };
-		dropTargetsNotFound: { readonly contentType: MessageValue };
-		itemLocked: { readonly lockOwner: MessageValue };
-		contentWasChangedByAnotherUser: { readonly name: MessageValue };
-		contentWasLockedByAnotherUser: { readonly name: MessageValue };
-		noPolicyComply: { readonly detail: MessageValue; readonly fileName: MessageValue };
-	}>({
-		maxCount: {
-			id: 'validations.maxCount',
-			defaultMessage: 'The max number of items is {maxCount}'
-		},
-		minCount: {
-			id: 'validations.minCount',
-			defaultMessage: 'The min number of items is {minCount}'
-		},
-		required: {
-			id: 'validations.required',
-			defaultMessage: '{field} is required'
-		},
-		maxLength: {
-			id: 'validations.maxLength',
-			defaultMessage: 'Maximum length reached ({maxLength})'
-		},
-		registerNotFound: {
-			id: 'register.notFound',
-			defaultMessage: "{name} is not visible or was not registered by it's developer"
-		},
-		dropTargetsNotFound: {
-			id: 'register.dropTargetsNotFound',
-			defaultMessage: 'There are no drop targets for {contentType} components'
-		},
-		itemLocked: {
-			id: 'validations.itemLocked',
-			defaultMessage: 'The item is already locked by {lockOwner}. Please try again later.'
-		},
-		contentWasChangedByAnotherUser: {
-			id: 'previewConcierge.contentWasChangedByAnotherUser',
-			defaultMessage: '{name} has changed the current page. Reload?'
-		},
-		contentWasLockedByAnotherUser: {
-			id: 'previewConcierge.contentWasLockedByAnotherUser',
-			defaultMessage: 'The item was locked by {name}. Edit mode disabled until lock is released.'
-		},
-		noPolicyComply: {
-			id: 'desktopAssetUpload.noPolicyComply',
-			defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-		}
+	maxCount: defineMessage<{ readonly maxCount: MessageValue }>({
+		id: 'validations.maxCount',
+		defaultMessage: 'The max number of items is {maxCount}'
+	}),
+	minCount: defineMessage<{ readonly minCount: MessageValue }>({
+		id: 'validations.minCount',
+		defaultMessage: 'The min number of items is {minCount}'
+	}),
+	required: defineMessage<{ readonly field: MessageValue }>({
+		id: 'validations.required',
+		defaultMessage: '{field} is required'
+	}),
+	maxLength: defineMessage<{ readonly maxLength: MessageValue }>({
+		id: 'validations.maxLength',
+		defaultMessage: 'Maximum length reached ({maxLength})'
+	}),
+	registerNotFound: defineMessage<{ readonly name: MessageValue }>({
+		id: 'register.notFound',
+		defaultMessage: "{name} is not visible or was not registered by it's developer"
+	}),
+	dropTargetsNotFound: defineMessage<{ readonly contentType: MessageValue }>({
+		id: 'register.dropTargetsNotFound',
+		defaultMessage: 'There are no drop targets for {contentType} components'
+	}),
+	itemLocked: defineMessage<{ readonly lockOwner: MessageValue }>({
+		id: 'validations.itemLocked',
+		defaultMessage: 'The item is already locked by {lockOwner}. Please try again later.'
+	}),
+	contentWasChangedByAnotherUser: defineMessage<{ readonly name: MessageValue }>({
+		id: 'previewConcierge.contentWasChangedByAnotherUser',
+		defaultMessage: '{name} has changed the current page. Reload?'
+	}),
+	contentWasLockedByAnotherUser: defineMessage<{ readonly name: MessageValue }>({
+		id: 'previewConcierge.contentWasLockedByAnotherUser',
+		defaultMessage: 'The item was locked by {name}. Edit mode disabled until lock is released.'
+	}),
+	noPolicyComply: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
+		id: 'desktopAssetUpload.noPolicyComply',
+		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
 	})
 };

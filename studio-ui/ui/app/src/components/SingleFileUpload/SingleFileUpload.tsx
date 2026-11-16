@@ -17,7 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Uppy, XHRUpload, Form } from 'uppy';
 import ProgressBar from '@uppy/progress-bar';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import 'uppy/dist/uppy.css';
 import '@uppy/progress-bar/dist/style.css';
 import { getGlobalHeaders } from '../../utils/ajax';
@@ -61,17 +61,12 @@ const messages = {
 			defaultMessage: 'Please select a file to upload'
 		}
 	}),
-	...defineMessages<{
-		policyError: { readonly detail: MessageValue; readonly fileName: MessageValue };
-		overwriteConfirm: { readonly fileName: MessageValue };
-	}>({
-		policyError: {
-			defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
-		},
-		overwriteConfirm: {
-			id: 'fileUpload.overwriteConfirm',
-			defaultMessage: 'A file named "{fileName}" already exists at this location. Do you want to overwrite it?'
-		}
+	policyError: defineMessage<{ readonly detail: MessageValue; readonly fileName: MessageValue }>({
+		defaultMessage: 'File "{fileName}" doesn\'t comply with project policies: {detail}'
+	}),
+	overwriteConfirm: defineMessage<{ readonly fileName: MessageValue }>({
+		id: 'fileUpload.overwriteConfirm',
+		defaultMessage: 'A file named "{fileName}" already exists at this location. Do you want to overwrite it?'
 	})
 };
 

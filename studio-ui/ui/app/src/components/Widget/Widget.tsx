@@ -19,7 +19,7 @@ import NonReactWidget from '../NonReactWidget/NonReactWidget';
 import { buildFileUrl, importPlugin } from '../../services/plugin';
 import { components } from '../../utils/constants';
 import EmptyState from '../EmptyState/EmptyState';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import ErrorState from '../ErrorState';
 import { isValidElementType } from 'react-is';
 import WidgetDescriptor from '../../models/WidgetDescriptor';
@@ -45,18 +45,13 @@ const messages = {
 			defaultMessage: 'Plugin load failed'
 		}
 	}),
-	...defineMessages<{
-		componentNotFoundTitle: { readonly id: MessageValue };
-		pluginLoadFailedMessageBody: { readonly id: MessageValue; readonly info: MessageValue };
-	}>({
-		componentNotFoundTitle: {
-			id: 'widgetComponent.componentNotFoundTitle',
-			defaultMessage: 'Component {id} not found.'
-		},
-		pluginLoadFailedMessageBody: {
-			id: 'widgetComponent.pluginLoadFailedMessageBody',
-			defaultMessage: 'With {info} & component id "{id}".'
-		}
+	componentNotFoundTitle: defineMessage<{ readonly id: MessageValue }>({
+		id: 'widgetComponent.componentNotFoundTitle',
+		defaultMessage: 'Component {id} not found.'
+	}),
+	pluginLoadFailedMessageBody: defineMessage<{ readonly id: MessageValue; readonly info: MessageValue }>({
+		id: 'widgetComponent.pluginLoadFailedMessageBody',
+		defaultMessage: 'With {info} & component id "{id}".'
 	})
 };
 

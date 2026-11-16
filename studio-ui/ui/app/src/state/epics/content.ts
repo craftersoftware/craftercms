@@ -79,7 +79,7 @@ import {
 } from '../../utils/path';
 import { getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
 import { validateActionPolicy } from '../../services/sites';
-import { defineMessages, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageValue } from 'react-intl';
 import { CrafterCMSEpic } from '../store';
 import StandardAction from '../../models/StandardAction';
 import { asArray } from '../../utils/array';
@@ -104,25 +104,19 @@ export const sitePolicyMessages = {
 			defaultMessage: 'Duplicate'
 		}
 	}),
-	...defineMessages<{
-		itemPastePolicyConfirm: {
-			readonly action: MessageValue;
-			readonly detail: MessageValue;
-			readonly modifiedPath: MessageValue;
-			readonly path: MessageValue;
-		};
-		itemPastePolicyError: { readonly action: MessageValue; readonly detail: MessageValue };
+	itemPastePolicyConfirm: defineMessage<{
+		readonly action: MessageValue;
+		readonly detail: MessageValue;
+		readonly modifiedPath: MessageValue;
+		readonly path: MessageValue;
 	}>({
-		itemPastePolicyConfirm: {
-			id: 'pastePolicy.confirm',
-			defaultMessage:
-				'The selected {action} target goes against project policies for the destination directory ({detail}). • Original path: "{path}", • Suggested path is: "{modifiedPath}". Would you like to use the suggested path?'
-		},
-		itemPastePolicyError: {
-			id: 'pastePolicy.error',
-			defaultMessage:
-				'The selected {action} target goes against project policies for the destination directory: {detail}'
-		}
+		id: 'pastePolicy.confirm',
+		defaultMessage:
+			'The selected {action} target goes against project policies for the destination directory ({detail}). • Original path: "{path}", • Suggested path is: "{modifiedPath}". Would you like to use the suggested path?'
+	}),
+	itemPastePolicyError: defineMessage<{ readonly action: MessageValue; readonly detail: MessageValue }>({
+		id: 'pastePolicy.error',
+		defaultMessage: 'The selected {action} target goes against project policies for the destination directory: {detail}'
 	})
 };
 

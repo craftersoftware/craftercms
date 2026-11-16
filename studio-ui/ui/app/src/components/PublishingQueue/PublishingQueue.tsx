@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import PublishingPackage from './PublishingPackage';
 import { fetchPackages, fetchPublishingTargets } from '../../services/publishing';
 import { CurrentFilters, PublishPackage, Selected } from '../../models/Publishing';
@@ -105,19 +105,14 @@ const messages = {
 			defaultMessage: 'Next Page'
 		}
 	}),
-	...defineMessages<{
-		filteredBy: { readonly environment: MessageValue; readonly state: MessageValue };
-		packagesSelected: { readonly count: number | bigint };
-	}>({
-		filteredBy: {
-			id: 'publishingDashboard.filteredBy',
-			defaultMessage:
-				'Showing: {state, select, all {} other {Status: {state}.}} {environment, select, all {} other {{environment} target.}}'
-		},
-		packagesSelected: {
-			id: 'publishingDashboard.packagesSelected',
-			defaultMessage: '{count, plural, one {{count} Package selected} other {{count} Packages selected}}'
-		}
+	filteredBy: defineMessage<{ readonly environment: MessageValue; readonly state: MessageValue }>({
+		id: 'publishingDashboard.filteredBy',
+		defaultMessage:
+			'Showing: {state, select, all {} other {Status: {state}.}} {environment, select, all {} other {{environment} target.}}'
+	}),
+	packagesSelected: defineMessage<{ readonly count: number | bigint }>({
+		id: 'publishingDashboard.packagesSelected',
+		defaultMessage: '{count, plural, one {{count} Package selected} other {{count} Packages selected}}'
 	})
 };
 

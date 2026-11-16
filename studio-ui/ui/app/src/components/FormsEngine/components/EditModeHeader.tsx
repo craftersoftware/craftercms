@@ -37,7 +37,8 @@ import {
 	type MessageDescriptor,
 	useIntl,
 	type MessageValue,
-	type MessageTag
+	type MessageTag,
+	defineMessage
 } from 'react-intl';
 import { EditOffOutlined, EditOutlined } from '@mui/icons-material';
 import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
@@ -61,10 +62,8 @@ const copyMessages = {
 		copied: { defaultMessage: 'Copied' },
 		copyFailed: { defaultMessage: 'Could not copy to the clipboard' }
 	}),
-	...defineMessages<{
-		copyValue: { readonly value: MessageValue };
-	}>({
-		copyValue: { defaultMessage: 'Copy {value}' }
+	copyValue: defineMessage<{ readonly value: MessageValue }>({
+		defaultMessage: 'Copy {value}'
 	})
 };
 
@@ -73,13 +72,14 @@ const tocMessages = defineMessages({
 	expand: { defaultMessage: 'Expand table of contents' }
 });
 
-const dateMessages = defineMessages<{
-	created: { readonly when: MessageValue; readonly who: MessageTag };
-	updated: { readonly when: MessageValue; readonly who: MessageTag };
-}>({
-	created: { defaultMessage: 'Created {when} by <who>who</who>' },
-	updated: { defaultMessage: 'Updated {when} by <who>who</who>' }
-});
+const dateMessages = {
+	created: defineMessage<{ readonly when: MessageValue; readonly who: MessageTag }>({
+		defaultMessage: 'Created {when} by <who>who</who>'
+	}),
+	updated: defineMessage<{ readonly when: MessageValue; readonly who: MessageTag }>({
+		defaultMessage: 'Updated {when} by <who>who</who>'
+	})
+};
 
 // Theme spacing units. The title row uses `columnGap`; the toggle also keeps a small end margin.
 const titleRowGap = 1;

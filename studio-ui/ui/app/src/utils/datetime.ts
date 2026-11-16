@@ -15,18 +15,16 @@
  */
 
 import moment, { Moment } from 'moment-timezone';
-import { defineMessages } from 'react-intl';
+import { defineMessage } from 'react-intl';
 import { getCurrentIntl } from './i18n';
 import GlobalState from '../models/GlobalState';
 
-const translations = defineMessages<{
-	ordinals: { readonly day: number | bigint };
-}>({
-	ordinals: {
+const translations = {
+	ordinals: defineMessage<{ readonly day: number | bigint }>({
 		id: 'dateTime.ordinals',
 		defaultMessage: '{day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}'
-	}
-});
+	})
+};
 
 export interface TimezoneDescriptor {
 	name: string;

@@ -93,7 +93,7 @@
 		"@types/rimraf": "^4.0.5",
 		"build-if-changed": "^1.5.5",
 		"esbuild": "^0.28.2",
-        "eslint": "^10.14.0",
+		"eslint": "^10.14.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-prettier": "^5.5.7",
 		"glob-gitignore": "^1.0.15",

@@ -18,7 +18,7 @@ import React from 'react';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import { SiteState } from '../../models/Site';
-import { defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, FormattedMessage, useIntl, type MessageValue } from 'react-intl';
 import GitAuthForm from '../GitAuthForm';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
@@ -96,13 +96,9 @@ const messages = {
 				'Creating the project as an orphan will dissociate the project from the source git repository and remove all history.'
 		}
 	}),
-	...defineMessages<{
-		required: { readonly name: MessageValue };
-	}>({
-		required: {
-			id: 'createSiteDialog.required',
-			defaultMessage: '{name} is required.'
-		}
+	required: defineMessage<{ readonly name: MessageValue }>({
+		id: 'createSiteDialog.required',
+		defaultMessage: '{name} is required.'
 	})
 };
 

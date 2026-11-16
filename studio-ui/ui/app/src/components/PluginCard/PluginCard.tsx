@@ -22,7 +22,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import CardActions from '@mui/material/CardActions';
 import { MarketplacePlugin } from '../../models/MarketplacePlugin';
-import { defineMessages, useIntl, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, useIntl, type MessageValue } from 'react-intl';
 import MobileStepper from '../MobileStepper/MobileStepper';
 import { backgroundColor } from '../../styles/theme';
 import Button from '@mui/material/Button';
@@ -78,13 +78,9 @@ const messages = {
 			defaultMessage: 'More...'
 		}
 	}),
-	...defineMessages<{
-		licenseTooltip: { readonly license: MessageValue };
-	}>({
-		licenseTooltip: {
-			id: 'plugin.licenseTooltip',
-			defaultMessage: '{license} license'
-		}
+	licenseTooltip: defineMessage<{ readonly license: MessageValue }>({
+		id: 'plugin.licenseTooltip',
+		defaultMessage: '{license} license'
 	})
 };
 

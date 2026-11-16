@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, type MessageTag, type MessageValue } from 'react-intl';
+import { defineMessage, defineMessages, type MessageTag, type MessageValue } from 'react-intl';
 
 // Side-effect defineMessages calls for formatjs extraction (values come from site config / UI XML).
 defineMessages({
@@ -124,11 +124,7 @@ defineMessages({
 	}
 });
 
-defineMessages<{
-	site: { readonly muted: MessageTag; readonly siteName: MessageValue };
-}>({
-	site: {
-		id: 'launcher.siteSectionTitle',
-		defaultMessage: 'Project <muted>• {siteName}</muted>'
-	}
+defineMessage<{ readonly muted: MessageTag; readonly siteName: MessageValue }>({
+	id: 'launcher.siteSectionTitle',
+	defaultMessage: 'Project <muted>• {siteName}</muted>'
 });
