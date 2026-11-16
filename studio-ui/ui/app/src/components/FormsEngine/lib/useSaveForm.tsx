@@ -30,13 +30,16 @@ import {
 	commitFormVisibility,
 	complementValuesWithSystemProps,
 	composePathForType,
+	embeddedFileName,
 	EMPTY_CHANGED_FIELD_IDS,
 	extractAtomValues,
 	getBasePath,
 	getFileNameValueFromPath,
 	readInvalidFieldIds,
-	showAlert
+	showAlert,
+	xmlFileNamesForPath
 } from './formUtils';
+import { buildContentXml } from './valueSerializers';
 import { FormSavePromiseResult, FormsEngineProps } from '../FormsEngine';
 import { contentFormSaveAction } from '../../../utils/contentFormLaunch';
 import { applySaveGate, childFields, draftFlagAfterBeforeSave, repositorySaveFollowUp } from './formVisibility';
@@ -53,7 +56,6 @@ import {
 import { AjaxError, AjaxResponse } from 'rxjs/ajax';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { buildContentXml } from './valueSerializers';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled, isInternalNameValid } from './validators';
@@ -386,8 +388,6 @@ export function useSaveForm(props: UseSaveFormProps) {
 				});
 
 				complementValuesWithSystemProps(id, values, contentObject, contentType, saveAsDraft);
-				const { [XmlKeys.fileName]: _, ...valuesWithoutFileName } = values;
-				const xml = buildContentXml(valuesWithoutFileName, contentTypesById);
 				// Embedded handled here. If true, execution ends inside if statement.
 				if (isEmbedded) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
@@ -403,6 +403,12 @@ export function useSaveForm(props: UseSaveFormProps) {
 						});
 					}
 
+					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
+					// Mutate in place so relevance WeakMap association is kept for stacked commits.
+					// Do not read `file-name` from form values: stacked embeds delete it at bootstrap, and a
+					// top-level embed may seed a path-derived slug. Use the component's stored element.
+					values[XmlKeys.fileName] = embeddedFileName(id, contentObject?.[XmlKeys.fileName] as string);
+					const xml = buildContentXml(values, contentTypesById);
 					const dom = fromString(xml);
 
 					// Stacked embedded: hand values back to the parent form (e.g. NodeSelector merges in memory).
@@ -504,6 +510,9 @@ export function useSaveForm(props: UseSaveFormProps) {
 						path = itemPath;
 					}
 				}
+
+				// Keep `values` as the UI slug; only the XML copy gets the path basename (`index.xml`, `foo.xml`).
+				const xml = buildContentXml({ ...values, ...xmlFileNamesForPath(path) }, contentTypesById);
 
 				const saveActionCallbacks = {
 					async next(ajaxResponse: AjaxResponse<WriteContentResponse>) {

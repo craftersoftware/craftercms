@@ -168,7 +168,7 @@ export function EditSiteDialogContainer(props: EditSiteDialogContainerProps) {
 							<Card elevation={2}>
 								<CardMedia component="img" image={imageUrl} title={name} sx={{ height: '234px' }} />
 								<CardActions sx={{ placeContent: 'center' }} disableSpacing>
-									<Tooltip title={<FormattedMessage id="words.edit" defaultMessage="Edit" />}>
+									<Tooltip title={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}>
 										<IconButton
 											onClick={onEditSiteImage}
 											aria-label={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}

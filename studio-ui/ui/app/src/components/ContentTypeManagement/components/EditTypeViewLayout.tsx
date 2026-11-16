@@ -16,7 +16,7 @@
 
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import IconButton, { IconButtonProps } from '@mui/material/IconButton';
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import Typography from '@mui/material/Typography';
@@ -52,6 +52,7 @@ const actionsMap: Record<EditAppLayoutAction, EditAppLayoutAction> = {
 
 export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>((props, ref) => {
 	const [open, setOpen] = useState(false);
+	const { formatMessage } = useIntl();
 	const anchorElRef = useRef(undefined);
 	const handleOpenMenuButton: IconButtonProps['onClick'] = () => setOpen(true);
 	const handleClose: MenuProps['onClose'] = () => setOpen(false);
@@ -73,7 +74,7 @@ export const EditTypeViewLayout = forwardRef<HTMLDivElement, EditAppLayoutProps>
 							alignItems: 'center'
 						}}
 					>
-						<Tooltip title={<FormattedMessage defaultMessage="Done" />}>
+						<Tooltip title={formatMessage({ defaultMessage: 'Done' })}>
 							<IconButton data-action-id={actionsMap.exit} onClick={handleMenuItemClick} sx={{ mr: 1 }}>
 								<ArrowBackRounded />
 							</IconButton>

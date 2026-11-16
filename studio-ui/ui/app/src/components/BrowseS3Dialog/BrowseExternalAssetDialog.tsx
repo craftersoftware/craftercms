@@ -260,7 +260,7 @@ function BrowseExternalAssetDialogBody(props: BrowseExternalAssetDialogContainer
 													<Divider orientation="vertical" flexItem sx={{ marginTop: '-3px', marginBottom: '-3px' }} />
 												</>
 											)}
-											<Tooltip title={<FormattedMessage defaultMessage="Refresh" />}>
+											<Tooltip title={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}>
 												<IconButton
 													onClick={onRefresh}
 													aria-label={formatMessage({ id: 'word.refresh', defaultMessage: 'Refresh' })}

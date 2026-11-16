@@ -1172,7 +1172,11 @@ function CreateDataSourcePicker(props: {
 						<FormLabel id="creationStrategyLabel">
 							<FormattedMessage defaultMessage="Creation Strategy" />
 						</FormLabel>
-						<Tooltip title={<FormattedMessage defaultMessage="Learn more about shared vs embedded components" />}>
+						<Tooltip
+							title={formatMessage({
+								defaultMessage: 'Learn more about shared vs embedded components'
+							})}
+						>
 							<IconButton
 								size="small"
 								sx={{ ml: 1 }}

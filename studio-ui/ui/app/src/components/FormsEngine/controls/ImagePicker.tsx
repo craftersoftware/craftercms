@@ -258,7 +258,7 @@ export function ImagePicker(props: ImagePickerProps) {
 										</>
 									)}
 									<Box>
-										<Tooltip title={<FormattedMessage defaultMessage="Replace" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Replace' })}>
 											<IconButton
 												size="small"
 												disabled={readonly || !actionsReady}
@@ -273,7 +273,7 @@ export function ImagePicker(props: ImagePickerProps) {
 												<EditOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Download" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Download' })}>
 											<IconButton
 												size="small"
 												onClick={() => {
@@ -283,7 +283,7 @@ export function ImagePicker(props: ImagePickerProps) {
 												<DownloadOutlined />
 											</IconButton>
 										</Tooltip>
-										<Tooltip title={<FormattedMessage defaultMessage="Delete" />}>
+										<Tooltip title={formatMessage({ defaultMessage: 'Delete' })}>
 											<IconButton size="small" onClick={handleRemoveImage} disabled={readonly}>
 												<DeleteOutlined />
 											</IconButton>

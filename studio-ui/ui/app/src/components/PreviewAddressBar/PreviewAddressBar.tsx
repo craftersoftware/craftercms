@@ -164,7 +164,7 @@ export function PreviewAddressBar(props: AddressBarProps) {
 		<>
 			<PreviewBackButton />
 			<PreviewForwardButton />
-			<Tooltip title={noSiteSet ? '' : <FormattedMessage defaultMessage="Reload this page (r)" />}>
+			<Tooltip title={noSiteSet ? '' : formatMessage({ defaultMessage: 'Reload this page (r)' })}>
 				<IconButton
 					onClick={noSiteSet ? undefined : onRefresh}
 					size="large"
@@ -239,7 +239,7 @@ export function PreviewAddressBar(props: AddressBarProps) {
 						onBlur={() => setFocus(false)}
 					/>
 				)}
-				<Tooltip title={disableItemMenuButton ? '' : <FormattedMessage defaultMessage="Options (a)" />}>
+				<Tooltip title={disableItemMenuButton ? '' : formatMessage({ defaultMessage: 'Options (a)' })}>
 					<IconButton
 						onClick={onOptions}
 						disabled={disableItemMenuButton}

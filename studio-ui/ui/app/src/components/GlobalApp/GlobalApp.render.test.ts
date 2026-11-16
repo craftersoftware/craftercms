@@ -137,3 +137,15 @@ describe('GlobalApp tab order', () => {
 		assert.equal(document.activeElement, main);
 	});
 });
+
+describe('GlobalApp sidebar spacing', () => {
+	it('insets the nav list to line up with the first Project Tools row, not the drawer', async () => {
+		const host = await renderGlobalApp();
+		const nav = host.querySelector('nav');
+		const list = nav?.querySelector('ul');
+		assert.ok(nav && list);
+		// Project Tools: 16px header top inset + 10px header margin = 26px.
+		assert.equal(getComputedStyle(list).paddingTop, '26px');
+		assert.equal(parseFloat(getComputedStyle(nav).paddingTop), 0, 'the drawer body itself has no top padding');
+	});
+});

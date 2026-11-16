@@ -27,6 +27,8 @@ type ErrorStateClassKey = 'root' | 'image' | 'title' | 'message' | 'button';
 
 export type ErrorStateProps = React.PropsWithChildren<{
 	title?: ReactNode;
+	/** Id for the title element, so a dialog can be named by it when it fails to load. */
+	titleId?: string;
 	message?: ReactNode;
 	imageUrl?: string;
 	buttonIcon?: ReactNode;
@@ -81,6 +83,7 @@ export function ErrorState(props: ErrorStateProps) {
 			)}
 			{nnou(title) && (
 				<Typography
+					id={props.titleId}
 					variant="body1"
 					component={titleComponent}
 					className={props.classes?.title}

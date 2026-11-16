@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
+import { defineMessages, useIntl } from 'react-intl';
 import React, { useEffect, useMemo, useReducer } from 'react';
 import { getTranslation } from '../../utils/i18n';
 import IconButton from '@mui/material/IconButton';
@@ -228,7 +228,7 @@ export function PreviewSimulatorPanel(props: any) {
 					onChange={(e) => setHeight(e.target.value)}
 					value={height}
 				/>
-				<Tooltip title={<FormattedMessage defaultMessage="Rotate screen" />}>
+				<Tooltip title={formatMessage({ defaultMessage: 'Rotate screen' })}>
 					<IconButton
 						onClick={onFlipDimensions}
 						edge="end"
