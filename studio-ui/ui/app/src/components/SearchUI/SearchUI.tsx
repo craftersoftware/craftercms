@@ -129,9 +129,10 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
-	// Built only from the loaded response: `searchResults.offset` is the offset that response was requested with.
+	// Built from the loaded response: `searchResults.offset` is the offset that response was requested with.
 	// `searchParameters.offset` changes as soon as the user pages, but the request starts in a later effect, so
-	// reading it here would pair the new offset with the previous page's items. Stay silent while a search is in
+	// it only stands in for callers whose response carries no `offset` (plain `SearchResult`s from outside Studio).
+	// Studio's own path always sets `offset`, so it never reads the parameter. Stay silent while a search is in
 	// flight, since `searchResults` still holds the previous response until the new one lands.
 	let resultsStatus = '';
 	if (searchResults != null && !isFetching) {

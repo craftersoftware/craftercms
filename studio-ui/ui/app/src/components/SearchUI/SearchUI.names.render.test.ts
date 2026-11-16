@@ -205,6 +205,18 @@ describe('search results status', () => {
 		assert.equal(status(host), '19-27 of 34 results');
 	});
 
+	it('falls back to the search parameters when the response carries no offset', async () => {
+		const { offset: _omitted, ...plain } = page(9, 9);
+		const { host } = await mount({ searchParameters: { limit: 9, offset: 9 }, searchResults: plain });
+		assert.equal(status(host), '10-18 of 34 results');
+	});
+
+	it('falls back to zero when neither the response nor the parameters carry an offset', async () => {
+		const { offset: _omitted, ...plain } = page(0, 9);
+		const { host } = await mount({ searchParameters: { limit: 9 }, searchResults: plain });
+		assert.equal(status(host), '1-9 of 34 results');
+	});
+
 	it('announces the range for the last short page itself', async () => {
 		const { host } = await mount({ searchParameters: { limit: 9, offset: 30 }, searchResults: page(30, 4) });
 		assert.equal(status(host), '31-34 of 34 results');
