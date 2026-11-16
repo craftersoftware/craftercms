@@ -276,7 +276,7 @@ export function ZoneMenu(props: ZoneMenuProps) {
 			const { maxCount, minCount } = containerCountLimits(containerField);
 			const trashableValidation = minCount == null || minCount < numOfItemsInContainerCollection;
 			const duplicateValidation =
-				permissions.includes('content_create') && (maxCount == null || maxCount > numOfItemsInContainerCollection);
+				permissions.includes('content_write') && (maxCount == null || maxCount > numOfItemsInContainerCollection);
 
 			// The trash/duplicate are not applicable outside of item selector or repeat group type fields:
 			if (

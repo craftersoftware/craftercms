@@ -105,6 +105,7 @@ public class XsltTest {
 		addXsltCases(rows, "globalPermissions50023Test", globalPermissions50023TestData());
 		addXsltCases(rows, "globalPermissions50025Test", globalPermissions50025TestData());
 		addXsltCases(rows, "contentMovePermissionTest", contentMovePermissionTestData());
+		addXsltCases(rows, "contentCreatePermissionTest", contentCreatePermissionTestData());
 		addXsltCases(rows, "siteConfigTools407Test", siteConfigTools407TestData());
 		addScenario(rows, "shippedSiteConfigToolsRemoveLegacyContentTypesTool", Scenario.SHIPPED_SITE_CONFIG_TOOLS);
 		addScenario(rows, "uiPipelineContinuesFrom4500ThroughContentTypeManagement", Scenario.UI_PIPELINE);
@@ -677,6 +678,28 @@ public class XsltTest {
 				new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.2.xslt"),
 				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.28/input.xml"),
 				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.28/expected.xml"),
+				emptyMap()
+			}
+		};
+	}
+
+	/**
+	 * content_create is removed. A rule that already grants content_write drops it. A rule that only had
+	 * content_create is rewritten to content_write. Rules without content_create are left alone.
+	 * The harness runs the template twice.
+	 */
+	public static Object[][] contentCreatePermissionTestData() {
+		return new Object[][]{
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.3.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/permission-mappings-config/5.0/5.0.0.3/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/permission-mappings-config/5.0/5.0.0.3/expected.xml"),
+				emptyMap()
+			},
+			new Object[]{
+				new ClassPathResource("crafter/studio/upgrade/5.0.x/permission-mappings/permission-mappings-config-v5.0.0.3.xslt"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.29/input.xml"),
+				new ClassPathResource("crafter/studio/upgrade/xslt/global-permission-mappings/5.0/5.0.0.29/expected.xml"),
 				emptyMap()
 			}
 		};

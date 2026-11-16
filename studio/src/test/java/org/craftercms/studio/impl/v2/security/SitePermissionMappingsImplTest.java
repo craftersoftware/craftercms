@@ -24,9 +24,8 @@ import java.util.Set;
 import org.craftercms.studio.api.v2.dal.Group;
 import org.craftercms.studio.api.v2.dal.security.NormalizedGroup;
 import org.craftercms.studio.api.v2.dal.security.NormalizedRole;
-import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_CREATE;
 import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_READ;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_CREATE;
+import static org.craftercms.studio.api.v2.security.ContentItemAvailableActionsConstants.BITMAP_CONTENT_WRITE;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_READ;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
 import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_GET_CHILDREN;
@@ -52,7 +51,7 @@ public class SitePermissionMappingsImplTest {
 			List.of(group("site_author")),
 			"/site/website/articles/index.xml");
 
-		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_CREATE, actions);
+		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_WRITE, actions);
 	}
 
 	@Test
@@ -66,7 +65,7 @@ public class SitePermissionMappingsImplTest {
 		long actions = userMapped.getAvailableActions("jane", Collections.emptyList(),
 			"/site/website/index.xml");
 
-		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_CREATE, actions);
+		assertEquals(BITMAP_CONTENT_READ | BITMAP_CONTENT_WRITE, actions);
 	}
 
 	@Test
@@ -96,7 +95,7 @@ public class SitePermissionMappingsImplTest {
 		Set<String> permissions = mappings.getUserPermissions("sysadmin", Collections.emptyList(), true);
 
 		assertTrue(permissions.contains(PERMISSION_CONTENT_READ));
-		assertTrue(permissions.contains(PERMISSION_CONTENT_CREATE));
+		assertTrue(permissions.contains(PERMISSION_CONTENT_WRITE));
 		assertTrue(permissions.contains(PERMISSION_GET_CHILDREN));
 	}
 
@@ -105,7 +104,7 @@ public class SitePermissionMappingsImplTest {
 		Set<String> permissions = mappings.getUserPermissions("jane", List.of(group("site_author")), false);
 
 		assertTrue(permissions.contains(PERMISSION_CONTENT_READ));
-		assertTrue(permissions.contains(PERMISSION_CONTENT_CREATE));
+		assertTrue(permissions.contains(PERMISSION_CONTENT_WRITE));
 		assertTrue(permissions.contains(PERMISSION_GET_CHILDREN));
 	}
 
@@ -117,7 +116,7 @@ public class SitePermissionMappingsImplTest {
 			"/site/website/index.xml",
 			false);
 
-		assertEquals(Set.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_CREATE, PERMISSION_GET_CHILDREN),
+		assertEquals(Set.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE, PERMISSION_GET_CHILDREN),
 			permissions);
 	}
 
@@ -209,7 +208,7 @@ public class SitePermissionMappingsImplTest {
 	private static RolePermissionMappingsImpl authorRoleMappings() {
 		RolePermissionMappingsImpl roleMappings = new RolePermissionMappingsImpl();
 		roleMappings.addRuleContentItemPermissionsMapping("/site/website/.*",
-			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_CREATE));
+			List.of(PERMISSION_CONTENT_READ, PERMISSION_CONTENT_WRITE));
 		return roleMappings;
 	}
 

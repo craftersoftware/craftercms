@@ -75,7 +75,7 @@ import static org.apache.commons.lang3.Strings.CI;
 import static org.craftercms.commons.lang.UrlUtils.concat;
 import static org.craftercms.studio.api.v1.constant.GitRepositories.SANDBOX;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.*;
-import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_CREATE;
+import static org.craftercms.studio.permissions.StudioPermissionsConstants.PERMISSION_CONTENT_WRITE;
 
 /**
  * Internal implementation of {@link org.craftercms.studio.api.v2.service.content.ContentTypeService}.
@@ -149,7 +149,7 @@ public class ContentTypeServiceInternalImpl implements org.craftercms.studio.api
 		for (ContentType contentType : quickCreateContentTypes) {
 			try {
 				if (userService.getUserPermissions(siteId, contentType.getQuickCreatePath(), SecurityUtils.getCurrentUsername())
-						.contains(PERMISSION_CONTENT_CREATE)) {
+						.contains(PERMISSION_CONTENT_WRITE)) {
 					QuickCreateItem item = new QuickCreateItem();
 					item.setSiteId(siteId);
 					item.setContentTypeId(contentType.getId());

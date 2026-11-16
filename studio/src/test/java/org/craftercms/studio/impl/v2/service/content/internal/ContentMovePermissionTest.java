@@ -84,7 +84,7 @@ public class ContentMovePermissionTest {
 	private static final String SITE = "ed";
 	private static final String AUTHOR_SCOPE = "/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?";
 	private static final Set<String> AUTHOR_ACTIONS = Set.of(
-			PERMISSION_CONTENT_WRITE, "content_create", "folder_create", "content_copy", PERMISSION_CONTENT_MOVE);
+			PERMISSION_CONTENT_WRITE, "folder_create", "content_copy", PERMISSION_CONTENT_MOVE);
 	private static final String ABOUT = "/site/website/about/index.xml";
 	private static final String HELLO = "/site/website/hello/index.xml";
 
@@ -314,9 +314,9 @@ public class ContentMovePermissionTest {
 		return switch (current) {
 			case AUTHOR -> path.matches(AUTHOR_SCOPE) && AUTHOR_ACTIONS.contains(action);
 			case PUBLISHER -> path.matches("/site/.*|/static-assets.*")
-					&& Set.of(PERMISSION_CONTENT_WRITE, "content_create", "folder_create", "content_copy",
+					&& Set.of(PERMISSION_CONTENT_WRITE, "folder_create", "content_copy",
 					PERMISSION_CONTENT_MOVE).contains(action);
-			case ADMIN -> Set.of(PERMISSION_CONTENT_WRITE, PERMISSION_CONTENT_MOVE, "content_create",
+			case ADMIN -> Set.of(PERMISSION_CONTENT_WRITE, PERMISSION_CONTENT_MOVE,
 					"folder_create", "content_copy").contains(action);
 			case REVIEWER -> false;
 			case MOVER -> PERMISSION_CONTENT_MOVE.equals(action) && path.matches(AUTHOR_SCOPE);

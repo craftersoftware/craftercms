@@ -3137,7 +3137,7 @@ var nodeOpen = false,
       // is this really a service and not a util, can we rename it to something descriptive?
       isCreateContentAllowed: function (permissions) {
         for (var i = 0; i < permissions.length; i++) {
-          if (permissions[i] === 'content_create') {
+          if (permissions[i] === 'content_write') {
             return true;
           }
         }

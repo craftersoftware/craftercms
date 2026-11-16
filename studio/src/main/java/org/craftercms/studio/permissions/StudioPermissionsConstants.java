@@ -26,7 +26,6 @@ public final class StudioPermissionsConstants {
 	public static final String PERMISSION_AUDIT_LOG = "audit_log";
 	public static final String PERMISSION_CANCEL_FAILED_PULL = "cancel_failed_pull";
 	public static final String PERMISSION_COMMIT_RESOLUTION = "commit_resolution";
-	public static final String PERMISSION_CONTENT_CREATE = "content_create";
 	public static final String PERMISSION_FOLDER_CREATE = "folder_create";
 	public static final String PERMISSION_CREATE_GROUPS = "create_groups";
 	public static final String PERMISSION_CREATE_USERS = "create_users";
