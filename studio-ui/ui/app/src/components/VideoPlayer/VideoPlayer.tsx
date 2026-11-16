@@ -17,6 +17,7 @@
 import React, { CSSProperties, lazy, Suspense } from 'react';
 import '@videojs/react/video/skin.css';
 import { VideoPlayer as Player, VideoSkin, Video } from '@videojs/react/video';
+import { resolveSourceType } from './utils';
 
 export interface VideoPlayerProps {
 	src: string;
@@ -32,25 +33,8 @@ export interface VideoPlayerProps {
 const HlsJsVideo = lazy(() => import('@videojs/react/media/hlsjs-video').then((m) => ({ default: m.HlsJsVideo })));
 const DashVideo = lazy(() => import('@videojs/react/media/dash-video').then((m) => ({ default: m.DashVideo })));
 
-const SourceTypes = {
-	mp4: 'video/mp4',
-	m3u8: 'application/x-mpegURL',
-	mpd: 'application/dash+xml'
-};
-
 const HLS_TYPES = new Set(['application/x-mpegurl', 'application/vnd.apple.mpegurl']);
 const DASH_TYPES = new Set(['application/dash+xml']);
-
-const extensionRegex = /(?:\.([^.]+))?$/;
-
-function resolveSourceType(src: string, type?: string): string | undefined {
-	if (type) {
-		return type;
-	}
-	const path = src.split(/[?#]/, 1)[0];
-	const extension = extensionRegex.exec(path)?.[1]?.toLowerCase();
-	return extension ? SourceTypes[extension] : undefined;
-}
 
 function VideoPlayer(props: VideoPlayerProps) {
 	const { src, autoplay, controls, height, width, muted, poster, type } = props;
