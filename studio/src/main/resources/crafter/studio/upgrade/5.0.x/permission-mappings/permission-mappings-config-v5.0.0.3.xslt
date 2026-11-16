@@ -44,6 +44,11 @@
 		<xsl:element name="permission">
 			<xsl:text>content_write</xsl:text>
 		</xsl:element>
+		<xsl:if test="not(../permission = 'content_move')">
+			<xsl:element name="permission">
+				<xsl:text>content_move</xsl:text>
+			</xsl:element>
+		</xsl:if>
 	</xsl:template>
 
 </xsl:stylesheet>
