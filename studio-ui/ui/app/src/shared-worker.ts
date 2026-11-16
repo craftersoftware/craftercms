@@ -138,6 +138,8 @@ const authTokenQueue = createAuthTokenQueue({
 	obtain: obtainAuthToken,
 	extend: extendSession,
 	onToken(token) {
+		// An extension that ran right after another request leaves the timer of that request behind
+		clearTimeout(timeout);
 		log('New token received');
 		status = 'active';
 		current = token;
