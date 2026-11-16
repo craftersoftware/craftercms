@@ -34,13 +34,14 @@ import type { AllowListEntry, Theme } from './allow-list';
  *    removed, or the test failed before reaching it);
  *  - the suite declares no root test with that title in that theme: unscanned, however the run was filtered, because
  *    no run of this suite can ever reach it;
- *  - the root test exists but did not run (filtered out): skipped, it is not this run's to judge.
+ *  - the root test exists but did not run (filtered out, or it skipped itself with `test.skip()`/`test.fixme()`):
+ *    skipped, it is not this run's to judge.
  */
 
 /** Written by `checkA11y` for every scan: `{ theme, screen }`. */
 export const SCAN_RECORD_PREFIX = 'a11y-scan-';
 
-/** Written by the `allowListCoverage` fixture when a test starts: `{ theme, test }`. */
+/** Written by the `allowListCoverage` fixture after a test that was not skipped: `{ theme, test }`. */
 export const RUN_RECORD_PREFIX = 'a11y-run-';
 
 export interface ScanRecord {
@@ -71,7 +72,7 @@ export const rootScreen = (screen: string) => screen.split(' > ')[0];
 /**
  * Splits the allow-list into entries this run left unscanned and entries it had no basis to judge.
  * @param scanned Keys of the screens a scan reached in this run.
- * @param ran Keys of the tests that started in this run.
+ * @param ran Keys of the tests that ran, and were not skipped, in this run.
  * @param declared Keys of every test the suite declares, filtered or not, or `null` when that list is not available.
  *   Without it an entry whose root test did not run is skipped, since a filtered test can't be told from a removed one.
  */

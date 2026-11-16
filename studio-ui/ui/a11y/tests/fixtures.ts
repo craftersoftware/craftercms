@@ -15,7 +15,7 @@
  */
 
 import { test as base, expect, Page } from '@playwright/test';
-import { recordTestRun, unscannedEntries } from './axe';
+import { verifyTestRun } from './axe';
 import { password, project, username } from './env';
 
 export { expect };
@@ -53,20 +53,12 @@ export const test = base.extend<{ authenticated: boolean; allowListCoverage: voi
 		if (authenticated) await logIn(page);
 		await use(page);
 	},
-	// After each test, fail on allow-list entries for the test's screens that no scan reached (renamed or removed).
-	// Also records that the test ran, for the suite-wide check in `coverage-teardown.ts`.
+	// After each test that wasn't skipped, fail on allow-list entries for the test's screens that no scan reached
+	// (renamed or removed). Also records that the test ran, for the suite-wide check in `coverage-teardown.ts`.
 	allowListCoverage: [
 		async ({}, use, testInfo) => {
-			recordTestRun(testInfo);
 			await use();
-			const missed = unscannedEntries(testInfo);
-			if (missed.length) {
-				throw new Error(
-					`Allow-list entries for screens this test never scanned (remove them, or fix the earlier failure):\n${missed
-						.map(({ rule, screen, theme }) => `  ${rule} on ${theme} ${screen}`)
-						.join('\n')}`
-				);
-			}
+			verifyTestRun(testInfo);
 		},
 		{ auto: true }
 	]
