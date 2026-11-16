@@ -615,7 +615,7 @@ export function PublishDialogContainer(props: PublishDialogContainerProps) {
 										)}
 									</Paper>
 								) : (
-									<Alert severity="warning">
+									<Alert severity="warning" role="note">
 										<FormattedMessage
 											id="publishDialog.firstPublish"
 											defaultMessage="The entire project will be published since this is the first publish request"

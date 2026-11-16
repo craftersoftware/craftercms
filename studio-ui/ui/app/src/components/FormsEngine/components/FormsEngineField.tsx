@@ -384,6 +384,7 @@ export const FormsEngineField = forwardRef<HTMLDivElement, FormsEngineFieldProps
 				)}
 				{sourcePath && (
 					<Alert
+						role="note"
 						variant="standard"
 						severity="info"
 						icon={
