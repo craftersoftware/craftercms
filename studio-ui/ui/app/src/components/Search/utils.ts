@@ -166,9 +166,13 @@ export interface UseSearchStateHookProps extends Pick<BaseSearchProps, 'onSelect
 	disableChangePreselected?: SearchProps['disableChangePreselected'];
 }
 
-/** A search response paired with the offset it was requested with, so the range can be built from loaded data alone. */
+/**
+ * A search response paired with the offset it was requested with, so the range can be built from loaded data alone.
+ * `offset` is optional so plugin callers passing a plain `SearchResult` keep working; SearchUI then falls back to the
+ * requested offset.
+ */
 export interface OffsetSearchResult extends SearchResult {
-	offset: number;
+	offset?: number;
 }
 
 export interface UseSearchStateReturn {

@@ -140,8 +140,11 @@ export function SearchUI(props: SearchUIProps) {
 		} else if (searchResults.items.length > 0) {
 			// Count the rows that are rendered, not the requested page window.
 			resultsStatus = formatMessage(translations.resultsStatus, {
-				from: searchResults.offset + 1,
-				to: Math.min(searchResults.offset + searchResults.items.length, searchResults.total),
+				from: (searchResults.offset ?? searchParameters.offset ?? 0) + 1,
+				to: Math.min(
+					(searchResults.offset ?? searchParameters.offset ?? 0) + searchResults.items.length,
+					searchResults.total
+				),
 				count: searchResults.total
 			});
 		}
