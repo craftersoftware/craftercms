@@ -16,6 +16,9 @@
 
 package org.craftercms.studio.impl.v2.service.security.internal;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.craftercms.commons.http.NamedCookieManager;
 import org.craftercms.studio.api.v2.dal.RetryingDatabaseOperationFacade;
 import org.craftercms.studio.api.v2.dal.SecurityDAO;
 import org.craftercms.studio.api.v2.dal.User;
@@ -25,6 +28,7 @@ import org.springframework.security.core.Authentication;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.function.Supplier;
 
 import static org.craftercms.studio.impl.v2.service.security.internal.AccessTokenServiceInternalImpl.ACTIVITY_CACHE_CONFIG_KEY;
@@ -63,7 +67,7 @@ public class AccessTokenServiceInternalImplTest {
 			return null;
 		}).when(retryingFacade).retry(any(Runnable.class));
 		when(retryingFacade.retry(any(Supplier.class))).thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
-		var service = new AccessTokenServiceInternalImpl(null, null, 5, "sign", "encrypt", sessionTimeout,
+		var service = new AccessTokenServiceInternalImpl(null, null, 5, "sign-password-long-enough-for-hmac-sha-512-key-size-at-least-64-bytes-long!!", "encrypt", sessionTimeout,
 			inactivityTimeout, MAX_EXTENSIONS, securityDao, null, null, studioConfiguration, null, retryingFacade, null,
 			null, null);
 		service.afterPropertiesSet();
@@ -73,12 +77,30 @@ public class AccessTokenServiceInternalImplTest {
 	@Test
 	public void sessionLimitIsCountedInWholeMinutes() {
 		var service = createService(480, 30);
-		when(securityDao.getRefreshTokenRemainingSeconds(USER_ID, 481)).thenReturn(120L);
+		var expectedExpiration = Instant.now().plusSeconds(120).truncatedTo(ChronoUnit.SECONDS);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481)).thenReturn(expectedExpiration.getEpochSecond());
 
 		Instant expiration = service.getSessionLimitExpiration(USER_ID);
 
-		assertNotNull(expiration);
-		assertTrue(Duration.between(Instant.now(), expiration).getSeconds() <= 120);
+		assertEquals(expectedExpiration, expiration);
+	}
+
+	@Test
+	public void sessionExpirationIsTheSameOnEveryCall() throws Exception {
+		var service = createService(480, 30);
+		when(securityDao.getRefreshTokenExpiration(USER_ID, 481)).thenReturn(Instant.now().getEpochSecond() + 120);
+		service.setAudience("test-instance");
+		service.setRefreshTokenCookieManager(mock(NamedCookieManager.class));
+		service.setPreviewCookieManager(mock(NamedCookieManager.class));
+		var request = mock(HttpServletRequest.class);
+		var response = mock(HttpServletResponse.class);
+
+		var first = service.createTokens(auth, request, response, false);
+		Thread.sleep(20);
+		var second = service.createTokens(auth, request, response, false);
+
+		assertNotNull(first.getSessionExpiresAt());
+		assertEquals(first.getSessionExpiresAt(), second.getSessionExpiresAt());
 	}
 
 	@Test
@@ -101,7 +123,7 @@ public class AccessTokenServiceInternalImplTest {
 
 		assertNull(service.getSessionLimitExpiration(USER_ID));
 		assertNull(service.getInactivityExpiration(USER_ID));
-		verify(securityDao, never()).getRefreshTokenRemainingSeconds(anyLong(), anyInt());
+		verify(securityDao, never()).getRefreshTokenExpiration(anyLong(), anyInt());
 	}
 
 	@Test

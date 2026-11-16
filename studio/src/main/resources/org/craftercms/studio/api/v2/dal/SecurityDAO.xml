@@ -43,8 +43,8 @@
 		  AND token = #{token}
 	</select>
 
-	<select id="getRefreshTokenRemainingSeconds" resultType="java.lang.Long">
-		SELECT #{minutes} * 60 - TIMESTAMPDIFF(SECOND, created_on, NOW())
+	<select id="getRefreshTokenExpiration" resultType="java.lang.Long">
+		SELECT UNIX_TIMESTAMP(created_on) + #{minutes} * 60
 		FROM refresh_token
 		WHERE user_id = #{userId}
 	</select>

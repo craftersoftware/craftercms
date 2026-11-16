@@ -267,8 +267,8 @@ public class AccessTokenServiceInternalImpl implements AccessTokenService, Initi
 			return null;
 		}
 		// The clean up deletes the tokens that are older than the timeout in whole minutes
-		Long remainingSeconds = securityDao.getRefreshTokenRemainingSeconds(userId, sessionTimeout + 1);
-		return remainingSeconds != null ? now().plusSeconds(remainingSeconds) : null;
+		Long expirationSeconds = securityDao.getRefreshTokenExpiration(userId, sessionTimeout + 1);
+		return expirationSeconds != null ? Instant.ofEpochSecond(expirationSeconds) : null;
 	}
 
 	/**
