@@ -80,4 +80,13 @@ public class ManagementTokenUtilsTest {
 			() -> ManagementTokenUtils.validateToken("other", CONFIGURED_TOKEN));
 	}
 
+	@Test
+	public void comparisonUsesUtf8Bytes() throws InvalidManagementTokenException {
+		String token = "caf\u00e9";
+
+		ManagementTokenUtils.validateToken(token, token);
+		assertThrows(InvalidManagementTokenException.class,
+			() -> ManagementTokenUtils.validateToken("cafX", token));
+	}
+
 }

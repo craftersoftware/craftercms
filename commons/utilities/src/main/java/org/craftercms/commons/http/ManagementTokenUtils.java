@@ -20,6 +20,7 @@ import org.craftercms.commons.exceptions.InvalidManagementTokenException;
 import org.craftercms.commons.rest.ManagementTokenResolver;
 
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 /**
@@ -55,9 +56,26 @@ public final class ManagementTokenUtils {
 	 */
 	public static void validateToken(String token, String configuredToken) throws InvalidManagementTokenException {
 
-		if (token == null || token.isEmpty() || !MessageDigest.isEqual(token.getBytes(), configuredToken.getBytes())) {
+		if (token == null || token.isEmpty() || !matches(token, configuredToken)) {
 			throw new InvalidManagementTokenException(INVALID_MANAGEMENT_TOKEN_MESSAGE);
 		}
+	}
+
+	/**
+	 * Compares a supplied token with the configured token using UTF-8 bytes.
+	 * A missing token does not match.
+	 *
+	 * @param token           the supplied token
+	 * @param configuredToken the expected token
+	 * @return true when both values are present and their UTF-8 bytes are equal
+	 */
+	public static boolean matches(String token, String configuredToken) {
+		if (token == null || configuredToken == null) {
+			return false;
+		}
+		return MessageDigest.isEqual(
+			token.getBytes(StandardCharsets.UTF_8),
+			configuredToken.getBytes(StandardCharsets.UTF_8));
 	}
 
 }

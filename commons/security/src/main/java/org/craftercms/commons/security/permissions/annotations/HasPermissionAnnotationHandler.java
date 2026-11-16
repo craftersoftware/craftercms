@@ -20,6 +20,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.craftercms.commons.aop.AopUtils;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.http.RequestContext;
 import org.craftercms.commons.i10n.I10nLogger;
 import org.craftercms.commons.rest.ManagementTokenResolver;
@@ -29,7 +30,6 @@ import org.springframework.core.annotation.Order;
 
 import java.beans.ConstructorProperties;
 import java.lang.reflect.Method;
-import java.security.MessageDigest;
 import java.util.Map;
 
 /**
@@ -108,7 +108,7 @@ public class HasPermissionAnnotationHandler extends AbstractPermissionAnnotation
 		}
 		String token = ManagementTokenResolver.resolve(requestContext.getRequest());
 
-		return token != null && MessageDigest.isEqual(token.getBytes(), managementToken.getBytes());
+		return ManagementTokenUtils.matches(token, managementToken);
 	}
 
 }

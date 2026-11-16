@@ -152,6 +152,17 @@ public class MoveManagementTokenToHeaderUpgradeOperationTest {
 	}
 
 	@Test
+	public void tokenParameterNameIsCaseSensitive() {
+		String url = "http://engine/api/1/site/cache/clear.json?Token=" + SECRET;
+		Map<String, Object> processor = processor(url);
+
+		operation.doExecute(target, targetConfig(processor));
+
+		assertEquals(url, processor.get("url"));
+		assertNull(processor.get("headers"));
+	}
+
+	@Test
 	public void customCallbackIsMigratedWhenOptedIn() {
 		Map<String, Object> processor = processor(
 			"https://hooks.example/callback?token=" + SECRET + "&keep=1");
@@ -174,12 +185,12 @@ public class MoveManagementTokenToHeaderUpgradeOperationTest {
 
 		assertEquals("http://engine/api/1/site/cache/clear.json", processor.get("url"));
 		assertHeader(processor, "p@ss+word tail end");
-		assertFalse(loggedText().contains("p@ss+word+tail end"));
+		assertFalse(loggedText().contains("p@ss+word tail end"));
 		assertFalse(loggedText().contains("p%40ss%2Bword+tail%20end"));
 	}
 
 	@Test
-	public void queryValueDecodingPreservesPlaceholdersAndPlus() {
+	public void queryValueDecodingDecodesPlusAndPreservesPlaceholders() {
 		assertEquals("a b", tokenValue("token=a+b"));
 		assertEquals("+", tokenValue("token=%2B"));
 		assertEquals("+", tokenValue("token=%2b"));

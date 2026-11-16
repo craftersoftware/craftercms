@@ -38,7 +38,8 @@ import java.util.regex.Pattern;
  * A {@code token} parameter by itself does not mark a URL as a management endpoint.
  * <p>
  * Literal percent-encoded token values are decoded before they are stored in the header.
- * {@code +} stays a plus, and unresolved {@code ${...}} placeholders are copied unchanged.
+ * A literal {@code +} becomes a space, {@code %2B} stays a plus, and unresolved {@code ${...}}
+ * placeholders are copied unchanged.
  * Other query parameters, including {@code crafterSite}, stay on the URL. Token values are not written to the log.
  */
 public class MoveManagementTokenToHeaderUpgradeOperation extends AbstractTargetUpgradeOperation {
@@ -161,7 +162,7 @@ public class MoveManagementTokenToHeaderUpgradeOperation extends AbstractTargetU
 			}
 			int equals = part.indexOf('=');
 			String name = equals >= 0 ? part.substring(0, equals) : part;
-			if ("token".equalsIgnoreCase(name)) {
+			if ("token".equals(name)) {
 				if (!found) {
 					tokenValue = decodeQueryValue(equals >= 0 ? part.substring(equals + 1) : "");
 					found = true;
@@ -222,7 +223,8 @@ public class MoveManagementTokenToHeaderUpgradeOperation extends AbstractTargetU
 	}
 
 	/**
-	 * Percent-decodes a query value as a URI query component: {@code +} is a plus, and {@code %2B} is a plus.
+	 * Percent-decodes a query value the way the server decoded the old query parameter: a literal {@code +}
+	 * becomes a space, and {@code %2B} is a plus.
 	 * Text inside an unresolved {@code ${...}} placeholder, including nested placeholders, is not decoded.
 	 * An invalid percent sequence or a byte sequence that is not UTF-8 is left as written.
 	 */
