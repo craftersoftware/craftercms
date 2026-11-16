@@ -166,13 +166,18 @@ export interface UseSearchStateHookProps extends Pick<BaseSearchProps, 'onSelect
 	disableChangePreselected?: SearchProps['disableChangePreselected'];
 }
 
+/** A search response paired with the offset it was requested with, so the range can be built from loaded data alone. */
+export interface OffsetSearchResult extends SearchResult {
+	offset: number;
+}
+
 export interface UseSearchStateReturn {
 	selected: string[];
 	areAllSelected: boolean;
 	selectionOptions: ContextMenuOption[];
 	itemsByPath: LookupTable<ContentItem>;
 	guestBase: string;
-	searchResults: SearchResult;
+	searchResults: OffsetSearchResult;
 	selectedPath: string;
 	error: ApiResponse;
 	drawerOpen: boolean;
@@ -218,7 +223,7 @@ export const useSearchState = ({
 	const site = useActiveSiteId();
 	const { authoringBase, guestBase } = useEnv();
 	const [selected, setSelected] = useState<string[]>(preselectedPaths);
-	const [searchResults, setSearchResults] = useState<SearchResult>(null);
+	const [searchResults, setSearchResults] = useState<OffsetSearchResult>(null);
 	const [selectedPath, setSelectedPath] = useState<string>(searchParameters.path ?? '');
 	useFetchContentItems(selected);
 	const { itemsBeingFetchedByPath, itemsByPath } = useSelection((state) => state.content);
@@ -308,14 +313,15 @@ export const useSearchState = ({
 	const refreshSearch = useCallback(() => {
 		setError(null);
 		setIsFetchingResults(true);
-		search(site, prepareSearchParams(searchParameters)).subscribe({
+		const requestParameters = prepareSearchParams(searchParameters);
+		search(site, requestParameters).subscribe({
 			next(result) {
-				setSearchResults(result);
+				setSearchResults({ ...result, offset: requestParameters.offset ?? 0 });
 				setIsFetchingResults(false);
 			},
 			error(error) {
 				setIsFetchingResults(false);
-				setSearchResults({ total: 0, items: [], facets: [] });
+				setSearchResults({ total: 0, items: [], facets: [], offset: 0 });
 				const { response } = error;
 				if (response && response.response) {
 					setError(response.response);

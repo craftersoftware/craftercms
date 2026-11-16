@@ -60,66 +60,79 @@ afterEach(async () => {
 	});
 });
 
-async function render() {
+const baseProps = {
+	mode: 'select',
+	embedded: false,
+	desktopScreen: true,
+	areAllSelected: false,
+	error: null,
+	isFetching: false,
+	sortBy: 'internalName',
+	sortOrder: 'asc',
+	searchParameters: { limit: 9 },
+	currentView: 'card',
+	keyword: '',
+	checkedFilters: {},
+	drawerOpen: false,
+	searchResults: { items: [], total: 0, facets: [], offset: 0 },
+	selectedPath: null,
+	selected: [],
+	guestBase: '/studio',
+	selectionOptions: {},
+	preselectedLookup: {},
+	handleSearchKeyword() {},
+	toggleDrawer() {},
+	handleChangeView() {},
+	handleFilterChange() {},
+	clearFilter() {},
+	clearFilters() {},
+	onSelectedPathChanges() {},
+	onCheckedFiltersChanges() {},
+	handleSelectAll() {},
+	handleChangePage() {},
+	handleChangeRowsPerPage() {},
+	onPreview() {},
+	handleSelect() {},
+	onHeaderButtonClick() {},
+	onActionClicked() {},
+	handleClearSelected() {},
+	onClose() {},
+	onAcceptSelection() {}
+};
+
+async function mount(overrides: Record<string, unknown> = {}) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	mounted.push({ unmount: () => root.unmount(), host });
-	await act(async () => {
-		root.render(
+	const element = (extra: Record<string, unknown>) =>
+		React.createElement(
+			Provider,
+			{ store },
 			React.createElement(
-				Provider,
-				{ store },
-				React.createElement(
-					RawIntlProvider,
-					{ value: intl },
-					React.createElement(SearchUI, {
-						mode: 'select',
-						embedded: false,
-						desktopScreen: true,
-						areAllSelected: false,
-						error: null,
-						isFetching: false,
-						sortBy: 'internalName',
-						sortOrder: 'asc',
-						searchParameters: { limit: 9 },
-						currentView: 'card',
-						keyword: '',
-						checkedFilters: {},
-						drawerOpen: false,
-						searchResults: { items: [], total: 0, facets: [] },
-						selectedPath: null,
-						selected: [],
-						guestBase: '/studio',
-						selectionOptions: {},
-						preselectedLookup: {},
-						handleSearchKeyword() {},
-						toggleDrawer() {},
-						handleChangeView() {},
-						handleFilterChange() {},
-						clearFilter() {},
-						clearFilters() {},
-						onSelectedPathChanges() {},
-						onCheckedFiltersChanges() {},
-						handleSelectAll() {},
-						handleChangePage() {},
-						handleChangeRowsPerPage() {},
-						onPreview() {},
-						handleSelect() {},
-						onHeaderButtonClick() {},
-						onActionClicked() {},
-						handleClearSelected() {},
-						onClose() {},
-						onAcceptSelection() {}
-					} as never)
-				)
+				RawIntlProvider,
+				{ value: intl },
+				React.createElement(SearchUI, { ...baseProps, ...overrides, ...extra } as never)
 			)
 		);
+	await act(async () => {
+		root.render(element({}));
 	});
 	await act(async () => {
 		await new Promise((resolve) => setTimeout(resolve, 60));
 	});
-	return host;
+	return {
+		host,
+		async update(extra: Record<string, unknown>) {
+			await act(async () => {
+				root.render(element(extra));
+			});
+		}
+	};
+}
+
+async function render() {
+	return (await mount()).host;
 }
 
 const selectAllInput = (host: HTMLElement) =>
@@ -145,5 +158,55 @@ describe('search select-all name', () => {
 		});
 		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
 		assert.equal(input.getAttribute('aria-label'), 'Select all on this page');
+	});
+});
+
+describe('search results status', () => {
+	const items = (count: number) =>
+		Array.from({ length: count }, (_, i) => ({
+			path: `/site/website/p${i}`,
+			name: `p${i}`,
+			type: 'Page',
+			mimeType: 'text/html',
+			previewUrl: '',
+			lastModifier: 'ann',
+			lastModified: '2026-01-01T00:00:00Z',
+			size: 1,
+			snippets: {}
+		}));
+	const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent;
+	const page = (offset: number, count: number, total = 34) => ({ items: items(count), total, facets: [], offset });
+
+	it('announces the range of the loaded response', async () => {
+		const { host } = await mount({ searchParameters: { limit: 9, offset: 9 }, searchResults: page(9, 9) });
+		assert.equal(status(host), '10-18 of 34 results');
+	});
+
+	it('does not build the range from the requested offset while the previous page is still shown', async () => {
+		const { host, update } = await mount({ searchParameters: { limit: 9, offset: 0 }, searchResults: page(0, 9) });
+		assert.equal(status(host), '1-9 of 34 results');
+		// Paging forward: the offset parameter changes before the request starts, so the old items are still shown.
+		await update({ searchParameters: { limit: 9, offset: 9 } });
+		assert.equal(status(host), '1-9 of 34 results');
+		await update({ searchParameters: { limit: 9, offset: 9 }, isFetching: true });
+		assert.equal(status(host), '');
+		await update({ searchParameters: { limit: 9, offset: 9 }, searchResults: page(9, 9) });
+		assert.equal(status(host), '10-18 of 34 results');
+	});
+
+	it('announces the right range when going back from a short last page', async () => {
+		const { host, update } = await mount({ searchParameters: { limit: 9, offset: 27 }, searchResults: page(27, 7) });
+		assert.equal(status(host), '28-34 of 34 results');
+		await update({ searchParameters: { limit: 9, offset: 18 } });
+		assert.equal(status(host), '28-34 of 34 results');
+		await update({ searchParameters: { limit: 9, offset: 18 }, isFetching: true });
+		assert.equal(status(host), '');
+		await update({ searchParameters: { limit: 9, offset: 18 }, searchResults: page(18, 9) });
+		assert.equal(status(host), '19-27 of 34 results');
+	});
+
+	it('announces the range for the last short page itself', async () => {
+		const { host } = await mount({ searchParameters: { limit: 9, offset: 30 }, searchResults: page(30, 4) });
+		assert.equal(status(host), '31-34 of 34 results');
 	});
 });

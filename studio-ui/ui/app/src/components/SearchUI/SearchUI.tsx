@@ -129,7 +129,10 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
-	// Stay silent while a search is in flight: `searchResults` still holds the previous response until it lands.
+	// Built only from the loaded response: `searchResults.offset` is the offset that response was requested with.
+	// `searchParameters.offset` changes as soon as the user pages, but the request starts in a later effect, so
+	// reading it here would pair the new offset with the previous page's items. Stay silent while a search is in
+	// flight, since `searchResults` still holds the previous response until the new one lands.
 	let resultsStatus = '';
 	if (searchResults != null && !isFetching) {
 		if (searchResults.total === 0) {
@@ -137,8 +140,8 @@ export function SearchUI(props: SearchUIProps) {
 		} else if (searchResults.items.length > 0) {
 			// Count the rows that are rendered, not the requested page window.
 			resultsStatus = formatMessage(translations.resultsStatus, {
-				from: searchParameters.offset + 1,
-				to: Math.min(searchParameters.offset + searchResults.items.length, searchResults.total),
+				from: searchResults.offset + 1,
+				to: Math.min(searchResults.offset + searchResults.items.length, searchResults.total),
 				count: searchResults.total
 			});
 		}
