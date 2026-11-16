@@ -25,7 +25,7 @@ yarn workspace @craftercms/studio-a11y report     # opens the HTML report
 ```
 
 In this workspace, `test:light` and `test:dark` run a single theme, and `test:unit` runs the suite's own helper tests
-(allow-list filter and readiness), which need a browser but no Studio. Reports are written to `ui/a11y/report/`
+(allow-list filter, coverage check and readiness), which need a browser but no Studio. Reports are written to `ui/a11y/report/`
 (`html/` and `results.json`). Every scan attaches its complete axe result, plus the allowed, blocking and stale nodes,
 as JSON to the HTML report.
 
@@ -64,10 +64,30 @@ ids normalised away (`filter.ts`). Each fingerprint allows exactly one node. So:
 
 - a new failure of an allow-listed rule on the same screen and theme fails the run;
 - an allowed node that no longer fails is reported as **stale** and fails the run: delete it in the PR that fixed it;
-- an entry for a screen its test never scanned (renamed or removed screen) fails the run.
+- an entry for a screen its test never scanned (renamed or removed screen) fails the run. The test itself reports this
+  for its own screens (its title, or `title > page`); the suite-wide check below covers the rest.
 
 A markup change on an allowed node changes its fingerprint, which shows up as one stale and one blocking node. Review
 it and recapture.
+
+### Suite-wide coverage check
+
+A renamed or removed root test (say `dashboard`) matches no running test, so the per-test check never sees its entries.
+After every run, `tests/coverage-teardown.ts` (a global teardown next to the capture one) fails the run on each
+allow-list entry, per screen and theme, that no scan reached. It reads the records `checkA11y` writes for each scan and
+the one the fixture writes when a test starts (both under `report/artifacts`), plus the list of tests the suite declares
+(a `playwright test --list` of the same config in a child process). The root of an entry is the first segment of its
+screen key, which must be the title of the test that scans it. Each entry is then:
+
+- **covered** if a scan reached its screen in that theme;
+- **unscanned** if its root test ran in that theme without scanning it, or if the suite declares no test with that
+  title in that theme (renamed or removed), however the run was filtered;
+- **skipped**, with a log line, if its root test exists but did not run in this run.
+
+So partial runs do not false-fail, and no flags are parsed: `--grep`, `test:light`, `test:dark`, one spec file, a shard
+or an early stop leave the entries of tests that did not run unjudged, while an entry whose test is gone fails in any of
+them. If the listing can't be read, a warning is logged and only tests that ran are judged. The check passes trivially
+while the allow-list is empty and is off with `A11Y_CAPTURE=1`, which rewrites the allow-list from the run.
 
 ### Capture
 

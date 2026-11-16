@@ -18,6 +18,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { allowList, inTicketScope, ruleTickets, Theme } from './allow-list';
+import { RUN_RECORD_PREFIX, RunRecord, SCAN_RECORD_PREFIX, ScanRecord } from './coverage';
 import { applyAllowList, blockingFindings, Finding, StaleNode } from './filter';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -27,6 +28,12 @@ export const SCAN_ANNOTATION = 'a11y-scan';
 
 /** With `A11Y_CAPTURE=1`, every scan also writes its in-scope findings for `capture-teardown.ts` to record. */
 export const CAPTURE_FILE_PREFIX = 'a11y-capture-';
+
+/** Records that a test started, so the suite-wide coverage check can tell tests that ran from tests filtered out. */
+export function recordTestRun(testInfo: TestInfo) {
+	const record: RunRecord = { theme: testInfo.project.name as Theme, test: testInfo.title };
+	writeFileSync(testInfo.outputPath(`${RUN_RECORD_PREFIX}test.json`), JSON.stringify(record));
+}
 
 function describeFinding({ rule, impact, help, fingerprint, html }: Finding) {
 	const ticket = ruleTickets[rule]?.ticket ?? 'no ticket';
@@ -50,6 +57,11 @@ export async function checkA11y(page: Page, testInfo: TestInfo, name: string) {
 	const findings = blockingFindings(results.violations);
 	const { allowed, blocking, stale } = applyAllowList(findings, allowList, name, theme);
 	testInfo.annotations.push({ type: SCAN_ANNOTATION, description: name });
+	const scan: ScanRecord = { theme, screen: name };
+	writeFileSync(
+		testInfo.outputPath(`${SCAN_RECORD_PREFIX}${name.replace(/[^a-z0-9]+/gi, '-')}.json`),
+		JSON.stringify(scan)
+	);
 
 	const label = `${theme} - ${name}`;
 	await testInfo.attach(`axe ${label}.json`, {
@@ -86,7 +98,8 @@ export async function checkA11y(page: Page, testInfo: TestInfo, name: string) {
 
 /**
  * Allow-list entries for this test's screens (its title, or `title > page`) in this theme that no scan reached. A
- * renamed or removed screen would otherwise leave its exception in place without ever being checked.
+ * renamed or removed screen would otherwise leave its exception in place without ever being checked. A test that was
+ * renamed or removed matches no entry here: `coverage-teardown.ts` covers that across the whole run.
  */
 export function unscannedEntries(testInfo: TestInfo) {
 	const theme = testInfo.project.name as Theme;

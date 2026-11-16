@@ -15,7 +15,7 @@
  */
 
 import { test as base, expect, Page } from '@playwright/test';
-import { unscannedEntries } from './axe';
+import { recordTestRun, unscannedEntries } from './axe';
 import { password, project, username } from './env';
 
 export { expect };
@@ -54,8 +54,10 @@ export const test = base.extend<{ authenticated: boolean; allowListCoverage: voi
 		await use(page);
 	},
 	// After each test, fail on allow-list entries for the test's screens that no scan reached (renamed or removed).
+	// Also records that the test ran, for the suite-wide check in `coverage-teardown.ts`.
 	allowListCoverage: [
 		async ({}, use, testInfo) => {
+			recordTestRun(testInfo);
 			await use();
 			const missed = unscannedEntries(testInfo);
 			if (missed.length) {

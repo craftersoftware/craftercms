@@ -29,8 +29,12 @@ const screens = /screens\.spec\.ts$/;
 export default defineConfig({
 	testDir: './tests',
 	outputDir: 'report/artifacts',
-	// With A11Y_CAPTURE=1, records this run's ticketed findings in tests/allow-list.json.
-	globalTeardown: './tests/capture-teardown.ts',
+	globalTeardown: [
+		// With A11Y_CAPTURE=1, records this run's ticketed findings in tests/allow-list.json.
+		'./tests/capture-teardown.ts',
+		// Otherwise, fails on allow-list entries that no scan in the run reached (renamed or removed tests included).
+		'./tests/coverage-teardown.ts'
+	],
 	timeout: 180_000,
 	workers: 1,
 	retries: process.env.CI ? 1 : 0,
