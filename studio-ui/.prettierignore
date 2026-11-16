@@ -21,6 +21,4 @@ ui/uppy/lib
 static-assets/app
 static-assets/libs
 static-assets/jquery
-static-assets/yui
-static-assets/modules
 static-assets/styles
