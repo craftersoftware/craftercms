@@ -177,3 +177,26 @@ describe('toast focus halo', () => {
 		});
 	}
 });
+
+describe('default toast sizing', () => {
+	// Emotion inserts rules with insertRule, so they are in the CSSOM and not in the style elements' text.
+	const allRules = (rules: CSSRuleList): CSSRule[] =>
+		[...rules].flatMap((rule) => [rule, ...('cssRules' in rule ? allRules((rule as CSSGroupingRule).cssRules) : [])]);
+	const cssText = () =>
+		[...document.styleSheets].flatMap((sheet) => allRules(sheet.cssRules).map((rule) => rule.cssText));
+
+	it("keeps notistack's wrapping and its 288px minimum width from the sm breakpoint up", async () => {
+		const container = await mountToast(NotistackDefaultVariant, { variant: 'default' });
+		const host = container.querySelector<HTMLElement>(`.${TOAST_HOST_CLASS}`);
+		const owned = [...(host?.classList ?? [])];
+		const ownRules = cssText().filter((text) => owned.some((className) => text.includes(`.${className}`)));
+		assert.ok(
+			ownRules.some((text) => /flex-wrap:\s*wrap/.test(text)),
+			'the toast wraps its message and action'
+		);
+		assert.ok(
+			ownRules.some((text) => /min-width:\s*288px/.test(text)),
+			'the toast keeps a 288px minimum width on wider screens'
+		);
+	});
+});

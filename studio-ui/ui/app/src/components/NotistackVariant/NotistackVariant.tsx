@@ -77,8 +77,17 @@ export const NotistackVariant = React.forwardRef<HTMLDivElement, CustomContentPr
 	}
 );
 
+// notistack's own SnackbarContent sizing (not exported): wrap the message and action, fill the viewport on
+// small screens, and hold a 288px minimum from the `sm` breakpoint (600px) up. Restated here because the
+// styles below must not override it.
 const DefaultSurface = styled(SnackbarContent)(({ theme }) => ({
 	display: 'flex',
+	flexWrap: 'wrap',
+	flexGrow: 1,
+	'@media (min-width:600px)': {
+		flexGrow: 'initial',
+		minWidth: 288
+	},
 	alignItems: 'center',
 	backgroundColor: '#313131',
 	color: '#fff',
