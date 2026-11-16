@@ -165,14 +165,11 @@ public final class ContentItemAvailableActionsConstants {
 	// content_read
 	public static final long BITMAP_CONTENT_READ =
 			CONTENT_READ + CONTENT_READ_VERSION_HISTORY + CONTENT_GET_DEPENDENCIES;
-	// content_create was retired. Create and paste are granted by content_write.
-	public static final long BITMAP_CONTENT_CREATE =
-		CONTENT_CREATE + CONTENT_PASTE;
 	// content_write
 	public static final long BITMAP_CONTENT_WRITE =
 		CONTENT_EDIT + CONTENT_UPLOAD + CONTENT_DUPLICATE + CONTENT_CHANGE_TYPE +
 		CONTENT_REVERT + CONTENT_EDIT_CONTROLLER + CONTENT_EDIT_TEMPLATE +
-		BITMAP_CONTENT_CREATE;
+		CONTENT_CREATE + CONTENT_PASTE;
 	// content_move
 	public static final long BITMAP_CONTENT_MOVE =
 		CONTENT_RENAME + CONTENT_CUT;
