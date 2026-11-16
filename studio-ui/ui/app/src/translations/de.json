@@ -915,7 +915,7 @@
 	"previewComponentsPanel.listInPageInstances": "Instanzen auf dieser Seite",
 	"previewComponentsPanelTitle": "Inhalt erstellen",
 	"previewConcierge.contentWasChangedByAnotherUser": "{name} hat {label} ({contentType}) geändert. Neu laden?",
-	"previewConcierge.contentPathWasChangedByAnotherUser": "{name} hat {path} geändert. Neu laden?",
+	"previewConcierge.contentPathWasChangedByAnotherUser": "{name} hat auf dieser Seite verwendete Inhalte aktualisiert. Neu laden?",
 	"previewConcierge.contentWasLockedByAnotherUser": "Das Element wurde von {name}gesperrt. Bearbeitungsmodus deaktiviert, bis die Sperre aufgehoben wird.",
 	"previewConcierge.currentContentChangedByAnotherUser": "{name} hat die aktuelle Seite geändert. Neu laden?",
 	"previewDialog.toggleBackgroundColor": "Hintergrundfarbe umschalten",

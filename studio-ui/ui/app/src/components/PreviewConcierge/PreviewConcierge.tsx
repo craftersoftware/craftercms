@@ -96,7 +96,7 @@ import {
 	writeInstance
 } from '../../services/content';
 import { uploadDataUrl } from '../../services/contentUpload';
-import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject, forkJoin, Observable, of, Subscription } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
@@ -1591,18 +1591,22 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							});
 						} else {
 							const item = store.getState().content.itemsByPath[targetPath];
-							if (item) {
-								message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-									name: getPersonFullName(person),
-									label: item.label,
-									contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
-								});
-							} else {
-								message = formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
-									name: getPersonFullName(person),
-									path: targetPath
-								});
-							}
+							const item$ = item?.label
+								? of(item)
+								: fetchContentItemService(siteId, targetPath).pipe(catchError(() => of(null)));
+							item$.pipe(take(1)).subscribe((item) => {
+								if (item) {
+									message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+										name: getPersonFullName(person),
+										label: item.label,
+										contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
+									});
+								} else {
+									message = formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
+										name: getPersonFullName(person)
+									});
+								}
+							});
 						}
 						enqueueSnackbar(message, {
 							action: (

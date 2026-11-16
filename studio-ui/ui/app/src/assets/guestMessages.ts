@@ -128,7 +128,7 @@ export const guestMessages = defineMessages({
 	},
 	contentPathWasChangedByAnotherUser: {
 		id: 'previewConcierge.contentPathWasChangedByAnotherUser',
-		defaultMessage: '{name} has changed {path}. Reload?'
+		defaultMessage: '{name} updated content used on this page. Reload?'
 	},
 	contentWasLockedByAnotherUser: {
 		id: 'previewConcierge.contentWasLockedByAnotherUser',

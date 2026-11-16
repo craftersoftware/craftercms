@@ -915,7 +915,7 @@
 	"previewComponentsPanel.listInPageInstances": "Instancias en esta página",
 	"previewComponentsPanelTitle": "Crear contenido",
 	"previewConcierge.contentWasChangedByAnotherUser": "{name} ha cambiado {label} ({contentType}). ¿Recargar?",
-	"previewConcierge.contentPathWasChangedByAnotherUser": "{name} ha cambiado {path}. ¿Recargar?",
+	"previewConcierge.contentPathWasChangedByAnotherUser": "{name} ha actualizado contenido usado en esta página. ¿Recargar?",
 	"previewConcierge.contentWasLockedByAnotherUser": "El elemento fue bloqueado por {name}. Edición deshabilitada hasta que se libera el bloqueo.",
 	"previewConcierge.currentContentChangedByAnotherUser": "{name} ha cambiado la página actual. ¿Recargar?",
 	"previewDialog.toggleBackgroundColor": "Alternar contraste de fondo",
