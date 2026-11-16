@@ -1591,11 +1591,18 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							});
 						} else {
 							const item = store.getState().content.itemsByPath[targetPath];
-							const contentTypeName = item ? (contentTypes[item.contentTypeId]?.name ?? item.contentTypeId) : null;
-							message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-								name: getPersonFullName(person),
-								content: item ? `${item.label} (${contentTypeName})` : targetPath
-							});
+							if (item) {
+								message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+									name: getPersonFullName(person),
+									label: item.label,
+									contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
+								});
+							} else {
+								message = formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
+									name: getPersonFullName(person),
+									path: targetPath
+								});
+							}
 						}
 						enqueueSnackbar(message, {
 							action: (
