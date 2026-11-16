@@ -88,8 +88,7 @@ export default [
 				}
 			],
 			// Enable the TypeScript-specific rule with allowShortCircuit option
-			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }],
-			'formatjs/enforce-message-types': ['error', { generateTypes: true }]
+			'@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }]
 		}
 	}
 ];
