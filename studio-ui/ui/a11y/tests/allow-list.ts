@@ -15,6 +15,8 @@
  */
 
 import recorded from './allow-list.json';
+import { captureMode } from './capture';
+import { splitFingerprint, stableTokens } from './filter';
 
 export type Theme = 'light' | 'dark';
 
@@ -34,7 +36,7 @@ export interface AllowListEntry {
 	/** Screen key, as passed to `checkA11y` (see `screens.spec.ts`). */
 	screen: string;
 	theme: Theme;
-	/** Fingerprints (see `fingerprint` in `filter.ts`) of the nodes that are allowed to fail. One per node. */
+	/** Fingerprints (see `fingerprint` in `filter.ts`: CSS path plus normalised start tag) of the nodes that are allowed to fail. One per node. */
 	nodes: string[];
 }
 
@@ -61,17 +63,17 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'aria-input-field-name': {
 		ticket: 'craftersoftware/craftercms-e#1449',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { dashboard: both, search: both }
+		scope: {
+			dashboard: both,
+			search: both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Existing Content': both
+		}
 	},
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { search: both }
-	},
-	'button-name': {
-		ticket: 'craftersoftware/craftercms-e#1451',
-		criterion: '4.1.2 Name, Role, Value',
-		scope: { 'edit form': both, preview: light }
+		scope: { search: both, 'edit mode tools panel > Settings': both }
 	},
 	'color-contrast': {
 		ticket: 'craftersoftware/craftercms-e#1452',
@@ -81,17 +83,26 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: { dashboard: both, search: both }
+		scope: {
+			dashboard: both,
+			search: both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Settings': both
+		}
 	},
 	'link-in-text-block': {
 		ticket: 'craftersoftware/craftercms-e#1454',
 		criterion: '1.4.1 Use of Color',
-		scope: { 'create project': light, projects: light, 'site tools': light, users: light }
+		scope: { projects: light, 'site tools': light, users: light }
 	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
-		scope: { dashboard: both, 'edit form': both }
+		scope: {
+			dashboard: both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Settings': both
+		}
 	},
 	listitem: {
 		ticket: 'craftersoftware/craftercms-e#1456',
@@ -106,7 +117,7 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'nested-interactive': {
 		ticket: 'craftersoftware/craftercms-e#1457',
 		criterion: '2.1.1 Keyboard',
-		scope: { dashboard: both, 'edit form': both }
+		scope: { dashboard: both, 'tools panel > Dashboard': both }
 	},
 	'label-content-name-mismatch': {
 		ticket: 'craftersoftware/craftercms-e#1458',
@@ -134,6 +145,15 @@ export function validateAllowList(entries: AllowListEntry[]) {
 		if (!Array.isArray(nodes) || !nodes.length || nodes.some((node) => typeof node !== 'string' || !node)) {
 			throw new Error(`Allow-list entry for ${key} must list the fingerprint of every node it allows`);
 		}
+		const unstable = nodes.filter((node) => !splitFingerprint(node).startTag || !stableTokens(node).length);
+		if (unstable.length) {
+			throw new Error(
+				`Allow-list entry for ${key} has ${unstable.length} fingerprint(s) that name no stable node, so a different node ` +
+					`of the rule would match: each needs a normalised start tag (see fingerprint in filter.ts) holding a Mui or ` +
+					`authored class, a role, an authored id or a literal attribute value. Give the node one, or fix it.\n` +
+					unstable.map((node) => `  ${node}`).join('\n')
+			);
+		}
 		if (keys.has(key)) throw new Error(`Allow-list entry for ${key} is listed twice`);
 		keys.add(key);
 	});
@@ -142,6 +162,9 @@ export function validateAllowList(entries: AllowListEntry[]) {
 
 /**
  * The recorded baseline. Each entry names exact nodes, so a new failure of the same rule on the same screen still fails,
- * and an entry whose node no longer fails is reported as stale. `yarn capture` rewrites the file from a live run.
+ * and an entry whose node no longer fails is reported as stale. `yarn capture` rewrites the file from a live run, and
+ * `yarn capture:prune` removes the nodes a fix made stale. A capture loads the file unvalidated, so it can replace one in
+ * an older format; `capture-teardown.ts` validates what it writes.
  */
-export const allowList: AllowListEntry[] = validateAllowList(recorded as AllowListEntry[]);
+export const allowList: AllowListEntry[] =
+	captureMode() === 'capture' ? (recorded as AllowListEntry[]) : validateAllowList(recorded as AllowListEntry[]);
