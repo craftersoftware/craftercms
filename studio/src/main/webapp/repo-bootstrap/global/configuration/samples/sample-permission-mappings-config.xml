@@ -31,7 +31,7 @@
 <permissions>
 	<version>5.0.0.3</version>
 	<role name="author">
-		<rule regex="/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?">
+		<rule regex="/site/website(/.*)?|/site/components(/.*)?|/static-assets(/.*)?">
 			<allowed-permissions>
 				<permission>content_write</permission>
 				<permission>content_move</permission>
