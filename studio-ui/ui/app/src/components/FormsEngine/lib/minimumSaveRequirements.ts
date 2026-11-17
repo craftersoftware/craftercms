@@ -27,18 +27,22 @@ export type MinimumSaveRequirement = 'fileName' | 'internalName';
  * and for the button, the tooltip and the alert, so they cannot disagree.
  * A repeat item commits in memory and has no file name or internal name. An embedded form has no
  * file name. That holds for a stacked embedded form too: the save checks embedded before it hands the
- * values back to the parent. A full form needs both.
+ * values back to the parent. A full form needs a file name when that field is on the type, and an
+ * internal name when that field is on the type. `hasInternalNameField` defaults to true so a blank
+ * value still blocks a type that defines the field. Pass false when the type has no such field.
  */
 export function missingMinimumSaveRequirements(args: {
 	isRepeatMode: boolean;
 	isEmbedded: boolean;
 	fileNameValid: boolean;
 	internalName: unknown;
+	/** False when the content type does not define `internal-name`. Omitted means the field exists. */
+	hasInternalNameField?: boolean;
 }): MinimumSaveRequirement[] {
 	if (args.isRepeatMode) return [];
 	const missing: MinimumSaveRequirement[] = [];
 	if (!args.isEmbedded && !args.fileNameValid) missing.push('fileName');
-	if (!isInternalNameFilled(args.internalName)) missing.push('internalName');
+	if (args.hasInternalNameField !== false && !isInternalNameFilled(args.internalName)) missing.push('internalName');
 	return missing;
 }
 
@@ -48,8 +52,10 @@ export function isInternalNameFilled(value: unknown): boolean {
 }
 
 /**
- * Current requirements from the form's atoms. A missing file-name validity is not judged here:
- * the save guard still reads it. A missing internal-name value counts as empty, as it does in the save.
+ * Current requirements from the form's atoms.
+ * A missing file-name validity atom means the type has no file-name field, so that requirement is skipped.
+ * A missing internal-name value atom means the type has no internal-name field, so that requirement is skipped.
+ * A present internal-name atom with an empty value still blocks save.
  */
 export async function readMissingMinimumSaveRequirements(
 	store: { get<Value>(atom: Atom<Value>): Value },
@@ -69,6 +75,7 @@ export async function readMissingMinimumSaveRequirements(
 	return missingMinimumSaveRequirements({
 		...flags,
 		fileNameValid,
+		hasInternalNameField: Boolean(internalNameAtom),
 		internalName: internalNameAtom ? store.get(internalNameAtom) : undefined
 	});
 }
