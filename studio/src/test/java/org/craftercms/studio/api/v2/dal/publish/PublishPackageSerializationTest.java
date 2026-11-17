@@ -61,6 +61,46 @@ public class PublishPackageSerializationTest {
 	}
 
 	@Test
+	public void nullSiteSerializesSiteIdAsNull() throws Exception {
+		PublishPackage publishPackage = new PublishPackage();
+		publishPackage.setId(7L);
+		publishPackage.setSiteId(42L);
+		publishPackage.setSubmittedOn(Instant.parse("2026-01-02T03:04:05Z"));
+
+		JsonNode node = mapper.readTree(mapper.writeValueAsString(publishPackage));
+
+		assertTrue(node.has("siteId"));
+		assertTrue(node.get("siteId").isNull());
+		assertEquals(42L, publishPackage.getSiteId());
+	}
+
+	@Test
+	public void siteIdIsIgnoredOnDeserialize() throws Exception {
+		Site site = new Site();
+		site.setId(42L);
+		site.setSiteId("editorial");
+
+		PublishPackage publishPackage = new PublishPackage();
+		publishPackage.setId(7L);
+		publishPackage.setSiteId(42L);
+		publishPackage.setSite(site);
+		publishPackage.setSubmittedOn(Instant.parse("2026-01-02T03:04:05Z"));
+
+		String json = mapper.writeValueAsString(publishPackage);
+		PublishPackage restored = mapper.readValue(json, PublishPackage.class);
+
+		assertEquals(7L, restored.getId());
+		assertEquals(Instant.parse("2026-01-02T03:04:05Z"), restored.getSubmittedOn());
+		assertEquals(0L, restored.getSiteId());
+		assertNull(restored.getSite());
+		assertNull(restored.getStringSiteId());
+
+		PublishPackage fromStringSiteId = mapper.readValue("{\"id\":7,\"siteId\":\"editorial\"}", PublishPackage.class);
+		assertEquals(0L, fromStringSiteId.getSiteId());
+		assertNull(fromStringSiteId.getStringSiteId());
+	}
+
+	@Test
 	public void publishItemEmitsPublishState() throws Exception {
 		PublishItem item = new PublishItem();
 		item.setId(9L);

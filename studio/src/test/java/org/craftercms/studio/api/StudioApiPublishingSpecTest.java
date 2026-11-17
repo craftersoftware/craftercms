@@ -137,10 +137,11 @@ public class StudioApiPublishingSpecTest {
 		assertEquals("#/components/responses/Forbidden", enable.path("403").path("$ref").asText());
 
 		for (String path : List.of(
+			"/api/2/publish/{siteId}/package/{packageId}",
 			"/api/2/workflow/{siteId}/approve",
 			"/api/2/workflow/{siteId}/reject",
 			"/api/2/workflow/{siteId}/cancel")) {
-			assertEquals("#/components/responses/InvalidPackageState",
+			assertEquals(path, "#/components/responses/InvalidPackageState",
 				operation(path, "post").path("responses").path("409").path("$ref").asText());
 		}
 		String conflict = responses.path("InvalidPackageState").path("description").asText();
@@ -184,6 +185,8 @@ public class StudioApiPublishingSpecTest {
 		assertEquals("date-time", schemas.path("PublishTargetStatus").path("properties").path("dateLastPublished").path("format").asText());
 		assertEquals("date-time", schemas.path("PublishTargetStatus").path("properties").path("dateScheduled").path("format").asText());
 		assertEquals("date-time", schemas.path("WorkflowPackage").path("properties").path("schedule").path("format").asText());
+
+		assertEquals(500, schemas.path("UpdatePackageRequest").path("properties").path("comment").path("maxLength").asInt());
 	}
 
 	private static void assertPublishingTarget(JsonNode publishingTarget) {
@@ -204,6 +207,7 @@ public class StudioApiPublishingSpecTest {
 		JsonNode comment = schema.path("properties").path("comment");
 		assertEquals(1, comment.path("minLength").asInt());
 		assertEquals(500, comment.path("maxLength").asInt());
+		assertEquals("^.*\\S.*$", comment.path("pattern").asText());
 	}
 
 	private static JsonNode operation(String path, String method) {

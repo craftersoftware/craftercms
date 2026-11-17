@@ -6507,7 +6507,7 @@ paths:
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '409':
-                    $ref: '#/components/responses/Conflict'
+                    $ref: '#/components/responses/InvalidPackageState'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -8271,6 +8271,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
+                                    pattern: '^.*\S.*$'
                                 schedule:
                                     type: string
                                     format: date-time
@@ -8341,6 +8342,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
+                                    pattern: '^.*\S.*$'
                             required:
                                 - packageIds
                                 - comment
@@ -8404,6 +8406,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
+                                    pattern: '^.*\S.*$'
                             required:
                                 - packageIds
                                 - comment
@@ -10429,6 +10432,7 @@ components:
                 comment:
                     type: string
                     description: submitter comment. If omitted or null, the current comment is kept
+                    maxLength: 500
                 title:
                     type: string
                     description: package title. If omitted or null, the current title is kept
