@@ -57,6 +57,29 @@ describe('minimum save requirements', () => {
 		]);
 	});
 
+	it('does not require an internal name when the type has no such field', () => {
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: false as const };
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: undefined }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '   ' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: undefined }), [
+			'fileName'
+		]);
+		assert.deepEqual(
+			missingMinimumSaveRequirements({ ...base, isEmbedded: true, fileNameValid: false, internalName: '' }),
+			[]
+		);
+	});
+
+	it('still requires a non-blank internal name when the field exists', () => {
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true as const };
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: '' }), [
+			'internalName'
+		]);
+		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
+	});
+
 	it('needs nothing on a repeat item, which commits in memory', () => {
 		assert.deepEqual(
 			missingMinimumSaveRequirements({ isRepeatMode: true, isEmbedded: false, fileNameValid: false, internalName: '' }),
@@ -81,6 +104,27 @@ describe('minimum save requirements', () => {
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isRepeatMode: true }), []);
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, null, full), []);
+	});
+
+	it('does not require internal-name when the form has no atom for it', async () => {
+		const store = createStore();
+		const full = { isRepeatMode: false, isEmbedded: false };
+		const validFileOnly = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, validFileOnly, full), []);
+		const neither = { validationByFieldId: {}, valueByFieldId: {} } as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, neither, full), []);
+		const invalidFileOnly = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(invalid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(await readMissingMinimumSaveRequirements(store, invalidFileOnly, full), ['fileName']);
+		assert.deepEqual(
+			await readMissingMinimumSaveRequirements(store, invalidFileOnly, { isRepeatMode: false, isEmbedded: true }),
+			[]
+		);
 	});
 
 	it('follows a file name that becomes valid', async () => {
