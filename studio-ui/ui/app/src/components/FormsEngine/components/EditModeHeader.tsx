@@ -191,7 +191,7 @@ export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; t
 		? internalNameAtom
 			? (getFieldAtomValue(internalNameAtom, store) as string)
 			: ''
-		: item.label;
+		: (item?.label ?? '');
 	const typeIconItem: Pick<ContentItem, 'systemType' | 'mimeType'> = isEmbedded
 		? { systemType: 'component', mimeType: 'application/xml' }
 		: item;
@@ -227,7 +227,7 @@ export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; t
 				>
 					{itemLabel}
 				</Typography>
-				{item.savedAsDraft && <DraftChip />}
+				{item?.savedAsDraft && <DraftChip />}
 				{readonly && (
 					<Chip
 						sx={{ [`.${chipClasses.label}`]: { display: 'flex', alignItems: 'center' }, flexShrink: 0 }}
@@ -254,15 +254,17 @@ export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; t
 							minWidth: 0
 						}}
 					>
-						<CopyableValue value={item.path}>
-							<Box
-								component="span"
-								dir="ltr"
-								sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0 }}
-							>
-								{item.path}
-							</Box>
-						</CopyableValue>
+						{item?.path && (
+							<CopyableValue value={item.path}>
+								<Box
+									component="span"
+									dir="ltr"
+									sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0 }}
+								>
+									{item.path}
+								</Box>
+							</CopyableValue>
+						)}
 					</Typography>
 				</Box>
 			</Box>
