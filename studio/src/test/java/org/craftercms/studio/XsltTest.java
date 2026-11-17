@@ -686,6 +686,8 @@ public class XsltTest {
 	/**
 	 * content_create is removed. A rule that already grants content_write drops it. A rule that only had
 	 * content_create is rewritten to content_write + content_move. Rules without content_create are left alone.
+	 * The stock author regex is widened so the home folder matches. Any other regex is left alone, including
+	 * the same pattern on another role and an author regex that is not an exact match.
 	 * The harness runs the template twice.
 	 */
 	public static Object[][] contentCreatePermissionTestData() {

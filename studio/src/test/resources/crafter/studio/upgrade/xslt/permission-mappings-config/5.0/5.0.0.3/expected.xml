@@ -23,6 +23,27 @@
 				<permission>folder_create</permission>
 			</allowed-permissions>
 		</rule>
+		<rule regex="/site/website(/.*)?|/site/components(/.*)?|/static-assets(/.*)?">
+			<allowed-permissions>
+				<permission>content_write</permission>
+				<permission>content_move</permission>
+				<permission>folder_create</permission>
+				<permission>content_copy</permission>
+			</allowed-permissions>
+		</rule>
+	</role>
+	<role name="custom">
+		<rule regex="/site/website/.*">
+			<allowed-permissions>
+				<permission>content_write</permission>
+				<permission>content_move</permission>
+			</allowed-permissions>
+		</rule>
+		<rule regex="/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?">
+			<allowed-permissions>
+				<permission>content_write</permission>
+			</allowed-permissions>
+		</rule>
 	</role>
 	<role name="contributor">
 		<rule regex="/site/components/.*">

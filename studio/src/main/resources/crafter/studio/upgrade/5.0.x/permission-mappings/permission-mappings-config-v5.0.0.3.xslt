@@ -36,6 +36,13 @@
 		</xsl:if>
 	</xsl:template>
 
+	<!-- The stock author rule does not match the home folder. Widen only that exact regex. -->
+	<xsl:template match="role[@name='author']/rule/@regex[. = '/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?']">
+		<xsl:attribute name="regex">
+			<xsl:text>/site/website(/.*)?|/site/components(/.*)?|/static-assets(/.*)?</xsl:text>
+		</xsl:attribute>
+	</xsl:template>
+
 	<!-- content_create is retired. A rule that already grants content_write keeps that permission. -->
 	<xsl:template match="permission[. = 'content_create' and ../permission = 'content_write']"/>
 
