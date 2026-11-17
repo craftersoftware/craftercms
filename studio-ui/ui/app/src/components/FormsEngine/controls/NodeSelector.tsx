@@ -232,9 +232,11 @@ function NodeSelector(props: NodeSelectorProps) {
 	);
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
-	// The form's own item is only needed when an action runs, so read it then instead of subscribing.
-	const getContextItemPath = () => stableForm.getItem()?.path;
 	const { id, pathInSite } = useItemMetaContext();
+	// Create forms have no store item (`getItem()` is null). Prefer the live item, then the form's
+	// update/create path, then pathInSite so nested embedded creates still get a parent path.
+	const getContextItemPath = () =>
+		stableForm.getItem()?.path ?? stableForm.props?.update?.path ?? stableForm.props?.create?.path ?? pathInSite;
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -1606,13 +1608,23 @@ function showDuplicatesWarning(dispatch: ReduxDispatch, duplicateItems: NodeSele
 
 export default NodeSelector;
 
-/** An embedded component has no item of its own; it shows the form's item. Only these rows follow its updates. */
+/**
+ * An embedded component has no ContentItem of its own. When the parent form has one (edit of a saved
+ * item), workflow/publishing chrome can borrow it; create forms have no store item, so only the label
+ * and type icon are shown.
+ */
 function EmbeddedItemDisplay({ label, showWorkflowState }: { label: string; showWorkflowState: boolean }) {
 	const contextItem = useFormItem();
+	const showState = Boolean(showWorkflowState && contextItem?.stateMap);
 	return (
 		<ItemDisplay
-			item={{ ...contextItem, label, systemType: 'component' }}
-			showWorkflowState={showWorkflowState}
+			item={
+				contextItem
+					? { ...contextItem, label, systemType: 'component' }
+					: { label, path: '', systemType: 'component', mimeType: 'application/xml' }
+			}
+			showWorkflowState={showState}
+			showPublishingTarget={showState}
 			showNavigableAsLinks={false}
 		/>
 	);

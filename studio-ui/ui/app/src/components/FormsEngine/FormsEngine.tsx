@@ -1033,7 +1033,9 @@ function FormOrchestrator(props: FormsEngineProps) {
 	const isStackedForm = stackIndex > 0;
 	const hasStackedForms = !isStackedForm && stackFormCount > 0;
 	const isEmbedded = isEmbeddedForm({ update, create });
-	const isCreateMode = Boolean(create?.path);
+	// Any `create` prop is create mode (including embedded creates). Do not require `create.path`:
+	// nested embeds opened from an unsaved create can briefly lack a path; they still must not use EditModeHeader.
+	const isCreateMode = Boolean(create);
 	const isRepeatMode = Boolean(repeat?.fieldId);
 	const affectedPackages = lockStatus.affectedPackages?.length > 0;
 	const contentTypeFields = contentType.fields;
