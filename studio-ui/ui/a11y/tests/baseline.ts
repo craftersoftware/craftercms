@@ -66,11 +66,14 @@ export async function observeDashlet(scope: Locator): Promise<DashletState> {
 	const text = await dashlet
 		.getByText(/^\s*\d[\d,.]*\s*[-\u2013]\s*\d[\d,.]*\s+of\s+\d[\d,.]*\s*$/)
 		.first()
-		.innerText({
-			timeout: 5_000
-		});
-	const total = parseTotal(text);
-	if (total === null) throw new BaselineStateError(`Could not read the Unpublished Work total from "${text}".`);
+		.innerText({ timeout: 5_000 })
+		.catch(() => null);
+	const total = text === null ? null : parseTotal(text);
+	if (total === null) {
+		throw new BaselineStateError(
+			`Could not read the Unpublished Work total: the dashlet shows ${rows} rows but no "1-${rows} of N" pager text.`
+		);
+	}
 	return { total, rows };
 }
 

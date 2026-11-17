@@ -55,16 +55,16 @@ test.describe('dashboard baseline logic', () => {
 const origin = 'https://studio.test';
 
 /** The Unpublished Work dashlet the way it renders: a card with its rows and the pager's "1-n of total" text. */
-function dashletHtml(rows: number, total: number) {
+function dashletHtml(rows: number, total: number, pager = true) {
 	const items = Array.from({ length: rows }, (_, i) => `<li><div class="MuiListItemButton-root">Item ${i}</div></li>`);
-	const footer = total ? `<div><p>1-${rows} of ${total}</p></div>` : '';
+	const footer = total && pager ? `<div><p>1-${rows} of ${total}</p></div>` : '';
 	const empty = total ? '' : '<p>There are no unpublished items</p>';
 	return `<!doctype html><body><div class="MuiCard-root"><h2>Unpublished Work</h2><ul>${items.join('')}</ul>${empty}${footer}</div></body>`;
 }
 
-async function openDashlet(page: Page, rows: number, total: number) {
+async function openDashlet(page: Page, rows: number, total: number, pager = true) {
 	await page.route(`${origin}/**`, (route) =>
-		route.fulfill({ contentType: 'text/html', body: dashletHtml(rows, total) })
+		route.fulfill({ contentType: 'text/html', body: dashletHtml(rows, total, pager) })
 	);
 	await page.goto(`${origin}/`);
 	return page.locator('body');
@@ -104,6 +104,13 @@ test.describe('dashboard baseline check', () => {
 	test('a shorter first page fails too', async ({ page }) => {
 		const scope = await openDashlet(page, 20, 20);
 		await expect(verifyDashboardBaseline(scope, testInfo)).rejects.toThrow(/20 unpublished items \(20 rows/);
+	});
+
+	test('a dashlet with rows but no pager text fails with a baseline error instead of a timeout', async ({ page }) => {
+		const scope = await openDashlet(page, 50, 228, false);
+		const failure = observeDashlet(scope);
+		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
+		await expect(failure).rejects.toThrow(/Could not read the Unpublished Work total.*50 rows but no "1-50 of N"/);
 	});
 
 	test('capture mode reports what it observed instead of failing', async ({ page }) => {
