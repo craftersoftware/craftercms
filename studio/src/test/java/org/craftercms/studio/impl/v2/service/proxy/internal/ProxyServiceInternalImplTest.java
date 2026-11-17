@@ -22,6 +22,7 @@ import org.craftercms.studio.api.v2.utils.StudioConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -101,6 +102,19 @@ public class ProxyServiceInternalImplTest {
 		assertFalse(uri.toString().contains("token="));
 		assertNull(entity.getHeaders().getFirst(ManagementToken.HEADER_NAME));
 		verify(managementTokenRestTemplate, never()).exchange(any(URI.class), any(HttpMethod.class), any(HttpEntity.class), eq(Object.class));
+	}
+
+	@Test
+	public void incomingHostHeaderIsNotForwarded() throws Exception {
+		MockHttpServletRequest request = request("/studio/engine/api/1/content/exists", "foo=1");
+		request.addHeader("host", "studio.example");
+		request.addHeader(HttpHeaders.ACCEPT, "application/json");
+
+		proxy.proxyEngine(null, "editorial", request);
+
+		HttpEntity<?> entity = capturedEntity(restTemplate);
+		assertNull(entity.getHeaders().getFirst(HttpHeaders.HOST));
+		assertEquals("application/json", entity.getHeaders().getFirst(HttpHeaders.ACCEPT));
 	}
 
 	@Test

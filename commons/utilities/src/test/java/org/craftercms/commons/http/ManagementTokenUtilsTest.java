@@ -81,7 +81,19 @@ public class ManagementTokenUtilsTest {
 	}
 
 	@Test
-	public void comparisonUsesUtf8Bytes() throws InvalidManagementTokenException {
+	public void nullConfiguredTokenIsRejected() {
+		assertThrows(InvalidManagementTokenException.class,
+			() -> ManagementTokenUtils.validateToken("x", null));
+	}
+
+	@Test
+	public void emptyConfiguredTokenIsRejected() {
+		assertThrows(InvalidManagementTokenException.class,
+			() -> ManagementTokenUtils.validateToken("x", ""));
+	}
+
+	@Test
+	public void unicodeTokensCompareByValue() throws InvalidManagementTokenException {
 		String token = "caf\u00e9";
 
 		ManagementTokenUtils.validateToken(token, token);

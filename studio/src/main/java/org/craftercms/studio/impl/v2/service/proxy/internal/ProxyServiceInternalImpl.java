@@ -157,11 +157,13 @@ public class ProxyServiceInternalImpl implements ProxyService {
 	private HttpHeaders getProxyRequestHeaders(HttpServletRequest request) {
 		HttpHeaders headers = new HttpHeaders();
 		Enumeration<String> headerNames = request.getHeaderNames();
-		// Add all headers except an ignored list and the cookie header
+		// Skip Host here so the HTTP client sets it from the Engine URL.
+		// Host stays out of ProxyUtils.IGNORE_REQUEST_HEADERS because Engine's proxy filter shares that list.
 		while (headerNames.hasMoreElements()) {
 			String headerName = headerNames.nextElement();
 			if (!ProxyUtils.IGNORE_REQUEST_HEADERS.contains(headerName.toLowerCase())
 				&& !headerName.equalsIgnoreCase(HttpHeaders.COOKIE)
+				&& !headerName.equalsIgnoreCase(HttpHeaders.HOST)
 				&& !headerName.equalsIgnoreCase(ManagementToken.HEADER_NAME)) {
 				headers.set(headerName, request.getHeader(headerName));
 			}
