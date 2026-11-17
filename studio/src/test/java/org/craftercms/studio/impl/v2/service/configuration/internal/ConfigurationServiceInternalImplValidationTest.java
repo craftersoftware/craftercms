@@ -256,20 +256,27 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
-	public void writeConfigurationRejectsWhenDoctypeReaderCannotBeConfigured() {
-		ConfigurationServiceInternalImpl failing = new ConfigurationServiceInternalImpl() {
-			@Override
-			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler) throws ParserConfigurationException {
-				throw new ParserConfigurationException("forced");
-			}
-		};
+	public void validateRejectsDoctypeBytesWhenReaderCannotBeConfigured() {
+		ConfigurationServiceInternalImpl failing = unconfiguredDoctypeReader();
 		ContentService contentService = mock(ContentService.class);
 		failing.setContentService(contentService);
 
-		InvalidConfigurationException error = assertThrows(InvalidConfigurationException.class, () ->
-				failing.writeConfiguration("site", "studio", "script.groovy", null, stream("def value = 1")));
-		assertEquals("Failed to validate the configuration file 'script.groovy'", error.getMessage());
+		InvalidConfigurationException error = assertRejected(failing, bytes(DOCTYPE_XML), "script.groovy");
+		assertEquals("Invalid XML configuration file 'script.groovy'", error.getMessage());
+		assertRejected(failing, "<!DOCTYPE".getBytes(StandardCharsets.UTF_16BE), "page.html");
+		assertRejected(failing, "<!DOCTYPE".getBytes(StandardCharsets.UTF_16LE), "template.ftl");
+
+		assertThrows(InvalidConfigurationException.class, () ->
+				failing.writeConfiguration("site", "studio", "script.groovy", null, stream(DOCTYPE_XML)));
 		verifyNoInteractions(contentService);
+	}
+
+	@Test
+	public void validateAcceptsCleanContentWhenReaderCannotBeConfigured() throws Exception {
+		ConfigurationServiceInternalImpl failing = unconfiguredDoctypeReader();
+		assertAccepted(failing, bytes("def value = 1\n"), "script.groovy");
+		assertAccepted(failing, bytes("This note mentions a doctype.\n"), "config");
+		assertAccepted(failing, bytes("<!doctype html>"), "page.html");
 	}
 
 	@Test
@@ -345,6 +352,15 @@ public class ConfigurationServiceInternalImplValidationTest {
 	private void assertAccepted(ConfigurationServiceInternalImpl target, byte[] content, String filename) throws Exception {
 		InputStream result = target.validate(new ByteArrayInputStream(content), filename);
 		assertArrayEquals(filename, content, IOUtils.toByteArray(result));
+	}
+
+	private static ConfigurationServiceInternalImpl unconfiguredDoctypeReader() {
+		return new ConfigurationServiceInternalImpl() {
+			@Override
+			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler) throws ParserConfigurationException {
+				throw new ParserConfigurationException("forced");
+			}
+		};
 	}
 
 	private static ConfigurationServiceInternalImpl readerThat(ParseFailure failure) {

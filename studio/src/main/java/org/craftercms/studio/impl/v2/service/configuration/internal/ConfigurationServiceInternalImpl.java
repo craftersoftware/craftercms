@@ -82,6 +82,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -131,6 +132,9 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 
 	private static final String LEXICAL_HANDLER = "http://xml.org/sax/properties/lexical-handler";
 	private static final String XINCLUDE_FEATURE = "http://apache.org/xml/features/xinclude";
+	private static final byte[] DOCTYPE_ASCII = "<!DOCTYPE".getBytes(StandardCharsets.US_ASCII);
+	private static final byte[] DOCTYPE_UTF16_BE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16BE);
+	private static final byte[] DOCTYPE_UTF16_LE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16LE);
 
 	private GitContentRepository contentRepository;
 	private ContentService contentService;
@@ -577,7 +581,8 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	 * <p>
 	 * A SAX reader allows the declaration and records {@code startDTD}. External entities,
 	 * external DTD loading, and XInclude stay off. Parsing stops at the first element when
-	 * no DOCTYPE was declared. A reader that cannot be configured fails closed.
+	 * no DOCTYPE was declared. When that reader cannot be configured, only the {@code <!DOCTYPE}
+	 * bytes in ASCII, UTF-16BE, or UTF-16LE are rejected.
 	 */
 	private void rejectDoctypeInXml(byte[] bytes, String filename) throws InvalidConfigurationException {
 		DoctypeDeclarationHandler handler = new DoctypeDeclarationHandler();
@@ -585,8 +590,8 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		try {
 			reader = createDoctypeDetectingReader(handler);
 		} catch (ParserConfigurationException | SAXException e) {
-			logger.error("Failed to validate the configuration file '{}'", filename, e);
-			throw new InvalidConfigurationException(format("Failed to validate the configuration file '%s'", filename), e);
+			rejectDoctypeBytesOrAccept(bytes, filename, e);
+			return;
 		}
 
 		try {
@@ -667,6 +672,42 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	private void rejectDeclaredDoctype(String filename, Exception parserException) throws InvalidConfigurationException {
 		logger.error("Failed to validate the configuration file '{}'", filename, parserException);
 		throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename), parserException);
+	}
+
+	/**
+	 * Used only when the detecting reader cannot be configured. Accepts every other payload and logs.
+	 */
+	private void rejectDoctypeBytesOrAccept(byte[] bytes, String filename, Exception configurationError)
+			throws InvalidConfigurationException {
+		if (containsDoctypeMarker(bytes)) {
+			logger.error("Failed to validate the configuration file '{}'", filename, configurationError);
+			throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename),
+					configurationError);
+		}
+		logger.error("Failed to configure the XML reader for configuration file '{}'", filename, configurationError);
+	}
+
+	private static boolean containsDoctypeMarker(byte[] bytes) {
+		return indexOf(bytes, DOCTYPE_ASCII) >= 0
+				|| indexOf(bytes, DOCTYPE_UTF16_BE) >= 0
+				|| indexOf(bytes, DOCTYPE_UTF16_LE) >= 0;
+	}
+
+	private static int indexOf(byte[] haystack, byte[] needle) {
+		if (haystack == null || needle.length == 0 || haystack.length < needle.length) {
+			return -1;
+		}
+		int last = haystack.length - needle.length;
+		for (int i = 0; i <= last; i++) {
+			int j = 0;
+			while (j < needle.length && haystack[i + j] == needle[j]) {
+				j++;
+			}
+			if (j == needle.length) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	private static boolean isStopParse(Throwable error) {
