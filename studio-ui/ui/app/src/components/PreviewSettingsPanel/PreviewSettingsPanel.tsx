@@ -56,11 +56,11 @@ const translations = defineMessages({
 	},
 	highlightAllZones: {
 		id: 'settingsPanel.highlightAllTargets',
-		defaultMessage: 'Highlight all targets (e)'
+		defaultMessage: 'Highlight All Targets (e)'
 	},
 	highlightMovable: {
 		id: 'settingsPanel.highlightMovable',
-		defaultMessage: 'Highlight movable (m)'
+		defaultMessage: 'Highlight Movable (m)'
 	}
 });
 
@@ -84,7 +84,7 @@ export function PreviewSettingsPanel() {
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
 			<ListItem>
-				<ListItemText primary={formatMessage({ defaultMessage: 'Keyboard shortcuts' })} />
+				<ListItemText primary={formatMessage({ defaultMessage: 'Keyboard Shortcuts' })} />
 				<KeyboardShortcutsSwitch edge="end" />
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>

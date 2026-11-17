@@ -203,7 +203,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 								<div className="row">
 									<InputLabel htmlFor="firstName" className="section-label">
 										<Typography color="textSecondary">
-											<FormattedMessage id="words.firstName" defaultMessage="First name" />
+											<FormattedMessage id="words.firstName" defaultMessage="First Name" />
 										</Typography>
 									</InputLabel>
 									{managedInStudio ? (
@@ -236,7 +236,7 @@ export function EditUserDialogUI(props: EditUserDialogUIProps) {
 								<div className="row">
 									<InputLabel htmlFor="lastName" className="section-label">
 										<Typography color="textSecondary">
-											<FormattedMessage id="words.lastName" defaultMessage="Last name" />
+											<FormattedMessage id="words.lastName" defaultMessage="Last Name" />
 										</Typography>
 									</InputLabel>
 									{managedInStudio ? (

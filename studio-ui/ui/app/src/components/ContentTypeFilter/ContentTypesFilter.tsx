@@ -32,12 +32,12 @@ export const ContentTypesFilter = forwardRef<HTMLDivElement, ContentTypesFilterP
 	return (
 		<Select {...props} ref={ref}>
 			<MenuItem value="all">
-				<FormattedMessage defaultMessage="Show all types" />
+				<FormattedMessage defaultMessage="Show all Types" />
 			</MenuItem>
 			{archetypes.map((option) => (
 				<MenuItem key={option.id} value={option.id}>
 					<FormattedMessage
-						defaultMessage="{label} only"
+						defaultMessage="{label} Only"
 						values={{
 							label: getPossibleTranslation(option.name, formatMessage)
 						}}
