@@ -103,6 +103,9 @@ screen and theme. Screens the run did not reach keep their existing entries. Fin
 recorded; `report/capture-summary.md` lists them with a rule/ticket/screen/theme/node-count table for reconciling
 against the tickets. Capture records whatever fails, so review the diff before committing it.
 
+The committed baseline was captured on 2026-11-17 in both themes against a live authoring Studio built from `develop`
+at `f2950f2c` (the Website Editorial blueprint, project `editorial`, user `admin`).
+
 ## Readiness
 
 `tests/readiness.ts` exposes `settle(page, screen, ready)`. `ready` is the screen's own loaded state, its explicit
