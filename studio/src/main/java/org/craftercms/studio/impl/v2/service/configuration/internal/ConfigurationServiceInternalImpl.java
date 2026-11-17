@@ -132,6 +132,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 
 	private static final String LEXICAL_HANDLER = "http://xml.org/sax/properties/lexical-handler";
 	private static final String XINCLUDE_FEATURE = "http://apache.org/xml/features/xinclude";
+	private static final String MAX_XML_NAME_LIMIT = "jdk.xml.maxXMLNameLimit";
 	private static final byte[] DOCTYPE_ASCII = "<!DOCTYPE".getBytes(StandardCharsets.US_ASCII);
 	private static final byte[] DOCTYPE_UTF16_BE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16BE);
 	private static final byte[] DOCTYPE_UTF16_LE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16LE);
@@ -640,6 +641,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 
 	/**
 	 * Applies required features and best-effort external-access properties, then registers {@code handler}.
+	 * The XML name limit is removed on the reader so a long DOCTYPE name still reaches {@code startDTD}.
 	 */
 	XMLReader bindDoctypeReader(SAXParser parser, XMLReader reader, DefaultHandler2 handler) throws SAXException {
 		setExternalAccess(parser::setProperty);
@@ -650,6 +652,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		reader.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
 		reader.setFeature(LOAD_EXTERNAL_DTD, false);
 		setExternalAccess(reader::setProperty);
+		setBestEffortProperty(reader::setProperty, MAX_XML_NAME_LIMIT, "0");
 		reader.setProperty(LEXICAL_HANDLER, handler);
 		reader.setContentHandler(handler);
 		reader.setErrorHandler(handler);
@@ -657,13 +660,13 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	}
 
 	private static void setExternalAccess(XmlPropertySetter setter) {
-		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_DTD);
-		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_SCHEMA);
+		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
 	}
 
-	private static void setBestEffortProperty(XmlPropertySetter setter, String property) {
+	private static void setBestEffortProperty(XmlPropertySetter setter, String property, Object value) {
 		try {
-			setter.setProperty(property, "");
+			setter.setProperty(property, value);
 		} catch (SAXNotRecognizedException | SAXNotSupportedException e) {
 			logger.debug("XML parser does not support property '{}'", property, e);
 		}

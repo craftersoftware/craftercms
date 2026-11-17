@@ -248,6 +248,14 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
+	public void validateRejectsDoctypeWithLongRootName() {
+		String name = "a".repeat(1001);
+		assertRejected(bytes("<!DOCTYPE " + name + "><x/>"), "script.groovy");
+		assertRejected(bytes("<!DOCTYPE " + name + " SYSTEM \"file:///etc/hostname\"><x/>"), "script.groovy");
+		assertRejected(bytes("<!DOCTYPE " + "a".repeat(200_000) + "><x/>"), "script.groovy");
+	}
+
+	@Test
 	public void validateAcceptsDoctypeTextThatIsNotADeclaration() throws Exception {
 		assertAccepted("<root><![CDATA[<!DOCTYPE x>]]></root>", "config");
 		assertAccepted("<root>before <!DOCTYPE x> after</root>", "page.html");
