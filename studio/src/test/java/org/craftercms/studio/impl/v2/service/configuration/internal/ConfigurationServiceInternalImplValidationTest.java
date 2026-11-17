@@ -20,7 +20,10 @@ import org.apache.commons.io.IOUtils;
 import org.craftercms.studio.api.v2.exception.configuration.InvalidConfigurationException;
 import org.craftercms.studio.api.v2.service.content.ContentService;
 import org.junit.Test;
+import org.xml.sax.XMLReader;
+import org.xml.sax.ext.DefaultHandler2;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -28,12 +31,14 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.UUID;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -71,6 +76,9 @@ public class ConfigurationServiceInternalImplValidationTest {
 			"<!-- <!DOCTYPE configuration SYSTEM \"file:///etc/hostname\"> -->" +
 			"<configuration><header>ok</header></configuration>";
 	private static final String LOWERCASE_DOCTYPE = "<!doctype html><html><body>hello</body></html>";
+	private static final String SIMPLE_DOCTYPE = "<?xml version=\"1.0\"?><!DOCTYPE configuration><configuration/>";
+	private static final String UTF16_DECLARED_DOCTYPE =
+			"<?xml version=\"1.0\" encoding=\"UTF-16\"?><!DOCTYPE configuration><configuration/>";
 	private static final String[] NON_XML_FILENAMES = {
 			"controller.groovy",
 			"template.ftl",
@@ -216,6 +224,43 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
+	public void validateRejectsUtf16DoctypeWithBom() {
+		assertRejected(utf16(SIMPLE_DOCTYPE, StandardCharsets.UTF_16BE, true), "config");
+		assertRejected(utf16(SIMPLE_DOCTYPE, StandardCharsets.UTF_16LE, true), "page.html");
+	}
+
+	@Test
+	public void validateRejectsUtf16DeclaredDoctypeWithoutBom() {
+		assertRejected(utf16(UTF16_DECLARED_DOCTYPE, StandardCharsets.UTF_16BE, false), "template.ftl");
+		assertRejected(utf16(UTF16_DECLARED_DOCTYPE, StandardCharsets.UTF_16LE, false), "widget.json");
+	}
+
+	@Test
+	public void validateAcceptsDoctypeTextThatIsNotADeclaration() throws Exception {
+		assertAccepted("<root><![CDATA[<!DOCTYPE x>]]></root>", "config");
+		assertAccepted("<root>before <!DOCTYPE x> after</root>", "page.html");
+		assertAccepted("garbage<!DOCTYPE x><x/>", "template.ftl");
+		assertAccepted(new byte[] {'<', (byte) 0xFF, (byte) 0xFE, 'a'}, "config");
+	}
+
+	@Test
+	public void writeConfigurationRejectsWhenDoctypeReaderCannotBeConfigured() {
+		ConfigurationServiceInternalImpl failing = new ConfigurationServiceInternalImpl() {
+			@Override
+			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler) throws ParserConfigurationException {
+				throw new ParserConfigurationException("forced");
+			}
+		};
+		ContentService contentService = mock(ContentService.class);
+		failing.setContentService(contentService);
+
+		InvalidConfigurationException error = assertThrows(InvalidConfigurationException.class, () ->
+				failing.writeConfiguration("site", "studio", "script.groovy", null, stream("def value = 1")));
+		assertEquals("Failed to validate the configuration file 'script.groovy'", error.getMessage());
+		verifyNoInteractions(contentService);
+	}
+
+	@Test
 	public void validateDoesNotPrintFatalError() throws Exception {
 		PrintStream original = System.err;
 		ByteArrayOutputStream captured = new ByteArrayOutputStream();
@@ -238,8 +283,12 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	private void assertAccepted(String content, String filename) throws Exception {
-		InputStream result = service.validate(stream(content), filename);
-		assertEquals(filename, content, IOUtils.toString(result, StandardCharsets.UTF_8));
+		assertAccepted(bytes(content), filename);
+	}
+
+	private void assertAccepted(byte[] content, String filename) throws Exception {
+		InputStream result = service.validate(new ByteArrayInputStream(content), filename);
+		assertArrayEquals(filename, content, IOUtils.toByteArray(result));
 	}
 
 	private static void assertDoesNotLeak(Throwable error, String secret) {
@@ -258,6 +307,20 @@ public class ConfigurationServiceInternalImplValidationTest {
 
 	private static byte[] bytes(String content) {
 		return content.getBytes(StandardCharsets.UTF_8);
+	}
+
+	private static byte[] utf16(String content, Charset charset, boolean bom) {
+		byte[] body = content.getBytes(charset);
+		if (!bom) {
+			return body;
+		}
+		byte[] prefix = charset.equals(StandardCharsets.UTF_16LE)
+				? new byte[] {(byte) 0xFF, (byte) 0xFE}
+				: new byte[] {(byte) 0xFE, (byte) 0xFF};
+		byte[] result = new byte[prefix.length + body.length];
+		System.arraycopy(prefix, 0, result, 0, prefix.length);
+		System.arraycopy(body, 0, result, prefix.length, body.length);
+		return result;
 	}
 
 	private static byte[] withUtf8Bom(String content) {

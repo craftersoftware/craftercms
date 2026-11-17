@@ -65,6 +65,7 @@ import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXNotRecognizedException;
@@ -81,7 +82,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -131,9 +131,6 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 
 	private static final String LEXICAL_HANDLER = "http://xml.org/sax/properties/lexical-handler";
 	private static final String XINCLUDE_FEATURE = "http://apache.org/xml/features/xinclude";
-	private static final byte[] DOCTYPE_ASCII = "<!DOCTYPE".getBytes(StandardCharsets.US_ASCII);
-	private static final byte[] DOCTYPE_UTF16_BE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16BE);
-	private static final byte[] DOCTYPE_UTF16_LE = "<!DOCTYPE".getBytes(StandardCharsets.UTF_16LE);
 
 	private GitContentRepository contentRepository;
 	private ContentService contentService;
@@ -579,28 +576,27 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	 * Rejects XML that declares a DOCTYPE. Non-XML content is left unchanged.
 	 * <p>
 	 * A SAX reader allows the declaration and records {@code startDTD}. External entities,
-	 * external DTD loading, and XInclude stay off. When that reader cannot be configured,
-	 * only the {@code <!DOCTYPE} bytes in ASCII, UTF-16BE, or UTF-16LE are rejected.
+	 * external DTD loading, and XInclude stay off. Parsing stops at the first element when
+	 * no DOCTYPE was declared. A reader that cannot be configured fails closed.
 	 */
 	private void rejectDoctypeInXml(byte[] bytes, String filename) throws InvalidConfigurationException {
 		DoctypeDeclarationHandler handler = new DoctypeDeclarationHandler();
-		XMLReader reader;
+		final XMLReader reader;
 		try {
 			reader = createDoctypeDetectingReader(handler);
 		} catch (ParserConfigurationException | SAXException e) {
-			rejectDoctypeBytesOrAccept(bytes, filename, e);
-			return;
+			logger.error("Failed to validate the configuration file '{}'", filename, e);
+			throw new InvalidConfigurationException(format("Failed to validate the configuration file '%s'", filename), e);
 		}
 
 		try {
 			reader.parse(new InputSource(new ByteArrayInputStream(bytes)));
-		} catch (SAXException | IOException e) {
+		} catch (SAXException | IOException | RuntimeException e) {
 			if (handler.isDeclared()) {
 				rejectDeclaredDoctype(filename, e);
 				return;
 			}
-			if (e instanceof SAXNotRecognizedException || e instanceof SAXNotSupportedException) {
-				rejectDoctypeBytesOrAccept(bytes, filename, e);
+			if (isStopParse(e)) {
 				return;
 			}
 			logger.debug("Configuration file '{}' is not XML, will not validate", filename);
@@ -618,10 +614,10 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 
 	/**
 	 * Reader that reaches {@code startDTD} and does not resolve external markup.
-	 * Features are set on the factory and the reader. External-access properties have no
-	 * factory API, so they are set on the parser and again on the reader.
+	 * Secure processing, the lexical handler, and the external-entity and DTD features are required.
+	 * External-access properties are set on the parser and the reader when the implementation supports them.
 	 */
-	private static XMLReader createDoctypeDetectingReader(DoctypeDeclarationHandler handler)
+	XMLReader createDoctypeDetectingReader(DefaultHandler2 handler)
 			throws ParserConfigurationException, SAXException {
 		SAXParserFactory factory = SAXParserFactory.newInstance();
 		factory.setXIncludeAware(false);
@@ -632,8 +628,7 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		factory.setFeature(LOAD_EXTERNAL_DTD, false);
 
 		SAXParser parser = factory.newSAXParser();
-		parser.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-		parser.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+		setExternalAccess(parser::setProperty);
 
 		XMLReader reader = parser.getXMLReader();
 		reader.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -642,11 +637,24 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		reader.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
 		reader.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
 		reader.setFeature(LOAD_EXTERNAL_DTD, false);
-		reader.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-		reader.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+		setExternalAccess(reader::setProperty);
 		reader.setProperty(LEXICAL_HANDLER, handler);
+		reader.setContentHandler(handler);
 		reader.setErrorHandler(handler);
 		return reader;
+	}
+
+	private static void setExternalAccess(XmlPropertySetter setter) {
+		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_DTD);
+		setBestEffortProperty(setter, XMLConstants.ACCESS_EXTERNAL_SCHEMA);
+	}
+
+	private static void setBestEffortProperty(XmlPropertySetter setter, String property) {
+		try {
+			setter.setProperty(property, "");
+		} catch (SAXNotRecognizedException | SAXNotSupportedException e) {
+			logger.debug("XML parser does not support property '{}'", property, e);
+		}
 	}
 
 	private void rejectDeclaredDoctype(String filename, Exception parserException) throws InvalidConfigurationException {
@@ -654,40 +662,21 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename), parserException);
 	}
 
-	/**
-	 * Used only when the detecting reader cannot be configured. Accepts every other payload and logs.
-	 */
-	private void rejectDoctypeBytesOrAccept(byte[] bytes, String filename, Exception configurationError)
-			throws InvalidConfigurationException {
-		if (containsDoctypeMarker(bytes)) {
-			logger.error("Failed to validate the configuration file '{}'", filename, configurationError);
-			throw new InvalidConfigurationException(format("Invalid XML configuration file '%s'", filename),
-					configurationError);
+	private static boolean isStopParse(Throwable error) {
+		Throwable current = error;
+		int guard = 0;
+		while (current != null && guard++ < 8) {
+			if (current instanceof StopParseException) {
+				return true;
+			}
+			current = current.getCause();
 		}
-		logger.error("Failed to configure the XML reader for configuration file '{}'", filename, configurationError);
+		return false;
 	}
 
-	private static boolean containsDoctypeMarker(byte[] bytes) {
-		return indexOf(bytes, DOCTYPE_ASCII) >= 0
-				|| indexOf(bytes, DOCTYPE_UTF16_BE) >= 0
-				|| indexOf(bytes, DOCTYPE_UTF16_LE) >= 0;
-	}
-
-	private static int indexOf(byte[] haystack, byte[] needle) {
-		if (haystack == null || needle.length == 0 || haystack.length < needle.length) {
-			return -1;
-		}
-		int last = haystack.length - needle.length;
-		for (int i = 0; i <= last; i++) {
-			int j = 0;
-			while (j < needle.length && haystack[i + j] == needle[j]) {
-				j++;
-			}
-			if (j == needle.length) {
-				return i;
-			}
-		}
-		return -1;
+	@FunctionalInterface
+	private interface XmlPropertySetter {
+		void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException;
 	}
 
 	private String getConfigurationPath(String siteId, String module, String path, String environment) throws SiteNotFoundException {
@@ -966,8 +955,9 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	}
 
 	/**
-	 * Records a DOCTYPE and stops the parse. Registered as the error handler so a fatal
-	 * error is not written to stderr.
+	 * Records a DOCTYPE and stops the parse. Registered as the content handler and the error
+	 * handler so a fatal error is not written to stderr and a document without a DOCTYPE is
+	 * not read past its first element.
 	 */
 	private static final class DoctypeDeclarationHandler extends DefaultHandler2 {
 
@@ -979,8 +969,23 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 			throw new SAXException("DOCTYPE declaration is not allowed");
 		}
 
+		@Override
+		public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+			throw new StopParseException();
+		}
+
 		private boolean isDeclared() {
 			return declared;
+		}
+	}
+
+	/**
+	 * Ends a parse that reached an element without a DOCTYPE declaration.
+	 */
+	private static final class StopParseException extends SAXException {
+
+		private StopParseException() {
+			super("No DOCTYPE declaration");
 		}
 	}
 }
