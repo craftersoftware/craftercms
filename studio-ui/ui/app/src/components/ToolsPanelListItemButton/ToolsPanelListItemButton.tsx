@@ -52,7 +52,9 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 	const trailingActionLabel =
 		secondaryActionLabel ?? formatMessage({ defaultMessage: 'Open {title}' }, { title: translatedTitle });
 	return (
+		// Tools panel widgets sit directly in the panel, not in a list, so the row is not a list item.
 		<ListItem
+			component="div"
 			disablePadding
 			secondaryAction={
 				onSecondaryActionClick ? (

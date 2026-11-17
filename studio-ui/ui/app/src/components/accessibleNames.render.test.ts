@@ -94,10 +94,10 @@ describe('accessible names', () => {
 				onSecondaryActionClick: () => clicked++
 			})
 		);
-		const item = host.querySelector('li') as HTMLElement;
-		const row = host.querySelector(
-			'li > [role="button"], li > button, li > div[class*="ListItemButton"]'
-		) as HTMLElement;
+		const item = host.firstElementChild as HTMLElement;
+		const row = item.querySelector('[role="button"], button, div[class*="ListItemButton"]') as HTMLElement;
+		assert.equal(item.tagName, 'DIV');
+		assert.equal(host.querySelector('li'), null, 'a tools panel row is not a list item outside a list');
 		assert.equal(item.classList.contains('custom-class'), false);
 		assert.equal(row.classList.contains('custom-class'), true);
 		assert.equal(row.classList.contains('Mui-selected'), true);
