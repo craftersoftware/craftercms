@@ -30,7 +30,7 @@ export const audioDesktopUploadDataSourceModule: DataSourceModule = defineDataSo
 			getActions() {
 				return [
 					createUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						fileTypes: AUDIO_MIME_TYPES,
 						selection: 'asset'

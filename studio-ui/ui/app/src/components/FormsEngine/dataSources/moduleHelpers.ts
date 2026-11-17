@@ -27,6 +27,15 @@ import type {
 	DataSourceVariantsSelection
 } from './types';
 import { expandPathOrRaw, toSearchPath } from './pathUtils';
+import { defineMessages } from 'react-intl';
+import { getCurrentIntl } from '../../../utils/i18n';
+
+const messages = defineMessages({
+	upload: { defaultMessage: 'Upload' },
+	uploadWithTitle: { defaultMessage: 'Upload - {title}' },
+	transcode: { defaultMessage: 'Transcode' },
+	transcodeWithTitle: { defaultMessage: 'Transcode - {title}' }
+});
 
 /**
  * Normalizes a key/value list entry (configured options, taxonomy items, …).
@@ -422,17 +431,26 @@ export function createSearchAction(options: {
 /** Factory for a standard upload action; maps Uppy results via {@link mapUploadResultToAssets}. */
 export function createUploadAction(options: {
 	id?: string;
+	/** Explicit label. Prefer `title` so the "Upload - {title}" string is i18n'd. */
 	label?: string;
+	/** Data-source title; used to build the default i18n label when `label` is omitted. */
+	title?: string;
 	path: string;
 	fileTypes?: string[];
 	selection: 'item' | 'asset';
 	meta?: DataSourceActionMeta;
 }): DataSourceAction {
 	const { path, fileTypes, selection } = options;
+	const intl = getCurrentIntl();
+	const label =
+		options.label ??
+		(options.title
+			? intl.formatMessage(messages.uploadWithTitle, { title: options.title })
+			: intl.formatMessage(messages.upload));
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',
-		label: options.label ?? 'Upload',
+		label,
 		meta: {
 			path,
 			fileTypes,
@@ -453,7 +471,10 @@ export function createUploadAction(options: {
  */
 export function createExternalUploadAction(options: {
 	id?: string;
+	/** Explicit label. Prefer `title` so the "Transcode - {title}" string is i18n'd. */
 	label?: string;
+	/** Data-source title; used to build the default i18n label when `label` is omitted. */
+	title?: string;
 	path: string;
 	profileId?: string;
 	inputProfileId?: string;
@@ -474,10 +495,16 @@ export function createExternalUploadAction(options: {
 		selection,
 		transcode = false
 	} = options;
+	const intl = getCurrentIntl();
+	const label =
+		options.label ??
+		(options.title
+			? intl.formatMessage(messages.transcodeWithTitle, { title: options.title })
+			: intl.formatMessage(messages.transcode));
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',
-		label: options.label ?? 'Upload',
+		label,
 		meta: {
 			path,
 			fileTypes,

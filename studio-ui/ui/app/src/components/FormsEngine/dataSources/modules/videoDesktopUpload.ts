@@ -30,7 +30,7 @@ export const videoDesktopUploadDataSourceModule: DataSourceModule = defineDataSo
 			getActions() {
 				return [
 					createUploadAction({
-						label: `Upload - ${record.title}`,
+						title: record.title,
 						path,
 						fileTypes: VIDEO_MIME_TYPES,
 						selection: 'asset'
