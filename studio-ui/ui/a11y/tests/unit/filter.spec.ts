@@ -17,32 +17,39 @@
 import { expect, test } from '@playwright/test';
 import type { Result } from 'axe-core';
 import { AllowListEntry, validateAllowList } from '../allow-list';
-import { applyAllowList, blockingFindings, fingerprint } from '../filter';
+import { applyAllowList, blockingFindings, fingerprint, splitFingerprint, stableTokens, startTag } from '../filter';
 
 /** A minimal axe violation with one node per target. */
-function violation(id: string, targets: string[], impact: Result['impact'] = 'serious'): Result {
+function violation(
+	id: string,
+	targets: string[],
+	impact: Result['impact'] = 'serious',
+	html = '<a class="mui-1abc MuiLink-root" href="/x">'
+): Result {
 	return {
 		id,
 		impact,
 		help: `${id} help`,
-		nodes: targets.map((target) => ({ target: [target], html: `<x data-t="${target}">`, impact }))
+		nodes: targets.map((target) => ({ target: [target], html, impact }))
 	} as unknown as Result;
 }
 
 const knownNode = '.MuiTypography-root.css-1x2y3z > a';
+const knownHtml = '<a class="mui-1abc MuiLink-root" href="/x">';
+const known = fingerprint([knownNode], knownHtml);
 const entry: AllowListEntry = {
 	rule: 'color-contrast',
 	screen: 'users',
 	theme: 'light',
-	nodes: [fingerprint([knownNode])]
+	nodes: [known]
 };
 
 test.describe('allow-list filter', () => {
 	test('a second, unrelated failure of the same rule on the same screen and theme still fails', () => {
 		const findings = blockingFindings([violation('color-contrast', [knownNode, '#users-grid .MuiChip-label'])]);
 		const { allowed, blocking, stale } = applyAllowList(findings, [entry], 'users', 'light');
-		expect(allowed.map((f) => f.fingerprint)).toEqual([fingerprint([knownNode])]);
-		expect(blocking.map((f) => f.fingerprint)).toEqual(['#users-grid .MuiChip-label']);
+		expect(allowed.map((f) => f.fingerprint)).toEqual([known]);
+		expect(blocking.map((f) => f.fingerprint)).toEqual([fingerprint(['#users-grid .MuiChip-label'], knownHtml)]);
 		expect(stale).toEqual([]);
 	});
 
@@ -166,10 +173,20 @@ test.describe('fingerprint normalisation', () => {
 			rule: 'label-content-name-mismatch',
 			screen: 'create project',
 			theme: 'light',
-			nodes: [fingerprint(['.mui-1k0n8m7.MuiCardActionArea-root[aria-labelledby="_r_2o_"]'])]
+			nodes: [
+				fingerprint(
+					['.mui-1k0n8m7.MuiCardActionArea-root[aria-labelledby="_r_2o_"]'],
+					'<button class="mui-1k0n8m7 MuiCardActionArea-root" aria-labelledby="_r_2o_">'
+				)
+			]
 		};
 		const next = blockingFindings([
-			violation('label-content-name-mismatch', ['.mui-zz9y8x.MuiCardActionArea-root[aria-labelledby="_r_3c_"]'])
+			violation(
+				'label-content-name-mismatch',
+				['.mui-zz9y8x.MuiCardActionArea-root[aria-labelledby="_r_3c_"]'],
+				'serious',
+				'<button class="mui-zz9y8x MuiCardActionArea-root" aria-labelledby="_r_3c_">'
+			)
 		]);
 		const { allowed, blocking, stale } = applyAllowList(next, [recorded], 'create project', 'light');
 		expect([allowed.length, blocking.length, stale.length]).toEqual([1, 0, 0]);
@@ -182,7 +199,7 @@ test.describe('allow-list validation', () => {
 	});
 
 	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
-		const node = ['x'];
+		const node = [known];
 		const scoped = [
 			...['aria-input-field-name', 'label', 'list', 'nested-interactive'].map((rule) => ({
 				rule,
@@ -203,7 +220,7 @@ test.describe('allow-list validation', () => {
 	});
 
 	test('no longer lists screens the baseline found clean', () => {
-		const node = ['x'];
+		const node = [known];
 		expect(() =>
 			validateAllowList([{ rule: 'button-name', screen: 'edit form', theme: 'light', nodes: node }])
 		).toThrow(/no umbrella ticket/);
@@ -230,5 +247,183 @@ test.describe('allow-list validation', () => {
 	test('rejects an entry without nodes, and duplicates', () => {
 		expect(() => validateAllowList([{ ...entry, nodes: [] }])).toThrow(/fingerprint of every node/);
 		expect(() => validateAllowList([entry, entry])).toThrow(/listed twice/);
+	});
+});
+
+test.describe('start tag', () => {
+	test('keeps the tag name, role, and Mui and authored classes, and drops generated classes and other attributes', () => {
+		expect(
+			startTag(
+				'<LI class="mui-1abc MuiListItem-root css-9z authored MuiListItem-gutters" role="listitem" data-x="1" id="x">text</LI>'
+			)
+		).toBe('<li role="listitem" class="MuiListItem-gutters MuiListItem-root authored">');
+		expect(startTag('<div class="mui-1abc css-1x2y3z">')).toBe('<div>');
+		expect(startTag('<ul>')).toBe('<ul>');
+	});
+
+	test('is independent of class order, repeats and generated hashes', () => {
+		expect(startTag('<div class="MuiBox-root mui-1abc authored">')).toBe(
+			startTag('<div class="authored mui-9zz MuiBox-root MuiBox-root">')!
+		);
+	});
+
+	test('tss-react classes keep their name, emotion classes with a label keep the label', () => {
+		expect(startTag('<div class="tss-1a2b3c-root">')).toBe('<div class="tss-*-root">');
+		expect(startTag('<div class="css-1a2b3c-MuiPaper-root">')).toBe('<div class="MuiPaper-root">');
+	});
+
+	test('MUI mui-fixed is a real class and is kept', () => {
+		expect(startTag('<div class="mui-fixed mui-1abc MuiAppBar-root">')).toBe('<div class="MuiAppBar-root mui-fixed">');
+		expect(fingerprint(['.mui-fixed.mui-1abc:nth-child(2)'])).toBe('.mui-fixed.mui-*:nth-child(2)');
+		expect(fingerprint(['.mui-fixed > .mui-fixedx'])).toBe('.mui-fixed > .mui-*');
+	});
+
+	test("a link's href is part of its start tag, a generated fragment is not, and other tags' hrefs are ignored", () => {
+		expect(startTag('<a href="https://craftercms.org/blog" target="_blank">News</a>')).toBe(
+			'<a href="https://craftercms.org/blog">'
+		);
+		expect(startTag('<a class="MuiLink-root" href="#_r_1_">')).toBe('<a href="#*" class="MuiLink-root">');
+		expect(startTag('<a>')).toBe('<a>');
+		expect(startTag('<link href="/x.css">')).toBe('<link>');
+	});
+
+	test('reads attributes with quoted values that hold > and spaces, single quotes and bare values', () => {
+		expect(startTag(`<a href="/a>b" title='x y' role=link class="MuiLink-root">`)).toBe(
+			'<a role="link" href="/a>b" class="MuiLink-root">'
+		);
+		expect(startTag('<input disabled class="MuiInput-input" />')).toBe('<input class="MuiInput-input">');
+	});
+
+	test('returns null when the html does not start with a tag', () => {
+		expect(startTag('')).toBeNull();
+		expect(startTag('text <div>')).toBeNull();
+		expect(startTag('<!-- c -->')).toBeNull();
+	});
+});
+
+test.describe('fingerprints with the start tag', () => {
+	const path = '.mui-ybhk9l:nth-child(1)';
+
+	test('follow the path, and split back into the two', () => {
+		const value = fingerprint([path], '<div class="mui-1abc" role="listitem">');
+		expect(value).toBe('.mui-*:nth-child(1) <div role="listitem">');
+		expect(splitFingerprint(value)).toEqual({ path: '.mui-*:nth-child(1)', startTag: '<div role="listitem">' });
+		expect(splitFingerprint('ul')).toEqual({ path: 'ul', startTag: null });
+		expect(splitFingerprint('a[href="x <b>"]')).toEqual({ path: 'a[href="x <b>"]', startTag: null });
+	});
+
+	test('a path alone is what a node without a readable start tag gets', () => {
+		expect(fingerprint([path])).toBe('.mui-*:nth-child(1)');
+		expect(fingerprint([path], 'not html')).toBe('.mui-*:nth-child(1)');
+	});
+
+	test('two different nodes reached by the same hash-only path no longer share a fingerprint', () => {
+		const listitem = fingerprint([path], '<div class="mui-1abc" role="listitem">');
+		const other = fingerprint([path], '<div class="mui-1abc MuiCard-root">');
+		expect(listitem).not.toBe(other);
+		const recorded: AllowListEntry = { rule: 'listitem', screen: 'preview', theme: 'light', nodes: [listitem] };
+		const findings = blockingFindings([
+			violation('listitem', [path], 'serious', '<div class="mui-1abc MuiCard-root">')
+		]);
+		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'preview', 'light');
+		expect([allowed.length, blocking.length, stale.length]).toEqual([0, 1, 1]);
+	});
+
+	test('the same node still matches when only generated classes and ids change', () => {
+		const recorded: AllowListEntry = {
+			rule: 'listitem',
+			screen: 'preview',
+			theme: 'light',
+			nodes: [fingerprint(['.mui-ybhk9l:nth-child(1)'], '<div class="mui-ybhk9l" role="listitem">')]
+		};
+		const findings = blockingFindings([
+			violation(
+				'listitem',
+				['.mui-zz9y8x:nth-child(1)'],
+				'serious',
+				'<div class="mui-zz9y8x" role="listitem" id="_r_3_">'
+			)
+		]);
+		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'preview', 'light');
+		expect([allowed.length, blocking.length, stale.length]).toEqual([1, 0, 0]);
+	});
+});
+
+test.describe('stable tokens', () => {
+	test('a Mui or authored class, an authored id, a literal attribute value and a role are stable', () => {
+		expect(stableTokens('.mui-* > .MuiListItem-root:nth-child(2) <li>')).toEqual(['.MuiListItem-root']);
+		expect(stableTokens('.mui-*.avatar <td>')).toEqual(['.avatar']);
+		expect(stableTokens('#users-grid > .mui-* <div>')).toEqual(['#users-grid']);
+		expect(stableTokens('a[href$="blog"] <a>')).toEqual(['[href$="blog"]']);
+		expect(stableTokens('.mui-*:nth-child(1) <div role="listitem">')).toEqual(['role=listitem']);
+		expect(stableTokens('.mui-* <div class="MuiCard-root mui-fixed">')).toEqual(['.MuiCard-root', '.mui-fixed']);
+		expect(stableTokens('.tss-*-root <div>')).toEqual(['.tss-*-root']);
+		expect(stableTokens('a:nth-child(2) <a href="https://github.com/craftercms/craftercms/issues">')).toEqual([
+			'href=https://github.com/craftercms/craftercms/issues'
+		]);
+	});
+
+	test('hashes, ids, positions and a bare tag name are not', () => {
+		for (const value of [
+			'.mui-*',
+			'.mui-*:nth-child(1)',
+			'.mui-* > .mui-*:nth-child(8)',
+			'.css-*.mui-*',
+			'#*',
+			'ul',
+			'li:nth-child(1)',
+			'a:nth-child(2)',
+			'button[aria-labelledby="*"]',
+			'button[aria-labelledby="* *"]',
+			'.mui-*:nth-child(1) <div>',
+			'.mui-*:nth-child(1) <li>',
+			'#* <input>',
+			'ul <ul>',
+			'a:nth-child(2) <a>',
+			'a:nth-child(2) <a href="#*">'
+		]) {
+			expect(stableTokens(value), value).toEqual([]);
+		}
+	});
+});
+
+test.describe('allow-list validation of fingerprints', () => {
+	const node = (path: string, html: string) => fingerprint([path], html);
+	const listitem = (nodes: string[]): AllowListEntry => ({
+		rule: 'listitem',
+		screen: 'preview',
+		theme: 'light',
+		nodes
+	});
+
+	test('accepts nodes the start tag makes identifiable', () => {
+		const nodes = [
+			node('.mui-ybhk9l:nth-child(1)', '<div class="mui-ybhk9l" role="listitem">'),
+			node('.mui-ybhk9l > .mui-o5ytqa:nth-child(8)', '<li class="mui-o5ytqa MuiListItem-root">'),
+			node('.MuiListItem-padding', '<li class="MuiListItem-padding">')
+		];
+		expect(validateAllowList([listitem(nodes)])).toHaveLength(1);
+	});
+
+	test('rejects a fingerprint of generated classes and positions only, naming it', () => {
+		const weak = [node('.mui-ybhk9l:nth-child(1)', '<div class="mui-ybhk9l">'), node('#_r_1_', '<input>')];
+		expect(() =>
+			validateAllowList([listitem([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])])
+		).toThrow(
+			/listitem on light preview has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
+		);
+	});
+
+	test('rejects a path-only fingerprint, even one with a class, as the older format', () => {
+		expect(() => validateAllowList([listitem(['.MuiListItem-padding'])])).toThrow(/no stable node/);
+		expect(() => validateAllowList([listitem(['ul'])])).toThrow(/no stable node/);
+	});
+
+	test('the committed allow-list is valid under it', async () => {
+		const { allowList } = await import('../allow-list');
+		expect(allowList.length).toBeGreaterThan(0);
+		for (const { nodes } of allowList) {
+			for (const value of nodes) expect(stableTokens(value), value).not.toEqual([]);
+		}
 	});
 });
