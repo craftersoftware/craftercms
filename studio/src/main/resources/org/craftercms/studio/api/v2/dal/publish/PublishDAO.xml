@@ -40,6 +40,8 @@
 
 	<resultMap id="PublishItemMapWithMetadata" type="org.craftercms.studio.api.v2.dal.publish.PublishItemWithMetadata"
 		   autoMapping="true">
+		<!-- item_id is also the association column, so auto-mapping skips it -->
+		<result property="itemId" column="item_id"/>
 		<association property="itemTargets" column="item_id"
 			     select="org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO.getByItemId"/>
 		<association property="itemMetadata" columnPrefix="meta_" resultMap="org.craftercms.studio.api.v2.dal.ItemDAO.LightItemMetadataMap"/>
@@ -331,7 +333,11 @@
 	</select>
 
 	<sql id="getPublishItemsQuery">
-		SELECT pi.*, ipi.item_id
+		SELECT pi.*,
+		<choose>
+			<when test="includeMetadata">COALESCE(ipi.item_id, i.id)</when>
+			<otherwise>ipi.item_id</otherwise>
+		</choose> AS item_id
 		<if test="includeMetadata">, i.label as meta_label, i.system_type as meta_system_type, i.mime_type as meta_mime_type</if>
 		FROM publish_item pi
 		INNER JOIN publish_package pp ON pi.package_id = pp.id
