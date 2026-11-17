@@ -132,7 +132,8 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 		>
 			{/* @see https://github.com/craftersoftware/craftercms/issues/5442 */}
 			{inWorkflow && !shouldItemShowAsStaged(item)
-				? showWorkflowState && (
+				? showWorkflowState &&
+					contentItem.stateMap && (
 						<ItemStateIcon
 							{...stateIconProps}
 							item={item as ContentItem}
@@ -145,7 +146,8 @@ const ItemDisplay = forwardRef<HTMLSpanElement, ItemDisplayProps>((props, ref) =
 							}}
 						/>
 					)
-				: showPublishingTarget && (
+				: showPublishingTarget &&
+					contentItem.stateMap && (
 						<ItemPublishingTargetIcon
 							{...publishingTargetIconProps}
 							item={item as ContentItem}
