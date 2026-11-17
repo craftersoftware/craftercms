@@ -30,7 +30,7 @@ export const videoBrowseRepoDataSourceModule: DataSourceModule = defineDataSourc
 			getActions() {
 				return [
 					createBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						mimeTypes: VIDEO_MIME_TYPES,
 						selection: 'asset'

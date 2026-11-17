@@ -31,11 +31,28 @@ import { defineMessages } from 'react-intl';
 import { getCurrentIntl } from '../../../utils/i18n';
 
 const messages = defineMessages({
+	browse: { defaultMessage: 'Browse' },
+	browseWithTitle: { defaultMessage: 'Browse - {title}' },
+	search: { defaultMessage: 'Search' },
+	searchWithTitle: { defaultMessage: 'Search - {title}' },
 	upload: { defaultMessage: 'Upload' },
 	uploadWithTitle: { defaultMessage: 'Upload - {title}' },
+	create: { defaultMessage: 'Create' },
+	createWithTitle: { defaultMessage: 'Create - {title}' },
 	transcode: { defaultMessage: 'Transcode' },
 	transcodeWithTitle: { defaultMessage: 'Transcode - {title}' }
 });
+
+type ActionLabelType = 'browse' | 'search' | 'upload' | 'create' | 'transcode';
+
+/** Builds an i18n action label from an optional override, title, or bare type default. */
+export function resolveActionLabel(type: ActionLabelType, options: { label?: string; title?: string } = {}): string {
+	if (options.label) return options.label;
+	const intl = getCurrentIntl();
+	const withTitle = messages[`${type}WithTitle` as `${ActionLabelType}WithTitle`];
+	const wihoutTitle = messages[type];
+	return options.title ? intl.formatMessage(withTitle, { title: options.title }) : intl.formatMessage(wihoutTitle);
+}
 
 /**
  * Normalizes a key/value list entry (configured options, taxonomy items, …).
@@ -301,6 +318,7 @@ export function unsupportedRemoteError(type: string, operation: string): never {
 export function createBrowseAction(options: {
 	id?: string;
 	label?: string;
+	title?: string;
 	path: string;
 	contentTypes?: string[];
 	mimeTypes?: string[];
@@ -311,7 +329,7 @@ export function createBrowseAction(options: {
 	return {
 		id: options.id ?? 'browse',
 		kind: 'browse',
-		label: options.label ?? 'Browse',
+		label: resolveActionLabel('browse', options),
 		meta: {
 			path,
 			contentTypes,
@@ -344,6 +362,7 @@ export function createBrowseAction(options: {
 export function createExternalBrowseAction(options: {
 	id?: string;
 	label?: string;
+	title?: string;
 	path: string;
 	profileId: string;
 	profileType?: 'aws' | 'webdav';
@@ -357,7 +376,7 @@ export function createExternalBrowseAction(options: {
 	return {
 		id: options.id ?? 'browse',
 		kind: 'browse',
-		label: options.label ?? 'Browse',
+		label: resolveActionLabel('browse', options),
 		meta: {
 			path,
 			mimeTypes,
@@ -390,6 +409,7 @@ export function createExternalBrowseAction(options: {
 export function createSearchAction(options: {
 	id?: string;
 	label?: string;
+	title?: string;
 	path: string;
 	contentTypes?: string[];
 	mimeTypes?: string[];
@@ -400,7 +420,7 @@ export function createSearchAction(options: {
 	return {
 		id: options.id ?? 'search',
 		kind: 'search',
-		label: options.label ?? 'Search',
+		label: resolveActionLabel('search', options),
 		meta: {
 			path,
 			contentTypes,
@@ -441,16 +461,10 @@ export function createUploadAction(options: {
 	meta?: DataSourceActionMeta;
 }): DataSourceAction {
 	const { path, fileTypes, selection } = options;
-	const intl = getCurrentIntl();
-	const label =
-		options.label ??
-		(options.title
-			? intl.formatMessage(messages.uploadWithTitle, { title: options.title })
-			: intl.formatMessage(messages.upload));
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',
-		label,
+		label: resolveActionLabel('upload', options),
 		meta: {
 			path,
 			fileTypes,
@@ -471,7 +485,7 @@ export function createUploadAction(options: {
  */
 export function createExternalUploadAction(options: {
 	id?: string;
-	/** Explicit label. Prefer `title` so the "Transcode - {title}" string is i18n'd. */
+	/** Explicit label. Prefer `title` so Upload/Transcode strings are i18n'd. */
 	label?: string;
 	/** Data-source title; used to build the default i18n label when `label` is omitted. */
 	title?: string;
@@ -495,16 +509,10 @@ export function createExternalUploadAction(options: {
 		selection,
 		transcode = false
 	} = options;
-	const intl = getCurrentIntl();
-	const label =
-		options.label ??
-		(options.title
-			? intl.formatMessage(messages.transcodeWithTitle, { title: options.title })
-			: intl.formatMessage(messages.transcode));
 	return {
 		id: options.id ?? 'upload',
 		kind: 'upload',
-		label,
+		label: resolveActionLabel(transcode ? 'transcode' : 'upload', options),
 		meta: {
 			path,
 			fileTypes,
@@ -546,6 +554,7 @@ export function createExternalUploadAction(options: {
 export function createCreateAction(options: {
 	id?: string;
 	label?: string;
+	title?: string;
 	createTargets: CreateTarget[];
 	meta?: DataSourceActionMeta;
 }): DataSourceAction {
@@ -553,7 +562,7 @@ export function createCreateAction(options: {
 	return {
 		id: options.id ?? 'create',
 		kind: 'create',
-		label: options.label ?? 'Create',
+		label: resolveActionLabel('create', options),
 		meta: {
 			createTargets,
 			...options.meta

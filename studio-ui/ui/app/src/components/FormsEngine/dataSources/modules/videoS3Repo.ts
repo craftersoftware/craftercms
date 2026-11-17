@@ -32,7 +32,7 @@ export const videoS3RepoDataSourceModule: DataSourceModule = defineDataSourceMod
 			getActions() {
 				return [
 					createExternalBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						profileId,
 						profileType: 'aws',

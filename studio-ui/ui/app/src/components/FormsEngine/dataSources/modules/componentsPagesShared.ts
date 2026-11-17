@@ -25,6 +25,7 @@ import {
 	type CreateTarget,
 	propBoolean,
 	propString,
+	resolveActionLabel,
 	resolveContentTypeIds
 } from '../moduleHelpers';
 
@@ -51,9 +52,10 @@ export function createComponentsOrPagesModule(
 			const rawContentTypes = propString(record, 'contentTypes') || undefined;
 
 			const advertised: DataSourceAction[] = [];
-			if (enableBrowse) advertised.push({ id: 'browse', kind: 'browse', label: 'Browse' });
-			if (enableSearch) advertised.push({ id: 'search', kind: 'search', label: 'Search' });
-			if (allowShared || allowEmbedded) advertised.push({ id: 'create', kind: 'create', label: 'Create' });
+			if (enableBrowse) advertised.push({ id: 'browse', kind: 'browse', label: resolveActionLabel('browse') });
+			if (enableSearch) advertised.push({ id: 'search', kind: 'search', label: resolveActionLabel('search') });
+			if (allowShared || allowEmbedded)
+				advertised.push({ id: 'create', kind: 'create', label: resolveActionLabel('create') });
 
 			return createInstanceFromRecord(record, module, {
 				capabilities: capabilitiesFromActions(advertised),
@@ -66,7 +68,7 @@ export function createComponentsOrPagesModule(
 					if (enableBrowse) {
 						actions.push(
 							createBrowseAction({
-								label: `Browse - ${record.title}`,
+								title: record.title,
 								path: browsePath,
 								contentTypes: contentTypeIds,
 								selection: 'item',
@@ -77,7 +79,7 @@ export function createComponentsOrPagesModule(
 					if (enableSearch) {
 						actions.push(
 							createSearchAction({
-								label: `Search - ${record.title}`,
+								title: record.title,
 								path: browsePath,
 								contentTypes: contentTypeIds,
 								selection: 'item',
@@ -102,7 +104,7 @@ export function createComponentsOrPagesModule(
 					if (createTargets.length) {
 						actions.push(
 							createCreateAction({
-								label: `Create - ${record.title}`,
+								title: record.title,
 								createTargets
 							})
 						);

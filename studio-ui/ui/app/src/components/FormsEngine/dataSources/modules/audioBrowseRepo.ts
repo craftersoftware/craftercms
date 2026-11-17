@@ -30,7 +30,7 @@ export const audioBrowseRepoDataSourceModule: DataSourceModule = defineDataSourc
 			getActions() {
 				return [
 					createBrowseAction({
-						label: `Browse - ${record.title}`,
+						title: record.title,
 						path,
 						mimeTypes: AUDIO_MIME_TYPES,
 						selection: 'asset'
