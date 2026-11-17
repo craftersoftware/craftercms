@@ -1584,43 +1584,46 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						guest &&
 						(guest.path === targetPath || guest.modelIdByPath[targetPath])
 					) {
-						let message: string;
-						if (guest.path === targetPath) {
-							message = formatMessage(guestMessages.currentContentChangedByAnotherUser, {
-								name: getPersonFullName(person)
+						const notify = (message: string) =>
+							enqueueSnackbar(message, {
+								action: (
+									<IconButton
+										size="small"
+										onClick={() => hostToGuest$.next(reloadRequest())}
+										aria-label={formatMessage({ id: 'shortcuts.reloadPreview', defaultMessage: 'Reload preview' })}
+										sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
+									>
+										<RefreshRounded />
+									</IconButton>
+								),
+								autoHideDuration: 10000
 							});
+						if (guest.path === targetPath) {
+							notify(
+								formatMessage(guestMessages.currentContentChangedByAnotherUser, { name: getPersonFullName(person) })
+							);
 						} else {
-							const item = store.getState().content.itemsByPath[targetPath];
-							const item$ = item?.label
-								? of(item)
+							const { siteId } = upToDateRefs.current;
+							const cachedItem = store.getState().content.itemsByPath[targetPath];
+							const item$ = cachedItem?.label
+								? of(cachedItem)
 								: fetchContentItemService(siteId, targetPath).pipe(catchError(() => of(null)));
 							item$.pipe(take(1)).subscribe((item) => {
-								if (item) {
-									message = formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-										name: getPersonFullName(person),
-										label: item.label,
-										contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
-									});
-								} else {
-									message = formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
-										name: getPersonFullName(person)
-									});
-								}
+								// The user may have navigated to another page while the item was loading.
+								if (upToDateRefs.current.guest?.path !== guest.path) return;
+								notify(
+									item?.label
+										? formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+												name: getPersonFullName(person),
+												label: item.label,
+												contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
+											})
+										: formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
+												name: getPersonFullName(person)
+											})
+								);
 							});
 						}
-						enqueueSnackbar(message, {
-							action: (
-								<IconButton
-									size="small"
-									onClick={() => hostToGuest$.next(reloadRequest())}
-									aria-label={formatMessage({ id: 'shortcuts.reloadPreview', defaultMessage: 'Reload preview' })}
-									sx={{ color: `common.${theme.palette.mode === 'light' ? 'white' : 'black'}` }}
-								>
-									<RefreshRounded />
-								</IconButton>
-							),
-							autoHideDuration: 10000
-						});
 					}
 					break;
 				}
