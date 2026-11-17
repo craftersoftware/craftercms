@@ -301,6 +301,82 @@ test.describe('start tag', () => {
 	});
 });
 
+test.describe('transient interaction state classes', () => {
+	test('focus and pressed state classes are not part of the start tag', () => {
+		expect(startTag('<button class="MuiButtonBase-root MuiButton-root Mui-focusVisible" role="button">')).toBe(
+			startTag('<button class="MuiButtonBase-root MuiButton-root" role="button">')
+		);
+		expect(startTag('<div class="MuiInputBase-root Mui-focused mui-1abc">')).toBe('<div class="MuiInputBase-root">');
+		expect(startTag('<span class="MuiSlider-thumb Mui-active Mui-focusVisible MuiButton-focusVisible">')).toBe(
+			'<span class="MuiSlider-thumb">'
+		);
+		expect(startTag('<li class="MuiTab-root MuiTab-focused MuiStepIcon-active">')).toBe('<li class="MuiTab-root">');
+	});
+
+	test('deterministic state classes stay, so the Settings switch keeps its two Mui-checked entries distinct', () => {
+		const on = '<span class="Mui-checked MuiButtonBase-root MuiSwitch-switchBase mui-1abc">';
+		const off = '<span class="MuiButtonBase-root MuiSwitch-switchBase mui-1abc">';
+		expect(startTag(on)).toBe('<span class="Mui-checked MuiButtonBase-root MuiSwitch-switchBase">');
+		expect(startTag(on)).not.toBe(startTag(off));
+		for (const name of ['Mui-selected', 'Mui-expanded', 'Mui-disabled', 'Mui-error', 'MuiTableRow-hover']) {
+			expect(startTag(`<tr class="${name}">`), name).toBe(`<tr class="${name}">`);
+		}
+	});
+
+	test('a class that only starts or ends like a state class is kept', () => {
+		expect(startTag('<div class="Mui-focusedX Mui-activeness MuiFoo-focusVisibleTrap authored-focused">')).toBe(
+			'<div class="Mui-activeness Mui-focusedX MuiFoo-focusVisibleTrap authored-focused">'
+		);
+	});
+
+	test('the CSS path drops them too, keeping the rest of the segment and the position of a segment left empty', () => {
+		expect(fingerprint(['.MuiButtonBase-root.Mui-focusVisible'])).toBe('.MuiButtonBase-root');
+		expect(fingerprint(['.Mui-focused.MuiInputBase-root > input'])).toBe('.MuiInputBase-root > input');
+		expect(fingerprint(['.MuiTab-root.Mui-focusVisible.mui-1abc:nth-child(2)'])).toBe(
+			'.MuiTab-root.mui-*:nth-child(2)'
+		);
+		expect(fingerprint(['.Mui-focusVisible > span'])).toBe('* > span');
+		expect(fingerprint(['li > .Mui-focused:nth-child(2) .Mui-active'])).toBe('li > *:nth-child(2) *');
+		expect(fingerprint(['div.Mui-focused > a'])).toBe('div > a');
+		expect(fingerprint(['.Mui-selected > .mui-1abc.MuiBox-root'])).toBe('.Mui-selected > .mui-*.MuiBox-root');
+		expect(fingerprint(['.Mui-checked'])).toBe('.Mui-checked');
+	});
+
+	test('a node keeps its fingerprint when it picks up focus, and a checked node differs from an unchecked one', () => {
+		const target = ['#main .MuiSwitch-root > .MuiSwitch-switchBase'];
+		const html = '<span class="MuiButtonBase-root MuiSwitch-switchBase mui-1abc Mui-checked">';
+		const focused = html.replace('Mui-checked', 'Mui-checked Mui-focusVisible');
+		expect(fingerprint(target, focused)).toBe(fingerprint(target, html));
+		expect(fingerprint(['#main .MuiSwitch-switchBase.Mui-focusVisible'], focused)).toBe(
+			fingerprint(['#main .MuiSwitch-switchBase'], html)
+		);
+		expect(fingerprint(target, html.replace(' Mui-checked', ''))).not.toBe(fingerprint(target, html));
+	});
+
+	test('an allow-listed node still matches, and is not stale, after it picked up focus', () => {
+		const target = '.MuiListItemButton-root.Mui-focusVisible > span';
+		const clean = fingerprint(['.MuiListItemButton-root > span'], '<span class="MuiTypography-root">');
+		const findings = blockingFindings([
+			violation('color-contrast', [target], 'serious', '<span class="MuiTypography-root Mui-focused">')
+		]);
+		const { allowed, blocking, stale } = applyAllowList(
+			findings,
+			[{ rule: 'color-contrast', screen: 'users', theme: 'light', nodes: [clean] }],
+			'users',
+			'light'
+		);
+		expect(allowed).toHaveLength(1);
+		expect(blocking).toEqual([]);
+		expect(stale).toEqual([]);
+	});
+
+	test('stable tokens do not include transient state classes', () => {
+		expect(stableTokens(fingerprint(['.MuiTab-root.Mui-focusVisible'], '<a class="MuiTab-root Mui-focused">'))).toEqual(
+			['.MuiTab-root', '.MuiTab-root']
+		);
+	});
+});
+
 test.describe('fingerprints with the start tag', () => {
 	const path = '.mui-ybhk9l:nth-child(1)';
 

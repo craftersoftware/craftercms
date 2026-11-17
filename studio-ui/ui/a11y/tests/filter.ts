@@ -69,6 +69,29 @@ const GENERATED_ID_IN_VALUE = new RegExp(`(?<!\\S)${GENERATED_ID}[\\w-]*(?!\\S)`
 /** A generated `.mui-<hash>` emotion class. MUI's own `.mui-fixed` marker class is not one: it is kept as it is. */
 const MUI_HASH_CLASS = /\.mui-(?!fixed(?![a-z0-9]))[a-z0-9]+/g;
 
+/**
+ * The name of a transient interaction state class: MUI's global `Mui-focusVisible`, `Mui-focused` and `Mui-active`, and
+ * the component scoped ones some components also emit (`MuiButton-focusVisible`). These follow the keyboard focus, the
+ * pointer and the pressed state of whatever the run touched last (an Escape in `checkPanelPages` leaves
+ * `Mui-focusVisible` on the element that had focus), not the markup, so they make a fingerprint differ between two scans
+ * of the same node.
+ *
+ * Deterministic state classes are kept on purpose: `Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`,
+ * `Mui-error`, `Mui-readOnly` and `Mui-required` come from props and data, so they are the same on every run of a
+ * baseline project and tell a node in one state from the same node in another (the two `Mui-checked` entries of the edit
+ * mode Settings switch). MUI emits no class for hover (`MuiTableRow-hover` is the `hover` prop, which is static).
+ */
+const TRANSIENT_STATE_NAME = String.raw`Mui[A-Za-z]*-(?:focusVisible|focused|active)`;
+
+const TRANSIENT_STATE_CLASS = new RegExp(`^${TRANSIENT_STATE_NAME}$`);
+
+/** Transient state classes in an axe CSS path. A segment made of nothing else becomes `*` so its position survives. */
+const TRANSIENT_STATE_ONLY_SEGMENT = new RegExp(
+	String.raw`(^|[\s>+~])(?:\.${TRANSIENT_STATE_NAME})+(?![\w.#\[-])`,
+	'g'
+);
+const TRANSIENT_STATE_SELECTOR = new RegExp(String.raw`\.${TRANSIENT_STATE_NAME}(?![\w-])`, 'g');
+
 /** The start tag of an element: tag name, then attributes whose values may hold `>` inside quotes. */
 const START_TAG = /^\s*<([a-zA-Z][\w:-]*)((?:\s+[^\s=>/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>/;
 
@@ -86,9 +109,12 @@ const START_TAG_SEPARATOR = ' <';
 /**
  * A class of the start tag, minus what changes without the markup changing: emotion hashes (`css-1x2y3z`, `mui-1x2y3z`)
  * are dropped, and the hash of a tss-react class is replaced (`tss-1x2y3z-root` becomes `tss-*-root`). Mui component
- * classes (`MuiListItem-root`), MUI's `mui-fixed` and authored classes stay.
+ * classes (`MuiListItem-root`), MUI's `mui-fixed`, authored classes and deterministic state classes (`Mui-checked`)
+ * stay. Transient interaction state classes (`Mui-focusVisible`, `Mui-focused`, `Mui-active`) are dropped, see
+ * `TRANSIENT_STATE_NAME`.
  */
 function normaliseClass(name: string): string | null {
+	if (TRANSIENT_STATE_CLASS.test(name)) return null;
 	if (/^css-[a-z0-9]+$/.test(name)) return null;
 	if (/^mui-(?!fixed$)[a-z0-9]+$/.test(name)) return null;
 	return name.replace(/^css-[a-z0-9]+-/, '').replace(/^tss-[a-z0-9]+-/, 'tss-*-');
@@ -138,7 +164,8 @@ export function startTag(html: string): string | null {
  * class hashes (`.css-1x2y3z`, `.mui-1x2y3z`), the hash in tss-react classes (`tss-1x2y3z-root` keeps `-root`) and
  * React/MUI generated ids, in id selectors and as whole tokens of id reference attributes (`aria-labelledby`,
  * `aria-controls`, `for`, `id` and so on). What remains is the element path, the stable `Mui*` component classes,
- * `.mui-fixed` and authored ids.
+ * `.mui-fixed` and authored ids. Transient interaction state classes (`.Mui-focusVisible`, `.Mui-focused`,
+ * `.Mui-active`) are removed, a segment with nothing else left becoming `*`.
  *
  * With the node's `html`, the normalised start tag follows the path (see `startTag`): `.mui-*:nth-child(3) <div
  * role="listitem">`. Without it, or if it holds no tag, the fingerprint is the path alone.
@@ -156,6 +183,8 @@ export function fingerprint(target: NodeResult['target'], html?: string): string
 		.replace(/\.css-[a-z0-9]+/g, '.css-*')
 		.replace(MUI_HASH_CLASS, '.mui-*')
 		.replace(/\.tss-[a-z0-9]+-/g, '.tss-*-')
+		.replace(TRANSIENT_STATE_ONLY_SEGMENT, '$1*')
+		.replace(TRANSIENT_STATE_SELECTOR, '')
 		.trim();
 	const tag = html === undefined ? null : startTag(html);
 	return tag ? `${path} ${tag}` : path;
