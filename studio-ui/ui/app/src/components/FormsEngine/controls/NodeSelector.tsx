@@ -233,10 +233,18 @@ function NodeSelector(props: NodeSelectorProps) {
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
 	const { id, pathInSite } = useItemMetaContext();
-	// Create forms have no store item (`getItem()` is null). Prefer the live item, then the form's
-	// update/create path, then pathInSite so nested embedded creates still get a parent path.
-	const getContextItemPath = () =>
-		stableForm.getItem()?.path ?? stableForm.props?.update?.path ?? stableForm.props?.create?.path ?? pathInSite;
+	// Create forms have no store item (`getItem()` is null). Prefer the live item, then update path,
+	// then pathInSite (already macro-processed for creates). Raw create.path is last-resort and must
+	// be processed — only drop it once pathInSite is guaranteed for nested embedded creates.
+	const getContextItemPath = () => {
+		const createPath = stableForm.props?.create?.path;
+		return (
+			stableForm.getItem()?.path ??
+			stableForm.props?.update?.path ??
+			pathInSite ??
+			(createPath ? processPathMacros({ path: createPath, objectId: id, fullParentPath: pathInSite }) : undefined)
+		);
+	};
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
