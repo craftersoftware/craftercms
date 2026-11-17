@@ -394,6 +394,25 @@ test.describe('search baseline while the index builds', () => {
 		await expect(verifySearchBaseline(scope, testInfo, { ...fast, stableMs: 600 })).resolves.toBeUndefined();
 	});
 
+	test('a Search error state after a reload fails at once, not after the settle timeout', async ({ page }) => {
+		let requests = 0;
+		await page.route(`${origin}/**`, (route) =>
+			route.fulfill({
+				contentType: 'text/html; charset=utf-8',
+				body:
+					requests++ === 0
+						? searchHtml(3, 3)
+						: '<!doctype html><body><h2>Search</h2><section><h3>Error 500</h3></section></body>'
+			})
+		);
+		await page.goto(`${origin}/`);
+		const started = Date.now();
+		await expect(verifySearchBaseline(page.locator('body'), testInfo, { ...fast, timeoutMs: 10_000 })).rejects.toThrow(
+			/search was not ready to scan: it shows an error state \("Error 500"\)/
+		);
+		expect(Date.now() - started).toBeLessThan(5_000);
+	});
+
 	test('the defaults give an index a minute and a few seconds of the same total to be final', () => {
 		expect(SEARCH_SETTLE.pollMs).toBeGreaterThanOrEqual(1_000);
 		expect(SEARCH_SETTLE.timeoutMs).toBeGreaterThanOrEqual(30_000);

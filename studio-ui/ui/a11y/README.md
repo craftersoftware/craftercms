@@ -170,8 +170,9 @@ content event, so an open page never picks up a growing index: between two reads
 reloads the page and waits for it to load, which runs the search again. It passes as soon as the total and card count
 match `SEARCH_BASELINE`. A state that differs but shows the same non-empty total for 5s is taken as final and reported
 as a baseline mismatch. If the total is still changing, empty or unreadable after 60s, it fails with "the search
-results did not settle" and the last state it saw: wait for the index to finish and run again. The intervals are
-`SEARCH_SETTLE` in `tests/baseline.ts`. The dashboard and Users guards read once.
+results did not settle" and the last state it saw: wait for the index to finish and run again. A Search error state fails
+it at once, with the error's title. The intervals are `SEARCH_SETTLE` in `tests/baseline.ts`. The dashboard and Users
+guards read once.
 
 A capture (`A11Y_CAPTURE=1`) skips the guards, since a recapture is how the baseline changes. It logs `<Screen>
 baseline observed: total=N rows=M` (and attaches it to the report): set the constants to those values in the same

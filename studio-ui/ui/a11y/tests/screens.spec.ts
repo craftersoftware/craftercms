@@ -90,7 +90,10 @@ test.describe('Global app', () => {
 
 	test('users', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/users');
-		await settle(page, 'users', { loaded: page.getByRole('grid').or(page.getByRole('table')).first() });
+		await settle(page, 'users', {
+			loaded: page.getByRole('grid').or(page.getByRole('table')).first(),
+			error: errorState(page.locator('body'))
+		});
 		await verifyUsersBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'users');
 	});

@@ -246,7 +246,8 @@ export const SEARCH_SETTLE: Required<SettleOptions> = { pollMs: 2_000, stableMs:
  *
  * An empty or unreadable list never counts as final (the index may have nothing to show yet, or the pager may not have
  * rendered), and neither does a state that keeps changing: after `timeoutMs` it throws a `BaselineStateError` naming
- * what was last seen.
+ * what was last seen. A Search error state is not waited out: `settle` fails with a `NotReadyError` naming it as soon as
+ * a load shows it.
  */
 export async function settleSearch(
 	scope: Locator,
