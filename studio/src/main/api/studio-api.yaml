@@ -5693,6 +5693,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6210,6 +6212,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6255,10 +6259,17 @@ paths:
                                 title:
                                     type: string
                                     description: package title
+                                    minLength: 1
                                     maxLength: 200
                                 comment:
                                     type: string
                                     description: package comment
+                                    minLength: 1
+                                    maxLength: 500
+                            required:
+                                - publishingTarget
+                                - title
+                                - comment
             responses:
                 '201':
                     description: Created
@@ -6277,6 +6288,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6386,6 +6399,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6432,6 +6447,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6523,7 +6540,7 @@ paths:
                     required: false
                     schema:
                         type: string
-                -   name: systemTypes
+                -   name: systemType
                     in: query
                     description: system types to filter package items by
                     required: false
@@ -6584,6 +6601,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6623,6 +6642,11 @@ paths:
                                 publishingTarget:
                                     type: string
                                     description: the publishing target (staging or live)
+                                    minLength: 1
+                                    maxLength: 20
+                                    pattern: '^[a-z0-9]*$'
+                            required:
+                                - publishingTarget
             responses:
                 '200':
                     description: OK
@@ -6679,6 +6703,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6716,6 +6742,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6766,6 +6794,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6804,6 +6834,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -6851,6 +6883,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -7925,7 +7959,7 @@ paths:
             summary: Get item workflow states for site
             description: |
                     Module: Studio <br>
-                    Required permission "get_item_states"
+                    Required permission "content_read"
             operationId: getItemStates
             parameters:
                 -   name: siteId
@@ -7989,6 +8023,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -8010,7 +8046,9 @@ paths:
                     schema:
                         type: string
             requestBody:
-                description: List of items to set workflow state(s)
+                description: |
+                    Items to update and the workflow state changes to apply.
+                    State fields are flattened onto this object; there is no nested `update` property.
                 required: true
                 content:
                     application/json:
@@ -8056,6 +8094,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -8133,6 +8173,8 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -8219,21 +8261,25 @@ paths:
                             properties:
                                 packageIds:
                                     type: array
-                                    description: list of package IDs to cancel
+                                    description: list of package IDs to approve
+                                    minItems: 1
                                     items:
                                         type: integer
                                         format: int64
                                 comment:
                                     type: string
                                     description: Reviewer's comment
+                                    minLength: 1
+                                    maxLength: 500
                                 schedule:
                                     type: string
-                                    format: datetime
+                                    format: date-time
                                     description: schedule when to publish content
                                 updateSchedule:
                                     type: boolean
                                     description: if true, update schedule. Otherwise, keep the original schedule
                             required:
+                                - packageIds
                                 - comment
             responses:
                 '200':
@@ -8253,6 +8299,8 @@ paths:
                     $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
+                '409':
+                    $ref: '#/components/responses/InvalidPackageState'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -8283,14 +8331,18 @@ paths:
                             properties:
                                 packageIds:
                                     type: array
-                                    description: list of package IDs to cancel
+                                    description: list of package IDs to reject
+                                    minItems: 1
                                     items:
                                         type: integer
                                         format: int64
                                 comment:
                                     type: string
                                     description: Reviewer's comment
+                                    minLength: 1
+                                    maxLength: 500
                             required:
+                                - packageIds
                                 - comment
             responses:
                 '200':
@@ -8310,6 +8362,8 @@ paths:
                     $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
+                '409':
+                    $ref: '#/components/responses/InvalidPackageState'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -8341,13 +8395,17 @@ paths:
                                 packageIds:
                                     type: array
                                     description: list of package IDs to cancel
+                                    minItems: 1
                                     items:
                                         type: integer
                                         format: int64
                                 comment:
                                     type: string
                                     description: Reviewer's comment
+                                    minLength: 1
+                                    maxLength: 500
                             required:
+                                - packageIds
                                 - comment
             responses:
                 '200':
@@ -8363,8 +8421,12 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '401':
                     $ref: '#/components/responses/Unauthorized'
+                '403':
+                    $ref: '#/components/responses/Forbidden'
                 '404':
                     $ref: '#/components/responses/NotFound'
+                '409':
+                    $ref: '#/components/responses/InvalidPackageState'
                 '500':
                     $ref: '#/components/responses/InternalServerError'
 
@@ -9989,13 +10051,27 @@ components:
                 id:
                     type: number
                     example: 123
-                submitedOn:
+                title:
+                    type: string
+                    description: package title
+                    maxLength: 200
+                submittedOn:
                     type: string
                     format: date-time
+                    description: date and time when the package was submitted
                 submitterComment:
                     type: string
+                submitterId:
+                    type: integer
+                    format: int64
+                    description: id of the user who submitted the package
                 reviewerComment:
                     type: string
+                reviewerId:
+                    type: integer
+                    format: int64
+                    description: id of the user who reviewed the package
+                    nullable: true
                 reviewedOn:
                     type: string
                     format: date-time
@@ -10026,6 +10102,8 @@ components:
                 schedule:
                     type: string
                     format: date-time
+                    nullable: true
+                    description: scheduled publish time; null when the package is not scheduled
                 submitter:
                     $ref: '#/components/schemas/Person'
                 reviewer:
@@ -10071,13 +10149,16 @@ components:
                           * `BIT ORDER (little-endian)`: 1, `FLAG`: Reject, `DESCRIPTION`: Reject the publish package
                           * `BIT ORDER (little-endian)`: 2, `FLAG`: Cancel, `DESCRIPTION`: Cancel the publish package
                           * `BIT ORDER (little-endian)`: 3, `FLAG`: Resubmit, `DESCRIPTION`: Recalculate and resubmit the publish package
+                          * `BIT ORDER (little-endian)`: 4, `FLAG`: Update, `DESCRIPTION`: Update package metadata (title, schedule, comment)
             required:
                 - id
                 - siteId
-                - schedule
-                - approver
-                - state
-                - publishingTarget
+                - title
+                - target
+                - approvalState
+                - packageState
+                - submittedOn
+                - packageType
 
         PublishItem:
             type: object
@@ -10104,7 +10185,7 @@ components:
                 userRequested:
                     type: boolean
                     description: true if user directly requested to include this item, otherwise false (if included as a calculated dependency)
-                publishedState:
+                publishState:
                     type: integer
                     description: >-
                         bitmap of states
@@ -10307,6 +10388,9 @@ components:
                     type: string
                     description: the publishing target (staging or live)
                     example: staging
+                    minLength: 1
+                    maxLength: 20
+                    pattern: '^[a-z0-9]*$'
                 paths:
                     type: array
                     items:
@@ -10328,6 +10412,8 @@ components:
                     items:
                         type: string
                     description: the commit ids to publish
+            required:
+                - publishingTarget
 
         UpdatePackageRequest:
             type: object
@@ -10436,21 +10522,23 @@ components:
                     type: string
                     description: locale of content item
                 translationSourceId:
-                    type: string
+                    type: integer
+                    format: int64
                     description: ID of content item that is original for translation that current item represents
+                    nullable: true
                 creator:
                     $ref: '#/components/schemas/Person'
                     description: user that created the item
                 dateCreated:
                     type: string
-                    format: datetime
+                    format: date-time
                     description: timestamp when item was created
                 modifier:
                     $ref: '#/components/schemas/Person'
                     description: last user that modified sandbox version of item
                 dateModified:
                     type: string
-                    format: datetime
+                    format: date-time
                     description: timestamp when was item last modified in sandbox
                 availableActions:
                     type: integer
@@ -10516,11 +10604,11 @@ components:
             properties:
                 dateLastPublished:
                     type: string
-                    format: datetime
+                    format: date-time
                     description: timestamp when was item last time published to this target
                 dateScheduled:
                     type: string
-                    format: datetime
+                    format: date-time
                     description: timestamp this item is scheduled for
                 publisher:
                     $ref: '#/components/schemas/Person'
@@ -10590,8 +10678,10 @@ components:
                     type: string
                     description: locale of content item
                 translationSourceId:
-                    type: string
+                    type: integer
+                    format: int64
                     description: ID of content item that is original for translation that current item represents
+                    nullable: true
             required:
                 - id
                 - label
@@ -10796,7 +10886,7 @@ components:
                     description: username of the reviewer
                 schedule:
                     type: string
-                    format: datetime
+                    format: date-time
                     description: scheduled date and time to publish the package
                 publishingTarget:
                     type: string
@@ -11233,6 +11323,19 @@ components:
                         properties:
                             response:
                                 $ref: '#/components/schemas/ApiResponse'
+        InvalidPackageState:
+            description: Requested publish package is not in the required state for this operation (ApiResponse code 7008)
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            response:
+                                $ref: '#/components/schemas/ApiResponse'
+                            package:
+                                type: integer
+                                format: int64
+                                description: id of the publish package
         BadRequest:
             description: Invalid request
             content:
