@@ -186,8 +186,11 @@ export function EditModeHeader({ isEmbedded, titleId }: { isEmbedded: boolean; t
 	const store = useJotaiStore();
 	const readonly = useAtomValue(atoms.readonly);
 	const isLargeContainer = useAtomValue(atoms.isLargeContainer);
+	const internalNameAtom = atoms.valueByFieldId[XmlKeys.internalName];
 	const itemLabel = isEmbedded
-		? (getFieldAtomValue(atoms.valueByFieldId[XmlKeys.internalName], store) as string)
+		? internalNameAtom
+			? (getFieldAtomValue(internalNameAtom, store) as string)
+			: ''
 		: item.label;
 	const typeIconItem: Pick<ContentItem, 'systemType' | 'mimeType'> = isEmbedded
 		? { systemType: 'component', mimeType: 'application/xml' }

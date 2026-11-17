@@ -59,7 +59,7 @@ import Typography from '@mui/material/Typography';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled } from './validators';
-import { minimumRequirementsNotice, missingMinimumSaveRequirements } from './minimumSaveRequirements';
+import { embeddedMinimumSaveAlert, fullFormMinimumSaveAlert } from './minimumSaveRequirements';
 import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -395,23 +395,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 					// Validate minimum embedded requirements to save as draft. Execution stops if minimum reqs aren't fulfilled.
 					// Same safety net as the full form below, for a stacked embedded form too.
 					// Internal name is required only when this type defines the field.
-					const missingEmbedded = missingMinimumSaveRequirements({
-						isRepeatMode: false,
-						isEmbedded: true,
-						fileNameValid: true,
-						internalName: values[XmlKeys.internalName],
+					const embeddedAlert = embeddedMinimumSaveAlert(
+						formatMessage,
+						contentType.fields,
+						values[XmlKeys.internalName],
 						hasInternalNameField
-					});
-					if (missingEmbedded.length) {
-						const notice = minimumRequirementsNotice(missingEmbedded, contentType.fields);
+					);
+					if (embeddedAlert) {
 						setIsSubmitting(false);
-						return showAlert({
-							dispatch,
-							message: formatMessage(
-								{ defaultMessage: '{internalName} is required to save content.' },
-								{ internalName: notice?.internalName }
-							)
-						});
+						return showAlert({ dispatch, message: embeddedAlert });
 					}
 
 					// Parents (e.g. NodeSelector) merge `values` into the in-memory component, not `xml`/`dom`.
@@ -573,37 +565,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 				);
 				if (!minimumRequirementsFullfilled) {
 					const fileNameValid = fileNameValidation ? (await fileNameValidation).isValid : true;
-					const notice = minimumRequirementsNotice(
-						missingMinimumSaveRequirements({
-							isRepeatMode: false,
-							isEmbedded: false,
+					setIsSubmitting(false);
+					return showAlert({
+						dispatch,
+						message: fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
 							fileNameValid,
 							internalName: values[XmlKeys.internalName],
 							hasInternalNameField
-						}),
-						contentType.fields
-					);
-					let message: string;
-					if (notice?.copy === 'fileName') {
-						message = formatMessage(
-							{ defaultMessage: '{fileName} is required to save content.' },
-							{ fileName: notice.fileName }
-						);
-					} else if (notice?.copy === 'internalName') {
-						message = formatMessage(
-							{ defaultMessage: '{internalName} is required to save content.' },
-							{ internalName: notice.internalName }
-						);
-					} else {
-						message = formatMessage(
-							{
-								defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.'
-							},
-							{ fileName: notice?.fileName, internalName: notice?.internalName }
-						);
-					}
-					setIsSubmitting(false);
-					return showAlert({ dispatch, message });
+						})
+					});
 				}
 
 				// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?

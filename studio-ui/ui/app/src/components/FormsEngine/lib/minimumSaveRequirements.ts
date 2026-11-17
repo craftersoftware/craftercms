@@ -120,6 +120,67 @@ export function minimumRequirementsNotice(
 	};
 }
 
+type SaveAlertFormatter = (
+	descriptor: { defaultMessage: string },
+	values?: Record<string, string | undefined>
+) => string;
+
+/**
+ * Snackbar copy for an embedded save that is missing its internal name.
+ * Null when the type has no internal-name field, or the value is filled.
+ */
+export function embeddedMinimumSaveAlert(
+	formatMessage: SaveAlertFormatter,
+	fields: LookupTable<{ name?: string }> | null | undefined,
+	internalName: unknown,
+	hasInternalNameField: boolean
+): string | null {
+	const missing = missingMinimumSaveRequirements({
+		isRepeatMode: false,
+		isEmbedded: true,
+		fileNameValid: true,
+		internalName,
+		hasInternalNameField
+	});
+	if (!missing.length) return null;
+	const notice = minimumRequirementsNotice(missing, fields);
+	return formatMessage(
+		{ defaultMessage: '{internalName} is required to save content.' },
+		{ internalName: notice?.internalName }
+	);
+}
+
+/**
+ * Snackbar copy for a full-form save that is missing a file name, an internal name, or both.
+ * Null when every requirement that applies to this type is met.
+ */
+export function fullFormMinimumSaveAlert(
+	formatMessage: SaveAlertFormatter,
+	fields: LookupTable<{ name?: string }> | null | undefined,
+	args: { fileNameValid: boolean; internalName: unknown; hasInternalNameField: boolean }
+): string | null {
+	const missing = missingMinimumSaveRequirements({
+		isRepeatMode: false,
+		isEmbedded: false,
+		...args
+	});
+	if (!missing.length) return null;
+	const notice = minimumRequirementsNotice(missing, fields);
+	if (notice?.copy === 'fileName') {
+		return formatMessage({ defaultMessage: '{fileName} is required to save content.' }, { fileName: notice.fileName });
+	}
+	if (notice?.copy === 'internalName') {
+		return formatMessage(
+			{ defaultMessage: '{internalName} is required to save content.' },
+			{ internalName: notice.internalName }
+		);
+	}
+	return formatMessage(
+		{ defaultMessage: 'You need a valid {fileName} and {internalName} at a minimum to save content.' },
+		{ fileName: notice?.fileName, internalName: notice?.internalName }
+	);
+}
+
 /** The content type's name for a blocking field, for the alert's Show button. */
 export function blockingFieldName(notice: MinimumRequirementsNotice, fieldId: string | undefined): string | undefined {
 	if (!fieldId) return undefined;

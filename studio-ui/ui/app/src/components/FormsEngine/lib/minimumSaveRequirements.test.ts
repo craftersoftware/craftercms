@@ -26,9 +26,12 @@ const {
 	minimumRequirementsNotice,
 	missingMinimumSaveRequirements,
 	readMissingMinimumSaveRequirements,
+	embeddedMinimumSaveAlert,
+	fullFormMinimumSaveAlert,
 	saveButtonTip,
 	validationAlertVariant
 } = await import('./minimumSaveRequirements.ts');
+const { checkMinimumSaveRequirementsFulfilled } = await import('./validators.ts');
 
 const valid = { isValid: true, messages: [] };
 const invalid = { isValid: false, messages: [] };
@@ -193,6 +196,65 @@ describe('alert variant', () => {
 
 	it('is absent for a clean form', () => {
 		assert.equal(validationAlertVariant({ missing: [], errorCount: 0 }), null);
+	});
+});
+
+const { createIntl } = await import('react-intl');
+const saveIntl = createIntl({ locale: 'en', onError: () => undefined });
+const formatSaveAlert = (descriptor: { defaultMessage: string }, values?: Record<string, string | undefined>) =>
+	saveIntl.formatMessage(descriptor, values);
+
+describe('save guard and alert when fields are absent', () => {
+	const validFile = Promise.resolve({ isValid: true, messages: [] });
+	const invalidFile = Promise.resolve({ isValid: false, messages: [] });
+
+	it('passes when the type has neither a file name nor an internal name', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(undefined, {}, false), true);
+		assert.equal(embeddedMinimumSaveAlert(formatSaveAlert, undefined, undefined, false), null);
+		assert.equal(
+			fullFormMinimumSaveAlert(formatSaveAlert, undefined, {
+				fileNameValid: true,
+				internalName: undefined,
+				hasInternalNameField: false
+			}),
+			null
+		);
+	});
+
+	it('blocks an invalid file name and names that field', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(invalidFile, {}, false), false);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'file-name': { name: 'Page URL' } },
+				{
+					fileNameValid: false,
+					internalName: undefined,
+					hasInternalNameField: false
+				}
+			),
+			'Page URL is required to save content.'
+		);
+	});
+
+	it('blocks a blank internal name when the field exists', async () => {
+		assert.equal(await checkMinimumSaveRequirementsFulfilled(validFile, { 'internal-name': '  ' }, true), false);
+		assert.equal(
+			embeddedMinimumSaveAlert(formatSaveAlert, { 'internal-name': { name: 'Internal Name' } }, '', true),
+			'Internal Name is required to save content.'
+		);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'internal-name': { name: 'Internal Name' } },
+				{
+					fileNameValid: true,
+					internalName: '',
+					hasInternalNameField: true
+				}
+			),
+			'Internal Name is required to save content.'
+		);
 	});
 });
 
