@@ -148,7 +148,7 @@ function searchHtml(cards: number, total: number, pager = true) {
 		(_, i) => `<div class="MuiGrid-root MuiGrid-item"><div class="MuiCard-root">Card ${i}</div></div>`
 	);
 	const footer = pager ? `<p>1-${cards} of ${total} results</p>` : '';
-	return `<!doctype html><body>${footer}<div class="MuiGrid-container">${items.join('')}</div></body>`;
+	return `<!doctype html><body><h2>Search</h2>${footer}<div class="MuiGrid-container">${items.join('')}</div></body>`;
 }
 
 /** The Users grid the way it renders: the header row, one row per user and the pager's "1-n of total" text. */
@@ -162,27 +162,25 @@ function usersHtml(rows: number, total: number, pager = true) {
 /** Settle options that keep the unit tests quick: a state that holds still for 200ms is final. */
 const fast = { pollMs: 25, stableMs: 200, timeoutMs: 3_000 };
 
-/**
- * The search results while the index builds: each step is `[delay in ms, cards, total]`, applied by the page itself
- * from `setTimeout`, the first one at load.
- */
-function buildingSearchHtml(steps: [number, number, number][]) {
-	return `<!doctype html><body><p></p><div class="MuiGrid-container"></div><script>
-		const grid = document.querySelector('.MuiGrid-container');
-		const pager = document.querySelector('p');
-		for (const [delay, cards, total] of ${JSON.stringify(steps)}) {
-			setTimeout(() => {
-				grid.innerHTML = Array.from({ length: cards }, (_, i) => '<div class="MuiGrid-root MuiGrid-item"><div class="MuiCard-root">Card ' + i + '</div></div>').join('');
-				pager.textContent = '1-' + cards + ' of ' + total + ' results';
-			}, delay);
-		}
-	</script></body>`;
-}
-
 async function open(page: Page, html: string) {
 	await page.route(`${origin}/**`, (route) => route.fulfill({ contentType: 'text/html; charset=utf-8', body: html }));
 	await page.goto(`${origin}/`);
 	return page.locator('body');
+}
+
+/**
+ * The search page while the index builds: the Nth request of the page (the load, then each reload) is served
+ * `stages[N]` as `[cards, total]`, and the last stage keeps being served once they run out. The real page runs its
+ * search on mount only, so a state that moves has to arrive with a reload. `requests` counts what was served.
+ */
+async function openBuilding(page: Page, stages: [number, number][]) {
+	const requests = { count: 0 };
+	await page.route(`${origin}/**`, (route) => {
+		const [cards, total] = stages[Math.min(requests.count++, stages.length - 1)];
+		return route.fulfill({ contentType: 'text/html; charset=utf-8', body: searchHtml(cards, total) });
+	});
+	await page.goto(`${origin}/`);
+	return { scope: page.locator('body'), requests };
 }
 
 test.describe('search and users baselines', () => {
@@ -293,15 +291,22 @@ test.describe('search baseline while the index builds', () => {
 	const { total, rows } = SEARCH_BASELINE;
 
 	test('waits for a total that is still growing to reach the baseline', async ({ page }) => {
-		const scope = await open(
-			page,
-			buildingSearchHtml([
-				[0, 5, 17],
-				[300, 12, 61],
-				[600, rows, total]
-			])
-		);
+		const { scope } = await openBuilding(page, [
+			[5, 17],
+			[12, 61],
+			[rows, total]
+		]);
 		await expect(verifySearchBaseline(scope, testInfo, { ...fast, stableMs: 5_000 })).resolves.toBeUndefined();
+	});
+
+	test('runs the search again between reads, since the page only searches when it loads', async ({ page }) => {
+		const { scope, requests } = await openBuilding(page, [
+			[5, 17],
+			[12, 61],
+			[rows, total]
+		]);
+		await verifySearchBaseline(scope, testInfo, { ...fast, stableMs: 5_000 });
+		expect(requests.count).toBe(3);
 	});
 
 	test('a total that is settled and matches the baseline passes without waiting for the stable interval', async ({
@@ -316,13 +321,10 @@ test.describe('search baseline while the index builds', () => {
 	test('a total that stops short of the baseline is reported as a baseline mismatch once it held still', async ({
 		page
 	}) => {
-		const scope = await open(
-			page,
-			buildingSearchHtml([
-				[0, 5, 17],
-				[200, 12, 61]
-			])
-		);
+		const { scope } = await openBuilding(page, [
+			[5, 17],
+			[12, 61]
+		]);
 		const failure = verifySearchBaseline(scope, testInfo, fast);
 		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
 		await expect(failure).rejects.toThrow(/not in its baseline state: the search results shows 61 results \(12 cards/);
@@ -331,8 +333,8 @@ test.describe('search baseline while the index builds', () => {
 	test('a total that keeps changing fails with a message about the index, not with a baseline mismatch', async ({
 		page
 	}) => {
-		const steps: [number, number, number][] = Array.from({ length: 80 }, (_, i) => [i * 50, 10, 10 + i]);
-		const scope = await open(page, buildingSearchHtml(steps));
+		const stages: [number, number][] = Array.from({ length: 400 }, (_, i) => [10, 10 + i]);
+		const { scope } = await openBuilding(page, stages);
 		const failure = verifySearchBaseline(scope, testInfo, { pollMs: 25, stableMs: 500, timeoutMs: 1_000 });
 		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
 		await expect(failure).rejects.toThrow(
@@ -349,24 +351,51 @@ test.describe('search baseline while the index builds', () => {
 		await expect(unreadable).rejects.toThrow(/last read failed: Could not read the total of the search results/);
 	});
 
-	test('capture mode waits for the final total before it reports what it observed', async ({ page }) => {
+	test('capture mode reads the total once, without waiting for the index or reloading', async ({ page }) => {
 		process.env.A11Y_CAPTURE = '1';
 		const attached: string[] = [];
 		const capturing = {
 			attach: async (name: string, options: { body: string }) => void attached.push(`${name} ${options.body}`)
 		} as unknown as TestInfo;
-		const scope = await open(
-			page,
-			buildingSearchHtml([
-				[0, 3, 3],
-				[200, 9, 99]
-			])
-		);
+		const { scope, requests } = await openBuilding(page, [
+			[3, 3],
+			[9, 99]
+		]);
+		const started = Date.now();
 		await verifySearchBaseline(scope, capturing, { ...fast, stableMs: 600 });
-		expect(attached).toEqual(['search baseline observed.json {"total":99,"rows":9}']);
+		expect(attached).toEqual(['search baseline observed.json {"total":3,"rows":3}']);
+		expect(requests.count).toBe(1);
+		expect(Date.now() - started).toBeLessThan(500);
+	});
+
+	test('capture mode does not throw for an empty or unreadable search, it logs and attaches what it saw', async ({
+		page
+	}) => {
+		process.env.A11Y_CAPTURE = '1';
+		const attached: string[] = [];
+		const capturing = {
+			attach: async (name: string, options: { body: string }) => void attached.push(`${name} ${options.body}`)
+		} as unknown as TestInfo;
+		const options = { pollMs: 25, stableMs: 100, timeoutMs: 500 };
+		await verifySearchBaseline(await open(page, searchHtml(0, 0, false)), capturing, options);
+		await verifySearchBaseline(await open(page, searchHtml(21, 230, false)), capturing, options);
+		expect(attached).toEqual([
+			'search baseline observed.json {"total":0,"rows":0}',
+			expect.stringMatching(/^search baseline observed\.json \{"error":"Could not read the total of the search results/)
+		]);
+	});
+
+	test('prune mode waits for the final total like a normal run', async ({ page }) => {
+		process.env.A11Y_CAPTURE = 'prune';
+		const { scope } = await openBuilding(page, [
+			[3, 3],
+			[rows, total]
+		]);
+		await expect(verifySearchBaseline(scope, testInfo, { ...fast, stableMs: 600 })).resolves.toBeUndefined();
 	});
 
 	test('the defaults give an index a minute and a few seconds of the same total to be final', () => {
+		expect(SEARCH_SETTLE.pollMs).toBeGreaterThanOrEqual(1_000);
 		expect(SEARCH_SETTLE.timeoutMs).toBeGreaterThanOrEqual(30_000);
 		expect(SEARCH_SETTLE.stableMs).toBeGreaterThan(SEARCH_SETTLE.pollMs * 2);
 		expect(SEARCH_SETTLE.stableMs).toBeLessThan(SEARCH_SETTLE.timeoutMs);

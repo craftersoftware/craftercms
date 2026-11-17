@@ -121,6 +121,10 @@ screen and theme. Screens the run did not reach keep their existing entries. Fin
 recorded; `report/capture-summary.md` lists them with a rule/ticket/screen/theme/node-count table for reconciling
 against the tickets. Capture records whatever fails, so review the diff before committing it.
 
+A capture does not enforce the content guards: it logs what each one observed and goes on, and the Search guard reads
+its total once instead of waiting for the index to settle (see [Content baseline guards](#content-baseline-guards)), so
+let the project's search index finish building before you recapture.
+
 The committed baseline was captured on 2026-11-17 in both themes against a live authoring Studio built from `develop`
 at `f2950f2c` (the Website Editorial blueprint, project `editorial`, user `admin`), and recaptured on 2026-11-17 on
 this branch's build to move to start-tag fingerprints (same 62 entries and 658 nodes).
@@ -159,15 +163,21 @@ guard does not check which items are listed. Other screens (site tools, preview 
 entries.
 
 The Search guard waits for the results to settle before it compares them, because a project created moments ago keeps
-adding results while its search index builds. It reads the pager every 500ms and passes as soon as the total and card
-count match `SEARCH_BASELINE`. A state that differs but shows the same non-empty total for 5s is taken as final and
-reported as a baseline mismatch. If the total is still changing, empty or unreadable after 60s, it fails with "the
-search results did not settle" and the last state it saw: wait for the index to finish and run again. The intervals are
+adding results while its search index builds. The search page runs its query when it mounts and again only after a
+content event, so an open page never picks up a growing index: between two reads the guard waits `pollMs` (2s),
+reloads the page and waits for it to load, which runs the search again. It passes as soon as the total and card count
+match `SEARCH_BASELINE`. A state that differs but shows the same non-empty total for 5s is taken as final and reported
+as a baseline mismatch. If the total is still changing, empty or unreadable after 60s, it fails with "the search
+results did not settle" and the last state it saw: wait for the index to finish and run again. The intervals are
 `SEARCH_SETTLE` in `tests/baseline.ts`. The dashboard and Users guards read once.
 
 A capture (`A11Y_CAPTURE=1`) skips the guards, since a recapture is how the baseline changes. It logs `<Screen>
 baseline observed: total=N rows=M` (and attaches it to the report): set the constants to those values in the same
-commit as the new allow-list. A prune-only capture keeps them enforced.
+commit as the new allow-list. The Search guard does not wait in a capture: it reads the total once, without reloading
+and without throwing (an unreadable or empty list is logged and attached instead of failing the capture), so a
+recapture on a project that is off the baseline does not stall. That also means the value it logs is only the baseline
+when the search index has finished building, so wait for the index before you recapture. A prune-only capture keeps the
+guards enforced, including the wait.
 
 ## Readiness
 
