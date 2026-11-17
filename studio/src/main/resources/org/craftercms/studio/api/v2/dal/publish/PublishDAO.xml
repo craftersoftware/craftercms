@@ -318,7 +318,7 @@
 		SELECT COUNT(1)
 		FROM (
 		<bind name="state" value="null"/>
-		<bind name="includeMetadata" value="false"/>
+		<bind name="includeMetadata" value="true"/>
 		<include refid="getPublishItemsQuery"/>
 		) AS tbl
 	</select>
@@ -338,7 +338,7 @@
 		INNER JOIN site s ON pp.site_id = s.id
 		LEFT OUTER JOIN item_publish_item ipi ON pi.id = ipi.publish_item_id
 		<if test="includeMetadata">
-			INNER JOIN item i ON ipi.item_id = i.id
+			LEFT OUTER JOIN item i ON ipi.item_id = i.id
 		</if>
 		WHERE pi.package_id = #{packageId}
 		AND s.site_id = #{siteId}
