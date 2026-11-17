@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2024 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -17,6 +17,7 @@
 package org.craftercms.studio.api.v2.dal.publish;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.model.rest.Person;
 
@@ -65,12 +66,25 @@ public class PublishPackage {
 		this.id = id;
 	}
 
+	/**
+	 * Internal numeric site id. Hidden from JSON; the API {@code siteId} is {@link #getStringSiteId()}.
+	 */
+	@JsonIgnore
 	public long getSiteId() {
 		return siteId;
 	}
 
+	@JsonIgnore
 	public void setSiteId(final long siteId) {
 		this.siteId = siteId;
+	}
+
+	/**
+	 * String site id serialized as {@code siteId}.
+	 */
+	@JsonProperty("siteId")
+	public String getStringSiteId() {
+		return site == null ? null : site.getSiteId();
 	}
 
 	@JsonIgnore
