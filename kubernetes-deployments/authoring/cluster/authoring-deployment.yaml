@@ -147,7 +147,7 @@ spec:
       containers:
         # OpenSearch container
         - name: opensearch
-          image: opensearchproject/opensearch:2.19.1
+          image: opensearchproject/opensearch:3.9.0
           readinessProbe:
             httpGet:
               path: /_cluster/health?wait_for_status=yellow
@@ -183,20 +183,29 @@ spec:
           image: craftercms/authoring_tomcat:5.0.0E-SNAPSHOT
           startupProbe:
             httpGet:
-              path: /api/1/monitoring/status.json?token=defaultManagementToken
+              path: /api/1/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 30
             periodSeconds: 60
           readinessProbe:
             httpGet:
-              path: /api/1/monitoring/status.json?token=defaultManagementToken
+              path: /api/1/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /api/1/monitoring/status.json?token=defaultManagementToken
+              path: /api/1/monitoring/status.json
               port: 8080
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 10
             timeoutSeconds: 60
             periodSeconds: 60
@@ -277,20 +286,29 @@ spec:
           imagePullPolicy: "Always"
           startupProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 60
             periodSeconds: 60
           readinessProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /api/1/monitoring/status?token=defaultManagementToken
+              path: /api/1/monitoring/status
               port: 9191
+              httpHeaders:
+                - name: X-Crafter-Management-Token
+                  value: defaultManagementToken
             failureThreshold: 10
             timeoutSeconds: 60
             periodSeconds: 60

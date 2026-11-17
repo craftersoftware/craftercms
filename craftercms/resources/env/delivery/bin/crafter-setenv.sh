@@ -88,7 +88,10 @@ export CATALINA_TMPDIR=${CATALINA_TMPDIR:="$CRAFTER_TEMP_DIR/tomcat"}
 export GIT_CONFIG_NOSYSTEM=${GIT_CONFIG_NOSYSTEM:="true"}
 
 # -------------------- Management tokens ----------------
-# Please update this per installation and provide these tokens to the status monitors.
+# Send these values in the X-Crafter-Management-Token header.
+# Engine and Deployer management APIs still accept ?token=.
+# Deployer /api/1/target/* accepts the header only.
+# Please update these per installation and provide them to the status monitors.
 export ENGINE_MANAGEMENT_TOKEN=${ENGINE_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export DEPLOYER_MANAGEMENT_TOKEN=${DEPLOYER_MANAGEMENT_TOKEN:="defaultManagementToken"}
 # Token sent to Studio when listing sites. Must match STUDIO_SITE_MANAGEMENT_TOKEN on authoring.
