@@ -369,12 +369,14 @@ studio.security.activity.cache.config: initialCapacity=25,maximumSize=100
 
 # Public URLs, comma separated list of regular expressions.
 # The regex should not include extension and should match the query string too.
+# Plugin reload allows an optional .json suffix: the deployer calls reload.json, and suffix
+# stripping runs after the security filter, so the matcher still sees the suffix.
 studio.security.publicUrls: >
     /api/2/system/available_languages.*,
     /api/2/management/sites.*,
     /api/2/monitoring/.+,/api/2/users/forgot_password.*,/api/2/users/set_password.*,/static-assets/.+,
     /api/2/users/validate_token.*,/api/2/users/forgot_password.*,
-    /api/2/plugin/.+/script/reload.*
+    /api/2/plugin/[^/?]+/script/reload(\.json)?(\?.*)?
 # Salt for encrypting
 studio.security.cipher.salt: DgGN9xhq3GOn6zxg
 # Key for encrypting
