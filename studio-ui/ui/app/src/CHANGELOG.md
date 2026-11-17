@@ -15,7 +15,7 @@
   * The shared focus-visible ring (`styles/focusRing.ts`, `ui/scss/src/_focus-ring.scss` and the `CrafterThemeProvider` `focusVisible` patch) is from #9376. This PR applies it to the controls it touches.
   * [SelectionList] `onItemClicked` is now `(event: MouseEvent | null, path: string)`. The event is always `null`; selection comes from the checkbox, which the item text labels.
   * [ToolsPanelListItemButton] New optional `secondaryActionLabel`. When `onSecondaryActionClick` is set, the trailing button's default accessible name is `Open {title}`.
-  * [ToolsPanelListItemButton] The row renders as a `div` instead of an `li`, since tools panel widgets are not placed in a list.
+  * [ToolsPanelListItemButton] The row renders as a `div` instead of an `li`, since tools panel widgets are not placed in a list. New optional `listItemComponent` prop sets the row's root element; pass `listItemComponent="li"` when placing the row inside a `List`. (`component` still applies to the inner button.)
   * [PaddingModeSwitchListItem] New optional `component` prop. It renders as a `div` by default instead of an `li`; pass `component="li"` when placing it inside a `List`.
   * Removed `pages/QuickCreateMenu` component.
   * Removed `SuspenseWithEmptyState` and `WithEmptyState` components.

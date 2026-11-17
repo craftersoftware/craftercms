@@ -107,6 +107,25 @@ describe('accessible names', () => {
 		assert.equal(clicked, 1);
 	});
 
+	it('renders the tools panel row as an li when the caller passes listItemComponent, keeping component on the button', async () => {
+		const { default: List } = await import('@mui/material/List');
+		const host = await render(
+			React.createElement(
+				List,
+				null,
+				React.createElement(ToolsPanelListItemButton, {
+					title: 'Templates',
+					listItemComponent: 'li',
+					component: 'a',
+					href: '#templates'
+				})
+			)
+		);
+		assert.equal(host.querySelectorAll('ul > li.MuiListItem-root').length, 1);
+		assert.equal(host.querySelectorAll('li').length, 1);
+		assert.ok(host.querySelector('li > a.MuiListItemButton-root[href="#templates"]'));
+	});
+
 	it('names the dispatch button trailing action, including a caller-supplied label', async () => {
 		const store = configureStore({ reducer: (state = {}) => state });
 		const host = await render(

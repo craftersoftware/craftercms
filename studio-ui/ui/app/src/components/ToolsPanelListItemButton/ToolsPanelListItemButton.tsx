@@ -29,6 +29,8 @@ import ListItem from '@mui/material/ListItem';
 export interface ToolsPanelListItemButtonProps extends Omit<ListItemButtonProps, 'title'> {
 	title: TranslationOrText;
 	subtitle?: string;
+	/** The element type of the row's root. Renders as a `div` by default; pass `li` when placing the row inside a `List`. */
+	listItemComponent?: React.ElementType;
 	icon?: SystemIconDescriptor;
 	secondaryActionIcon?: React.ReactNode;
 	/** Accessible name for the trailing action. Defaults to "Open {title}". */
@@ -41,6 +43,7 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 		icon,
 		title,
 		subtitle,
+		listItemComponent = 'div',
 		onClick,
 		secondaryActionIcon = <ChevronRounded />,
 		secondaryActionLabel,
@@ -54,7 +57,7 @@ export function ToolsPanelListItemButton(props: ToolsPanelListItemButtonProps) {
 	return (
 		// Tools panel widgets sit directly in the panel, not in a list, so the row is not a list item.
 		<ListItem
-			component="div"
+			component={listItemComponent}
 			disablePadding
 			secondaryAction={
 				onSecondaryActionClick ? (

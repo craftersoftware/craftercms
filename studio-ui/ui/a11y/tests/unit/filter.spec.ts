@@ -476,9 +476,10 @@ test.describe('stable tokens', () => {
 
 test.describe('allow-list validation of fingerprints', () => {
 	const node = (path: string, html: string) => fingerprint([path], html);
-	const listitem = (nodes: string[]): AllowListEntry => ({
-		rule: 'listitem',
-		screen: 'preview',
+	// `list` on the dashboard is still allow-listed (#1455); `listitem` has no ticket since #1456 was fixed.
+	const entry = (nodes: string[]): AllowListEntry => ({
+		rule: 'list',
+		screen: 'dashboard',
 		theme: 'light',
 		nodes
 	});
@@ -489,21 +490,21 @@ test.describe('allow-list validation of fingerprints', () => {
 			node('.mui-ybhk9l > .mui-o5ytqa:nth-child(8)', '<li class="mui-o5ytqa MuiListItem-root">'),
 			node('.MuiListItem-padding', '<li class="MuiListItem-padding">')
 		];
-		expect(validateAllowList([listitem(nodes)])).toHaveLength(1);
+		expect(validateAllowList([entry(nodes)])).toHaveLength(1);
 	});
 
 	test('rejects a fingerprint of generated classes and positions only, naming it', () => {
 		const weak = [node('.mui-ybhk9l:nth-child(1)', '<div class="mui-ybhk9l">'), node('#_r_1_', '<input>')];
 		expect(() =>
-			validateAllowList([listitem([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])])
+			validateAllowList([entry([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])])
 		).toThrow(
-			/listitem on light preview has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
+			/list on light dashboard has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
 		);
 	});
 
 	test('rejects a path-only fingerprint, even one with a class, as the older format', () => {
-		expect(() => validateAllowList([listitem(['.MuiListItem-padding'])])).toThrow(/no stable node/);
-		expect(() => validateAllowList([listitem(['ul'])])).toThrow(/no stable node/);
+		expect(() => validateAllowList([entry(['.MuiListItem-padding'])])).toThrow(/no stable node/);
+		expect(() => validateAllowList([entry(['ul'])])).toThrow(/no stable node/);
 	});
 
 	test('the committed allow-list is valid under it', async () => {
