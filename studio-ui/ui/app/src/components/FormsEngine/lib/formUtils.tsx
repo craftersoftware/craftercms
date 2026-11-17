@@ -1007,25 +1007,39 @@ export function commitFormVisibility(
  * path-derived name {@link setFieldAtoms} starts the field from, not the XML element. Otherwise rolling back an
  * untouched form would rename the item.
  *
- * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form,
- * and `undefined`/`null` for a nested scope such as a repeat item form, whose `file-name` field, if it has one, is its
- * own value and is returned as is. Values with no `file-name` are returned as is too.
+ * Same rule as `setFieldAtoms`: only a form that has an item path is normalized. `path` is `''` for a create form
+ * and `undefined`/`null` for a nested scope such as a repeat item form. Both keep the file-name they were given,
+ * so a content-type default (section defaults uses `crafter-level-descriptor.level`) is not wiped. Values with no
+ * `file-name` are returned as is too.
  */
 export function withPathFileName(
 	values: LookupTable<unknown>,
 	atoms: Pick<FormsEngineAtoms, 'fileName'> | null | undefined,
 	path?: string | null
 ): LookupTable<unknown> {
-	return atoms?.fileName && path != null && XmlKeys.fileName in values
+	return atoms?.fileName && path && XmlKeys.fileName in values
 		? { ...values, [XmlKeys.fileName]: fileNameFromItemPath(path) }
 		: values;
+}
+
+/**
+ * File name a new item opens with. The content type's file-name default, when it has one.
+ * Pages leave this blank so the author types the URL. Section defaults is readonly and supplies
+ * `crafter-level-descriptor.level`; without it the create form cannot be saved.
+ */
+export function newItemFileName(
+	contentType: { fields?: LookupTable<ContentTypeField> } | null | undefined
+): string | undefined {
+	const value = contentType?.fields?.[XmlKeys.fileName]?.defaultValue;
+	return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
 /**
  * Creates the value and validity atoms for a field and sets them on to the target object.
  *
  * @param itemPath - Full path of the item being edited. Only the `file-name` field reads it, to start its value
- * from the same name {@link createFileNameAtom} derives. Omit it for a form with no path yet (create).
+ * from the same name {@link createFileNameAtom} derives. `''` (create) starts blank unless `value` is the
+ * field's default. A missing path keeps `value`.
  **/
 export function setFieldAtoms(
 	stableFormContextRef: RefObject<StableFormContextProps>,
@@ -1085,9 +1099,16 @@ export function setFieldAtoms(
 	// Save writes `<file-name>` / `<folder-name>` from the path (via {@link xmlFileNamesForPath}),
 	// matching FE1, while the form atom keeps the slug. The backend still rewrites both names on a
 	// copy collision.
-	// Only a form with an item path starts here. A nested scope (repeat item) passes none and keeps its value.
-	const initialValue =
-		fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null ? fileNameFromItemPath(itemPath) : value;
+	// A real item path wins, including the home page (blank). Create passes `''`: the stored value is dropped so
+	// the field matches the dedicated file-name atom, which starts blank, except a content-type default
+	// (section defaults uses `crafter-level-descriptor.level`). A repeat item passes no path and keeps `value`.
+	let initialValue = value;
+	if (fieldId === XmlKeys.fileName && atomsTarget.fileName && itemPath != null) {
+		const fromPath = fileNameFromItemPath(itemPath);
+		const fallback = field.defaultValue;
+		const keepDefault = itemPath === '' && typeof fallback === 'string' && fallback !== '' && value === fallback;
+		initialValue = keepDefault ? fallback : fromPath;
+	}
 	const [valueAtom, validityAtom] = createFieldAtoms(field, initialValue, stableFormContextRef, validatorsData);
 	atomsTarget.valueByFieldId[fieldId] = valueAtom;
 	atomsTarget.validationByFieldId[fieldId] = validityAtom;

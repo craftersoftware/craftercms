@@ -92,6 +92,7 @@ import { ViewPackagesDialogProps } from '../ViewPackagesDialog';
 import {
 	buildSectionExpandedStateAtoms,
 	createFileNameAtom,
+	newItemFileName,
 	commitFormVisibility,
 	createFormsEngineAtoms,
 	extractAtomValues,
@@ -532,7 +533,8 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form has none yet: `''`.
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form passes `''`,
+			// which keeps the file name the type default supplied.
 			stableFormContextRef.current.originalValues = withPathFileName(
 				values,
 				atoms,
@@ -755,7 +757,7 @@ function FormBootstrap(props: FormsEngineProps) {
 					lockResult: lockResultAtom,
 					readonly: atom(false),
 					expandedStateBySectionId: buildSectionExpandedStateAtoms(contentType.sections),
-					fileName: createFileNameAtom('', stableFormContextRef),
+					fileName: createFileNameAtom('', stableFormContextRef, newItemFileName(contentType)),
 					// Default version comment for new content.
 					versionComment: atom(generateDefaultCreationComment('', formatMessage))
 				},
