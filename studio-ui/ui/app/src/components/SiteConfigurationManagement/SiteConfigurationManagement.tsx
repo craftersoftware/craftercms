@@ -258,7 +258,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 				sessionStorage.removeItem(sessionStorageKey);
 				setLoadingXml(false);
 			} else {
-				fetchConfigurationXML(
+				const subscription = fetchConfigurationXML(
 					site,
 					selectedConfigFile.path,
 					selectedConfigFile.module,
@@ -278,6 +278,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						setLoadingXml(false);
 					}
 				});
+				return () => subscription.unsubscribe();
 			}
 		}
 	}, [selectedConfigFile, environment, site, ignoreEnv, refs, sessionStorageKey]);
