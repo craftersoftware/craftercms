@@ -317,6 +317,8 @@ export function EditModeMetadata() {
 	const item = useFormItem();
 	const localeConf = useLocale();
 	const { formatMessage } = useIntl();
+	// A new embedded component has no content item yet. The dates and state belong to a stored item.
+	if (!item) return null;
 	const formattedCreator = prettyPrintPerson(item.creator);
 	const formattedCreationDate = new Intl.DateTimeFormat(localeConf.localeCode, {
 		dateStyle: 'short'
