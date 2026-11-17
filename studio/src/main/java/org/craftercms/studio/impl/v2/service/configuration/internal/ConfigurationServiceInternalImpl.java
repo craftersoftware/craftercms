@@ -599,12 +599,11 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 			if (isStopParse(e)) {
 				return;
 			}
+			if (e instanceof RuntimeException) {
+				logger.warn("Configuration file '{}' is not XML, will not validate", filename, e);
+				return;
+			}
 			logger.debug("Configuration file '{}' is not XML, will not validate", filename);
-			return;
-		}
-
-		if (handler.isDeclared()) {
-			rejectDeclaredDoctype(filename, new SAXException("DOCTYPE declaration is not allowed"));
 		}
 	}
 
@@ -619,6 +618,11 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	 */
 	XMLReader createDoctypeDetectingReader(DefaultHandler2 handler)
 			throws ParserConfigurationException, SAXException {
+		SAXParser parser = newDoctypeParser();
+		return bindDoctypeReader(parser, parser.getXMLReader(), handler);
+	}
+
+	SAXParser newDoctypeParser() throws ParserConfigurationException, SAXException {
 		SAXParserFactory factory = SAXParserFactory.newInstance();
 		factory.setXIncludeAware(false);
 		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -626,11 +630,14 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 		factory.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
 		factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
 		factory.setFeature(LOAD_EXTERNAL_DTD, false);
+		return factory.newSAXParser();
+	}
 
-		SAXParser parser = factory.newSAXParser();
+	/**
+	 * Applies required features and best-effort external-access properties, then registers {@code handler}.
+	 */
+	XMLReader bindDoctypeReader(SAXParser parser, XMLReader reader, DefaultHandler2 handler) throws SAXException {
 		setExternalAccess(parser::setProperty);
-
-		XMLReader reader = parser.getXMLReader();
 		reader.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 		reader.setFeature(XINCLUDE_FEATURE, false);
 		reader.setFeature(DISALLOW_DOCTYPE_DECL, false);

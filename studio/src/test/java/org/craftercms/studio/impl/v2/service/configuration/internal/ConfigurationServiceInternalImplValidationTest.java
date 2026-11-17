@@ -20,12 +20,24 @@ import org.apache.commons.io.IOUtils;
 import org.craftercms.studio.api.v2.exception.configuration.InvalidConfigurationException;
 import org.craftercms.studio.api.v2.service.content.ContentService;
 import org.junit.Test;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.DTDHandler;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.Parser;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXNotRecognizedException;
+import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.ext.DefaultHandler2;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -261,6 +273,41 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
+	public void validateRejectsDoctypeWhenExternalAccessPropertiesAreUnsupported() {
+		ConfigurationServiceInternalImpl unsupported = new ConfigurationServiceInternalImpl() {
+			@Override
+			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler)
+					throws ParserConfigurationException, SAXException {
+				SAXParser parser = new AccessRejectingParser(newDoctypeParser());
+				return bindDoctypeReader(parser, parser.getXMLReader(), handler);
+			}
+		};
+		InvalidConfigurationException error = assertRejected(unsupported, bytes(SIMPLE_DOCTYPE), "config");
+		assertEquals("Invalid XML configuration file 'config'", error.getMessage());
+	}
+
+	@Test
+	public void validateAcceptsRuntimeExceptionBeforeDoctype() throws Exception {
+		ConfigurationServiceInternalImpl failing = readerThat((handler, input) -> {
+			throw new IllegalStateException("before startDTD");
+		});
+		assertAccepted(failing, bytes("not xml"), "config");
+	}
+
+	@Test
+	public void validateRejectsRuntimeExceptionAfterDoctype() {
+		ConfigurationServiceInternalImpl failing = readerThat((handler, input) -> {
+			try {
+				handler.startDTD("configuration", null, null);
+			} catch (SAXException e) {
+				throw new IllegalStateException("after startDTD", e);
+			}
+		});
+		InvalidConfigurationException error = assertRejected(failing, bytes(SIMPLE_DOCTYPE), "config");
+		assertEquals("Invalid XML configuration file 'config'", error.getMessage());
+	}
+
+	@Test
 	public void validateDoesNotPrintFatalError() throws Exception {
 		PrintStream original = System.err;
 		ByteArrayOutputStream captured = new ByteArrayOutputStream();
@@ -276,19 +323,264 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	private InvalidConfigurationException assertRejected(byte[] content, String filename) {
+		return assertRejected(service, content, filename);
+	}
+
+	private InvalidConfigurationException assertRejected(ConfigurationServiceInternalImpl target, byte[] content,
+														  String filename) {
 		InvalidConfigurationException error = assertThrows(filename, InvalidConfigurationException.class,
-				() -> service.validate(new ByteArrayInputStream(content), filename));
+				() -> target.validate(new ByteArrayInputStream(content), filename));
 		assertNotNull(filename, error.getCause());
 		return error;
 	}
 
 	private void assertAccepted(String content, String filename) throws Exception {
-		assertAccepted(bytes(content), filename);
+		assertAccepted(service, bytes(content), filename);
 	}
 
 	private void assertAccepted(byte[] content, String filename) throws Exception {
-		InputStream result = service.validate(new ByteArrayInputStream(content), filename);
+		assertAccepted(service, content, filename);
+	}
+
+	private void assertAccepted(ConfigurationServiceInternalImpl target, byte[] content, String filename) throws Exception {
+		InputStream result = target.validate(new ByteArrayInputStream(content), filename);
 		assertArrayEquals(filename, content, IOUtils.toByteArray(result));
+	}
+
+	private static ConfigurationServiceInternalImpl readerThat(ParseFailure failure) {
+		return new ConfigurationServiceInternalImpl() {
+			@Override
+			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler) {
+				return new ThrowingXmlReader(handler, failure);
+			}
+		};
+	}
+
+	@FunctionalInterface
+	private interface ParseFailure {
+		void parse(DefaultHandler2 handler, InputSource input);
+	}
+
+	private static final class ThrowingXmlReader extends UnusedXmlReader {
+
+		private final DefaultHandler2 handler;
+		private final ParseFailure failure;
+
+		private ThrowingXmlReader(DefaultHandler2 handler, ParseFailure failure) {
+			this.handler = handler;
+			this.failure = failure;
+		}
+
+		@Override
+		public void parse(InputSource input) {
+			failure.parse(handler, input);
+		}
+	}
+
+	private static final class AccessRejectingParser extends SAXParser {
+
+		private final SAXParser delegate;
+		private XMLReader reader;
+
+		private AccessRejectingParser(SAXParser delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public Parser getParser() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public XMLReader getXMLReader() throws SAXException {
+			if (reader == null) {
+				reader = new AccessRejectingReader(delegate.getXMLReader());
+			}
+			return reader;
+		}
+
+		@Override
+		public boolean isNamespaceAware() {
+			return delegate.isNamespaceAware();
+		}
+
+		@Override
+		public boolean isValidating() {
+			return delegate.isValidating();
+		}
+
+		@Override
+		public void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException {
+			if (isExternalAccess(name)) {
+				throw new SAXNotRecognizedException(name);
+			}
+			delegate.setProperty(name, value);
+		}
+
+		@Override
+		public Object getProperty(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
+			return delegate.getProperty(name);
+		}
+	}
+
+	private static final class AccessRejectingReader extends UnusedXmlReader {
+
+		private final XMLReader delegate;
+
+		private AccessRejectingReader(XMLReader delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public boolean getFeature(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
+			return delegate.getFeature(name);
+		}
+
+		@Override
+		public void setFeature(String name, boolean value) throws SAXNotRecognizedException, SAXNotSupportedException {
+			delegate.setFeature(name, value);
+		}
+
+		@Override
+		public Object getProperty(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
+			return delegate.getProperty(name);
+		}
+
+		@Override
+		public void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException {
+			if (isExternalAccess(name)) {
+				throw new SAXNotSupportedException(name);
+			}
+			delegate.setProperty(name, value);
+		}
+
+		@Override
+		public void setEntityResolver(EntityResolver resolver) {
+			delegate.setEntityResolver(resolver);
+		}
+
+		@Override
+		public EntityResolver getEntityResolver() {
+			return delegate.getEntityResolver();
+		}
+
+		@Override
+		public void setDTDHandler(DTDHandler dtdHandler) {
+			delegate.setDTDHandler(dtdHandler);
+		}
+
+		@Override
+		public DTDHandler getDTDHandler() {
+			return delegate.getDTDHandler();
+		}
+
+		@Override
+		public void setContentHandler(ContentHandler contentHandler) {
+			delegate.setContentHandler(contentHandler);
+		}
+
+		@Override
+		public ContentHandler getContentHandler() {
+			return delegate.getContentHandler();
+		}
+
+		@Override
+		public void setErrorHandler(ErrorHandler errorHandler) {
+			delegate.setErrorHandler(errorHandler);
+		}
+
+		@Override
+		public ErrorHandler getErrorHandler() {
+			return delegate.getErrorHandler();
+		}
+
+		@Override
+		public void parse(InputSource input) throws IOException, SAXException {
+			delegate.parse(input);
+		}
+
+		@Override
+		public void parse(String systemId) throws IOException, SAXException {
+			delegate.parse(systemId);
+		}
+	}
+
+	private abstract static class UnusedXmlReader implements XMLReader {
+
+		@Override
+		public boolean getFeature(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
+			throw new UnsupportedOperationException(name);
+		}
+
+		@Override
+		public void setFeature(String name, boolean value) throws SAXNotRecognizedException, SAXNotSupportedException {
+			throw new UnsupportedOperationException(name);
+		}
+
+		@Override
+		public Object getProperty(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
+			throw new UnsupportedOperationException(name);
+		}
+
+		@Override
+		public void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException {
+			throw new UnsupportedOperationException(name);
+		}
+
+		@Override
+		public void setEntityResolver(EntityResolver resolver) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public EntityResolver getEntityResolver() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void setDTDHandler(DTDHandler dtdHandler) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public DTDHandler getDTDHandler() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void setContentHandler(ContentHandler contentHandler) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ContentHandler getContentHandler() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void setErrorHandler(ErrorHandler errorHandler) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ErrorHandler getErrorHandler() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void parse(InputSource input) throws IOException, SAXException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void parse(String systemId) throws IOException, SAXException {
+			throw new UnsupportedOperationException();
+		}
+	}
+
+	private static boolean isExternalAccess(String name) {
+		return XMLConstants.ACCESS_EXTERNAL_DTD.equals(name) || XMLConstants.ACCESS_EXTERNAL_SCHEMA.equals(name);
 	}
 
 	private static void assertDoesNotLeak(Throwable error, String secret) {
