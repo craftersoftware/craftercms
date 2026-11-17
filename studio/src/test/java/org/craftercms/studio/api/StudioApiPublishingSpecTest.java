@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.*;
 
@@ -207,7 +208,15 @@ public class StudioApiPublishingSpecTest {
 		JsonNode comment = schema.path("properties").path("comment");
 		assertEquals(1, comment.path("minLength").asInt());
 		assertEquals(500, comment.path("maxLength").asInt());
-		assertEquals("^.*\\S.*$", comment.path("pattern").asText());
+		String pattern = comment.path("pattern").asText();
+		assertEquals("\\S", pattern);
+		// JSON Schema patterns are unanchored ECMA-262. \S matches a non-whitespace
+		// character anywhere, including in a multi-line comment. Java '.' also does
+		// not match newlines, so the old anchored form rejects a trailing newline.
+		String multiLine = "line1\nline2\n";
+		assertTrue(Pattern.compile(pattern).matcher(multiLine).find());
+		assertFalse(Pattern.compile(pattern).matcher(" \n\t").find());
+		assertFalse(Pattern.compile("^.*\\S.*$").matcher(multiLine).matches());
 	}
 
 	private static JsonNode operation(String path, String method) {

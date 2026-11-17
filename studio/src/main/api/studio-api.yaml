@@ -8271,7 +8271,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
-                                    pattern: '^.*\S.*$'
+                                    pattern: '\S'
                                 schedule:
                                     type: string
                                     format: date-time
@@ -8342,7 +8342,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
-                                    pattern: '^.*\S.*$'
+                                    pattern: '\S'
                             required:
                                 - packageIds
                                 - comment
@@ -8406,7 +8406,7 @@ paths:
                                     description: Reviewer's comment
                                     minLength: 1
                                     maxLength: 500
-                                    pattern: '^.*\S.*$'
+                                    pattern: '\S'
                             required:
                                 - packageIds
                                 - comment
