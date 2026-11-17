@@ -1608,21 +1608,23 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							const item$ = cachedItem?.label
 								? of(cachedItem)
 								: fetchContentItemService(siteId, targetPath).pipe(catchError(() => of(null)));
-							item$.pipe(take(1)).subscribe((item) => {
-								// The user may have navigated to another page while the item was loading.
-								if (upToDateRefs.current.guest?.path !== guest.path) return;
-								notify(
-									item?.label
-										? formatMessage(guestMessages.contentWasChangedByAnotherUser, {
-												name: getPersonFullName(person),
-												label: item.label,
-												contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
-											})
-										: formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
-												name: getPersonFullName(person)
-											})
-								);
-							});
+							hostToHostSubscription.add(
+								item$.pipe(take(1)).subscribe((item) => {
+									// The user may have switched site or navigated to another page while the item was loading.
+									if (upToDateRefs.current.siteId !== siteId || upToDateRefs.current.guest?.path !== guest.path) return;
+									notify(
+										item?.label
+											? formatMessage(guestMessages.contentWasChangedByAnotherUser, {
+													name: getPersonFullName(person),
+													label: item.label,
+													contentType: contentTypes[item.contentTypeId]?.name ?? item.contentTypeId
+												})
+											: formatMessage(guestMessages.contentPathWasChangedByAnotherUser, {
+													name: getPersonFullName(person)
+												})
+									);
+								})
+							);
 						}
 					}
 					break;
