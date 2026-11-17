@@ -16,9 +16,38 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { JSDOM } from 'jsdom';
+import type ContentType from '../../../models/ContentType';
+import type { ContentTypeField } from '../../../models/ContentType';
 import '../../../../test/registerTsLoader.mjs';
 
-const { embeddedComponentFromParentField } = await import('./formUtils.tsx');
+const { window } = new JSDOM('<!doctype html><html><body></body></html>');
+Object.assign(globalThis, {
+	DOMParser: window.DOMParser,
+	XMLSerializer: window.XMLSerializer,
+	Element: window.Element,
+	document: window.document
+});
+
+const { createStore } = await import('jotai');
+const { embeddedComponentFromParentField, prepareEmbeddedItemForm } = await import('./formUtils.tsx');
+const { buildContentXml } = await import('./valueSerializers.ts');
+
+const OID = 'nested-oid';
+const itemsField = { id: 'items_o', name: 'Items', type: 'node-selector', validations: {} } as ContentTypeField;
+const pageType = {
+	id: '/page/p',
+	type: 'page',
+	fields: { items_o: itemsField },
+	sections: []
+} as unknown as ContentType;
+const compType = {
+	id: '/component/c',
+	type: 'component',
+	fields: {},
+	sections: []
+} as unknown as ContentType;
+const types = { [pageType.id]: pageType, [compType.id]: compType };
 
 describe('embeddedComponentFromParentField', () => {
 	it('reads XML-deserialized { item: [...] } shape', () => {
@@ -44,5 +73,32 @@ describe('embeddedComponentFromParentField', () => {
 		assert.equal(embeddedComponentFromParentField({ item: [] }, 0), undefined);
 		assert.equal(embeddedComponentFromParentField([], 0), undefined);
 		assert.equal(embeddedComponentFromParentField('x', 0), undefined);
+	});
+});
+
+describe('prepareEmbeddedItemForm', () => {
+	it('prepareEmbeddedItemForm reads the component from an in-session (form-shaped) parent', () => {
+		const component = { 'content-type': '/component/c', objectId: OID, 'internal-name': 'Comp' };
+		const parentValues = {
+			'content-type': '/page/p',
+			objectId: 'p1',
+			items_o: [{ key: OID, value: 'Comp', component }]
+		};
+		const req = prepareEmbeddedItemForm({
+			username: 'u',
+			contentType: compType,
+			locked: true,
+			lockError: null,
+			affectedPackages: null,
+			update: { path: undefined, modelId: OID, values: component },
+			parentStackData: {
+				itemMeta: { contentXml: buildContentXml(parentValues, types), contentObject: parentValues }
+			},
+			stableFormContextRef: { current: { store: createStore() } },
+			parentPathInSite: '/site/website/about/index.xml',
+			siteId: 's',
+			contentTypesById: types
+		} as never);
+		assert.equal(req.itemMeta.contentObject, component);
 	});
 });
