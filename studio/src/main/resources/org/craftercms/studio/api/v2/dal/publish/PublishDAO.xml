@@ -338,14 +338,15 @@
 		INNER JOIN site s ON pp.site_id = s.id
 		LEFT OUTER JOIN item_publish_item ipi ON pi.id = ipi.publish_item_id
 		<if test="includeMetadata">
-			LEFT OUTER JOIN item i ON ipi.item_id = i.id
+			LEFT OUTER JOIN item i ON i.id = ipi.item_id
+				OR (ipi.item_id IS NULL AND i.site_id = s.id AND i.path = pi.path)
 		</if>
 		WHERE pi.package_id = #{packageId}
 		AND s.site_id = #{siteId}
 
 		<if test="includeMetadata">
 			<if test="path != null">
-				AND i.path RLIKE #{path}
+				AND COALESCE(i.path, pi.path) RLIKE #{path}
 			</if>
 			<if test="systemTypes != null">
 				AND i.system_type IN
