@@ -30,8 +30,10 @@ Object.assign(globalThis, {
 });
 
 const { createStore } = await import('jotai');
-const { embeddedComponentFromParentField, prepareEmbeddedItemForm } = await import('./formUtils.tsx');
+const { embeddedComponentFromParentField, getFormContextPath, prepareEmbeddedItemForm } =
+	await import('./formUtils.tsx');
 const { buildContentXml } = await import('./valueSerializers.ts');
+const { processPathMacros } = await import('../../../utils/path.ts');
 
 const OID = 'nested-oid';
 const itemsField = { id: 'items_o', name: 'Items', type: 'node-selector', validations: {} } as ContentTypeField;
@@ -100,5 +102,30 @@ describe('prepareEmbeddedItemForm', () => {
 			contentTypesById: types
 		} as never);
 		assert.equal(req.itemMeta.contentObject, component);
+	});
+});
+
+describe('getFormContextPath', () => {
+	it('prefers item.path, then updatePath, then pathInSite', () => {
+		assert.equal(getFormContextPath({ item: { path: '/a' }, updatePath: '/b', pathInSite: '/c' }), '/a');
+		assert.equal(getFormContextPath({ item: null, updatePath: '/b', pathInSite: '/c' }), '/b');
+		assert.equal(getFormContextPath({ item: null, updatePath: undefined, pathInSite: '/c' }), '/c');
+		assert.equal(getFormContextPath({ item: null, updatePath: undefined, pathInSite: undefined }), undefined);
+	});
+
+	it('two levels of embedded create resolve {parentPath[0]} from the root item path', () => {
+		const rootPath = '/site/website/articles/foo/index.xml';
+		// L1/L2 embedded creates have no ContentItem and no update.path; prepareEmbeddedItemForm
+		// keeps pathInSite as the root physical path down the stack.
+		const l1Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: rootPath });
+		const l2Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: l1Path });
+		assert.equal(
+			processPathMacros({
+				path: '/site/components/{parentPath[0]}',
+				objectId: 'nested',
+				fullParentPath: l2Path
+			}),
+			'/site/components/articles'
+		);
 	});
 });

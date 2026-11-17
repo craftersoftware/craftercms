@@ -115,7 +115,7 @@ import {
 	isMediaContent
 } from '../../PathNavigator/utils';
 import useSelection from '../../../hooks/useSelection';
-import { getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
+import { getFormContextPath, getValidationValue, isFieldReadOnly, showAlert } from '../lib/formUtils';
 import TypeList from '../../ContentTypeManagement/components/TypeList';
 import { SearchBar } from '../../SearchBar';
 import useDebouncedInput from '../../../hooks/useDebouncedInput';
@@ -233,9 +233,13 @@ function NodeSelector(props: NodeSelectorProps) {
 	const user = useActiveUser();
 	const stableForm = useStableFormContext();
 	const { id, pathInSite } = useItemMetaContext();
-	// Create forms have no store item (`getItem()` is null). Prefer the live item, then the update path,
-	// then pathInSite, which create forms always set from the macro-processed create.path.
-	const getContextItemPath = () => stableForm.getItem()?.path ?? stableForm.props?.update?.path ?? pathInSite;
+	// Create forms have no store item (`getItem()` is null). See getFormContextPath.
+	const getContextItemPath = () =>
+		getFormContextPath({
+			item: stableForm.getItem(),
+			updatePath: stableForm.props?.update?.path,
+			pathInSite
+		});
 	const api = useStableGlobalApiContext();
 	const hasContent = Boolean(value.length);
 	const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -430,7 +434,7 @@ function NodeSelector(props: NodeSelectorProps) {
 		choice: AllowedPathsData | CreateDataSourcePickerData
 	) => {
 		const processPath = (path: string) =>
-			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() ?? pathInSite });
+			processPathMacros({ path, objectId: id, fullParentPath: getContextItemPath() });
 		switch (optionType) {
 			case 'browse': {
 				const pickerChoice = choice as AllowedPathsData;

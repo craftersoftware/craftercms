@@ -1522,6 +1522,19 @@ export function getNodeIndex(element: Element): number {
 }
 
 /**
+ * Resolves the path used as `fullParentPath` for `{parentPath}` / `{parentPath[n]}` macros.
+ * Prefers the live ContentItem path, then the form update path, then `pathInSite` (which nested
+ * embedded creates inherit from the root item via {@link prepareEmbeddedItemForm}).
+ */
+export function getFormContextPath(args: {
+	item?: { path?: string } | null;
+	updatePath?: string | null;
+	pathInSite?: string | null;
+}): string | undefined {
+	return args.item?.path ?? args.updatePath ?? args.pathInSite ?? undefined;
+}
+
+/**
  * Reads an embedded component out of a parent field value at `index`.
  * Parent `contentObject` may be XML-deserialized (`{ item: [{ component }] }`) or in-session form
  * values (a `NodeSelectorItem[]`). Returns undefined when neither shape yields a component.
