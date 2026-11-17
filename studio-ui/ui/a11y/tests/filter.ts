@@ -70,18 +70,19 @@ const GENERATED_ID_IN_VALUE = new RegExp(`(?<!\\S)${GENERATED_ID}[\\w-]*(?!\\S)`
 const MUI_HASH_CLASS = /\.mui-(?!fixed(?![a-z0-9]))[a-z0-9]+/g;
 
 /**
- * The name of a transient interaction state class: MUI's global `Mui-focusVisible`, `Mui-focused` and `Mui-active`, and
- * the component scoped ones some components also emit (`MuiButton-focusVisible`). These follow the keyboard focus, the
- * pointer and the pressed state of whatever the run touched last (an Escape in `checkPanelPages` leaves
- * `Mui-focusVisible` on the element that had focus), not the markup, so they make a fingerprint differ between two scans
- * of the same node.
+ * The name of a transient interaction state class: MUI's global `Mui-focusVisible` and `Mui-focused`, and the component
+ * scoped ones some components also emit (`MuiButton-focusVisible`). These follow the keyboard focus and the pointer of
+ * whatever the run touched last (an Escape in `checkPanelPages` leaves `Mui-focusVisible` on the element that had
+ * focus), not the markup, so they make a fingerprint differ between two scans of the same node.
  *
  * Deterministic state classes are kept on purpose: `Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`,
- * `Mui-error`, `Mui-readOnly` and `Mui-required` come from props and data, so they are the same on every run of a
- * baseline project and tell a node in one state from the same node in another (the two `Mui-checked` entries of the edit
- * mode Settings switch). MUI emits no class for hover (`MuiTableRow-hover` is the `hover` prop, which is static).
+ * `Mui-error`, `Mui-readOnly`, `Mui-required` and `Mui-active` come from props and data, so they are the same on every
+ * run of a baseline project and tell a node in one state from the same node in another (the two `Mui-checked` entries
+ * of the edit mode Settings switch). `Mui-active` is not a pressed state: it comes from `TableSortLabel`'s `active`
+ * prop and from `StepLabel`, `StepIcon` and `StepConnector`. MUI emits no class for hover (`MuiTableRow-hover` is the
+ * `hover` prop, which is static).
  */
-const TRANSIENT_STATE_NAME = String.raw`Mui[A-Za-z]*-(?:focusVisible|focused|active)`;
+const TRANSIENT_STATE_NAME = String.raw`Mui[A-Za-z]*-(?:focusVisible|focused)`;
 
 const TRANSIENT_STATE_CLASS = new RegExp(`^${TRANSIENT_STATE_NAME}$`);
 
@@ -110,7 +111,7 @@ const START_TAG_SEPARATOR = ' <';
  * A class of the start tag, minus what changes without the markup changing: emotion hashes (`css-1x2y3z`, `mui-1x2y3z`)
  * are dropped, and the hash of a tss-react class is replaced (`tss-1x2y3z-root` becomes `tss-*-root`). Mui component
  * classes (`MuiListItem-root`), MUI's `mui-fixed`, authored classes and deterministic state classes (`Mui-checked`)
- * stay. Transient interaction state classes (`Mui-focusVisible`, `Mui-focused`, `Mui-active`) are dropped, see
+ * stay. Transient interaction state classes (`Mui-focusVisible`, `Mui-focused`) are dropped, see
  * `TRANSIENT_STATE_NAME`.
  */
 function normaliseClass(name: string): string | null {
@@ -164,8 +165,8 @@ export function startTag(html: string): string | null {
  * class hashes (`.css-1x2y3z`, `.mui-1x2y3z`), the hash in tss-react classes (`tss-1x2y3z-root` keeps `-root`) and
  * React/MUI generated ids, in id selectors and as whole tokens of id reference attributes (`aria-labelledby`,
  * `aria-controls`, `for`, `id` and so on). What remains is the element path, the stable `Mui*` component classes,
- * `.mui-fixed` and authored ids. Transient interaction state classes (`.Mui-focusVisible`, `.Mui-focused`,
- * `.Mui-active`) are removed, a segment with nothing else left becoming `*`.
+ * `.mui-fixed` and authored ids. Transient interaction state classes (`.Mui-focusVisible`,
+ * `.Mui-focused`) are removed, a segment with nothing else left becoming `*`.
  *
  * With the node's `html`, the normalised start tag follows the path (see `startTag`): `.mui-*:nth-child(3) <div
  * role="listitem">`. Without it, or if it holds no tag, the fingerprint is the path alone.

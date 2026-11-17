@@ -302,15 +302,15 @@ test.describe('start tag', () => {
 });
 
 test.describe('transient interaction state classes', () => {
-	test('focus and pressed state classes are not part of the start tag', () => {
+	test('focus state classes are not part of the start tag', () => {
 		expect(startTag('<button class="MuiButtonBase-root MuiButton-root Mui-focusVisible" role="button">')).toBe(
 			startTag('<button class="MuiButtonBase-root MuiButton-root" role="button">')
 		);
 		expect(startTag('<div class="MuiInputBase-root Mui-focused mui-1abc">')).toBe('<div class="MuiInputBase-root">');
-		expect(startTag('<span class="MuiSlider-thumb Mui-active Mui-focusVisible MuiButton-focusVisible">')).toBe(
+		expect(startTag('<span class="MuiSlider-thumb Mui-focusVisible MuiButton-focusVisible">')).toBe(
 			'<span class="MuiSlider-thumb">'
 		);
-		expect(startTag('<li class="MuiTab-root MuiTab-focused MuiStepIcon-active">')).toBe('<li class="MuiTab-root">');
+		expect(startTag('<li class="MuiTab-root MuiTab-focused">')).toBe('<li class="MuiTab-root">');
 	});
 
 	test('deterministic state classes stay, so the Settings switch keeps its two Mui-checked entries distinct', () => {
@@ -318,7 +318,15 @@ test.describe('transient interaction state classes', () => {
 		const off = '<span class="MuiButtonBase-root MuiSwitch-switchBase mui-1abc">';
 		expect(startTag(on)).toBe('<span class="Mui-checked MuiButtonBase-root MuiSwitch-switchBase">');
 		expect(startTag(on)).not.toBe(startTag(off));
-		for (const name of ['Mui-selected', 'Mui-expanded', 'Mui-disabled', 'Mui-error', 'MuiTableRow-hover']) {
+		for (const name of [
+			'Mui-selected',
+			'Mui-expanded',
+			'Mui-disabled',
+			'Mui-error',
+			'Mui-active',
+			'MuiStepIcon-active',
+			'MuiTableRow-hover'
+		]) {
 			expect(startTag(`<tr class="${name}">`), name).toBe(`<tr class="${name}">`);
 		}
 	});
@@ -336,7 +344,10 @@ test.describe('transient interaction state classes', () => {
 			'.MuiTab-root.mui-*:nth-child(2)'
 		);
 		expect(fingerprint(['.Mui-focusVisible > span'])).toBe('* > span');
-		expect(fingerprint(['li > .Mui-focused:nth-child(2) .Mui-active'])).toBe('li > *:nth-child(2) *');
+		expect(fingerprint(['li > .Mui-focused:nth-child(2) .Mui-active'])).toBe('li > *:nth-child(2) .Mui-active');
+		expect(fingerprint(['.MuiTableSortLabel-root.Mui-active.Mui-focusVisible'])).toBe(
+			'.MuiTableSortLabel-root.Mui-active'
+		);
 		expect(fingerprint(['div.Mui-focused > a'])).toBe('div > a');
 		expect(fingerprint(['.Mui-selected > .mui-1abc.MuiBox-root'])).toBe('.Mui-selected > .mui-*.MuiBox-root');
 		expect(fingerprint(['.Mui-checked'])).toBe('.Mui-checked');

@@ -71,10 +71,10 @@ are dropped from the path and the tag, React/MUI generated ids (`_r_1_`, `:r1:`)
 tokens of id reference attributes such as `[aria-labelledby]` and in an anchor's `#fragment` (other attribute values
 are kept), and the tag keeps only its name, `role`, sorted authored classes (`Mui*` and project classes) and, for an
 `<a>`, its `href`. `.mui-fixed` is a stable MUI marker, not a hash, so it is kept. Transient interaction state classes
-(`Mui-focusVisible`, `Mui-focused`, `Mui-active`, and component scoped ones such as `MuiButton-focusVisible`) are
+(`Mui-focusVisible`, `Mui-focused`, and component scoped ones such as `MuiButton-focusVisible`) are
 dropped from the path and the tag, because they follow whatever the run focused last (an Escape in a panel test leaves
 `Mui-focusVisible` on an element) and would make the same node look new and stale at once. Deterministic state classes
-(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`) come from props and data, so they are kept: the two
+(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`, `Mui-active`) come from props and data, so they are kept: the two
 `Mui-checked` entries of the edit mode Settings switch stay as captured. The start tag is what identifies a
 node when the path alone is positional (`.mui-*:nth-child(8)`), so a reordered list does not silently allow a different
 node. Each fingerprint allows exactly one node. So:
