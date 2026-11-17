@@ -204,11 +204,12 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 							disablePadding
 							onMouseEnter={() => onPackageMouseOver(pkg.id)}
 							onMouseLeave={onPackageMouseLeave}
+							sx={{ '&:focus-within .MuiListItem-secondaryAction .MuiIconButton-root': { opacity: 1 } }}
 							secondaryAction={
 								<IconButton
 									onClick={(e) => contextMenu?.openContextMenu(e, pkg)}
 									aria-label={formatMessage({ defaultMessage: 'Package options' })}
-									sx={{ visibility: hoveredPackage === pkg.id ? 'visible' : 'hidden' }}
+									sx={{ opacity: hoveredPackage === pkg.id ? 1 : 0, '&:focus-visible': { opacity: 1 } }}
 								>
 									<MoreVertRoundedIcon />
 								</IconButton>

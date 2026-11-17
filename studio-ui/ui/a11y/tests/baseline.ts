@@ -175,7 +175,11 @@ export async function observeListing(
 /** Reads the Unpublished Work dashlet inside `scope` once it has loaded: its first page's rows and its total. */
 export function observeDashlet(scope: Locator): Promise<ListingState> {
 	const dashlet = unpublishedDashlet(scope);
-	return observeListing(dashlet.locator('ul .MuiListItem-root'), dashlet.getByText(PAGER_TEXT), DASHBOARD_SUBJECT);
+	return observeListing(
+		dashlet.locator('ul .MuiListItem-root:not(:has(.MuiSkeleton-root))'),
+		dashlet.getByText(PAGER_TEXT),
+		DASHBOARD_SUBJECT
+	);
 }
 
 /** Reads the search results inside `scope` once they have loaded: the cards of the first page and the results total. */

@@ -201,10 +201,7 @@ test.describe('allow-list validation', () => {
 	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
 		const node = [known];
 		const scoped = [
-			...['aria-input-field-name', 'label', 'list', 'nested-interactive'].map((rule) => ({
-				rule,
-				screen: 'tools panel > Dashboard'
-			})),
+			{ rule: 'aria-input-field-name', screen: 'tools panel > Dashboard' },
 			{ rule: 'aria-input-field-name', screen: 'edit mode tools panel > Existing Content' },
 			...['aria-prohibited-attr', 'label', 'list'].map((rule) => ({ rule, screen: 'edit mode tools panel > Settings' }))
 		];
@@ -212,11 +209,14 @@ test.describe('allow-list validation', () => {
 			const entries = scoped.map((scope) => ({ ...scope, theme, nodes: node }));
 			expect(validateAllowList(entries)).toHaveLength(scoped.length);
 		}
+		for (const rule of ['label', 'list']) {
+			expect(() =>
+				validateAllowList([{ rule, screen: 'tools panel > Dashboard', theme: 'light', nodes: node }])
+			).toThrow(/does not list/);
+		}
 		expect(() =>
-			validateAllowList([
-				{ rule: 'nested-interactive', screen: 'edit mode tools panel > Settings', theme: 'light', nodes: node }
-			])
-		).toThrow(/does not list/);
+			validateAllowList([{ rule: 'nested-interactive', screen: 'dashboard', theme: 'light', nodes: node }])
+		).toThrow(/no umbrella ticket/);
 	});
 
 	test('no longer lists screens the baseline found clean', () => {
@@ -226,8 +226,7 @@ test.describe('allow-list validation', () => {
 		).toThrow(/no umbrella ticket/);
 		for (const [rule, screen] of [
 			['link-in-text-block', 'create project'],
-			['list', 'edit form'],
-			['nested-interactive', 'edit form']
+			['list', 'edit form']
 		]) {
 			expect(() => validateAllowList([{ rule, screen, theme: 'light', nodes: node }]), `${rule} on ${screen}`).toThrow(
 				/does not list/
