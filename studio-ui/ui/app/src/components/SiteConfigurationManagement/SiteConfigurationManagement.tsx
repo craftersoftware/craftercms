@@ -1168,7 +1168,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 										<Link
 											href="https://craftercms.com/docs/current/by-role/common/staging.html"
 											underline="hover"
-											onClick={(e) => e.preventDefault()}
+											target="_blank"
+											rel="noopener noreferrer"
 										>
 											{msg}
 										</Link>
