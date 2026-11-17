@@ -80,9 +80,13 @@ export async function settle(page: Page, screen: string, ready: ReadyState, time
 	}
 }
 
+/** The Unpublished Work dashlet, on the dashboard and in the tools panel Dashboard. */
+export const unpublishedDashlet = (scope: Locator) =>
+	scope.locator('.MuiCard-root').filter({ hasText: 'Unpublished Work' });
+
 /** The Unpublished Work dashlet with its rows, or its empty message. Used by the dashboard and the tools panel Dashboard. */
 export function dashboardReady(scope: Locator): ReadyState {
-	const dashlet = scope.locator('.MuiCard-root').filter({ hasText: 'Unpublished Work' });
+	const dashlet = unpublishedDashlet(scope);
 	return {
 		loaded: dashlet.locator('ul .MuiListItemButton-root'),
 		empty: dashlet.getByText('There are no unpublished items', { exact: true }),
@@ -174,5 +178,5 @@ export function panelDestination(page: Page, panel: Locator, label: string, scre
 			: // ToolPanel renders `<header>` (Back, title) then a divider and the page `<section>`.
 				panel.locator('header').filter({ has: title }).locator('xpath=following-sibling::section[1]');
 	const ready = destination.ready(root);
-	return { kind: destination.kind, ready: { ...ready, error: ready.error ?? errorState(root) } };
+	return { kind: destination.kind, root, ready: { ...ready, error: ready.error ?? errorState(root) } };
 }

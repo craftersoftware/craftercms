@@ -16,6 +16,7 @@
 
 import { Locator, Page } from '@playwright/test';
 import { checkA11y } from './axe';
+import { verifyDashboardBaseline } from './baseline';
 import { expect, test } from './fixtures';
 import { previewPage, project } from './env';
 import { dashboardReady, errorState, panelDestination, ReadyState, settle, siteToolsReady } from './readiness';
@@ -56,6 +57,7 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 		const destination = panelDestination(page, panel, label, screen);
 		await panel.locator('.MuiListItemButton-root', { hasText: label }).first().click();
 		await settle(page, screen, destination.ready);
+		if (label === 'Dashboard') await verifyDashboardBaseline(destination.root, testInfo);
 		await checkA11y(page, testInfo, screen);
 		if (destination.kind === 'dialog') {
 			await page.keyboard.press('Escape');
@@ -103,6 +105,7 @@ test.describe('Project screens', () => {
 	test('dashboard', async ({ page }, testInfo) => {
 		await page.goto('/studio/site-dashboard');
 		await settle(page, 'dashboard', dashboardReady(page.locator('body')));
+		await verifyDashboardBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'dashboard');
 	});
 

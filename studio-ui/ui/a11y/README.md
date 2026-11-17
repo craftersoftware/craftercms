@@ -15,7 +15,8 @@ tests per theme and 24 in total. The preview iframe is excluded: it hosts the pr
 
 ## Run
 
-Against a running Studio (default `http://localhost:8080`) that has a project and an administrator account:
+Against a running Studio (default `http://localhost:8080`) that has a freshly created Website Editorial project with no
+edits (see [Dashboard baseline](#dashboard-baseline)) and an administrator account:
 
 ```bash
 yarn install
@@ -34,7 +35,7 @@ as JSON to the HTML report.
 | `STUDIO_URL`           | `http://localhost:8080` | Studio origin                                                     |
 | `STUDIO_USERNAME`      | `admin`                 | Login user (needs edit and publish permissions)                   |
 | `STUDIO_PASSWORD`      | `admin`                 | Login password                                                    |
-| `STUDIO_PROJECT`       | `editorial`             | Existing Website Editorial project used by project screens        |
+| `STUDIO_PROJECT`       | `editorial`             | Freshly created Website Editorial project, no edits (see below)   |
 | `STUDIO_PREVIEW_PAGE`  | `/`                     | Preview page used for the edit form and publish dialog            |
 | `A11Y_BROWSER_CHANNEL` | (bundled Chromium)      | `chrome` runs the installed Google Chrome instead                 |
 | `A11Y_CAPTURE`         | (off)                   | `1` records the run's ticketed findings (see [Capture](#capture)) |
@@ -93,7 +94,8 @@ while the allow-list is empty and is off with `A11Y_CAPTURE=1`, which rewrites t
 
 ### Capture
 
-On a live Studio:
+On a live Studio, against a freshly created Website Editorial project with no edits (see
+[Dashboard baseline](#dashboard-baseline)):
 
 ```bash
 yarn workspace @craftercms/studio-a11y capture
@@ -106,6 +108,20 @@ against the tickets. Capture records whatever fails, so review the diff before c
 
 The committed baseline was captured on 2026-11-17 in both themes against a live authoring Studio built from `develop`
 at `f2950f2c` (the Website Editorial blueprint, project `editorial`, user `admin`).
+
+### Dashboard baseline
+
+The allow-list was captured against a freshly created Website Editorial project with no edits, and `STUDIO_PROJECT`
+must be one. The dashboard entries (the Unpublished Work rows) are keyed by row position, so editing, publishing or
+deleting content in the project would otherwise leave them stale and fail the run without saying why. Before it scans
+the Unpublished Work dashlet, the `dashboard` test and the tools panel's Dashboard page therefore read the dashlet's
+"1-50 of N" total and its first page's row count, and compare them with `DASHBOARD_BASELINE` in `tests/baseline.ts`
+(228 items, 50 rows, from the 17 Nov 2026 capture). On a mismatch they fail with "the project is not in its baseline
+state": recreate the project from the Website Editorial blueprint, or recapture.
+
+A capture (`A11Y_CAPTURE=1`) skips the check, since a recapture is how the baseline changes. It logs `Dashboard
+baseline observed: total=N rows=M` (and attaches it to the report): set `DASHBOARD_BASELINE` to those values in the
+same commit as the new allow-list.
 
 ## Readiness
 
