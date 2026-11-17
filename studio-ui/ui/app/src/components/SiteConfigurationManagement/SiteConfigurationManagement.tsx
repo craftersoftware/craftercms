@@ -1130,7 +1130,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						</>
 					)
 				}
-				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
+				okButtonText={<FormattedMessage defaultMessage="Enable Staging" />}
 				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
 				disableCancelButton={enableStagingConfirm.submitting}
 				onOk={onConfirmEnableStaging}
