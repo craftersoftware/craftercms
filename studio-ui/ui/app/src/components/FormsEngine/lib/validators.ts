@@ -18,7 +18,7 @@ import ContentType, { type ContentTypeField } from '../../../models/ContentType'
 import type { BuiltInControlType } from './controlMap';
 import LookupTable from '../../../models/LookupTable';
 import { XmlKeys } from './formConsts';
-import { isInternalNameFilled, missingMinimumSaveRequirements } from './minimumSaveRequirements';
+import { missingMinimumSaveRequirements } from './minimumSaveRequirements';
 import { defineMessage, defineMessages, type MessageDescriptor } from 'react-intl';
 import type { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
 import { nnou, nou } from '../../../utils/object';
@@ -549,18 +549,18 @@ export function isFieldRequired(field: ContentTypeField): boolean {
 /**
  * Checks if the minimum save requirements are fulfilled.
  * A missing file-name validation (the type has no file-name field) is treated as valid.
- * Internal name is required only when `hasInternalNameField` is true (the default).
+ * Internal name is required only when `hasInternalNameField` is true. Callers must say which.
  *
  * @param {Promise<FieldValidityState> | undefined} fileNameValidation - The file-name field's validity, when that field exists.
  * @param {LookupTable<unknown>} values - A lookup table containing field values, including the internal name.
- * @param {boolean} hasInternalNameField - Whether the content type defines `internal-name`. Defaults to true.
+ * @param {boolean} hasInternalNameField - Whether the content type defines `internal-name`.
  * @returns {Promise<boolean>} - A promise resolving to `true` if the requirements that apply are fulfilled; otherwise, `false`.
  *
  */
 export async function checkMinimumSaveRequirementsFulfilled(
 	fileNameValidation: Promise<FieldValidityState> | undefined,
 	values: LookupTable<unknown>,
-	hasInternalNameField = true
+	hasInternalNameField: boolean
 ): Promise<boolean> {
 	const fileNameValid = fileNameValidation ? (await fileNameValidation).isValid : true;
 	return (
@@ -572,17 +572,6 @@ export async function checkMinimumSaveRequirementsFulfilled(
 			hasInternalNameField
 		}).length === 0
 	);
-}
-
-/**
- * Checks if the internal name is valid.
- *
- * @param {LookupTable<unknown>} values - A lookup table containing field values, including the internal name.
- * @returns {boolean} - Returns `true` if the internal name is not empty or consists only of whitespace; otherwise, `false`.
- *
- */
-export function isInternalNameValid(values: LookupTable<unknown>): boolean {
-	return isInternalNameFilled(values[XmlKeys.internalName]);
 }
 
 /** How long the file-name uniqueness check waits after the latest value before calling the server. */
