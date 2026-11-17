@@ -121,7 +121,10 @@ test.describe('Project screens', () => {
 
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
-		await settle(page, 'search', { loaded: page.getByRole('heading', { name: 'Search', level: 2 }) });
+		await settle(page, 'search', {
+			loaded: page.getByRole('heading', { name: 'Search', level: 2 }),
+			error: errorState(page.locator('body'))
+		});
 		await verifySearchBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'search');
 	});

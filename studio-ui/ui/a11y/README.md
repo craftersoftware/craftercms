@@ -72,9 +72,11 @@ tokens of id reference attributes such as `[aria-labelledby]` and in an anchor's
 are kept), and the tag keeps only its name, `role`, sorted authored classes (`Mui*` and project classes) and, for an
 `<a>`, its `href`. `.mui-fixed` is a stable MUI marker, not a hash, so it is kept. Transient interaction state classes
 (`Mui-focusVisible`, `Mui-focused`, and component scoped ones such as `MuiButton-focusVisible`) are
-dropped from the path and the tag, because they follow whatever the run focused last (an Escape in a panel test leaves
-`Mui-focusVisible` on an element) and would make the same node look new and stale at once. Deterministic state classes
-(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`, `Mui-active`) come from props and data, so they are kept: the two
+dropped from the path and the tag, because they follow whatever the run focused last and would make the same node look
+new and stale at once. `checkPanelPages` blurs after an Escape so the opener does not keep `Mui-focusVisible`; dropping
+them covers any other starting focus (an autofocused field, a focus a dialog restores). Deterministic state classes
+(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`, `Mui-active`) come from props and data, so they are kept
+(`Mui-active`'s one pointer driven use, a `Slider` thumb while dragged, never happens in a scan): the two
 `Mui-checked` entries of the edit mode Settings switch stay as captured. The start tag is what identifies a
 node when the path alone is positional (`.mui-*:nth-child(8)`), so a reordered list does not silently allow a different
 node. Each fingerprint allows exactly one node. So:

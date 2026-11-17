@@ -72,15 +72,16 @@ const MUI_HASH_CLASS = /\.mui-(?!fixed(?![a-z0-9]))[a-z0-9]+/g;
 /**
  * The name of a transient interaction state class: MUI's global `Mui-focusVisible` and `Mui-focused`, and the component
  * scoped ones some components also emit (`MuiButton-focusVisible`). These follow the keyboard focus and the pointer of
- * whatever the run touched last (an Escape in `checkPanelPages` leaves `Mui-focusVisible` on the element that had
- * focus), not the markup, so they make a fingerprint differ between two scans of the same node.
+ * whatever the run touched last, not the markup, so they make a fingerprint differ between two scans of the same node.
+ * `checkPanelPages` blurs after an Escape so the opener does not keep `Mui-focusVisible`; dropping them here covers any
+ * other focus a scan starts with (an autofocused field, a focus a dialog restores).
  *
  * Deterministic state classes are kept on purpose: `Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`,
  * `Mui-error`, `Mui-readOnly`, `Mui-required` and `Mui-active` come from props and data, so they are the same on every
  * run of a baseline project and tell a node in one state from the same node in another (the two `Mui-checked` entries
- * of the edit mode Settings switch). `Mui-active` is not a pressed state: it comes from `TableSortLabel`'s `active`
- * prop and from `StepLabel`, `StepIcon` and `StepConnector`. MUI emits no class for hover (`MuiTableRow-hover` is the
- * `hover` prop, which is static).
+ * of the edit mode Settings switch). `Mui-active` comes from `TableSortLabel`'s `active` prop and from `StepLabel`,
+ * `StepIcon` and `StepConnector`; its one pointer driven use, a `Slider` thumb while dragged, never happens in a scan.
+ * MUI emits no class for hover (`MuiTableRow-hover` is the `hover` prop, which is static).
  */
 const TRANSIENT_STATE_NAME = String.raw`Mui[A-Za-z]*-(?:focusVisible|focused)`;
 
