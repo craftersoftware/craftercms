@@ -119,9 +119,18 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const { formatMessage } = useIntl();
 	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
-	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() =>
-		selectedConfigFileId ? null : (JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null)
-	);
+	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() => {
+		const sessionFile = JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null;
+		if (!sessionFile) {
+			return null;
+		}
+		// Use the session file when opening the tool normally, or when it is the same file as selectedConfigFileId.
+		// If selectedConfigFileId points at a different file, skip restore here so sessionStorage stays available later.
+		if (!selectedConfigFileId || sessionFile.id === selectedConfigFileId) {
+			return sessionFile;
+		}
+		return null;
+	});
 	const [changesRecoveredOnMount] = useState<boolean>(() => selectedConfigFile !== null);
 	const ignoreEnv = selectedConfigFile?.path === 'site-policy-config.xml';
 	const [selectedConfigFileXml, setSelectedConfigFileXml] = useState(null);
@@ -251,7 +260,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		if (selectedConfigFile && environment) {
 			setConfigError(null);
 			const sessionData = JSON.parse(sessionStorage.getItem(sessionStorageKey));
-			if (sessionData?.content) {
+			const sessionMatchesSelection = sessionData?.selectedConfigFile?.id === selectedConfigFile.id;
+			if (sessionMatchesSelection && sessionData?.content) {
 				setSelectedConfigFileXml(sessionData.content);
 				setContentSize(sessionData.content.length);
 				setDisabledSaveButton(false);
