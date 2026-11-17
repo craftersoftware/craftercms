@@ -1093,10 +1093,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 							<Box component="ul" sx={{ mt: 2, pl: 1, textAlign: 'left', listStylePosition: 'inside' }}>
 								<Typography>
 									<li>
-										<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live." />
+										<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
 									</li>
 									<li>
-										<FormattedMessage defaultMessage="Serverless delivery provisions a staging target and cloud storage." />
+										<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
 									</li>
 									<li>
 										<FormattedMessage defaultMessage="Removing staging later means recreating the project." />
@@ -1154,7 +1154,11 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="For more details, see the <a>staging documentation</a>."
 								values={{
 									a: (msg) => (
-										<Link href="#" underline="hover" onClick={(e) => e.preventDefault()}>
+										<Link
+											href="https://craftercms.com/docs/current/by-role/common/staging.html"
+											underline="hover"
+											onClick={(e) => e.preventDefault()}
+										>
 											{msg}
 										</Link>
 									)

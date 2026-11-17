@@ -26,10 +26,11 @@ import { Site } from '../../models/Site';
 import CardMedia from '@mui/material/CardMedia';
 import CardActions from '@mui/material/CardActions';
 import Tooltip from '@mui/material/Tooltip';
-import { defineMessage, FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import CardActionArea from '@mui/material/CardActionArea';
 import Box from '@mui/material/Box';
 import { alpha, Typography } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
 import { PublishingStatus } from '../../models/Publishing';
 import { PublishingStatusButtonUI } from '../PublishingStatusButton';
 import SiteStatusIndicator from '../SiteStatusIndicator/SiteStatusIndicator';
@@ -80,6 +81,7 @@ export function SiteCard(props: SiteCardProps) {
 	const [dataUrl, fetch] = useProjectPreviewImage(site.id, fallbackImageSrc);
 	const color = useMemo(() => toColor(site.name), [site.name]);
 	const { formatMessage } = useIntl();
+	const stagingEnabledLabel = formatMessage({ defaultMessage: 'Staging is enabled for this project' });
 	const hasActionsMenu =
 		isSiteReady &&
 		(Boolean(onDuplicateSiteClick) ||
@@ -142,13 +144,16 @@ export function SiteCard(props: SiteCardProps) {
 								{site.name}
 							</Box>
 							{site.stagingEnabled && (
-								<Tooltip title={<FormattedMessage defaultMessage="Staging is enabled for this project" />}>
+								<Tooltip title={stagingEnabledLabel}>
 									<Box component="span" sx={{ display: 'inline-flex', flexShrink: 0, ml: 0.5 }}>
 										<ItemPublishingTargetIcon
 											item={{ stateMap: { staged: true } as ItemStateMap }}
 											displayTooltip={false}
 											fontSize="small"
 										/>
+										<Box component="span" sx={visuallyHidden}>
+											{stagingEnabledLabel}
+										</Box>
 									</Box>
 								</Tooltip>
 							)}
@@ -230,7 +235,7 @@ export function SiteCard(props: SiteCardProps) {
 						disabled={disabled}
 					/>
 				)}
-				{isSiteReady && onEditSiteClick && (
+				{!compact && isSiteReady && onEditSiteClick && (
 					<Tooltip title={formatMessage({ id: 'words.edit', defaultMessage: 'Edit' })}>
 						<IconButton
 							onClick={() => onEditSiteClick(site)}
