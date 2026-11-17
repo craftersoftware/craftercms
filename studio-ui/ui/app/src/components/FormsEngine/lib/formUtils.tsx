@@ -1523,8 +1523,9 @@ export function getNodeIndex(element: Element): number {
 
 /**
  * Resolves the path used as `fullParentPath` for `{parentPath}` / `{parentPath[n]}` macros.
- * Prefers the live ContentItem path, then the form update path, then `pathInSite` (which nested
- * embedded creates inherit from the root item via {@link prepareEmbeddedItemForm}).
+ * Prefers the live ContentItem path, then the form update path, then `pathInSite`. Nested embedded creates
+ * have neither an item nor an update path; their `pathInSite` is the macro-processed `create.path`, which
+ * the parent form set to its own context path, so it carries the root item's path down the stack.
  */
 export function getFormContextPath(args: {
 	item?: { path?: string } | null;

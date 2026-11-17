@@ -115,10 +115,13 @@ describe('getFormContextPath', () => {
 
 	it('two levels of embedded create resolve {parentPath[0]} from the root item path', () => {
 		const rootPath = '/site/website/articles/foo/index.xml';
-		// L1/L2 embedded creates have no ContentItem and no update.path; prepareEmbeddedItemForm
-		// keeps pathInSite as the root physical path down the stack.
-		const l1Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: rootPath });
-		const l2Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: l1Path });
+		// Each embedded create gets create.path = parent's getContextItemPath(), and FormsEngine's create
+		// branch sets pathInSite = processPathMacros({ path: create.path, fullParentPath: '' }).
+		const createHop = (parentPath: string) =>
+			processPathMacros({ path: parentPath, objectId: 'nested', fullParentPath: '', useUUID: false });
+		const rootContext = getFormContextPath({ item: { path: rootPath }, updatePath: rootPath, pathInSite: undefined });
+		const l1Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: createHop(rootContext) });
+		const l2Path = getFormContextPath({ item: null, updatePath: undefined, pathInSite: createHop(l1Path) });
 		assert.equal(
 			processPathMacros({
 				path: '/site/components/{parentPath[0]}',
