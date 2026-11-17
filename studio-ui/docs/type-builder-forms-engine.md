@@ -147,7 +147,8 @@ Root `<form>` — the single type artifact Studio and TB2 read/write. Roughly:
 
 - Identity: `title`, `description`, `objectType`, `content-type`, `imageThumbnail`, `quickCreate`, `quickCreatePath`
 - Type properties: `display-template`, `no-template-required`, `merge-strategy` (under `<properties>`)
-- Former `config.xml` fields at form root (merged by 5.0.0.2 / written by TB2): `controller`, `paths` (includes/excludes), `delete-dependencies`, `copy-dependencies`, `previewable`, `allowed-roles`
+- Former `config.xml` fields at form root (merged by 5.0.0.2): `paths` (includes/excludes), `delete-dependencies`, `copy-dependencies`, `previewable`, `allowed-roles`
+- Written by TB2 or already present on forms: `controller`
 - `<sections>` → `<fields>` (controls with `<properties>` / `<constraints>`)
 - `<datasources>`
 
