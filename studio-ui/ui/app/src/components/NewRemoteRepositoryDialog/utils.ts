@@ -65,5 +65,5 @@ export const isFormValid = (inputs) => {
 		return true;
 	} else if (inputs.repoAuthentication === 'token' && inputs.repoToken !== '') {
 		return true;
-	} else return !!(inputs.repoAuthentication === 'key' && inputs.repoKey);
+	} else return !!(inputs.repoAuthentication === 'private_key' && inputs.repoKey);
 };
