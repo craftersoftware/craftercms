@@ -476,10 +476,10 @@ test.describe('stable tokens', () => {
 
 test.describe('allow-list validation of fingerprints', () => {
 	const node = (path: string, html: string) => fingerprint([path], html);
-	// `list` on the dashboard is still allow-listed (#1455); `listitem` has no ticket since #1456 was fixed.
+	// `list` on the Settings tools panel is allow-listed (#1455); `listitem` has no ticket since #1456 was fixed.
 	const entry = (nodes: string[]): AllowListEntry => ({
 		rule: 'list',
-		screen: 'dashboard',
+		screen: 'edit mode tools panel > Settings',
 		theme: 'light',
 		nodes
 	});
@@ -498,7 +498,7 @@ test.describe('allow-list validation of fingerprints', () => {
 		expect(() =>
 			validateAllowList([entry([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])])
 		).toThrow(
-			/list on light dashboard has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
+			/list on light edit mode tools panel > Settings has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
 		);
 	});
 
