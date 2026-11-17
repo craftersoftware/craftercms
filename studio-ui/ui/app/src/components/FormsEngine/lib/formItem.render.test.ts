@@ -398,6 +398,16 @@ describe('form item subscriptions', () => {
 		assert.equal(host.textContent?.includes(formPath), true);
 	});
 
+	it('skips metadata when the form has no content item yet', async () => {
+		const store = createItemsStore({});
+		const entry = createEntry(['file-name']);
+		const host = await mountTree(
+			store,
+			React.createElement(FormHost, { entry }, React.createElement(EditModeMetadata))
+		);
+		assert.equal(host.textContent, 'Please wait');
+	});
+
 	it('renders an embedded header when the form has no content item yet', async () => {
 		const store = createItemsStore({});
 		const entry = createEntry(['file-name']);
