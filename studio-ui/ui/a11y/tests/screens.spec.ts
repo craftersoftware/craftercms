@@ -62,6 +62,9 @@ async function checkPanelPages(page: Page, testInfo: Parameters<typeof checkA11y
 		if (destination.kind === 'dialog') {
 			await page.keyboard.press('Escape');
 			await expect(page.getByRole('dialog')).toHaveCount(0);
+			// Escape returns focus to the opener with keyboard modality, which adds Mui-focusVisible to it and to the
+			// CSS path axe builds for it. Blurring keeps the next scan on the same selectors as a pointer run.
+			await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 		} else {
 			await panel.getByRole('button', { name: 'Back' }).first().click();
 			await settle(page, name, panelRoot(panel));
