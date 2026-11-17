@@ -50,8 +50,8 @@ export function resolveActionLabel(type: ActionLabelType, options: { label?: str
 	if (options.label) return options.label;
 	const intl = getCurrentIntl();
 	const withTitle = messages[`${type}WithTitle` as `${ActionLabelType}WithTitle`];
-	const wihoutTitle = messages[type];
-	return options.title ? intl.formatMessage(withTitle, { title: options.title }) : intl.formatMessage(wihoutTitle);
+	const withoutTitle = messages[type];
+	return options.title ? intl.formatMessage(withTitle, { title: options.title }) : intl.formatMessage(withoutTitle);
 }
 
 /**
