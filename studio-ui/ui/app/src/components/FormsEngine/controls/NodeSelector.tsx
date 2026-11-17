@@ -1618,11 +1618,13 @@ function EmbeddedItemDisplay({ label, showWorkflowState }: { label: string; show
 	const showState = Boolean(showWorkflowState && contextItem?.stateMap);
 	return (
 		<ItemDisplay
-			item={
-				contextItem
-					? { ...contextItem, label, systemType: 'component' }
-					: { label, path: '', systemType: 'component', mimeType: 'application/xml' }
-			}
+			// Create forms have no store item; ItemDisplay returns null for a nullish `item`, so fall
+			// back to a minimal stub. State icons stay off via `showState` when there is no stateMap.
+			item={{
+				...(contextItem ?? { path: '', mimeType: 'application/xml' }),
+				label,
+				systemType: 'component'
+			}}
 			showWorkflowState={showState}
 			showPublishingTarget={showState}
 			showNavigableAsLinks={false}
