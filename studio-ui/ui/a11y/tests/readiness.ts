@@ -90,9 +90,21 @@ export function dashboardReady(scope: Locator): ReadyState {
 	};
 }
 
-/** The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog. */
+/**
+ * The project tools list, as shown by Project Tools and the tools panel's Project Tools dialog: the "Project Tools"
+ * navigation landmark holding a list whose items are tool buttons. The landmark and its list render before the tools
+ * arrive, so the signal is the first tool button.
+ */
 export function siteToolsReady(scope: Locator): ReadyState {
-	return { loaded: scope.getByRole('menu'), error: errorState(scope) };
+	return {
+		loaded: scope
+			.getByRole('navigation', { name: 'Project Tools', exact: true })
+			.getByRole('list')
+			.getByRole('listitem')
+			.getByRole('button')
+			.first(),
+		error: errorState(scope)
+	};
 }
 
 type Destination = { kind: 'page' | 'dialog'; ready: (body: Locator) => ReadyState };
