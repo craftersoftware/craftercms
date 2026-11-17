@@ -75,7 +75,7 @@ import type { FormsEngineProps } from '../FormsEngine';
 import usePreviousValue from '../../../hooks/usePreviousValue';
 import useActiveSiteId from '../../../hooks/useActiveSiteId';
 import useActiveUser from '../../../hooks/useActiveUser';
-import { areAllPairsEqual } from '../../../utils/array';
+import { areAllPairsEqual, asArray } from '../../../utils/array';
 import { deserializeContentDoc } from './valueRetrievers';
 import { buildContentXml } from './valueSerializers';
 import {
@@ -1521,6 +1521,21 @@ export function getNodeIndex(element: Element): number {
 	return index;
 }
 
+/**
+ * Reads an embedded component out of a parent field value at `index`.
+ * Parent `contentObject` may be XML-deserialized (`{ item: [{ component }] }`) or in-session form
+ * values (a `NodeSelectorItem[]`). Returns undefined when neither shape yields a component.
+ */
+export function embeddedComponentFromParentField(fieldValue: unknown, index: number): LookupTable<unknown> | undefined {
+	// Form values: NodeSelectorItem[]. XML-deserialized: { item } (one object or an array).
+	const items = Array.isArray(fieldValue)
+		? fieldValue
+		: fieldValue && typeof fieldValue === 'object' && 'item' in fieldValue
+			? asArray((fieldValue as { item: unknown }).item)
+			: undefined;
+	return (items?.[index] as { component?: LookupTable<unknown> } | undefined)?.component;
+}
+
 export function prepareEmbeddedItemForm(props: {
 	username: string;
 	contentType: ContentType;
@@ -1618,11 +1633,14 @@ export function prepareEmbeddedItemForm(props: {
 	if (element) {
 		const fieldId = element.parentElement.parentElement.tagName; // <root><fieldId><item><component/></item></fieldId></root>, so (component.parentElement = item).parentElement = fieldId
 		const index = getNodeIndex(element.parentElement); // Get the position of the `item` tag
-		contentObject = (
-			getParsedField(parentStackData.itemMeta.contentObject, fieldId) as {
-				item: Array<{ component: LookupTable<unknown> }>;
-			}
-		).item[index].component;
+
+		//  For in-session parents, contentXml is rebuilt from form values (so the nested modelId is found),
+		//  but contentObject stays form-shaped (NodeSelectorItem[]). embeddedComponentFromParentField is
+		//  used to get the component from the parent field with the correct form, since prepareEmbeddedItemForm
+		// always expects XML shape.
+		contentObject =
+			embeddedComponentFromParentField(getParsedField(parentStackData.itemMeta.contentObject, fieldId), index) ??
+			update.values;
 		contentXml = element.outerHTML;
 	} else {
 		// Created (or edited) in-session; not yet serialized into parent contentXml
