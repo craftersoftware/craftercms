@@ -86,6 +86,77 @@ test.describe('allow-list filter', () => {
 	});
 });
 
+test.describe('fingerprint normalisation', () => {
+	test('React useId ids are normalised in attribute selectors, not only in #id', () => {
+		for (const attribute of ['aria-labelledby', 'aria-describedby', 'aria-controls', 'aria-owns', 'for', 'id']) {
+			expect(fingerprint([`button[${attribute}="_r_2g_"]`]), attribute).toBe(`button[${attribute}="*"]`);
+			expect(fingerprint([`button[${attribute}="_r_2g_"]`]), attribute).toBe(
+				fingerprint([`button[${attribute}="_r_9z_"]`])
+			);
+		}
+	});
+
+	test('older React and MUI generated ids are normalised in attribute selectors', () => {
+		expect(fingerprint(['input[id=":r1:"]'])).toBe('input[id="*"]');
+		expect(fingerprint(['input[id=":r1a:"]'])).toBe(fingerprint(['input[id=":r2b:"]']));
+		expect(fingerprint(['input[id="\\:r1\\:"]'])).toBe('input[id="*"]');
+		expect(fingerprint(['label[for=«r1»]'])).toBe('label[for=*]');
+		expect(fingerprint(["input[id='mui-42']"])).toBe("input[id='*']");
+		expect(fingerprint(['div[aria-controls=_r_1_]'])).toBe('div[aria-controls=*]');
+	});
+
+	test('every generated id in a list value is normalised, and ids derived from one keep their suffix out', () => {
+		expect(fingerprint(['span[aria-labelledby="_r_1_ _r_2_"]'])).toBe('span[aria-labelledby="* *"]');
+		expect(fingerprint(['span[aria-labelledby="_r_1_ authored-title"]'])).toBe(
+			'span[aria-labelledby="* authored-title"]'
+		);
+		expect(fingerprint(['#_r_1_-label'])).toBe('#*');
+		expect(fingerprint(['#\\:r1\\:-label'])).toBe('#*');
+	});
+
+	test('authored ids and non-id attribute values are kept', () => {
+		expect(fingerprint(['input[id="username"]'])).toBe('input[id="username"]');
+		expect(fingerprint(['label[for="email"]'])).toBe('label[for="email"]');
+		expect(fingerprint(['span[aria-labelledby="dialog-title"]'])).toBe('span[aria-labelledby="dialog-title"]');
+		expect(fingerprint(['a[href$="blog"]'])).toBe('a[href$="blog"]');
+		expect(fingerprint(['input[id="_r_1_"]'])).not.toBe(fingerprint(['input[name="_r_1_"]']));
+		expect(fingerprint(['input[id="_r_1_"]'])).not.toBe(fingerprint(['input[id="username"]']));
+	});
+
+	test('emotion and MUI generated classes do not change the fingerprint, Mui component classes do', () => {
+		expect(fingerprint(['.mui-1k0n8m7.MuiCardActionArea-root'])).toBe('.mui-*.MuiCardActionArea-root');
+		expect(fingerprint(['.mui-ybhk9l.MuiListItemButton-root:nth-child(1) > .mui-o5ytqa.MuiListItemIcon-root'])).toBe(
+			fingerprint(['.mui-1vcal46.MuiListItemButton-root:nth-child(1) > .mui-huimn3.MuiListItemIcon-root'])
+		);
+		expect(fingerprint(['.css-1abc2de.MuiBox-root'])).toBe(fingerprint(['.css-9zz8yy.MuiBox-root']));
+		expect(fingerprint(['.PrivateSwitchBase-input.mui-j8yymo'])).toBe('.PrivateSwitchBase-input.mui-*');
+		expect(fingerprint(['.MuiTableCell-alignCenter.avatar > .MuiAvatar-root'])).toBe(
+			'.MuiTableCell-alignCenter.avatar > .MuiAvatar-root'
+		);
+	});
+
+	test('nodes that differ in the element path stay distinct once hashes are removed', () => {
+		const a = fingerprint(['.mui-ybhk9l.MuiListItemButton-root:nth-child(1) > .MuiCheckbox-root']);
+		const b = fingerprint(['.mui-ybhk9l.MuiListItemButton-root:nth-child(2) > .MuiCheckbox-root']);
+		const c = fingerprint(['.mui-ybhk9l.MuiListItemButton-root:nth-child(1) > .MuiSwitch-root']);
+		expect(new Set([a, b, c]).size).toBe(3);
+	});
+
+	test('an allow-listed node still matches when only its generated ids and classes change', () => {
+		const recorded: AllowListEntry = {
+			rule: 'label-content-name-mismatch',
+			screen: 'create project',
+			theme: 'light',
+			nodes: [fingerprint(['.mui-1k0n8m7.MuiCardActionArea-root[aria-labelledby="_r_2o_"]'])]
+		};
+		const next = blockingFindings([
+			violation('label-content-name-mismatch', ['.mui-zz9y8x.MuiCardActionArea-root[aria-labelledby="_r_3c_"]'])
+		]);
+		const { allowed, blocking, stale } = applyAllowList(next, [recorded], 'create project', 'light');
+		expect([allowed.length, blocking.length, stale.length]).toEqual([1, 0, 0]);
+	});
+});
+
 test.describe('allow-list validation', () => {
 	test('accepts a ticketed, in-scope node list', () => {
 		expect(validateAllowList([entry])).toEqual([entry]);

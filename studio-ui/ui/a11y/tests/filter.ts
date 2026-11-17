@@ -35,17 +35,39 @@ export interface StaleNode {
 }
 
 /**
- * Identifies a node by axe's CSS path to it, minus the tokens that change without the markup changing: emotion class
- * hashes (`css-1x2y3z`), the hash in tss-react classes (`tss-1x2y3z-root` keeps `-root`) and React/MUI generated ids
- * (`:r1:`, `«r1»`, `_r_1_`, `mui-12`). What remains is the element path, MUI component classes and authored ids.
+ * A React `useId` or MUI generated id: `:r1:` (React 18, CSS-escaped as `\:r1\:` in an id selector), `«r1»`, `_r_1_`
+ * (React 19) and `mui-12`.
+ */
+const GENERATED_ID = String.raw`(?:\\?:r[a-z0-9]+\\?:|«r[a-z0-9]+»|_r_[a-z0-9]+_|mui-\d+)`;
+
+/** An id selector (`#_r_1_`, `#_r_1_-label`): the token and whatever suffix is derived from it. */
+const ID_SELECTOR = new RegExp(`#${GENERATED_ID}[\\w-]*`, 'g');
+
+/** An attribute selector (`[aria-labelledby="_r_1_ _r_2_"]`, `[for=:r1:]`, `[id='_r_1_']`) and its value. */
+const ATTRIBUTE_SELECTOR = /\[([^\]=\s]+)\s*([~|^$*]?=)\s*(["']?)([^\]]*?)\3\s*\]/g;
+
+/** A generated id inside an attribute value, which may hold several space separated ids. */
+const GENERATED_ID_IN_VALUE = new RegExp(`(?<![\\w-])${GENERATED_ID}[\\w-]*`, 'g');
+
+/**
+ * Identifies a node by axe's CSS path to it, minus the tokens that change without the markup changing: emotion and MUI
+ * class hashes (`.css-1x2y3z`, `.mui-1x2y3z`), the hash in tss-react classes (`tss-1x2y3z-root` keeps `-root`) and
+ * React/MUI generated ids, in id selectors and in any attribute value (`aria-labelledby`, `aria-controls`, `for`, `id`
+ * and so on). What remains is the element path, the stable `Mui*` component classes and authored ids.
  */
 export function fingerprint(target: NodeResult['target']): string {
 	return target
 		.map((part) => (Array.isArray(part) ? part.join(' >>> ') : part))
 		.join(' >>> ')
+		.replace(ID_SELECTOR, '#*')
+		.replace(
+			ATTRIBUTE_SELECTOR,
+			(_match, name, operator, quote, value) =>
+				`[${name}${operator}${quote}${value.replace(GENERATED_ID_IN_VALUE, '*')}${quote}]`
+		)
 		.replace(/\.css-[a-z0-9]+/g, '.css-*')
+		.replace(/\.mui-[a-z0-9]+/g, '.mui-*')
 		.replace(/\.tss-[a-z0-9]+-/g, '.tss-*-')
-		.replace(/#(?:\\:r[a-z0-9]+\\:|«r[a-z0-9]+»|_r_[a-z0-9]+_|mui-\d+)[\w-]*/g, '#*')
 		.trim();
 }
 
