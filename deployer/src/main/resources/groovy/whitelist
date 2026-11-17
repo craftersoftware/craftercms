@@ -302,8 +302,10 @@ method java.lang.Throwable printStackTrace java.io.PrintStream
 method java.lang.Throwable printStackTrace java.io.PrintWriter
 method java.math.BigDecimal multiply java.math.BigDecimal
 method java.math.BigDecimal negate
+method java.math.BigDecimal remainder java.math.BigDecimal
 method java.math.BigInteger negate
 method java.math.BigInteger not
+method java.math.BigInteger remainder java.math.BigInteger
 new java.net.MalformedURLException java.lang.String
 new java.net.URL java.lang.String
 staticMethod java.net.URLDecoder decode java.lang.String java.lang.String
