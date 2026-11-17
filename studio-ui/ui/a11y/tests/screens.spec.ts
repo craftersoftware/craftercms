@@ -16,7 +16,7 @@
 
 import { Locator, Page } from '@playwright/test';
 import { checkA11y } from './axe';
-import { verifyDashboardBaseline } from './baseline';
+import { verifyDashboardBaseline, verifySearchBaseline, verifyUsersBaseline } from './baseline';
 import { expect, test } from './fixtures';
 import { previewPage, project } from './env';
 import { dashboardReady, errorState, panelDestination, ReadyState, settle, siteToolsReady } from './readiness';
@@ -88,6 +88,7 @@ test.describe('Global app', () => {
 	test('users', async ({ page }, testInfo) => {
 		await page.goto('/studio/#/users');
 		await settle(page, 'users', { loaded: page.getByRole('grid').or(page.getByRole('table')).first() });
+		await verifyUsersBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'users');
 	});
 
@@ -118,6 +119,7 @@ test.describe('Project screens', () => {
 	test('search', async ({ page }, testInfo) => {
 		await page.goto('/studio/search');
 		await settle(page, 'search', { loaded: page.getByRole('heading', { name: 'Search', level: 2 }) });
+		await verifySearchBaseline(page.locator('body'), testInfo);
 		await checkA11y(page, testInfo, 'search');
 	});
 });
