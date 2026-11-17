@@ -25,7 +25,9 @@ import {
 	observeUsers,
 	parseTotal,
 	SEARCH_BASELINE,
+	SEARCH_SETTLE,
 	SEARCH_SUBJECT,
+	settleSearch,
 	USERS_BASELINE,
 	USERS_SUBJECT,
 	verifyDashboardBaseline,
@@ -157,6 +159,26 @@ function usersHtml(rows: number, total: number, pager = true) {
 	return `<!doctype html><body><table><thead><tr class="hoverDisabled"><th></th></tr></thead><tbody>${items.join('')}${empty}</tbody></table>${footer}</body>`;
 }
 
+/** Settle options that keep the unit tests quick: a state that holds still for 200ms is final. */
+const fast = { pollMs: 25, stableMs: 200, timeoutMs: 3_000 };
+
+/**
+ * The search results while the index builds: each step is `[delay in ms, cards, total]`, applied by the page itself
+ * from `setTimeout`, the first one at load.
+ */
+function buildingSearchHtml(steps: [number, number, number][]) {
+	return `<!doctype html><body><p></p><div class="MuiGrid-container"></div><script>
+		const grid = document.querySelector('.MuiGrid-container');
+		const pager = document.querySelector('p');
+		for (const [delay, cards, total] of ${JSON.stringify(steps)}) {
+			setTimeout(() => {
+				grid.innerHTML = Array.from({ length: cards }, (_, i) => '<div class="MuiGrid-root MuiGrid-item"><div class="MuiCard-root">Card ' + i + '</div></div>').join('');
+				pager.textContent = '1-' + cards + ' of ' + total + ' results';
+			}, delay);
+		}
+	</script></body>`;
+}
+
 async function open(page: Page, html: string) {
 	await page.route(`${origin}/**`, (route) => route.fulfill({ contentType: 'text/html; charset=utf-8', body: html }));
 	await page.goto(`${origin}/`);
@@ -192,8 +214,10 @@ test.describe('search and users baselines', () => {
 
 	test('search passes on its baseline and fails with a search message on any other state', async ({ page }) => {
 		const { total, rows } = SEARCH_BASELINE;
-		await expect(verifySearchBaseline(await open(page, searchHtml(rows, total)), testInfo)).resolves.toBeUndefined();
-		const failure = verifySearchBaseline(await open(page, searchHtml(rows, total + 1)), testInfo);
+		await expect(
+			verifySearchBaseline(await open(page, searchHtml(rows, total)), testInfo, fast)
+		).resolves.toBeUndefined();
+		const failure = verifySearchBaseline(await open(page, searchHtml(rows, total + 1)), testInfo, fast);
 		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
 		await expect(failure).rejects.toThrow(
 			new RegExp(
@@ -201,7 +225,7 @@ test.describe('search and users baselines', () => {
 			)
 		);
 		await expect(
-			verifySearchBaseline(await open(page, searchHtml(Math.max(rows - 1, 1), total)), testInfo)
+			verifySearchBaseline(await open(page, searchHtml(Math.max(rows - 1, 1), total)), testInfo, fast)
 		).rejects.toThrow(/search results shows/);
 	});
 
@@ -234,7 +258,7 @@ test.describe('search and users baselines', () => {
 		const capturing = {
 			attach: async (name: string, options: { body: string }) => void attached.push(`${name} ${options.body}`)
 		} as unknown as TestInfo;
-		await expect(verifySearchBaseline(await open(page, searchHtml(9, 99)), capturing)).resolves.toBeUndefined();
+		await expect(verifySearchBaseline(await open(page, searchHtml(9, 99)), capturing, fast)).resolves.toBeUndefined();
 		await expect(verifyUsersBaseline(await open(page, usersHtml(3, 3)), capturing)).resolves.toBeUndefined();
 		expect(attached).toEqual([
 			'search baseline observed.json {"total":99,"rows":9}',
@@ -258,5 +282,93 @@ test.describe('search and users baselines', () => {
 			expect(message, subject.screen).toContain('A11Y_CAPTURE=1');
 			expect(message, subject.screen).toContain('captured with 2 (2)');
 		}
+	});
+});
+
+test.describe('search baseline while the index builds', () => {
+	test.afterEach(() => {
+		delete process.env.A11Y_CAPTURE;
+	});
+
+	const { total, rows } = SEARCH_BASELINE;
+
+	test('waits for a total that is still growing to reach the baseline', async ({ page }) => {
+		const scope = await open(
+			page,
+			buildingSearchHtml([
+				[0, 5, 17],
+				[300, 12, 61],
+				[600, rows, total]
+			])
+		);
+		await expect(verifySearchBaseline(scope, testInfo, { ...fast, stableMs: 5_000 })).resolves.toBeUndefined();
+	});
+
+	test('a total that is settled and matches the baseline passes without waiting for the stable interval', async ({
+		page
+	}) => {
+		const scope = await open(page, searchHtml(rows, total));
+		const started = Date.now();
+		await expect(settleSearch(scope, SEARCH_BASELINE, { ...fast, stableMs: 5_000 })).resolves.toEqual({ total, rows });
+		expect(Date.now() - started).toBeLessThan(2_000);
+	});
+
+	test('a total that stops short of the baseline is reported as a baseline mismatch once it held still', async ({
+		page
+	}) => {
+		const scope = await open(
+			page,
+			buildingSearchHtml([
+				[0, 5, 17],
+				[200, 12, 61]
+			])
+		);
+		const failure = verifySearchBaseline(scope, testInfo, fast);
+		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
+		await expect(failure).rejects.toThrow(/not in its baseline state: the search results shows 61 results \(12 cards/);
+	});
+
+	test('a total that keeps changing fails with a message about the index, not with a baseline mismatch', async ({
+		page
+	}) => {
+		const steps: [number, number, number][] = Array.from({ length: 80 }, (_, i) => [i * 50, 10, 10 + i]);
+		const scope = await open(page, buildingSearchHtml(steps));
+		const failure = verifySearchBaseline(scope, testInfo, { pollMs: 25, stableMs: 500, timeoutMs: 1_000 });
+		await expect(failure).rejects.toBeInstanceOf(BaselineStateError);
+		await expect(failure).rejects.toThrow(
+			/did not settle within 1s.*still changing.*expects 103 results, 21 cards.*last showed \d+ results.*search index still building/s
+		);
+	});
+
+	test('an empty or unreadable list is not taken as final, and the timeout says what was seen', async ({ page }) => {
+		const options = { pollMs: 25, stableMs: 100, timeoutMs: 500 };
+		const empty = settleSearch(await open(page, searchHtml(0, 0, false)), SEARCH_BASELINE, options);
+		await expect(empty).rejects.toThrow(/did not settle within 1s.*last showed 0 results/s);
+		const unreadable = settleSearch(await open(page, searchHtml(21, 230, false)), SEARCH_BASELINE, options);
+		await expect(unreadable).rejects.toBeInstanceOf(BaselineStateError);
+		await expect(unreadable).rejects.toThrow(/last read failed: Could not read the total of the search results/);
+	});
+
+	test('capture mode waits for the final total before it reports what it observed', async ({ page }) => {
+		process.env.A11Y_CAPTURE = '1';
+		const attached: string[] = [];
+		const capturing = {
+			attach: async (name: string, options: { body: string }) => void attached.push(`${name} ${options.body}`)
+		} as unknown as TestInfo;
+		const scope = await open(
+			page,
+			buildingSearchHtml([
+				[0, 3, 3],
+				[200, 9, 99]
+			])
+		);
+		await verifySearchBaseline(scope, capturing, { ...fast, stableMs: 600 });
+		expect(attached).toEqual(['search baseline observed.json {"total":99,"rows":9}']);
+	});
+
+	test('the defaults give an index a minute and a few seconds of the same total to be final', () => {
+		expect(SEARCH_SETTLE.timeoutMs).toBeGreaterThanOrEqual(30_000);
+		expect(SEARCH_SETTLE.stableMs).toBeGreaterThan(SEARCH_SETTLE.pollMs * 2);
+		expect(SEARCH_SETTLE.stableMs).toBeLessThan(SEARCH_SETTLE.timeoutMs);
 	});
 });

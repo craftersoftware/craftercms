@@ -70,7 +70,12 @@ A node fingerprint is axe's CSS path to the node followed by a normalised copy o
 are dropped from the path and the tag, React/MUI generated ids (`_r_1_`, `:r1:`) become `*` in id selectors, in whole
 tokens of id reference attributes such as `[aria-labelledby]` and in an anchor's `#fragment` (other attribute values
 are kept), and the tag keeps only its name, `role`, sorted authored classes (`Mui*` and project classes) and, for an
-`<a>`, its `href`. `.mui-fixed` is a stable MUI marker, not a hash, so it is kept. The start tag is what identifies a
+`<a>`, its `href`. `.mui-fixed` is a stable MUI marker, not a hash, so it is kept. Transient interaction state classes
+(`Mui-focusVisible`, `Mui-focused`, `Mui-active`, and component scoped ones such as `MuiButton-focusVisible`) are
+dropped from the path and the tag, because they follow whatever the run focused last (an Escape in a panel test leaves
+`Mui-focusVisible` on an element) and would make the same node look new and stale at once. Deterministic state classes
+(`Mui-checked`, `Mui-selected`, `Mui-expanded`, `Mui-disabled`) come from props and data, so they are kept: the two
+`Mui-checked` entries of the edit mode Settings switch stay as captured. The start tag is what identifies a
 node when the path alone is positional (`.mui-*:nth-child(8)`), so a reordered list does not silently allow a different
 node. Each fingerprint allows exactly one node. So:
 
@@ -152,6 +157,13 @@ the Website Editorial blueprint (and remove extra users), or recapture.
 Limits: the guards compare counts, not content. The Users guard does not check usernames or avatars, and the Search
 guard does not check which items are listed. Other screens (site tools, preview pages) have no content-dependent
 entries.
+
+The Search guard waits for the results to settle before it compares them, because a project created moments ago keeps
+adding results while its search index builds. It reads the pager every 500ms and passes as soon as the total and card
+count match `SEARCH_BASELINE`. A state that differs but shows the same non-empty total for 5s is taken as final and
+reported as a baseline mismatch. If the total is still changing, empty or unreadable after 60s, it fails with "the
+search results did not settle" and the last state it saw: wait for the index to finish and run again. The intervals are
+`SEARCH_SETTLE` in `tests/baseline.ts`. The dashboard and Users guards read once.
 
 A capture (`A11Y_CAPTURE=1`) skips the guards, since a recapture is how the baseline changes. It logs `<Screen>
 baseline observed: total=N rows=M` (and attaches it to the report): set the constants to those values in the same

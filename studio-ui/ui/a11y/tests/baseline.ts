@@ -38,7 +38,7 @@ export const DASHBOARD_BASELINE: ListingState = { total: 228, rows: 50 };
  * State of the search results the allow-list baseline was captured in: the first page (21 cards) of the unfiltered
  * search of a freshly created Website Editorial project. The search entries are keyed by card position, and which cards
  * fail depends on the items behind them, so they only hold while the results look like this. The total also moves while
- * the search index is still being built.
+ * the search index is still being built, which `settleSearch` waits out before the guard compares it.
  */
 export const SEARCH_BASELINE: ListingState = { total: 103, rows: 21 };
 
@@ -221,9 +221,86 @@ export async function verifyDashboardBaseline(scope: Locator, testInfo: TestInfo
 	await verifyBaseline(await observeDashlet(scope), DASHBOARD_SUBJECT, testInfo);
 }
 
-/** Checks the first page of the unfiltered search results against their baseline. */
-export async function verifySearchBaseline(scope: Locator, testInfo: TestInfo) {
-	await verifyBaseline(await observeSearch(scope), SEARCH_SUBJECT, testInfo);
+/** How long `settleSearch` polls the search results, and when it stops waiting. */
+export interface SettleOptions {
+	/** Delay between two reads of the results. */
+	pollMs?: number;
+	/** How long the same non-empty state has to hold before it is taken as the final one. */
+	stableMs?: number;
+	/** Total time to wait for the results to match the baseline or hold still. */
+	timeoutMs?: number;
+}
+
+export const SEARCH_SETTLE: Required<SettleOptions> = { pollMs: 500, stableMs: 5_000, timeoutMs: 60_000 };
+
+/**
+ * Reads the search results until they are final: they match `baseline`, or show the same non-empty state for
+ * `stableMs`. A project created moments ago keeps adding results while its search index builds, so a single read
+ * compares a total that is still moving with the baseline and fails a run that would pass a minute later. A state that
+ * holds still but differs from the baseline is returned too, for `verifyBaseline` to report: that one is a project that
+ * is not in its baseline state, not an index that is still building.
+ *
+ * An empty or unreadable list never counts as final (the index may have nothing to show yet, or the pager may not have
+ * rendered), and neither does a state that keeps changing: after `timeoutMs` it throws a `BaselineStateError` naming
+ * what was last seen.
+ */
+export async function settleSearch(
+	scope: Locator,
+	baseline: ListingState = SEARCH_BASELINE,
+	options: SettleOptions = {}
+): Promise<ListingState> {
+	const { pollMs, stableMs, timeoutMs } = { ...SEARCH_SETTLE, ...options };
+	const started = Date.now();
+	let last: ListingState | null = null;
+	let since = started;
+	let changes = 0;
+	let unreadable: BaselineStateError | null = null;
+	for (;;) {
+		let observed: ListingState | null = null;
+		try {
+			observed = await observeSearch(scope);
+			unreadable = null;
+		} catch (error) {
+			if (!(error instanceof BaselineStateError)) throw error;
+			unreadable = error;
+		}
+		const now = Date.now();
+		if (observed) {
+			if (observed.total === baseline.total && observed.rows === baseline.rows) return observed;
+			if (!last || last.total !== observed.total || last.rows !== observed.rows) {
+				if (last) changes++;
+				last = observed;
+				since = now;
+			} else if (observed.total > 0 && now - since >= stableMs) {
+				return observed;
+			}
+		} else {
+			last = null;
+			since = now;
+		}
+		const remaining = started + timeoutMs - now;
+		if (remaining <= 0) {
+			const seen = unreadable
+				? `Its last read failed: ${unreadable.message}`
+				: last
+					? `It last showed ${last.total} results (${last.rows} cards on its first page) after changing ${changes} time${changes === 1 ? '' : 's'}.`
+					: 'It showed nothing.';
+			throw new BaselineStateError(
+				`The search results did not settle within ${Math.round(timeoutMs / 1000)}s: the total was still changing, empty or unreadable ` +
+					`(the baseline expects ${baseline.total} results, ${baseline.rows} cards). ${seen} A project created moments ago has ` +
+					`its search index still building: wait for it to finish and run the suite again.`
+			);
+		}
+		await new Promise((resolve) => setTimeout(resolve, Math.min(pollMs, remaining)));
+	}
+}
+
+/**
+ * Checks the first page of the unfiltered search results against their baseline, once they have settled (see
+ * `settleSearch`).
+ */
+export async function verifySearchBaseline(scope: Locator, testInfo: TestInfo, options?: SettleOptions) {
+	await verifyBaseline(await settleSearch(scope, SEARCH_BASELINE, options), SEARCH_SUBJECT, testInfo);
 }
 
 /** Checks the Users grid against its baseline. */
