@@ -46,24 +46,41 @@ const ID_SELECTOR = new RegExp(`#${GENERATED_ID}[\\w-]*`, 'g');
 /** An attribute selector (`[aria-labelledby="_r_1_ _r_2_"]`, `[for=:r1:]`, `[id='_r_1_']`) and its value. */
 const ATTRIBUTE_SELECTOR = /\[([^\]=\s]+)\s*([~|^$*]?=)\s*(["']?)([^\]]*?)\3\s*\]/g;
 
-/** A generated id inside an attribute value, which may hold several space separated ids. */
-const GENERATED_ID_IN_VALUE = new RegExp(`(?<![\\w-])${GENERATED_ID}[\\w-]*`, 'g');
+/** Attributes whose value is an id or a list of ids; other values (`href`, `aria-label`, `data-*`) are kept. */
+const ID_REFERENCE_ATTRIBUTES = new Set([
+	'id',
+	'for',
+	'form',
+	'headers',
+	'list',
+	'aria-activedescendant',
+	'aria-controls',
+	'aria-describedby',
+	'aria-details',
+	'aria-errormessage',
+	'aria-flowto',
+	'aria-labelledby',
+	'aria-owns'
+]);
+
+/** A generated id as a whole token of an id reference value, which may hold several space separated ids. */
+const GENERATED_ID_IN_VALUE = new RegExp(`(?<!\\S)${GENERATED_ID}[\\w-]*(?!\\S)`, 'g');
 
 /**
  * Identifies a node by axe's CSS path to it, minus the tokens that change without the markup changing: emotion and MUI
  * class hashes (`.css-1x2y3z`, `.mui-1x2y3z`), the hash in tss-react classes (`tss-1x2y3z-root` keeps `-root`) and
- * React/MUI generated ids, in id selectors and in any attribute value (`aria-labelledby`, `aria-controls`, `for`, `id`
- * and so on). What remains is the element path, the stable `Mui*` component classes and authored ids.
+ * React/MUI generated ids, in id selectors and as whole tokens of id reference attributes (`aria-labelledby`,
+ * `aria-controls`, `for`, `id` and so on). What remains is the element path, the stable `Mui*` component classes and authored ids.
  */
 export function fingerprint(target: NodeResult['target']): string {
 	return target
 		.map((part) => (Array.isArray(part) ? part.join(' >>> ') : part))
 		.join(' >>> ')
 		.replace(ID_SELECTOR, '#*')
-		.replace(
-			ATTRIBUTE_SELECTOR,
-			(_match, name, operator, quote, value) =>
-				`[${name}${operator}${quote}${value.replace(GENERATED_ID_IN_VALUE, '*')}${quote}]`
+		.replace(ATTRIBUTE_SELECTOR, (match, name, operator, quote, value) =>
+			ID_REFERENCE_ATTRIBUTES.has(name)
+				? `[${name}${operator}${quote}${value.replace(GENERATED_ID_IN_VALUE, '*')}${quote}]`
+				: match
 		)
 		.replace(/\.css-[a-z0-9]+/g, '.css-*')
 		.replace(/\.mui-[a-z0-9]+/g, '.mui-*')

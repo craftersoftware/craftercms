@@ -60,8 +60,9 @@ Known exceptions are node-level and ticketed:
   ticket must list the screen and theme, and every entry names at least one node.
 
 A node fingerprint is axe's CSS path to the node, with emotion and MUI class hashes (`.css-*`, `.mui-*`), tss-react
-hashes and React/MUI generated ids (`_r_1_`, `:r1:`) normalised away (`filter.ts`), in id selectors and in attribute
-values such as `[aria-labelledby]`. Stable `Mui*` component classes stay. Each fingerprint allows exactly one node. So:
+hashes and React/MUI generated ids (`_r_1_`, `:r1:`) normalised away (`filter.ts`), in id selectors and as whole
+tokens of id reference attributes such as `[aria-labelledby]` (other attribute values are kept). Stable `Mui*` component
+classes stay. Each fingerprint allows exactly one node. So:
 
 - a new failure of an allow-listed rule on the same screen and theme fails the run;
 - an allowed node that no longer fails is reported as **stale** and fails the run: delete it in the PR that fixed it;

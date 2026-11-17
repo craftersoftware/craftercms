@@ -73,11 +73,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		criterion: '4.1.2 Name, Role, Value',
 		scope: { search: both, 'edit mode tools panel > Settings': both }
 	},
-	'button-name': {
-		ticket: 'craftersoftware/craftercms-e#1451',
-		criterion: '4.1.2 Name, Role, Value',
-		scope: { 'edit form': both, preview: light }
-	},
 	'color-contrast': {
 		ticket: 'craftersoftware/craftercms-e#1452',
 		criterion: '1.4.3 Contrast (Minimum)',
@@ -96,14 +91,13 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'link-in-text-block': {
 		ticket: 'craftersoftware/craftercms-e#1454',
 		criterion: '1.4.1 Use of Color',
-		scope: { 'create project': light, projects: light, 'site tools': light, users: light }
+		scope: { projects: light, 'site tools': light, users: light }
 	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
 		scope: {
 			dashboard: both,
-			'edit form': both,
 			'tools panel > Dashboard': both,
 			'edit mode tools panel > Settings': both
 		}
@@ -121,7 +115,7 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'nested-interactive': {
 		ticket: 'craftersoftware/craftercms-e#1457',
 		criterion: '2.1.1 Keyboard',
-		scope: { dashboard: both, 'edit form': both, 'tools panel > Dashboard': both }
+		scope: { dashboard: both, 'tools panel > Dashboard': both }
 	},
 	'label-content-name-mismatch': {
 		ticket: 'craftersoftware/craftercms-e#1458',

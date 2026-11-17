@@ -123,6 +123,25 @@ test.describe('fingerprint normalisation', () => {
 		expect(fingerprint(['input[id="_r_1_"]'])).not.toBe(fingerprint(['input[id="username"]']));
 	});
 
+	test('generated-id-shaped text in an attribute that is not an id reference is kept', () => {
+		expect(fingerprint(['a[href="mui-2-guide"]'])).toBe('a[href="mui-2-guide"]');
+		expect(fingerprint(['button[aria-label="Step mui-3"]'])).toBe('button[aria-label="Step mui-3"]');
+		expect(fingerprint(['button[aria-label=_r_1_]'])).toBe('button[aria-label=_r_1_]');
+		expect(fingerprint(['div[title="_r_1_"]'])).toBe('div[title="_r_1_"]');
+		expect(fingerprint(['input[value=":r1:"]'])).toBe('input[value=":r1:"]');
+		expect(fingerprint(['div[data-target="_r_1_ _r_2_"]'])).toBe('div[data-target="_r_1_ _r_2_"]');
+		expect(fingerprint(['a[href="#_r_1_"]'])).toBe('a[href="#*"]');
+	});
+
+	test('a partial token match inside an id reference attribute is kept', () => {
+		expect(fingerprint(['div[aria-labelledby="prefix_r_1_"]'])).toBe('div[aria-labelledby="prefix_r_1_"]');
+		expect(fingerprint(['div[aria-labelledby="_r_1_!"]'])).toBe('div[aria-labelledby="_r_1_!"]');
+		expect(fingerprint(['div[aria-controls="Step mui-3,"]'])).toBe('div[aria-controls="Step mui-3,"]');
+		expect(fingerprint(['label[for="x:r1:"]'])).toBe('label[for="x:r1:"]');
+		expect(fingerprint(['div[aria-labelledby="_r_1_ title_r_2_"]'])).toBe('div[aria-labelledby="* title_r_2_"]');
+		expect(fingerprint(['div[aria-labelledby="_r_1_.suffix"]'])).toBe('div[aria-labelledby="_r_1_.suffix"]');
+	});
+
 	test('emotion and MUI generated classes do not change the fingerprint, Mui component classes do', () => {
 		expect(fingerprint(['.mui-1k0n8m7.MuiCardActionArea-root'])).toBe('.mui-*.MuiCardActionArea-root');
 		expect(fingerprint(['.mui-ybhk9l.MuiListItemButton-root:nth-child(1) > .mui-o5ytqa.MuiListItemIcon-root'])).toBe(
@@ -181,6 +200,22 @@ test.describe('allow-list validation', () => {
 				{ rule: 'nested-interactive', screen: 'edit mode tools panel > Settings', theme: 'light', nodes: node }
 			])
 		).toThrow(/does not list/);
+	});
+
+	test('no longer lists screens the baseline found clean', () => {
+		const node = ['x'];
+		expect(() =>
+			validateAllowList([{ rule: 'button-name', screen: 'edit form', theme: 'light', nodes: node }])
+		).toThrow(/no umbrella ticket/);
+		for (const [rule, screen] of [
+			['link-in-text-block', 'create project'],
+			['list', 'edit form'],
+			['nested-interactive', 'edit form']
+		]) {
+			expect(() => validateAllowList([{ rule, screen, theme: 'light', nodes: node }]), `${rule} on ${screen}`).toThrow(
+				/does not list/
+			);
+		}
 	});
 
 	test('rejects a rule with no umbrella ticket', () => {
