@@ -76,7 +76,7 @@ const messages = defineMessages({
 	},
 	enableStaging: {
 		id: 'createSiteDialog.enableStaging',
-		defaultMessage: 'Enable staging'
+		defaultMessage: 'Enable Staging'
 	},
 	yes: {
 		id: 'words.yes',

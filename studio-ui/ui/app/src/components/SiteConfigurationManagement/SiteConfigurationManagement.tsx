@@ -1130,7 +1130,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						</>
 					)
 				}
-				okButtonText={<FormattedMessage defaultMessage="Enable staging" />}
+				okButtonText={<FormattedMessage defaultMessage="Enable Staging" />}
 				disableOkButton={!enableStagingConfirm.checked || enableStagingConfirm.submitting}
 				disableCancelButton={enableStagingConfirm.submitting}
 				onOk={onConfirmEnableStaging}
@@ -1168,7 +1168,8 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 										<Link
 											href="https://craftercms.com/docs/current/by-role/common/staging.html"
 											underline="hover"
-											onClick={(e) => e.preventDefault()}
+											target="_blank"
+											rel="noopener noreferrer"
 										>
 											{msg}
 										</Link>

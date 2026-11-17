@@ -422,7 +422,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 									</Typography>
 									<Typography variant="body2" gutterBottom>
 										<span>
-											<FormattedMessage defaultMessage="Enable staging" />:{' '}
+											<FormattedMessage defaultMessage="Enable Staging" />:{' '}
 										</span>
 										{site.enableStaging ? (
 											<FormattedMessage defaultMessage="Yes" />
