@@ -162,6 +162,27 @@ test.describe('allow-list validation', () => {
 		expect(validateAllowList([entry])).toEqual([entry]);
 	});
 
+	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
+		const node = ['x'];
+		const scoped = [
+			...['aria-input-field-name', 'label', 'list', 'nested-interactive'].map((rule) => ({
+				rule,
+				screen: 'tools panel > Dashboard'
+			})),
+			{ rule: 'aria-input-field-name', screen: 'edit mode tools panel > Existing Content' },
+			...['aria-prohibited-attr', 'label', 'list'].map((rule) => ({ rule, screen: 'edit mode tools panel > Settings' }))
+		];
+		for (const theme of ['light', 'dark'] as const) {
+			const entries = scoped.map((scope) => ({ ...scope, theme, nodes: node }));
+			expect(validateAllowList(entries)).toHaveLength(scoped.length);
+		}
+		expect(() =>
+			validateAllowList([
+				{ rule: 'nested-interactive', screen: 'edit mode tools panel > Settings', theme: 'light', nodes: node }
+			])
+		).toThrow(/does not list/);
+	});
+
 	test('rejects a rule with no umbrella ticket', () => {
 		expect(() => validateAllowList([{ ...entry, rule: 'aria-required-parent' }])).toThrow(/no umbrella ticket/);
 	});

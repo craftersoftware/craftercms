@@ -61,12 +61,17 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'aria-input-field-name': {
 		ticket: 'craftersoftware/craftercms-e#1449',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { dashboard: both, search: both }
+		scope: {
+			dashboard: both,
+			search: both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Existing Content': both
+		}
 	},
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { search: both }
+		scope: { search: both, 'edit mode tools panel > Settings': both }
 	},
 	'button-name': {
 		ticket: 'craftersoftware/craftercms-e#1451',
@@ -81,7 +86,12 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: { dashboard: both, search: both }
+		scope: {
+			dashboard: both,
+			search: both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Settings': both
+		}
 	},
 	'link-in-text-block': {
 		ticket: 'craftersoftware/craftercms-e#1454',
@@ -91,7 +101,12 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
-		scope: { dashboard: both, 'edit form': both }
+		scope: {
+			dashboard: both,
+			'edit form': both,
+			'tools panel > Dashboard': both,
+			'edit mode tools panel > Settings': both
+		}
 	},
 	listitem: {
 		ticket: 'craftersoftware/craftercms-e#1456',
@@ -106,7 +121,7 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'nested-interactive': {
 		ticket: 'craftersoftware/craftercms-e#1457',
 		criterion: '2.1.1 Keyboard',
-		scope: { dashboard: both, 'edit form': both }
+		scope: { dashboard: both, 'edit form': both, 'tools panel > Dashboard': both }
 	},
 	'label-content-name-mismatch': {
 		ticket: 'craftersoftware/craftercms-e#1458',
