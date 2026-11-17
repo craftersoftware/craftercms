@@ -32,6 +32,7 @@ const {
 	createFormsEngineAtoms,
 	createFormStackData,
 	readInvalidFieldIds,
+	newItemFileName,
 	setFieldAtoms,
 	withPathFileName
 } = await import('./formUtils.tsx');
@@ -310,9 +311,10 @@ describe('rollback of an untouched page whose xml file-name differs from the pat
 		assert.equal(store.get(atoms.valueByFieldId['file-name']), 'row-name');
 	});
 
-	it('normalizes a create form to a blank name', () => {
-		const values = { 'file-name': 'default-name' };
-		assert.deepEqual(withPathFileName(values, { fileName: atom('') }, ''), { 'file-name': '' });
+	it('keeps a create form file-name default instead of blanking it', () => {
+		const values = { 'file-name': 'crafter-level-descriptor.level' };
+		assert.equal(withPathFileName(values, { fileName: atom('') }, ''), values);
+		assert.deepEqual(withPathFileName({ 'file-name': '' }, { fileName: atom('') }, ''), { 'file-name': '' });
 	});
 
 	it('returns values with no file-name, or no file-name atom, as they are', () => {
@@ -320,5 +322,59 @@ describe('rollback of an untouched page whose xml file-name differs from the pat
 		assert.equal(withPathFileName(values, { fileName: atom('') }, aboutPath), values);
 		const withName = { 'file-name': 'x' };
 		assert.equal(withPathFileName(withName, {} as never, aboutPath), withName);
+	});
+});
+
+describe('a new item whose type defines a file-name default', () => {
+	const levelDefault = 'crafter-level-descriptor.level';
+	const fileNameField = {
+		id: 'file-name',
+		name: 'File Name',
+		type: 'file-name',
+		defaultValue: levelDefault,
+		validations: {}
+	} as ContentTypeField;
+
+	function openCreate(defaultValue: string | undefined, storedValue: unknown) {
+		const formContextRef = { current: createFormStackData() };
+		const contentType = {
+			id: '/component/level-descriptor',
+			name: 'Section Defaults',
+			fields: { 'file-name': { ...fileNameField, defaultValue } }
+		} as never;
+		const atoms = createFormsEngineAtoms('author', {
+			lockResult: atom({ locked: false, lockError: null, affectedPackages: null }),
+			readonly: atom(false),
+			fileName: createFileNameAtom('', formContextRef, newItemFileName(contentType))
+		});
+		formContextRef.current.atoms = atoms;
+		formContextRef.current.itemMeta = { path: null, pathInSite: '/site/website/articles/pilot-section' } as never;
+		setFieldAtoms(
+			formContextRef,
+			contentType,
+			contentType.fields,
+			'file-name',
+			atoms,
+			storedValue,
+			undefined,
+			false,
+			''
+		);
+		return { atoms, store: createStore() };
+	}
+
+	it('opens the dedicated file-name atom and the field atom on that default', () => {
+		assert.equal(newItemFileName({ fields: { 'file-name': fileNameField } }), levelDefault);
+		assert.equal(newItemFileName({ fields: { 'file-name': { ...fileNameField, defaultValue: '' } } }), undefined);
+		assert.equal(newItemFileName(null), undefined);
+		const form = openCreate(levelDefault, levelDefault);
+		assert.equal(form.store.get(form.atoms.fileName), levelDefault);
+		assert.equal(form.store.get(form.atoms.valueByFieldId['file-name']), levelDefault);
+	});
+
+	it('stays blank when the type has no file-name default', () => {
+		const form = openCreate(undefined, 'xml value');
+		assert.equal(form.store.get(form.atoms.fileName), '');
+		assert.equal(form.store.get(form.atoms.valueByFieldId['file-name']), '');
 	});
 });
