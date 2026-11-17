@@ -269,7 +269,7 @@ export function SiteManagement() {
 							currentView={currentView}
 							onPublishButtonClick={onPublishButtonClick}
 							onDuplicateSiteClick={permissionsLookup['duplicate_site'] && onDuplicateSiteClick}
-							onConfigurationClick={onConfigurationClick}
+							onConfigurationClick={permissionsLookup['edit_site'] && onConfigurationClick}
 							disabledSitesLookup={disabledSitesLookup}
 						/>
 					) : (

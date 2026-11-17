@@ -119,9 +119,18 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 	const { formatMessage } = useIntl();
 	const [environment, setEnvironment] = useState<string>();
 	const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
-	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() =>
-		selectedConfigFileId ? null : (JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null)
-	);
+	const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(() => {
+		const sessionFile = JSON.parse(sessionStorage.getItem(sessionStorageKey))?.selectedConfigFile ?? null;
+		if (!sessionFile) {
+			return null;
+		}
+		// Use the session file when opening the tool normally, or when it is the same file as selectedConfigFileId.
+		// If selectedConfigFileId points at a different file, skip restore here so sessionStorage stays available later.
+		if (!selectedConfigFileId || sessionFile.id === selectedConfigFileId) {
+			return sessionFile;
+		}
+		return null;
+	});
 	const [changesRecoveredOnMount] = useState<boolean>(() => selectedConfigFile !== null);
 	const ignoreEnv = selectedConfigFile?.path === 'site-policy-config.xml';
 	const [selectedConfigFileXml, setSelectedConfigFileXml] = useState(null);
@@ -251,14 +260,15 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 		if (selectedConfigFile && environment) {
 			setConfigError(null);
 			const sessionData = JSON.parse(sessionStorage.getItem(sessionStorageKey));
-			if (sessionData?.content) {
+			const sessionMatchesSelection = sessionData?.selectedConfigFile?.id === selectedConfigFile.id;
+			if (sessionMatchesSelection && sessionData?.content) {
 				setSelectedConfigFileXml(sessionData.content);
 				setContentSize(sessionData.content.length);
 				setDisabledSaveButton(false);
 				sessionStorage.removeItem(sessionStorageKey);
 				setLoadingXml(false);
 			} else {
-				fetchConfigurationXML(
+				const subscription = fetchConfigurationXML(
 					site,
 					selectedConfigFile.path,
 					selectedConfigFile.module,
@@ -278,6 +288,7 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 						setLoadingXml(false);
 					}
 				});
+				return () => subscription.unsubscribe();
 			}
 		}
 	}, [selectedConfigFile, environment, site, ignoreEnv, refs, sessionStorageKey]);
@@ -1093,10 +1104,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 							<Box component="ul" sx={{ mt: 2, pl: 1, textAlign: 'left', listStylePosition: 'inside' }}>
 								<Typography>
 									<li>
-										<FormattedMessage defaultMessage="A published project copies its staging branch and blob-store assets from live." />
+										<FormattedMessage defaultMessage="If the project is already published, live content and assets are copied into staging first. On large projects this can take several minutes and use additional storage." />
 									</li>
 									<li>
-										<FormattedMessage defaultMessage="Serverless delivery provisions a staging target and cloud storage." />
+										<FormattedMessage defaultMessage="With serverless delivery, a staging target and cloud storage are also provisioned." />
 									</li>
 									<li>
 										<FormattedMessage defaultMessage="Removing staging later means recreating the project." />
@@ -1154,7 +1165,11 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
 								defaultMessage="For more details, see the <a>staging documentation</a>."
 								values={{
 									a: (msg) => (
-										<Link href="#" underline="hover" onClick={(e) => e.preventDefault()}>
+										<Link
+											href="https://craftercms.com/docs/current/by-role/common/staging.html"
+											underline="hover"
+											onClick={(e) => e.preventDefault()}
+										>
 											{msg}
 										</Link>
 									)
