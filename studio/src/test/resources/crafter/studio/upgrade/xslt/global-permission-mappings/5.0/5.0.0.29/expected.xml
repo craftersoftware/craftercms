@@ -35,6 +35,7 @@
 		<rule regex="/site/.*">
 			<allowed-permissions>
 				<permission>content_write</permission>
+				<permission>content_move</permission>
 			</allowed-permissions>
 		</rule>
 	</role>

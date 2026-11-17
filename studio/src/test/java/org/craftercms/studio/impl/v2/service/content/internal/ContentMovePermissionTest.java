@@ -82,7 +82,7 @@ import static org.mockito.Mockito.when;
 public class ContentMovePermissionTest {
 
 	private static final String SITE = "ed";
-	private static final String AUTHOR_SCOPE = "/site/website/.*|/site/components(/.*)?|/static-assets(/.*)?";
+	private static final String AUTHOR_SCOPE = "/site/website(/.*)?|/site/components(/.*)?|/static-assets(/.*)?";
 	private static final Set<String> AUTHOR_ACTIONS = Set.of(
 			PERMISSION_CONTENT_WRITE, "folder_create", "content_copy", PERMISSION_CONTENT_MOVE);
 	private static final String ABOUT = "/site/website/about/index.xml";
@@ -234,6 +234,16 @@ public class ContentMovePermissionTest {
 
 		assertThrows(ActionDeniedException.class,
 				() -> service.move(SITE, "/site/website/section", "/site/website/archive/section"));
+		assertEquals(List.of("/site/website/section"), only(PERMISSION_CONTENT_MOVE).paths());
+		assertEquals(List.of("/site/website/archive/section"), only(PERMISSION_CONTENT_WRITE).paths());
+	}
+
+	@Test
+	public void moveAndUpdateIsDeniedWithoutContentWriteOnTheTarget() {
+		role = Role.MOVER;
+
+		assertThrows(ActionDeniedException.class, () -> service.moveAndUpdate(SITE, "/site/website/section",
+				"/site/website/archive/section", "<page/>"));
 		assertEquals(List.of("/site/website/section"), only(PERMISSION_CONTENT_MOVE).paths());
 		assertEquals(List.of("/site/website/archive/section"), only(PERMISSION_CONTENT_WRITE).paths());
 	}

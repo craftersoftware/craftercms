@@ -685,7 +685,7 @@ public class XsltTest {
 
 	/**
 	 * content_create is removed. A rule that already grants content_write drops it. A rule that only had
-	 * content_create is rewritten to content_write. Rules without content_create are left alone.
+	 * content_create is rewritten to content_write + content_move. Rules without content_create are left alone.
 	 * The harness runs the template twice.
 	 */
 	public static Object[][] contentCreatePermissionTestData() {

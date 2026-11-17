@@ -92,7 +92,11 @@ export interface UseSaveFormProps {
 const wrapOnSaveProp: (onSaveProp: FormsEngineProps['onSave']) => FormsEngineProps['onSave'] = (onSaveProp) => (args) =>
 	onSaveProp?.(args) ?? Promise.resolve({ close: false });
 
-/** move_and_update answers HTTP 403 with the generic "Unauthorized" body. */
+/**
+ * move_and_update answers HTTP 403 with ApiResponse.UNAUTHORIZED (code 2001, message "Unauthorized").
+ * The denied action stays on the server exception and is not in the body, so content_move and content_write
+ * look the same to the form.
+ */
 function isMoveAndUpdateForbidden(error: unknown): boolean {
 	if (typeof error !== 'object' || error === null) {
 		return false;
@@ -557,11 +561,15 @@ export function useSaveForm(props: UseSaveFormProps) {
 						}
 					},
 					error: (error) => {
-						// move_and_update 403 is Unauthorized with no path. Name the target the user tried to move to.
+						// A 403 does not say whether content_move or content_write was denied. Name both, and the
+						// path the user tried to save to. The body does not include it.
 						if (isRename && isMoveAndUpdateForbidden(error)) {
 							showSaveError(
 								error,
-								formatMessage({ defaultMessage: 'You don\'t have permission to move this item to "{path}".' }, { path })
+								formatMessage(
+									{ defaultMessage: 'You don\'t have permission to rename or move this item to "{path}".' },
+									{ path }
+								)
 							);
 							return;
 						}
