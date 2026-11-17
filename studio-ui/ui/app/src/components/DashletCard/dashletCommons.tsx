@@ -51,7 +51,7 @@ import { generatePackageOptions, packageActionDispatcher } from '../../utils/pac
 import { LIVE_COLOUR, STAGING_COLOUR } from '../ItemPublishingTargetIcon/styles';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import useLocale from '../../hooks/useLocale';
-import { useTheme } from '@mui/material/styles';
+import { Theme, useTheme } from '@mui/material/styles';
 import { fetchPackage } from '../../services/publishing';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import { pushErrorDialog } from '../../utils/system';
@@ -208,6 +208,18 @@ export function Pager(props: {
 		</>
 	);
 }
+
+/**
+ * Styles for a dashlet row that selects itself when clicked. The row is not a button: the checkbox inside it is the
+ * keyboard (and assistive technology) way to select, so the click is a pointer convenience. Making the row a button
+ * would nest the checkbox and the row's other controls inside it (axe `nested-interactive`).
+ */
+export const dashletSelectableRowSx: SxProps<Theme> = {
+	pt: 0,
+	pb: 0,
+	cursor: 'pointer',
+	'&:hover': { bgcolor: 'action.hover' }
+};
 
 export function DashletItemOptions(props: { path: string; iconButtonProps?: IconButtonProps }) {
 	const { path, iconButtonProps } = props;

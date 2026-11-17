@@ -70,7 +70,7 @@ const origin = 'https://studio.test';
 
 /** The Unpublished Work dashlet the way it renders: a card with its rows and the pager's "1-n of total" text. */
 function dashletHtml(rows: number, total: number, pager = true) {
-	const items = Array.from({ length: rows }, (_, i) => `<li><div class="MuiListItemButton-root">Item ${i}</div></li>`);
+	const items = Array.from({ length: rows }, (_, i) => `<li class="MuiListItem-root">Item ${i}</li>`);
 	const footer = total && pager ? `<div><p>1-${rows} of ${total}</p></div>` : '';
 	const empty = total ? '' : '<p>There are no unpublished items</p>';
 	return `<!doctype html><body><div class="MuiCard-root"><h2>Unpublished Work</h2><ul>${items.join('')}</ul>${empty}${footer}</div></body>`;

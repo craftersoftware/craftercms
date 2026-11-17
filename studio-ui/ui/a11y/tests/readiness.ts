@@ -88,7 +88,7 @@ export const unpublishedDashlet = (scope: Locator) =>
 export function dashboardReady(scope: Locator): ReadyState {
 	const dashlet = unpublishedDashlet(scope);
 	return {
-		loaded: dashlet.locator('ul .MuiListItemButton-root'),
+		loaded: dashlet.locator('ul .MuiListItem-root'),
 		empty: dashlet.getByText('There are no unpublished items', { exact: true }),
 		error: errorState(dashlet)
 	};
