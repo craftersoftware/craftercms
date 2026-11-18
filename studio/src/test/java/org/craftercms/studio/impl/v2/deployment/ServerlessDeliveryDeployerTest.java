@@ -47,6 +47,7 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -104,7 +105,7 @@ public class ServerlessDeliveryDeployerTest {
 	public void createStagingTargetSkippedWhenServerlessDisabled() {
 		when(studioConfiguration.getProperty(SERVERLESS_DELIVERY_ENABLED, Boolean.class, false)).thenReturn(false);
 
-		deployer.createStagingTarget(SITE);
+		assertFalse(deployer.createStagingTarget(SITE));
 
 		verify(restTemplate, never()).exchange(any(), eq(Map.class));
 	}
@@ -112,7 +113,7 @@ public class ServerlessDeliveryDeployerTest {
 	@Test
 	@SuppressWarnings("unchecked")
 	public void createStagingTargetUsesStagingBranchAndSiteName() {
-		deployer.createStagingTarget(SITE);
+		assertTrue(deployer.createStagingTarget(SITE));
 
 		ArgumentCaptor<RequestEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(RequestEntity.class);
 		verify(restTemplate).exchange(captor.capture(), eq(Map.class));
@@ -158,7 +159,7 @@ public class ServerlessDeliveryDeployerTest {
 		when(restTemplate.exchange(any(), eq(Map.class)))
 			.thenThrow(new RestServiceException(HttpStatus.CONFLICT, "Target already exists"));
 
-		deployer.createStagingTarget(SITE);
+		assertFalse(deployer.createStagingTarget(SITE));
 
 		verify(restTemplate).exchange(any(), eq(Map.class));
 	}
@@ -169,7 +170,7 @@ public class ServerlessDeliveryDeployerTest {
 			.thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "Target already exists",
 				HttpHeaders.EMPTY, new byte[0], null));
 
-		deployer.createStagingTarget(SITE);
+		assertFalse(deployer.createStagingTarget(SITE));
 
 		verify(restTemplate).exchange(any(), eq(Map.class));
 	}
@@ -265,6 +266,36 @@ public class ServerlessDeliveryDeployerTest {
 		RestClientException error = assertThrows(RestClientException.class, () -> deployer.deleteTargets(SITE));
 
 		assertEquals(deployerError, error);
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void deleteTargetsContinuesStagingCleanupWhenLiveTargetIsMissing() {
+		when(restTemplate.exchange(any(), eq(Map.class))).thenAnswer(invocation -> {
+			RequestEntity<?> request = invocation.getArgument(0);
+			if (request.getUrl().toString().endsWith("/" + SITE)) {
+				throw new RestServiceException(HttpStatus.NOT_FOUND, "Target not found");
+			}
+			return null;
+		});
+
+		deployer.deleteTargets(SITE);
+
+		ArgumentCaptor<RequestEntity<?>> captor = ArgumentCaptor.forClass(RequestEntity.class);
+		verify(restTemplate, times(2)).exchange(captor.capture(), eq(Map.class));
+		assertTrue(captor.getAllValues().get(0).getUrl().toString().endsWith("/serverless-delivery/" + SITE));
+		assertTrue(captor.getAllValues().get(1).getUrl().toString().endsWith("/serverless-delivery/" + STAGING_SITE));
+	}
+
+	@Test
+	public void deleteTargetsPropagatesLiveDeleteFailure() {
+		RestServiceException deployerError = new RestServiceException(HttpStatus.INTERNAL_SERVER_ERROR, "Deployer is down");
+		when(restTemplate.exchange(any(), eq(Map.class))).thenThrow(deployerError);
+
+		RestClientException error = assertThrows(RestClientException.class, () -> deployer.deleteTargets(SITE));
+
+		assertEquals(deployerError, error);
+		verify(restTemplate).exchange(any(), eq(Map.class));
 	}
 
 	@Test

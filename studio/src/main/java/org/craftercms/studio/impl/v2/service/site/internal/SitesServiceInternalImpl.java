@@ -1136,11 +1136,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * Blobs are copied from live when this call creates the staging branch, and when a previous attempt left
 	 * {@code staging_blobs_copied} false. The flag is stored false before item targets and the blob copy, so a
 	 * retry that finds the branch still there copies instead of treating it as already published. An existing
-	 * branch whose flag is already true is left as published. The paths come from that branch, which points at
-	 * the live commit captured when the branch was created. {@code createStagingTarget} is create-if-not-exists,
-	 * so repeating it is safe. On failure, only the branch, item targets, and deployer target this call created
-	 * are removed. There is no blob-prefix delete; deleting the new branch lets the next attempt create it again
-	 * and copy blobs. The pending flag is left false when the branch cannot be deleted.
+	 * branch whose flag is already true is left as published. When that retry still has to insert item targets,
+	 * the leftover branch is deleted and created again from the current live branch first, so the branch, the
+	 * item targets, and the blob paths all come from that one live commit. The paths come from the staging
+	 * branch. {@code createStagingTarget} returns false when the target already exists, and only a target this
+	 * call created is removed on failure. There is no blob-prefix delete; deleting the new branch lets the next
+	 * attempt create it again and copy blobs. The pending flag is left false when the branch cannot be deleted.
 	 */
 	protected void doEnableStaging(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -1162,6 +1163,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 				if (createdBranch) {
 					retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, false));
 					blobsPending = true;
+				} else if (blobsPending && !itemTargetDao.targetExists(site.getId(), stagingBranch)) {
+					createdBranch = rebuildStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+					if (createdBranch) {
+						retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, false));
+						blobsPending = true;
+					}
 				}
 				if (!itemTargetDao.targetExists(site.getId(), stagingBranch)) {
 					retryingDatabaseOperationFacade.retry(() -> itemTargetDao.initStaging(site.getId(), stagingBranch, liveBranch));
@@ -1174,8 +1181,7 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 						stagingBranch, siteId);
 				}
 			}
-			deployer.createStagingTarget(siteId);
-			createdDeployerTarget = true;
+			createdDeployerTarget = deployer.createStagingTarget(siteId);
 			retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingBlobsCopied(siteId, true));
 			int updated = retryingDatabaseOperationFacade.retry(() -> siteDao.setStagingEnabled(siteId));
 			if (updated == 0) {
@@ -1241,6 +1247,29 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	protected boolean publishedToLive(String siteId, String liveBranch) throws ServiceLayerException, IOException {
 		return blobAwareRepository.publishedRepositoryExists(siteId) && blobAwareRepository.isTargetPublished(siteId, liveBranch);
+	}
+
+	/**
+	 * A failed enable can leave the staging branch at an older live commit after item-target cleanup succeeded and
+	 * branch cleanup did not. Drop that branch and create it from the current live branch before item targets and
+	 * blobs are initialized, so the retry does not combine a newer live state with the earlier commit.
+	 *
+	 * @return true when this call created the replacement branch
+	 */
+	private boolean rebuildStagingBranchFromLive(String siteId, String liveBranch, String stagingBranch)
+			throws ServiceLayerException, IOException {
+		if (!blobAwareRepository.isTargetPublished(siteId, stagingBranch)) {
+			return false;
+		}
+		logger.info("Rebuilding staging branch '{}' for site '{}' from '{}' after an incomplete enable",
+			stagingBranch, siteId, liveBranch);
+		blobAwareRepository.deletePublishedBranch(siteId, stagingBranch);
+		boolean created = blobAwareRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
+		if (!created) {
+			throw new ServiceLayerException(format(
+				"Failed to rebuild staging branch '%s' for site '%s' from '%s'", stagingBranch, siteId, liveBranch));
+		}
+		return true;
 	}
 
 	/**

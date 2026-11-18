@@ -84,9 +84,25 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 			return;
 		}
 		String environment = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV);
-		doDeleteTarget(site, environment);
+		deleteLiveTargetIfExists(site, environment);
 		if (shouldDeleteStagingTarget(site)) {
 			deleteStagingTargetIfExists(site, environment);
+		}
+	}
+
+	/**
+	 * Delete the live target. A 404 means a previous attempt already removed it, which is what a retry sees after
+	 * the live delete succeeded and the staging delete did not. Staging cleanup still runs. Other errors still fail
+	 * the delete.
+	 */
+	protected void deleteLiveTargetIfExists(String site, String environment) {
+		try {
+			doDeleteTarget(site, environment);
+		} catch (RestClientException e) {
+			if (!isNotFound(e)) {
+				throw e;
+			}
+			logger.debug("Live deployer target for site '{}' does not exist", site);
 		}
 	}
 
@@ -127,12 +143,15 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 
 	/**
 	 * Create the staging target if it is missing. {@code replace} stays false even when the live-target setting is
-	 * true, so a later publish does not rebuild the target. An existing target (409) is success.
+	 * true, so a later publish does not rebuild the target. An existing target (409) is success and returns false,
+	 * so the caller does not record that this call created the target.
+	 *
+	 * @return true when this call created the target
 	 */
 	@Override
-	public void createStagingTarget(String site) throws RestClientException {
+	public boolean createStagingTarget(String site) throws RestClientException {
 		if (!isServerlessDeliveryEnabled()) {
-			return;
+			return false;
 		}
 		String stagingSiteName = stagingSiteName(site);
 		String localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH, stagingSiteName);
@@ -144,11 +163,13 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
 		try {
 			doCreateTarget(stagingSiteName, studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_ENV),
 				template, false, false, localRepoPath, repoUrl, stagingBranch(site), templateParams);
+			return true;
 		} catch (RestClientException e) {
 			if (!isConflict(e)) {
 				throw e;
 			}
 			logger.debug("Staging deployer target for site '{}' already exists", site);
+			return false;
 		}
 	}
 

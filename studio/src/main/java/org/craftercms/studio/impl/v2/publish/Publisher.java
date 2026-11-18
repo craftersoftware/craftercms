@@ -205,6 +205,7 @@ public class Publisher implements ApplicationEventPublisherAware {
 		TaskProgress<PublishTaskId, Long> taskProgress = taskManager.registerTask(new PublishTask(siteId, packageId));
 		taskProgress.start();
 		String activityOperation = null;
+		boolean completePackage = true;
 		try {
 			Stage itemLoadStage = taskProgress.startStage("Loading items list");
 			publishDao.updatePublishItemsState(packageId, PublishItem.PublishState.PROCESSING.value, PublishItem.PublishState.PENDING.value);
@@ -214,6 +215,9 @@ public class Publisher implements ApplicationEventPublisherAware {
 
 			activityOperation = auditOperation(publishPackage.getPackageType(), packageId, siteId);
 			publishPackage(publishPackage, publishItems);
+		} catch (StagingBlobCopyException e) {
+			completePackage = false;
+			throw e;
 		} finally {
 			Stage completeStage = taskProgress.startStage("Save completed package");
 			if (activityOperation != null) {
@@ -222,10 +226,12 @@ public class Publisher implements ApplicationEventPublisherAware {
 					null, Long.toString(packageId));
 			}
 			eventPublisher.publishEvent(new PublishEvent(siteId));
-			publishPackage.setPublishedOn(now());
-			publishPackage.updatePackageState(COMPLETED.value, PROCESSING.value);
-			publishDao.updatePackage(publishPackage);
-			publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
+			if (completePackage) {
+				publishPackage.setPublishedOn(now());
+				publishPackage.updatePackageState(COMPLETED.value, PROCESSING.value);
+				publishDao.updatePackage(publishPackage);
+				publishDao.updatePublishItemsState(packageId, 0, PublishItem.PublishState.PROCESSING.value);
+			}
 			completeStage.complete();
 			taskProgress.complete(publishPackage.getPackageState());
 		}
@@ -321,7 +327,12 @@ public class Publisher implements ApplicationEventPublisherAware {
 		String siteId = publishPackage.getSite().getSiteId();
 		long packageId = publishPackage.getId();
 		if (stagingEnabled) {
-			copyStagingBlobsFromLive(siteId);
+			try {
+				copyStagingBlobsFromLive(siteId);
+			} catch (Exception e) {
+				failStagingBlobCopy(publishPackage, siteId, e);
+				throw new StagingBlobCopyException(format("Failed to copy live blobs to staging for site '%s'", siteId), e);
+			}
 		}
 		switch (publishPackage.getPackageType()) {
 			case INITIAL_PUBLISH -> {
@@ -344,7 +355,8 @@ public class Publisher implements ApplicationEventPublisherAware {
 	/**
 	 * Copy the live blob-store assets onto the staging branch created during upgrade, before this package publishes
 	 * its staging delta. The copy is skipped once {@code staging_blobs_copied} is set. A failure leaves the flag
-	 * false and stops the package, so the next publish request copies again.
+	 * false, fails the package and its items the same way a staging target publish fails, and does not mark the
+	 * package completed, so the next publish request copies again.
 	 */
 	private void copyStagingBlobsFromLive(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -408,20 +420,41 @@ public class Publisher implements ApplicationEventPublisherAware {
 		try {
 			runInTransaction(targetPublisher).run(packageTO, target, publishItems);
 		} catch (Exception e) {
-			logger.error("Failed to publish package '{}' to target '{}' for site '{}'", publishPackage.getId(), target, publishPackage.getSite().getSiteId(), e);
-			publishPackage.updatePackageState(packageTO.getFailedOnBits(), 0);
-			packageTO.setError(PublishUtils.translatePackageException(e));
-			publishDao.updatePackage(publishPackage);
-			publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getFailedOnBits(), 0);
-			eventPublisher.publishEvent(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId(), e));
+			recordTargetPublishFailure(publishPackage, packageTO, target, e);
 		} finally {
-			publishDao.updateItemStatesForCompletePackage(packageTO.getId(),
-				packageTO.getItemSuccessOnMask(),
-				packageTO.getItemSuccessOffMask(),
-				packageTO.getItemFailureOffMask(),
-				packageTO.getItemSuccessState(),
-				servicesConfig.getLiveEnvironment(publishPackage.getSite().getSiteId()));
+			finishTargetPublish(publishPackage, packageTO);
 		}
+	}
+
+	/**
+	 * Record a staging blob-copy failure the same way {@link #runTargetPublisher} records a staging target failure.
+	 * The package is left uncompleted so {@link #doPublish} does not clear the failure.
+	 */
+	private void failStagingBlobCopy(final PublishPackage publishPackage, final String siteId, final Exception e)
+			throws SiteNotFoundException {
+		PublishPackageTO packageTO = getPublishPackageTO(publishPackage, false);
+		recordTargetPublishFailure(publishPackage, packageTO, servicesConfig.getStagingEnvironment(siteId), e);
+		finishTargetPublish(publishPackage, packageTO);
+	}
+
+	private void recordTargetPublishFailure(final PublishPackage publishPackage, final PublishPackageTO packageTO,
+						final String target, final Exception e) {
+		logger.error("Failed to publish package '{}' to target '{}' for site '{}'", publishPackage.getId(), target, publishPackage.getSite().getSiteId(), e);
+		publishPackage.updatePackageState(packageTO.getFailedOnBits(), 0);
+		packageTO.setError(PublishUtils.translatePackageException(e));
+		publishDao.updatePackage(publishPackage);
+		publishDao.updatePublishItemsState(publishPackage.getId(), packageTO.getFailedOnBits(), 0);
+		eventPublisher.publishEvent(new PublishErrorEvent(publishPackage.getSite().getSiteId(), publishPackage.getId(), e));
+	}
+
+	private void finishTargetPublish(final PublishPackage publishPackage, final PublishPackageTO packageTO)
+			throws SiteNotFoundException {
+		publishDao.updateItemStatesForCompletePackage(packageTO.getId(),
+			packageTO.getItemSuccessOnMask(),
+			packageTO.getItemSuccessOffMask(),
+			packageTO.getItemFailureOffMask(),
+			packageTO.getItemSuccessState(),
+			servicesConfig.getLiveEnvironment(publishPackage.getSite().getSiteId()));
 	}
 
 	private PublishPackageTO getPublishPackageTO(final PublishPackage publishPackage, final boolean isLiveTarget) {
@@ -710,5 +743,18 @@ public class Publisher implements ApplicationEventPublisherAware {
 	@Override
 	public void setApplicationEventPublisher(@NonNull final ApplicationEventPublisher applicationEventPublisher) {
 		this.eventPublisher = applicationEventPublisher;
+	}
+
+	/**
+	 * Staging blob copy failed after the package and its items were marked failed. {@link #doPublish} must not
+	 * mark the package completed.
+	 */
+	private static final class StagingBlobCopyException extends ServiceLayerException {
+
+		private static final long serialVersionUID = 1L;
+
+		private StagingBlobCopyException(final String message, final Throwable cause) {
+			super(message, cause);
+		}
 	}
 }

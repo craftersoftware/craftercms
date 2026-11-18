@@ -81,12 +81,14 @@ public class CompositeDeployer implements Deployer {
 	}
 
 	@Override
-	public void createStagingTarget(String site) throws RestClientException {
+	public boolean createStagingTarget(String site) throws RestClientException {
+		boolean created = false;
 		if (CollectionUtils.isNotEmpty(deployers)) {
 			for (Deployer deployer : deployers) {
-				deployer.createStagingTarget(site);
+				created |= deployer.createStagingTarget(site);
 			}
 		}
+		return created;
 	}
 
 	@Override

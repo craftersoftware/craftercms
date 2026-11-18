@@ -54,9 +54,11 @@ public interface Deployer {
 	 * Implementations that do not provision a staging target do nothing.
 	 *
 	 * @param site the site
+	 * @return true when this call created the target, false when it already existed or this deployer does not create one
 	 * @throws RestClientException if an error occurs
 	 */
-	default void createStagingTarget(String site) throws RestClientException {
+	default boolean createStagingTarget(String site) throws RestClientException {
+		return false;
 	}
 
 	/**

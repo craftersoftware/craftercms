@@ -24,8 +24,10 @@ import org.craftercms.studio.api.v2.dal.Site;
 import org.craftercms.studio.api.v2.dal.SiteDAO;
 import org.craftercms.studio.api.v2.dal.publish.ItemTargetDAO;
 import org.craftercms.studio.api.v2.dal.publish.PublishDAO;
+import org.craftercms.studio.api.v2.dal.publish.PublishItem;
 import org.craftercms.studio.api.v2.dal.publish.PublishPackage;
 import org.craftercms.studio.api.v2.deployment.Deployer;
+import org.craftercms.studio.api.v2.event.publish.PublishErrorEvent;
 import org.craftercms.studio.api.v2.event.publish.RequestPublishEvent;
 import org.craftercms.studio.api.v2.event.site.SiteDeletingEvent;
 import org.craftercms.studio.api.v2.repository.blob.StudioBlobAwareContentRepository;
@@ -41,12 +43,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.craftercms.studio.model.rest.ApiResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.client.RestClientException;
 
 import static java.util.Collections.emptyList;
 import static org.craftercms.studio.api.v2.dal.AuditLogConstants.OPERATION_PUBLISH_START;
 import static org.craftercms.studio.api.v2.dal.Site.State.READY;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.COMPLETED;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.PROCESSING;
+import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.STAGING_FAILED;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
 import static org.junit.Assert.assertThrows;
@@ -339,7 +345,7 @@ public class PublisherTest {
 		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
 		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
 		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
-		doThrow(new RestClientException("deployer down")).doNothing().when(deployer).createStagingTarget(SITE_ID);
+		doThrow(new RestClientException("deployer down")).doReturn(true).when(deployer).createStagingTarget(SITE_ID);
 		doNothing().when(publisher).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
 
 		publisher.doPublish(publishPackage);
@@ -399,6 +405,15 @@ public class PublisherTest {
 		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
 		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
+		verify(publishPackage).updatePackageState(STAGING_FAILED.value, 0);
+		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		verify(publishPackage, never()).updatePackageState(COMPLETED.value, PROCESSING.value);
+		verify(publishPackage, never()).setPublishedOn(any());
+		verify(publishDAO).updatePublishItemsState(PACKAGE_ID, STAGING_FAILED.value, 0);
+		verify(publishDAO, never()).updatePublishItemsState(PACKAGE_ID, 0, PublishItem.PublishState.PROCESSING.value);
+		verify(publishDAO).updateItemStatesForCompletePackage(eq(PACKAGE_ID), anyLong(), anyLong(), anyLong(),
+			eq(PublishItem.PublishState.STAGING_SUCCESS.value), eq(LIVE));
+		verify(eventPublisher).publishEvent(any(PublishErrorEvent.class));
 	}
 
 	@Test
