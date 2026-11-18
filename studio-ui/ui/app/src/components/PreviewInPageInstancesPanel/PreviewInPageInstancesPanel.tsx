@@ -148,12 +148,15 @@ export function PreviewInPageInstancesPanel() {
 					disabled={!Boolean(contentTypeFilter)}
 				/>
 				<FormControl fullWidth sx={{ marginTop: '15px' }}>
-					<InputLabel id={contentTypeLabelId}>{contentTypeLabel}</InputLabel>
+					<InputLabel id={contentTypeLabelId} shrink>
+						{contentTypeLabel}
+					</InputLabel>
 					<Select
 						labelId={contentTypeLabelId}
 						label={contentTypeLabel}
 						value={contentTypes.length ? contentTypeFilter : ''}
 						displayEmpty
+						notched
 						sx={{ width: '100%' }}
 						onChange={(event: any) => handleSelectChange(event.target.value)}
 						endAdornment={
