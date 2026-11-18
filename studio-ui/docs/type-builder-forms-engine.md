@@ -2,7 +2,7 @@
 
 > Living backbone for TB/FE modernization work. **Read this first** in any new agent/session before changing related code. Keep it current: update _Open decisions_, _Progress_, and _Known pitfalls_ when you learn something durable.
 
-Last updated: 2026-11-06
+Last updated: 2026-11-17
 
 ---
 
@@ -20,15 +20,13 @@ Pipeline:
 ```text
 TB (edit type)
   → writes type artifacts under /config/studio/content-types/<objectType>/<typeName>/
-  → form-definition.xml (+ today: config.xml)
+  → form-definition.xml (single type artifact)
        ↓
 FE (edit content)
   → reads type definition + existing content (or empty for create)
   → renders form UI
   → saves content XML (e.g. /site/website/.../index.xml)
 ```
-
-Sample artifacts in this repo: `samples/form-definition.xml`, `samples/config.xml`, `samples/index.xml`, `samples/site-config-tools.xml`.
 
 Local sandbox site for inspection:
 
@@ -43,9 +41,9 @@ Local sandbox site for inspection:
 
 Typical type folder contents:
 
-- `form-definition.xml` — form model (sections, fields, datasources, type-level properties)
-- `config.xml` — type registry / metadata (target: **absorb into form-definition and drop**)
+- `form-definition.xml` — single type artifact (sections, fields, datasources, type-level properties, plus former `config.xml` fields after the 5.0.0.2 merge)
 - optional: `controller.groovy`, thumbnail image, `form-controller.js`
+- `config.xml` — **gone** on blueprints and on sites upgraded through 5.0.0.2 (`content-type-merge-v5.0.0.2.xslt` from [#8769](https://github.com/craftersoftware/craftercms/pull/8769) copies selected fields into the form definition, then deletes the file)
 
 ---
 
@@ -129,7 +127,6 @@ ContentTypeManagement/
   controls/                   # TB-specific property editors (paths, template, …)
   components/                 # EditTypeView, TypeList, TypeBuilderFormsEngine, …
   proposal.xml                # design notes for site-config-tools / plugins
-  config.xml                  # annotated sample of what to keep/move/drop from config.xml
 ```
 
 Shared XML helpers also appear under `ui/app/src/components/XmlTools/`.
@@ -146,26 +143,24 @@ Constants:
 
 ### form-definition.xml
 
-Root `<form>` with roughly:
+Root `<form>` — the single type artifact Studio and TB2 read/write. Roughly:
 
 - Identity: `title`, `description`, `objectType`, `content-type`, `imageThumbnail`, `quickCreate`, `quickCreatePath`
-- Type properties: `display-template`, `no-template-required`, `merge-strategy` (today under `<properties>`)
+- Type properties: `display-template`, `no-template-required`, `merge-strategy` (under `<properties>`)
+- Former `config.xml` fields at form root (merged by 5.0.0.2): `paths` (includes/excludes), `delete-dependencies`, `copy-dependencies`, `previewable`, `allowed-roles`
+- Written by TB2 or already present on forms: `controller`
 - `<sections>` → `<fields>` (controls with `<properties>` / `<constraints>`)
 - `<datasources>`
 
 FE loads this (via Studio APIs / content-type catalog) to build the author form. FE save writes **content** XML, not the form definition.
 
-### config.xml (to be removed)
+**Allowed Destinations** (paths, copy/delete deps, previewable) is available in TB2 (`commonDescriptors.ts` `allowedDestinations` section). **Allowed Roles** and pass-through of unmodeled form data: [#9288](https://github.com/craftersoftware/craftercms/issues/9288) / [#9290](https://github.com/craftersoftware/craftercms/pull/9290). **`noThumbnail`** removed from model and blueprints: [#9289](https://github.com/craftersoftware/craftercms/issues/9289) / [#9310](https://github.com/craftersoftware/craftercms/pull/9310).
 
-Root `<content-type>` with registry-ish metadata, e.g.:
+### config.xml (merged / dropped)
 
-- Dupes of form-definition: `label`, `form`, thumbnail, quickCreate\*
-- Removal candidates (legacy noise): `form-path`, `model-instance-path`, `file-extension`, `content-as-folder`, `previewable`
-- Move into form-definition: `controller`, `paths` (includes/excludes)
+Historical sibling of `form-definition.xml` (`<content-type>` root). The 5.0.0.2 upgrader (`content-type-merge-v5.0.0.2.xslt`, [#8769](https://github.com/craftersoftware/craftercms/pull/8769)) copies `previewable`, `noThumbnail`, `paths`, `delete-dependencies`, `copy-dependencies` and `allowed-roles` into the form definition, then deletes `config.xml`. `noThumbnail` is no longer modeled or shipped in blueprints ([#9310](https://github.com/craftersoftware/craftercms/pull/9310)). Blueprints no longer ship `config.xml`; TB2 does not write it.
 
-Annotated working notes: `ui/app/src/components/ContentTypeManagement/config.xml`.
-
-**Blocker (known):** backend still consumes `config.xml` fields (`form`, thumbnail, `paths`, …). UI already serializes several former-config fields into the form-definition structure (`SerializeToXmlContentTypeStructure` marks `controller`, `paths`, deps, `previewable`), but **Allowed Destinations** UI is gated until config.xml can be dropped (see comments in `descriptors/controls/commonDescriptors.ts`).
+Studio’s content-type APIs (`ContentTypeServiceInternalImpl`) load **`form-definition.xml` only** for type metadata (paths, previewable, roles, thumbnail, …). `studio.configuration.site.contentTypes.configFileName` is still used, but only by `ContentTypeConfigMergeUpgrader` to locate the `config.xml` it merges and deletes. `createConfigPathFromTypeId` (`utils/contentType.ts`) is unused (stale import in EditTypeView.tsx). Neither is a live dual-file contract.
 
 ### Content XML (FE output)
 
@@ -179,7 +174,7 @@ Field id suffixes (`_s`, `_html`, `_o`, `_dt`, …) matter for indexing/Engine �
 
 1. **Modern FE** — React FormsEngine replacing `forms-engine.js` (substantial progress).
 2. **Modern TB** — ContentTypeManagement replacing `content-types.js`.
-3. **Single type artifact** — fold `config.xml` into `form-definition.xml` and delete `config.xml` (requires Studio **backend** alignment, not UI-only).
+3. **Single type artifact** — fold `config.xml` into `form-definition.xml` and delete `config.xml` (**done** at 5.0.0.2 for upgraded sites and blueprints; residual naming/cleanup only).
 4. **Descriptors / site-config-tools** — control & datasource listing + property forms driven by code defaults + optional XML overrides/plugins (`proposal.xml`, crawl → walk → run).
 
 Out of scope unless asked: Engine delivery / Freemarker templates beyond how TB stores `display-template`.
@@ -195,7 +190,7 @@ Out of scope unless asked: Engine delivery / Freemarker templates beyond how TB 
   - CTM serialize (`prepareSerializeToXmlTypeObject` / `buildContentTypeXml`)
   - content-type parse / `ContentType` model
   - FE value retrieve/serialize/validate
-  - (eventually) backend type APIs that today still read `config.xml`
+  - backend type APIs that read `form-definition.xml` (former `config.xml` fields included)
 
 ### 5.1 Do not conflate these extension concerns
 
@@ -737,22 +732,22 @@ When validating XML shape changes, compare a live type folder + a saved content 
 
 ### Quick “where do I look?”
 
-| Question                         | Start here                                                                                            |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Author form shell / save / stack | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                             |
-| Form controller                  | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                         |
-| Control rendering                | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                            |
-| Legacy module protocol           | `cstudio-common/common-api.js` (`Module`)                                                             |
-| New FE DS interpretation         | `FormsEngine/dataSourceHooks/*`                                                                       |
-| Content XML in/out               | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                   |
-| Item reads, subscriptions        | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                         |
-| Type list / edit UI              | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                            |
-| New TB catalog configuration     | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                     |
-| Type XML out                     | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                  |
-| Control property forms           | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                |
-| config.xml merge plan            | `ContentTypeManagement/config.xml`, `commonDescriptors.ts` comments, `ContentType.ts` serialize types |
-| Plugin packaging / runtime       | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`     |
-| Plugin / listing design          | `proposal.xml`, `samples/site-config-tools.xml`                                                       |
+| Question                            | Start here                                                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Author form shell / save / stack    | `FormsEngine/FormsEngine.tsx`, `lib/useSaveForm.tsx`, `lib/formUtils.tsx`                                           |
+| Form controller                     | `FormsEngine/formControllers/` (`types`, `loader`, `runtime`, `host`, `stub`)                                       |
+| Control rendering                   | `lib/renderControl.tsx`, `lib/controlMap.ts`, `controls/*`                                                          |
+| Legacy module protocol              | `cstudio-common/common-api.js` (`Module`)                                                                           |
+| New FE DS interpretation            | `FormsEngine/dataSourceHooks/*`                                                                                     |
+| Content XML in/out                  | `lib/valueRetrievers.ts`, `lib/valueSerializers.ts`                                                                 |
+| Item reads, subscriptions           | `lib/formItem.ts`, `lib/useFormEntryWiring.ts`, "FE2 subscription rules" (§2)                                       |
+| Type list / edit UI                 | `ContentTypeManagement.tsx`, `components/EditTypeView.tsx`                                                          |
+| New TB catalog configuration        | `EditTypeView.tsx` (`fetchSiteUiConfig`), `/config/studio/ui.xml`                                                   |
+| Type XML out                        | `ContentTypeManagement/utils.ts` (`prepareSerializeToXmlTypeObject`)                                                |
+| Control property forms              | `descriptors/controls/*`, `TypeBuilderFormsEngine.tsx`                                                              |
+| form-definition (post-config merge) | `commonDescriptors.ts` (Allowed Destinations), `ContentType.ts` serialize types, `content-type-merge-v5.0.0.2.xslt` |
+| Plugin packaging / runtime          | `docs/type-builder-forms-engine-plugins.md`, `services/plugin.ts`, `components/Widget/Widget.tsx`                   |
+| Plugin / listing design             | `proposal.xml`, `samples/site-config-tools.xml`                                                                     |
 
 ---
 
@@ -776,11 +771,13 @@ Separate **completed design decisions** (`[x]`) from **remaining implementation 
 - [x] **Plugin control valueRetriever / valueSerializer** — optional on `ControlPluginContribution`; registered with the control; FE preloads plugin locators before form parse and save.
 - [x] **Plugin control validator** — optional on `ControlPluginContribution`; looked up via `getFieldValidator` after built-in `validatorsMap`; ToC uses `hasFieldValidator`. Required/empty remains host-owned.
 - [x] **Field state indicator** — one component on the field label and the table of contents. An empty required field is an asterisk. A required field that is filled keeps that cue as a small asterisk on the upper-left of the state icon (check when valid, rounded warning triangle when invalid). The badge is `aria-hidden`; the tooltip and the table-of-contents name say "Required", "Required, complete", or "Required." plus the first validation message. An unchecked checkbox and an RTE with no text (for example `<p></p>`) count as empty. A control's `isValid` override applies to that label and its control only; the table of contents and the form alert follow the validation atom.
+- [x] **`config.xml` → form-definition merge (5.0.0.2)** — upgrader merges and deletes `config.xml`; blueprints ship form-definition only; Studio reads form-definition. See §3.
+- [x] **Allowed Destinations / paths / copy-delete deps / previewable** — available in TB2; persisted on form-definition.xml.
+- [x] **Allowed Roles + unmodeled form pass-through** — [#9288](https://github.com/craftersoftware/craftercms/issues/9288) / [#9290](https://github.com/craftersoftware/craftercms/pull/9290).
+- [x] **Remove unused `noThumbnail` (and related)** — [#9289](https://github.com/craftersoftware/craftercms/issues/9289) / [#9310](https://github.com/craftersoftware/craftercms/pull/9310).
 
 ### Remaining implementation / validation
 
-- [ ] **Backend still requires `config.xml`** for several properties; UI cannot fully drop it yet.
-- [ ] **Allowed Destinations / paths / copy-delete deps / previewable** UI section intentionally incomplete until config merge is unblocked.
 - [ ] **Lib-style plugins** — eager load without dummy widgets + stable host path for `utils`. See plugins companion §9.8 items 2–3.
 - [ ] Reconcile new TB's code-default catalog proposal with current `ui.xml` allow-list behavior.
 - [ ] Implement/clarify descriptor merge precedence and plugin-coordinate propagation from `ui.xml` (and make lookup order consistent across insert/edit/save).
@@ -910,6 +907,7 @@ This is distinct from `controller.groovy`, which is a server-side content-type c
 
 Keep newest first. One short bullet per meaningful session.
 
+- **2026-11-17** — [#9344](https://github.com/craftersoftware/craftercms/issues/9344): corrected stale “Allowed Destinations unavailable until config.xml removed” comments/docs. Post-5.0.0.2 model documented in §3; linked [#9288](https://github.com/craftersoftware/craftercms/issues/9288)/[#9289](https://github.com/craftersoftware/craftercms/issues/9289)/[#9310](https://github.com/craftersoftware/craftercms/pull/9310).
 - **2026-11-10** — FE2 save writes `<file-name>` again, derived from the final save path basename (`index.xml` / `foo.xml`), matching FE1/XB, and `<folder-name>` as the page folder slug (empty for home and non-pages). For non-embeds the form atom stays the path slug and only the XML serialize copy gets those path-derived names. Embeds keep their stored `<file-name>` and get `{objectId}.xml` only when they have none, set on the `values` object parents merge (NodeSelector does not use the XML copy). Path still wins for UI/validation and `originalValues`.
 - **2026-11-06** — Documented site-config field-name postfix enforcement in §5.4 next to descriptor `suffixes`: exact ignore match, `endsWith` (not TB1 anywhere-in-name), top-level-only; helper is `ContentTypeManagement/fieldNamePostfix.ts` (#9352).
 - **2026-11-05** — `FieldUpdate` stays `{ fieldId }` (no captured `value`). The `fieldChanges` and `onFieldChange` docs now say precisely when `value` is read: synchronously as each subscriber is notified, not once per write. If an earlier subscriber writes the same field during delivery, the nested change is delivered first and later subscribers get the newer value for the outer event too; filter by field or compare values when that matters. Pinned by a test in `fieldChanges.test.ts`. The TSDoc of the functions this PR adds or touches was completed.
