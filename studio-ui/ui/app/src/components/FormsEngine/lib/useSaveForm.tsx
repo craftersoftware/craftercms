@@ -565,15 +565,14 @@ export function useSaveForm(props: UseSaveFormProps) {
 				);
 				if (!minimumRequirementsFullfilled) {
 					const fileNameValid = fileNameValidation ? (await fileNameValidation).isValid : true;
-					setIsSubmitting(false);
-					return showAlert({
-						dispatch,
-						message: fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
-							fileNameValid,
-							internalName: values[XmlKeys.internalName],
-							hasInternalNameField
-						})
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
 					});
+					setIsSubmitting(false);
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
 				}
 
 				// TODO: write-content url on FE1 sends phase, path, fileName, contentType QSAs. Important?

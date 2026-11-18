@@ -1256,12 +1256,21 @@ function FormOrchestrator(props: FormsEngineProps) {
 	);
 	// What the save refuses to write without. A selected-fields item form saves through its parent,
 	// so it reports the parent's requirements, by the parent's own mode.
-	const localMinimum = useMinimumSaveRequirements(atoms, { isRepeatMode, isEmbedded }, fieldUpdates$);
+	const localMinimum = useMinimumSaveRequirements(
+		atoms,
+		{
+			isRepeatMode,
+			isEmbedded,
+			hasInternalNameField: Boolean(contentType.fields?.[XmlKeys.internalName])
+		},
+		fieldUpdates$
+	);
 	const parentMinimum = useMinimumSaveRequirements(
 		itemMode === 'selected' ? parentAtoms : null,
 		{
 			isRepeatMode: Boolean(parentEntry?.props?.repeat?.fieldId),
-			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {})
+			isEmbedded: isEmbeddedForm(parentEntry?.props ?? {}),
+			hasInternalNameField: Boolean(parentEntry?.itemMeta.contentType?.fields?.[XmlKeys.internalName])
 		},
 		parentEntry?.fieldUpdates$
 	);

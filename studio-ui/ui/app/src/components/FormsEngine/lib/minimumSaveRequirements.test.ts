@@ -38,7 +38,7 @@ const invalid = { isValid: false, messages: [] };
 
 describe('minimum save requirements', () => {
 	it('needs a valid file name and an internal name on a full form', () => {
-		const base = { isRepeatMode: false, isEmbedded: false };
+		const base = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: true, internalName: 'Home' }), []);
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: 'Home' }), [
 			'fileName'
@@ -53,7 +53,7 @@ describe('minimum save requirements', () => {
 	});
 
 	it('needs only the internal name on an embedded form, stacked or not', () => {
-		const base = { isRepeatMode: false, isEmbedded: true };
+		const base = { isRepeatMode: false, isEmbedded: true, hasInternalNameField: true };
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: 'Card' }), []);
 		assert.deepEqual(missingMinimumSaveRequirements({ ...base, fileNameValid: false, internalName: '' }), [
 			'internalName'
@@ -85,7 +85,13 @@ describe('minimum save requirements', () => {
 
 	it('needs nothing on a repeat item, which commits in memory', () => {
 		assert.deepEqual(
-			missingMinimumSaveRequirements({ isRepeatMode: true, isEmbedded: false, fileNameValid: false, internalName: '' }),
+			missingMinimumSaveRequirements({
+				isRepeatMode: true,
+				isEmbedded: false,
+				fileNameValid: false,
+				internalName: '',
+				hasInternalNameField: true
+			}),
 			[]
 		);
 	});
@@ -98,7 +104,7 @@ describe('minimum save requirements', () => {
 			validationByFieldId: { 'file-name': fileName },
 			valueByFieldId: { 'internal-name': internalName }
 		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName', 'internalName']);
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, { ...full, isEmbedded: true }), [
 			'internalName'
@@ -109,9 +115,9 @@ describe('minimum save requirements', () => {
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, null, full), []);
 	});
 
-	it('does not require internal-name when the form has no atom for it', async () => {
+	it('does not require internal-name when the type has no such field', async () => {
 		const store = createStore();
-		const full = { isRepeatMode: false, isEmbedded: false };
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: false };
 		const validFileOnly = {
 			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
 			valueByFieldId: {}
@@ -125,8 +131,28 @@ describe('minimum save requirements', () => {
 		} as never;
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, invalidFileOnly, full), ['fileName']);
 		assert.deepEqual(
-			await readMissingMinimumSaveRequirements(store, invalidFileOnly, { isRepeatMode: false, isEmbedded: true }),
+			await readMissingMinimumSaveRequirements(store, invalidFileOnly, {
+				isRepeatMode: false,
+				isEmbedded: true,
+				hasInternalNameField: false
+			}),
 			[]
+		);
+	});
+
+	it('requires internal-name when the type defines it and the form has no atom', async () => {
+		const store = createStore();
+		const atoms = {
+			validationByFieldId: { 'file-name': atom(Promise.resolve(valid)) },
+			valueByFieldId: {}
+		} as never;
+		assert.deepEqual(
+			await readMissingMinimumSaveRequirements(store, atoms, {
+				isRepeatMode: false,
+				isEmbedded: false,
+				hasInternalNameField: true
+			}),
+			['internalName']
 		);
 	});
 
@@ -137,7 +163,7 @@ describe('minimum save requirements', () => {
 			validationByFieldId: { 'file-name': atom(async (get) => (get(name) ? valid : invalid)) },
 			valueByFieldId: { 'internal-name': atom<unknown>('Home') }
 		} as never;
-		const full = { isRepeatMode: false, isEmbedded: false };
+		const full = { isRepeatMode: false, isEmbedded: false, hasInternalNameField: true };
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), ['fileName']);
 		store.set(name, 'home');
 		assert.deepEqual(await readMissingMinimumSaveRequirements(store, atoms, full), []);
