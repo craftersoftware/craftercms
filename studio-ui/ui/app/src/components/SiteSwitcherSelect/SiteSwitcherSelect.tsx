@@ -98,10 +98,14 @@ function SiteSwitcherSelect(props: SiteSwitcherSelectProps) {
 				slotProps: {
 					...rest.MenuProps?.slotProps,
 					// The open listbox is named only through labelId. This select has none, so the same name goes on the list.
-					list: {
-						...(typeof rest.MenuProps?.slotProps?.list === 'object' ? rest.MenuProps.slotProps.list : undefined),
-						'aria-label': siteLabel,
-						'aria-labelledby': undefined
+					// A function list slot is resolved the way MUI would, then the name is applied last.
+					list: (ownerState) => {
+						const callerList = rest.MenuProps?.slotProps?.list;
+						return {
+							...(typeof callerList === 'function' ? callerList(ownerState) : callerList),
+							'aria-label': siteLabel,
+							'aria-labelledby': undefined
+						};
 					}
 				}
 			}}

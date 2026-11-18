@@ -32,6 +32,7 @@ const { RawIntlProvider, createIntl } = await import('react-intl');
 const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { BrowseFilesDialogUI } = await import('./BrowseFilesDialogUI.tsx');
+const { accessibleName } = await import('../../../test/accessibleName.ts');
 
 // The real createIntl, so a message without an id fails the test instead of getting one made up.
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
@@ -143,35 +144,38 @@ describe('browse files dialog select-all name', () => {
 	});
 });
 
-function accessibleName(node: HTMLElement) {
-	const explicit = node.getAttribute('aria-label');
-	if (explicit) return explicit;
-	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
-	return ids
-		.map((id) => document.getElementById(id)?.textContent ?? '')
-		.join(' ')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
-
 describe('browse files sort select names', () => {
-	it('names the sort-by and order comboboxes from their visible labels, and the open listbox too', async () => {
+	async function openSortMenu() {
 		const host = await render({ searchParameters: { sortBy: 'internalName', sortOrder: 'asc' } });
 		const sortButton = host.querySelector<HTMLButtonElement>('#sort-button');
 		assert.ok(sortButton, 'the sorting button is missing');
 		await act(async () => {
 			sortButton.click();
 		});
-		const comboboxes = [...document.querySelectorAll<HTMLElement>('[role="combobox"]')];
+		return [...document.querySelectorAll<HTMLElement>('[role="combobox"]')];
+	}
+
+	it('names the sort-by combobox from its visible label, and the open listbox too', async () => {
+		const comboboxes = await openSortMenu();
 		const sortBy = comboboxes.find((node) => accessibleName(node) === 'Sort By');
-		const order = comboboxes.find((node) => accessibleName(node) === 'Order');
 		assert.ok(sortBy, 'the sort-by combobox has no name');
-		assert.ok(order, 'the order combobox has no name');
 		await act(async () => {
 			sortBy.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
 		});
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
 		assert.ok(listbox, 'the sort-by listbox did not open');
 		assert.equal(accessibleName(listbox), 'Sort By');
+	});
+
+	it('names the order combobox from its visible label, and the open listbox too', async () => {
+		const comboboxes = await openSortMenu();
+		const order = comboboxes.find((node) => accessibleName(node) === 'Order');
+		assert.ok(order, 'the order combobox has no name');
+		await act(async () => {
+			order.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox, 'the order listbox did not open');
+		assert.equal(accessibleName(listbox), 'Order');
 	});
 });

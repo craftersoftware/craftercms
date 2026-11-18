@@ -45,11 +45,12 @@ export const ContentTypesFilter = forwardRef<HTMLDivElement, ContentTypesFilterP
 				...MenuProps,
 				slotProps: {
 					...MenuProps?.slotProps,
-					list: {
-						...(callerList && typeof callerList !== 'function' ? callerList : undefined),
+					// MUI calls a function list slot with ownerState. Resolve it, then keep the name on top.
+					list: (ownerState) => ({
+						...(typeof callerList === 'function' ? callerList(ownerState) : callerList),
 						'aria-label': contentTypeLabel,
 						'aria-labelledby': undefined
-					}
+					})
 				}
 			}}
 		>

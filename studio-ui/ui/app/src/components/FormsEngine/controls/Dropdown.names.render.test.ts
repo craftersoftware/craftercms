@@ -37,6 +37,7 @@ const { createFormVisibilityAtoms } = await import('../lib/formVisibility.ts');
 const { FormsEngineFormContextApi, ItemMetaContext, StableFormContext, StableGlobalContext } =
 	await import('../lib/formsEngineContext.ts');
 const { Dropdown } = await import('./Dropdown.tsx');
+const { accessibleName } = await import('../../../../test/accessibleName.ts');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
@@ -75,17 +76,6 @@ afterEach(async () => {
 		host.remove();
 	}
 });
-
-function accessibleName(node: HTMLElement) {
-	const explicit = node.getAttribute('aria-label');
-	if (explicit) return explicit;
-	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
-	return ids
-		.map((id) => document.getElementById(id)?.textContent ?? '')
-		.join(' ')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
 
 async function render() {
 	const validationAtom = atom({ isValid: true, messages: [] });

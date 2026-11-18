@@ -267,7 +267,15 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 					>
 						{Object.keys(assetsTypes).map((typeId) => (
 							<MenuItem value={typeId} key={typeId}>
-								<Radio checked={showTypes === typeId} color="primary" />
+								{/* The option's text is its name and aria-selected is its state. The radio only paints the mark. */}
+								<Radio
+									checked={showTypes === typeId}
+									color="primary"
+									tabIndex={-1}
+									disableRipple
+									aria-hidden
+									slotProps={{ input: { tabIndex: -1, 'aria-hidden': true } }}
+								/>
 								{assetsTypes[typeId].label}
 							</MenuItem>
 						))}

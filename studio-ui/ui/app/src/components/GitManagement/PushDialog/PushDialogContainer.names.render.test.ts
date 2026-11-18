@@ -32,6 +32,7 @@ const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { PushDialogContainer } = await import('./PushDialogContainer.tsx');
+const { accessibleName } = await import('../../../../test/accessibleName.ts');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
 
@@ -60,17 +61,6 @@ afterEach(async () => {
 		}
 	});
 });
-
-function accessibleName(node: HTMLElement) {
-	const explicit = node.getAttribute('aria-label');
-	if (explicit) return explicit;
-	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
-	return ids
-		.map((id) => document.getElementById(id)?.textContent ?? '')
-		.join(' ')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
 
 async function render() {
 	const host = document.createElement('div');
