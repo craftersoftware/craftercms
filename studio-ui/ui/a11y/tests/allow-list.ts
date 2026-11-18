@@ -118,11 +118,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		ticket: 'craftersoftware/craftercms-e#1457',
 		criterion: '2.1.1 Keyboard',
 		scope: { dashboard: both, 'tools panel > Dashboard': both }
-	},
-	'label-content-name-mismatch': {
-		ticket: 'craftersoftware/craftercms-e#1458',
-		criterion: '2.5.3 Label in Name',
-		scope: { 'create project': both }
 	}
 };
 
