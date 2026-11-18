@@ -41,7 +41,6 @@ export interface AllowListEntry {
 }
 
 const both: Theme[] = ['light', 'dark'];
-const light: Theme[] = ['light'];
 
 /**
  * The umbrella tickets, one per axe rule, and the screens and themes each one lists. They inventory what still fails once
@@ -52,11 +51,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
 		scope: { 'edit mode tools panel > Settings': both }
-	},
-	'color-contrast': {
-		ticket: 'craftersoftware/craftercms-e#1452',
-		criterion: '1.4.3 Contrast (Minimum)',
-		scope: { users: both, 'edit form': light }
 	},
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',

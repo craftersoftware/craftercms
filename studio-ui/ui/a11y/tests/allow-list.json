@@ -1,11 +1,5 @@
 [
 	{
-		"rule": "color-contrast",
-		"screen": "edit form",
-		"theme": "light",
-		"nodes": [".Mui-selected > .mui-*.MuiBox-root[data-after-saving-label=\"\"] <span class=\"MuiBox-root\">"]
-	},
-	{
 		"rule": "aria-prohibited-attr",
 		"screen": "edit mode tools panel > Settings",
 		"theme": "dark",
@@ -48,23 +42,5 @@
 		"screen": "edit mode tools panel > Settings",
 		"theme": "light",
 		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
-	},
-	{
-		"rule": "color-contrast",
-		"screen": "users",
-		"theme": "dark",
-		"nodes": [
-			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
-			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
-		]
-	},
-	{
-		"rule": "color-contrast",
-		"screen": "users",
-		"theme": "light",
-		"nodes": [
-			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
-			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
-		]
 	}
 ]
