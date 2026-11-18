@@ -15,6 +15,7 @@
  */
 
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
+import { SidebarFooterHtml } from '../ResizeableDrawer/SidebarFooterHtml';
 import {
 	sidebarDrawerPadding,
 	sidebarFooterPadding,
@@ -231,20 +232,7 @@ export function SiteTools(props: SiteToolsProps) {
 					}}
 				>
 					{!hideSidebarLogo && <CrafterCMSLogo width={100} sxs={{ root: { margin: '0 auto 10px auto' } }} />}
-					{footerHtml && (
-						<Typography
-							component="p"
-							variant="caption"
-							sx={(theme) => ({
-								color: theme.palette.text.secondary,
-								'& > a': {
-									textDecoration: 'none',
-									color: theme.palette.primary.main
-								}
-							})}
-							dangerouslySetInnerHTML={{ __html: footerHtml }}
-						/>
-					)}
+					{footerHtml && <SidebarFooterHtml html={footerHtml} />}
 				</Box>
 			</ResizeableDrawer>
 			<Box

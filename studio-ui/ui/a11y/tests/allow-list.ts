@@ -41,7 +41,6 @@ export interface AllowListEntry {
 }
 
 const both: Theme[] = ['light', 'dark'];
-const light: Theme[] = ['light'];
 
 const editModePages = [
 	'Search',
@@ -73,31 +72,17 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { search: both, 'edit mode tools panel > Settings': both }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: {
-			dashboard: both,
-			search: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Settings': both
-		}
-	},
-	'link-in-text-block': {
-		ticket: 'craftersoftware/craftercms-e#1454',
-		criterion: '1.4.1 Use of Color',
-		scope: { projects: light, 'site tools': light, users: light }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
-		scope: {
-			dashboard: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Settings': both
-		}
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	listitem: {
 		ticket: 'craftersoftware/craftercms-e#1456',
@@ -108,11 +93,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 			'edit mode tools panel': both,
 			...Object.fromEntries(editModePages.map((page) => [`edit mode tools panel > ${page}`, both]))
 		}
-	},
-	'nested-interactive': {
-		ticket: 'craftersoftware/craftercms-e#1457',
-		criterion: '2.1.1 Keyboard',
-		scope: { dashboard: both, 'tools panel > Dashboard': both }
 	},
 	'label-content-name-mismatch': {
 		ticket: 'craftersoftware/craftercms-e#1458',
