@@ -1,23 +1,5 @@
 [
 	{
-		"rule": "aria-input-field-name",
-		"screen": "dashboard",
-		"theme": "dark",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "dashboard",
-		"theme": "light",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
-		]
-	},
-	{
 		"rule": "color-contrast",
 		"screen": "edit form",
 		"theme": "light",
@@ -116,28 +98,12 @@
 		]
 	},
 	{
-		"rule": "aria-input-field-name",
-		"screen": "edit mode tools panel > Existing Content",
-		"theme": "dark",
-		"nodes": [
-			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
-		]
-	},
-	{
 		"rule": "listitem",
 		"screen": "edit mode tools panel > Existing Content",
 		"theme": "dark",
 		"nodes": [
 			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "edit mode tools panel > Existing Content",
-		"theme": "light",
-		"nodes": [
-			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
 		]
 	},
 	{
@@ -321,40 +287,6 @@
 			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "search",
-		"theme": "dark",
-		"nodes": [
-			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "search",
-		"theme": "light",
-		"nodes": [
-			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "tools panel > Dashboard",
-		"theme": "dark",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "tools panel > Dashboard",
-		"theme": "light",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
 		]
 	},
 	{
