@@ -78,6 +78,7 @@ dependencies {
 	implementation libs.log4j.jakarta.web
 	implementation libs.log4j.slf4j2.impl
 	implementation libs.bcpg.jdk18on
+	implementation enforcedPlatform(libs.netty.bom)
 	implementation libs.aws.s3
 	implementation libs.aws.sts
 	implementation libs.aws.sso
