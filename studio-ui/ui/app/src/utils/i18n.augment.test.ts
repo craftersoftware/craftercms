@@ -23,11 +23,18 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { describe, it } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import '../../test/registerTsLoader.mjs';
+
+const { toLanguageTag } = await import('./i18n.ts');
 
 const i18nUrl = pathToFileURL(fileURLToPath(new URL('./i18n.ts', import.meta.url))).href;
 const loaderUrl = pathToFileURL(fileURLToPath(new URL('../../test/registerTsLoader.mjs', import.meta.url))).href;
 
-function pluginStringAfterLocale(stored: string, pluginLocales: Record<string, Record<string, string>>): string {
+function pluginStringAfterLocale(
+	stored: string,
+	pluginLocales: Record<string, Record<string, string>>,
+	expectedLocale = stored.replaceAll('_', '-')
+): string {
 	const script = `
 		import { JSDOM } from 'jsdom';
 		await import(${JSON.stringify(loaderUrl)});
@@ -37,7 +44,7 @@ function pluginStringAfterLocale(stored: string, pluginLocales: Record<string, R
 		globalThis.document = dom.window.document;
 		globalThis.CustomEvent = dom.window.CustomEvent;
 		const mod = await import(${JSON.stringify(i18nUrl)});
-		const target = ${JSON.stringify(stored)}.replaceAll('_', '-');
+		const target = ${JSON.stringify(expectedLocale)};
 		await new Promise((resolve, reject) => {
 			if (mod.getCurrentIntl().locale === target) return resolve();
 			const timeout = setTimeout(() => reject(new Error('locale did not become ' + target)), 5000);
@@ -75,8 +82,26 @@ function pluginStringAfterLocale(stored: string, pluginLocales: Record<string, R
 	return JSON.parse(result.stdout) as string;
 }
 
+describe('toLanguageTag', () => {
+	it('canonicalises a lower-case underscore id', () => {
+		assert.equal(toLanguageTag('es_es'), 'es-ES');
+	});
+
+	it('canonicalises a mixed-case underscore id', () => {
+		assert.equal(toLanguageTag('es_ES'), 'es-ES');
+	});
+
+	it('keeps the underscore swap when the id is not a locale', () => {
+		assert.equal(toLanguageTag('es_ES!'), 'es-ES!');
+	});
+});
+
 describe('augmentTranslations', () => {
 	it('stores an underscore plugin locale under its BCP 47 tag', () => {
-		assert.equal(pluginStringAfterLocale('es_ES', { es_ES: { pluginGreeting: 'hola' } }), 'hola');
+		assert.equal(pluginStringAfterLocale('es_ES', { es_ES: { pluginGreeting: 'hola' } }, 'es-ES'), 'hola');
+	});
+
+	it('matches a lower-case stored locale to a canonical plugin key', () => {
+		assert.equal(pluginStringAfterLocale('es_es', { 'es-ES': { pluginGreeting: 'hola' } }, 'es-ES'), 'hola');
 	});
 });

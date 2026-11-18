@@ -90,13 +90,22 @@ export async function createIntlInstance(
 	);
 }
 
+/** Stored ids may use underscores or any case (es_es). Lookups use a canonical BCP 47 tag (es-ES). */
+export function toLanguageTag(id: string): string {
+	const replaced = id.replace(/_/g, '-');
+	try {
+		return Intl.getCanonicalLocales(replaced)[0] ?? replaced;
+	} catch {
+		return replaced;
+	}
+}
+
 export function augmentTranslations(translations: { [localeCode: string]: object }): void {
 	if (translations) {
-		let currentLocale = intl.locale;
+		let currentLocale = toLanguageTag(intl.locale);
 		let currentLocaleChanged = false;
 		Object.entries(translations).forEach(([rawCode, translations]) => {
-			// Plugin ids may use underscores (es_ES). Lookups use a BCP 47 tag (es-ES).
-			const localeCode = rawCode.replace(/_/g, '-');
+			const localeCode = toLanguageTag(rawCode);
 			currentTranslations[localeCode] = { ...currentTranslations[localeCode], ...translations };
 			currentLocale === localeCode && (currentLocaleChanged = true);
 		});
@@ -168,8 +177,7 @@ if (typeof document !== 'undefined') {
 	document.addEventListener(
 		'setlocale',
 		async (e) => {
-			// Stored ids may use underscores (es_ES). lang needs a BCP 47 tag (es-ES).
-			const locale = e.detail?.replace(/_/g, '-');
+			const locale = e.detail ? toLanguageTag(e.detail) : e.detail;
 			if (locale && locale !== intl.locale) {
 				intl = await createIntlInstance(locale);
 				document.documentElement.setAttribute('lang', locale);
@@ -180,7 +188,7 @@ if (typeof document !== 'undefined') {
 	);
 
 	// FreeMarker shells start at lang="en". A stored locale updates `lang` through this listener.
-	const initialLocale = getCurrentLocale();
+	const initialLocale = toLanguageTag(getCurrentLocale());
 	if (initialLocale && initialLocale !== intl.locale) {
 		dispatchLanguageChange(initialLocale);
 	}

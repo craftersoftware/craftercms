@@ -72,8 +72,15 @@
 		'en'
 	);
 
-	// Stored ids may use underscores (es_ES). The document lang needs a BCP 47 tag (es-ES).
-	$('html').attr('lang', lang.replace(/_/g, '-'));
+	// Stored ids may use underscores or any case (es_es). The document lang needs a canonical BCP 47 tag (es-ES).
+	// This page has no app bundle, so the same steps as toLanguageTag() are inlined.
+	var languageTag = lang.replace(/_/g, '-');
+	try {
+		languageTag = Intl.getCanonicalLocales(languageTag)[0] || languageTag;
+	} catch (ignore) {
+		// An id that is not a locale keeps the underscore swap.
+	}
+	$('html').attr('lang', languageTag);
 	CStudioAuthoringContext.lang = lang;
 
 	$(function () {

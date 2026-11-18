@@ -33,7 +33,7 @@ interface StartupResult {
 	langWrites: string[];
 }
 
-function loadStoredLocale(stored: string): StartupResult {
+function loadStoredLocale(stored: string, target = stored.replaceAll('_', '-')): StartupResult {
 	const script = `
 		import { JSDOM } from 'jsdom';
 		await import(${JSON.stringify(loaderUrl)});
@@ -50,7 +50,7 @@ function loadStoredLocale(stored: string): StartupResult {
 			setAttribute(name, value);
 		};
 		const mod = await import(${JSON.stringify(i18nUrl)});
-		const target = ${JSON.stringify(stored)}.replaceAll('_', '-');
+		const target = ${JSON.stringify(target)};
 		if (target !== 'en') {
 			await new Promise((resolve, reject) => {
 				if (mod.getCurrentIntl().locale === target) return resolve();
@@ -102,7 +102,13 @@ describe('stored locale on startup', () => {
 	});
 
 	it('writes a stored underscore locale as a BCP 47 lang tag', () => {
-		const loaded = loadStoredLocale('es_ES');
+		const loaded = loadStoredLocale('es_ES', 'es-ES');
+		assert.equal(loaded.lang, 'es-ES');
+		assert.equal(loaded.locale, 'es-ES');
+	});
+
+	it('canonicalises a lower-case stored locale', () => {
+		const loaded = loadStoredLocale('es_es', 'es-ES');
 		assert.equal(loaded.lang, 'es-ES');
 		assert.equal(loaded.locale, 'es-ES');
 	});
