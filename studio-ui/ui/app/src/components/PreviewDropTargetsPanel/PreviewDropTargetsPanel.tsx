@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { getHostToGuestBus } from '../../utils/subjects';
 import { ContentTypeDropTarget } from '../../models/ContentTypeDropTarget';
@@ -81,6 +81,7 @@ export function PreviewDropTargetsPanel() {
 		? Object.values(contentTypesBranch.byId).filter((contentType) => contentType.type === 'component')
 		: null;
 	const { formatMessage } = useIntl();
+	const contentTypeLabelId = useId();
 	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
 	const [listMode, setListMode] = useState(true);
@@ -180,8 +181,9 @@ export function PreviewDropTargetsPanel() {
 							}}
 						>
 							<FormControl>
-								<InputLabel>{formatMessage(translations.selectedContentType)}</InputLabel>
+								<InputLabel id={contentTypeLabelId}>{formatMessage(translations.selectedContentType)}</InputLabel>
 								<Select
+									labelId={contentTypeLabelId}
 									value={dropTargetsBranch.selectedContentType || ''}
 									label={formatMessage(translations.selectedContentType)}
 									sx={{

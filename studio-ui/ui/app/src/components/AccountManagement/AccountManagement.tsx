@@ -15,7 +15,7 @@
  */
 
 import Box, { BoxProps } from '@mui/material/Box';
-import React, { forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useId, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import { FormControlLabel, Switch, Typography } from '@mui/material';
@@ -108,6 +108,7 @@ export const DEFAULT_SNACKBAR_DURATION = 5000;
 
 export function AccountManagement(props: AccountManagementProps) {
 	const { passwordRequirementsMinComplexity = 4 } = props;
+	const projectLabelId = useId();
 	const user = useActiveUser();
 	const [language, setLanguage] = useState(() => getCurrentLocale());
 	const [languages, setLanguages] = useState<SystemLang[]>();
@@ -346,10 +347,11 @@ export function AccountManagement(props: AccountManagementProps) {
 					</Typography>
 					<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
 						<FormControl sx={{ minWidth: 200 }}>
-							<InputLabel>
+							<InputLabel id={projectLabelId}>
 								<FormattedMessage defaultMessage="Project" />
 							</InputLabel>
 							<Select
+								labelId={projectLabelId}
 								value={selectedSite}
 								label={<FormattedMessage defaultMessage="Project" />}
 								onChange={(event) => {

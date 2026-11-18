@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
@@ -58,6 +58,8 @@ const TREE_PANEL_MIN_WIDTH = 240;
 const TREE_PANEL_MAX_WIDTH = 480;
 
 export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
+	const sortByLabelId = useId();
+	const sortOrderLabelId = useId();
 	// region const { ... } = props;
 	const {
 		items,
@@ -229,10 +231,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 								>
 									<MenuItem>
 										<FormControl fullWidth>
-											<InputLabel>
+											<InputLabel id={sortByLabelId}>
 												<FormattedMessage id="BrowseFilesDialog.sortBy" defaultMessage="Sort By" />
 											</InputLabel>
 											<Select
+												labelId={sortByLabelId}
 												fullWidth
 												value={searchParameters.sortBy}
 												onChange={({ target }) => {
@@ -267,10 +270,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 									{searchParameters.sortBy && SORT_AUTO !== searchParameters.sortBy && (
 										<MenuItem>
 											<FormControl fullWidth>
-												<InputLabel>
+												<InputLabel id={sortOrderLabelId}>
 													<FormattedMessage id="words.order" defaultMessage="Order" />
 												</InputLabel>
 												<Select
+													labelId={sortOrderLabelId}
 													fullWidth
 													value={searchParameters.sortOrder}
 													onChange={({ target }) => {

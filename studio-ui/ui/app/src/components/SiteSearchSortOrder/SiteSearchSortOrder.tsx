@@ -36,6 +36,10 @@ const messages = defineMessages({
 	lessRelevantFirst: {
 		id: 'searchFilter.byRelevanceAscMessage',
 		defaultMessage: 'Less relevant first'
+	},
+	sortOrder: {
+		id: 'searchFilter.sortOrder',
+		defaultMessage: 'Sort order'
 	}
 });
 
@@ -71,9 +75,13 @@ export function SiteSearchSortOrder(props: SortOrderProps) {
 					value: 'desc'
 				}
 			];
+	// No visible label of its own (the accordion title names Sort by). The open listbox is named only through labelId.
+	const sortOrderLabel = formatMessage(messages.sortOrder);
 	return (
 		<Select
 			value={sortOrder}
+			inputProps={{ 'aria-label': sortOrderLabel }}
+			MenuProps={{ slotProps: { list: { 'aria-label': sortOrderLabel } } }}
 			sx={{
 				width: '100%',
 				marginTop: '10px'

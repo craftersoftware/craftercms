@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -185,6 +185,7 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 	} = props;
 	// endregion
 	const { formatMessage } = useIntl();
+	const sortByLabelId = useId();
 	const [expanded, setExpanded] = useSpreadState({
 		sortBy: false,
 		path: false
@@ -280,14 +281,19 @@ export function SiteSearchFilters(props: SiteSearchFiltersProps) {
 			<Divider sx={{ width: 'auto', margin: '0 10px' }} />
 			<Accordion expanded={expanded.sortBy} elevation={0} onChange={() => handleExpandClick('sortBy')}>
 				<AccordionSummary expandIcon={<ExpandMoreIcon />}>
-					<Typography sx={{ display: 'flex', fontWeight: 600, alignItems: 'center' }}>
+					<Typography id={sortByLabelId} sx={{ display: 'flex', fontWeight: 600, alignItems: 'center' }}>
 						{formatMessage(messages.sortBy)}
 						{sortBy && <CheckIcon />}
 					</Typography>
 				</AccordionSummary>
 				<AccordionDetails>
 					<>
-						<SiteSearchSortBy sortBy={sortBy} filterKeys={filterKeys} handleFilterChange={handleFilterChange} />
+						<SiteSearchSortBy
+							labelId={sortByLabelId}
+							sortBy={sortBy}
+							filterKeys={filterKeys}
+							handleFilterChange={handleFilterChange}
+						/>
 						{sortBy && sortBy !== SORT_AUTO && (
 							<SiteSearchSortOrder sortOrder={sortOrder} sortBy={sortBy} handleFilterChange={handleFilterChange} />
 						)}

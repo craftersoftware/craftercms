@@ -29,8 +29,26 @@ export type ObjectTypeOption = 'all' | Extract<SystemType, 'page' | 'component'>
 export const ContentTypesFilter = forwardRef<HTMLDivElement, ContentTypesFilterProps>((props, ref) => {
 	const { formatMessage } = useIntl();
 	const archetypes = useArchetypesList();
+	// The closed value ("Show all types") is not a label. The open listbox is named only through labelId.
+	const typeLabel = formatMessage({ id: 'searchFilter.contentType', defaultMessage: 'Content Type' });
+	const { inputProps, MenuProps, ...rest } = props;
+	const callerList = MenuProps?.slotProps?.list;
 	return (
-		<Select {...props} ref={ref}>
+		<Select
+			{...rest}
+			ref={ref}
+			inputProps={{ ...inputProps, 'aria-label': typeLabel }}
+			MenuProps={{
+				...MenuProps,
+				slotProps: {
+					...MenuProps?.slotProps,
+					list: {
+						...(typeof callerList === 'function' ? {} : callerList),
+						'aria-label': typeLabel
+					}
+				}
+			}}
+		>
 			<MenuItem value="all">
 				<FormattedMessage defaultMessage="Show all types" />
 			</MenuItem>

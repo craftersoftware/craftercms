@@ -45,6 +45,8 @@ function SiteSwitcherSelect(props: SiteSwitcherSelectProps) {
 	const dispatch = useDispatch();
 	const checkMinimized = useMinimizedDialogWarning();
 	const { formatMessage } = useIntl();
+	// No visible label. The open listbox is named only through labelId, so the same name goes on the list.
+	const selectSiteLabel = formatMessage({ defaultMessage: 'Select site' });
 
 	const onSiteChange = ({ target: { value } }) => {
 		if (!isBlank(value) && site !== value && !checkMinimized()) {
@@ -89,9 +91,10 @@ function SiteSwitcherSelect(props: SiteSwitcherSelectProps) {
 			onChange={onSiteChange}
 			slotProps={{
 				input: {
-					'aria-label': formatMessage({ defaultMessage: 'Select site' })
+					'aria-label': selectSiteLabel
 				}
 			}}
+			MenuProps={{ slotProps: { list: { 'aria-label': selectSiteLabel } } }}
 		>
 			{sites.length === 0 && (
 				<MenuItem value="">

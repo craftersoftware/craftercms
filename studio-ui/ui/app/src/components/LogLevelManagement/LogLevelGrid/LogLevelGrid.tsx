@@ -23,7 +23,7 @@ import TableBody from '@mui/material/TableBody';
 import GlobalAppGridRow from '../../GlobalAppGridRow';
 import GlobalAppGridCell from '../../GlobalAppGridCell';
 import Typography from '@mui/material/Typography';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -58,6 +58,12 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 		loggerFilter = '',
 		levelFilter = ''
 	} = props;
+	const { formatMessage } = useIntl();
+	// `label` only sizes the outline notch; it does not name the control. The open listbox is named only through labelId.
+	const levelFilterLabel = formatMessage({
+		id: 'loggingLevels.levelFilterLabel',
+		defaultMessage: 'Level filter'
+	});
 	const [displayAll, setDisplayAll] = useState(false);
 	const onShowAllClick = () => setDisplayAll(true);
 	useEffect(() => {
@@ -101,6 +107,8 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 										<Select
 											fullWidth
 											label={<FormattedMessage id="loggingLevels.levelFilterLabel" defaultMessage="Level filter" />}
+											inputProps={{ 'aria-label': levelFilterLabel }}
+											MenuProps={{ slotProps: { list: { 'aria-label': levelFilterLabel } } }}
 											value={levelFilter}
 											size="small"
 											variant="outlined"

@@ -21,7 +21,7 @@ import { DialogFooter } from '../DialogFooter';
 import Button from '@mui/material/Button';
 import { FormattedMessage, useIntl } from 'react-intl';
 import PrimaryButton from '../PrimaryButton';
-import React, { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import React, { MouseEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -68,6 +68,7 @@ interface DuplicateSiteDialogContainerProps {
 
 export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainerProps) {
 	const { site, setSite, handleClose, onGoBack, isSubmitting } = props;
+	const sourceProjectLabelId = useId();
 	const [error, setError] = useState(null);
 	const { authoringBase, useBaseDomain } = useEnv();
 	const fieldsErrorsLookup: LookupTable<boolean> = useMemo(
@@ -283,10 +284,11 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 								<Grid container spacing={3}>
 									<Grid size={12} data-field-id="sourceSiteId">
 										<FormControl fullWidth>
-											<InputLabel>
+											<InputLabel id={sourceProjectLabelId}>
 												<FormattedMessage defaultMessage="Project" />
 											</InputLabel>
 											<Select
+												labelId={sourceProjectLabelId}
 												value={site.sourceSiteId}
 												id="sourceSiteId"
 												name="sourceSiteId"

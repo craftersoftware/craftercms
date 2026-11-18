@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import React, { useState } from 'react';
 import DialogBody from '../DialogBody/DialogBody';
 import SingleItemSelector from '../SingleItemSelector';
@@ -58,6 +58,10 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 		error
 	} = props;
 	const [openSelector, setOpenSelector] = useState(false);
+	const { formatMessage } = useIntl();
+	// Neither picker has a visible label. The open listbox is named only through labelId, so the name goes on the list too.
+	const referencesLabel = formatMessage({ id: 'dependenciesDialog.references', defaultMessage: 'References' });
+	const referenceTypeLabel = formatMessage({ id: 'words.type', defaultMessage: 'Type' });
 	const filteredDependencies = dependencies?.filter((dependency) => assetsTypes[showTypes].filter(dependency));
 
 	return (
@@ -83,6 +87,8 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							onChange={(event: SelectChangeEvent) => {
 								setDependenciesShown(event.target.value);
 							}}
+							inputProps={{ 'aria-label': referencesLabel }}
+							MenuProps={{ slotProps: { list: { 'aria-label': referencesLabel } } }}
 							slotProps={{
 								input: {
 									sx: {
@@ -204,6 +210,7 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 						onChange={(event: SelectChangeEvent) => {
 							setShowTypes(event.target.value);
 						}}
+						inputProps={{ 'aria-label': referenceTypeLabel }}
 						slotProps={{
 							input: {
 								sx: {
@@ -217,6 +224,7 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							}
 						}}
 						MenuProps={{
+							slotProps: { list: { 'aria-label': referenceTypeLabel } },
 							sx: {
 								'& .MuiListItem-root': {
 									padding: '0 10px',
