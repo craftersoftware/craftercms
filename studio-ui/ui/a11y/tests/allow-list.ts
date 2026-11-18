@@ -75,11 +75,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		criterion: '4.1.2 Name, Role, Value',
 		scope: { search: both, 'edit mode tools panel > Settings': both }
 	},
-	'color-contrast': {
-		ticket: 'craftersoftware/craftercms-e#1452',
-		criterion: '1.4.3 Contrast (Minimum)',
-		scope: { users: both, 'edit form': light }
-	},
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',

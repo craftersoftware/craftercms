@@ -160,6 +160,28 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 						}
 					}
 				},
+				// colorDefault initials are background.default on grey[400] (light) and grey[600] (dark):
+				// #FAFAFA on #BDBDBD is 1.80:1, #1C1C1E on #757575 is 3.69:1. The disc stays.
+				// text.primary on those discs is 9.36:1 and 4.61:1. 20px regular text needs 4.5:1.
+				MuiAvatar: {
+					styleOverrides: {
+						colorDefault: ({ theme }) => ({
+							color: theme.palette.text.primary
+						})
+					}
+				},
+				// A selected primary toggle paints primary.main on an 8% wash of itself. On
+				// background.default (#FAFAFA) that is #0068DA on #E6EEF7, 4.49:1, and 4.24:1 once
+				// hover adds hoverOpacity. Axe requires the ratio to be over 4.5. blue.shade (#0040DD)
+				// is 6.46:1 and 6.09:1 on those washes. Dark mode's tint already clears at rest (5.13:1).
+				MuiToggleButton: {
+					styleOverrides: {
+						root: ({ ownerState, theme }) =>
+							ownerState.color === 'primary' && theme.palette.mode === 'light'
+								? { '&.Mui-selected': { color: palette.blue.shade } }
+								: {}
+					}
+				},
 				// A tinted background alone does not tell a selected item apart (1.4.1), so add a leading bar.
 				MuiListItemButton: { styleOverrides: { root: selectedBar } },
 				MuiMenuItem: { styleOverrides: { root: selectedBar } },

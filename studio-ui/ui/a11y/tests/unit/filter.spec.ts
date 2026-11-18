@@ -195,7 +195,9 @@ test.describe('fingerprint normalisation', () => {
 
 test.describe('allow-list validation', () => {
 	test('accepts a ticketed, in-scope node list', () => {
-		expect(validateAllowList([entry])).toEqual([entry]);
+		// color-contrast is no longer ticketed (craftersoftware/craftercms-e#1452). Use a rule that still is.
+		const ticketed = { ...entry, rule: 'link-in-text-block' };
+		expect(validateAllowList([ticketed])).toEqual([ticketed]);
 	});
 
 	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
@@ -224,6 +226,9 @@ test.describe('allow-list validation', () => {
 		expect(() =>
 			validateAllowList([{ rule: 'button-name', screen: 'edit form', theme: 'light', nodes: node }])
 		).toThrow(/no umbrella ticket/);
+		expect(() => validateAllowList([{ rule: 'color-contrast', screen: 'users', theme: 'light', nodes: node }])).toThrow(
+			/no umbrella ticket/
+		);
 		for (const [rule, screen] of [
 			['link-in-text-block', 'create project'],
 			['list', 'edit form'],
@@ -240,13 +245,14 @@ test.describe('allow-list validation', () => {
 	});
 
 	test('rejects a screen or theme the ticket does not list', () => {
-		expect(() => validateAllowList([{ ...entry, screen: 'login' }])).toThrow(/does not list/);
+		expect(() => validateAllowList([{ ...entry, rule: 'label', screen: 'login' }])).toThrow(/does not list/);
 		expect(() => validateAllowList([{ ...entry, rule: 'link-in-text-block', theme: 'dark' }])).toThrow(/does not list/);
 	});
 
 	test('rejects an entry without nodes, and duplicates', () => {
-		expect(() => validateAllowList([{ ...entry, nodes: [] }])).toThrow(/fingerprint of every node/);
-		expect(() => validateAllowList([entry, entry])).toThrow(/listed twice/);
+		const ticketed = { ...entry, rule: 'link-in-text-block' };
+		expect(() => validateAllowList([{ ...ticketed, nodes: [] }])).toThrow(/fingerprint of every node/);
+		expect(() => validateAllowList([ticketed, ticketed])).toThrow(/listed twice/);
 	});
 });
 

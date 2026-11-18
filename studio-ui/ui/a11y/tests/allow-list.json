@@ -288,12 +288,6 @@
 		]
 	},
 	{
-		"rule": "color-contrast",
-		"screen": "edit form",
-		"theme": "light",
-		"nodes": [".Mui-selected > .mui-*.MuiBox-root[data-after-saving-label=\"\"] <span class=\"MuiBox-root\">"]
-	},
-	{
 		"rule": "listitem",
 		"screen": "edit mode tools panel > Assets",
 		"theme": "dark",
@@ -1047,24 +1041,6 @@
 			".mui-*:nth-child(6) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".mui-*:nth-child(7) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".mui-*:nth-child(9) <li class=\"MuiListItem-gutters MuiListItem-root\">"
-		]
-	},
-	{
-		"rule": "color-contrast",
-		"screen": "users",
-		"theme": "dark",
-		"nodes": [
-			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
-			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
-		]
-	},
-	{
-		"rule": "color-contrast",
-		"screen": "users",
-		"theme": "light",
-		"nodes": [
-			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
-			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
 		]
 	},
 	{
