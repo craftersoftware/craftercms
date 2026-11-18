@@ -59,6 +59,7 @@ import {
 	DashletAvatar,
 	DashletEmptyMessage,
 	DashletItemOptions,
+	getDashletRevealOnHoverSx,
 	PersonAvatar,
 	PersonFullName,
 	usePackageContextMenu
@@ -627,13 +628,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 									content = <FormattedMessage defaultMessage="Loading..." />;
 								} else {
 									const activity = feed[index];
-									const optionsHovered = hoveredActivity?.id === activity.id;
-									const optionsButtonSx = {
-										opacity: optionsHovered ? 1 : 0,
-										pointerEvents: optionsHovered ? 'auto' : 'none',
-										'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
-										'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
-									};
+									const optionsButtonSx = getDashletRevealOnHoverSx(hoveredActivity?.id === activity.id);
 									content = (
 										<CustomTimelineItem key={activity.id}>
 											<SizedTimelineSeparator>

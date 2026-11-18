@@ -21,6 +21,7 @@ import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import {
 	DashletEmptyMessage,
+	getDashletRevealOnHoverSx,
 	getItemSkeleton,
 	List,
 	Pager,
@@ -209,12 +210,7 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 								<IconButton
 									onClick={(e) => contextMenu?.openContextMenu(e, pkg)}
 									aria-label={formatMessage({ defaultMessage: 'Package options' })}
-									sx={{
-										opacity: hoveredPackage === pkg.id ? 1 : 0,
-										pointerEvents: hoveredPackage === pkg.id ? 'auto' : 'none',
-										'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
-										'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
-									}}
+									sx={getDashletRevealOnHoverSx(hoveredPackage === pkg.id)}
 								>
 									<MoreVertRoundedIcon />
 								</IconButton>

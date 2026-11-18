@@ -216,6 +216,18 @@ export const dashletSelectableRowSx: SxProps<Theme> = {
 	'&:hover': { bgcolor: 'action.hover' }
 };
 
+/**
+ * Hides a dashlet options button until its row is hovered, while keeping it available to keyboard focus and to touch
+ * (or any coarse or hover-less pointer). `pointer-events: none` stops a hidden button from taking the row's click; the
+ * button stays in the tab order.
+ */
+export const getDashletRevealOnHoverSx = (visible: boolean): SxProps<Theme> => ({
+	opacity: visible ? 1 : 0,
+	pointerEvents: visible ? 'auto' : 'none',
+	'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
+	'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
+});
+
 export function DashletItemOptions(props: { path: string; iconButtonProps?: IconButtonProps }) {
 	const { path, iconButtonProps } = props;
 	const dispatch = useDispatch();
