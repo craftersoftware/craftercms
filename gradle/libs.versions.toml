@@ -132,7 +132,6 @@ node = "22.18.0"
 yarn = "1.22.22"
 rome-utils = "2.1.0"
 netty = "4.2.17.Final"
-okio = "3.17.0"
 html5diff = "1.4.5"
 
 [libraries]
