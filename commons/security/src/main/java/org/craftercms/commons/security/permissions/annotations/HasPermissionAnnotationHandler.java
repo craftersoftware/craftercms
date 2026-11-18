@@ -20,8 +20,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.craftercms.commons.aop.AopUtils;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.commons.http.RequestContext;
 import org.craftercms.commons.i10n.I10nLogger;
+import org.craftercms.commons.rest.ManagementTokenResolver;
 import org.craftercms.commons.security.exception.ActionDeniedException;
 import org.craftercms.commons.security.permissions.PermissionEvaluator;
 import org.springframework.core.annotation.Order;
@@ -39,8 +41,6 @@ import java.util.Map;
 @Aspect
 @Order(-1)
 public class HasPermissionAnnotationHandler extends AbstractPermissionAnnotationHandler {
-
-	private static final String TOKEN_PARAMETER = "token";
 
 	private static final I10nLogger logger = new I10nLogger(HasPermissionAnnotationHandler.class,
 		"crafter.security.messages.logging");
@@ -90,7 +90,8 @@ public class HasPermissionAnnotationHandler extends AbstractPermissionAnnotation
 	}
 
 	/**
-	 * Checks if there is a valid management token param in the request.
+	 * Checks if there is a valid management token in the request.
+	 * The header is used when present; the query parameter is used only when the header is absent.
 	 * This token must match the configured management token for this handler.
 	 *
 	 * @param hasPermission the {@link HasPermission} annotation
@@ -105,9 +106,9 @@ public class HasPermissionAnnotationHandler extends AbstractPermissionAnnotation
 		if (requestContext == null || requestContext.getRequest() == null) {
 			return false;
 		}
-		String token = requestContext.getRequest().getParameter(TOKEN_PARAMETER);
+		String token = ManagementTokenResolver.resolve(requestContext.getRequest());
 
-		return StringUtils.equals(token, managementToken);
+		return ManagementTokenUtils.matches(token, managementToken);
 	}
 
 }

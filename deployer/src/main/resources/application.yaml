@@ -133,12 +133,15 @@ deployer:
             # Thread pool size of the task scheduler
             poolSize: 10
         management:
-            # Deployer management authorization token
+            # Deployer management authorization token.
+            # Monitoring accepts X-Crafter-Management-Token (preferred) and the token query parameter.
+            # Target APIs accept the header only.
             # Please update this per installation and provide this token to the status monitors.
             authorizationToken: defaultManagementToken
-            # Engine management authorization token
+            # Engine management authorization token sent in X-Crafter-Management-Token by deployment processors.
             # Please update this per installation and provide this token to the status monitors.
             engineAuthorizationToken: defaultManagementToken
+            # Studio management authorization token sent in X-Crafter-Management-Token by deployment processors.
             studioAuthorizationToken: defaultManagementToken
         security:
             encryption:

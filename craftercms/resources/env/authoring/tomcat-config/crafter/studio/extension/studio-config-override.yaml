@@ -17,7 +17,7 @@ studio.repo.basePath: ${env:CRAFTER_DATA_DIR}/repos
 ##                   Site Configuration                   ##
 ############################################################
 # Destroy site context url for preview engine
-studio.configuration.site.preview.destroy.context.url: ${env:ENGINE_URL}/api/1/site/context/destroy.json?crafterSite={siteName}&token=${studio.configuration.management.previewAuthorizationToken}
+studio.configuration.site.preview.destroy.context.url: ${env:ENGINE_URL}/api/1/site/context/destroy.json?crafterSite={siteName}
 # Default preview URL
 studio.configuration.site.defaultPreviewUrl: ^https?://localhost:8080/?
 # Default authoring URL
