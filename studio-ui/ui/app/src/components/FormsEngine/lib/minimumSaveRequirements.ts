@@ -180,6 +180,19 @@ export function fullFormMinimumSaveAlert(
 	);
 }
 
+/**
+ * A non-embedded create whose file name is blank. Composing the path would write
+ * `<createPath>/index.xml` for a page, or `<createPath>/.xml` for a component, and can
+ * overwrite the folder's existing index page. An embedded create and an edit are left alone.
+ */
+export function isBlankCreateFileName(args: {
+	isCreateMode: boolean;
+	isEmbedded: boolean;
+	fileName: unknown;
+}): boolean {
+	return args.isCreateMode && !args.isEmbedded && (args.fileName?.toString() ?? '').trim() === '';
+}
+
 /** The content type's name for a blocking field, for the alert's Show button. */
 export function blockingFieldName(notice: MinimumRequirementsNotice, fieldId: string | undefined): string | undefined {
 	if (!fieldId) return undefined;

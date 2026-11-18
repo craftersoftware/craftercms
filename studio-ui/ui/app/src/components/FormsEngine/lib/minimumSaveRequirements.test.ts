@@ -24,6 +24,7 @@ const {
 	firstBlockingFieldId,
 	minimumRequirementsCopy,
 	minimumRequirementsNotice,
+	isBlankCreateFileName,
 	missingMinimumSaveRequirements,
 	readMissingMinimumSaveRequirements,
 	embeddedMinimumSaveAlert,
@@ -258,6 +259,23 @@ describe('save guard and alert when fields are absent', () => {
 					internalName: undefined,
 					hasInternalNameField: false
 				}
+			),
+			'Page URL is required to save content.'
+		);
+	});
+
+	it('refuses a blank file name on a non-embedded create before a path is built', () => {
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: '' }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: '   ' }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: undefined }), true);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: false, fileName: 'about' }), false);
+		assert.equal(isBlankCreateFileName({ isCreateMode: true, isEmbedded: true, fileName: '' }), false);
+		assert.equal(isBlankCreateFileName({ isCreateMode: false, isEmbedded: false, fileName: '' }), false);
+		assert.equal(
+			fullFormMinimumSaveAlert(
+				formatSaveAlert,
+				{ 'file-name': { name: 'Page URL' } },
+				{ fileNameValid: false, internalName: 'Home', hasInternalNameField: true }
 			),
 			'Page URL is required to save content.'
 		);

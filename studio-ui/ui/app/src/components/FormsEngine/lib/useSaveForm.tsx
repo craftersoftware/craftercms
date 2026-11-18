@@ -59,7 +59,7 @@ import Typography from '@mui/material/Typography';
 import { flushSync } from 'react-dom';
 import LookupTable from '../../../models/LookupTable';
 import { checkMinimumSaveRequirementsFulfilled } from './validators';
-import { embeddedMinimumSaveAlert, fullFormMinimumSaveAlert } from './minimumSaveRequirements';
+import { embeddedMinimumSaveAlert, fullFormMinimumSaveAlert, isBlankCreateFileName } from './minimumSaveRequirements';
 import { cancelPackages, fetchAffectedPackages } from '../../../services/workflow';
 import { switchMap } from 'rxjs';
 import { validateActionPolicy } from '../../../services/sites';
@@ -498,6 +498,18 @@ export function useSaveForm(props: UseSaveFormProps) {
 						saveEmbeddedContent();
 					}
 					return 'saved';
+				}
+				// A type with no file-name field has no validity atom, so the check below treats the name as
+				// valid. A blank name would compose `<folder>/index.xml` or `<folder>/.xml`. Refuse it first.
+				if (isBlankCreateFileName({ isCreateMode, isEmbedded, fileName: currentFileName })) {
+					setIsSubmitting(false);
+					const msg = fullFormMinimumSaveAlert(formatMessage, contentType.fields, {
+						fileNameValid: false,
+						internalName: values[XmlKeys.internalName],
+						hasInternalNameField
+					});
+					if (msg) showAlert({ dispatch, message: msg });
+					return;
 				}
 				let path: string;
 				let renamePath: string;
