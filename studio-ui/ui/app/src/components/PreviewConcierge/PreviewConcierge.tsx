@@ -241,9 +241,6 @@ const issueDescriptorRequest = (props: {
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
-	// Track paths queued by this request only; mark the shared ref after delivery so
-	// cancellation (e.g. a new check-in) leaves them eligible for the next request.
-	const pendingSourceMapPaths = new Set<string>();
 
 	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
 		.pipe(
@@ -263,8 +260,8 @@ const issueDescriptorRequest = (props: {
 								contentItemPathLookup[path] = true;
 								contentItemPaths.push(path);
 							}
-							if (!requestedSourceMapPaths.current[path] && !pendingSourceMapPaths.has(path)) {
-								pendingSourceMapPaths.add(path);
+							if (!requestedSourceMapPaths.current[path]) {
+								requestedSourceMapPaths.current[path] = true;
 								requests.push(fetchContentInstance(site, path, contentTypes));
 							}
 						});
@@ -300,9 +297,6 @@ const issueDescriptorRequest = (props: {
 			})
 		)
 		.subscribe(({ contentItems, modelResponse }) => {
-			pendingSourceMapPaths.forEach((path) => {
-				requestedSourceMapPaths.current[path] = true;
-			});
 			const { model, modelLookup } = modelResponse;
 			const normalizedModels = normalizeModelsLookup(modelLookup);
 			const hierarchyMap = createModelHierarchyDescriptorMap(normalizedModels, contentTypes);
@@ -363,6 +357,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		usePreviewState();
 	const item = useCurrentPreviewItem();
 	const { currentUrlPath } = usePreviewNavigation();
+	const contentTypes = useContentTypes();
 	const contentTypes$Ref = useRef<BehaviorSubject<Record<string, ContentType>>>(undefined);
 	const { authoringBase, guestBase, xsrfArgument } = useSelection((state) => state.env);
 	const priorState = useRef({ site: siteId });
@@ -379,7 +374,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 	const guestUploadSubscriptionsRef = useRef(new Map<string, Subscription>());
 	const currentItemPath = guest?.path;
 	const uiConfig = useSiteUIConfig();
-	const contentTypes = useContentTypes();
 	const { cdataEscapedFieldPatterns } = uiConfig;
 	const rteConfig = useRTEConfig();
 	const keyboardShortcutsDialogState = useEnhancedDialogState();
@@ -433,7 +427,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 		enqueueSnackbar,
 		editModePadding,
 		cdataEscapedFieldPatterns,
-		uiConfig,
 		toggleEditMode,
 		keyboardShortcutsDialogState,
 		setDataSourceActionsListState,
@@ -788,6 +781,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const { url, location } = payload;
 					const path = getPathFromPreviewURL(url);
 					dispatch(guestCheckIn({ location, site: siteId, path }));
+
 					contentTypes$.subscribe((contentTypes) => {
 						issueDescriptorRequest({
 							site: siteId,
