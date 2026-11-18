@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { type DetailedHTMLProps, type HTMLAttributes, ReactNode, useRef } from 'react';
+import React, { type DetailedHTMLProps, type HTMLAttributes, ReactNode, useId, useRef } from 'react';
 import LookupTable from '../../models/LookupTable';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
@@ -25,7 +25,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import CircularProgress from '@mui/material/CircularProgress';
 import EmptyState from '../EmptyState/EmptyState';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import TransferListItem from './TransferListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import { PaginationOptions } from '../../models';
@@ -70,6 +70,9 @@ export function TransferListColumn(props: TransferListColumnProps) {
 		hasMoreItems
 	} = props;
 	const listRef = useRef(undefined);
+	const { formatMessage } = useIntl();
+	const titleId = useId();
+	const rowLabelId = useId();
 
 	// If there are more items to be loaded then add an extra row to hold a loading indicator.
 	const currentItemsCount = items ? (hasMoreItems ? items.length + 1 : items.length) : 0;
@@ -103,9 +106,18 @@ export function TransferListColumn(props: TransferListColumnProps) {
 						disabled={items?.length === 0}
 						checked={isAllChecked}
 						onChange={(event) => onCheckAllClicked(items, event.target.checked)}
+						slotProps={{
+							input: title
+								? { 'aria-labelledby': titleId }
+								: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) }
+						}}
 					/>
 				)}
-				{title && <Typography color="textSecondary">{title}</Typography>}
+				{title && (
+					<Typography id={titleId} color="textSecondary">
+						{title}
+					</Typography>
+				)}
 				<SearchBar
 					keyword={keyword}
 					onChange={onSearch}
@@ -153,6 +165,7 @@ export function TransferListColumn(props: TransferListColumnProps) {
 									);
 								} else {
 									const item = items[index];
+									const itemLabelId = `${rowLabelId}-${index}`;
 									content = (
 										<ListItemButton
 											disabled={disabled || inProgressIds.includes(item.id) || disabledItems?.[item.id]}
@@ -169,6 +182,16 @@ export function TransferListColumn(props: TransferListColumnProps) {
 															checked={(checkedList[item.id] && !disabledItems?.[item.id]) ?? false}
 															tabIndex={-1}
 															disableRipple
+															slotProps={{
+																input: item.title
+																	? { 'aria-labelledby': itemLabelId }
+																	: {
+																			'aria-label': formatMessage(
+																				{ defaultMessage: 'Select {name}' },
+																				{ name: String(item.id) }
+																			)
+																		}
+															}}
 														/>
 													)}
 												</ListItemIcon>
@@ -177,7 +200,7 @@ export function TransferListColumn(props: TransferListColumnProps) {
 												primary={item.title}
 												secondary={item.subtitle}
 												slotProps={{
-													primary: { noWrap: true, title: item.title }
+													primary: { id: itemLabelId, noWrap: true, title: item.title }
 												}}
 											/>
 										</ListItemButton>

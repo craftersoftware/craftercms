@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,7 +15,7 @@
  */
 
 import { ContentItem } from '../../models/Item';
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import ListItemButton from '@mui/material/ListItemButton';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
@@ -73,6 +73,7 @@ function PathNavigatorItem(props: NavItemProps) {
 	} = props;
 	const [over, setOver] = useState(false);
 	const { formatMessage } = useIntl();
+	const labelId = useId();
 	const onMouseOver = isSelectMode ? null : () => setOver(true);
 	const onMouseLeave = isSelectMode ? null : () => setOver(false);
 	const onClick = (e) => onItemClicked?.(item, e);
@@ -122,6 +123,7 @@ function PathNavigatorItem(props: NavItemProps) {
 					onChange={(e) => {
 						onItemChecked(item, e.currentTarget.checked);
 					}}
+					slotProps={{ input: { 'aria-labelledby': labelId } }}
 				/>
 			)}
 			<ItemDisplay
@@ -134,7 +136,7 @@ function PathNavigatorItem(props: NavItemProps) {
 				item={item}
 				showPublishingTarget={!isSelectMode}
 				showWorkflowState={!isSelectMode}
-				labelTypographyProps={{ variant: 'body2' }}
+				labelTypographyProps={{ id: labelId, variant: 'body2' }}
 			/>
 			{over && onOpenItemMenu && (
 				<Tooltip title={formatMessage(translations.itemMenu)}>
