@@ -184,11 +184,11 @@ export function fetchContentInstanceDescriptor(
 			? of(contentTypeLookup)
 			: fetchContentTypes(site).pipe(map((contentTypes) => createLookupTable(contentTypes)))
 	).pipe(
-		switchMap((resolvedContentTypeLookup) =>
+		switchMap((contentTypeLookup) =>
 			fetchDescriptorDOM(site, path, options).pipe(
 				map((doc) => {
 					const modelLookup = {};
-					const model = parseContentXML(doc, path, resolvedContentTypeLookup, modelLookup, unflattenedPaths);
+					const model = parseContentXML(doc, path, contentTypeLookup, modelLookup, unflattenedPaths);
 					return { model, modelLookup, unflattenedPaths };
 				})
 			)
