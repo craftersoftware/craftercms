@@ -152,22 +152,6 @@
 		]
 	},
 	{
-		"rule": "aria-prohibited-attr",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "dark",
-		"nodes": [
-			".MuiSwitch-colorDefault <span class=\"Mui-checked MuiButtonBase-root MuiSwitch-colorDefault MuiSwitch-switchBase PrivateSwitchBase-root\">"
-		]
-	},
-	{
-		"rule": "label",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "dark",
-		"nodes": [
-			".MuiSwitch-colorDefault > .MuiSwitch-input[role=\"switch\"][type=\"checkbox\"] <input role=\"switch\" class=\"MuiSwitch-input PrivateSwitchBase-input\">"
-		]
-	},
-	{
 		"rule": "list",
 		"screen": "edit mode tools panel > Settings",
 		"theme": "dark",
@@ -180,22 +164,6 @@
 		"nodes": [
 			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".mui-*.MuiListItem-root.MuiListItem-gutters:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
-		]
-	},
-	{
-		"rule": "aria-prohibited-attr",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "light",
-		"nodes": [
-			".MuiSwitch-colorDefault <span class=\"Mui-checked MuiButtonBase-root MuiSwitch-colorDefault MuiSwitch-switchBase PrivateSwitchBase-root\">"
-		]
-	},
-	{
-		"rule": "label",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "light",
-		"nodes": [
-			".MuiSwitch-colorDefault > .MuiSwitch-input[role=\"switch\"][type=\"checkbox\"] <input role=\"switch\" class=\"MuiSwitch-input PrivateSwitchBase-input\">"
 		]
 	},
 	{

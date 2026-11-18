@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2026 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -79,8 +79,8 @@ export function PreviewSettingsPanel() {
 	return (
 		<List>
 			<ListItem>
-				<ListItemText primary={formatMessage(translations.editMode)} />
-				<EditModeSwitch edge="end" />
+				<ListItemText id="settingsPanelEditModeLabel" primary={formatMessage(translations.editMode)} />
+				<EditModeSwitch edge="end" slotProps={{ input: { 'aria-labelledby': 'settingsPanelEditModeLabel' } }} />
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
 			<ListItem>
