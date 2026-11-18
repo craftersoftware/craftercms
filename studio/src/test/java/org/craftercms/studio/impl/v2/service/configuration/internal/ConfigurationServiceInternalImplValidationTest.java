@@ -42,11 +42,13 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.SocketTimeoutException;
+import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -195,15 +197,39 @@ public class ConfigurationServiceInternalImplValidationTest {
 		}
 	}
 
-	@Test
+	@Test(timeout = 5000)
 	public void validateRejectsExternalHttpEntityWithoutConnecting() throws Exception {
 		try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
-			String xml = "<?xml version=\"1.0\"?>" +
-					"<!DOCTYPE foo [<!ENTITY ext SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/secret\">]>" +
-					"<foo>&ext;</foo>";
-			assertRejected(bytes(xml), "config");
-			server.setSoTimeout(500);
-			assertThrows(SocketTimeoutException.class, server::accept);
+			List<Socket> connections = new ArrayList<>();
+			Thread acceptor = new Thread(() -> {
+				while (!Thread.currentThread().isInterrupted()) {
+					try {
+						Socket socket = server.accept();
+						connections.add(socket);
+						socket.close();
+					} catch (IOException e) {
+						return;
+					}
+				}
+			});
+			acceptor.setDaemon(true);
+			acceptor.start();
+			try {
+				String xml = "<?xml version=\"1.0\"?>" +
+						"<!DOCTYPE foo [<!ENTITY ext SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/secret\">]>" +
+						"<foo>&ext;</foo>";
+				assertRejected(bytes(xml), "config");
+				server.close();
+				acceptor.join(1000);
+				assertFalse(acceptor.isAlive());
+				assertEquals(0, connections.size());
+			} finally {
+				server.close();
+				acceptor.join(1000);
+				for (Socket socket : connections) {
+					socket.close();
+				}
+			}
 		}
 	}
 
@@ -288,7 +314,21 @@ public class ConfigurationServiceInternalImplValidationTest {
 	}
 
 	@Test
-	public void validateRejectsDoctypeWhenExternalAccessPropertiesAreUnsupported() {
+	public void validateUsesByteFallbackWhenReaderCreationThrowsUnsupportedOperation() throws Exception {
+		ConfigurationServiceInternalImpl failing = new ConfigurationServiceInternalImpl() {
+			@Override
+			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler) {
+				throw new UnsupportedOperationException("setXIncludeAware");
+			}
+		};
+		assertAccepted(failing, bytes("def value = 1\n"), "script.groovy");
+		InvalidConfigurationException error = assertRejected(failing, bytes(DOCTYPE_XML), "script.groovy");
+		assertEquals("Invalid XML configuration file 'script.groovy'", error.getMessage());
+		assertEquals(UnsupportedOperationException.class, error.getCause().getClass());
+	}
+
+	@Test
+	public void validateRejectsDoctypeWhenExternalAccessPropertiesAreUnsupported() throws Exception {
 		ConfigurationServiceInternalImpl unsupported = new ConfigurationServiceInternalImpl() {
 			@Override
 			XMLReader createDoctypeDetectingReader(DefaultHandler2 handler)
@@ -299,6 +339,7 @@ public class ConfigurationServiceInternalImplValidationTest {
 		};
 		InvalidConfigurationException error = assertRejected(unsupported, bytes(SIMPLE_DOCTYPE), "config");
 		assertEquals("Invalid XML configuration file 'config'", error.getMessage());
+		assertAccepted(unsupported, bytes(COMMENT_CONTAINING_DOCTYPE), "config");
 	}
 
 	@Test
