@@ -280,7 +280,7 @@ export function SearchUI(props: SearchUIProps) {
 							[`& .${tablePaginationClasses.select}`]: { border: 'none' }
 						}}
 						component="div"
-						labelRowsPerPage={null}
+						labelRowsPerPage={formatMessage(translations.itemsPerPage)}
 						labelDisplayedRows={({ from, to, count }) => (
 							<>
 								<FormattedMessage

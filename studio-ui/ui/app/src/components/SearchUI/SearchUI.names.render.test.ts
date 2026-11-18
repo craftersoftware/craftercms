@@ -138,6 +138,21 @@ async function render() {
 const selectAllInput = (host: HTMLElement) =>
 	host.querySelector<HTMLInputElement>('input[type="checkbox"][aria-label="Select all on this page"]');
 
+describe('search rows-per-page name', () => {
+	it('names the rows-per-page combobox with the visible items-per-page label', async () => {
+		const host = (await mount({ searchParameters: { limit: 9, offset: 0 } })).host;
+		const combobox = host.querySelector<HTMLElement>('.MuiTablePagination-select[role="combobox"]');
+		assert.ok(combobox, 'the rows-per-page combobox is missing');
+		const ids = combobox.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
+		const name = ids
+			.map((id) => host.querySelector<HTMLElement>(`[id="${id}"]`)?.textContent ?? '')
+			.join(' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+		assert.match(name, /^Items per page:/);
+	});
+});
+
 describe('search select-all name', () => {
 	it('names the select-all input, not just the wrapper the tooltip clones', async () => {
 		const host = await render();

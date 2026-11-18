@@ -18,15 +18,6 @@
 		]
 	},
 	{
-		"rule": "aria-input-field-name",
-		"screen": "dashboard",
-		"theme": "dark",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
-		]
-	},
-	{
 		"rule": "label",
 		"screen": "dashboard",
 		"theme": "dark",
@@ -150,15 +141,6 @@
 			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
 			".MuiListItemButton-root.MuiListItemButton-gutters.mui-*:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
 			".mui-* > .MuiCardActionArea-root.mui-*[role=\"button\"] <div role=\"button\" class=\"MuiButtonBase-root MuiCardActionArea-root\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "dashboard",
-		"theme": "light",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-select <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
 		]
 	},
 	{
@@ -386,28 +368,12 @@
 		]
 	},
 	{
-		"rule": "aria-input-field-name",
-		"screen": "edit mode tools panel > Existing Content",
-		"theme": "dark",
-		"nodes": [
-			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
-		]
-	},
-	{
 		"rule": "listitem",
 		"screen": "edit mode tools panel > Existing Content",
 		"theme": "dark",
 		"nodes": [
 			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(1) <li class=\"MuiListItem-gutters MuiListItem-root\">",
 			".MuiListItem-root.MuiListItem-gutters.mui-*:nth-child(8) <li class=\"MuiListItem-gutters MuiListItem-root\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "edit mode tools panel > Existing Content",
-		"theme": "light",
-		"nodes": [
-			".mui-* <div role=\"combobox\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiSelect-outlined MuiSelect-select\">"
 		]
 	},
 	{
@@ -604,14 +570,6 @@
 		]
 	},
 	{
-		"rule": "aria-input-field-name",
-		"screen": "search",
-		"theme": "dark",
-		"nodes": [
-			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
-		]
-	},
-	{
 		"rule": "aria-prohibited-attr",
 		"screen": "search",
 		"theme": "dark",
@@ -665,14 +623,6 @@
 			"span[aria-label=\"Select Home\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
 			"span[aria-label=\"Select Latest Articles Widget\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">",
 			"span[aria-label=\"Select Men Styles For Winter\"] > .PrivateSwitchBase-input[data-indeterminate=\"false\"][type=\"checkbox\"] <input class=\"PrivateSwitchBase-input\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "search",
-		"theme": "light",
-		"nodes": [
-			"#* <div role=\"combobox\" class=\"MuiInputBase-input MuiSelect-select MuiSelect-standard MuiTablePagination-select\">"
 		]
 	},
 	{
@@ -739,15 +689,6 @@
 			"a:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">",
 			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
 			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "tools panel > Dashboard",
-		"theme": "dark",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
 		]
 	},
 	{
@@ -874,15 +815,6 @@
 			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(7) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
 			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(8) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">",
 			".mui-*.MuiListItemButton-root.MuiListItemButton-gutters:nth-child(9) <div role=\"button\" class=\"MuiButtonBase-root MuiListItemButton-gutters MuiListItemButton-root\">"
-		]
-	},
-	{
-		"rule": "aria-input-field-name",
-		"screen": "tools panel > Dashboard",
-		"theme": "light",
-		"nodes": [
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">",
-			".mui-* > .MuiInput-input.mui-*.MuiSelect-standard <div role=\"combobox\" class=\"MuiInput-input MuiInputBase-input MuiSelect-select MuiSelect-standard\">"
 		]
 	},
 	{

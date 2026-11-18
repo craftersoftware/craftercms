@@ -198,14 +198,13 @@ test.describe('allow-list validation', () => {
 		expect(validateAllowList([entry])).toEqual([entry]);
 	});
 
-	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
+	test('lists the tools panel Dashboard and the edit mode Settings page under their tickets', () => {
 		const node = [known];
 		const scoped = [
-			...['aria-input-field-name', 'label', 'list', 'nested-interactive'].map((rule) => ({
+			...['label', 'list', 'nested-interactive'].map((rule) => ({
 				rule,
 				screen: 'tools panel > Dashboard'
 			})),
-			{ rule: 'aria-input-field-name', screen: 'edit mode tools panel > Existing Content' },
 			...['aria-prohibited-attr', 'label', 'list'].map((rule) => ({ rule, screen: 'edit mode tools panel > Settings' }))
 		];
 		for (const theme of ['light', 'dark'] as const) {
@@ -223,6 +222,9 @@ test.describe('allow-list validation', () => {
 		const node = [known];
 		expect(() =>
 			validateAllowList([{ rule: 'button-name', screen: 'edit form', theme: 'light', nodes: node }])
+		).toThrow(/no umbrella ticket/);
+		expect(() =>
+			validateAllowList([{ rule: 'aria-input-field-name', screen: 'dashboard', theme: 'light', nodes: node }])
 		).toThrow(/no umbrella ticket/);
 		for (const [rule, screen] of [
 			['link-in-text-block', 'create project'],
