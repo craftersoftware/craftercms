@@ -94,7 +94,9 @@ export function augmentTranslations(translations: { [localeCode: string]: object
 	if (translations) {
 		let currentLocale = intl.locale;
 		let currentLocaleChanged = false;
-		Object.entries(translations).forEach(([localeCode, translations]) => {
+		Object.entries(translations).forEach(([rawCode, translations]) => {
+			// Plugin ids may use underscores (es_ES). Lookups use a BCP 47 tag (es-ES).
+			const localeCode = rawCode.replace(/_/g, '-');
 			currentTranslations[localeCode] = { ...currentTranslations[localeCode], ...translations };
 			currentLocale === localeCode && (currentLocaleChanged = true);
 		});

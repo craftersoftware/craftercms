@@ -16,61 +16,54 @@
 
 import { expect, test } from '@playwright/test';
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { ruleTickets } from '../allow-list';
 
-const templatesRoot = join(__dirname, '../../../../templates/web');
+const repoRoot = join(__dirname, '../../../../../');
+const templatesRoot = join(repoRoot, 'studio-ui/templates/web');
+
+/**
+ * Studio templates, Engine templates and the default site, Studio notification mail,
+ * and deployer mail. TinyMCE v2 is vendored and out of scope.
+ */
+const templateRoots = [
+	'studio-ui/templates',
+	'engine/src/main/webapp',
+	'studio/src/main/webapp/WEB-INF/notification/templates',
+	'deployer/src/main/resources/templates'
+];
 
 /** Whitespace before `lang`, so `data-lang` and `xml:lang` do not satisfy it. */
 const htmlLangEn = /\slang\s*=\s*"en"/;
 
-test('studio web templates set lang on the html element', () => {
-	const files = readdirSync(templatesRoot, { recursive: true })
-		.map(String)
-		.filter((file) => file.endsWith('.ftl'));
+test('template documents set lang on the html element', () => {
 	const missing: string[] = [];
-	for (const file of files) {
-		const source = readFileSync(join(templatesRoot, file), 'utf8');
-		const tags = source.match(/<html\b[^>]*>/gi) ?? [];
-		tags.forEach((tag, index) => {
-			if (!htmlLangEn.test(tag)) {
-				missing.push(`${file}${tags.length > 1 ? `#${index + 1}` : ''}: ${tag}`);
+	const checked: string[] = [];
+	for (const root of templateRoots) {
+		const files = readdirSync(join(repoRoot, root), { recursive: true })
+			.map(String)
+			.filter((file) => file.endsWith('.ftl') || file.endsWith('.html'))
+			.filter((file) => !file.split(sep).join('/').includes('tinymce/v2'));
+		for (const file of files) {
+			const relative = join(root, file);
+			const source = readFileSync(join(repoRoot, relative), 'utf8');
+			const tags = source.match(/<html\b[^>]*>/gi) ?? [];
+			if (!tags.length) {
+				continue;
 			}
-		});
+			checked.push(relative.split(sep).join('/'));
+			tags.forEach((tag, index) => {
+				if (!htmlLangEn.test(tag)) {
+					missing.push(`${relative}${tags.length > 1 ? `#${index + 1}` : ''}: ${tag}`);
+				}
+			});
+		}
 	}
 	expect(missing, 'html elements without lang="en"').toEqual([]);
+	expect(templateRoots.filter((root) => checked.some((file) => file.startsWith(root)))).toEqual(templateRoots);
 	expect(htmlLangEn.test('<html lang="en">')).toBe(true);
 	expect(htmlLangEn.test('<html data-lang="en">')).toBe(false);
 	expect(htmlLangEn.test('<html xml:lang="en">')).toBe(false);
-});
-
-const otherDocuments = [
-	'engine/src/main/webapp/WEB-INF/templates/web/errors/layout.ftl',
-	'engine/src/main/webapp/WEB-INF/templates/web/errors/site-resolving.ftl',
-	'engine/src/main/webapp/default-site/templates/web/entry.ftl',
-	'studio-ui/templates/system/email/forgotPassword.ftl',
-	'studio/src/main/webapp/WEB-INF/notification/templates/email/disk-monitor-alarm.ftl',
-	'deployer/src/main/resources/templates/mail/default-mail-template.ftl',
-	'deployer/src/main/resources/templates/mail/runtime-warning-mail-template.ftl'
-];
-
-test('engine, default-site and mail templates set lang on html', () => {
-	const repoRoot = join(__dirname, '../../../../../');
-	const missing: string[] = [];
-	for (const file of otherDocuments) {
-		const source = readFileSync(join(repoRoot, file), 'utf8');
-		const tags = source.match(/<html\b[^>]*>/gi) ?? [];
-		if (!tags.length) {
-			missing.push(`${file}: no <html> root`);
-			continue;
-		}
-		tags.forEach((tag, index) => {
-			if (!htmlLangEn.test(tag)) {
-				missing.push(`${file}${tags.length > 1 ? `#${index + 1}` : ''}: ${tag}`);
-			}
-		});
-	}
-	expect(missing, 'html elements without lang="en"').toEqual([]);
 });
 
 test('studio-context writes a BCP 47 lang tag', () => {
