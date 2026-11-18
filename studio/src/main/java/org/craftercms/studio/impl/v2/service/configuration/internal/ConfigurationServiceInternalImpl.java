@@ -582,15 +582,16 @@ public class ConfigurationServiceInternalImpl implements ConfigurationService, A
 	 * <p>
 	 * A SAX reader allows the declaration and records {@code startDTD}. External entities,
 	 * external DTD loading, and XInclude stay off. Parsing stops at the first element when
-	 * no DOCTYPE was declared. When that reader cannot be configured, only the {@code <!DOCTYPE}
-	 * bytes in ASCII, UTF-16BE, or UTF-16LE are rejected.
+	 * no DOCTYPE was declared. When that reader cannot be configured, including an
+	 * {@code UnsupportedOperationException} from {@code setXIncludeAware}, only the
+	 * {@code <!DOCTYPE} bytes in ASCII, UTF-16BE, or UTF-16LE are rejected.
 	 */
 	private void rejectDoctypeInXml(byte[] bytes, String filename) throws InvalidConfigurationException {
 		DoctypeDeclarationHandler handler = new DoctypeDeclarationHandler();
 		final XMLReader reader;
 		try {
 			reader = createDoctypeDetectingReader(handler);
-		} catch (ParserConfigurationException | SAXException e) {
+		} catch (ParserConfigurationException | SAXException | UnsupportedOperationException e) {
 			rejectDoctypeBytesOrAccept(bytes, filename, e);
 			return;
 		}
