@@ -281,8 +281,7 @@ function ContentLocalizationDialogUI(props: ContentLocalizationDialogProps) {
 						</Box>
 					)}
 					{locales?.map((locale: any) => {
-						const localeLabel = localizationMap[locale.localeCode];
-						const localeName = localeLabel ?? locale.localeCode;
+						const localeName = localizationMap[locale.localeCode] ?? locale.localeCode;
 						return (
 							<Box sx={{ display: 'flex', alignItems: 'center' }} key={locale.id}>
 								<Checkbox
@@ -295,7 +294,7 @@ function ContentLocalizationDialogUI(props: ContentLocalizationDialogProps) {
 									}}
 								/>
 								<Typography variant="subtitle2" sx={{ paddingRight: '20px', width: '30%' }}>
-									{localeLabel}
+									{localeName}
 								</Typography>
 								<Typography variant="subtitle2" sx={{ paddingRight: '20px' }}>
 									{locale.status}

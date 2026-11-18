@@ -105,6 +105,13 @@ const buttonNamed = (body: HTMLElement, name: string) =>
 	);
 
 describe('content localization dialog checkbox names', () => {
+	it('shows the same name the controls announce, including the locale code fallback', async () => {
+		const body = await render();
+		const cells = Array.from(body.querySelectorAll('h6')).map((cell) => cell.textContent);
+		assert.ok(cells.includes('English, US (en)'));
+		assert.ok(cells.includes('xx'), 'the visible locale cell is blank for a locale missing from the map');
+	});
+
 	it('names the header select-all checkbox on the input', async () => {
 		const body = await render();
 		assert.ok(checkboxNamed(body, 'Select all'), 'the select-all input has no name');
