@@ -43,6 +43,7 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -51,12 +52,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -200,13 +206,18 @@ public class ConfigurationServiceInternalImplValidationTest {
 	@Test(timeout = 5000)
 	public void validateRejectsExternalHttpEntityWithoutConnecting() throws Exception {
 		try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
+			server.setSoTimeout(200);
 			List<Socket> connections = new ArrayList<>();
+			AtomicBoolean running = new AtomicBoolean(true);
+			AtomicInteger idleTimeouts = new AtomicInteger();
 			Thread acceptor = new Thread(() -> {
-				while (!Thread.currentThread().isInterrupted()) {
+				while (running.get()) {
 					try {
 						Socket socket = server.accept();
 						connections.add(socket);
 						socket.close();
+					} catch (SocketTimeoutException e) {
+						idleTimeouts.incrementAndGet();
 					} catch (IOException e) {
 						return;
 					}
@@ -219,11 +230,18 @@ public class ConfigurationServiceInternalImplValidationTest {
 						"<!DOCTYPE foo [<!ENTITY ext SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/secret\">]>" +
 						"<foo>&ext;</foo>";
 				assertRejected(bytes(xml), "config");
-				server.close();
+				int seen = idleTimeouts.get();
+				long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1000);
+				while (idleTimeouts.get() == seen && System.nanoTime() < deadline) {
+					LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
+				}
+				assertTrue(idleTimeouts.get() > seen);
+				running.set(false);
 				acceptor.join(1000);
 				assertFalse(acceptor.isAlive());
 				assertEquals(0, connections.size());
 			} finally {
+				running.set(false);
 				server.close();
 				acceptor.join(1000);
 				for (Socket socket : connections) {
