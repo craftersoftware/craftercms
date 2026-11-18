@@ -311,10 +311,14 @@ describe('rollback of an untouched page whose xml file-name differs from the pat
 		assert.equal(store.get(atoms.valueByFieldId['file-name']), 'row-name');
 	});
 
-	it('keeps a create form file-name default instead of blanking it', () => {
-		const values = { 'file-name': 'crafter-level-descriptor.level' };
-		assert.equal(withPathFileName(values, { fileName: atom('') }, ''), values);
-		assert.deepEqual(withPathFileName({ 'file-name': '' }, { fileName: atom('') }, ''), { 'file-name': '' });
+	it('keeps a create form file-name only when it is the type default', () => {
+		const atoms = { fileName: atom('') };
+		const level = 'crafter-level-descriptor.level';
+		const values = { 'file-name': level };
+		assert.equal(withPathFileName(values, atoms, '', level), values);
+		assert.deepEqual(withPathFileName({ 'file-name': '' }, atoms, '', level), { 'file-name': '' });
+		assert.deepEqual(withPathFileName({ 'file-name': 'other.xml' }, atoms, '', level), { 'file-name': '' });
+		assert.deepEqual(withPathFileName(values, atoms, ''), { 'file-name': '' });
 	});
 
 	it('returns values with no file-name, or no file-name atom, as they are', () => {
@@ -376,5 +380,23 @@ describe('a new item whose type defines a file-name default', () => {
 		const form = openCreate(undefined, 'xml value');
 		assert.equal(form.store.get(form.atoms.fileName), '');
 		assert.equal(form.store.get(form.atoms.valueByFieldId['file-name']), '');
+	});
+
+	it('agrees with withPathFileName: only the type default survives a create', () => {
+		const kept = openCreate(levelDefault, levelDefault);
+		assert.equal(kept.store.get(kept.atoms.valueByFieldId['file-name']), levelDefault);
+		assert.equal(
+			withPathFileName({ 'file-name': levelDefault }, { fileName: atom('') }, '', levelDefault)['file-name'],
+			levelDefault
+		);
+		const other = openCreate(levelDefault, 'not-the-default');
+		assert.equal(other.store.get(other.atoms.valueByFieldId['file-name']), '');
+		assert.equal(
+			withPathFileName({ 'file-name': 'not-the-default' }, { fileName: atom('') }, '', levelDefault)['file-name'],
+			''
+		);
+		const noDefault = openCreate(undefined, 'xml value');
+		assert.equal(noDefault.store.get(noDefault.atoms.valueByFieldId['file-name']), '');
+		assert.equal(withPathFileName({ 'file-name': 'xml value' }, { fileName: atom('') }, '')['file-name'], '');
 	});
 });

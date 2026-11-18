@@ -533,12 +533,13 @@ function FormBootstrap(props: FormsEngineProps) {
 			pluginPreloadFailures: ControlPluginPreloadFailure[] = []
 		) => {
 			stableFormContextRef.current.atoms = atoms;
-			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form passes `''`,
-			// which keeps the file name the type default supplied.
+			// A repeat item form is a nested scope: it passes no path, like `setFieldAtoms`. A create form passes `''`
+			// and the type's file-name default, so only that default is kept.
 			stableFormContextRef.current.originalValues = withPathFileName(
 				values,
 				atoms,
-				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? '')
+				isChildForm && repeat?.fieldId ? undefined : (itemMeta.path ?? ''),
+				newItemFileName(itemMeta.contentType)
 			);
 			stableFormContextRef.current.itemMeta = itemMeta;
 			stableFormContextRef.current.affectedPluginControlFields = (() => {
