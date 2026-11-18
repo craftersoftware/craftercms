@@ -41,11 +41,17 @@ afterEach(async () => {
 	});
 });
 
-async function render(messages: Record<string, string>) {
+async function render(
+	messages: Record<string, string>,
+	{
+		allowed = {},
+		contentTypes = {}
+	}: { allowed?: Record<string, boolean>; contentTypes?: Record<string, unknown> } = {}
+) {
 	const store = configureStore({
 		reducer: {
-			preview: (state = { dropTargets: null, editMode: false, guest: { allowedContentTypes: {} } }) => state,
-			contentTypes: (state = { byId: {}, isFetching: false }) => state
+			preview: (state = { dropTargets: null, editMode: false, guest: { allowedContentTypes: allowed } }) => state,
+			contentTypes: (state = { byId: contentTypes, isFetching: false }) => state
 		},
 		middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
 	});
@@ -77,5 +83,30 @@ describe('PreviewDropTargetsPanel empty state', () => {
 		const host = await render({ '/xPSui': 'No se encontraron zonas de colocación en la vista actual.' });
 		assert.ok(host.textContent?.includes('No se encontraron zonas de colocación en la vista actual.'));
 		assert.equal(host.textContent?.includes('No drop targets'), false);
+	});
+});
+
+describe('PreviewDropTargetsPanel compatible types', () => {
+	it('lists the compatible types as buttons in a labelled list, with the subheader inside the list', async () => {
+		const host = await render(
+			{},
+			{
+				allowed: { '/component/a': true, '/component/b': true },
+				contentTypes: {
+					'/component/a': { id: '/component/a', name: 'Article', type: 'component' },
+					'/component/b': { id: '/component/b', name: 'Banner', type: 'component' }
+				}
+			}
+		);
+		const lists = host.querySelectorAll('ul');
+		assert.equal(lists.length, 1);
+		const list = lists[0];
+		const subheader = list.querySelector(':scope > li.MuiListSubheader-root') as HTMLElement;
+		assert.equal(subheader.textContent, 'Compatible types');
+		assert.equal(list.getAttribute('aria-labelledby'), subheader.id);
+		const items = Array.from(list.querySelectorAll(':scope > li:not(.MuiListSubheader-root)'));
+		assert.equal(items.length, 2);
+		items.forEach((item) => assert.equal(item.querySelectorAll(':scope > .MuiListItemButton-root').length, 1));
+		assert.equal(host.querySelectorAll('li').length, 3, 'every li is a direct child of the list');
 	});
 });
