@@ -296,11 +296,11 @@ export function parseContentXML(
 				const contentTypeFields = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields;
 				const field = contentTypeFields?.[tagName];
 				if (!field) {
-					// Companion props from control `additionalFields` (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields.
+					// Props listed on a control's `additionalFields` (e.g. `{id}_tz`, `{id}_bk`) are not content-type fields.
 					const isAdditionalField = Object.values(contentTypeFields ?? {}).some((contentTypeField) =>
 						contentTypeField.additionalFields?.includes(tagName)
 					);
-					// Fallback for older form-defs that predate persisted `<additionalFields>` for date-time.
+					// Also accept `{id}_tz` when that list is missing or not merged yet.
 					const isTimezoneField =
 						!isAdditionalField && tagName.endsWith('_tz') && Boolean(contentTypeFields?.[tagName.replace(/_tz$/, '')]);
 					if (!isAdditionalField && !isTimezoneField) {
@@ -426,6 +426,7 @@ export function parseElementByContentType(
 		case 'image-picker':
 		case 'date-time':
 		case 'time':
+		case 'video-picker':
 			return getInnerHtml(element);
 		case 'dropdown':
 			if (field.id.endsWith('_i') || field.id.endsWith('_f')) {
@@ -442,12 +443,7 @@ export function parseElementByContentType(
 			// External plugin controls intentionally fall through to generic deserialize.
 			// Custom typing belongs on FormsEngine's valueRetriever / valueSerializer.
 			const isPluginControl = Boolean(field.properties?.plugin);
-			const isKnownDefaultFallthrough = [
-				'transcoded-video',
-				'transcoded-video-picker',
-				'taxonomy-selector',
-				'video-picker'
-			].includes(type);
+			const isKnownDefaultFallthrough = ['transcoded-video-picker', 'taxonomy-selector'].includes(type);
 			if (!isPluginControl && !isKnownDefaultFallthrough) {
 				console.log(
 					`%c[parseElementByContentType] Missing type "${type}" on switch statement for field "${field.id}".`,
