@@ -308,26 +308,6 @@
 		]
 	},
 	{
-		"rule": "link-in-text-block",
-		"screen": "projects",
-		"theme": "light",
-		"nodes": [
-			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
-			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">",
-			"a[target=\"_blank\"]:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">"
-		]
-	},
-	{
-		"rule": "link-in-text-block",
-		"screen": "site tools",
-		"theme": "light",
-		"nodes": [
-			"a:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">",
-			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
-			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">"
-		]
-	},
-	{
 		"rule": "listitem",
 		"screen": "tools panel",
 		"theme": "dark",
@@ -381,16 +361,6 @@
 		"nodes": [
 			"tr:nth-child(1) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">",
 			"tr:nth-child(2) > .mui-*.MuiTableCell-alignCenter.avatar > .MuiAvatar-root.MuiAvatar-circular.MuiAvatar-colorDefault <div class=\"MuiAvatar-circular MuiAvatar-colorDefault MuiAvatar-root\">"
-		]
-	},
-	{
-		"rule": "link-in-text-block",
-		"screen": "users",
-		"theme": "light",
-		"nodes": [
-			"a[href$=\"blog\"] <a href=\"https://craftercms.org/blog\">",
-			"a[href$=\"craftercms.org\"] <a href=\"https://craftercms.org\">",
-			"a[target=\"_blank\"]:nth-child(2) <a href=\"https://github.com/craftercms/craftercms/issues\">"
 		]
 	}
 ]
