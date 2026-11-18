@@ -139,17 +139,28 @@ const selectAllInput = (host: HTMLElement) =>
 	host.querySelector<HTMLInputElement>('input[type="checkbox"][aria-label="Select all on this page"]');
 
 describe('search rows-per-page name', () => {
-	it('names the rows-per-page combobox with the visible items-per-page label', async () => {
+	it('names the rows-per-page combobox "Items per page" without rendering a visible label', async () => {
 		const host = (await mount({ searchParameters: { limit: 9, offset: 0 } })).host;
 		const combobox = host.querySelector<HTMLElement>('.MuiTablePagination-select[role="combobox"]');
 		assert.ok(combobox, 'the rows-per-page combobox is missing');
 		const ids = combobox.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
-		const name = ids
-			.map((id) => host.querySelector<HTMLElement>(`[id="${id}"]`)?.textContent ?? '')
-			.join(' ')
-			.replace(/\s+/g, ' ')
-			.trim();
-		assert.match(name, /^Items per page:/);
+		const name =
+			combobox.getAttribute('aria-label') ??
+			ids
+				.map((id) => host.querySelector<HTMLElement>(`[id="${id}"]`)?.textContent ?? '')
+				.join(' ')
+				.replace(/\s+/g, ' ')
+				.trim();
+		assert.match(name, /^Items per page$/);
+		const pagination = host.querySelector<HTMLElement>('.MuiTablePagination-root');
+		assert.ok(pagination, 'the pagination toolbar is missing');
+		assert.doesNotMatch(pagination.textContent ?? '', /Items per page/);
+		assert.equal(
+			pagination.querySelector('.MuiTablePagination-selectLabel')?.textContent ?? '',
+			'',
+			'a visible rows-per-page label is rendered'
+		);
+		assert.equal(combobox.hasAttribute('aria-labelledby'), false, 'the combobox points at a label that is not shown');
 	});
 });
 

@@ -280,7 +280,7 @@ export function SearchUI(props: SearchUIProps) {
 							[`& .${tablePaginationClasses.select}`]: { border: 'none' }
 						}}
 						component="div"
-						labelRowsPerPage={formatMessage(translations.itemsPerPage)}
+						labelRowsPerPage={null}
 						labelDisplayedRows={({ from, to, count }) => (
 							<>
 								<FormattedMessage
@@ -323,6 +323,14 @@ export function SearchUI(props: SearchUIProps) {
 						rowsPerPage={searchParameters.limit}
 						page={Math.ceil(searchParameters.offset / searchParameters.limit)}
 						slotProps={{
+							select: {
+								// TablePagination always points the combobox at its (here empty) label via aria-labelledby, so
+								// that reference is dropped and the name goes straight on the combobox element.
+								SelectDisplayProps: {
+									'aria-label': formatMessage({ id: 'pagination.itemsPerPage', defaultMessage: 'Items per page' }),
+									'aria-labelledby': undefined
+								}
+							},
 							actions: {
 								previousButton: {
 									'aria-label': formatMessage(translations.previousPage),
