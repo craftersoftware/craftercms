@@ -74,12 +74,14 @@
 
 	// Stored ids may use underscores or any case (es_es). The document lang needs a canonical BCP 47 tag (es-ES).
 	// This page has no app bundle, so the same steps as toLanguageTag() are inlined.
+	// An id that is not a tag falls back to the shell's en. A tag-shaped id keeps the underscore swap when Intl is missing.
 	var languageTag = lang.replace(/_/g, '-');
 	try {
 		languageTag = Intl.getCanonicalLocales(languageTag)[0] || languageTag;
 	} catch (ignore) {
-		// An id that is not a locale keeps the underscore swap.
+		// Intl may be missing. The shape check below decides whether the swap is usable.
 	}
+	if (!/^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/.test(languageTag)) languageTag = 'en';
 	$('html').attr('lang', languageTag);
 	CStudioAuthoringContext.lang = lang;
 

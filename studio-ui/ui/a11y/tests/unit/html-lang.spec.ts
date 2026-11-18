@@ -69,6 +69,8 @@ test('template documents set lang on the html element', () => {
 test('studio-context writes a BCP 47 lang tag', () => {
 	const source = readFileSync(join(templatesRoot, 'common/page-fragments/studio-context.ftl'), 'utf8');
 	expect(source).toContain('Intl.getCanonicalLocales(languageTag)');
+	expect(source).toContain('/^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/');
+	expect(source).toContain("languageTag = 'en'");
 	expect(source).toContain("$('html').attr('lang', languageTag)");
 	expect(source).toContain('CStudioAuthoringContext.lang = lang');
 });
