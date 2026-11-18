@@ -44,6 +44,41 @@ test('studio web templates set lang on the html element', () => {
 	expect(htmlLangEn.test('<html xml:lang="en">')).toBe(false);
 });
 
+const otherDocuments = [
+	'engine/src/main/webapp/WEB-INF/templates/web/errors/layout.ftl',
+	'engine/src/main/webapp/WEB-INF/templates/web/errors/site-resolving.ftl',
+	'engine/src/main/webapp/default-site/templates/web/entry.ftl',
+	'studio-ui/templates/system/email/forgotPassword.ftl',
+	'studio/src/main/webapp/WEB-INF/notification/templates/email/disk-monitor-alarm.ftl',
+	'deployer/src/main/resources/templates/mail/default-mail-template.ftl',
+	'deployer/src/main/resources/templates/mail/runtime-warning-mail-template.ftl'
+];
+
+test('engine, default-site and mail templates set lang on html', () => {
+	const repoRoot = join(__dirname, '../../../../../');
+	const missing: string[] = [];
+	for (const file of otherDocuments) {
+		const source = readFileSync(join(repoRoot, file), 'utf8');
+		const tags = source.match(/<html\b[^>]*>/gi) ?? [];
+		if (!tags.length) {
+			missing.push(`${file}: no <html> root`);
+			continue;
+		}
+		tags.forEach((tag, index) => {
+			if (!htmlLangEn.test(tag)) {
+				missing.push(`${file}${tags.length > 1 ? `#${index + 1}` : ''}: ${tag}`);
+			}
+		});
+	}
+	expect(missing, 'html elements without lang="en"').toEqual([]);
+});
+
+test('studio-context writes a BCP 47 lang tag', () => {
+	const source = readFileSync(join(templatesRoot, 'common/page-fragments/studio-context.ftl'), 'utf8');
+	expect(source).toContain("$('html').attr('lang', lang.replace(/_/g, '-'))");
+	expect(source).toContain('CStudioAuthoringContext.lang = lang');
+});
+
 test('html-has-lang is not an allow-listed exception', () => {
 	expect(ruleTickets['html-has-lang']).toBeUndefined();
 	const recorded = JSON.parse(readFileSync(join(__dirname, '../allow-list.json'), 'utf8')) as {

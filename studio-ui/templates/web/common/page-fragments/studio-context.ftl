@@ -72,7 +72,8 @@
 		'en'
 	);
 
-	$('html').attr('lang', lang);
+	// Stored ids may use underscores (es_ES). The document lang needs a BCP 47 tag (es-ES).
+	$('html').attr('lang', lang.replace(/_/g, '-'));
 	CStudioAuthoringContext.lang = lang;
 
 	$(function () {
