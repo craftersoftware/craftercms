@@ -78,4 +78,22 @@ describe('PaddingModeSwitchListItem', () => {
 		assert.equal(host.querySelectorAll('ul > li.MuiListItem-root').length, 1);
 		assert.equal(host.querySelectorAll('li').length, 1);
 	});
+
+	it('keeps the helper text inside the list item, so the list has no other element children', async () => {
+		const host = await render(
+			React.createElement(
+				List,
+				null,
+				React.createElement(PaddingModeSwitchListItem, { component: 'li', showHelperText: true, showIcon: false })
+			)
+		);
+		const list = host.querySelector('ul');
+		assert.ok(list);
+		const children = Array.from(list.children);
+		assert.equal(children.length, 1);
+		assert.equal(children[0].tagName, 'LI');
+		const helper = children[0].querySelector('p');
+		assert.ok(helper?.textContent?.includes('Adds padding to collections'));
+		assert.equal(list.querySelector(':scope > p'), null);
+	});
 });

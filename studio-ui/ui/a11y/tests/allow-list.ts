@@ -62,11 +62,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
 		scope: { 'edit mode tools panel > Settings': both }
-	},
-	list: {
-		ticket: 'craftersoftware/craftercms-e#1455',
-		criterion: '1.3.1 Info and Relationships',
-		scope: { 'edit mode tools panel > Settings': both }
 	}
 };
 

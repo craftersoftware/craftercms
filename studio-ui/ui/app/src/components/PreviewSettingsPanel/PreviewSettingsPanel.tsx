@@ -17,7 +17,6 @@
 import React from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import {
-	Divider,
 	FormControl,
 	FormControlLabel,
 	FormHelperText,
@@ -72,55 +71,62 @@ const labelRootSx = {
 
 const formHelperTextSx = { pb: 1, pr: 2, pl: 2, pt: 0, mt: 0 };
 
+// Helper text sits on its own line inside the row. The row's bottom padding used to be the gap above a sibling `p`.
+const settingRowSx = { flexWrap: 'wrap', alignItems: 'center', pb: 0 };
+
+const settingHelperSx = { flexBasis: '100%', m: 0, mt: 1, px: 0, pb: 1 };
+
 export function PreviewSettingsPanel() {
 	const { formatMessage } = useIntl();
 	const { highlightMode } = usePreviewState();
 	const dispatch = useDispatch();
 	return (
+		// A ul may only contain li elements. Helper copy lives in its row, and the section rules are the
+		// list item's divider, so this stays a list of settings rather than a ul of paragraphs and hrs.
 		<List>
-			<ListItem>
+			<ListItem sx={settingRowSx}>
 				<ListItemText primary={formatMessage(translations.editMode)} />
 				<EditModeSwitch edge="end" />
+				<FormHelperText sx={settingHelperSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
 			</ListItem>
-			<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
-			<ListItem>
+			<ListItem sx={settingRowSx} divider>
 				<ListItemText primary={formatMessage({ defaultMessage: 'Keyboard shortcuts' })} />
 				<KeyboardShortcutsSwitch edge="end" />
+				<FormHelperText sx={settingHelperSx}>
+					<FormattedMessage defaultMessage="Enable/disable keyboard shortcuts" />
+				</FormHelperText>
 			</ListItem>
-			<FormHelperText sx={formHelperTextSx}>
-				<FormattedMessage defaultMessage="Enable/disable keyboard shortcuts" />
-			</FormHelperText>
-			<Divider />
-			<ListSubheader id="settingsPanelHighlightModeLabel" children={formatMessage(translations.highlightMode)} />
-			<FormControl sx={{ pt: 0, pb: 0, pl: 2, pr: 2 }} component="li">
-				<RadioGroup
-					value={highlightMode}
-					onChange={(e) => {
-						dispatch(
-							setHighlightMode({
-								highlightMode: e.target.value as HighlightMode
-							})
-						);
-					}}
-				>
-					<FormControlLabel
-						value="all"
-						sx={labelRootSx}
-						control={<Radio color="primary" edge="end" />}
-						label={formatMessage(translations.highlightAllZones)}
-						labelPlacement="start"
-					/>
-					<FormControlLabel
-						value="move"
-						sx={labelRootSx}
-						control={<Radio color="primary" edge="end" />}
-						label={formatMessage(translations.highlightMovable)}
-						labelPlacement="start"
-					/>
-				</RadioGroup>
-				<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.highlightModeHelperText)}</FormHelperText>
-			</FormControl>
-			<Divider />
+			<ListSubheader id="settingsPanelHighlightModeLabel">{formatMessage(translations.highlightMode)}</ListSubheader>
+			<ListItem divider disablePadding sx={{ flexDirection: 'column', alignItems: 'stretch' }}>
+				<FormControl sx={{ pt: 0, pb: 0, pl: 2, pr: 2 }}>
+					<RadioGroup
+						value={highlightMode}
+						onChange={(e) => {
+							dispatch(
+								setHighlightMode({
+									highlightMode: e.target.value as HighlightMode
+								})
+							);
+						}}
+					>
+						<FormControlLabel
+							value="all"
+							sx={labelRootSx}
+							control={<Radio color="primary" edge="end" />}
+							label={formatMessage(translations.highlightAllZones)}
+							labelPlacement="start"
+						/>
+						<FormControlLabel
+							value="move"
+							sx={labelRootSx}
+							control={<Radio color="primary" edge="end" />}
+							label={formatMessage(translations.highlightMovable)}
+							labelPlacement="start"
+						/>
+					</RadioGroup>
+					<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.highlightModeHelperText)}</FormHelperText>
+				</FormControl>
+			</ListItem>
 			<PaddingModeSwitchListItem component="li" showIcon={false} showHelperText />
 		</List>
 	);

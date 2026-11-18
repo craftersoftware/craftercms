@@ -22,12 +22,6 @@
 		]
 	},
 	{
-		"rule": "list",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "dark",
-		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
-	},
-	{
 		"rule": "aria-prohibited-attr",
 		"screen": "edit mode tools panel > Settings",
 		"theme": "light",
@@ -42,12 +36,6 @@
 		"nodes": [
 			".MuiSwitch-colorDefault > .MuiSwitch-input[role=\"switch\"][type=\"checkbox\"] <input role=\"switch\" class=\"MuiSwitch-input PrivateSwitchBase-input\">"
 		]
-	},
-	{
-		"rule": "list",
-		"screen": "edit mode tools panel > Settings",
-		"theme": "light",
-		"nodes": ["ul <ul class=\"MuiList-padding MuiList-root\">"]
 	},
 	{
 		"rule": "color-contrast",
