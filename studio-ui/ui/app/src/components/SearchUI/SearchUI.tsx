@@ -129,6 +129,7 @@ export function SearchUI(props: SearchUIProps) {
 	// endregion
 
 	const { formatMessage } = useIntl();
+	const itemsPerPageLabel = formatMessage({ id: 'pagination.itemsPerPage', defaultMessage: 'Items per page' });
 	// Built from the loaded response: `searchResults.offset` is the offset that response was requested with.
 	// `searchParameters.offset` changes as soon as the user pages, but the request starts in a later effect, so
 	// it only stands in for callers whose response carries no `offset` (plain `SearchResult`s from outside Studio).
@@ -323,6 +324,22 @@ export function SearchUI(props: SearchUIProps) {
 						rowsPerPage={searchParameters.limit}
 						page={Math.ceil(searchParameters.offset / searchParameters.limit)}
 						slotProps={{
+							select: {
+								// TablePagination points the combobox and the open listbox at its (here empty) label through
+								// aria-labelledby. Those references are dropped and the name goes straight on both elements.
+								SelectDisplayProps: {
+									'aria-label': itemsPerPageLabel,
+									'aria-labelledby': undefined
+								},
+								MenuProps: {
+									slotProps: {
+										list: {
+											'aria-label': itemsPerPageLabel,
+											'aria-labelledby': undefined
+										}
+									}
+								}
+							},
 							actions: {
 								previousButton: {
 									'aria-label': formatMessage(translations.previousPage),

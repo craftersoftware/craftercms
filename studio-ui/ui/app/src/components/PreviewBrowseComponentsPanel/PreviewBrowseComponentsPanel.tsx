@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { nnou, nou } from '../../utils/object';
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary';
@@ -32,6 +32,8 @@ import SearchBar from '../SearchBar/SearchBar';
 import { getHostToGuestBus } from '../../utils/subjects';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import ContentType from '../../models/ContentType';
 import { useSelection } from '../../hooks/useSelection';
 import { useDebouncedInput } from '../../hooks/useDebouncedInput';
@@ -94,6 +96,8 @@ export function PreviewBrowseComponentsPanel() {
 	}, [siteId, contentTypesBranch, dispatch, awaitingGuestCheckIn]);
 
 	const { formatMessage } = useIntl();
+	const contentTypeLabelId = useId();
+	const contentTypeLabel = formatMessage(translations.contentType);
 	const hostToGuest$ = getHostToGuestBus();
 
 	const onDragStart = (item: ContentInstance) => {
@@ -154,42 +158,43 @@ export function PreviewBrowseComponentsPanel() {
 						autoFocus
 					/>
 					{contentTypes && (
-						<Select
-							size="small"
-							value={componentsState.contentTypeFilter}
-							displayEmpty
-							sx={{
-								width: '100%',
-								marginTop: (theme) => theme.spacing(1)
-							}}
-							onChange={(event: any) => handleSelectChange(event.target.value)}
-						>
-							<MenuItem value="compatible">
-								<FormattedMessage defaultMessage="Compatible Types" />
-							</MenuItem>
-							<ListSubheader>
-								<FormattedMessage defaultMessage="Compatible" />
-							</ListSubheader>
-							{contentTypeData.allowedTypes.length === 0 ? (
-								<MenuItem disabled>
-									<FormattedMessage defaultMessage="No compatible types were found." />
+						<FormControl size="small" fullWidth sx={{ marginTop: (theme) => theme.spacing(1) }}>
+							<InputLabel id={contentTypeLabelId}>{contentTypeLabel}</InputLabel>
+							<Select
+								labelId={contentTypeLabelId}
+								label={contentTypeLabel}
+								size="small"
+								value={componentsState.contentTypeFilter}
+								displayEmpty
+								onChange={(event: any) => handleSelectChange(event.target.value)}
+							>
+								<MenuItem value="compatible">
+									<FormattedMessage defaultMessage="Compatible Types" />
 								</MenuItem>
-							) : (
-								contentTypeData.allowedTypes.map((contentType: ContentType, i: number) => (
+								<ListSubheader>
+									<FormattedMessage defaultMessage="Compatible" />
+								</ListSubheader>
+								{contentTypeData.allowedTypes.length === 0 ? (
+									<MenuItem disabled>
+										<FormattedMessage defaultMessage="No compatible types were found." />
+									</MenuItem>
+								) : (
+									contentTypeData.allowedTypes.map((contentType: ContentType, i: number) => (
+										<MenuItem value={contentType.id} key={i}>
+											{contentType.name}
+										</MenuItem>
+									))
+								)}
+								<ListSubheader>
+									<FormattedMessage defaultMessage="Other" />
+								</ListSubheader>
+								{contentTypeData.otherTypes.map((contentType: ContentType, i: number) => (
 									<MenuItem value={contentType.id} key={i}>
 										{contentType.name}
 									</MenuItem>
-								))
-							)}
-							<ListSubheader>
-								<FormattedMessage defaultMessage="Other" />
-							</ListSubheader>
-							{contentTypeData.otherTypes.map((contentType: ContentType, i: number) => (
-								<MenuItem value={contentType.id} key={i}>
-									{contentType.name}
-								</MenuItem>
-							))}
-						</Select>
+								))}
+							</Select>
+						</FormControl>
 					)}
 				</Box>
 				{componentsState.error ? (

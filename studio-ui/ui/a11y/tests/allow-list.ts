@@ -60,20 +60,10 @@ const editModePages = [
  * the other a11y PRs have merged. A rule that is not here has no ticket, so it can't be allow-listed: it fails the run.
  */
 export const ruleTickets: Record<string, RuleTicket> = {
-	'aria-input-field-name': {
-		ticket: 'craftersoftware/craftercms-e#1449',
-		criterion: '4.1.2 Name, Role, Value',
-		scope: {
-			dashboard: both,
-			search: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Existing Content': both
-		}
-	},
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { search: both, 'edit mode tools panel > Settings': both }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	'color-contrast': {
 		ticket: 'craftersoftware/craftercms-e#1452',
@@ -83,26 +73,12 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: {
-			dashboard: both,
-			search: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Settings': both
-		}
-	},
-	'link-in-text-block': {
-		ticket: 'craftersoftware/craftercms-e#1454',
-		criterion: '1.4.1 Use of Color',
-		scope: { projects: light, 'site tools': light, users: light }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
-		scope: {
-			dashboard: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Settings': both
-		}
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	listitem: {
 		ticket: 'craftersoftware/craftercms-e#1456',
@@ -113,34 +89,27 @@ export const ruleTickets: Record<string, RuleTicket> = {
 			'edit mode tools panel': both,
 			...Object.fromEntries(editModePages.map((page) => [`edit mode tools panel > ${page}`, both]))
 		}
-	},
-	'nested-interactive': {
-		ticket: 'craftersoftware/craftercms-e#1457',
-		criterion: '2.1.1 Keyboard',
-		scope: { dashboard: both, 'tools panel > Dashboard': both }
-	},
-	'label-content-name-mismatch': {
-		ticket: 'craftersoftware/craftercms-e#1458',
-		criterion: '2.5.3 Label in Name',
-		scope: { 'create project': both }
 	}
 };
 
 /** True when the rule's ticket lists the screen in that theme. */
-export function inTicketScope(rule: string, screen: string, theme: Theme) {
-	return Boolean(ruleTickets[rule]?.scope[screen]?.includes(theme));
+export function inTicketScope(rule: string, screen: string, theme: Theme, tickets = ruleTickets) {
+	return Boolean(tickets[rule]?.scope[screen]?.includes(theme));
 }
 
-/** Throws on any entry that is not a reviewed, ticketed, in-scope node list. There is no placeholder ticket. */
-export function validateAllowList(entries: AllowListEntry[]) {
+/**
+ * Throws on any entry that is not a reviewed, ticketed, in-scope node list. There is no placeholder ticket.
+ * `tickets` defaults to `ruleTickets`. The unit tests pass a fixed table so they don't depend on which tickets are open.
+ */
+export function validateAllowList(entries: AllowListEntry[], tickets = ruleTickets) {
 	const keys = new Set<string>();
 	entries.forEach(({ rule, screen, theme, nodes }) => {
 		const key = `${rule} on ${theme} ${screen}`;
-		if (!ruleTickets[rule]) {
+		if (!tickets[rule]) {
 			throw new Error(`Allow-list entry for ${key}: the rule has no umbrella ticket in ruleTickets`);
 		}
-		if (!inTicketScope(rule, screen, theme)) {
-			throw new Error(`Allow-list entry for ${key}: ${ruleTickets[rule].ticket} does not list that screen and theme`);
+		if (!inTicketScope(rule, screen, theme, tickets)) {
+			throw new Error(`Allow-list entry for ${key}: ${tickets[rule].ticket} does not list that screen and theme`);
 		}
 		if (!Array.isArray(nodes) || !nodes.length || nodes.some((node) => typeof node !== 'string' || !node)) {
 			throw new Error(`Allow-list entry for ${key} must list the fingerprint of every node it allows`);

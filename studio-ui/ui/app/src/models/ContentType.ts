@@ -316,17 +316,17 @@ export interface SerializeToXmlContentTypeStructure {
 	objectType: string;
 	imageThumbnail?: string;
 	'allowed-roles'?: { role: string[] };
-	// ∨∨∨ config.xml ∨∨∨
 	controller: 'true' | 'false';
 	quickCreate: 'true' | 'false';
 	quickCreatePath: string;
+	// ∨∨∨ former config.xml fields (5.0.0.2 merge) ∨∨∨
 	paths: {
 		excludes?: { pattern: string[] };
 		includes?: { pattern: string[] };
 	};
 	'delete-dependencies': ContentType['delete-dependencies'];
 	'copy-dependencies': ContentType['copy-dependencies'];
-	// ^^^ config.xml ^^^
+	// ^^^ former config.xml fields ^^^
 	// TODO: Can we move these to the root or drop `label` and `type`?
 	properties: { property: LegacyFormDefinitionProperty[] };
 	sections: { section: Array<LegacyFormDefinitionSectionWithId> };
@@ -346,10 +346,10 @@ export interface LegacyFormDefinition {
 	imageThumbnail: string; // e.g. page-home.png
 	quickCreate: 'true' | 'false';
 	quickCreatePath: string; // e.g. /site/pages
-	// ∨∨∨ config.xml ∨∨∨
 	controller: 'true' | 'false';
+	// ∨∨∨ former config.xml fields (5.0.0.2 merge) ∨∨∨
 	paths: ContentType['paths'];
-	// ^^^ config.xml ^^^
+	// ^^^ former config.xml fields ^^^
 	sections: { section: LegacyFormDefinitionSection | Array<LegacyFormDefinitionSection> };
 	properties: { property: LegacyFormDefinitionProperty | Array<LegacyFormDefinitionProperty> };
 	datasources: { datasource: LegacyDataSource | Array<LegacyDataSource> };

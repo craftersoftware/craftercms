@@ -111,6 +111,7 @@ function PluginCard(props: PluginCardProps) {
 	const isDuplicateCard = id === 'DUPLICATE';
 	const isGitOrDuplicateCard = isGitCard || isDuplicateCard;
 	const titleId = useId();
+	const descriptionId = useId();
 	const sliderRef = useRef<{ moveToItem: (itemIndex: number) => void } | null>(null);
 
 	function handleChangeIndex(value: number) {
@@ -329,27 +330,65 @@ function PluginCard(props: PluginCardProps) {
 				</CardActionArea>
 			)}
 			{isGitOrDuplicateCard ? (
-				<CardActionArea
-					disabled={disableCardActionClick}
-					onClick={() => onPluginSelected(plugin, 1)}
-					aria-labelledby={titleId}
-					sx={{ display: 'flex', justifyContent: 'start' }}
+				// The visible label is the title. Naming the button from that title while the description
+				// stayed inside it made the accessible name shorter than the visible text (WCAG 2.5.3).
+				// The description is a sibling, exposed with aria-describedby, and the button still covers
+				// the card so the click target and focus ring stay on the whole control.
+				<Box
+					sx={{
+						display: 'grid',
+						gridTemplateColumns: 'auto minmax(0, 1fr)',
+						gridTemplateRows: 'auto auto',
+						width: '100%'
+					}}
 				>
-					<PluginMediaCarousel
-						ref={sliderRef}
-						items={renderMedias(id)}
-						onChangeItem={handleChangeIndex}
-						sx={{ width: 'unset' }}
-					/>
-					<CardContent sx={{ height: 'unset !important' }} className="cardContent">
-						<Typography id={titleId} gutterBottom variant="subtitle2" component="h2" className="cardTitle">
+					<CardActionArea
+						disabled={disableCardActionClick}
+						onClick={() => onPluginSelected(plugin, 1)}
+						aria-labelledby={titleId}
+						aria-describedby={plugin.description ? descriptionId : undefined}
+						sx={{
+							gridColumn: '1 / -1',
+							gridRow: '1 / -1',
+							zIndex: 1,
+							display: 'grid',
+							gridTemplateColumns: 'subgrid',
+							gridTemplateRows: 'subgrid',
+							justifyContent: 'start',
+							width: 'auto',
+							height: 'auto'
+						}}
+					>
+						<PluginMediaCarousel
+							ref={sliderRef}
+							items={renderMedias(id)}
+							onChangeItem={handleChangeIndex}
+							sx={{ width: 'unset', gridColumn: 1, gridRow: '1 / -1' }}
+						/>
+						<Typography
+							id={titleId}
+							gutterBottom
+							variant="subtitle2"
+							component="h2"
+							className="cardTitle"
+							sx={{ gridColumn: 2, gridRow: 1, padding: '12px 14px 0 14px' }}
+						>
 							{name}
 						</Typography>
-						<Typography gutterBottom variant="subtitle2" component="h2" color="textSecondary">
+					</CardActionArea>
+					{plugin.description ? (
+						<Typography
+							id={descriptionId}
+							gutterBottom
+							variant="subtitle2"
+							component="p"
+							color="textSecondary"
+							sx={{ gridColumn: 2, gridRow: 2, padding: '0 14px 5px 14px' }}
+						>
 							{plugin.description}
 						</Typography>
-					</CardContent>
-				</CardActionArea>
+					) : null}
+				</Box>
 			) : (
 				<Box>
 					<PluginMediaCarousel
