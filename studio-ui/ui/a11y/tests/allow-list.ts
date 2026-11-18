@@ -73,7 +73,7 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
-		scope: { search: both, 'edit mode tools panel > Settings': both }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	'color-contrast': {
 		ticket: 'craftersoftware/craftercms-e#1452',
@@ -83,7 +83,7 @@ export const ruleTickets: Record<string, RuleTicket> = {
 	label: {
 		ticket: 'craftersoftware/craftercms-e#1453',
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
-		scope: { search: both, 'edit mode tools panel > Settings': both }
+		scope: { 'edit mode tools panel > Settings': both }
 	},
 	'link-in-text-block': {
 		ticket: 'craftersoftware/craftercms-e#1454',
