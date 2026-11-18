@@ -100,20 +100,17 @@ public class DatabaseCollationUpgradeOperationMariaDBTest {
         FROM information_schema.tables
         WHERE table_schema = ?
           AND table_type = 'BASE TABLE'
-          AND table_name <> '_meta'
         """;
     private static final String COLUMN_CHARSET_SQL = """
         SELECT character_set_name
         FROM information_schema.columns
         WHERE table_schema = ?
-          AND table_name <> '_meta'
           AND character_set_name IS NOT NULL
         """;
     private static final String COLUMN_COLLATION_SQL = """
         SELECT collation_name
         FROM information_schema.columns
         WHERE table_schema = ?
-          AND table_name <> '_meta'
           AND collation_name IS NOT NULL
         """;
 

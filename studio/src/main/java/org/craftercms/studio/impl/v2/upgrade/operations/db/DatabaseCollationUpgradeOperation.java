@@ -43,6 +43,11 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.DB_SCHEMA;
  * <p>Tables which already match are not rebuilt, so an interrupted upgrade resumes with the remaining tables.
  * Tables created afterwards without an explicit character set inherit {@code site}'s collation.</p>
  *
+ * <p>Future upgrade scripts must not set {@code DEFAULT CHARSET = utf8} on new tables. Without that clause
+ * the table inherits the database collation. This step converts a table only when
+ * {@code information_schema.tables.table_collation} differs from {@code site}; a column whose collation
+ * differs from its table is left unchanged when the table already matches.</p>
+ *
  * <p>Converting to {@code site}'s collation can make previously distinct values equal, for example {@code ß} and
  * {@code ss} when {@code site} is {@code uca1400} and the other table is {@code general_ci}. A unique key on those
  * values (such as an item path, username, or group name) then fails the conversion. That failure names the table
