@@ -160,7 +160,7 @@ FE loads this (via Studio APIs / content-type catalog) to build the author form.
 
 Historical sibling of `form-definition.xml` (`<content-type>` root). The 5.0.0.2 upgrader (`content-type-merge-v5.0.0.2.xslt`, [#8769](https://github.com/craftersoftware/craftercms/pull/8769)) copies `previewable`, `noThumbnail`, `paths`, `delete-dependencies`, `copy-dependencies` and `allowed-roles` into the form definition, then deletes `config.xml`. `noThumbnail` is no longer modeled or shipped in blueprints ([#9310](https://github.com/craftersoftware/craftercms/pull/9310)). Blueprints no longer ship `config.xml`; TB2 does not write it.
 
-Studio’s content-type APIs (`ContentTypeServiceInternalImpl`) load **`form-definition.xml` only** for type metadata (paths, previewable, roles, thumbnail, …). Residual references (e.g. `studio.configuration.site.contentTypes.configFileName`, unused `createConfigPathFromTypeId`) are naming leftovers from the upgrade path, not a live dual-file contract.
+Studio’s content-type APIs (`ContentTypeServiceInternalImpl`) load **`form-definition.xml` only** for type metadata (paths, previewable, roles, thumbnail, …). `studio.configuration.site.contentTypes.configFileName` is still used, but only by `ContentTypeConfigMergeUpgrader` to locate the `config.xml` it merges and deletes. `createConfigPathFromTypeId` (`utils/contentType.ts`) is dead code. Neither is a live dual-file contract.
 
 ### Content XML (FE output)
 
