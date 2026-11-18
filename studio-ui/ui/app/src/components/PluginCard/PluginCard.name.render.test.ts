@@ -18,7 +18,8 @@
  * The Git and Duplicate project cards are one button over an icon, a title and a description.
  * The accessible name is the visible title (WCAG 2.5.3): aria-labelledby points at that title, and the
  * description is outside the button so it is not part of the visible label. aria-describedby still
- * points at it. Two cards must not share ids.
+ * points at it. The description is a paragraph, so the heading outline lists the card titles.
+ * Two cards must not share ids.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -117,6 +118,7 @@ describe('PluginCard accessible name', () => {
 			assert.equal(text(description), plugin.description);
 			assert.equal(visible.includes(plugin.description), false);
 			assert.equal(title.tagName, 'H2');
+			assert.equal(description.tagName, 'P');
 			assert.equal(title.classList.contains('cardTitle'), true);
 			await act(async () => (button as HTMLButtonElement).click());
 			assert.deepEqual(selected, { id: plugin.id, view: 1 });

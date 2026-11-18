@@ -381,7 +381,7 @@ function PluginCard(props: PluginCardProps) {
 							id={descriptionId}
 							gutterBottom
 							variant="subtitle2"
-							component="h2"
+							component="p"
 							color="textSecondary"
 							sx={{ gridColumn: 2, gridRow: 2, padding: '0 14px 5px 14px' }}
 						>
