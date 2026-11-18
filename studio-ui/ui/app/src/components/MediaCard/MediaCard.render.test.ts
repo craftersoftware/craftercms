@@ -15,7 +15,7 @@
  */
 
 /**
- * Browse pickers select one result from the keyboard through a real button on the card.
+ * Browse pickers select one result from the keyboard through a real button on the card header.
  * Enter and Space activate that button the way the browser does, with one click. The title heading
  * and the path stay outside the button. Multi-select uses the checkbox, named on the input.
  * Search and the assets panel do not pass `isSelected`, and their cards stay as they were.
@@ -148,18 +148,33 @@ describe('MediaCard keyboard selection', () => {
 		toggle.focus();
 		assert.equal(document.activeElement, toggle);
 
-		// The button is taken out of flow, so the header layout matches a card that does not opt in.
+		// The button stays on the header even with no preview, taken out of flow, so the media is outside
+		// it and the header's own box matches a card that does not opt in.
 		const plainHeader = headerOf(plain.host);
 		const plainCss = getComputedStyle(plainHeader);
 		const css = getComputedStyle(header);
 		assert.equal(css.display, plainCss.display);
 		assert.equal(css.padding, plainCss.padding);
 		assert.equal(css.alignItems, plainCss.alignItems);
-		assert.equal(css.position, plainCss.position);
-		assert.equal(header.querySelector('.MuiCardHeader-action'), null);
+		assert.equal(css.position, 'relative');
+		assert.ok(toggle.closest('.MuiCardHeader-root'), 'the selection button stays on the header');
+		const media = header.nextElementSibling;
+		assert.ok(media, 'media');
+		assert.equal(media.contains(toggle), false);
+		assert.equal(toggle.contains(media), false);
+		const slot = header.querySelector('.MuiCardHeader-action');
+		assert.ok(slot);
+		assert.equal(slot.contains(toggle), true);
+		const slotCss = getComputedStyle(slot);
+		assert.equal(slotCss.marginTop, '0px');
+		assert.equal(slotCss.marginRight, '0px');
+		assert.equal(slotCss.marginBottom, '0px');
+		assert.equal(slotCss.width, '0px');
+		assert.equal(slotCss.height, '0px');
+		assert.equal(slotCss.pointerEvents, 'none');
 		const toggleCss = getComputedStyle(toggle);
 		assert.equal(toggleCss.position, 'absolute');
-		assert.notEqual(toggleCss.pointerEvents, 'none');
+		assert.equal(toggleCss.pointerEvents, 'none');
 	});
 
 	it('calls onClick once for Enter and once for Space', async () => {

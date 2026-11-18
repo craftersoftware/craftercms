@@ -50,9 +50,10 @@ export interface MediaCardProps {
 	 * `<button type="button">` joins the tab order: Enter, Space and a click run `onClick` once, and
 	 * `aria-pressed` reports this value. The button is not an ancestor of the title heading or the path,
 	 * so both stay exposed. Its accessible name is the item name and, when the path is shown, the path.
-	 * With no preview control the button covers the card, so the focus ring outlines the card. With a
-	 * preview control it covers only the header (using the action slot, so `action` is not rendered) and
-	 * the preview stays its own button. Clicking still selects. Only the focus ring is new.
+	 * It covers only the header, with or without a preview control (using the action slot, so `action`
+	 * is not rendered), and it does not take the pointer. Title and path tooltips, text selection and a
+	 * right-click on the media stay on the card. Enter and Space still activate it. The preview stays
+	 * its own button. Only the focus ring is new.
 	 */
 	isSelected?: boolean;
 	classes?: Partial<Record<MediaCardClassKey, string>>;
@@ -87,8 +88,6 @@ function MediaCard(props: MediaCardProps) {
 	// endregion
 	const { formatMessage } = useIntl();
 	const keyboardSelectable = typeof isSelected === 'boolean' && Boolean(onClick) && !onSelect;
-	// A preview control is its own button. The selection button then stays on the header so it does not cover it.
-	const selectionCoversCard = keyboardSelectable && !onPreview;
 	let { name, path, type } = item;
 	const selectionLabel = showPath ? `${name}, ${item.path}` : name;
 	const selectItemLabel = formatMessage({ defaultMessage: 'Select {name}' }, { name });
@@ -137,8 +136,9 @@ function MediaCard(props: MediaCardProps) {
 				textAlign: 'inherit',
 				appearance: 'none',
 				cursor: 'inherit',
-				// The header slot is pointer-events: none so its collapsed box does not steal clicks.
-				pointerEvents: 'auto',
+				// Mouse clicks and hover go to the card, so the title and path tooltips still show.
+				// Enter and Space still click the focused button.
+				pointerEvents: 'none',
 				// Inset, because the card clips anything drawn outside it.
 				'&:focus-visible': getFocusRingSx({ inset: true })
 			}}
@@ -217,16 +217,15 @@ function MediaCard(props: MediaCardProps) {
 				sxs?.root
 			)}
 		>
-			{selectionCoversCard && selectionButton}
 			<CardHeader
 				classes={{ root: props.classes?.cardHeader }}
 				sx={{
 					alignSelf: 'center',
-					// The header button is positioned against the header, on the same box the ring used to use.
-					...(keyboardSelectable && !selectionCoversCard && { position: 'relative' }),
+					// The button is positioned against the header, on the same box the ring used to use.
+					...(keyboardSelectable && { position: 'relative' }),
 					...sxs?.cardHeader
 				}}
-				action={keyboardSelectable ? (selectionCoversCard ? undefined : selectionButton) : action}
+				action={keyboardSelectable ? selectionButton : action}
 				avatar={
 					onSelect ? (
 						<FormGroup className={props.classes?.checkbox} sx={sxs?.checkbox}>
@@ -249,21 +248,20 @@ function MediaCard(props: MediaCardProps) {
 				title={name}
 				subheader={showPath ? item.path : null}
 				slotProps={{
-					action:
-						keyboardSelectable && !selectionCoversCard
-							? {
-									// The slot's own margins and flex basis would shift the title. Collapse it;
-									// the toggle is taken out of flow and covers the header.
-									sx: {
-										m: 0,
-										flex: '0 0 auto',
-										width: 0,
-										height: 0,
-										overflow: 'visible',
-										pointerEvents: 'none'
-									}
+					action: keyboardSelectable
+						? {
+								// The slot's own margins and flex basis would shift the title. Collapse it;
+								// the button is taken out of flow and covers the header.
+								sx: {
+									m: 0,
+									flex: '0 0 auto',
+									width: 0,
+									height: 0,
+									overflow: 'visible',
+									pointerEvents: 'none'
 								}
-							: undefined,
+							}
+						: undefined,
 					content: {
 						sx: {
 							flexGrow: 1,
