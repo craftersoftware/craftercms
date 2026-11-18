@@ -15,17 +15,17 @@
  */
 
 /**
- * The name a screen reader uses. `aria-labelledby` wins whenever it lists ids, including when those
- * ids resolve to nothing: a present reference is the name, and `aria-label` is only the fallback.
+ * Accessible name per AccName: `aria-labelledby`, then `aria-label`.
+ * An id counts only when an element with that id exists. Missing ids are left out.
+ * If none resolve, or the ones that do have no text, `aria-label` is the name.
  */
 export function accessibleName(node: HTMLElement) {
 	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
-	if (ids.length) {
-		return ids
-			.map((id) => node.ownerDocument.getElementById(id)?.textContent ?? '')
-			.join(' ')
-			.replace(/\s+/g, ' ')
-			.trim();
-	}
+	const parts = ids.flatMap((id) => {
+		const element = node.ownerDocument.getElementById(id);
+		return element ? [element.textContent ?? ''] : [];
+	});
+	const fromLabelledBy = parts.join(' ').replace(/\s+/g, ' ').trim();
+	if (fromLabelledBy) return fromLabelledBy;
 	return node.getAttribute('aria-label') ?? '';
 }

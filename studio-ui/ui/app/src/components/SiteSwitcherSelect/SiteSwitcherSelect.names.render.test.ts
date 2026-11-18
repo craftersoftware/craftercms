@@ -56,7 +56,7 @@ afterEach(async () => {
 	});
 });
 
-async function render() {
+async function render(props: Record<string, unknown> = {}) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -69,7 +69,7 @@ async function render() {
 				React.createElement(
 					RawIntlProvider,
 					{ value: intl },
-					React.createElement(SiteSwitcherSelect, { site: 'editorial' })
+					React.createElement(SiteSwitcherSelect, { site: 'editorial', ...props })
 				)
 			)
 		);
@@ -96,5 +96,32 @@ describe('site switcher names', () => {
 		assert.ok(listbox, 'the site switcher listbox did not open');
 		assert.equal(listbox.getAttribute('aria-label'), 'Select site');
 		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
+	});
+
+	it('keeps a function list slot and still names the open listbox', async () => {
+		let ownerState: unknown;
+		const host = await render({
+			MenuProps: {
+				slotProps: {
+					list: (state: unknown) => {
+						ownerState = state;
+						return { 'data-x': 'kept' };
+					}
+				}
+			}
+		});
+		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
+		assert.ok(combobox, 'the site switcher combobox is missing');
+		await act(async () => {
+			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox, 'the site switcher listbox did not open');
+		assert.equal(typeof ownerState, 'object');
+		assert.ok(ownerState);
+		assert.equal((ownerState as { value?: string }).value, 'editorial');
+		assert.equal(listbox.getAttribute('data-x'), 'kept');
+		assert.equal(listbox.getAttribute('aria-label'), 'Select site');
+		assert.equal(listbox.hasAttribute('aria-labelledby'), false);
 	});
 });
