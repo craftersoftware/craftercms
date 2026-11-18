@@ -119,7 +119,7 @@ spec:
             - name: DISABLE_SECURITY_PLUGIN
               value: 'true'
             - name: OPENSEARCH_JAVA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=60.0"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=60.0 -XX:-UseBASE64Intrinsics"
           resources:
             requests:
               cpu: 500m
@@ -160,7 +160,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: CATALINA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
           resources:
             requests:
               cpu: 1
@@ -206,7 +206,7 @@ spec:
               mountPath: /opt/crafter/logs
           env:
             - name: DEPLOYER_JAVA_OPTS
-              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0"
+              value: "-server -Xss1024K -XX:MaxRAMPercentage=70.0 -XX:-UseBASE64Intrinsics"
           resources:
             requests:
               cpu: 500m
