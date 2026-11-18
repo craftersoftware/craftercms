@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { getHostToGuestBus } from '../../utils/subjects';
 import { ContentTypeDropTarget } from '../../models/ContentTypeDropTarget';
@@ -37,6 +37,7 @@ import { getAvatarWithIconColors } from '../../utils/contentType';
 import { darken, useTheme } from '@mui/material/styles';
 import { ContentTypeField } from '../../icons';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import Box from '@mui/material/Box';
 import { nou } from '../../utils/object';
@@ -84,6 +85,7 @@ export function PreviewDropTargetsPanel() {
 	const cancelSelectionLabel = formatMessage({ defaultMessage: 'Cancel selection' });
 	const dispatch = useDispatch();
 	const [listMode, setListMode] = useState(true);
+	const compatibleTypesLabelId = useId();
 	const allowedTypesData = useSelection((state) => state.preview.guest?.allowedContentTypes);
 	const awaitingGuestCheckIn = nou(allowedTypesData);
 	const allowedContentTypes = useMemo(() => {
@@ -150,20 +152,27 @@ export function PreviewDropTargetsPanel() {
 						<FormHelperText sx={{ p: 2 }}>
 							<FormattedMessage defaultMessage="Select content type to view the available drop targets for it" />
 						</FormHelperText>
-						<ListSubheader>
-							<FormattedMessage defaultMessage="Compatible types" />
-						</ListSubheader>
-						{allowedContentTypes?.map((contentType: ContentType, i: number) => (
-							<ListItemButton
-								key={i}
-								onClick={() => {
-									setListMode(false);
-									handleSelectChange(contentType.id);
-								}}
-							>
-								<ContentTypeItem contentType={contentType} />
-							</ListItemButton>
-						))}
+						<List
+							aria-labelledby={compatibleTypesLabelId}
+							subheader={
+								<ListSubheader id={compatibleTypesLabelId}>
+									<FormattedMessage defaultMessage="Compatible types" />
+								</ListSubheader>
+							}
+						>
+							{allowedContentTypes?.map((contentType: ContentType, i: number) => (
+								<ListItem key={i} disablePadding>
+									<ListItemButton
+										onClick={() => {
+											setListMode(false);
+											handleSelectChange(contentType.id);
+										}}
+									>
+										<ContentTypeItem contentType={contentType} />
+									</ListItemButton>
+								</ListItem>
+							))}
+						</List>
 					</>
 				) : (
 					<>
