@@ -55,7 +55,10 @@ import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageSta
 import static org.craftercms.studio.api.v2.dal.publish.PublishPackage.PackageState.STAGING_FAILED;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getEnableStagingLockKey;
 import static org.craftercms.studio.api.v2.utils.StudioUtils.getPublishedRepoLockKey;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -399,21 +402,61 @@ public class PublisherTest {
 		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
 		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
 			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		long[] packageState = {0};
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(0);
+			long offBits = invocation.getArgument(1);
+			packageState[0] = (packageState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishPackage).updatePackageState(anyLong(), anyLong());
+		long[] itemState = {0};
+		doAnswer(invocation -> {
+			long onBits = invocation.getArgument(1);
+			long offBits = invocation.getArgument(2);
+			itemState[0] = (itemState[0] | onBits) & ~offBits;
+			return null;
+		}).when(publishDAO).updatePublishItemsState(eq(PACKAGE_ID), anyLong(), anyLong());
 
-		assertThrows(ServiceLayerException.class, () -> publisher.doPublish(publishPackage));
+		publisher.doPublish(publishPackage);
 
-		verify(publisher, never()).runTargetPublisher(any(), any(), any(), anyBoolean(), anyString());
+		assertEquals(COMPLETED.value | STAGING_FAILED.value, packageState[0]);
+		assertTrue(COMPLETED.matches(packageState[0]));
+		assertTrue(STAGING_FAILED.matches(packageState[0]));
+		assertFalse(PROCESSING.matches(packageState[0]));
+		// runTargetPublisher stores the package staging-failure bit on the items, then completion clears processing.
+		assertEquals(STAGING_FAILED.value, itemState[0]);
+		assertEquals(0, itemState[0] & PublishItem.PublishState.PROCESSING.value);
+		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
+		verify(publishPackage).setPublishedOn(any());
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(false), eq(STAGING));
 		verify(siteDAO, never()).setStagingBlobsCopied(anyString(), anyBoolean());
 		verify(generalLockService).unlock(getPublishedRepoLockKey(SITE_ID));
-		verify(publishPackage).updatePackageState(STAGING_FAILED.value, 0);
-		verify(publishPackage).setStagingError(ApiResponse.INTERNAL_SYSTEM_FAILURE.getCode());
-		verify(publishPackage, never()).updatePackageState(COMPLETED.value, PROCESSING.value);
-		verify(publishPackage, never()).setPublishedOn(any());
-		verify(publishDAO).updatePublishItemsState(PACKAGE_ID, STAGING_FAILED.value, 0);
-		verify(publishDAO, never()).updatePublishItemsState(PACKAGE_ID, 0, PublishItem.PublishState.PROCESSING.value);
 		verify(publishDAO).updateItemStatesForCompletePackage(eq(PACKAGE_ID), anyLong(), anyLong(), anyLong(),
 			eq(PublishItem.PublishState.STAGING_SUCCESS.value), eq(LIVE));
 		verify(eventPublisher).publishEvent(any(PublishErrorEvent.class));
+	}
+
+	@Test
+	public void blobCopyFailureRecordingKeepsTheOriginalException() throws Exception {
+		preparePackagePublish(PublishPackage.PackageType.ITEM_LIST, LIVE);
+		when(servicesConfig.getStagingEnvironment(SITE_ID)).thenReturn(STAGING);
+		when(servicesConfig.isStagingEnvironmentEnabled(SITE_ID)).thenReturn(true);
+		when(site2.isStagingBlobsCopied()).thenReturn(false);
+		when(contentRepository.publishedRepositoryExists(SITE_ID)).thenReturn(true);
+		when(contentRepository.isTargetPublished(SITE_ID, STAGING)).thenReturn(true);
+		doThrow(new ServiceLayerException("blob copy failed")).when(contentRepository)
+			.copyBlobs(SITE_ID, LIVE, STAGING, STAGING);
+		doNothing().doThrow(new RuntimeException("dao down")).when(publishDAO).updatePackage(publishPackage);
+
+		ServiceLayerException error = assertThrows(ServiceLayerException.class, () -> publisher.doPublish(publishPackage));
+
+		assertEquals("blob copy failed", error.getCause().getMessage());
+		assertEquals(1, error.getCause().getSuppressed().length);
+		assertEquals("dao down", error.getCause().getSuppressed()[0].getMessage());
+		verify(publishPackage, never()).updatePackageState(COMPLETED.value, PROCESSING.value);
+		verify(publishPackage, never()).setPublishedOn(any());
+		verify(publisher, never()).runTargetPublisher(any(), any(), any(), eq(true), eq(LIVE));
 	}
 
 	@Test

@@ -1137,11 +1137,12 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 	 * {@code staging_blobs_copied} false. The flag is stored false before item targets and the blob copy, so a
 	 * retry that finds the branch still there copies instead of treating it as already published. An existing
 	 * branch whose flag is already true is left as published. When that retry still has to insert item targets,
-	 * the leftover branch is deleted and created again from the current live branch first, so the branch, the
-	 * item targets, and the blob paths all come from that one live commit. The paths come from the staging
-	 * branch. {@code createStagingTarget} returns false when the target already exists, and only a target this
-	 * call created is removed on failure. There is no blob-prefix delete; deleting the new branch lets the next
-	 * attempt create it again and copy blobs. The pending flag is left false when the branch cannot be deleted.
+	 * the leftover branch is deleted and created again from live before the item targets and the blob copy.
+	 * Each of those steps reads live on its own. They stay consistent because this call holds the enable lock,
+	 * so live cannot move between them. {@code createStagingTarget} returns false when the target already exists,
+	 * and only a target this call created is removed on failure. There is no blob-prefix delete; deleting the new
+	 * branch lets the next attempt create it again and copy blobs. The pending flag is left false when the branch
+	 * cannot be deleted.
 	 */
 	protected void doEnableStaging(String siteId) throws ServiceLayerException {
 		Site site = siteDao.getSite(siteId);
@@ -1251,19 +1252,21 @@ public class SitesServiceInternalImpl implements SitesService, ApplicationContex
 
 	/**
 	 * A failed enable can leave the staging branch at an older live commit after item-target cleanup succeeded and
-	 * branch cleanup did not. Drop that branch and create it from the current live branch before item targets and
-	 * blobs are initialized, so the retry does not combine a newer live state with the earlier commit.
+	 * branch cleanup did not. Drop that branch and create it again from live before item targets and blobs are
+	 * initialized. Each step reads live on its own. The result is consistent only because the enable lock stops
+	 * live from moving during the call.
 	 *
 	 * @return true when this call created the replacement branch
 	 */
 	private boolean rebuildStagingBranchFromLive(String siteId, String liveBranch, String stagingBranch)
 			throws ServiceLayerException, IOException {
-		if (!blobAwareRepository.isTargetPublished(siteId, stagingBranch)) {
-			return false;
-		}
 		logger.info("Rebuilding staging branch '{}' for site '{}' from '{}' after an incomplete enable",
 			stagingBranch, siteId, liveBranch);
-		blobAwareRepository.deletePublishedBranch(siteId, stagingBranch);
+		if (!blobAwareRepository.deletePublishedBranch(siteId, stagingBranch)) {
+			throw new ServiceLayerException(format(
+				"Failed to delete staging branch '%s' for site '%s' before rebuilding it from '%s'",
+				stagingBranch, siteId, liveBranch));
+		}
 		boolean created = blobAwareRepository.createStagingBranchFromLive(siteId, liveBranch, stagingBranch);
 		if (!created) {
 			throw new ServiceLayerException(format(
