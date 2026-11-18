@@ -442,7 +442,7 @@ describe('addConfiguredAdditionalFields', () => {
 	});
 });
 
-describe('fetchContentInstanceDescriptor lookup paths', () => {
+describe('contentTypesForParse lookup', () => {
 	const path = '/site/website/articles/index.xml';
 	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
 
@@ -460,8 +460,6 @@ describe('fetchContentInstanceDescriptor lookup paths', () => {
 	});
 
 	it('internally fetched lookup: merge after createLookupTable quiets plugin companions', () => {
-		// Mirrors fetchContentInstanceDescriptor's internal branch:
-		// fetchContentTypes(site) -> createLookupTable(types) -> addConfiguredAdditionalFields(..., controls)
 		const fetchedTypes = [articleWithoutPersistedAdditionalFields];
 		const lookup = createLookupTable(fetchedTypes as never);
 		const merged = addConfiguredAdditionalFields(lookup as never, pluginControls);

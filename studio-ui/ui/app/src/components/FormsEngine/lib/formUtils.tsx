@@ -1339,6 +1339,11 @@ export function composePathForType(basePath: string, fileName: string, contentTy
 	}
 }
 
+/**
+ * Companion field ids declared on a control descriptor for `fieldId`.
+ * Expands `descriptor.metadata.additionalFields` templates (e.g. `{id}_tz` → `publishDate_dt_tz`).
+ * Returns an empty array when the descriptor has no additionalFields.
+ */
 export function getAdditionalFieldsIdsFromDescriptor(fieldId: string, descriptor: DescriptorContentType): string[] {
 	return expandAdditionalFieldTemplates(fieldId, descriptor.metadata?.additionalFields);
 }

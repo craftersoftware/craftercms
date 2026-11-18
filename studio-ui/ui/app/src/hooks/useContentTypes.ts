@@ -22,7 +22,7 @@ import { useSelection } from './useSelection';
 import { useEffect, useMemo } from 'react';
 import { fetchContentTypes } from '../state/actions/preview';
 import { useSiteUIConfig } from './useSiteUIConfig';
-import { addConfiguredAdditionalFields } from '../utils/contentType';
+import { contentTypesForParse } from '../utils/contentType';
 
 export function useContentTypes(): LookupTable<ContentType> {
 	const dispatch = useDispatch();
@@ -35,11 +35,7 @@ export function useContentTypes(): LookupTable<ContentType> {
 		}
 	}, [dispatch, site, byId, isFetching]);
 
-	// Return `byId` immediately so Preview is not held on UI config; merge once controls load.
-	return useMemo(
-		() => (uiConfig.isFetching === false ? addConfiguredAdditionalFields(byId, uiConfig.controls) : byId),
-		[byId, uiConfig.isFetching, uiConfig.controls]
-	);
+	return useMemo(() => contentTypesForParse(byId, uiConfig), [byId, uiConfig.isFetching, uiConfig.controls]);
 }
 
 export default useContentTypes;

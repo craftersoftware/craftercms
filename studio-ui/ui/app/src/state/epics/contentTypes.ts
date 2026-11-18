@@ -41,7 +41,7 @@ import {
 	fetchContentTypes as fetchContentTypesService
 } from '../../services/contentTypes';
 import { CrafterCMSEpic } from '../store';
-import { addConfiguredAdditionalFields } from '../../utils/contentType';
+import { contentTypesForParse } from '../../utils/contentType';
 
 export default [
 	// region fetchContentTypes
@@ -78,16 +78,12 @@ export default [
 						.filter((contentType) => contentType.type === 'component' && !contentType.id.includes('/level-descriptor'))
 						.map((contentType) => contentType.id);
 				}
-				const contentTypesById =
-					state.uiConfig.isFetching === false
-						? addConfiguredAdditionalFields(state.contentTypes.byId, state.uiConfig.controls)
-						: state.contentTypes.byId;
 				return fetchItemsByContentType(
 					state.sites.active,
 					state.preview.components.contentTypeFilter === 'compatible'
 						? allowedContentTypes
 						: state.preview.components.contentTypeFilter,
-					contentTypesById,
+					contentTypesForParse(state.contentTypes.byId, state.uiConfig),
 					state.preview.components.query
 				).pipe(map(fetchComponentsByContentTypeComplete), catchAjaxError(fetchComponentsByContentTypeFailed));
 			})

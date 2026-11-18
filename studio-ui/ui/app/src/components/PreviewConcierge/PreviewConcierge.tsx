@@ -228,7 +228,6 @@ const issueDescriptorRequest = (props: {
 	dispatch: Dispatch;
 	completeActionCreator: ActionCreatorWithOptionalPayload<any>;
 	permissions: string[];
-	controls?: Record<string, { metadata?: { additionalFields?: string[] | null } }>;
 }) => {
 	const {
 		site,
@@ -238,8 +237,7 @@ const issueDescriptorRequest = (props: {
 		flatten = true,
 		dispatch,
 		completeActionCreator,
-		permissions,
-		controls
+		permissions
 	} = props;
 	const hostToGuest$ = getHostToGuestBus();
 	const guestToHost$ = getGuestToHostBus();
@@ -247,7 +245,7 @@ const issueDescriptorRequest = (props: {
 	// cancellation (e.g. a new check-in) leaves them eligible for the next request.
 	const pendingSourceMapPaths = new Set<string>();
 
-	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes, controls)
+	fetchContentInstanceDescriptor(site, path, { flatten }, contentTypes)
 		.pipe(
 			// If another check in comes while loading, this request should be cancelled.
 			// This may happen if navigating rapidly from one page to another (guest-side).
@@ -747,13 +745,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// endregion
 			const { type, payload } = action;
 			const permissions = user?.permissionsBySite[siteId];
-			// Take the first ready lookup. useContentTypes applies configured additionalFields once uiConfig loads.
+			// useContentTypes backfills additionalFields once UI config has loaded.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
 				take(1)
 			);
-			const controlsForParse = () =>
-				upToDateRefs.current.uiConfig?.isFetching === false ? upToDateRefs.current.uiConfig.controls : undefined;
 			switch (type) {
 				case guestSiteLoad.type:
 				case guestCheckIn.type:
@@ -800,8 +796,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 							requestedSourceMapPaths,
 							dispatch,
 							completeActionCreator: fetchPrimaryGuestModelComplete,
-							permissions,
-							controls: controlsForParse()
+							permissions
 						});
 					});
 					break;
@@ -864,8 +859,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchPrimaryGuestModelComplete,
-								permissions,
-								controls: controlsForParse()
+								permissions
 							});
 						});
 					}
@@ -881,8 +875,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 								requestedSourceMapPaths,
 								dispatch,
 								completeActionCreator: fetchGuestModelsComplete,
-								permissions,
-								controls: controlsForParse()
+								permissions
 							});
 						});
 					} else {

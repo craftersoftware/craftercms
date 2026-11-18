@@ -330,16 +330,24 @@ export const componentsDataSourceContentTypesPropertyNames = [
 
 /**
  * Form-definition XML is the authoritative source for a field's `additionalFields`.
- * Control descriptors in the site UI config backfill ids that were never persisted
- * (form defs saved before that tag existed, or a descriptor template whose expanded
- * id is not already stored). A persisted id that differs from the descriptor is kept.
+ * Control descriptors in the site UI config backfill ids that were never persisted.
+ * A persisted id that differs from the descriptor is kept.
  *
- * Old form defs must keep working before re-save: callers that parse content (Preview,
- * `fetchContentInstanceDescriptor`, dialogs via `useContentTypes`) should run this merge.
- * Preview must not stall guest load waiting on UI config solely to silence companion-field
- * logs — emit content types as soon as `byId` is ready and re-issue the descriptor request
- * when a later merged lookup arrives.
+ * Runtime callers should use `contentTypesForParse` (via `useContentTypes` in React) and
+ * pass that lookup into `parseContentXML`. This returns the store lookup until UI config
+ * has loaded, so guest load is not held for the backfill.
  */
+export function contentTypesForParse(
+	byId: LookupTable<ContentType>,
+	uiConfig: {
+		isFetching: boolean | null;
+		controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>;
+	}
+): LookupTable<ContentType> {
+	if (!byId || uiConfig?.isFetching !== false) return byId;
+	return addConfiguredAdditionalFields(byId, uiConfig.controls);
+}
+
 export function addConfiguredAdditionalFields(
 	contentTypes: LookupTable<ContentType>,
 	controls: LookupTable<{ metadata?: { additionalFields?: string[] | null } }>

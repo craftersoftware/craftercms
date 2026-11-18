@@ -21,6 +21,7 @@ import DialogBody from '../DialogBody/DialogBody';
 import { LoadingState } from '../LoadingState';
 import useSpreadState from '../../hooks/useSpreadState';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
+import { useContentTypes } from '../../hooks/useContentTypes';
 import { forkJoin } from 'rxjs';
 import { fetchContentByCommitId } from '../../services/content';
 import { fromString } from '../../utils/xml';
@@ -89,6 +90,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 		}
 	);
 	const siteId = useActiveSiteId();
+	const contentTypesById = useContentTypes();
 	const isCompareDataReady = useMemo(() => {
 		if (preFetchedContent) {
 			// Check that selectionContent is complete and synced with prefetchedContent
@@ -103,7 +105,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 		} else {
 			return (
 				compareVersionsBranch?.compareVersions &&
-				contentTypesBranch?.byId &&
+				contentTypesById &&
 				item?.contentTypeId &&
 				selectionContent.a.content &&
 				selectionContent.b.content
@@ -112,14 +114,14 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 	}, [
 		preFetchedContent,
 		compareVersionsBranch?.compareVersions,
-		contentTypesBranch?.byId,
+		contentTypesById,
 		item?.contentTypeId,
 		selectionContent
 	]);
 	const [selectedField, setSelectedField] = useState<ContentTypeField>(null);
 	const selectedFieldRef = useRef(null);
 	selectedFieldRef.current = selectedField;
-	const contentType = contentTypesBranch?.byId[item.contentTypeId];
+	const contentType = contentTypesById?.[item.contentTypeId];
 	const contentTypeFields = useMemo(() => {
 		return !isAsset && isCompareDataReady
 			? [
@@ -175,11 +177,11 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 				} else {
 					setSelectionContent({
 						a: {
-							content: parseContentXML(fromString(contentA as string), selectedA.path, contentTypesBranch.byId, {}),
+							content: parseContentXML(fromString(contentA as string), selectedA.path, contentTypesById, {}),
 							xml: contentA as string
 						},
 						b: {
-							content: parseContentXML(fromString(contentB as string), selectedB.path, contentTypesBranch.byId, {}),
+							content: parseContentXML(fromString(contentB as string), selectedB.path, contentTypesById, {}),
 							xml: contentB as string
 						}
 					});
@@ -187,7 +189,7 @@ export function CompareVersionsDialogContainer(props: CompareVersionsDialogConta
 			});
 			return () => subscription.unsubscribe();
 		}
-	}, [preFetchedContent, selectedA, selectedB, siteId, setSelectionContent, contentTypesBranch, isAsset]);
+	}, [preFetchedContent, selectedA, selectedB, siteId, setSelectionContent, contentTypesById, isAsset]);
 
 	useEffect(() => {
 		if (contentTypeFields?.length && !fieldIdsWithChanges.includes(selectedFieldRef.current?.id)) {
