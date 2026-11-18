@@ -178,8 +178,6 @@ export function Pager(props: {
 	const { totalPages, totalItems, currentPage, rowsPerPage, onPagePickerChange, onPageChange, onRowsPerPageChange } =
 		props;
 	const { formatMessage } = useIntl();
-	// The closed select shows "Page N". The name includes that text and says what the control does.
-	const pageNumber = currentPage + 1;
 
 	return (
 		<>
@@ -189,7 +187,8 @@ export function Pager(props: {
 				value={`${currentPage}`}
 				onChange={(e) => onPagePickerChange(parseInt(e.target.value))}
 				inputProps={{
-					'aria-label': formatMessage({ defaultMessage: 'Go to page {pageNumber}' }, { pageNumber })
+					// "Page N" is the closed select's value, not its label, so the name stays the word Page.
+					'aria-label': formatMessage({ id: 'words.page', defaultMessage: 'Page' })
 				}}
 				sx={{ fontSize: (theme) => theme.typography.fontSize }}
 			>

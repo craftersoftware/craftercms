@@ -15,8 +15,8 @@
  */
 
 /**
- * The dashlet page picker is a MUI Select whose closed label is "Page N". The accessible name has to include that
- * text (WCAG 2.5.3) and say that the control changes the page (WCAG 4.1.2).
+ * The dashlet page picker is a MUI Select. Its closed text ("Page N") is the value, not a visible label, so the
+ * accessible name does not repeat it (WCAG 2.5.3). The name is the static word "Page".
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -68,20 +68,21 @@ async function render(currentPage = 0) {
 }
 
 describe('dashlet page picker name', () => {
-	it('names the page combobox with the page it shows', async () => {
+	it('names the page combobox Page, and shows the current page as its value', async () => {
 		const host = await render(0);
 		const comboboxes = host.querySelectorAll<HTMLElement>('[role="combobox"]');
 		const pagePicker = Array.from(comboboxes).find((node) => !node.classList.contains('MuiTablePagination-select'));
 		assert.ok(pagePicker, 'the page picker combobox is missing');
-		assert.equal(pagePicker.getAttribute('aria-label'), 'Go to page 1');
+		assert.equal(pagePicker.getAttribute('aria-label'), 'Page');
 		assert.equal(pagePicker.textContent?.replace(/\s+/g, ' ').trim(), 'Page 1');
 	});
 
-	it('keeps the name in step with the current page', async () => {
+	it('keeps the name when the current page changes', async () => {
 		const host = await render(2);
 		const pagePicker = Array.from(host.querySelectorAll<HTMLElement>('[role="combobox"]')).find(
 			(node) => !node.classList.contains('MuiTablePagination-select')
 		);
-		assert.equal(pagePicker?.getAttribute('aria-label'), 'Go to page 3');
+		assert.equal(pagePicker?.getAttribute('aria-label'), 'Page');
+		assert.equal(pagePicker?.textContent?.replace(/\s+/g, ' ').trim(), 'Page 3');
 	});
 });

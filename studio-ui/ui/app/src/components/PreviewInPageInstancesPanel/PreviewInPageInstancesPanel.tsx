@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 import MenuItem from '@mui/material/MenuItem';
 import { contentTreeFieldSelected, setContentTypeFilter, setPreviewEditMode } from '../../state/actions/preview';
@@ -23,6 +23,8 @@ import Suspencified from '../Suspencified/Suspencified';
 import ContentInstance from '../../models/ContentInstance';
 import SearchBar from '../SearchBar/SearchBar';
 import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import Avatar from '@mui/material/Avatar';
 import { getInitials } from '../../utils/string';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
@@ -53,11 +55,17 @@ const translations = defineMessages({
 	chooseContentType: {
 		id: 'previewInPageInstancesPanel.chooseContentType',
 		defaultMessage: 'Please choose a content type.'
+	},
+	contentType: {
+		id: 'searchFilter.contentType',
+		defaultMessage: 'Content Type'
 	}
 });
 
 export function PreviewInPageInstancesPanel() {
 	const { formatMessage } = useIntl();
+	const contentTypeLabelId = useId();
+	const contentTypeLabel = formatMessage(translations.contentType);
 	const dispatch = useDispatch();
 	const contentTypeLookup = useContentTypes();
 	const contentTypeFilter = useSelection((state) => state.preview.components.contentTypeFilter);
@@ -139,27 +147,32 @@ export function PreviewInPageInstancesPanel() {
 					keyword={keyword}
 					disabled={!Boolean(contentTypeFilter)}
 				/>
-				<Select
-					value={contentTypes.length ? contentTypeFilter : ''}
-					displayEmpty
-					sx={{ width: '100%', marginTop: '15px' }}
-					onChange={(event: any) => handleSelectChange(event.target.value)}
-					endAdornment={
-						contentTypes.length && contentTypeLookup ? null : (
-							<CircularProgress size={20} sx={{ position: 'absolute', right: '28px' }} />
-						)
-					}
-				>
-					<MenuItem value="" disabled>
-						{formatMessage(translations.selectContentType)}
-					</MenuItem>
-					{contentTypeLookup &&
-						contentTypes.map((id: string, i: number) => (
-							<MenuItem value={contentTypeLookup[id].id} key={i}>
-								{contentTypeLookup[id].name}
-							</MenuItem>
-						))}
-				</Select>
+				<FormControl fullWidth sx={{ marginTop: '15px' }}>
+					<InputLabel id={contentTypeLabelId}>{contentTypeLabel}</InputLabel>
+					<Select
+						labelId={contentTypeLabelId}
+						label={contentTypeLabel}
+						value={contentTypes.length ? contentTypeFilter : ''}
+						displayEmpty
+						sx={{ width: '100%' }}
+						onChange={(event: any) => handleSelectChange(event.target.value)}
+						endAdornment={
+							contentTypes.length && contentTypeLookup ? null : (
+								<CircularProgress size={20} sx={{ position: 'absolute', right: '28px' }} />
+							)
+						}
+					>
+						<MenuItem value="" disabled>
+							{formatMessage(translations.selectContentType)}
+						</MenuItem>
+						{contentTypeLookup &&
+							contentTypes.map((id: string, i: number) => (
+								<MenuItem value={contentTypeLookup[id].id} key={i}>
+									{contentTypeLookup[id].name}
+								</MenuItem>
+							))}
+					</Select>
+				</FormControl>
 			</Box>
 			<Suspencified>
 				{filteredContentTypes ? (
