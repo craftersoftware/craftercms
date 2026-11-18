@@ -488,7 +488,7 @@ describe('Preview additionalFields loading race', () => {
 			true
 		);
 
-		// Preview must not delay guest load for this log; when useContentTypes later merges, re-issue parses quietly.
+		// Preview doesn't wait on UI config for this log; parses made after useContentTypes merges stay quiet.
 		const merged = addConfiguredAdditionalFields(unmerged as never, pluginControls);
 		const after = captureConsoleErrors(() => {
 			parseContentXML(contentDoc(companionXml), path, merged as never, {});
