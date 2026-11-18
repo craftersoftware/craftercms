@@ -166,6 +166,7 @@ export function TransferListColumn(props: TransferListColumnProps) {
 								} else {
 									const item = items[index];
 									const itemLabelId = `${rowLabelId}-${index}`;
+									const visibleName = item.title || item.subtitle;
 									content = (
 										<ListItemButton
 											disabled={disabled || inProgressIds.includes(item.id) || disabledItems?.[item.id]}
@@ -183,7 +184,7 @@ export function TransferListColumn(props: TransferListColumnProps) {
 															tabIndex={-1}
 															disableRipple
 															slotProps={{
-																input: item.title
+																input: visibleName
 																	? { 'aria-labelledby': itemLabelId }
 																	: {
 																			'aria-label': formatMessage(
@@ -200,7 +201,12 @@ export function TransferListColumn(props: TransferListColumnProps) {
 												primary={item.title}
 												secondary={item.subtitle}
 												slotProps={{
-													primary: { id: itemLabelId, noWrap: true, title: item.title }
+													primary: {
+														noWrap: true,
+														title: item.title,
+														...(item.title ? { id: itemLabelId } : {})
+													},
+													...(!item.title && item.subtitle ? { secondary: { id: itemLabelId } } : {})
 												}}
 											/>
 										</ListItemButton>

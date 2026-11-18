@@ -84,8 +84,14 @@ export function PreviewSettingsPanel() {
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>{formatMessage(translations.editModeHelperText)}</FormHelperText>
 			<ListItem>
-				<ListItemText primary={formatMessage({ defaultMessage: 'Keyboard shortcuts' })} />
-				<KeyboardShortcutsSwitch edge="end" />
+				<ListItemText
+					id="settingsPanelKeyboardShortcutsLabel"
+					primary={formatMessage({ defaultMessage: 'Keyboard shortcuts' })}
+				/>
+				<KeyboardShortcutsSwitch
+					edge="end"
+					slotProps={{ input: { 'aria-labelledby': 'settingsPanelKeyboardShortcutsLabel' } }}
+				/>
 			</ListItem>
 			<FormHelperText sx={formHelperTextSx}>
 				<FormattedMessage defaultMessage="Enable/disable keyboard shortcuts" />

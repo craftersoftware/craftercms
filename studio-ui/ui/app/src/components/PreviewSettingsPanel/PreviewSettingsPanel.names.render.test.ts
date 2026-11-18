@@ -34,6 +34,7 @@ const { Provider } = await import('react-redux');
 const { configureStore } = await import('@reduxjs/toolkit');
 const { PreviewSettingsPanel } = await import('./PreviewSettingsPanel.tsx');
 const { EditModeSwitch } = await import('../EditModeSwitch/EditModeSwitch.tsx');
+const { KeyboardShortcutsSwitch } = await import('../KeyboardShortcutsSwitch/KeyboardShortcutsSwitch.tsx');
 
 // EditModeSwitch reads palette.border.control, which the default MUI theme does not define.
 const theme = createTheme({ palette: { border: { control: '#bdbdbd' } } } as never);
@@ -108,6 +109,14 @@ describe('settings edit mode switch', () => {
 		assert.equal(accessibleName(host, input), 'Edit Mode (e | m)');
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
+		const shortcuts = host.querySelector<HTMLInputElement>(
+			'input[aria-labelledby="settingsPanelKeyboardShortcutsLabel"]'
+		);
+		assert.ok(shortcuts, 'keyboard shortcuts switch input');
+		assert.equal(host.querySelector('#settingsPanelKeyboardShortcutsLabel')?.textContent, 'Keyboard shortcuts');
+		assert.equal(accessibleName(host, shortcuts), 'Keyboard shortcuts');
+		assert.equal(shortcuts.closest('.MuiSwitch-switchBase')?.getAttribute('aria-label'), null);
+		assert.equal(shortcuts.closest('.MuiSwitch-switchBase')?.getAttribute('aria-labelledby'), null);
 	});
 
 	it('keeps that name, and no prohibited name on the span, while the tooltip is open', async () => {
@@ -123,6 +132,26 @@ describe('settings edit mode switch', () => {
 		assert.equal(accessibleName(host, input), 'Edit Mode (e | m)');
 		assert.equal(span.getAttribute('aria-label'), null);
 		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
+});
+
+describe('keyboard shortcuts switch', () => {
+	it('uses a caller input name and keeps the caller input props', async () => {
+		const host = await render(
+			React.createElement(
+				React.Fragment,
+				null,
+				React.createElement('span', { id: 'shortcutsLabel' }, 'Keyboard shortcuts'),
+				React.createElement(KeyboardShortcutsSwitch, {
+					slotProps: { input: { 'aria-labelledby': 'shortcutsLabel', 'data-kept': 'yes' } }
+				} as never)
+			)
+		);
+		const input = host.querySelector<HTMLInputElement>('input[type="checkbox"]');
+		assert.ok(input, 'keyboard shortcuts switch input');
+		assert.equal(accessibleName(host, input), 'Keyboard shortcuts');
+		assert.equal(input.getAttribute('data-kept'), 'yes');
+		assert.equal(input.closest('.MuiSwitch-switchBase')?.getAttribute('aria-label'), null);
 	});
 });
 

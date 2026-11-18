@@ -16,7 +16,7 @@
 
 /**
  * Transfer-list checkboxes have no FormControlLabel. The header takes the visible column title.
- * Each row takes the visible item title.
+ * Each row takes the visible item title, then its subtitle, and only then a translated Select {name}.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -56,7 +56,13 @@ function accessibleName(host: HTMLElement, input: HTMLElement) {
 	return input.getAttribute('aria-label') ?? '';
 }
 
-async function render(title: string | null) {
+async function render(
+	title: string | null,
+	items: Array<{ id: string | number; title: string; subtitle?: string }> = [
+		{ id: 'home', title: 'Home' },
+		{ id: 'about', title: 'About' }
+	]
+) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -68,10 +74,7 @@ async function render(title: string | null) {
 				{ value: intl },
 				React.createElement(TransferListColumn, {
 					title,
-					items: [
-						{ id: 'home', title: 'Home' },
-						{ id: 'about', title: 'About' }
-					],
+					items,
 					checkedList: {},
 					inProgressIds: [],
 					isAllChecked: false,
@@ -102,5 +105,16 @@ describe('transfer list checkbox names', () => {
 		const input = host.querySelector<HTMLInputElement>('input[type="checkbox"]');
 		assert.ok(input, 'header checkbox');
 		assert.equal(input.getAttribute('aria-label'), 'Select all');
+	});
+
+	it('names a title-less row from its subtitle, and uses Select {name} only when nothing is visible', async () => {
+		const host = await render('Groups', [
+			{ id: 7, title: '', subtitle: 'Site editors' },
+			{ id: 8, title: '' }
+		]);
+		const inputs = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+		assert.equal(inputs.length, 3);
+		assert.equal(accessibleName(host, inputs[1]), 'Site editors');
+		assert.equal(inputs[2].getAttribute('aria-label'), 'Select 8');
 	});
 });
