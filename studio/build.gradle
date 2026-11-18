@@ -85,6 +85,7 @@ dependencies {
 	implementation libs.spring.data.commons
 	implementation libs.jackson.datatype.jsr310
 	implementation libs.jackson.databind
+	implementation enforcedPlatform(libs.netty.bom)
 	implementation libs.aws.sts
 	implementation libs.aws.s3
 	implementation libs.aws.elastictranscoder
