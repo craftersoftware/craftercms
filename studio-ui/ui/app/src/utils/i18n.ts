@@ -58,13 +58,6 @@ export function getStoredLanguage(username?: string): string {
 	);
 }
 
-if (getCurrentLocale() !== 'en') {
-	createIntlInstance(getCurrentLocale()).then((newIntl) => {
-		intl = newIntl;
-		intl$$.next(newIntl);
-	});
-}
-
 async function fetchLocale(locale: string, imports: ImportsLookup): Promise<LookupTable<string>> {
 	const importFn = imports[locale];
 	if (!importFn) {
@@ -181,4 +174,10 @@ if (typeof document !== 'undefined') {
 		},
 		false
 	);
+
+	// FreeMarker shells start at lang="en". A stored locale updates `lang` through this listener.
+	const initialLocale = getCurrentLocale();
+	if (initialLocale && initialLocale !== intl.locale) {
+		dispatchLanguageChange(initialLocale);
+	}
 }
