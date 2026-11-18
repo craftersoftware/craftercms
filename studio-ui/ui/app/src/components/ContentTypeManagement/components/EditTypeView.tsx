@@ -59,11 +59,9 @@ import {
 	TypePropsToEdit,
 	typePropsToEdit
 } from '../utils';
+import { resolveControlDescriptor, resolveDataSourceDescriptor } from '../catalogDescriptorLookup';
 import { EMPTY_CHANGED_FIELD_IDS, extractAtomValues, useShowAlert } from '../../FormsEngine/lib/formUtils';
 import TypeBuilderFormsEngine, { FieldFormViewProps } from './TypeBuilderFormsEngine';
-import controlDescriptors from '../descriptors/controls';
-import dataSourceDescriptors from '../descriptors/dataSources';
-import type { BuiltInControlType } from '../../FormsEngine/lib/controlMap';
 import TypeDetailsView, { TypeDetailsViewProps } from './TypeDetailsView';
 import {
 	FieldUpdate,
@@ -332,8 +330,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 			updatedType = updateTypeFromSectionUpdate(currentType, stateRef.current.selectedSection, values);
 		} else if (stateRef.current.selectedDataSource) {
 			const currentDataSource = stateRef.current.selectedDataSource;
-			const descriptor =
-				dataSourceDescriptors[currentDataSource.type] ?? config.dataSources?.[currentDataSource.type]?.descriptor;
+			const descriptor = resolveDataSourceDescriptor(
+				currentDataSource.type,
+				config.dataSources?.[currentDataSource.type]?.descriptor
+			);
 			if (!descriptor) {
 				console.error(`No data source descriptor found for type "${currentDataSource.type}"`);
 				return type;
@@ -464,8 +464,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		// are preserved (e.g. selecting a parent after editing one of its children).
 		const fieldForForm = getFieldFromType(typeForForm, resolvedFieldIdPath) ?? field;
 
-		const controlDescriptor =
-			controlDescriptors[fieldForForm.type as BuiltInControlType] ?? config.controls?.[fieldForForm.type]?.descriptor;
+		const controlDescriptor = resolveControlDescriptor(
+			fieldForForm.type,
+			config.controls?.[fieldForForm.type]?.descriptor
+		);
 		if (!controlDescriptor)
 			return showAlert(`No control descriptor found for field "${fieldForForm.name}" of type "${fieldForForm.type}"`);
 
@@ -537,8 +539,10 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		if (!postCloseType) return;
 		const typeForForm = postCloseType;
 
-		const dataSourceDescriptor =
-			dataSourceDescriptors[dataSource.type] ?? config.dataSources?.[dataSource.type]?.descriptor;
+		const dataSourceDescriptor = resolveDataSourceDescriptor(
+			dataSource.type,
+			config.dataSources?.[dataSource.type]?.descriptor
+		);
 		if (!dataSourceDescriptor)
 			return showAlert(`No control descriptor found for field "${dataSource.title}" of type "${dataSource.type}"`);
 
@@ -661,8 +665,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						typeToSave,
 						formEngine.ignorePostfixFields,
 						(field) =>
-							(controlDescriptors[field.type as BuiltInControlType] ?? config.controls?.[field.type]?.descriptor)
-								?.metadata?.suffixes
+							resolveControlDescriptor(field.type, config.controls?.[field.type]?.descriptor)?.metadata?.suffixes
 					);
 					if (postfixViolations.length) {
 						showAlert({
@@ -841,7 +844,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 		const { sectionId, fieldPath } = insertFieldData;
 		setInsertFieldData({ sectionId: null });
 		const configEntry = config.controls?.[fieldType];
-		const descriptor = controlDescriptors[fieldType] ?? configEntry?.descriptor;
+		const descriptor = resolveControlDescriptor(fieldType, configEntry?.descriptor);
 		if (!descriptor) {
 			showAlert(`No control descriptor found for field type "${fieldType}"`);
 			return;
@@ -888,7 +891,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 	};
 	const handleInsertDataSource = (dataSourceType: string, position: number) => {
 		const configEntry = config.dataSources?.[dataSourceType];
-		const descriptor = dataSourceDescriptors[dataSourceType] ?? configEntry?.descriptor;
+		const descriptor = resolveDataSourceDescriptor(dataSourceType, configEntry?.descriptor);
 		if (!descriptor) {
 			showAlert(`No data source descriptor found for type "${dataSourceType}"`);
 			return;
@@ -1505,7 +1508,7 @@ function updateTypeFromFieldUpdate(
 	if (!state.selectedField) return;
 
 	const fieldType = state.selectedField.type;
-	const descriptor = configDescriptors?.[fieldType] ?? controlDescriptors[fieldType];
+	const descriptor = resolveControlDescriptor(fieldType, configDescriptors?.[fieldType]);
 	if (isComposedPath(fieldIdPath)) {
 		// When the field is not on the root level (composed fieldIdPath), the field is under another field, where each
 		// field contains a lookupTable of fields. In that screnario sections should not be updated.

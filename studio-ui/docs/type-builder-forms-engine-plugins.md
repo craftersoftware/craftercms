@@ -2,7 +2,7 @@
 
 > Companion to [`type-builder-forms-engine.md`](type-builder-forms-engine.md). Read this before designing or changing dynamic controls, data sources, FE form controllers, plugin loading, or TB plugin discovery.
 
-Last updated: 2026-11-04
+Last updated: 2026-11-18
 
 ## 1. Why plugins are part of the core design
 
@@ -54,6 +54,8 @@ Wiring targets:
 - `preview-app` adds `<widget>` declarations to `ui.xml` at the installation `parentXpath` (`ui.xslt`)
 
 `form-control` and `form-datasource` packages omit `parentXpath` (the model default is the string `"null"`). Their transforms therefore choose the catalog parent themselves. The inserted subtree is still the package `element`. Type Builder lists a control or data source from that entry when it has an `id` and a `<descriptor>`, and it reads data-source entries as `dataSource`.
+
+Type Builder looks up that descriptor code-first, for controls and for data sources. `resolveCatalogDescriptor` (`components/ContentTypeManagement/catalogDescriptorLookup.ts`) returns the built-in descriptor when the type id is one Studio ships, and the `ui.xml` descriptor otherwise. A plugin or site config entry cannot override a built-in type. Insert, the properties form, field commit, field-name suffixes, and data-source property serialization all use that lookup (`resolveControlDescriptor` / `resolveDataSourceDescriptor`). Forms Engine control hooks follow the same rule (`resolveControlDescriptors`).
 
 ### 2.2 General modern Studio UI plugin
 
@@ -418,12 +420,11 @@ Missing for a complete extension contract:
 
 ### TB2 controls: plugin coordinates on insert
 
-TB2 reads control entries/descriptors from the `ContentTypeManagement` widget in `ui.xml`. When inserting a field or data source from a catalog entry that includes `<plugin>`, `EditTypeView` copies coordinates onto `field.properties.plugin` or `DataSource.plugin` (mapping `id`→`pluginId`, `fileName`→`filename`).
+TB2 reads control entries/descriptors from the `ContentTypeManagement` widget in `ui.xml`. When inserting a field or data source from a catalog entry that includes `<plugin>`, `EditTypeView` copies coordinates onto `field.properties.plugin` or `DataSource.plugin` (mapping `id`→`pluginId`, `fileName`→`filename`). Descriptor lookup is code-first on every path: a built-in type wins over a plugin or site config entry with the same id (see [§2.1](#21-project-plugin-package)).
 
 Remaining gaps:
 
 - package installers write `form-control` and `form-datasource` entries into the `ui.xml` catalog; an entry still needs an `id` and a `<descriptor>` before Type Builder offers it, and a legacy `<datasource>` element name is not `dataSource`;
-- descriptor merge/precedence remains inconsistent across some edit/serialize helpers;
 - a general `PluginDescriptor.widgets` control is not connected to FE's control resolver.
 
 ### FE2 data sources: runtime + built-in modules
