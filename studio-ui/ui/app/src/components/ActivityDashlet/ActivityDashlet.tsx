@@ -627,6 +627,13 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 									content = <FormattedMessage defaultMessage="Loading..." />;
 								} else {
 									const activity = feed[index];
+									const optionsHovered = hoveredActivity?.id === activity.id;
+									const optionsButtonSx = {
+										opacity: optionsHovered ? 1 : 0,
+										pointerEvents: optionsHovered ? 'auto' : 'none',
+										'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
+										'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
+									};
 									content = (
 										<CustomTimelineItem key={activity.id}>
 											<SizedTimelineSeparator>
@@ -666,12 +673,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 															{renderActivityTimestamp(activity.actionTimestamp, locale)}
 														</Typography>
 													</Box>
-													<Box
-														sx={{
-															alignSelf: 'center',
-															visibility: hoveredActivity?.id === activity.id ? 'visible' : 'hidden'
-														}}
-													>
+													<Box sx={{ alignSelf: 'center' }}>
 														{activity.package ? (
 															<IconButton
 																aria-label={formatMessage({ defaultMessage: 'Package options' })}
@@ -679,12 +681,18 @@ export function ActivityDashlet(props: ActivityDashletProps) {
 																	e.stopPropagation();
 																	packageContextMenu?.openContextMenu(e, activity.package);
 																}}
+																sx={optionsButtonSx}
 															>
 																<MoreVertRoundedIcon />
 															</IconButton>
 														) : (
 															activity.actionType !== 'DELETE' &&
-															activity.item && <DashletItemOptions path={activity.item.path} />
+															activity.item && (
+																<DashletItemOptions
+																	path={activity.item.path}
+																	iconButtonProps={{ sx: optionsButtonSx }}
+																/>
+															)
 														)}
 													</Box>
 												</Box>

@@ -213,7 +213,7 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 										opacity: hoveredPackage === pkg.id ? 1 : 0,
 										pointerEvents: hoveredPackage === pkg.id ? 'auto' : 'none',
 										'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
-										'@media (hover: none)': { opacity: 1, pointerEvents: 'auto' }
+										'@media (hover: none), (any-pointer: coarse)': { opacity: 1, pointerEvents: 'auto' }
 									}}
 								>
 									<MoreVertRoundedIcon />
