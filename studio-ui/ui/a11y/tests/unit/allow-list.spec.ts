@@ -28,3 +28,15 @@ test('the committed allow-list is valid', async () => {
 		for (const value of nodes) expect(stableTokens(value), value).not.toEqual([]);
 	}
 });
+
+test('every ticket scope still has a committed entry', async () => {
+	// Capture mode records every finding inside a scope, so a scope with no entry would quietly re-allow a regression.
+	const { allowList, ruleTickets } = await import('../allow-list');
+	const recorded = new Set(allowList.map(({ rule, screen, theme }) => `${rule} on ${theme} ${screen}`));
+	const empty = Object.entries(ruleTickets).flatMap(([rule, { scope }]) =>
+		Object.entries(scope).flatMap(([screen, themes]) =>
+			themes.map((theme) => `${rule} on ${theme} ${screen}`).filter((key) => !recorded.has(key))
+		)
+	);
+	expect(empty).toEqual([]);
+});
