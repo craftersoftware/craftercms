@@ -31,6 +31,7 @@ const { act } = await import('react');
 const { default: Avatar } = await import('@mui/material/Avatar');
 const { default: ToggleButton } = await import('@mui/material/ToggleButton');
 const { default: CrafterThemeProvider } = await import('./CrafterThemeProvider.tsx');
+const { PublishingStatusAvatar } = await import('../PublishingStatusAvatar/PublishingStatusAvatar.tsx');
 
 (globalThis as any).localStorage ??= window.localStorage;
 
@@ -73,5 +74,17 @@ describe('theme color contrast overrides', () => {
 		assert.ok(button);
 		// palette.blue.shade is #0040DD. primary.main (#0068DA) is the colour the override replaces.
 		assert.equal(window.getComputedStyle(button).color, 'rgb(0, 64, 221)');
+	});
+
+	it('paints a background status avatar with the contrast colour of the success fill', async () => {
+		const host = await render(
+			React.createElement(PublishingStatusAvatar, { status: 'ready', enabled: true, variant: 'background' })
+		);
+		const avatar = host.querySelector<HTMLElement>('.MuiAvatar-root.ready');
+		assert.ok(avatar);
+		const style = window.getComputedStyle(avatar);
+		// Light success.main is #217F39. text.primary on it is 3.82:1; white is 5.05:1.
+		assert.equal(style.backgroundColor, 'rgb(33, 127, 57)');
+		assert.equal(style.color, 'rgb(255, 255, 255)');
 	});
 });

@@ -17,7 +17,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTheme } from '@mui/material/styles';
-import palette from './palette.ts';
+import palette, { getStudioPaletteOptions } from './palette.ts';
 
 /**
  * The two `color-contrast` pairs the theme overrides (WCAG 2.1 SC 1.4.3).
@@ -137,14 +137,39 @@ describe('selected primary toggle label (WCAG 2.1 SC 1.4.3)', () => {
 		assert.ok(hover > 4.5, `hover ${hover.toFixed(2)}:1 on ${hovered}`);
 	});
 
-	it('dark mode primary.main already clears 4.5:1 on the resting wash', () => {
+	it('dark mode primary.main clears 4.5:1 at rest, and text.primary clears it on hover', () => {
 		const dark = themeFor('dark');
-		const darkSelected = wash(
+		const surface = dark.palette.background.default;
+		const darkSelected = wash(dark.palette.primary.main, dark.palette.action.selectedOpacity, surface);
+		const darkHovered = wash(
 			dark.palette.primary.main,
-			dark.palette.action.selectedOpacity,
-			dark.palette.background.default
+			dark.palette.action.selectedOpacity + dark.palette.action.hoverOpacity,
+			surface
 		);
-		const value = ratio(dark.palette.primary.main, darkSelected);
-		assert.ok(value > 4.5, `dark rest ${value.toFixed(2)}:1 on ${darkSelected}`);
+		const rest = ratio(dark.palette.primary.main, darkSelected);
+		const hoverPrimary = ratio(dark.palette.primary.main, darkHovered);
+		const hoverText = ratio(dark.palette.text.primary, darkHovered);
+		assert.ok(rest > 4.5, `dark rest ${rest.toFixed(2)}:1 on ${darkSelected}`);
+		assert.ok(hoverPrimary < 4.5, `dark hover primary.main ${hoverPrimary.toFixed(2)}:1 on ${darkHovered}`);
+		assert.ok(hoverText > 4.5, `dark hover text.primary ${hoverText.toFixed(2)}:1 on ${darkHovered}`);
 	});
+});
+
+describe('publishing status icon on its fill (WCAG 2.1 SC 1.4.3)', () => {
+	// PublishingStatusAvatar's background variant calls getContrastText. The theme threshold is 4.5.
+	for (const mode of ['light', 'dark'] as const) {
+		const theme = createTheme({
+			palette: { mode, contrastThreshold: 4.5, ...getStudioPaletteOptions(mode) }
+		});
+		for (const [name, fill] of [
+			['success', theme.palette.success.main],
+			['error', theme.palette.error.main]
+		] as const) {
+			it(`${mode} ${name} fill (${fill}) contrast text clears 4.5:1`, () => {
+				const text = theme.palette.getContrastText(fill);
+				const value = ratio(text, fill);
+				assert.ok(value > 4.5, `${text} on ${fill} is ${value.toFixed(2)}:1`);
+			});
+		}
+	}
 });

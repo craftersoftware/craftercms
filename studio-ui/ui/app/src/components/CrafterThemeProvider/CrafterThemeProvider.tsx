@@ -173,13 +173,17 @@ export function CrafterThemeProvider(props: CrafterThemeProviderProps) {
 				// A selected primary toggle paints primary.main on an 8% wash of itself. On
 				// background.default (#FAFAFA) that is #0068DA on #E6EEF7, 4.49:1, and 4.24:1 once
 				// hover adds hoverOpacity. Axe requires the ratio to be over 4.5. blue.shade (#0040DD)
-				// is 6.46:1 and 6.09:1 on those washes. Dark mode's tint already clears at rest (5.13:1).
+				// is 6.46:1 and 6.09:1 on those washes. Dark mode's tint clears at rest (5.13:1).
+				// Hover adds another 8% (a 24% wash): #54A6FF on that wash is 4.38:1, so the hovered
+				// label uses text.primary (about 11:1). The scan does not hover, so the ratio test covers it.
 				MuiToggleButton: {
 					styleOverrides: {
 						root: ({ ownerState, theme }) =>
-							ownerState.color === 'primary' && theme.palette.mode === 'light'
-								? { '&.Mui-selected': { color: palette.blue.shade } }
-								: {}
+							ownerState.color !== 'primary'
+								? {}
+								: theme.palette.mode === 'light'
+									? { '&.Mui-selected': { color: palette.blue.shade } }
+									: { '&.Mui-selected:hover': { color: theme.palette.text.primary } }
 					}
 				},
 				// A tinted background alone does not tell a selected item apart (1.4.1), so add a leading bar.
