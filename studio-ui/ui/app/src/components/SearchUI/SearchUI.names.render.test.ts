@@ -164,6 +164,21 @@ describe('search rows-per-page name', () => {
 	});
 });
 
+describe('search rows-per-page listbox name', () => {
+	it('names the open listbox "Items per page" with no dangling aria-labelledby', async () => {
+		const host = (await mount({ searchParameters: { limit: 9, offset: 0 } })).host;
+		const combobox = host.querySelector<HTMLElement>('.MuiTablePagination-select[role="combobox"]');
+		assert.ok(combobox, 'the rows-per-page combobox is missing');
+		await act(async () => {
+			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+		});
+		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
+		assert.ok(listbox, 'the rows-per-page listbox did not open');
+		assert.equal(listbox.getAttribute('aria-label'), 'Items per page');
+		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
+	});
+});
+
 describe('search select-all name', () => {
 	it('names the select-all input, not just the wrapper the tooltip clones', async () => {
 		const host = await render();
