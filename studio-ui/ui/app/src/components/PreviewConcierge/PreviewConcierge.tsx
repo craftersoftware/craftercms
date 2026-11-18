@@ -781,7 +781,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 					const { url, location } = payload;
 					const path = getPathFromPreviewURL(url);
 					dispatch(guestCheckIn({ location, site: siteId, path }));
-
 					contentTypes$.subscribe((contentTypes) => {
 						issueDescriptorRequest({
 							site: siteId,
@@ -842,6 +841,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 						nnou(siteId) && dispatch(changeCurrentUrl('/'));
 					} else {
 						const path = payload.path;
+
 						contentTypes$.subscribe((contentTypes) => {
 							hostToGuest$.next(contentTypesResponse({ contentTypes: Object.values(contentTypes) }));
 							issueDescriptorRequest({
