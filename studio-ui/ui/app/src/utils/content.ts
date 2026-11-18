@@ -426,7 +426,6 @@ export function parseElementByContentType(
 		case 'image-picker':
 		case 'date-time':
 		case 'time':
-		case 'video-picker':
 			return getInnerHtml(element);
 		case 'dropdown':
 			if (field.id.endsWith('_i') || field.id.endsWith('_f')) {
@@ -443,7 +442,12 @@ export function parseElementByContentType(
 			// External plugin controls intentionally fall through to generic deserialize.
 			// Custom typing belongs on FormsEngine's valueRetriever / valueSerializer.
 			const isPluginControl = Boolean(field.properties?.plugin);
-			const isKnownDefaultFallthrough = ['transcoded-video-picker', 'taxonomy-selector'].includes(type);
+			const isKnownDefaultFallthrough = [
+				'transcoded-video',
+				'transcoded-video-picker',
+				'taxonomy-selector',
+				'video-picker'
+			].includes(type);
 			if (!isPluginControl && !isKnownDefaultFallthrough) {
 				console.log(
 					`%c[parseElementByContentType] Missing type "${type}" on switch statement for field "${field.id}".`,
