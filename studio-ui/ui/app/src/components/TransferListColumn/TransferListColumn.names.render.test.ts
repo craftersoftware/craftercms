@@ -114,7 +114,26 @@ describe('transfer list checkbox names', () => {
 		]);
 		const inputs = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
 		assert.equal(inputs.length, 3);
-		assert.equal(accessibleName(host, inputs[1]), 'Site editors');
+		const labelledBy = inputs[1].getAttribute('aria-labelledby');
+		const subtitle = inputs[1].closest('[role="listitem"]')?.querySelector(`[id="${labelledBy}"]`);
+		assert.ok(subtitle?.classList.contains('MuiListItemText-secondary'), 'the name is not the visible subtitle');
+		assert.equal(subtitle?.textContent?.trim(), 'Site editors');
 		assert.equal(inputs[2].getAttribute('aria-label'), 'Select 8');
+	});
+
+	it('treats whitespace-only title and subtitle as empty', async () => {
+		const host = await render('Groups', [
+			{ id: 9, title: ' ', subtitle: 'Sub' },
+			{ id: 10, title: ' ', subtitle: '   ' }
+		]);
+		const inputs = host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+		assert.equal(inputs.length, 3);
+		const labelledBy = inputs[1].getAttribute('aria-labelledby');
+		const row = inputs[1].closest('[role="listitem"]');
+		const subtitle = row?.querySelector(`[id="${labelledBy}"]`);
+		assert.ok(subtitle?.classList.contains('MuiListItemText-secondary'), 'the name is not the visible subtitle');
+		assert.equal(subtitle?.textContent?.trim(), 'Sub');
+		assert.equal(row?.querySelector('.MuiListItemText-primary')?.getAttribute('id'), null);
+		assert.equal(inputs[2].getAttribute('aria-label'), 'Select 10');
 	});
 });

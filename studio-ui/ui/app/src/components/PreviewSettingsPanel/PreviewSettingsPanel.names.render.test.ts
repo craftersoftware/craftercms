@@ -135,7 +135,30 @@ describe('settings edit mode switch', () => {
 	});
 });
 
+function keyboardShortcutsSwitch(host: HTMLElement) {
+	const input = host.querySelector<HTMLInputElement>('input[aria-labelledby="settingsPanelKeyboardShortcutsLabel"]');
+	assert.ok(input, 'keyboard shortcuts switch input');
+	const span = input.closest<HTMLElement>('.MuiSwitch-switchBase');
+	assert.ok(span, 'keyboard shortcuts switch root');
+	return { input, span };
+}
+
 describe('keyboard shortcuts switch', () => {
+	it('keeps that name, and no prohibited name on the span, while the tooltip is open', async () => {
+		const host = await render(React.createElement(PreviewSettingsPanel));
+		const { input, span } = keyboardShortcutsSwitch(host);
+		await act(async () => {
+			span.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+		});
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+		assert.equal(document.querySelectorAll('[role="tooltip"]').length, 1, 'the tooltip did not open');
+		assert.equal(accessibleName(host, input), 'Keyboard shortcuts');
+		assert.equal(span.getAttribute('aria-label'), null);
+		assert.equal(span.getAttribute('aria-labelledby'), null);
+	});
+
 	it('uses a caller input name and keeps the caller input props', async () => {
 		const host = await render(
 			React.createElement(
@@ -152,6 +175,33 @@ describe('keyboard shortcuts switch', () => {
 		assert.equal(accessibleName(host, input), 'Keyboard shortcuts');
 		assert.equal(input.getAttribute('data-kept'), 'yes');
 		assert.equal(input.closest('.MuiSwitch-switchBase')?.getAttribute('aria-label'), null);
+	});
+
+	it('merges a function form of slotProps.input and passes it ownerState', async () => {
+		let ownerState: unknown;
+		const host = await render(
+			React.createElement(
+				React.Fragment,
+				null,
+				React.createElement('span', { id: 'shortcutsLabel' }, 'Keyboard shortcuts'),
+				React.createElement(KeyboardShortcutsSwitch, {
+					slotProps: {
+						input: (state) => {
+							ownerState = state;
+							return { 'aria-labelledby': 'shortcutsLabel', 'data-kept': 'fn' };
+						}
+					}
+				} as never)
+			)
+		);
+		const input = host.querySelector<HTMLInputElement>('input[type="checkbox"]');
+		assert.ok(input, 'keyboard shortcuts switch input');
+		assert.equal(accessibleName(host, input), 'Keyboard shortcuts');
+		assert.equal(input.getAttribute('data-kept'), 'fn');
+		assert.equal(typeof ownerState, 'object');
+		assert.notEqual(ownerState, null);
+		assert.equal(input.closest('.MuiSwitch-switchBase')?.getAttribute('aria-label'), null);
+		assert.equal(input.closest('.MuiSwitch-switchBase')?.getAttribute('aria-labelledby'), null);
 	});
 });
 

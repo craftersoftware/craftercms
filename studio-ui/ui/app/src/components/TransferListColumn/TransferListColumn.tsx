@@ -166,7 +166,8 @@ export function TransferListColumn(props: TransferListColumnProps) {
 								} else {
 									const item = items[index];
 									const itemLabelId = `${rowLabelId}-${index}`;
-									const visibleName = item.title || item.subtitle;
+									const hasTitle = Boolean(item.title?.trim());
+									const visibleName = hasTitle || Boolean(item.subtitle?.trim());
 									content = (
 										<ListItemButton
 											disabled={disabled || inProgressIds.includes(item.id) || disabledItems?.[item.id]}
@@ -204,9 +205,9 @@ export function TransferListColumn(props: TransferListColumnProps) {
 													primary: {
 														noWrap: true,
 														title: item.title,
-														...(item.title ? { id: itemLabelId } : {})
+														...(hasTitle ? { id: itemLabelId } : {})
 													},
-													...(!item.title && item.subtitle ? { secondary: { id: itemLabelId } } : {})
+													...(!hasTitle && visibleName ? { secondary: { id: itemLabelId } } : {})
 												}}
 											/>
 										</ListItemButton>
