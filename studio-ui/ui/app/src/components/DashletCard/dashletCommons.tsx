@@ -172,6 +172,7 @@ export function Pager(props: {
 }) {
 	const { totalPages, totalItems, currentPage, rowsPerPage, onPagePickerChange, onPageChange, onRowsPerPageChange } =
 		props;
+	const { formatMessage } = useIntl();
 
 	return (
 		<>
@@ -180,6 +181,10 @@ export function Pager(props: {
 				disableUnderline
 				value={`${currentPage}`}
 				onChange={(e) => onPagePickerChange(parseInt(e.target.value))}
+				inputProps={{
+					// "Page N" is the closed select's value, not its label, so the name stays the word Page.
+					'aria-label': formatMessage({ id: 'words.page', defaultMessage: 'Page' })
+				}}
 				sx={{ fontSize: (theme) => theme.typography.fontSize }}
 			>
 				{new Array(totalPages).fill(null).map((nothing, index) => (

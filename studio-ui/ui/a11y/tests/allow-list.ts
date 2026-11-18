@@ -48,16 +48,6 @@ const light: Theme[] = ['light'];
  * the other a11y PRs have merged. A rule that is not here has no ticket, so it can't be allow-listed: it fails the run.
  */
 export const ruleTickets: Record<string, RuleTicket> = {
-	'aria-input-field-name': {
-		ticket: 'craftersoftware/craftercms-e#1449',
-		criterion: '4.1.2 Name, Role, Value',
-		scope: {
-			dashboard: both,
-			search: both,
-			'tools panel > Dashboard': both,
-			'edit mode tools panel > Existing Content': both
-		}
-	},
 	'aria-prohibited-attr': {
 		ticket: 'craftersoftware/craftercms-e#1450',
 		criterion: '4.1.2 Name, Role, Value',
