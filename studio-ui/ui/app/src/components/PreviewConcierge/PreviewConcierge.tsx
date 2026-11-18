@@ -738,7 +738,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
 			// endregion
 			const { type, payload } = action;
 			const permissions = user?.permissionsBySite[siteId];
-			// useContentTypes backfills additionalFields once UI config has loaded.
 			const contentTypes$ = upToDateRefs.current.contentTypes$.pipe(
 				filter((contentTypes) => Boolean(contentTypes)),
 				take(1)
