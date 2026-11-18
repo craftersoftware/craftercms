@@ -15,10 +15,11 @@
  */
 package org.craftercms.core.controller.rest;
 
-import org.apache.commons.lang3.StringUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.craftercms.commons.exceptions.InvalidManagementTokenException;
+import org.craftercms.commons.http.ManagementTokenUtils;
 import org.craftercms.core.exception.CacheException;
 import org.craftercms.core.exception.InvalidContextException;
 import org.craftercms.core.service.ContentStoreService;
@@ -27,7 +28,6 @@ import org.craftercms.core.util.cache.CacheTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -38,7 +38,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
  * @author avasquez
  * @author hyanghee
  */
-@RestController
+@CrafterRestController
 @RequestMapping(RestControllerBase.REST_BASE_URI + CacheRestController.URL_ROOT)
 public class CacheRestController extends RestControllerBase {
 
@@ -65,9 +65,9 @@ public class CacheRestController extends RestControllerBase {
 	}
 
 	@RequestMapping(value = URL_CLEAR_ALL_SCOPES, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
-	public Map<String, Object> clearAllScopes(@RequestParam String token)
+	public Map<String, Object> clearAllScopes(HttpServletRequest request)
 		throws CacheException, InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 		cacheTemplate.getCacheService().clearAll();
 		if (logger.isInfoEnabled()) {
 			logger.info("[CACHE] All scopes have been cleared");
@@ -78,9 +78,9 @@ public class CacheRestController extends RestControllerBase {
 
 	@RequestMapping(value = URL_CLEAR_SCOPE, method = RequestMethod.GET, produces = APPLICATION_JSON_VALUE)
 	public Map<String, Object> clearScope(@RequestParam(REQUEST_PARAM_CONTEXT_ID) String contextId,
-					      @RequestParam String token)
+					      HttpServletRequest request)
 		throws InvalidContextException, CacheException, InvalidManagementTokenException {
-		validateToken(token);
+		validateToken(request);
 		Context context = storeService.getContext(contextId);
 		if (context == null) {
 			throw new InvalidContextException("No context found for ID " + contextId);
@@ -94,10 +94,8 @@ public class CacheRestController extends RestControllerBase {
 		return createResponseMessage("Cache scope for context '" + contextId + "' has been cleared");
 	}
 
-	protected void validateToken(String token) throws InvalidManagementTokenException {
-		if (!StringUtils.equals(token, authorizationToken)) {
-			throw new InvalidManagementTokenException("Management authorization failed, invalid token.");
-		}
+	protected void validateToken(HttpServletRequest request) throws InvalidManagementTokenException {
+		ManagementTokenUtils.validateToken(request, authorizationToken);
 	}
 
 

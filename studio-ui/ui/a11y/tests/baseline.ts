@@ -176,7 +176,7 @@ export async function observeListing(
 export function observeDashlet(scope: Locator): Promise<ListingState> {
 	const dashlet = unpublishedDashlet(scope);
 	return observeListing(
-		dashlet.locator('ul .MuiListItemButton-root'),
+		dashlet.locator('ul .MuiListItem-root:not(:has(.MuiSkeleton-root))'),
 		dashlet.getByText(PAGER_TEXT),
 		DASHBOARD_SUBJECT
 	);

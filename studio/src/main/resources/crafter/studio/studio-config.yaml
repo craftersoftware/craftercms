@@ -225,7 +225,7 @@ studio.configuration.site.contentTypes.configFileName: config.xml
 # File name where definition of content type is stored.
 studio.configuration.site.contentTypes.definitionFileName: form-definition.xml
 # Destroy site context url for preview engine
-studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}&token=${studio.configuration.management.previewAuthorizationToken}
+studio.configuration.site.preview.destroy.context.url: http://localhost:8080/api/1/site/context/destroy.json?crafterSite={siteName}
 # Site id suffix appended when listing a site's staging publishing target.
 # Must match the suffix recognized by crafter.engine.site.staging.pattern.
 studio.configuration.site.staging.idSuffix: -staging
@@ -260,6 +260,7 @@ studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
 # Path for the translation configuration file
 studio.configuration.site.translation: ${studio.configuration.site.configBasePath}/translation-config.xml
 # Studio management authorization token.
+# Send it in the X-Crafter-Management-Token header. The token query parameter is still accepted.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.authorizationToken: defaultManagementToken
 # Studio management token for the site management API.
@@ -369,12 +370,14 @@ studio.security.activity.cache.config: initialCapacity=25,maximumSize=100
 
 # Public URLs, comma separated list of regular expressions.
 # The regex should not include extension and should match the query string too.
+# Plugin reload allows an optional .json suffix: the deployer calls reload.json, and suffix
+# stripping runs after the security filter, so the matcher still sees the suffix.
 studio.security.publicUrls: >
     /api/2/system/available_languages.*,
     /api/2/management/sites.*,
     /api/2/monitoring/.+,/api/2/users/forgot_password.*,/api/2/users/set_password.*,/static-assets/.+,
     /api/2/users/validate_token.*,/api/2/users/forgot_password.*,
-    /api/2/plugin/.+/script/reload.*
+    /api/2/plugin/[^/?]+/script/reload(\.json)?(\?.*)?
 # Salt for encrypting
 studio.security.cipher.salt: DgGN9xhq3GOn6zxg
 # Key for encrypting

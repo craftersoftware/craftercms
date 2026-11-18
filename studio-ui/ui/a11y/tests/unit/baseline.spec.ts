@@ -69,16 +69,22 @@ test.describe('dashboard baseline logic', () => {
 const origin = 'https://studio.test';
 
 /** The Unpublished Work dashlet the way it renders: a card with its rows and the pager's "1-n of total" text. */
-function dashletHtml(rows: number, total: number, pager = true) {
-	const items = Array.from({ length: rows }, (_, i) => `<li><div class="MuiListItemButton-root">Item ${i}</div></li>`);
+function dashletHtml(rows: number, total: number, pager = true, skeletons = 0) {
+	const items = [
+		...Array.from({ length: rows }, (_, i) => `<li class="MuiListItem-root">Item ${i}</li>`),
+		...Array.from(
+			{ length: skeletons },
+			() => '<li class="MuiListItem-root"><span class="MuiSkeleton-root"></span></li>'
+		)
+	];
 	const footer = total && pager ? `<div><p>1-${rows} of ${total}</p></div>` : '';
 	const empty = total ? '' : '<p>There are no unpublished items</p>';
 	return `<!doctype html><body><div class="MuiCard-root"><h2>Unpublished Work</h2><ul>${items.join('')}</ul>${empty}${footer}</div></body>`;
 }
 
-async function openDashlet(page: Page, rows: number, total: number, pager = true) {
+async function openDashlet(page: Page, rows: number, total: number, pager = true, skeletons = 0) {
 	await page.route(`${origin}/**`, (route) =>
-		route.fulfill({ contentType: 'text/html', body: dashletHtml(rows, total, pager) })
+		route.fulfill({ contentType: 'text/html', body: dashletHtml(rows, total, pager, skeletons) })
 	);
 	await page.goto(`${origin}/`);
 	return page.locator('body');
@@ -93,6 +99,11 @@ test.describe('dashboard baseline check', () => {
 
 	test('observes the rows on the first page and the dashlet total', async ({ page }) => {
 		const scope = await openDashlet(page, 50, 228);
+		expect(await observeDashlet(scope)).toEqual({ total: 228, rows: 50 });
+	});
+
+	test('does not count the placeholder rows of a dashlet that is still loading', async ({ page }) => {
+		const scope = await openDashlet(page, 50, 228, true, 3);
 		expect(await observeDashlet(scope)).toEqual({ total: 228, rows: 50 });
 	});
 
