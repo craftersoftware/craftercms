@@ -209,15 +209,19 @@ public class ConfigurationServiceInternalImplValidationTest {
 			server.setSoTimeout(200);
 			List<Socket> connections = new ArrayList<>();
 			AtomicBoolean running = new AtomicBoolean(true);
+			AtomicBoolean validationDone = new AtomicBoolean();
 			AtomicInteger idleTimeouts = new AtomicInteger();
 			Thread acceptor = new Thread(() -> {
 				while (running.get()) {
+					boolean acceptAfterValidation = validationDone.get();
 					try {
 						Socket socket = server.accept();
 						connections.add(socket);
 						socket.close();
 					} catch (SocketTimeoutException e) {
-						idleTimeouts.incrementAndGet();
+						if (acceptAfterValidation) {
+							idleTimeouts.incrementAndGet();
+						}
 					} catch (IOException e) {
 						return;
 					}
@@ -230,22 +234,27 @@ public class ConfigurationServiceInternalImplValidationTest {
 						"<!DOCTYPE foo [<!ENTITY ext SYSTEM \"http://127.0.0.1:" + server.getLocalPort() + "/secret\">]>" +
 						"<foo>&ext;</foo>";
 				assertRejected(bytes(xml), "config");
-				int seen = idleTimeouts.get();
-				long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1000);
-				while (idleTimeouts.get() == seen && System.nanoTime() < deadline) {
+				validationDone.set(true);
+				long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(2000);
+				while (idleTimeouts.get() == 0 && System.nanoTime() < deadline) {
 					LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
 				}
-				assertTrue(idleTimeouts.get() > seen);
+				assertTrue("acceptor never went idle after validation", idleTimeouts.get() > 0);
 				running.set(false);
 				acceptor.join(1000);
 				assertFalse(acceptor.isAlive());
 				assertEquals(0, connections.size());
 			} finally {
 				running.set(false);
-				server.close();
-				acceptor.join(1000);
-				for (Socket socket : connections) {
-					socket.close();
+				try {
+					server.close();
+				} finally {
+					acceptor.join(1000);
+					if (!acceptor.isAlive()) {
+						for (Socket socket : connections) {
+							socket.close();
+						}
+					}
 				}
 			}
 		}
