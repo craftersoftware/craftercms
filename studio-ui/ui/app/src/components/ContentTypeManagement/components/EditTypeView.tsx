@@ -118,12 +118,8 @@ import { fetchContentTypes } from '../../../state/actions/preview';
 import useSelection from '../../../hooks/useSelection';
 import { getXmlBuilder, valueSerializersLookup } from '../../FormsEngine/lib/valueSerializers';
 import { pushErrorDialog } from '../../../utils/system';
-import {
-	contentTypeCreated,
-	contentTypeDeleted,
-	emitSystemEvent,
-	showSystemNotification
-} from '../../../state/actions/system';
+import { contentTypeDeleted, emitSystemEvent, showSystemNotification } from '../../../state/actions/system';
+import { contentTypeSaveSystemEvent } from './editTypeSaveSystemEvent';
 import { extractErrorPayload } from '../../../utils/ajax';
 import Typography from '@mui/material/Typography';
 import { AjaxError } from 'rxjs/ajax';
@@ -733,7 +729,7 @@ export const EditTypeView = forwardRef<HTMLDivElement, EditTypeAppProps>((props,
 						}
 						dispatch(
 							batchActions([
-								...(isNew ? [emitSystemEvent(contentTypeCreated())] : []),
+								contentTypeSaveSystemEvent(isNew),
 								fetchContentTypes(),
 								showSystemNotification({
 									message: formatMessage({ defaultMessage: 'Save successful.' })
