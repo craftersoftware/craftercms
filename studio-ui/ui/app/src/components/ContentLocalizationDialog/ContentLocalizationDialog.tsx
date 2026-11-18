@@ -268,6 +268,7 @@ function ContentLocalizationDialogUI(props: ContentLocalizationDialogProps) {
 								color="primary"
 								sx={{ color: (theme) => theme.palette.primary.main }}
 								onChange={toggleSelectAll}
+								slotProps={{ input: { 'aria-label': formatMessage({ defaultMessage: 'Select all' }) } }}
 							/>
 							<>
 								<Typography variant="subtitle2" sx={{ fontWeight: 'bold', paddingRight: '20px', width: '30%' }}>
@@ -279,30 +280,37 @@ function ContentLocalizationDialogUI(props: ContentLocalizationDialogProps) {
 							</>
 						</Box>
 					)}
-					{locales?.map((locale: any) => (
-						<Box sx={{ display: 'flex', alignItems: 'center' }} key={locale.id}>
-							<Checkbox
-								color="primary"
-								sx={{ color: (theme) => theme.palette.primary.main }}
-								checked={selected?.includes(locale.id)}
-								onChange={(event) => handleSelect(event.currentTarget.checked, locale.id)}
-							/>
-							<Typography variant="subtitle2" sx={{ paddingRight: '20px', width: '30%' }}>
-								{localizationMap[locale.localeCode]}
-							</Typography>
-							<Typography variant="subtitle2" sx={{ paddingRight: '20px' }}>
-								{locale.status}
-							</Typography>
-							<IconButton
-								aria-label="options"
-								sx={{ marginLeft: 'auto', padding: '9px' }}
-								onClick={(e) => onOpenCustomMenu(locale, e.currentTarget)}
-								size="large"
-							>
-								<MoreVertIcon />
-							</IconButton>
-						</Box>
-					))}
+					{locales?.map((locale: any) => {
+						const localeLabel = localizationMap[locale.localeCode];
+						const localeName = localeLabel ?? locale.localeCode;
+						return (
+							<Box sx={{ display: 'flex', alignItems: 'center' }} key={locale.id}>
+								<Checkbox
+									color="primary"
+									sx={{ color: (theme) => theme.palette.primary.main }}
+									checked={selected?.includes(locale.id)}
+									onChange={(event) => handleSelect(event.currentTarget.checked, locale.id)}
+									slotProps={{
+										input: { 'aria-label': formatMessage({ defaultMessage: 'Select {name}' }, { name: localeName }) }
+									}}
+								/>
+								<Typography variant="subtitle2" sx={{ paddingRight: '20px', width: '30%' }}>
+									{localeLabel}
+								</Typography>
+								<Typography variant="subtitle2" sx={{ paddingRight: '20px' }}>
+									{locale.status}
+								</Typography>
+								<IconButton
+									aria-label={formatMessage({ defaultMessage: 'Options for {name}' }, { name: localeName })}
+									sx={{ marginLeft: 'auto', padding: '9px' }}
+									onClick={(e) => onOpenCustomMenu(locale, e.currentTarget)}
+									size="large"
+								>
+									<MoreVertIcon />
+								</IconButton>
+							</Box>
+						);
+					})}
 				</Box>
 			</DialogBody>
 			<ContextMenu
