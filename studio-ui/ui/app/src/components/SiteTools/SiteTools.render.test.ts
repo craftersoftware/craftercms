@@ -210,4 +210,16 @@ describe('SiteTools sidebar spacing', () => {
 		assert.equal(parseFloat(getComputedStyle(list).paddingLeft), 0);
 		assert.equal(getComputedStyle(footer).padding, '20px 16px 36px');
 	});
+
+	it('underlines a link inside the footer sentence', async () => {
+		const host = await renderSiteTools({
+			openSidebar: true,
+			hideSidebarLogo: false,
+			footerHtml: 'Report a <a href="https://github.com/craftercms/craftercms/issues" target="_blank">bug</a>.'
+		});
+		const link = host.querySelector('footer a');
+		assert.ok(link);
+		// jsdom reports the shorthand and leaves textDecorationLine at its initial value.
+		assert.match(getComputedStyle(link).textDecoration, /underline/);
+	});
 });

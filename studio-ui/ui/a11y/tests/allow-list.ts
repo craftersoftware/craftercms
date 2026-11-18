@@ -85,11 +85,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		criterion: '1.3.1 Info and Relationships; 4.1.2 Name, Role, Value',
 		scope: { 'edit mode tools panel > Settings': both }
 	},
-	'link-in-text-block': {
-		ticket: 'craftersoftware/craftercms-e#1454',
-		criterion: '1.4.1 Use of Color',
-		scope: { projects: light, 'site tools': light, users: light }
-	},
 	list: {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
