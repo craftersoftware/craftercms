@@ -123,7 +123,7 @@ function ItemActionsSnackbar(props: ItemActionsSnackbarProps) {
 								</ListItem>
 							))
 						)}
-						{append != null && <li style={actionItemStyle}>{append}</li>}
+						{append != null && append !== false && append !== '' && <li style={actionItemStyle}>{append}</li>}
 					</List>
 				</>
 			}
