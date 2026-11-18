@@ -29,7 +29,7 @@ const { buildContentTypeXml, prepareSerializeToXmlTypeObject } =
 	await import('../components/ContentTypeManagement/utils.ts');
 const { deserialize, entityEncodingTagValueProcessor, fromString } = await import('./xml.ts');
 const { parseContentXML } = await import('./content.ts');
-const { addConfiguredAdditionalFields } = await import('./contentType.ts');
+const { addConfiguredAdditionalFields, contentTypesForParse } = await import('./contentType.ts');
 const { createLookupTable } = await import('./object.ts');
 
 function namedList<T>(value: T | T[] | null | undefined): T[] {
@@ -445,6 +445,14 @@ describe('addConfiguredAdditionalFields', () => {
 describe('contentTypesForParse lookup', () => {
 	const path = '/site/website/articles/index.xml';
 	const companionXml = '<title_s>Hello</title_s><title_s_bk>Backup</title_s_bk>';
+
+	it('returns the store lookup until UI config has loaded, then backfills', () => {
+		const byId = { '/page/article': articleWithoutPersistedAdditionalFields } as never;
+		assert.equal(contentTypesForParse(byId, { isFetching: null, controls: pluginControls }), byId);
+		assert.equal(contentTypesForParse(byId, { isFetching: true, controls: pluginControls }), byId);
+		const merged = contentTypesForParse(byId, { isFetching: false, controls: pluginControls });
+		assert.deepEqual(merged['/page/article'].fields.title_s.additionalFields, ['title_s_bk']);
+	});
 
 	it('supplied lookup: merge from controls quiets plugin companions on old form defs', () => {
 		const supplied = { '/page/article': articleWithoutPersistedAdditionalFields };
