@@ -18,7 +18,7 @@
  * The Git and Duplicate project cards are one button over an icon, a title and a description.
  * The accessible name is the visible title (WCAG 2.5.3): aria-labelledby points at that title, and the
  * description is outside the button so it is not part of the visible label. aria-describedby still
- * points at it. The description is a paragraph, so the heading outline lists the card titles.
+ * points at it. The description is a paragraph, so it adds no heading; the title h2 is inside the button, so it is flattened too.
  * Two cards must not share ids.
  */
 
