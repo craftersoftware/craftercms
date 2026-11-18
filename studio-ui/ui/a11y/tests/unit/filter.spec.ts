@@ -221,11 +221,12 @@ test.describe('allow-list validation', () => {
 
 	test('no longer lists screens the baseline found clean', () => {
 		const node = [known];
-		expect(() =>
-			validateAllowList([{ rule: 'button-name', screen: 'edit form', theme: 'light', nodes: node }])
-		).toThrow(/no umbrella ticket/);
+		for (const rule of ['button-name', 'link-in-text-block']) {
+			expect(() => validateAllowList([{ rule, screen: 'edit form', theme: 'light', nodes: node }]), rule).toThrow(
+				/no umbrella ticket/
+			);
+		}
 		for (const [rule, screen] of [
-			['link-in-text-block', 'create project'],
 			['list', 'edit form'],
 			['nested-interactive', 'edit form']
 		]) {
@@ -241,7 +242,7 @@ test.describe('allow-list validation', () => {
 
 	test('rejects a screen or theme the ticket does not list', () => {
 		expect(() => validateAllowList([{ ...entry, screen: 'login' }])).toThrow(/does not list/);
-		expect(() => validateAllowList([{ ...entry, rule: 'link-in-text-block', theme: 'dark' }])).toThrow(/does not list/);
+		expect(() => validateAllowList([{ ...entry, screen: 'edit form', theme: 'dark' }])).toThrow(/does not list/);
 	});
 
 	test('rejects an entry without nodes, and duplicates', () => {
