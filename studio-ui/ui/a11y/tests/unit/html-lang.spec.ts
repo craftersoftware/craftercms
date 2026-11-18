@@ -16,32 +16,32 @@
 
 import { expect, test } from '@playwright/test';
 import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { ruleTickets } from '../allow-list';
 
 const templatesRoot = join(__dirname, '../../../../templates/web');
 
-/**
- * Developer results table at `/studio/test`. It is not a Studio screen: the content type has no form,
- * and nothing in the app supplies the `tests` model it renders.
- */
-const devOnlyTemplates = new Set(['test.ftl']);
+/** Whitespace before `lang`, so `data-lang` and `xml:lang` do not satisfy it. */
+const htmlLangEn = /\slang\s*=\s*"en"/;
 
 test('studio web templates set lang on the html element', () => {
 	const files = readdirSync(templatesRoot, { recursive: true })
 		.map(String)
-		.filter((file) => file.endsWith('.ftl') && !devOnlyTemplates.has(basename(file)));
+		.filter((file) => file.endsWith('.ftl'));
 	const missing: string[] = [];
 	for (const file of files) {
 		const source = readFileSync(join(templatesRoot, file), 'utf8');
 		const tags = source.match(/<html\b[^>]*>/gi) ?? [];
 		tags.forEach((tag, index) => {
-			if (!/\blang\s*=\s*"en"/.test(tag)) {
+			if (!htmlLangEn.test(tag)) {
 				missing.push(`${file}${tags.length > 1 ? `#${index + 1}` : ''}: ${tag}`);
 			}
 		});
 	}
 	expect(missing, 'html elements without lang="en"').toEqual([]);
+	expect(htmlLangEn.test('<html lang="en">')).toBe(true);
+	expect(htmlLangEn.test('<html data-lang="en">')).toBe(false);
+	expect(htmlLangEn.test('<html xml:lang="en">')).toBe(false);
 });
 
 test('html-has-lang is not an allow-listed exception', () => {

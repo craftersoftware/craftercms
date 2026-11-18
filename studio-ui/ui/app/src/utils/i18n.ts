@@ -166,9 +166,11 @@ if (typeof document !== 'undefined') {
 	document.addEventListener(
 		'setlocale',
 		async (e) => {
-			if (e.detail && e.detail !== intl.locale) {
-				intl = await createIntlInstance(e.detail);
-				document.documentElement.setAttribute('lang', e.detail);
+			// Stored ids may use underscores (es_ES). lang needs a BCP 47 tag (es-ES).
+			const locale = e.detail?.replace(/_/g, '-');
+			if (locale && locale !== intl.locale) {
+				intl = await createIntlInstance(locale);
+				document.documentElement.setAttribute('lang', locale);
 				intl$$.next(intl);
 			}
 		},
