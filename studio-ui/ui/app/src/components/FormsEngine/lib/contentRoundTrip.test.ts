@@ -408,22 +408,26 @@ describe('level descriptor without an internal-name field', () => {
 		assert.equal(created[XmlKeys.internalName], '');
 	});
 
-	it('saves the Website Editorial level descriptors without adding internal-name', () => {
-		const formPath = path.join(
-			blueprintsDir,
-			'1000_website_editorial/config/studio/content-types/component/level-descriptor/form-definition.xml'
-		);
-		const type = parseType(readFileSync(formPath, 'utf8'));
-		const contentTypes = { [type.id]: type };
-		for (const rel of [
-			'1000_website_editorial/site/website/crafter-level-descriptor.level.xml',
-			'1000_website_editorial/site/website/articles/crafter-level-descriptor.level.xml'
-		]) {
-			const xml = readFileSync(path.join(blueprintsDir, rel), 'utf8');
-			const saved = saveWithoutChanges(xml, contentTypes, `/${rel.slice('1000_website_editorial/'.length)}`);
-			assert.equal(saved.querySelector('internal-name'), null, rel);
+	it(
+		'saves the Website Editorial level descriptors without adding internal-name',
+		{ skip: !blueprints.length && 'blueprints not found' },
+		() => {
+			const formPath = path.join(
+				blueprintsDir,
+				'1000_website_editorial/config/studio/content-types/component/level-descriptor/form-definition.xml'
+			);
+			const type = parseType(readFileSync(formPath, 'utf8'));
+			const contentTypes = { [type.id]: type };
+			for (const rel of [
+				'1000_website_editorial/site/website/crafter-level-descriptor.level.xml',
+				'1000_website_editorial/site/website/articles/crafter-level-descriptor.level.xml'
+			]) {
+				const xml = readFileSync(path.join(blueprintsDir, rel), 'utf8');
+				const saved = saveWithoutChanges(xml, contentTypes, `/${rel.slice('1000_website_editorial/'.length)}`);
+				assert.equal(saved.querySelector('internal-name'), null, rel);
+			}
 		}
-	});
+	);
 });
 
 describe('objectGroupId', () => {

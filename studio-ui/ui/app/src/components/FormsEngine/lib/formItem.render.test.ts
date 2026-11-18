@@ -403,9 +403,12 @@ describe('form item subscriptions', () => {
 		const entry = createEntry(['file-name']);
 		const host = await mountTree(
 			store,
-			React.createElement(FormHost, { entry }, React.createElement(EditModeMetadata))
+			React.createElement(FormHost, { entry, create: true, itemKey: null }, React.createElement(EditModeMetadata))
 		);
-		assert.equal(host.textContent, 'Please wait');
+		assert.equal(host.querySelector('[data-testid="not-ready"]'), null);
+		assert.equal(host.textContent?.trim() ?? '', '');
+		assert.equal(host.textContent?.includes('Created'), false);
+		assert.equal(host.textContent?.includes('Updated'), false);
 	});
 
 	it('renders an embedded header when the form has no content item yet', async () => {
