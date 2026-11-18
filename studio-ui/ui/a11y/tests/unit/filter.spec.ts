@@ -16,7 +16,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Result } from 'axe-core';
-import { AllowListEntry, validateAllowList } from '../allow-list';
+import { AllowListEntry, RuleTicket, validateAllowList } from '../allow-list';
 import { applyAllowList, blockingFindings, fingerprint, splitFingerprint, stableTokens, startTag } from '../filter';
 
 /** A minimal axe violation with one node per target. */
@@ -170,8 +170,8 @@ test.describe('fingerprint normalisation', () => {
 
 	test('an allow-listed node still matches when only its generated ids and classes change', () => {
 		const recorded: AllowListEntry = {
-			rule: 'label-content-name-mismatch',
-			screen: 'create project',
+			rule: 'sample-rule',
+			screen: 'sample',
 			theme: 'light',
 			nodes: [
 				fingerprint(
@@ -182,72 +182,47 @@ test.describe('fingerprint normalisation', () => {
 		};
 		const next = blockingFindings([
 			violation(
-				'label-content-name-mismatch',
+				'sample-rule',
 				['.mui-zz9y8x.MuiCardActionArea-root[aria-labelledby="_r_3c_"]'],
 				'serious',
 				'<button class="mui-zz9y8x MuiCardActionArea-root" aria-labelledby="_r_3c_">'
 			)
 		]);
-		const { allowed, blocking, stale } = applyAllowList(next, [recorded], 'create project', 'light');
+		const { allowed, blocking, stale } = applyAllowList(next, [recorded], 'sample', 'light');
 		expect([allowed.length, blocking.length, stale.length]).toEqual([1, 0, 0]);
 	});
 });
 
 test.describe('allow-list validation', () => {
+	// A fixed ticket table, so these cases don't depend on which real tickets are still open.
+	const tickets: Record<string, RuleTicket> = {
+		[entry.rule]: {
+			ticket: 'craftersoftware/craftercms-e#1',
+			criterion: '1.4.3 Contrast (Minimum)',
+			scope: { [entry.screen]: ['light', 'dark'], 'edit form': ['light'] }
+		}
+	};
+
 	test('accepts a ticketed, in-scope node list', () => {
-		expect(validateAllowList([entry])).toEqual([entry]);
-	});
-
-	test('lists the tools panel Dashboard and the edit mode Existing Content and Settings pages under their tickets', () => {
-		const node = [known];
-		const scoped = [
-			...['aria-input-field-name', 'label', 'list', 'nested-interactive'].map((rule) => ({
-				rule,
-				screen: 'tools panel > Dashboard'
-			})),
-			{ rule: 'aria-input-field-name', screen: 'edit mode tools panel > Existing Content' },
-			...['aria-prohibited-attr', 'label', 'list'].map((rule) => ({ rule, screen: 'edit mode tools panel > Settings' }))
-		];
-		for (const theme of ['light', 'dark'] as const) {
-			const entries = scoped.map((scope) => ({ ...scope, theme, nodes: node }));
-			expect(validateAllowList(entries)).toHaveLength(scoped.length);
-		}
-		expect(() =>
-			validateAllowList([
-				{ rule: 'nested-interactive', screen: 'edit mode tools panel > Settings', theme: 'light', nodes: node }
-			])
-		).toThrow(/does not list/);
-	});
-
-	test('no longer lists screens the baseline found clean', () => {
-		const node = [known];
-		for (const rule of ['button-name', 'link-in-text-block']) {
-			expect(() => validateAllowList([{ rule, screen: 'edit form', theme: 'light', nodes: node }]), rule).toThrow(
-				/no umbrella ticket/
-			);
-		}
-		for (const [rule, screen] of [
-			['list', 'edit form'],
-			['nested-interactive', 'edit form']
-		]) {
-			expect(() => validateAllowList([{ rule, screen, theme: 'light', nodes: node }]), `${rule} on ${screen}`).toThrow(
-				/does not list/
-			);
-		}
+		expect(validateAllowList([entry], tickets)).toEqual([entry]);
 	});
 
 	test('rejects a rule with no umbrella ticket', () => {
-		expect(() => validateAllowList([{ ...entry, rule: 'aria-required-parent' }])).toThrow(/no umbrella ticket/);
+		expect(() => validateAllowList([{ ...entry, rule: 'aria-required-parent' }], tickets)).toThrow(
+			/no umbrella ticket/
+		);
 	});
 
 	test('rejects a screen or theme the ticket does not list', () => {
-		expect(() => validateAllowList([{ ...entry, screen: 'login' }])).toThrow(/does not list/);
-		expect(() => validateAllowList([{ ...entry, screen: 'edit form', theme: 'dark' }])).toThrow(/does not list/);
+		expect(() => validateAllowList([{ ...entry, screen: 'login' }], tickets)).toThrow(/does not list/);
+		expect(() => validateAllowList([{ ...entry, screen: 'edit form', theme: 'dark' }], tickets)).toThrow(
+			/does not list/
+		);
 	});
 
 	test('rejects an entry without nodes, and duplicates', () => {
-		expect(() => validateAllowList([{ ...entry, nodes: [] }])).toThrow(/fingerprint of every node/);
-		expect(() => validateAllowList([entry, entry])).toThrow(/listed twice/);
+		expect(() => validateAllowList([{ ...entry, nodes: [] }], tickets)).toThrow(/fingerprint of every node/);
+		expect(() => validateAllowList([entry, entry], tickets)).toThrow(/listed twice/);
 	});
 });
 
@@ -409,30 +384,30 @@ test.describe('fingerprints with the start tag', () => {
 		const listitem = fingerprint([path], '<div class="mui-1abc" role="listitem">');
 		const other = fingerprint([path], '<div class="mui-1abc MuiCard-root">');
 		expect(listitem).not.toBe(other);
-		const recorded: AllowListEntry = { rule: 'listitem', screen: 'preview', theme: 'light', nodes: [listitem] };
+		const recorded: AllowListEntry = { rule: 'sample-rule', screen: 'sample', theme: 'light', nodes: [listitem] };
 		const findings = blockingFindings([
-			violation('listitem', [path], 'serious', '<div class="mui-1abc MuiCard-root">')
+			violation('sample-rule', [path], 'serious', '<div class="mui-1abc MuiCard-root">')
 		]);
-		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'preview', 'light');
+		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'sample', 'light');
 		expect([allowed.length, blocking.length, stale.length]).toEqual([0, 1, 1]);
 	});
 
 	test('the same node still matches when only generated classes and ids change', () => {
 		const recorded: AllowListEntry = {
-			rule: 'listitem',
-			screen: 'preview',
+			rule: 'sample-rule',
+			screen: 'sample',
 			theme: 'light',
 			nodes: [fingerprint(['.mui-ybhk9l:nth-child(1)'], '<div class="mui-ybhk9l" role="listitem">')]
 		};
 		const findings = blockingFindings([
 			violation(
-				'listitem',
+				'sample-rule',
 				['.mui-zz9y8x:nth-child(1)'],
 				'serious',
 				'<div class="mui-zz9y8x" role="listitem" id="_r_3_">'
 			)
 		]);
-		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'preview', 'light');
+		const { allowed, blocking, stale } = applyAllowList(findings, [recorded], 'sample', 'light');
 		expect([allowed.length, blocking.length, stale.length]).toEqual([1, 0, 0]);
 	});
 });
@@ -477,12 +452,20 @@ test.describe('stable tokens', () => {
 
 test.describe('allow-list validation of fingerprints', () => {
 	const node = (path: string, html: string) => fingerprint([path], html);
-	const listitem = (nodes: string[]): AllowListEntry => ({
-		rule: 'listitem',
-		screen: 'preview',
+	// A fixed ticket. `listitem` is a real rule #1456 removes, and no remaining ticket lists one theme.
+	const sample = (nodes: string[]): AllowListEntry => ({
+		rule: 'sample-rule',
+		screen: 'sample',
 		theme: 'light',
 		nodes
 	});
+	const tickets: Record<string, RuleTicket> = {
+		'sample-rule': {
+			ticket: 'craftersoftware/craftercms-e#1',
+			criterion: '1.3.1 Info and Relationships',
+			scope: { sample: ['light'] }
+		}
+	};
 
 	test('accepts nodes the start tag makes identifiable', () => {
 		const nodes = [
@@ -490,28 +473,20 @@ test.describe('allow-list validation of fingerprints', () => {
 			node('.mui-ybhk9l > .mui-o5ytqa:nth-child(8)', '<li class="mui-o5ytqa MuiListItem-root">'),
 			node('.MuiListItem-padding', '<li class="MuiListItem-padding">')
 		];
-		expect(validateAllowList([listitem(nodes)])).toHaveLength(1);
+		expect(validateAllowList([sample(nodes)], tickets)).toHaveLength(1);
 	});
 
 	test('rejects a fingerprint of generated classes and positions only, naming it', () => {
 		const weak = [node('.mui-ybhk9l:nth-child(1)', '<div class="mui-ybhk9l">'), node('#_r_1_', '<input>')];
 		expect(() =>
-			validateAllowList([listitem([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])])
+			validateAllowList([sample([node('.MuiListItem-padding', '<li class="MuiListItem-padding">'), ...weak])], tickets)
 		).toThrow(
-			/listitem on light preview has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
+			/sample-rule on light sample has 2 fingerprint\(s\) that name no stable node[^]*\.mui-\*:nth-child\(1\) <div>[^]*#\* <input>/
 		);
 	});
 
 	test('rejects a path-only fingerprint, even one with a class, as the older format', () => {
-		expect(() => validateAllowList([listitem(['.MuiListItem-padding'])])).toThrow(/no stable node/);
-		expect(() => validateAllowList([listitem(['ul'])])).toThrow(/no stable node/);
-	});
-
-	test('the committed allow-list is valid under it', async () => {
-		const { allowList } = await import('../allow-list');
-		expect(allowList.length).toBeGreaterThan(0);
-		for (const { nodes } of allowList) {
-			for (const value of nodes) expect(stableTokens(value), value).not.toEqual([]);
-		}
+		expect(() => validateAllowList([sample(['.MuiListItem-padding'])], tickets)).toThrow(/no stable node/);
+		expect(() => validateAllowList([sample(['ul'])], tickets)).toThrow(/no stable node/);
 	});
 });
