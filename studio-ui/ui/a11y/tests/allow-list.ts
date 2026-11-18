@@ -83,11 +83,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 			'edit mode tools panel': both,
 			...Object.fromEntries(editModePages.map((page) => [`edit mode tools panel > ${page}`, both]))
 		}
-	},
-	'label-content-name-mismatch': {
-		ticket: 'craftersoftware/craftercms-e#1458',
-		criterion: '2.5.3 Label in Name',
-		scope: { 'create project': both }
 	}
 };
 

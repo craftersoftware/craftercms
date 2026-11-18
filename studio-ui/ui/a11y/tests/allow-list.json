@@ -1,23 +1,5 @@
 [
 	{
-		"rule": "label-content-name-mismatch",
-		"screen": "create project",
-		"theme": "dark",
-		"nodes": [
-			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">",
-			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">"
-		]
-	},
-	{
-		"rule": "label-content-name-mismatch",
-		"screen": "create project",
-		"theme": "light",
-		"nodes": [
-			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">",
-			"button[aria-labelledby=\"*\"] <button class=\"MuiButtonBase-root MuiCardActionArea-root\">"
-		]
-	},
-	{
 		"rule": "listitem",
 		"screen": "edit mode tools panel > Assets",
 		"theme": "dark",
