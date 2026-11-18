@@ -29,7 +29,7 @@ import { PartialSxRecord } from '../../models/CustomRecord';
 import { CSSSelectorObjectOrCssVariables } from '@mui/system/styleFunctionSx';
 import { consolidateSx } from '../../utils/system';
 import { useIntl } from 'react-intl';
-import type { KeyboardEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { getFocusRingSx } from '../../styles/focusRing';
 
 export type MediaCardViewModes = 'card' | 'compact' | 'row';
@@ -46,11 +46,13 @@ export interface MediaCardProps {
 	avatar?: CardHeaderProps['avatar'];
 	disableSelection?: boolean;
 	/**
-	 * Single selection without the checkbox. When set together with `onClick`, a transparent toggle
-	 * covers the header in the tab order: Enter or Space runs `onClick`, and `aria-pressed` reports
-	 * this value. The toggle is not an ancestor of the title heading or the path, so both stay exposed.
-	 * Its accessible name is the item name and, when the path is shown, the path. Clicking the card
-	 * works as before. The toggle uses the header's action slot, so `action` is not rendered in this mode.
+	 * Single selection without the checkbox. When set together with `onClick`, a real
+	 * `<button type="button">` joins the tab order: Enter, Space and a click run `onClick` once, and
+	 * `aria-pressed` reports this value. The button is not an ancestor of the title heading or the path,
+	 * so both stay exposed. Its accessible name is the item name and, when the path is shown, the path.
+	 * With no preview control the button covers the card, so the focus ring outlines the card. With a
+	 * preview control it covers only the header (using the action slot, so `action` is not rendered) and
+	 * the preview stays its own button. Clicking still selects. Only the focus ring is new.
 	 */
 	isSelected?: boolean;
 	classes?: Partial<Record<MediaCardClassKey, string>>;
@@ -83,9 +85,18 @@ function MediaCard(props: MediaCardProps) {
 		sxs
 	} = props;
 	// endregion
+	const { formatMessage } = useIntl();
 	const keyboardSelectable = typeof isSelected === 'boolean' && Boolean(onClick) && !onSelect;
+	// A preview control is its own button. The selection button then stays on the header so it does not cover it.
+	const selectionCoversCard = keyboardSelectable && !onPreview;
 	let { name, path, type } = item;
 	const selectionLabel = showPath ? `${name}, ${item.path}` : name;
+	const selectItemLabel = formatMessage({ defaultMessage: 'Select {name}' }, { name });
+	const activateSelection = (event: MouseEvent<HTMLButtonElement>) => {
+		// The card also listens for clicks. One activation has to win, or a toggle selects and clears itself.
+		event.stopPropagation();
+		if (!disableSelection) onClick?.(event);
+	};
 	if (item.mimeType.includes('audio/')) {
 		type = 'Audio';
 	}
@@ -102,7 +113,37 @@ function MediaCard(props: MediaCardProps) {
 	};
 	let icon = { id: iconMap[type] ?? '@mui/icons-material/InsertDriveFileOutlined' };
 	const systemIcon = <SystemIcon icon={icon} svgIconProps={{ className: 'media-icon' }} />;
-	const { formatMessage } = useIntl();
+	const selectionButton = keyboardSelectable ? (
+		<Box
+			component="button"
+			type="button"
+			aria-pressed={isSelected}
+			aria-disabled={disableSelection || undefined}
+			aria-label={selectionLabel}
+			onClick={activateSelection}
+			sx={{
+				position: 'absolute',
+				inset: 0,
+				zIndex: 1,
+				boxSizing: 'border-box',
+				m: 0,
+				p: 0,
+				border: 0,
+				borderRadius: 'inherit',
+				background: 'none',
+				color: 'inherit',
+				font: 'inherit',
+				lineHeight: 'inherit',
+				textAlign: 'inherit',
+				appearance: 'none',
+				cursor: 'inherit',
+				// The header slot is pointer-events: none so its collapsed box does not steal clicks.
+				pointerEvents: 'auto',
+				// Inset, because the card clips anything drawn outside it.
+				'&:focus-visible': getFocusRingSx({ inset: true })
+			}}
+		/>
+	) : null;
 	const media =
 		type === 'Image' ? (
 			<CardMedia
@@ -176,50 +217,29 @@ function MediaCard(props: MediaCardProps) {
 				sxs?.root
 			)}
 		>
+			{selectionCoversCard && selectionButton}
 			<CardHeader
 				classes={{ root: props.classes?.cardHeader }}
 				sx={{
 					alignSelf: 'center',
-					// The toggle is positioned against the header, on the same box the ring used to use.
-					...(keyboardSelectable && { position: 'relative' }),
+					// The header button is positioned against the header, on the same box the ring used to use.
+					...(keyboardSelectable && !selectionCoversCard && { position: 'relative' }),
 					...sxs?.cardHeader
 				}}
-				action={
-					keyboardSelectable ? (
-						<Box
-							role="button"
-							tabIndex={0}
-							aria-pressed={isSelected}
-							aria-disabled={disableSelection || undefined}
-							aria-label={selectionLabel}
-							onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-								if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-								e.preventDefault();
-								if (!disableSelection) onClick(e);
-							}}
-							sx={{
-								position: 'absolute',
-								inset: 0,
-								// Clicks keep going to the card. The control is only a keyboard tab stop.
-								pointerEvents: 'none',
-								// Inset, because the card clips anything drawn outside it.
-								'&:focus-visible': getFocusRingSx({ inset: true })
-							}}
-						/>
-					) : (
-						action
-					)
-				}
+				action={keyboardSelectable ? (selectionCoversCard ? undefined : selectionButton) : action}
 				avatar={
 					onSelect ? (
 						<FormGroup className={props.classes?.checkbox} sx={sxs?.checkbox}>
 							<Checkbox
 								checked={selected.includes(path)}
 								disabled={disableSelection}
-								onClick={(e: any) => !disableSelection && onSelect(path, e.target.checked)}
+								onChange={(event) => !disableSelection && onSelect(path, event.target.checked)}
+								// The card click toggles too. Stopping this click leaves the change handler as the one update.
+								onClick={(event) => event.stopPropagation()}
 								color="primary"
 								size="small"
-								aria-label={formatMessage({ defaultMessage: 'Select {name}' }, { name })}
+								// aria-label on Checkbox lands on the root span, which does not name the input.
+								slotProps={{ input: { 'aria-label': selectItemLabel } }}
 							/>
 						</FormGroup>
 					) : (
@@ -229,20 +249,21 @@ function MediaCard(props: MediaCardProps) {
 				title={name}
 				subheader={showPath ? item.path : null}
 				slotProps={{
-					action: keyboardSelectable
-						? {
-								// The slot's own margins and flex basis would shift the title. Collapse it;
-								// the toggle is taken out of flow and covers the header.
-								sx: {
-									m: 0,
-									flex: '0 0 auto',
-									width: 0,
-									height: 0,
-									overflow: 'visible',
-									pointerEvents: 'none'
+					action:
+						keyboardSelectable && !selectionCoversCard
+							? {
+									// The slot's own margins and flex basis would shift the title. Collapse it;
+									// the toggle is taken out of flow and covers the header.
+									sx: {
+										m: 0,
+										flex: '0 0 auto',
+										width: 0,
+										height: 0,
+										overflow: 'visible',
+										pointerEvents: 'none'
+									}
 								}
-							}
-						: undefined,
+							: undefined,
 					content: {
 						sx: {
 							flexGrow: 1,
