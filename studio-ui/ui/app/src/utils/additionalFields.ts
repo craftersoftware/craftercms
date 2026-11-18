@@ -19,27 +19,27 @@ export function processAdditionalFieldMacro(parentFieldId: string, fieldId: stri
 	return fieldId.replaceAll('{id}', parentFieldId);
 }
 
-/** Expands descriptor `metadata.additionalFields` templates for one field id. */
+/** Expands descriptor `metadata.additionalFields` values for one field id. */
 export function expandAdditionalFieldTemplates(
 	fieldId: string,
-	templates: readonly string[] | null | undefined
+	descriptorAdditionalFields: readonly string[] | null | undefined
 ): string[] {
-	if (!templates?.length) return [];
-	return templates.map((template) => processAdditionalFieldMacro(fieldId, template));
+	if (!descriptorAdditionalFields?.length) return [];
+	return descriptorAdditionalFields.map((additionalField) => processAdditionalFieldMacro(fieldId, additionalField));
 }
 
 /**
- * Form-definition ids are authoritative. Descriptor templates only backfill ids that were never
+ * Form-definition ids are authoritative. Descriptor additionalFields only backfill ids that were never
  * persisted; an empty descriptor does not clear stored ids, and a persisted id that differs from
  * the descriptor is kept.
  */
 export function mergeAdditionalFieldIds(
 	fieldId: string,
 	persisted: readonly string[] | null | undefined,
-	templates: readonly string[] | null | undefined
+	descriptorAdditionalFields: readonly string[] | null | undefined
 ): string[] {
 	const persistedAdditionalFields = persisted ?? [];
-	const expandedAdditionalFields = expandAdditionalFieldTemplates(fieldId, templates);
+	const expandedAdditionalFields = expandAdditionalFieldTemplates(fieldId, descriptorAdditionalFields);
 	if (expandedAdditionalFields.length === 0) return [...persistedAdditionalFields];
 	const seen = new Set(persistedAdditionalFields);
 	const missingAdditionalFields: string[] = [];
