@@ -21,21 +21,24 @@ import { useActiveSiteId } from './useActiveSiteId';
 import { useSelection } from './useSelection';
 import { useEffect, useMemo } from 'react';
 import { fetchContentTypes } from '../state/actions/preview';
-import { useSiteUIConfig } from './useSiteUIConfig';
 import { contentTypesForParse } from '../utils/contentType';
 
 export function useContentTypes(): LookupTable<ContentType> {
 	const dispatch = useDispatch();
 	const site = useActiveSiteId();
 	const { byId, isFetching } = useSelection((state) => state.contentTypes);
-	const uiConfig = useSiteUIConfig();
+	const uiConfigFetching = useSelection((state) => state.uiConfig?.isFetching);
+	const controls = useSelection((state) => state.uiConfig?.controls);
 	useEffect(() => {
 		if (!byId && site && isFetching === null) {
 			dispatch(fetchContentTypes());
 		}
 	}, [dispatch, site, byId, isFetching]);
 
-	return useMemo(() => contentTypesForParse(byId, uiConfig), [byId, uiConfig.isFetching, uiConfig.controls]);
+	return useMemo(
+		() => contentTypesForParse(byId, { isFetching: uiConfigFetching, controls }),
+		[byId, uiConfigFetching, controls]
+	);
 }
 
 export default useContentTypes;
