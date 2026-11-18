@@ -237,9 +237,15 @@ describe('browse picker keyboard selection', () => {
 
 	it('still selects a card from a mouse click', async () => {
 		const single = await render();
-		const heroButton = selectionButton(single.host, 'Hero banner, /site/components/hero.xml');
+		const heroCard = [...single.host.querySelectorAll('.MuiCard-root')].find((node) =>
+			node.textContent?.includes('Hero banner')
+		);
+		assert.ok(heroCard, 'hero card');
+		// The selection button stops propagation, so the title is the card's own click target.
+		const heroTitle = heroCard.querySelector('h2');
+		assert.ok(heroTitle, 'hero title');
 		await act(async () => {
-			heroButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+			heroTitle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
 		});
 		assert.equal(single.cards.length, 1);
 		assert.equal(single.cards[0].path, hero.path);
