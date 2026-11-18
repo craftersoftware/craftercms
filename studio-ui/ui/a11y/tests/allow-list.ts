@@ -67,11 +67,6 @@ export const ruleTickets: Record<string, RuleTicket> = {
 		ticket: 'craftersoftware/craftercms-e#1455',
 		criterion: '1.3.1 Info and Relationships',
 		scope: { 'edit mode tools panel > Settings': both }
-	},
-	'label-content-name-mismatch': {
-		ticket: 'craftersoftware/craftercms-e#1458',
-		criterion: '2.5.3 Label in Name',
-		scope: { 'create project': both }
 	}
 };
 
