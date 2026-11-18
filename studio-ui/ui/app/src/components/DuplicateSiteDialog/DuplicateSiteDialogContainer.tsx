@@ -68,7 +68,6 @@ interface DuplicateSiteDialogContainerProps {
 
 export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainerProps) {
 	const { site, setSite, handleClose, onGoBack, isSubmitting } = props;
-	const sourceProjectLabelId = useId();
 	const [error, setError] = useState(null);
 	const { authoringBase, useBaseDomain } = useEnv();
 	const fieldsErrorsLookup: LookupTable<boolean> = useMemo(
@@ -90,6 +89,7 @@ export function DuplicateSiteDialogContainer(props: DuplicateSiteDialogContainer
 	const mountedRef = useRef(true);
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
+	const sourceProjectLabelId = useId();
 
 	const validateForm = () => {
 		return !(

@@ -67,7 +67,6 @@ interface InternalDialogState {
 
 export function PublishingPackageReviewDialogContainer(props: PublishingPackageReviewDialogContainerProps) {
 	const { packageId, isSubmitting, onSuccess, onClose } = props;
-	const cannedCommentsLabelId = useId();
 	const { activeEnvironment } = useEnv();
 	const [publishingPackage, setPublishingPackage] = useState<PublishPackage>();
 	const [cannedMessages, setCannedMessages] = useState<CannedMessage[]>([]);
@@ -82,6 +81,7 @@ export function PublishingPackageReviewDialogContainer(props: PublishingPackageR
 	});
 	const [error, setError] = useState<ApiResponse>();
 	const siteId = useActiveSiteId();
+	const cannedCommentsLabelId = useId();
 	const submitLabel =
 		state.action === 'reject' ? (
 			<FormattedMessage defaultMessage="Reject" />

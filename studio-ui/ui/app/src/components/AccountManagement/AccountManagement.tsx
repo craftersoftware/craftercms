@@ -108,7 +108,6 @@ export const DEFAULT_SNACKBAR_DURATION = 5000;
 
 export function AccountManagement(props: AccountManagementProps) {
 	const { passwordRequirementsMinComplexity = 4 } = props;
-	const projectLabelId = useId();
 	const user = useActiveUser();
 	const [language, setLanguage] = useState(() => getCurrentLocale());
 	const [languages, setLanguages] = useState<SystemLang[]>();
@@ -119,6 +118,7 @@ export function AccountManagement(props: AccountManagementProps) {
 	const dispatch = useDispatch();
 	const { formatMessage } = useIntl();
 	const [anchorEl, setAnchorEl] = useState(null);
+	const projectLabelId = useId();
 	const sitesLookup = useSiteLookup();
 	const sitesIds = Object.keys(sitesLookup);
 	const [selectedSite, setSelectedSite] = useState('all');

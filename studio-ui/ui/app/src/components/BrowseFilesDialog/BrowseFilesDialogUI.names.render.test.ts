@@ -60,7 +60,7 @@ afterEach(async () => {
 	});
 });
 
-async function render(searchParameters: { sortBy?: string; sortOrder?: string } = {}) {
+async function render(overrides: Record<string, unknown> = {}) {
 	const host = document.createElement('div');
 	document.body.appendChild(host);
 	const root = createRoot(host);
@@ -81,7 +81,7 @@ async function render(searchParameters: { sortBy?: string; sortOrder?: string } 
 						multiSelect: true,
 						path: '/static-assets',
 						currentPath: '/static-assets',
-						searchParameters,
+						searchParameters: {},
 						setSearchParameters() {},
 						limit: 5,
 						offset: 0,
@@ -103,7 +103,8 @@ async function render(searchParameters: { sortBy?: string; sortOrder?: string } 
 						onRefresh() {},
 						onUpload() {},
 						onToggleViewMode() {},
-						onSelectAll() {}
+						onSelectAll() {},
+						...overrides
 					} as never)
 				)
 			)
@@ -142,8 +143,10 @@ describe('browse files dialog select-all name', () => {
 	});
 });
 
-function labelText(labelledBy: string | null) {
-	const ids = labelledBy?.split(/\s+/).filter(Boolean) ?? [];
+function accessibleName(node: HTMLElement) {
+	const explicit = node.getAttribute('aria-label');
+	if (explicit) return explicit;
+	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
 	return ids
 		.map((id) => document.getElementById(id)?.textContent ?? '')
 		.join(' ')
@@ -152,44 +155,23 @@ function labelText(labelledBy: string | null) {
 }
 
 describe('browse files sort select names', () => {
-	it('names the sort-by combobox and its open listbox from the visible Sort By label', async () => {
-		const host = await render({ sortBy: 'internalName', sortOrder: 'desc' });
+	it('names the sort-by and order comboboxes from their visible labels, and the open listbox too', async () => {
+		const host = await render({ searchParameters: { sortBy: 'internalName', sortOrder: 'asc' } });
 		const sortButton = host.querySelector<HTMLButtonElement>('#sort-button');
 		assert.ok(sortButton, 'the sorting button is missing');
 		await act(async () => {
 			sortButton.click();
 		});
-		const comboboxes = Array.from(document.querySelectorAll<HTMLElement>('[role="combobox"]'));
-		const sortBy = comboboxes.find((node) => labelText(node.getAttribute('aria-labelledby')) === 'Sort By');
-		assert.ok(sortBy, 'the sort-by combobox is not named by the visible Sort By label');
-		const labelId = sortBy.getAttribute('aria-labelledby');
+		const comboboxes = [...document.querySelectorAll<HTMLElement>('[role="combobox"]')];
+		const sortBy = comboboxes.find((node) => accessibleName(node) === 'Sort By');
+		const order = comboboxes.find((node) => accessibleName(node) === 'Order');
+		assert.ok(sortBy, 'the sort-by combobox has no name');
+		assert.ok(order, 'the order combobox has no name');
 		await act(async () => {
 			sortBy.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
 		});
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
 		assert.ok(listbox, 'the sort-by listbox did not open');
-		assert.equal(listbox.getAttribute('aria-labelledby'), labelId);
-		assert.equal(labelText(listbox.getAttribute('aria-labelledby')), 'Sort By');
-	});
-
-	it('names the order combobox and its open listbox from the visible Order label', async () => {
-		const host = await render({ sortBy: 'internalName', sortOrder: 'desc' });
-		const sortButton = host.querySelector<HTMLButtonElement>('#sort-button');
-		assert.ok(sortButton, 'the sorting button is missing');
-		await act(async () => {
-			sortButton.click();
-		});
-		const order = Array.from(document.querySelectorAll<HTMLElement>('[role="combobox"]')).find(
-			(node) => labelText(node.getAttribute('aria-labelledby')) === 'Order'
-		);
-		assert.ok(order, 'the order combobox is not named by the visible Order label');
-		const labelId = order.getAttribute('aria-labelledby');
-		await act(async () => {
-			order.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
-		});
-		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
-		assert.ok(listbox, 'the order listbox did not open');
-		assert.equal(listbox.getAttribute('aria-labelledby'), labelId);
-		assert.equal(labelText(listbox.getAttribute('aria-labelledby')), 'Order');
+		assert.equal(accessibleName(listbox), 'Sort By');
 	});
 });

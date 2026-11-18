@@ -15,16 +15,14 @@
  */
 
 /**
- * The push dialog's remote-branch select is named by its visible label. The label id is
- * remoteBranchToPushLabel; a labelId that still says Pull leaves both the combobox and the listbox unnamed.
+ * The remote-branch select's label id is remoteBranchToPushLabel. A mismatched labelId leaves the combobox and the
+ * open listbox unnamed.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
 import '../../../../test/registerTsLoader.mjs';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-
-globalThis.localStorage ??= window.localStorage;
 
 const React = await import('react');
 const { act } = await import('react');
@@ -36,7 +34,9 @@ const { ThemeProvider, createTheme } = await import('@mui/material/styles');
 const { PushDialogContainer } = await import('./PushDialogContainer.tsx');
 
 const intl = createIntl({ locale: 'en', messages: {}, onError: () => undefined });
-const theme = createTheme();
+
+// The branch preference helpers call the bare `localStorage` global. jsdom puts it on `window` only.
+globalThis.localStorage = window.localStorage;
 
 const store = configureStore({
 	reducer: {
@@ -46,7 +46,7 @@ const store = configureStore({
 				byId: { editorial: { id: 'editorial', uuid: 'site-uuid', name: 'Editorial' } }
 			}
 		) => state,
-		user: (state = { username: 'admin' }) => state
+		user: (state = { username: 'ann' }) => state
 	},
 	middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
 });
@@ -59,8 +59,18 @@ afterEach(async () => {
 			host.remove();
 		}
 	});
-	window.localStorage.clear();
 });
+
+function accessibleName(node: HTMLElement) {
+	const explicit = node.getAttribute('aria-label');
+	if (explicit) return explicit;
+	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
+	return ids
+		.map((id) => document.getElementById(id)?.textContent ?? '')
+		.join(' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
 
 async function render() {
 	const host = document.createElement('div');
@@ -77,7 +87,7 @@ async function render() {
 					{ value: intl },
 					React.createElement(
 						ThemeProvider,
-						{ theme },
+						{ theme: createTheme() },
 						React.createElement(PushDialogContainer, {
 							branches: ['main', 'develop'],
 							remoteName: 'origin',
@@ -93,22 +103,13 @@ async function render() {
 	return host;
 }
 
-function labelText(labelledBy: string | null) {
-	const ids = labelledBy?.split(/\s+/).filter(Boolean) ?? [];
-	return ids
-		.map((id) => document.getElementById(id)?.textContent ?? '')
-		.join(' ')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
-
-describe('push dialog remote branch select name', () => {
-	it('names the combobox from the visible Remote Branch to Push label', async () => {
+describe('push dialog remote branch names', () => {
+	it('names the combobox from the Remote Branch to Push label', async () => {
 		const host = await render();
 		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
 		assert.ok(combobox, 'the remote branch combobox is missing');
 		assert.equal(combobox.getAttribute('aria-labelledby'), 'remoteBranchToPushLabel');
-		assert.equal(labelText(combobox.getAttribute('aria-labelledby')), 'Remote Branch to Push');
+		assert.equal(accessibleName(combobox), 'Remote Branch to Push');
 	});
 
 	it('names the open listbox from the same label', async () => {
@@ -121,6 +122,6 @@ describe('push dialog remote branch select name', () => {
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
 		assert.ok(listbox, 'the remote branch listbox did not open');
 		assert.equal(listbox.getAttribute('aria-labelledby'), 'remoteBranchToPushLabel');
-		assert.equal(labelText(listbox.getAttribute('aria-labelledby')), 'Remote Branch to Push');
+		assert.equal(accessibleName(listbox), 'Remote Branch to Push');
 	});
 });

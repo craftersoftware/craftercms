@@ -16,8 +16,7 @@
 
 /**
  * The dashlet page picker is a MUI Select. Its closed text ("Page N") is the value, not a visible label, so the
- * accessible name does not repeat it (WCAG 2.5.3). The name is the static word "Page", on the combobox and on the
- * open listbox (the list is named only through labelId, which this select does not have).
+ * accessible name does not repeat it (WCAG 2.5.3). The name is the static word "Page".
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -87,7 +86,7 @@ describe('dashlet page picker name', () => {
 		assert.equal(pagePicker?.textContent?.replace(/\s+/g, ' ').trim(), 'Page 3');
 	});
 
-	it('names the open page listbox Page', async () => {
+	it('names the open listbox Page, with no dangling aria-labelledby', async () => {
 		const host = await render(0);
 		const pagePicker = Array.from(host.querySelectorAll<HTMLElement>('[role="combobox"]')).find(
 			(node) => !node.classList.contains('MuiTablePagination-select')
@@ -97,7 +96,7 @@ describe('dashlet page picker name', () => {
 			pagePicker.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
 		});
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
-		assert.ok(listbox, 'the page listbox did not open');
+		assert.ok(listbox, 'the page picker listbox did not open');
 		assert.equal(listbox.getAttribute('aria-label'), 'Page');
 		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
 	});

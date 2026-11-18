@@ -61,22 +61,16 @@ interface SortByProps {
 	sortBy?: string;
 	filterKeys: string[];
 	handleFilterChange(filter: FilterType, isFilter?: boolean): any;
-	/** Id of the visible "Sort By" title. Names the combobox and the open listbox. */
-	labelId?: string;
 }
 
 export function SiteSearchSortBy(props: SortByProps) {
 	const { formatMessage } = useIntl();
-	const { handleFilterChange, filterKeys, sortBy = SORT_AUTO, labelId } = props;
-	// Without the accordion title, the closed value is not a label. The open listbox is named only through labelId.
+	const { handleFilterChange, filterKeys, sortBy = SORT_AUTO } = props;
 	const sortByLabel = formatMessage({ id: 'searchFilter.sortBy', defaultMessage: 'Sort By' });
 
 	return (
 		<Select
-			labelId={labelId}
 			value={sortBy}
-			inputProps={labelId ? undefined : { 'aria-label': sortByLabel }}
-			MenuProps={labelId ? undefined : { slotProps: { list: { 'aria-label': sortByLabel } } }}
 			sx={{
 				width: '100%',
 				'&.last': {
@@ -84,6 +78,18 @@ export function SiteSearchSortBy(props: SortByProps) {
 				}
 			}}
 			onChange={(event) => handleFilterChange({ name: 'sortBy', value: event.target.value })}
+			SelectDisplayProps={{
+				'aria-label': sortByLabel,
+				'aria-labelledby': undefined
+			}}
+			MenuProps={{
+				slotProps: {
+					list: {
+						'aria-label': sortByLabel,
+						'aria-labelledby': undefined
+					}
+				}
+			}}
 		>
 			<MenuItem value={SORT_AUTO}>
 				<FormattedMessage defaultMessage="Auto" />

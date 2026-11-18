@@ -103,8 +103,7 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 	});
 	const [days, setDays] = useState(30);
 	const { formatMessage } = useIntl();
-	// The closed value ("30 days", "1 month") is not a label. The open listbox is named only through labelId.
-	const timeRangeLabel = formatMessage({ id: 'devContentOpsDashlet.timeRange', defaultMessage: 'Time range' });
+	const dateRangeLabel = formatMessage({ id: 'devContentOpsDashlet.dateRange', defaultMessage: 'Date range' });
 	const onRefresh = useMemo(
 		() => (backgroundRefresh?: boolean) => {
 			if (!backgroundRefresh) {
@@ -165,8 +164,19 @@ export function DevContentOpsDashlet(props: DevContentOpsDashletProps) {
 						disableUnderline
 						value={days}
 						onChange={(e) => setDays(e.target.value as number)}
-						SelectDisplayProps={{ style: { paddingLeft: '8px' }, 'aria-label': timeRangeLabel }}
-						MenuProps={{ slotProps: { list: { 'aria-label': timeRangeLabel } } }}
+						SelectDisplayProps={{
+							style: { paddingLeft: '8px' },
+							'aria-label': dateRangeLabel,
+							'aria-labelledby': undefined
+						}}
+						MenuProps={{
+							slotProps: {
+								list: {
+									'aria-label': dateRangeLabel,
+									'aria-labelledby': undefined
+								}
+							}
+						}}
 					>
 						<MenuItem value={3}>
 							<FormattedMessage defaultMessage="{days} days" values={{ days: 3 }} />

@@ -58,8 +58,6 @@ const TREE_PANEL_MIN_WIDTH = 240;
 const TREE_PANEL_MAX_WIDTH = 480;
 
 export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
-	const sortByLabelId = useId();
-	const sortOrderLabelId = useId();
 	// region const { ... } = props;
 	const {
 		items,
@@ -102,6 +100,8 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
 	} = props;
 	// endregion
 	const { formatMessage } = useIntl();
+	const sortByLabelId = useId();
+	const sortOrderLabelId = useId();
 	const [sortMenuOpen, setSortMenuOpen] = useState(false);
 	const buttonRef = useRef(undefined);
 	const [treePanelWidth, setTreePanelWidth] = useState(TREE_PANEL_DEFAULT_WIDTH);

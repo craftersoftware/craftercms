@@ -59,7 +59,6 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 		levelFilter = ''
 	} = props;
 	const { formatMessage } = useIntl();
-	// `label` only sizes the outline notch; it does not name the control. The open listbox is named only through labelId.
 	const levelFilterLabel = formatMessage({
 		id: 'loggingLevels.levelFilterLabel',
 		defaultMessage: 'Level filter'
@@ -107,14 +106,24 @@ export function LogLevelGrid(props: LoggingLevelsGridUIProps) {
 										<Select
 											fullWidth
 											label={<FormattedMessage id="loggingLevels.levelFilterLabel" defaultMessage="Level filter" />}
-											inputProps={{ 'aria-label': levelFilterLabel }}
-											MenuProps={{ slotProps: { list: { 'aria-label': levelFilterLabel } } }}
 											value={levelFilter}
 											size="small"
 											variant="outlined"
 											displayEmpty
 											onChange={(e) => {
 												onLevelFilterChange(e.target.value);
+											}}
+											SelectDisplayProps={{
+												'aria-label': levelFilterLabel,
+												'aria-labelledby': undefined
+											}}
+											MenuProps={{
+												slotProps: {
+													list: {
+														'aria-label': levelFilterLabel,
+														'aria-labelledby': undefined
+													}
+												}
 											}}
 										>
 											<MenuItem key="empty" value="">

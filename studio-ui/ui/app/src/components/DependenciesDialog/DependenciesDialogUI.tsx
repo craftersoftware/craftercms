@@ -59,9 +59,12 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 	} = props;
 	const [openSelector, setOpenSelector] = useState(false);
 	const { formatMessage } = useIntl();
-	// Neither picker has a visible label. The open listbox is named only through labelId, so the name goes on the list too.
+	// No visible label: the closed value is one of the options, so the name is the control's purpose.
 	const referencesLabel = formatMessage({ id: 'dependenciesDialog.references', defaultMessage: 'References' });
-	const referenceTypeLabel = formatMessage({ id: 'words.type', defaultMessage: 'Type' });
+	const referenceTypeLabel = formatMessage({
+		id: 'dependenciesDialog.referenceType',
+		defaultMessage: 'Reference type'
+	});
 	const filteredDependencies = dependencies?.filter((dependency) => assetsTypes[showTypes].filter(dependency));
 
 	return (
@@ -87,14 +90,24 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							onChange={(event: SelectChangeEvent) => {
 								setDependenciesShown(event.target.value);
 							}}
-							inputProps={{ 'aria-label': referencesLabel }}
-							MenuProps={{ slotProps: { list: { 'aria-label': referencesLabel } } }}
 							slotProps={{
 								input: {
 									sx: {
 										fontSize: '16px',
 										border: 'none',
 										background: 'none'
+									}
+								}
+							}}
+							SelectDisplayProps={{
+								'aria-label': referencesLabel,
+								'aria-labelledby': undefined
+							}}
+							MenuProps={{
+								slotProps: {
+									list: {
+										'aria-label': referencesLabel,
+										'aria-labelledby': undefined
 									}
 								}
 							}}
@@ -210,7 +223,6 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 						onChange={(event: SelectChangeEvent) => {
 							setShowTypes(event.target.value);
 						}}
-						inputProps={{ 'aria-label': referenceTypeLabel }}
 						slotProps={{
 							input: {
 								sx: {
@@ -223,8 +235,11 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 								}
 							}
 						}}
+						SelectDisplayProps={{
+							'aria-label': referenceTypeLabel,
+							'aria-labelledby': undefined
+						}}
 						MenuProps={{
-							slotProps: { list: { 'aria-label': referenceTypeLabel } },
 							sx: {
 								'& .MuiListItem-root': {
 									padding: '0 10px',
@@ -241,6 +256,12 @@ export function DependenciesDialogUI(props: DependenciesDialogUIProps) {
 							transformOrigin: {
 								vertical: 'bottom',
 								horizontal: 'left'
+							},
+							slotProps: {
+								list: {
+									'aria-label': referenceTypeLabel,
+									'aria-labelledby': undefined
+								}
 							}
 						}}
 					>

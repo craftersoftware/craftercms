@@ -52,6 +52,7 @@ interface SortOrderProps {
 export function SiteSearchSortOrder(props: SortOrderProps) {
 	const { formatMessage } = useIntl();
 	const { handleFilterChange, sortBy, sortOrder = 'desc' } = props;
+	const sortOrderLabel = formatMessage(messages.sortOrder);
 	// sortBy === undefined: this means the current filter is the default === _score
 	const isRelevance = sortBy === '_score' || sortBy === undefined;
 	const options = isRelevance
@@ -75,18 +76,26 @@ export function SiteSearchSortOrder(props: SortOrderProps) {
 					value: 'desc'
 				}
 			];
-	// No visible label of its own (the accordion title names Sort by). The open listbox is named only through labelId.
-	const sortOrderLabel = formatMessage(messages.sortOrder);
 	return (
 		<Select
 			value={sortOrder}
-			inputProps={{ 'aria-label': sortOrderLabel }}
-			MenuProps={{ slotProps: { list: { 'aria-label': sortOrderLabel } } }}
 			sx={{
 				width: '100%',
 				marginTop: '10px'
 			}}
 			onChange={(event) => handleFilterChange({ name: 'sortOrder', value: event.target.value })}
+			SelectDisplayProps={{
+				'aria-label': sortOrderLabel,
+				'aria-labelledby': undefined
+			}}
+			MenuProps={{
+				slotProps: {
+					list: {
+						'aria-label': sortOrderLabel,
+						'aria-labelledby': undefined
+					}
+				}
+			}}
 		>
 			<MenuItem value={options[0].value}>{options[0].name}</MenuItem>
 			<MenuItem value={options[1].value}>{options[1].name}</MenuItem>

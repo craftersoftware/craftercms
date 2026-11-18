@@ -15,8 +15,8 @@
  */
 
 /**
- * FormsEngineField renders the field name on a label whose id is labelId. The dropdown Select has to receive that
- * same id, or neither the combobox nor the open listbox is named.
+ * FormsEngineField renders the field label with the host's labelId. The dropdown Select has to receive that same
+ * labelId, or the combobox and the open listbox are unnamed.
  */
 
 import '../../../../test/stringListDomSetup.mjs';
@@ -46,8 +46,7 @@ const redux = configureStore({
 		content: (state = { itemsByPath: {} }) => state,
 		contentTypes: (state = { byId: {}, isFetching: false }) => state,
 		uiConfig: (state = { currentSite: 'editorial', isFetching: false, xml: null }) => state
-	},
-	middleware: (getDefault) => getDefault({ serializableCheck: false, immutableCheck: false })
+	}
 });
 
 const contentType = { id: '/component/thing', type: 'component', fields: {}, sections: [] };
@@ -57,6 +56,7 @@ const itemMeta = {
 	pathInSite: '/site/components',
 	contentType
 };
+
 const field = {
 	id: 'section_s',
 	name: 'Section',
@@ -67,7 +67,6 @@ const field = {
 	properties: {},
 	defaultValue: ''
 } as ContentTypeField;
-const labelId = 'section_s-label';
 
 const mounted: Array<{ unmount(): void; host: HTMLElement }> = [];
 afterEach(async () => {
@@ -77,12 +76,23 @@ afterEach(async () => {
 	}
 });
 
+function accessibleName(node: HTMLElement) {
+	const explicit = node.getAttribute('aria-label');
+	if (explicit) return explicit;
+	const ids = node.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
+	return ids
+		.map((id) => document.getElementById(id)?.textContent ?? '')
+		.join(' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
 async function render() {
 	const validationAtom = atom({ isValid: true, messages: [] });
 	const stable = {
 		atoms: {
-			valueByFieldId: { [field.id]: atom('') },
-			validationByFieldId: { [field.id]: validationAtom },
+			valueByFieldId: { section_s: atom('') },
+			validationByFieldId: { section_s: validationAtom },
 			...createFormVisibilityAtoms()
 		},
 		changedFieldIds: createChangedFieldIdsAtom(),
@@ -128,7 +138,8 @@ async function render() {
 											contentType,
 											readonly: false,
 											autoFocus: false,
-											labelId
+											inputId: 'section_s-input',
+											labelId: 'section_s-label'
 										})
 									)
 								)
@@ -140,7 +151,7 @@ async function render() {
 		);
 	});
 	await act(async () => {
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 30));
 	});
 	mounted.push({ unmount: () => root.unmount(), host });
 	return host;
@@ -151,11 +162,11 @@ describe('forms engine dropdown names', () => {
 		const host = await render();
 		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
 		assert.ok(combobox, 'the dropdown combobox is missing');
-		assert.equal(combobox.getAttribute('aria-labelledby'), labelId);
-		assert.equal(document.getElementById(labelId)?.textContent?.trim(), 'Section');
+		assert.equal(combobox.getAttribute('aria-labelledby'), 'section_s-label');
+		assert.equal(accessibleName(combobox), 'Section');
 	});
 
-	it('names the open listbox from the field label', async () => {
+	it('names the open listbox from the same field label', async () => {
 		const host = await render();
 		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
 		assert.ok(combobox, 'the dropdown combobox is missing');
@@ -164,7 +175,7 @@ describe('forms engine dropdown names', () => {
 		});
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
 		assert.ok(listbox, 'the dropdown listbox did not open');
-		assert.equal(listbox.getAttribute('aria-labelledby'), labelId);
-		assert.equal(document.getElementById(labelId)?.textContent?.trim(), 'Section');
+		assert.equal(listbox.getAttribute('aria-labelledby'), 'section_s-label');
+		assert.equal(accessibleName(listbox), 'Section');
 	});
 });

@@ -174,7 +174,6 @@ export function Pager(props: {
 		props;
 	const { formatMessage } = useIntl();
 	// "Page N" is the closed select's value, not its label, so the name stays the word Page.
-	// The open listbox is named only through labelId, which this select does not have, so the same name goes on the list.
 	const pageLabel = formatMessage({ id: 'words.page', defaultMessage: 'Page' });
 
 	return (
@@ -184,8 +183,18 @@ export function Pager(props: {
 				disableUnderline
 				value={`${currentPage}`}
 				onChange={(e) => onPagePickerChange(parseInt(e.target.value))}
-				inputProps={{ 'aria-label': pageLabel }}
-				MenuProps={{ slotProps: { list: { 'aria-label': pageLabel } } }}
+				inputProps={{
+					'aria-label': pageLabel
+				}}
+				MenuProps={{
+					slotProps: {
+						// The open listbox is named only through labelId. This select has none, so the same name goes on the list.
+						list: {
+							'aria-label': pageLabel,
+							'aria-labelledby': undefined
+						}
+					}
+				}}
 				sx={{ fontSize: (theme) => theme.typography.fontSize }}
 			>
 				{new Array(totalPages).fill(null).map((nothing, index) => (

@@ -16,7 +16,6 @@
 
 /**
  * The project switcher has no visible label. The combobox and the open listbox are both named "Select site".
- * The listbox is named only through labelId, which this select does not have.
  */
 
 import '../../../test/stringListDomSetup.mjs';
@@ -38,9 +37,8 @@ const store = configureStore({
 	reducer: {
 		sites: (
 			state = {
-				byId: {
-					editorial: { id: 'editorial', name: 'Editorial', state: 'READY' }
-				}
+				active: 'editorial',
+				byId: { editorial: { id: 'editorial', name: 'Editorial', state: 'READY', uuid: 'u1' } }
 			}
 		) => state,
 		env: (state = { authoringBase: '/studio', useBaseDomain: false }) => state
@@ -79,23 +77,23 @@ async function render() {
 	return host;
 }
 
-describe('project switcher select names', () => {
+describe('site switcher names', () => {
 	it('names the combobox Select site', async () => {
 		const host = await render();
 		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
-		assert.ok(combobox, 'the project switcher combobox is missing');
+		assert.ok(combobox, 'the site switcher combobox is missing');
 		assert.equal(combobox.getAttribute('aria-label'), 'Select site');
 	});
 
-	it('names the open listbox Select site', async () => {
+	it('names the open listbox Select site, with no dangling aria-labelledby', async () => {
 		const host = await render();
 		const combobox = host.querySelector<HTMLElement>('[role="combobox"]');
-		assert.ok(combobox, 'the project switcher combobox is missing');
+		assert.ok(combobox, 'the site switcher combobox is missing');
 		await act(async () => {
 			combobox.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 0 }));
 		});
 		const listbox = document.querySelector<HTMLElement>('[role="listbox"]');
-		assert.ok(listbox, 'the project switcher listbox did not open');
+		assert.ok(listbox, 'the site switcher listbox did not open');
 		assert.equal(listbox.getAttribute('aria-label'), 'Select site');
 		assert.equal(listbox.hasAttribute('aria-labelledby'), false, 'the listbox points at a label that is not shown');
 	});
