@@ -209,7 +209,12 @@ export function RecentlyPublishedDashlet(props: RecentlyPublishedDashletProps) {
 								<IconButton
 									onClick={(e) => contextMenu?.openContextMenu(e, pkg)}
 									aria-label={formatMessage({ defaultMessage: 'Package options' })}
-									sx={{ opacity: hoveredPackage === pkg.id ? 1 : 0, '&:focus-visible': { opacity: 1 } }}
+									sx={{
+										opacity: hoveredPackage === pkg.id ? 1 : 0,
+										pointerEvents: hoveredPackage === pkg.id ? 'auto' : 'none',
+										'&:focus-visible': { opacity: 1, pointerEvents: 'auto' },
+										'@media (hover: none)': { opacity: 1, pointerEvents: 'auto' }
+									}}
 								>
 									<MoreVertRoundedIcon />
 								</IconButton>
